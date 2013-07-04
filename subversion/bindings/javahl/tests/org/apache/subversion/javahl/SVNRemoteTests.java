@@ -951,12 +951,14 @@ public class SVNRemoteTests extends SVNTests
         client.commit(thisTest.getWCPathSet(), Depth.infinity, false, false,
                       null, null, cmcb, null);
 
-        // Check mergeinfo on updated branch
+        // Check inherited mergeinfo on updated branch
+        paths.set(0, "Abranch/mu");
         catalog = session.getMergeinfo(paths, 4L,
-                                       Mergeinfo.Inheritance.explicit,
+                                       Mergeinfo.Inheritance.nearest_ancestor,
                                        false);
         assertEquals(1, catalog.size());
-        List<RevisionRange> ranges = catalog.get("Abranch").getRevisions("/A");
+        List<RevisionRange> ranges =
+            catalog.get("Abranch/mu").getRevisions("/A/mu");
         assertEquals(1, ranges.size());
         assertEquals("1-3*", ranges.get(0).toString());
     }
