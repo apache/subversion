@@ -150,9 +150,6 @@ public class RemoteSession extends JNIObject implements ISVNRemote
                              Map<String, byte[]> properties)
             throws ClientException
     {
-        if (direntFields <= 0 && direntFields != DirEntry.Fields.all)
-            throw new IllegalArgumentException(
-                "direntFields must be positive or DirEntry.Fields.all");
         maybe_clear(dirents);
         maybe_clear(properties);
         return nativeGetDirectory(revision, path,
