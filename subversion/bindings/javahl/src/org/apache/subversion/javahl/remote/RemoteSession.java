@@ -156,7 +156,12 @@ public class RemoteSession extends JNIObject implements ISVNRemote
                                   direntFields, dirents, properties);
     }
 
-    // TODO: getMergeinfo
+    public native Map<String, Mergeinfo>
+        getMergeinfo(Iterable<String> paths, long revision,
+                     Mergeinfo.Inheritance inherit,
+                     boolean includeDescendants)
+            throws ClientException;
+
     // TODO: update
     // TODO: switch
 

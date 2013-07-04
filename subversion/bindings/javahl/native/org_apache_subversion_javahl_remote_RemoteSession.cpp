@@ -213,7 +213,18 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetDirectory(
                            jdirent_fields, jdirents, jproperties);
 }
 
-// TODO: getMergeinfo
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getMergeinfo(
+    JNIEnv *env, jobject jthis, jobject jpaths, jlong jrevision,
+    jobject jinherit, jboolean jinclude_descendants)
+{
+  JNIEntry(SVNReposAccess, getMergeinfo);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getMergeinfo(jpaths, jrevision, jinherit, jinclude_descendants);
+}
+
 // TODO: update
 // TODO: switch
 
