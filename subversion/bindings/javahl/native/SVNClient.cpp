@@ -768,57 +768,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
                 NULL);
     if (mergeinfo == NULL)
         return NULL;
-
-    // Transform mergeinfo into Java Mergeinfo object.
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Mergeinfo");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    static jmethodID ctor = 0;
-    if (ctor == 0)
-    {
-        ctor = env->GetMethodID(clazz, "<init>", "()V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    static jmethodID addRevisions = 0;
-    if (addRevisions == 0)
-    {
-        addRevisions = env->GetMethodID(clazz, "addRevisions",
-                                        "(Ljava/lang/String;"
-                                        "Ljava/util/List;)V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    jobject jmergeinfo = env->NewObject(clazz, ctor);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    apr_hash_index_t *hi;
-    for (hi = apr_hash_first(subPool.getPool(), mergeinfo);
-         hi;
-         hi = apr_hash_next(hi))
-    {
-        const void *path;
-        void *val;
-        apr_hash_this(hi, &path, NULL, &val);
-
-        jstring jpath =
-            JNIUtil::makeJString(reinterpret_cast<const char *>(path));
-        jobject jranges =
-            CreateJ::RevisionRangeList(reinterpret_cast<svn_rangelist_t *>(val));
-
-        env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
-
-        env->DeleteLocalRef(jranges);
-        env->DeleteLocalRef(jpath);
-    }
-
-    env->DeleteLocalRef(clazz);
-
-    return jmergeinfo;
+    return CreateJ::Mergeinfo(mergeinfo, subPool.getPool());
 }
 
 void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
@@ -1468,7 +1418,7 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
                                         &set_rev, ctx, subPool.getPool()),
                 NULL);
 
-    return CreateJ::PropertyMap(props);
+    return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
 struct info_baton

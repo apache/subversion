@@ -151,7 +151,7 @@ EditorProxy::cb_add_directory(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jchildren = (!children ? NULL : CreateJ::StringSet(children));
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props);
+  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
 
   SVN_JNI_CATCH(
@@ -190,7 +190,7 @@ EditorProxy::cb_add_file(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jcontents = NULL;     // FIXME: input stream proxy
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props);
+  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
 
   SVN_JNI_CATCH(
@@ -225,7 +225,7 @@ EditorProxy::cb_add_symlink(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jstring jtarget = JNIUtil::makeJString(target);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props);
+  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
 
   SVN_JNI_CATCH(
@@ -293,7 +293,7 @@ EditorProxy::cb_alter_directory(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jchildren = (!children ? NULL : CreateJ::StringSet(children));
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props);
+  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
 
   SVN_JNI_CATCH(
@@ -333,7 +333,7 @@ EditorProxy::cb_alter_file(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jcontents = NULL;     // FIXME: input stream proxy
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props);
+  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
 
   SVN_JNI_CATCH(
@@ -369,7 +369,7 @@ EditorProxy::cb_alter_symlink(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jstring jtarget = JNIUtil::makeJString(target);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jprops = CreateJ::PropertyMap(props);
+  jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
 
   SVN_JNI_CATCH(

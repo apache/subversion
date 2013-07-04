@@ -36,6 +36,7 @@
 
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -1141,7 +1142,7 @@ CreateJ::StringSet(const apr_array_header_t *strings)
   return CreateJ::Set(jstrs);
 }
 
-jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
+jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -1179,7 +1180,7 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  FillPropertyMap(map, prop_hash, put_mid);
+  FillPropertyMap(map, prop_hash, scratch_pool, put_mid);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -1187,7 +1188,7 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
 }
 
 void CreateJ::FillPropertyMap(jobject map, apr_hash_t* prop_hash,
-                              jmethodID put_mid)
+                              apr_pool_t* scratch_pool, jmethodID put_mid)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -1210,8 +1211,11 @@ void CreateJ::FillPropertyMap(jobject map, apr_hash_t* prop_hash,
         POP_AND_RETURN_NOTHING();
     }
 
+  if (!scratch_pool)
+    scratch_pool = apr_hash_pool_get(prop_hash);
+
   apr_hash_index_t *hi;
-  for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
+  for (hi = apr_hash_first(scratch_pool, prop_hash);
        hi; hi = apr_hash_next(hi))
     {
       const char *key;
@@ -1319,6 +1323,64 @@ jobject CreateJ::InheritedProps(apr_array_header_t *iprops)
     }
 
   return env->PopLocalFrame(array);
+}
+
+jobject CreateJ::Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool)
+{
+  if (mergeinfo == NULL)
+    return NULL;
+
+  // Transform mergeinfo into Java Mergeinfo object.
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Mergeinfo");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID ctor = 0;
+  if (ctor == 0)
+    {
+      ctor = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID addRevisions = 0;
+  if (addRevisions == 0)
+    {
+      addRevisions = env->GetMethodID(clazz, "addRevisions",
+                                      "(Ljava/lang/String;"
+                                      "Ljava/util/List;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject jmergeinfo = env->NewObject(clazz, ctor);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *path;
+      void *val;
+      apr_hash_this(hi, &path, NULL, &val);
+
+      jstring jpath =
+        JNIUtil::makeJString(static_cast<const char*>(path));
+      jobject jranges =
+        RevisionRangeList(static_cast<svn_rangelist_t*>(val));
+
+      env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
+
+      env->DeleteLocalRef(jranges);
+      env->DeleteLocalRef(jpath);
+    }
+
+  env->DeleteLocalRef(clazz);
+
+  return jmergeinfo;
 }
 
 
