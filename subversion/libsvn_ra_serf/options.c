@@ -401,10 +401,10 @@ create_options_req(options_context_t **opt_ctx,
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   xmlctx = svn_ra_serf__xml_context_create(options_ttable,
-                                           NULL, options_closed, NULL,
+                                           NULL, options_closed, NULL, NULL,
                                            new_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "OPTIONS";
   handler->path = session->session_url.path;

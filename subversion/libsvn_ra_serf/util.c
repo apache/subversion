@@ -99,6 +99,7 @@ struct expat_ctx_t {
   svn_ra_serf__xml_context_t *xmlctx;
   XML_Parser parser;
   svn_ra_serf__handler_t *handler;
+  const int *expected_status;
 
   svn_error_t *inner_error;
 
@@ -2504,9 +2505,23 @@ expat_response_handler(serf_request_t *request,
                        apr_pool_t *scratch_pool)
 {
   struct expat_ctx_t *ectx = baton;
+  svn_boolean_t got_expected_status;
 
-  /* ### TODO: sline.code < 200 should really be handled by the core */
-  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
+  if (ectx->expected_status)
+    {
+      const int *status = ectx->expected_status;
+      got_expected_status = FALSE;
+
+      while (*status && ectx->handler->sline.code != *status)
+        status++;
+
+      got_expected_status = (*status) != 0;
+    }
+  else
+    got_expected_status = (ectx->handler->sline.code == 200);
+
+  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300)
+      || ! got_expected_status)
     {
       /* By deferring to expect_empty_body(), it will make a choice on
          how to handle the body. Whatever the decision, the core handler
@@ -2519,6 +2534,8 @@ expat_response_handler(serf_request_t *request,
          continues, and then verifies if work has been performed.
 
          ### TODO: Make error checking consistent */
+
+      /* ### If !GOT_EXPECTED_STATUS, this should always produce an error */
       return svn_error_trace(svn_ra_serf__expect_empty_body(
                                request, response, ectx->handler,
                                scratch_pool));
@@ -2576,7 +2593,7 @@ expat_response_handler(serf_request_t *request,
          If an error is not present, THEN we go ahead and look for parsing
          errors.  */
       SVN_ERR(ectx->inner_error);
-      if (expat_status == XML_STATUS_ERROR)
+      if (expat_status != XML_STATUS_OK)
         return svn_error_createf(SVN_ERR_XML_MALFORMED,
                                  ectx->inner_error,
                                  _("The %s response contains invalid XML"
@@ -2605,6 +2622,7 @@ expat_response_handler(serf_request_t *request,
 
 svn_ra_serf__handler_t *
 svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  const int *expected_status,
                                   apr_pool_t *result_pool)
 {
   svn_ra_serf__handler_t *handler;
@@ -2613,6 +2631,7 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
   ectx = apr_pcalloc(result_pool, sizeof(*ectx));
   ectx->xmlctx = xmlctx;
   ectx->parser = NULL;
+  ectx->expected_status = expected_status;
   ectx->cleanup_pool = result_pool;
 
 

@@ -730,6 +730,12 @@ typedef svn_error_t *
                             apr_size_t len,
                             apr_pool_t *scratch_pool);
 
+/* Called when releasing the XML parser to signal that the entire document was
+   read successfully */
+typedef svn_error_t *
+(*svn_ra_serf__xml_done_t)(void *baton,
+                           apr_pool_t *scratch_pool);
+
 
 /* Magic state value for the initial state in a svn_ra_serf__xml_transition_t
    table */
@@ -789,7 +795,10 @@ typedef struct svn_ra_serf__xml_transition_t {
    COLLECT_CDATA flag). It will be called in every state, so the callback
    must examine the CURRENT_STATE parameter to decide what to do.
 
-   The same BATON value will be passed to all three callbacks.
+   If DONE_CB is not NULL, then it will be called when the parser is closed
+   after successfully parsing an entire document.
+
+   The same BATON value will be passed to all four callbacks.
 
    The context will be created within RESULT_POOL.  */
 svn_ra_serf__xml_context_t *
@@ -798,6 +807,7 @@ svn_ra_serf__xml_context_create(
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
   svn_ra_serf__xml_cdata_t cdata_cb,
+  svn_ra_serf__xml_done_t done_cb,
   void *baton,
   apr_pool_t *result_pool);
 
@@ -810,9 +820,16 @@ svn_ra_serf__xml_context_done(svn_ra_serf__xml_context_t *xmlctx);
    a response body using the given XML context. The handler and its
    internal structures are allocated in RESULT_POOL.
 
+   As part of the handling the http status value is compared to 200, or
+   if EXPECTED_STATUS is not NULL to all the values in EXPECTED_STATUS.
+   EXPECTED_STATUS is expected to be a list of integers ending with a 0
+   that lives at least as long as RESULT_POOL. If the status doesn't
+   match the request has failed and will be parsed as en error response.
+
    This also initializes HANDLER_POOL to the given RESULT_POOL.  */
 svn_ra_serf__handler_t *
 svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  const int *expected_status,
                                   apr_pool_t *result_pool);
 
 
