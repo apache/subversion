@@ -30,7 +30,7 @@ my $VIM = 'vim';
 my $STATUS = './STATUS';
 my $BRANCHES = '^/subversion/branches';
 
-my $YES = $ENV{YES}; # batch mode: eliminate prompts, add sleeps
+my $YES = !!$ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = qw[false true][0];
 my $DEBUG = qw[false true][0]; # 'set -x', etc
 my ($AVAILID) = $ENV{AVAILID} // do {
@@ -184,7 +184,7 @@ fi
 if $MAY_COMMIT; then
   $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
-else
+elif test 1 -ne $YES; then
   echo "Would have committed:"
   echo '[[['
   $SVN status -q
@@ -201,8 +201,8 @@ if $MAY_COMMIT; then
   if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
   if [ -n "\$YES" ]; then sleep 1; fi
-else
-  echo "Removing $reintegrated_word '$entry{branch}' branch"
+elif test 1 -ne $YES; then
+  echo "Would remove $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
 
@@ -333,10 +333,11 @@ sub vote {
 }
 
 sub revert {
-  copy $STATUS, "$STATUS.$$";
+  copy $STATUS, "$STATUS.$$.tmp";
   system "$SVN revert -q $STATUS";
-  system "$SVN revert -R ./";
-  move "$STATUS.$$", $STATUS;
+  system "$SVN revert -R ./" . ($YES && $MAY_COMMIT ne 'true'
+                             ? " -q" : "");
+  move "$STATUS.$$.tmp", $STATUS;
 }
 
 sub maybe_revert {
