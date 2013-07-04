@@ -172,17 +172,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1499095, r1499096
-   Fix issue #4388, crash during tree conflict resolution.
-   Justification:
-     Segfault can be triggered by sequence of client commands (see issue).
-     Regression from 1.7.
-   Notes:
-     r1499095 fixes the crash shown in the issue.
-     r1499096 should prevent a similar problem, found by code inspection.
-   Votes:
-      +1: stsp, gstein
-
  * r1498885
    Correctly initialize the node kind in the Ev2 shims' change table.
    Justification:
@@ -274,3 +263,13 @@ Approved changes:
    Votes:
      +1: danielsh, stefan2, philip
 
+ * r1499095, r1499096
+   Fix issue #4388, crash during tree conflict resolution.
+   Justification:
+     Segfault can be triggered by sequence of client commands (see issue).
+     Regression from 1.7.
+   Notes:
+     r1499095 fixes the crash shown in the issue.
+     r1499096 should prevent a similar problem, found by code inspection.
+   Votes:
+      +1: stsp, gstein, philip
