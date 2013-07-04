@@ -45,7 +45,7 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
     /**
      * Creates a new instance.  Called by native library.
      */
-    protected RevisionRange(long from, long to, boolean inhertiable)
+    protected RevisionRange(long from, long to, boolean inheritable)
     {
         this.from = Revision.getInstance(from);
         this.to = Revision.getInstance(to);
@@ -53,7 +53,7 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
     }
 
     /** @since 1.9 */
-    public RevisionRange(Revision from, Revision to, boolean inhertiable)
+    public RevisionRange(Revision from, Revision to, boolean inheritable)
     {
         this.from = from;
         this.to = to;
