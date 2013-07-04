@@ -111,12 +111,6 @@ static const svn_ra_serf__xml_transition_t blame_ttable[] = {
   { 0 }
 };
 
-static const int blame_expected_status[] = {
-  200,
-  0
-};
-
-
 /* Conforms to svn_ra_serf__xml_opened_t  */
 static svn_error_t *
 blame_opened(svn_ra_serf__xml_estate_t *xes,
