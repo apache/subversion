@@ -250,8 +250,10 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo "unpack the archive using unzip and rename the resulting"
   echo "directory to:"
   echo "$abs_srcdir/sqlite-amalgamation"
-  echo "or to:"
-  echo "$abs_builddir/sqlite-amalgamation"
+  if test x"$abs_srcdir" != x"$abs_builddir"; then
+    echo "or to:"
+    echo "$abs_builddir/sqlite-amalgamation"
+  fi
   echo ""
   AC_MSG_ERROR([Subversion requires SQLite])
 ])
