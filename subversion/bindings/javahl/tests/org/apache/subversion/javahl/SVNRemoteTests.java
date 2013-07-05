@@ -30,6 +30,7 @@ import org.apache.subversion.javahl.types.*;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
@@ -793,6 +794,7 @@ public class SVNRemoteTests extends SVNTests
             public boolean textChanged = false;
             public boolean propsChanged = false;
             public boolean deleted = false;
+            public Entry info = null;
 
             StatInfo(String relpath, char kind, boolean added)
             {
@@ -802,55 +804,106 @@ public class SVNRemoteTests extends SVNTests
             }
 
             StatInfo(String relpath, char kind,
-                     boolean textChanged, boolean propsChanged)
+                     boolean textChanged, boolean propsChanged,
+                     Entry info)
             {
                 this.relpath = relpath;
                 this.kind = kind;
                 this.textChanged = textChanged;
                 this.propsChanged = propsChanged;
+                this.info = info;
             }
+        }
+
+        private boolean debug;
+
+        public RemoteStatusReceiver()
+        {
+            this.debug = false;
+        }
+
+        public RemoteStatusReceiver(boolean debug)
+        {
+            this.debug = debug;
         }
 
         public ArrayList<StatInfo> status = new ArrayList<StatInfo>();
 
         public void addedDirectory(String relativePath)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  A   (dir)  " +
+                                   relativePath);
             status.add(new StatInfo(relativePath, 'D', true));
         }
 
         public void addedFile(String relativePath)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  A   (file) "
+                                   + relativePath);
             status.add(new StatInfo(relativePath, 'F', true));
         }
 
         public void addedSymlink(String relativePath)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  A   (link) "
+                                   + relativePath);
             status.add(new StatInfo(relativePath, 'L', true));
         }
 
         public void modifiedDirectory(String relativePath,
-                                      boolean childrenModified, boolean propsModified)
+                                      boolean childrenModified,
+                                      boolean propsModified,
+                                      Entry nodeInfo)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  " +
+                                   (childrenModified ? 'M' : '_') +
+                                   (propsModified ? 'M' : '_') +
+                                   "  (dir)  " + relativePath);
             status.add(new StatInfo(relativePath, 'D',
-                                    childrenModified, propsModified));
+                                    childrenModified, propsModified,
+                                    nodeInfo));
         }
 
         public void modifiedFile(String relativePath,
-                                 boolean textModified, boolean propsModified)
+                                 boolean textModified,
+                                 boolean propsModified,
+                                 Entry nodeInfo)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  " +
+                                   (textModified ? 'M' : '_') +
+                                   (propsModified ? 'M' : '_') +
+                                   "  (file) " + relativePath);
             status.add(new StatInfo(relativePath, 'F',
-                                    textModified, propsModified));
+                                    textModified, propsModified,
+                                    nodeInfo));
         }
 
         public void modifiedSymlink(String relativePath,
-                                    boolean targetModified, boolean propsModified)
+                                    boolean targetModified,
+                                    boolean propsModified,
+                                    Entry nodeInfo)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  " +
+                                   (targetModified ? 'M' : '_') +
+                                   (propsModified ? 'M' : '_') +
+                                   "  (link) " + relativePath);
             status.add(new StatInfo(relativePath, 'L',
-                                    targetModified, propsModified));
+                                    targetModified, propsModified,
+                                    nodeInfo));
+
         }
 
         public void deleted(String relativePath)
         {
+            if (debug)
+                System.err.println("RemoteStatus:  D          "
+                                   + relativePath);
             status.add(new StatInfo(relativePath, ' ', false));
         }
     }
@@ -899,5 +952,99 @@ public class SVNRemoteTests extends SVNTests
         assertEquals('F', mod.kind);
         assertEquals(false, mod.textChanged);
         assertEquals(true, mod.propsChanged);
+        assertEquals(false, mod.deleted);
+        assertEquals(2, mod.info.getCommittedRevision());
+    }
+
+    public void testDeletedStatus() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        CommitMessageCallback cmcb = new CommitMessageCallback() {
+                public String getLogMessage(Set<CommitItem> x) {
+                    return "Delete A/mu";
+                }
+            };
+        HashSet<String> paths = new HashSet<String>(1);
+        paths.add(getTestRepoUrl() + "/A/mu");
+        client.remove(paths, false, false, null, cmcb, null);
+
+        RemoteStatusReceiver receiver = new RemoteStatusReceiver();
+        ISVNReporter rp = session.status(null, Revision.SVN_INVALID_REVNUM,
+                                         Depth.infinity, receiver);
+        try {
+            rp.setPath("", 1, Depth.infinity, false, null);
+            assertEquals(2, rp.finishReport());
+        } finally {
+            rp.dispose();
+        }
+        assertEquals(3, receiver.status.size());
+        RemoteStatusReceiver.StatInfo mod = receiver.status.get(2);
+        assertEquals("A/mu", mod.relpath);
+        assertEquals(' ', mod.kind);
+        assertEquals(false, mod.textChanged);
+        assertEquals(false, mod.propsChanged);
+        assertEquals(true, mod.deleted);
+    }
+
+    public void testTrivialMergeinfo() throws Exception
+    {
+        ISVNRemote session = getSession();
+        ArrayList<String> paths = new ArrayList<String>(1);
+        paths.add("");
+
+        Map<String, Mergeinfo> catalog =
+            session.getMergeinfo(paths, 1L, Mergeinfo.Inheritance.explicit,
+                                 false);
+        assertEquals(null, catalog);
+    }
+
+    public void testBranchMergeinfo() throws Exception
+    {
+        CommitMessageCallback cmcb = new CommitMessageCallback() {
+                public String getLogMessage(Set<CommitItem> x) {
+                    return "testBranchMergeinfo";
+                }
+            };
+
+        ISVNRemote session = getSession();
+
+        // Create a branch
+        ArrayList<CopySource> dirA = new ArrayList<CopySource>(1);
+        dirA.add(new CopySource(getTestRepoUrl() + "/A",
+                                Revision.HEAD, Revision.HEAD));
+        client.copy(dirA, getTestRepoUrl() + "/Abranch",
+                    false, false, true, null, cmcb, null);
+
+        // Check mergeinfo on new branch
+        ArrayList<String> paths = new ArrayList<String>(1);
+        paths.add("Abranch");
+        Map<String, Mergeinfo> catalog =
+            session.getMergeinfo(paths, 2L, Mergeinfo.Inheritance.explicit,
+                                 false);
+        assertEquals(null, catalog);
+
+        // Modify source and merge to branch
+        client.propertySetRemote(getTestRepoUrl() + "/A/D/gamma",
+                                 2L, "foo", "bar".getBytes(), cmcb,
+                                 false, null, null);
+        client.update(thisTest.getWCPathSet(), Revision.HEAD, Depth.infinity,
+                      false, false, true, false);
+        client.merge(getTestRepoUrl() + "/A", Revision.HEAD, null,
+                     thisTest.getWCPath() + "/Abranch", false, Depth.infinity,
+                     false, false, false, false);
+        client.commit(thisTest.getWCPathSet(), Depth.infinity, false, false,
+                      null, null, cmcb, null);
+
+        // Check inherited mergeinfo on updated branch
+        paths.set(0, "Abranch/mu");
+        catalog = session.getMergeinfo(paths, 4L,
+                                       Mergeinfo.Inheritance.nearest_ancestor,
+                                       false);
+        assertEquals(1, catalog.size());
+        List<RevisionRange> ranges =
+            catalog.get("Abranch/mu").getRevisions("/A/mu");
+        assertEquals(1, ranges.size());
+        assertEquals("1-3", ranges.get(0).toString());
     }
 }

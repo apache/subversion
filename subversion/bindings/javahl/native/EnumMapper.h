@@ -51,6 +51,8 @@ class EnumMapper
   static svn_node_kind_t toNodeKind(jobject jNodeKind);
   static svn_checksum_kind_t toChecksumKind(jobject jChecksumKind);
   static svn_tristate_t toTristate(jobject jTristate);
+  static svn_mergeinfo_inheritance_t
+    toMergeinfoInheritance(jobject jInheritance);
 
   /* Converting from C enum's */
   static jint mapCommitMessageStateFlags(apr_byte_t flags);
