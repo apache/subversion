@@ -247,13 +247,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498550, r1499727
-   ra_svn: Fix client-triggerable client segfault upon commit.
-   Justification:
-     Segfault.  ra_local and ra_serf permit the commit.
-   Votes:
-     +1: danielsh, stefan2, philip
-
  * r1499095, r1499096
    Fix issue #4388, crash during tree conflict resolution.
    Justification:
