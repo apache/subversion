@@ -58,34 +58,130 @@ public interface RemoteStatus
      * @param relativePath The session-relative path of the directory.
      * @param childrenModified The directory contents changed.
      * @param propsModified The directory's properties changed.
+     * @param nodeInfo Additional information about the modified directory.
      */
     void modifiedDirectory(String relativePath,
                            boolean childrenModified,
-                           boolean propsModified);
+                           boolean propsModified,
+                           Entry nodeInfo);
 
     /**
      * A file was modified.
      * @param relativePath The session-relative path of the directory.
      * @param textModified The file contents changed.
      * @param propsModified The file's properties changed.
+     * @param nodeInfo Additional information about the modified file.
      */
     void modifiedFile(String relativePath,
                       boolean textModified,
-                      boolean propsModified);
+                      boolean propsModified,
+                      Entry nodeInfo);
 
     /**
      * A symbolic link was modified.
      * @param relativePath The session-relative path of the symlink.
      * @param textModified The link target changed.
      * @param propsModified The symlink's properties changed.
+     * @param nodeInfo Additional information about the modified symlink.
      */
     void modifiedSymlink(String relativePath,
                          boolean targetModified,
-                         boolean propsModified);
+                         boolean propsModified,
+                         Entry nodeInfo);
+
 
     /**
      * An entry was deleted.
      * @param relativePath The session-relative path of the entry.
      */
     void deleted(String relativePath);
+
+
+    /**
+     * Contains additional information related to a modification or
+     * deletion event.
+     */
+    public static class Entry
+        implements Comparable<Entry>, java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible
+        // change made to this class.
+        private static final long serialVersionUID = 1L;
+
+        private String uuid;    // The UUID of the repository
+        private String author;  // The author of the last change
+        private long revision;  // Committed revision number
+        private long timestamp; // Commit timestamp (milliseconds from epoch)
+
+        public Entry(String uuid, String author, long revision, long timestamp)
+        {
+            this.uuid = uuid;
+            this.author = author;
+            this.revision = revision;
+            this.timestamp = timestamp;
+        }
+
+        /** @return The UUID of the repository that the node belongs to. */
+        public String getUuid() { return uuid; }
+
+        /** @return The author (committer) of the change. */
+        public String getLastAuthor() { return author; }
+
+        /** @return The revision number in with the change was committed. */
+        public long getCommittedRevision() { return revision; }
+
+        /**
+         * @return The timestamp, in milliseconds from the epoch, of
+         * the committed revision.
+         */
+        public long getCommittedTimestamp() { return timestamp; }
+
+        /** Implementation of interface {@link java.lang.Comparable}. */
+        public int compareTo(Entry that)
+        {
+            if (this == that)
+                return 0;
+
+            int cmp = uuid.compareTo(that.uuid);
+            if (cmp == 0) {
+                cmp = author.compareTo(that.author);
+                if (cmp == 0) {
+                    cmp = (revision < that.revision ? 1
+                           : (revision > that.revision ? -1 : 0));
+                    if (cmp == 0)
+                        cmp = (timestamp < that.timestamp ? 1
+                               : (timestamp > that.timestamp ? -1 : 0));
+                }
+            }
+            return cmp;
+        }
+
+        @Override
+        public boolean equals(Object entry)
+        {
+            if (this == entry)
+                return true;
+            if (!super.equals(entry) || getClass() != entry.getClass())
+                return false;
+
+            final Entry that = (Entry)entry;
+            return (this.uuid == that.uuid
+                    && this.author == that.author
+                    && this.revision == that.revision
+                    && this.timestamp == that.timestamp);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            final int factor = 33;
+            int hash = ((uuid == null) ? 0 : uuid.hashCode());
+            hash = factor * hash + ((author == null) ? 0 : author.hashCode());
+            hash = factor * hash + (int)(revision >> 32) & 0xffffffff;
+            hash = factor * hash + (int)revision & 0xffffffff;
+            hash = factor * hash + (int)(timestamp >> 32) & 0xffffffff;
+            hash = factor * hash + (int)timestamp & 0xffffffff;
+            return hash;
+        }
+    }
 }

@@ -79,7 +79,8 @@ class RemoteSession : public SVNBase
                   jobject jcontents, jobject jproperties);
     jlong getDirectory(jlong jrevision, jstring jpath, jint jdirent_fields,
                        jobject jdirents, jobject jproperties);
-    // TODO: getMergeinfo
+    jobject getMergeinfo(jobject jpaths, jlong jrevision, jobject jinherit,
+                         jboolean jinclude_descendants);
     // TODO: update
     // TODO: switch
     void status(jobject jthis, jstring jstatus_target,

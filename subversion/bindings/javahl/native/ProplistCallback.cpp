@@ -96,7 +96,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
-  jobject jmap = CreateJ::PropertyMap(prop_hash);
+  jobject jmap = CreateJ::PropertyMap(prop_hash, pool);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 

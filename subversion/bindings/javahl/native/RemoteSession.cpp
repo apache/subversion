@@ -462,7 +462,7 @@ RemoteSession::getRevisionProperties(jlong jrevision)
                                   &props, subPool.getPool()),
               NULL);
 
-  return CreateJ::PropertyMap(props);
+  return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
 jbyteArray
@@ -509,7 +509,7 @@ RemoteSession::getFile(jlong jrevision, jstring jpath,
 
   if (jproperties)
     {
-      CreateJ::FillPropertyMap(jproperties, props);
+      CreateJ::FillPropertyMap(jproperties, props, subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
@@ -522,6 +522,9 @@ void fill_dirents(const char* base_url, const char* base_relpath,
                   jobject jdirents, apr_hash_t* dirents,
                   apr_pool_t* scratch_pool)
 {
+  if (!dirents)
+    return;
+
   base_url = apr_pstrcat(scratch_pool, base_url, "/", base_relpath, NULL);
   base_url = svn_uri_canonicalize(base_url, scratch_pool);
   svn_stringbuf_t* abs_path = svn_stringbuf_create(base_url, scratch_pool);
@@ -628,25 +631,13 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 
   if (jproperties)
     {
-      CreateJ::FillPropertyMap(jproperties, props);
+      CreateJ::FillPropertyMap(jproperties, props, subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
 
   return fetched_rev;
 }
-
-// TODO: getMergeinfo
-// TODO: update
-// TODO: switch
-
-void
-RemoteSession::status(jobject jthis, jstring jstatus_target,
-                      jlong jrevision, jobject jdepth,
-                      jobject jstatus_editor, jobject jreporter)
-{}
-
-// TODO: diff
 
 namespace {
 const apr_array_header_t*
@@ -680,6 +671,96 @@ build_string_array(const Iterator& iter,
   return array;
 }
 }
+
+jobject
+RemoteSession::getMergeinfo(jobject jpaths, jlong jrevision, jobject jinherit,
+                            jboolean jinclude_descendants)
+{
+  Iterator paths_iter(jpaths);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  SVN::Pool subPool(pool);
+  const apr_array_header_t* paths =
+    build_string_array(paths_iter, true, subPool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  svn_mergeinfo_catalog_t catalog;
+  SVN_JNI_ERR(svn_ra_get_mergeinfo(
+                  m_session, &catalog, paths, svn_revnum_t(jrevision),
+                  EnumMapper::toMergeinfoInheritance(jinherit),
+                  bool(jinclude_descendants),
+                  subPool.getPool()),
+              NULL);
+  if (catalog == NULL)
+    return NULL;
+
+  JNIEnv* env = JNIUtil::getEnv();
+  jclass cls = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID ctor_mid = 0;
+  if (0 == ctor_mid)
+    {
+      ctor_mid = env->GetMethodID(cls, "<init>", "()V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID put_mid = 0;
+  if (0 == put_mid)
+    {
+      put_mid = env->GetMethodID(cls, "put",
+                                 "(Ljava/lang/Object;"
+                                 "Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  jobject jcatalog = env->NewObject(cls, ctor_mid);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  for (apr_hash_index_t* hi = apr_hash_first(subPool.getPool(), catalog);
+       hi; hi = apr_hash_next(hi))
+    {
+      const void *v_key;
+      void *v_val;
+      apr_hash_this(hi, &v_key, NULL, &v_val);
+      const char* key = static_cast<const char*>(v_key);
+      svn_mergeinfo_t val = static_cast<svn_mergeinfo_t>(v_val);
+
+      jstring jpath = JNIUtil::makeJString(key);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      jobject jmergeinfo = CreateJ::Mergeinfo(val, subPool.getPool());
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->CallObjectMethod(jcatalog, put_mid, jpath, jmergeinfo);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jpath);
+      env->DeleteLocalRef(jmergeinfo);
+    }
+
+  return jcatalog;
+}
+
+// TODO: update
+// TODO: switch
+
+void
+RemoteSession::status(jobject jthis, jstring jstatus_target,
+                      jlong jrevision, jobject jdepth,
+                      jobject jstatus_editor, jobject jreporter)
+{}
+
+// TODO: diff
 
 void
 RemoteSession::getLog(jobject jpaths,

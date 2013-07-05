@@ -207,6 +207,14 @@ svn_depth_t EnumMapper::toDepth(jobject jdepth)
   return (svn_depth_t) (getOrdinal(JAVA_PACKAGE"/types/Depth", jdepth) - 2);
 }
 
+svn_mergeinfo_inheritance_t
+EnumMapper::toMergeinfoInheritance(jobject jInheritance)
+{
+  return static_cast<svn_mergeinfo_inheritance_t>(
+      getOrdinal(JAVA_PACKAGE"/types/Mergeinfo$Inheritance", jInheritance));
+}
+
+
 jobject EnumMapper::mapDepth(svn_depth_t depth)
 {
   // We're assuming a valid value for the C enum above

@@ -269,8 +269,6 @@ public interface ISVNRemote
      * <code>properties</code> may not perform any ISVNRemote
      * operations using this session.
      * @return The revision of the directory that was retreived.
-     * @throws IllegalArgumentException if <code>direntFields</code>
-     *         is less than or equal to 0.
      * @throws ClientException
      */
     long getDirectory(long revision, String path,
@@ -279,7 +277,42 @@ public interface ISVNRemote
                       Map<String, byte[]> properties)
             throws ClientException;
 
-    // TODO: getMergeinfo
+    /**
+     * Retreive the merginfo for <code>paths</code>, whose elements
+     * are relative to the session's URL. The request will fail if any
+     * one of <code>paths</code> does not exist in the given
+     * <code>revision</code>.
+     * <p>
+     * <b>Note:</b> If the server doesn't support retrieval of
+     * mergeinfo (which can happen even for file:// URLs, if the
+     * repository itself hasn't been upgraded), an unsupported feature
+     * exception is thrown in preference to any other error that might
+     * otherwise be returned.
+     *
+     * @param revision The revision to look for <code>paths</code>
+     *                 in. Defaults to the youngest revision when
+     *                 {@link Revision.SVN_INVALID_REVNUM}.
+     * @param inherit Indicates whether explicit, explicit or
+     *                inherited, or only inherited mergeinfo for
+     *                <code>paths</code> is retrieved.
+     * @param includeDescendants When <code>true</code>, additionally
+     *        return the mergeinfo for any descendant of any element
+     *        of <code>paths</code> which has the mergeinfo explicitly
+     *        set on it.  (Note that inheritance is only taken into
+     *        account for the elements in <code>paths</code>;
+     *        descendants of the elements in <code>paths</code> which
+     *        get their mergeinfo via inheritance are not included.)
+     *
+     * @return A dictionary of {@link Mergeinfo} objects for the given
+     *         <code>paths</code>, or <code>null</code> if no
+     *         mergeinfo is available..
+     * @throws ClientException
+     */
+    Map<String, Mergeinfo> getMergeinfo(Iterable<String> paths, long revision,
+                                        Mergeinfo.Inheritance inherit,
+                                        boolean includeDescendants)
+            throws ClientException;
+
     // TODO: update
     // TODO: switch
 
