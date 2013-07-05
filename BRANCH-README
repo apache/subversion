@@ -1,0 +1,8 @@
+This is an integration branch to review and format 6 compatible changes
+from the fsfs-format7 branch.  After review, the whole branch will get 
+merged into /trunk.
+
+More on this here:
+http://svn.haxx.se/dev/archive-2013-06/0755.shtml
+http://svn.haxx.se/dev/archive-2013-07/0059.shtml
+
