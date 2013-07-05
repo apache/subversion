@@ -233,7 +233,8 @@ svn_stringbuf_t *
 svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool);
 
 /** Create a new stringbuf using the given @a str as initial buffer.
- * Allocate the result in @a pool.
+ * Allocate the result in @a pool.  In contrast to #svn_stringbuf_create,
+ * the contents of @a str may change when the stringbuf gets modified.
  *
  * @since New in 1.9
  */
