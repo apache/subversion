@@ -20,8 +20,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
+ * @file PropertyTable.h
+ * @brief Interface of the class PropertyTable
  */
 
 #ifndef REVPROPTABLE_H
@@ -36,14 +36,14 @@ struct apr_hash_t;
 #include <map>
 #include <string>
 
-class RevpropTable
+class PropertyTable
 {
  private:
   std::map<std::string, std::string> m_revprops;
   jobject m_revpropTable;
  public:
-  RevpropTable(jobject jrevpropTable, bool bytearray_values=false);
-  ~RevpropTable();
+  PropertyTable(jobject jrevpropTable, bool bytearray_values=false);
+  ~PropertyTable();
   apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
 };
 
