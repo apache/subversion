@@ -30,7 +30,7 @@
 #include "Iterator.h"
 #include "JNIByteArray.h"
 #include "LockTokenTable.h"
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "RemoteSession.h"
 
 #include <apr_tables.h>
@@ -89,7 +89,7 @@ CommitEditor::CommitEditor(RemoteSession* session,
                                &m_callback_session_uuid,
                                pool.getPool()),);
 
-  RevpropTable revprops(jrevprops, true);
+  PropertyTable revprops(jrevprops, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
   LockTokenTable lock_tokens(jlock_tokens);
@@ -264,7 +264,7 @@ void CommitEditor::addDirectory(jstring jrelpath,
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  RevpropTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -289,7 +289,7 @@ void CommitEditor::addFile(jstring jrelpath,
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
-  RevpropTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -341,7 +341,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  RevpropTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -365,7 +365,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
-  RevpropTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
