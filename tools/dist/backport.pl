@@ -104,7 +104,7 @@ EOF
 }
 
 sub prompt {
-  print "$_[0] "; shift;
+  print $_[0]; shift;
   my %args = @_;
   my $getchar = sub {
     ReadMode 'cbreak';
@@ -446,12 +446,12 @@ sub handle_entry {
     say "";
     say "Vetoes found!" if @vetoes;
 
-    given (prompt 'Go ahead? [y,±1,±0,q,e,a,N]',
+    given (prompt 'Go ahead? [y,±1,±0,q,e,a,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
         while (1) { 
-          given (prompt "Shall I open a subshell? [ydN]", verbose => 1) {
+          given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {
               system($ENV{SHELL} // "/bin/sh") == 0
                 or warn "Creating an interactive subshell failed ($?): $!"
