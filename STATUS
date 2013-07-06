@@ -176,6 +176,15 @@ Candidate changes:
    Votes:
       +1: brane, gstein
 
+ * r1500226
+   Fixes copyfrom URL construction in Ev2 commit editor shims.
+   Justification:
+     Makes Ev2 shims work for commit via (at least) ra_serf.
+   Notes:
+     See note under r1498885, above.
+   Votes:
+     +1: brane
+
  * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
    and deny chunked requests.
