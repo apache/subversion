@@ -100,6 +100,7 @@ enum
     svnlook__ignore_properties,
     svnlook__properties_only,
     svnlook__diff_cmd,
+    svnlook__invoke_diff_cmd,
     svnlook__show_inherited_props
   };
 
@@ -134,6 +135,9 @@ static const apr_getopt_option_t options_table[] =
 
   {"diff-cmd",          svnlook__diff_cmd, 1,
    N_("use ARG as diff command")},
+
+  {"invoke-diff-cmd",   svnlook__invoke_diff_cmd, 1,
+   N_("use ARG as diff command (see svn help diff for details)")},
 
   {"ignore-properties",   svnlook__ignore_properties, 0,
    N_("ignore properties during the operation")},
@@ -224,7 +228,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
       "Print GNU-style diffs of changed files and properties.\n"),
    {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
     svnlook__diff_copy_from, svnlook__diff_cmd, 'x',
-    svnlook__ignore_properties, svnlook__properties_only} },
+    svnlook__ignore_properties, svnlook__properties_only,
+    svnlook__invoke_diff_cmd} },
 
   {"dirs-changed", subcommand_dirschanged, {0},
    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
@@ -329,7 +334,8 @@ struct svnlook_opt_state
   svn_boolean_t quiet;            /* --quiet */
   svn_boolean_t ignore_properties;  /* --ignore_properties */
   svn_boolean_t properties_only;    /* --properties-only */
-  const char *diff_cmd;           /* --diff-cmd */
+  const char *diff_cmd;             /* --diff-cmd */
+  const char *invoke_diff_cmd;      /* --invoke-diff-cmd */
   svn_boolean_t show_inherited_props; /*  --show-inherited-props */
 };
 
@@ -353,6 +359,7 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t ignore_properties;
   svn_boolean_t properties_only;
   const char *diff_cmd;
+  const char *invoke_diff_cmd;
 
 } svnlook_ctxt_t;
 
@@ -944,7 +951,7 @@ print_diff_tree(svn_stream_t *out_stream,
         }
       else
         {
-          if (c->diff_cmd)
+          if (c->diff_cmd || c->invoke_diff_cmd)
             {
               apr_file_t *outfile;
               apr_file_t *errfile;
@@ -990,14 +997,27 @@ print_diff_tree(svn_stream_t *out_stream,
               SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
                         svn_io_file_del_on_pool_cleanup, pool, pool));
 
-              SVN_ERR(svn_io_run_diff2(".",
-                                       diff_cmd_argv,
-                                       diff_cmd_argc,
-                                       orig_label, new_label,
-                                       orig_path, new_path,
-                                       &exitcode, outfile, errfile,
-                                       c->diff_cmd, pool));
+              if (c->diff_cmd)
+                SVN_ERR(svn_io_run_diff2(".",
+                                         diff_cmd_argv,
+                                         diff_cmd_argc,
+                                         orig_label, new_label,
+                                         orig_path, new_path,
+                                         &exitcode, outfile, errfile,
+                                         c->diff_cmd, pool));
 
+              else if (c->invoke_diff_cmd)
+                SVN_ERR(svn_io_run_external_diff(".",
+                                                 orig_label,
+                                                 new_label,
+                                                 orig_path,
+                                                 new_path,
+                                                 &exitcode,
+                                                 outfile,
+                                                 errfile,
+                                                 c->invoke_diff_cmd,
+                                                 pool));
+                
               SVN_ERR(svn_io_file_close(outfile, pool));
               SVN_ERR(svn_io_file_close(errfile, pool));
 
@@ -2078,6 +2098,7 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
                                           " \t\n\r", TRUE, pool);
   baton->ignore_properties = opt_state->ignore_properties;
   baton->properties_only = opt_state->properties_only;
+  baton->invoke_diff_cmd = opt_state->invoke_diff_cmd;
   baton->diff_cmd = opt_state->diff_cmd;
 
   if (baton->txn_name)
@@ -2502,7 +2523,6 @@ main(int argc, const char *argv[])
                            _("Invalid revision number supplied")));
           }
           break;
-
         case 't':
           opt_state.txn = opt_arg;
           break;
@@ -2595,6 +2615,10 @@ main(int argc, const char *argv[])
           opt_state.diff_cmd = opt_arg;
           break;
 
+        case svnlook__invoke_diff_cmd:
+          opt_state.invoke_diff_cmd = opt_arg;
+          break;
+
         case svnlook__show_inherited_props:
           opt_state.show_inherited_props = TRUE;
           break;
@@ -2620,6 +2644,13 @@ main(int argc, const char *argv[])
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("Cannot use the '--show-inherited-props' option with the "
                    "'--revprop' option")));
+
+  /* The --show-inherited-props and --revprop options may not co-exist. */
+  if (opt_state.diff_cmd && opt_state.invoke_diff_cmd)
+    SVN_INT_ERR(svn_error_create
+                (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                 _("Cannot use the '--diff-cmd' option with the "
+                   "'--invoke-diff-cmd' option")));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
