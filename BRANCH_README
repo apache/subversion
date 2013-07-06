@@ -3,14 +3,12 @@ This branch implements the 'invoke-diff-cmd' feature.
 --invoke-diff-cmd calls an external diff command with a user-defined
   arbitrary command.
 
---invoke-diff-cmd is currently is implemented for 'diff', 'log' and
-  the config file.
+--invoke-diff-cmd is currently is implemented for 'diff', 'log',
+  'svnlook' and the config file.
 
 Also see: http://subversion.tigris.org/issues/show_bug.cgi?id=2044
 
 TODO:
-
-  * add --invoke-diff-cmd to svnlook diff option 
 
   * figure out if/how to solve file-type issue
     http://subversion.tigris.org/issues/show_bug.cgi?id=2447
