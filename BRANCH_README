@@ -18,3 +18,7 @@ TODO:
   * consider adding to svn up, see issue:
     http://subversion.tigris.org/issues/show_bug.cgi?id=3836
 
+  * Write a docstring for svn_io_run_external_diff()
+
+  * (question) Should svn_io_run_diff2() be deprecated in favour of
+    svn_io_run_external_diff()?
