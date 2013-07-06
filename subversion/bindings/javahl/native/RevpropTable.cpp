@@ -63,8 +63,9 @@ apr_hash_t *RevpropTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
           return NULL;
         }
 
-      svn_string_t *propval = svn_string_create(it->second.c_str(),
-                                                pool.getPool());
+      svn_string_t *propval = svn_string_ncreate(it->second.c_str(),
+                                                 it->second.size(),
+                                                 pool.getPool());
 
       apr_hash_set(revprop_table, propname, APR_HASH_KEY_STRING, propval);
     }
