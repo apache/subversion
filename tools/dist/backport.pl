@@ -117,7 +117,7 @@ sub prompt {
   die "$0: called prompt() in non-interactive mode!" if $YES;
   my $answer = $getchar->();
   $answer .= $getchar->() if exists $args{extra} and $answer =~ $args{extra};
-  say "";
+  say "" unless $args{dontprint};
   return $args{verbose}
          ? $answer
          : ($answer =~ /^y/i) ? 1 : 0;
@@ -509,7 +509,12 @@ sub main {
   # ### TODO: both here and in merge(), unlink files that previous merges added
   # When running from cron, there shouldn't be local mods.  (For interactive
   # usage, we preserve local mods to STATUS.)
-  die "Local mods to STATUS file $STATUS" if $YES and `$SVN status -q $STATUS`;
+  if (`$SVN status -q $STATUS`) {
+    die  "Local mods to STATUS file $STATUS" if $YES;
+    warn "Local mods to STATUS file $STATUS";
+    system $SVN, qw/diff --/, $STATUS;
+    prompt "Press the 'any' key to continue...\n", dontprint => 1;
+  }
 
   # Skip most of the file
   $/ = ""; # paragraph mode
