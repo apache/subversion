@@ -255,6 +255,22 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1487094
+   (Perl bindings) Silence compiler warnings.
+   Justification:
+     Clean builds make it more likely to notice real compiler warnings.
+   Votes:
+     +1: rschupp
+
+ * r1488693, r1490721
+   (Perl bindings) Documentation fixes: document some SVN::Client methods
+   and at least list all wrapped -though still undocumented - methods.
+   Justification:
+     Save users from staring at the Perl source, trying to figure out
+     what is wrapped.
+   Votes:
+     +1: rschupp
+
 Veto-blocked changes:
 =====================
 
