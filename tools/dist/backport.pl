@@ -20,6 +20,7 @@ use feature qw/switch say/;
 # specific language governing permissions and limitations
 # under the License.
 
+use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
@@ -28,6 +29,7 @@ use POSIX qw/ctermid/;
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $VIM = 'vim';
 my $STATUS = './STATUS';
+my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
 my %ERRORS = ();
 
@@ -101,6 +103,10 @@ to stderr if it notices any conflicts.  These mode are normally used by the
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
 EOF
+}
+
+sub digest_string {
+  Digest->new("MD5")->add(@_)->hexdigest
 }
 
 sub prompt {
@@ -287,6 +293,7 @@ sub parse_entry {
     votes => [@votes],
     entry => [@lines],
     raw => $raw,
+    digest => digest_string($raw),
   );
 }
 
@@ -306,7 +313,7 @@ sub edit_string {
 }
 
 sub vote {
-  my ($approved, $votes) = @_;
+  my ($state, $approved, $votes) = @_;
   my $raw_approved = "";
   my @votes;
   return unless %$approved or %$votes;
@@ -325,7 +332,7 @@ sub vote {
 
     my ($vote, $entry) = @{$votes->{$.}};
     push @{$votes->{$.}}, 1;
-    push @votes, [$vote, $entry];
+    push @votes, [$vote, $entry, undef]; # ->[2] later set to $digest
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
@@ -336,6 +343,7 @@ sub vote {
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header} if $vote ne '+1';
+    $votes[$#votes]->[2] = digest_string $_;
     (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
@@ -369,8 +377,13 @@ sub vote {
   system $SVN, qw/diff --/, $STATUS;
   say "Voting '$_->[0]' on $_->[1]->{header}." for @votes;
   # say $logmsg;
-  system $SVN, qw/commit -m/, $logmsg, qw/--/, $STATUS
-    if prompt "Commit these votes? ";
+  if (prompt "Commit these votes? ") {
+    system($SVN, qw/commit -m/, $logmsg, qw/--/, $STATUS);
+    warn "Committing the votes failed($?): $!" and return if $? or $!;
+
+    $state->{$approved->{$_}->{digest}}++ for keys %$approved;
+    $state->{$_->[2]}++ for @votes;
+  }
 }
 
 sub revert {
@@ -400,10 +413,35 @@ sub warning_summary {
   }
 }
 
+sub read_state {
+  # die "$0: called read_state() in non-interactive mode!" if $YES;
+
+  open my $fh, '<', $STATEFILE or do {
+    return {} if $!{ENOENT};
+    die "Can't read statefile: $!";
+  };
+
+  my %rv;
+  while (<$fh>) {
+    chomp;
+    $rv{$_}++;
+  }
+  return \%rv;
+}
+
+sub write_state {
+  my $state = shift;
+  open STATE, '>', $STATEFILE or warn("Can't write state: $!"), return;
+  say STATE for keys %$state;
+  close STATE;
+}
+
 sub exit_stage_left {
+  my $state = shift;
   maybe_revert;
   warning_summary if $YES;
-  vote @_;
+  vote $state, @_;
+  write_state $state;
   exit scalar keys %ERRORS;
 }
 
@@ -411,6 +449,7 @@ sub handle_entry {
   my $in_approved = shift;
   my $approved = shift;
   my $votes = shift;
+  my $state = shift;
   my $raw = shift;
   my %entry = parse_entry $raw, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
@@ -435,6 +474,8 @@ sub handle_entry {
         revert;
       }
     }
+  } elsif ($state->{$entry{digest}}) {
+    say "Skipping the $entry{header} (remove $STATEFILE to reset)";
   } else {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
@@ -472,7 +513,7 @@ sub handle_entry {
         # NOTREACHED
       }
       when (/^q/i) {
-        exit_stage_left $approved, $votes;
+        exit_stage_left $state, $approved, $votes;
       }
       when (/^a/i) {
         $approved->{$.} = \%entry;
@@ -485,6 +526,12 @@ sub handle_entry {
       when (/^e/i) {
         $entry{raw} = edit_string $entry{raw}, $entry{header};
         $votes->{$.} = ['edit', \%entry]; # marker for the 2nd pass
+      }
+      when (/^N/i) {
+        $state->{$entry{digest}}++;
+      }
+      default {
+        # nothing
       }
     }
     last;
@@ -500,6 +547,7 @@ sub handle_entry {
 sub main {
   my %approved;
   my %votes;
+  my $state = read_state;
 
   usage, exit 0 if @ARGV;
 
@@ -551,7 +599,7 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%approved, \%votes, $lines, @lines;
+        handle_entry $in_approved, \%approved, \%votes, $state, $lines, @lines;
       }
       default {
         warn "Unknown entry '$lines[0]' at line $.\n";
@@ -559,7 +607,7 @@ sub main {
     }
   }
 
-  exit_stage_left \%approved, \%votes;
+  exit_stage_left $state, \%approved, \%votes;
 }
 
 &main
