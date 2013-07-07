@@ -90,7 +90,19 @@ private:
                jobject jrevprops, jobject jcommit_callback,
                jobject jlock_tokens, jboolean jkeep_locks);
 
-  // This is our svn_ra__get_copysrc_kind_cb_t for the commit editor.
+  // This is our private callbacks for the commit editor.
+  static svn_error_t* provide_base_cb(svn_stream_t **contents,
+                                      svn_revnum_t *revision,
+                                      void *baton,
+                                      const char *repos_relpath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+  static svn_error_t* provide_props_cb(apr_hash_t **props,
+                                       svn_revnum_t *revision,
+                                       void *baton,
+                                       const char *repos_relpath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
   static svn_error_t* get_copysrc_kind_cb(svn_node_kind_t* kind, void* baton,
                                           const char* repos_relpath,
                                           svn_revnum_t src_revision,

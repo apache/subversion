@@ -297,11 +297,6 @@ svn_cl__mergeinfo(apr_getopt_t *os,
         tgt_peg_revision.kind = svn_opt_revision_base;
     }
 
-  SVN_ERR_W(svn_cl__check_related_source_and_target(source, &src_peg_revision,
-                                                    target, &tgt_peg_revision,
-                                                    ctx, pool),
-            _("Source and target must be different but related branches"));
-
   src_start_revision = &(opt_state->start_revision);
   if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
     src_end_revision = src_start_revision;
