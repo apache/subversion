@@ -475,7 +475,9 @@ sub handle_entry {
       }
     }
   } elsif ($state->{$entry{digest}}) {
-    say "Skipping the $entry{header} (remove $STATEFILE to reset)";
+    print "\n\n";
+    say "Skipping the $entry{header} (remove $STATEFILE to reset):";
+    say $entry{logsummary}->[0], ('[...]' x (0 < $#{$entry{logsummary}}));
   } else {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
