@@ -85,7 +85,10 @@ a:   Move the entry to the "Approved changes" section.
      to enter a third +1 vote, type "a" "+" "1".
 e:   Edit the entry in $EDITOR.
      You will be prompted to commit your edits at the end.
-N:   Move to the next entry.
+N:   Move to the next entry.  Cache the entry in '$STATEFILE' and do not
+     prompt for it again (even across runs) until it is changed.
+ :   Move to the next entry, without adding the current one to the cache.
+     (That's a space character, ASCII 0x20.)
 
 After running a merge, you have the following options:
 
@@ -493,7 +496,7 @@ sub handle_entry {
     say "";
     say "Vetoes found!" if @vetoes;
 
-    given (prompt 'Go ahead? [y,±1,±0,q,e,a,N] ',
+    given (prompt 'Go ahead? [y,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
