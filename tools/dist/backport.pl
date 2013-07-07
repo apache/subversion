@@ -311,10 +311,13 @@ sub vote {
   my @votes;
   return unless %$approved or %$votes;
 
+  my $had_empty_line;
+
   $. = 0;
   open STATUS, "<", $STATUS;
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
+    $had_empty_line = /\n\n\z/;
     unless (exists $votes->{$.}) {
       (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
       next;
@@ -336,6 +339,7 @@ sub vote {
     (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
+  print VOTES "\n" unless $had_empty_line;
   print VOTES $raw_approved;
   close VOTES;
   die "Some vote chunks weren't found: "
@@ -405,8 +409,8 @@ sub exit_stage_left {
 
 sub handle_entry {
   my $in_approved = shift;
-  my $votes = shift;
   my $approved = shift;
+  my $votes = shift;
   my $lines = shift;
   my %entry = parse_entry $lines, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
