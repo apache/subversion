@@ -49,7 +49,7 @@
 #include "CommitMessage.h"
 #include "EnumMapper.h"
 #include "StringArray.h"
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "CreateJ.h"
 #include "svn_auth.h"
 #include "svn_dso.h"
@@ -267,7 +267,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
 }
 
 void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
-                       bool keep_local, RevpropTable &revprops,
+                       bool keep_local, PropertyTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -366,7 +366,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 void SVNClient::commit(Targets &targets, CommitMessage *message,
                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                       StringArray &changelists, RevpropTable &revprops,
+                       StringArray &changelists, PropertyTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -388,7 +388,7 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      CommitMessage *message, bool copyAsChild,
                      bool makeParents, bool ignoreExternals,
-                     RevpropTable &revprops, CommitCallback *callback)
+                     PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -416,7 +416,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      CommitMessage *message, bool force, bool moveAsChild,
-                     bool makeParents, RevpropTable &revprops,
+                     bool makeParents, PropertyTable &revprops,
                      CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -439,7 +439,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
 }
 
 void SVNClient::mkdir(Targets &targets, CommitMessage *message,
-                      bool makeParents, RevpropTable &revprops,
+                      bool makeParents, PropertyTable &revprops,
                       CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -556,7 +556,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
                          bool noIgnore, bool ignoreUnknownNodeTypes,
-                         RevpropTable &revprops, CommitCallback *callback)
+                         PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -854,7 +854,7 @@ void SVNClient::propertySetRemote(const char *path, long base_rev,
                                   const char *name,
                                   CommitMessage *message,
                                   JNIByteArray &value, bool force,
-                                  RevpropTable &revprops,
+                                  PropertyTable &revprops,
                                   CommitCallback *callback)
 {
     SVN::Pool subPool(pool);

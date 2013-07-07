@@ -2994,6 +2994,16 @@ public class BasicTests extends SVNTests
         }
     }
 
+    private static class CountingProgressListener implements ProgressCallback
+    {
+        public void onProgress(ProgressEvent event)
+        {
+            // TODO: Examine the byte counts from "event".
+            gotProgress = true;
+        }
+        public boolean gotProgress = false;
+    }
+
     public void testDataTransferProgressReport() throws Throwable
     {
         // ### FIXME: This isn't working over ra_local, because
@@ -3003,25 +3013,13 @@ public class BasicTests extends SVNTests
 
         // build the test setup
         OneTest thisTest = new OneTest();
-        ProgressCallback listener = new ProgressCallback()
-        {
-            public void onProgress(ProgressEvent event)
-            {
-                // TODO: Examine the byte counts from "event".
-                throw new RuntimeException("Progress reported as expected");
-            }
-        };
+        CountingProgressListener listener = new CountingProgressListener();
         client.setProgressCallback(listener);
 
         // Perform an update to exercise the progress notification.
-        try
-        {
-            update(thisTest);
+        update(thisTest);
+        if (!listener.gotProgress)
             fail("No progress reported");
-        }
-        catch (RuntimeException progressReported)
-        {
-        }
     }
 
     /**

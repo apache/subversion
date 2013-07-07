@@ -29,6 +29,7 @@ import org.apache.subversion.javahl.types.*;
 
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -308,8 +309,20 @@ public class SVNRemoteTests extends SVNTests
         }
         catch (ClientException ex)
         {
-            assertEquals("Disabled repository feature",
-                         ex.getAllMessages().get(0).getMessage());
+            ClientException.ErrorMessage error = null;
+            for (ClientException.ErrorMessage m : ex.getAllMessages())
+                if (!m.isGeneric()) {
+                    error = m;
+                    break;
+                }
+
+            if (error == null)
+                fail("Failed with no error message");
+
+            if (error.getCode() != 175002 && // SVN_ERR_RA_DAV_REQUEST_FAILED
+                error.getCode() != 165006)   // SVN_ERR_REPOS_DISABLED_FEATURE
+                fail(error.getMessage());
+
             return;
         }
 
@@ -351,8 +364,11 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(fetched_rev, 1);
         assertEquals(contents.toString("UTF-8"),
                      "This is the file 'lambda'.");
-        for (Map.Entry<String, byte[]> e : properties.entrySet())
-            assertTrue(e.getKey().startsWith("svn:entry:"));
+        for (Map.Entry<String, byte[]> e : properties.entrySet()) {
+            final String key = e.getKey();
+            assertTrue(key.startsWith("svn:entry:")
+                       || key.startsWith("svn:wc:"));
+        }
     }
 
     public void testGetDirectory() throws Exception
@@ -373,8 +389,11 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(dirents.get("E").getPath(), "E");
         assertEquals(dirents.get("F").getPath(), "F");
         assertEquals(dirents.get("lambda").getPath(), "lambda");
-        for (Map.Entry<String, byte[]> e : properties.entrySet())
-            assertTrue(e.getKey().startsWith("svn:entry:"));
+        for (Map.Entry<String, byte[]> e : properties.entrySet()) {
+            final String key = e.getKey();
+            assertTrue(key.startsWith("svn:entry:")
+                       || key.startsWith("svn:wc:"));
+        }
     }
 
     private final class CommitContext implements CommitCallback
