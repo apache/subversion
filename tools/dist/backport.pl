@@ -234,7 +234,7 @@ sub sanitize_branch {
 
 # TODO: may need to parse other headers too?
 sub parse_entry {
-  my $lines = shift;
+  my $raw = shift;
   my @lines = @_;
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
@@ -286,7 +286,7 @@ sub parse_entry {
     id => $id,
     votes => [@votes],
     entry => [@lines],
-    raw => $lines,
+    raw => $raw,
   );
 }
 
@@ -411,8 +411,8 @@ sub handle_entry {
   my $in_approved = shift;
   my $approved = shift;
   my $votes = shift;
-  my $lines = shift;
-  my %entry = parse_entry $lines, @_;
+  my $raw = shift;
+  my %entry = parse_entry $raw, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   if ($YES) {
