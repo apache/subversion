@@ -197,6 +197,15 @@ Candidate changes:
      +1: rschupp
      +1: danielsh (r1488693 only)
 
+ * r1500762
+   Make gpg-agent password store verify that a usable GPG agent exists.
+   Justification:
+     gpg-agent password store might lie about having stored passwords
+     which breaks password caching in the default configuration.
+     See http://svn.haxx.se/users/archive-2013-07/0093.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
