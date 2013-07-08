@@ -350,7 +350,7 @@ sub vote {
     (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
-  print VOTES "\n" unless $had_empty_line;
+  print VOTES "\n" if $raw_approved and $had_empty_line;
   print VOTES $raw_approved;
   close VOTES;
   die "Some vote chunks weren't found: "
