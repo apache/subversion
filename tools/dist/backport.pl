@@ -329,13 +329,17 @@ sub edit_string {
   die "$0: called edit_string() in non-interactive mode!" if $YES;
   my $string = shift;
   my $name = shift;
+  my %args = @_;
+  my $trailing_eol = $args{trailing_eol};
   my ($fh, $fn) = tempfile;
   print $fh $string;
   $fh->flush or die $!;
   system("$EDITOR -- $fn") == 0
     or warn "\$EDITOR failed editing $name: $! ($?); "
            ."edit results ($fn) ignored.";
-  return `cat $fn`;
+  my $rv = `cat $fn`;
+  $rv =~ s/\n*\z// and $rv .= ("\n" x $trailing_eol) if defined $trailing_eol;
+  $rv;
 }
 
 sub vote {
@@ -368,7 +372,8 @@ sub vote {
     
     s/^(\s*\Q$vote\E:.*)/"$1, $AVAILID"/me
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
-    $_ = edit_string $_, $entry->{header} if $vote ne '+1';
+    $_ = edit_string $_, $entry->{header}, trailing_eol => 2
+        if $vote ne '+1';
     $votes[$#votes]->[2] = digest_string $_;
     (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
   }
@@ -569,7 +574,8 @@ sub handle_entry {
       }
       when (/^e/i) {
         my $original = $entry{raw};
-        $entry{raw} = edit_string $entry{raw}, $entry{header};
+        $entry{raw} = edit_string $entry{raw}, $entry{header},
+                        trailing_eol => 2;
         $votes->{$.} = ['edit', \%entry] # marker for the 2nd pass
             if $original ne $entry{raw};
       }
