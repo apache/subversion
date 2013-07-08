@@ -76,6 +76,7 @@ At a prompt, you have the following options:
 
 y:   Run a merge.  It will not be committed.
      WARNING: This will run 'update' and 'revert -R ./'.
+l:   Show logs for the entries being nominated.
 q:   Quit the "for each nomination" loop.
 ±1:  Enter a +1 or -1 vote
      You will be prompted to commit your vote at the end.
@@ -499,7 +500,7 @@ sub handle_entry {
 
     # See above for why the while(1).
     QUESTION: while (1) {
-    given (prompt 'Run a merge? [y,±1,±0,q,e,a, ,N] ',
+    given (prompt 'Run a merge? [y,l,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
@@ -519,6 +520,20 @@ sub handle_entry {
           next PROMPT;
         }
         # NOTREACHED
+      }
+      when (/^l/i) {
+        if ($entry{branch}) {
+            system "$SVN log --stop-on-copy -v -r 0:HEAD -- "
+                   ."$BRANCHES/$entry{branch} "
+                   ."| $PAGER";
+        } elsif (@{$entry{revisions}}) {
+            system "$SVN log ".(join ' ', map { "-r$_" } @{$entry{revisions}})
+                   ." -- ^/subversion | $PAGER";
+        } else {
+            die "Assertion failed: entry has neither branch nor revisions:\n",
+                '[[[', (join ';;', %entry), ']]]';
+        }
+        next PROMPT;
       }
       when (/^q/i) {
         exit_stage_left $state, $approved, $votes;
