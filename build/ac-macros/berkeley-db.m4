@@ -127,7 +127,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
   else
     AC_MSG_CHECKING([for availability of Berkeley DB])
     AC_ARG_ENABLE(bdb6,
-      AS_HELP_STRING([---disable-bdb6],
+      AS_HELP_STRING([--enable-bdb6],
                      [Allow building against BDB 6+.
                       See --with-berkeley-db for specifying the location of
                       the Berkeley DB installation.  Using BDB 6 will fail if
