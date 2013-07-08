@@ -111,7 +111,11 @@ Candidate changes:
      -0: stsp (I don't really see a reason for backporting this.
                I don't think this test will ever find a regression in 1.8.x
                which we won't find on trunk. Having these changes in trunk
-               is good of course.)
+               is good of course.
+               <danielsh>  Let's not assume that all bugs that occur in 1.8.x
+               also occur in trunk; we have had counterexamples in our history.
+               Agreed though that the crash fixers elsewhere in the file are
+               more important to have.)
 
  * r1499034, r1500175
    sqlite3.m4: allow placing the amalgamation in the build dir.
