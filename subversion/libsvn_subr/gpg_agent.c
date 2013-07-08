@@ -417,7 +417,6 @@ password_set_gpg_agent(svn_boolean_t *done,
                        apr_pool_t *pool)
 {
   int sd;
-  const char *tty_name;
 
   *done = FALSE;
 
