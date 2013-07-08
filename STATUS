@@ -31,10 +31,7 @@ Candidate changes:
      See http://svn.haxx.se/dev/archive-2013-06/0147.shtml
      and http://blog.elegosoft.com/?q=updating-moves-in-subversion-18-just-ask
    Votes:
-     +1: stsp
-     +0.5: danielsh (+1 for everything, except the last hunk; trusting stsp
-                     that removing 'r' from the interactive resolver is a good
-                     idea (before unnominating r1492670,r1492682))
+     +1: stsp, danielsh
 
  * r1491816, r1494089
    Add two additional options to interactive file merge.
