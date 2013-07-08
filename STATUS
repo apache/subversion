@@ -85,18 +85,6 @@ Candidate changes:
      +1: ivan
      -0: gstein, brane (we should dynamically detect the problem; should fix name)
 
- * r1498449, r1498455, r1498997
-   kidney blame: convert a client segfault into a correct failure mode.  To
-   reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
-   Notes:
-     r1498449 breaks out a helper function
-     r1498455 fixes the segfault.
-     r1498997 is a minor optimisation
-   Justification:
-     Segfault.  (1.8.0 didn't have the segfaulting code.)
-   Votes:
-     +1: danielsh, stsp
-
  * r1498483, r1498484, r1498486
    fs: Improve a regression test.
    Notes:
@@ -131,7 +119,7 @@ Candidate changes:
      Record-only merge shouldn't be flagging tree conflicts.
      Regression from 1.7.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1500226
    Fixes copyfrom URL construction in Ev2 commit editor shims.
@@ -141,6 +129,8 @@ Candidate changes:
      See note under r1498885, above.
    Votes:
      +1: brane
+      0: rhuijben (Ev2 shims aren't used by production code. (-0)
+                   Only by JavaHL 1.7/1.8 extensions branch (+0))
 
  * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
@@ -186,7 +176,7 @@ Candidate changes:
    Justification:
      Spurious FAILs confuse people testing the release.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
      -0: danielsh (loses functionality; patch sent with alternative fix)
      stsp: where exactly is the alternative patch?
      danielsh: dev@, subject "checkout_tests", Friday 5 Jul
@@ -199,6 +189,9 @@ Candidate changes:
      See http://svn.haxx.se/users/archive-2013-07/0093.shtml
    Votes:
      +1: stsp
+     -0: rhuijben (This adds *nix assumptions, while gpg agent also runs
+                   on other platforms. Looks also console specific, while
+                   there might be an X implementation)
 
 Veto-blocked changes:
 =====================
@@ -294,3 +287,14 @@ Approved changes:
      +1: danielsh (r1488693)
      +0: danielsh (r1490721)
 
+ * r1498449, r1498455, r1498997
+   kidney blame: convert a client segfault into a correct failure mode.  To
+   reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
+   Notes:
+     r1498449 breaks out a helper function
+     r1498455 fixes the segfault.
+     r1498997 is a minor optimisation
+   Justification:
+     Segfault.  (1.8.0 didn't have the segfaulting code.)
+   Votes:
+     +1: danielsh, stsp, rhuijben
