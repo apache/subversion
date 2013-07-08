@@ -74,7 +74,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"list", subcommand_list, {0}, N_
    ("usage: svnauth list\n\n"
     "List cached authentication credentials.\n"),
-   {opt_show_passwords} },
+   {opt_config_dir, opt_show_passwords} },
 
   {NULL}
 };
