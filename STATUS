@@ -60,8 +60,8 @@ Candidate changes:
    Justification:
      Makes 'make install-tools' work when DESTDIR is set.
    Votes:
-     +1: philip (without r1499403), breser
-     +1: danielsh, stsp
+     +1: philip (without r1499403)
+     +1: danielsh, stsp, breser
 
  * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
@@ -165,7 +165,7 @@ Candidate changes:
               a running agent).
      r1500802 fixes a build warning introduced in r1500799
    Votes:
-     +1: stsp, danielsh
+     +1: stsp, danielsh, breser
 
  * r1499100, r1499483, r1499492, r1499496, r1499498
    Allow configuration files with an UTF-8 Byte Order Mark.
@@ -287,7 +287,7 @@ Approved changes:
      Requiring those variables can prevent some gpg-agent setups from working.
      We cannot assume that everyone using gpg-agent is also using a TTY.
    Votes:
-     +1: stsp, danielsh, rhuijben
+     +1: stsp, danielsh, rhuijben, breser
 
  * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
