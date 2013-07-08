@@ -26,16 +26,29 @@ use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid/;
 
-my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
-my $VIM = 'vim';
-my $STATUS = './STATUS';
-my $STATEFILE = './.backports1';
-my $BRANCHES = '^/subversion/branches';
-my %ERRORS = ();
+############### Start of reading values from environment ###############
 
+# Programs we use.
+my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
+my $SHELL = $ENV{SHELL} // '/bin/sh';
+my $VIM = 'vim';
+my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
+my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
+# TODO: convert $SVN and $SVNq to arrays.
+
+# Mode flags.
+#    svn-role:      YES=1 MAY_COMMIT=1
+#    conflicts-bot: YES=1 MAY_COMMIT=0
+#    interactive:   YES=0 MAY_COMMIT=0      (default)
 my $YES = ($ENV{YES} // 0) ? 1 : 0; # batch mode: eliminate prompts, add sleeps
-my $MAY_COMMIT = qw[false true][0];
-my $DEBUG = qw[false true][0]; # 'set -x', etc
+my $MAY_COMMIT = 'false';
+$MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
+
+# Other knobs.
+my $VERBOSE = 0;
+my $DEBUG = (exists $ENV{DEBUG}) ? 'true' : 'false'; # 'set -x', etc
+
+# Username for entering votes.
 my ($AVAILID) = $ENV{AVAILID} // do {
   my $SVN_A_O_REALM = 'd3c8a345b14f6a1b42251aef8027ab57';
   open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$SVN_A_O_REALM";
@@ -46,24 +59,29 @@ my ($AVAILID) = $ENV{AVAILID} // do {
   $_
 }
 // warn "Username for commits (of votes/merges) not found";
-my $MERGED_SOMETHING = 0;
-my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
-my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
-my $VERBOSE = 0;
-$DEBUG = 'true' if exists $ENV{DEBUG};
-$MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
-# derived values
+############## End of reading values from the environment ##############
+
+# Constants.
+my $STATUS = './STATUS';
+my $STATEFILE = './.backports1';
+my $BRANCHES = '^/subversion/branches';
+
+# Globals.
+my %ERRORS = ();
+my $MERGED_SOMETHING = 0;
 my $SVNq;
-my $SVNvsn = do {
+
+# Derived values.
+$SVNvsn = do {
   my ($major, $minor, $patch) = `$SVN --version -q` =~ /^(\d+)\.(\d+)\.(\d+)/;
   1e6*$major + 1e3*$minor + $patch;
 };
-
 $SVN .= " --non-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG eq 'true';
 
+
 sub usage {
   my $basename = $0;
   $basename =~ s#.*/##;
@@ -135,6 +153,7 @@ sub prompt {
          : ($answer =~ /^y/i) ? 1 : 0;
 }
 
+
 sub merge {
   my %entry = @_;
   $MERGED_SOMETHING++;
@@ -509,7 +528,7 @@ sub handle_entry {
         while (1) { 
           given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
             when (/^y/i) {
-              system($ENV{SHELL} // "/bin/sh") == 0
+              system($SHELL) == 0
                 or warn "Creating an interactive subshell failed ($?): $!"
             }
             when (/^d/) {
@@ -575,6 +594,7 @@ sub handle_entry {
   1;
 }
 
+
 sub main {
   my %approved;
   my %votes;
