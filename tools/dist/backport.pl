@@ -662,7 +662,7 @@ sub main {
         handle_entry $in_approved, \%approved, \%votes, $state, $lines, @lines;
       }
       default {
-        warn "Unknown entry '$lines[0]' at line $.\n";
+        warn "Unknown entry '$lines[0]'";
       }
     }
   }
