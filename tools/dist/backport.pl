@@ -590,6 +590,9 @@ sub main {
   # ### TODO: both here and in merge(), unlink files that previous merges added
   # When running from cron, there shouldn't be local mods.  (For interactive
   # usage, we preserve local mods to STATUS.)
+  system("$SVN info $STATUS >/dev/null") == 0
+    or die "$0: svn error; point \$SVN to an appropriate binary";
+
   if (`$SVN status -q $STATUS`) {
     die  "Local mods to STATUS file $STATUS" if $YES;
     warn "Local mods to STATUS file $STATUS";
