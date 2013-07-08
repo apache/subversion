@@ -1801,7 +1801,8 @@ svn_io_run_cmd(const char *path,
  *
  * Do all allocation in @a pool.
  * @since New in 1.6.0.
- */
+ * @deprecated Provided for backwards compatibility with the 1.6 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff2(const char *dir,
                  const char *const *user_args,
