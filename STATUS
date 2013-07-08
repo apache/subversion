@@ -54,17 +54,6 @@ Candidate changes:
    Votes:
      +1: danielsh, breser
 
- * r1500226
-   Fixes copyfrom URL construction in Ev2 commit editor shims.
-   Justification:
-     Makes Ev2 shims work for commit via (at least) ra_serf.
-   Notes:
-     See note under r1498885, above.
-   Votes:
-     +1: brane, breser
-      0: rhuijben (Ev2 shims aren't used by production code. (-0)
-                   Only by JavaHL 1.7/1.8 extensions branch (+0))
-
  * r1498000
    Improve error handling for inherited property requests by using the
    transition based xml parser in libsvn_ra_serf.
@@ -341,4 +330,15 @@ Approved changes:
    Votes:
      +1: stsp (without r1500928)
      +1: danielsh, breser, stefan2
+
+ * r1500226
+   Fixes copyfrom URL construction in Ev2 commit editor shims.
+   Justification:
+     Makes Ev2 shims work for commit via (at least) ra_serf.
+   Notes:
+     See note under r1498885, above.
+   Votes:
+     +1: brane, breser, stefan2
+      0: rhuijben (Ev2 shims aren't used by production code. (-0)
+                   Only by JavaHL 1.7/1.8 extensions branch (+0))
 
