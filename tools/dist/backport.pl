@@ -119,7 +119,7 @@ sub prompt {
   my $getchar = sub {
     ReadMode 'cbreak';
     my $answer = (ReadKey 0);
-    ReadMode 'cbreak';
+    ReadMode 'normal';
     print $answer;
     return $answer;
   };
