@@ -497,7 +497,9 @@ sub handle_entry {
     say "";
     say "Vetoes found!" if @vetoes;
 
-    given (prompt 'Go ahead? [y,±1,±0,q,e,a, ,N] ',
+    # See above for why the while(1).
+    QUESTION: while (1) {
+    given (prompt 'Run a merge? [y,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
@@ -538,12 +540,16 @@ sub handle_entry {
       when (/^N/i) {
         $state->{$entry{digest}}++;
       }
+      when (/^\x20/) {
+        last PROMPT; # Fall off the end of the given/when block.
+      }
       default {
-        # nothing
+        say "Please use one of the options in brackets (q to quit)!";
+        next QUESTION;
       }
     }
-    last;
-    }
+    last; } # QUESTION
+    last; } # PROMPT
   }
 
   # TODO: merge() changes ./STATUS, which we're reading below, but
