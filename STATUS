@@ -195,9 +195,6 @@ Candidate changes:
      r1500802 fixes a build warning introduced in r1500799
    Votes:
      +1: stsp
-     -0: rhuijben (This adds *nix assumptions, while gpg agent also runs
-                   on other platforms. Looks also console specific, while
-                   there might be an X implementation)
 
 Veto-blocked changes:
 =====================
