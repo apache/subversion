@@ -141,6 +141,7 @@ Candidate changes:
      on non-chunk-enabled proxies.
    Votes:
      +1: rhuijben, ivan
+
  * r1496127
    Fix occasional failure of checkout_tests.py 12.
    Justification:
@@ -172,10 +173,9 @@ Candidate changes:
      Make it easier for users, particularly those on Windows using notepad,
      which will only save UTF-8 encoded text files with a BOM.
    Votes:
-     +1: breser, breser
+     +1: breser
 
 Veto-blocked changes:
-     +1: breser
 =====================
 
 Approved changes:
