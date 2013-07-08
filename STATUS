@@ -173,7 +173,7 @@ Candidate changes:
      Make it easier for users, particularly those on Windows using notepad,
      which will only save UTF-8 encoded text files with a BOM.
    Votes:
-     +1: breser
+     +1: breser, stsp
 
 Veto-blocked changes:
 =====================
