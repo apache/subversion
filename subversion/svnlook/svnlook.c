@@ -133,11 +133,11 @@ static const apr_getopt_option_t options_table[] =
   {"no-diff-deleted",   svnlook__no_diff_deleted, 0,
    N_("do not print differences for deleted files")},
 
-  {"diff-cmd",          svnlook__diff_cmd, 1,
-   N_("use ARG as diff command")},
-
   {"invoke-diff-cmd",   svnlook__invoke_diff_cmd, 1,
-   N_("use ARG as diff command (see svn help diff for details)")},
+   N_("Customizable diff command (see svn help diff)")},
+
+  {"diff-cmd",          svnlook__diff_cmd, 1,
+   N_("deprecated, use --invoke-diff-cmd instead")},
 
   {"ignore-properties",   svnlook__ignore_properties, 0,
    N_("ignore properties during the operation")},
@@ -2645,7 +2645,7 @@ main(int argc, const char *argv[])
                  _("Cannot use the '--show-inherited-props' option with the "
                    "'--revprop' option")));
 
-  /* The --show-inherited-props and --revprop options may not co-exist. */
+  /* The --diff-cmd and --invoke-diff-cmd options may not co-exist. */
   if (opt_state.diff_cmd && opt_state.invoke_diff_cmd)
     SVN_INT_ERR(svn_error_create
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
