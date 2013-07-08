@@ -196,14 +196,6 @@ Candidate changes:
    Votes:
      +1: stsp, danielsh
 
- * r1500801
-   Don't require GPG_TTY and TERM when getting passwords from gpg-agent.
-   Justification:
-     Requiring those variables can prevent some gpg-agent setups from working.
-     We cannot assume that everyone using gpg-agent is also using a TTY.
-   Votes:
-     +1: stsp, danielsh
-
  * r1499100, r1499483, r1499492, r1499496, r1499498
    Allow configuration files with an UTF-8 Byte Order Mark.
    Justification:
@@ -317,3 +309,11 @@ Approved changes:
      Segfault.  (1.8.0 didn't have the segfaulting code.)
    Votes:
      +1: danielsh, stsp, rhuijben
+
+ * r1500801
+   Don't require GPG_TTY and TERM when getting passwords from gpg-agent.
+   Justification:
+     Requiring those variables can prevent some gpg-agent setups from working.
+     We cannot assume that everyone using gpg-agent is also using a TTY.
+   Votes:
+     +1: stsp, danielsh, rhuijben
