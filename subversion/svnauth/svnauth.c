@@ -90,11 +90,9 @@ static const apr_getopt_option_t options_table[] =
     {"config-dir",    opt_config_dir, 1,
                       N_("use auth cache in config directory ARG")},
 
-    {"show-passwords", opt_show_passwords, 0,
-                      N_("show cached passwords")},
+    {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
 
-    {"version",       opt_version, 0,
-     N_("show program version information")},
+    {"version",       opt_version, 0, N_("show program version information")},
 
     {NULL}
   };
