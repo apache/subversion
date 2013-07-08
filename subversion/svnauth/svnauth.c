@@ -191,6 +191,8 @@ list_credentials(svn_boolean_t *delete_cred,
       value = item.value;
       if (!opt_state->show_passwords && strcmp(key, "password") == 0)
         SVN_ERR(svn_cmdline_printf(scratch_pool, "%s: [not shown]\n", key));
+      else if (strcmp(value->data, realmstring) == 0)
+        continue; /* realm string was already shown above */
       else
         SVN_ERR(svn_cmdline_printf(scratch_pool, "%s: %s\n", key, value->data));
     }
