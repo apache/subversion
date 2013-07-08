@@ -24,7 +24,7 @@ Candidate changes:
      +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
 
- * r1491739, r1491755, r1491762, r1492152, r1492670, r1492682
+ * r1491739, r1491755, r1491762, r1492152
    Improve interactive conflict resolution menu.
    Justification:
      The current menu is too hard to figure out for users.
