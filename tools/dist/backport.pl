@@ -73,7 +73,7 @@ my $MERGED_SOMETHING = 0;
 my $SVNq;
 
 # Derived values.
-$SVNvsn = do {
+my $SVNvsn = do {
   my ($major, $minor, $patch) = `$SVN --version -q` =~ /^(\d+)\.(\d+)\.(\d+)/;
   1e6*$major + 1e3*$minor + $patch;
 };
