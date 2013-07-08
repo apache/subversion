@@ -122,10 +122,10 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
        */
 #if (defined(WIN32) && !defined(__MINGW32__))
       footer = apr_psprintf(pool, _("%s  Wincrypt cache in %s\n"),
-                            footer, config_path);
+                            footer, svn_dirent_local_style(config_path, pool));
 #elif !defined(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE)
       footer = apr_psprintf(pool, _("%s  Plaintext cache in %s\n"),
-                            footer, config_path);
+                            footer, svn_dirent_local_style(config_path, pool));
 #endif
 #ifdef SVN_HAVE_GNOME_KEYRING
       footer = apr_pstrcat(pool, footer, "  Gnome Keyring\n", NULL);
