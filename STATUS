@@ -33,14 +33,6 @@ Candidate changes:
    Votes:
      +1: stsp, danielsh
 
- * r1491816, r1494089
-   Add two additional options to interactive file merge.
-   Justification:
-     Usability enhancement for quicker conflict resolution in some cases.
-     Very simple change. Only affects interactive mode, not scripts.
-   Votes:
-     +1: stsp, danielsh
-
  * r1491868, r1494657
    Add missing conflict callback invocations to the update editor.
    Justification:
@@ -279,3 +271,12 @@ Approved changes:
      Ev2 API, as that is what JavaHL exposes.
    Votes:
       +1: brane, gstein, stsp
+
+ * r1491816, r1494089
+   Add two additional options to interactive file merge.
+   Justification:
+     Usability enhancement for quicker conflict resolution in some cases.
+     Very simple change. Only affects interactive mode, not scripts.
+   Votes:
+     +1: stsp, danielsh, stefan2
+
