@@ -85,23 +85,6 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: dev@, subject "checkout_tests", Friday 5 Jul
 
- * r1499438, r1499447, r1499460, r1500695, r1500928
-   Make building with BDB 6 an opt-in feature.
-   In configure, do not warn if BDB was not found.
-   Justification (r1499447):
-     The BDB backend is deprecated and the check is buggy.
-   Justification (r1499438, r1499460):
-     License change on a dependency.  libsvn_fs_base has not been tested with
-     bdb6, and is deprecated so we are unlikely to test it.
-   Notes:
-     Two orthogonal changes that conflict with each other.
-     r1499447 removes the warning.
-     r1499438 and r1499460 add an opt-in
-     r1500928 fixes the help string to be consistent with our convention
-   Votes:
-     +1: stsp, stefan2 (without r1500928)
-     +1: danielsh, breser
-
  * r1488693, r1490721, r1500904
    (Perl bindings) Documentation fixes: document some SVN::Client methods
    and at least list all wrapped -though still undocumented - methods.
@@ -341,3 +324,21 @@ Approved changes:
      them into one small patch.
    Votes:
      +1: stefan2, stsp, breser
+
+ * r1499438, r1499447, r1499460, r1500695, r1500928
+   Make building with BDB 6 an opt-in feature.
+   In configure, do not warn if BDB was not found.
+   Justification (r1499447):
+     The BDB backend is deprecated and the check is buggy.
+   Justification (r1499438, r1499460):
+     License change on a dependency.  libsvn_fs_base has not been tested with
+     bdb6, and is deprecated so we are unlikely to test it.
+   Notes:
+     Two orthogonal changes that conflict with each other.
+     r1499447 removes the warning.
+     r1499438 and r1499460 add an opt-in
+     r1500928 fixes the help string to be consistent with our convention
+   Votes:
+     +1: stsp (without r1500928)
+     +1: danielsh, breser, stefan2
+
