@@ -568,8 +568,8 @@ sub main {
   open STATUS, "<", $STATUS or (usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
-  die "A vim with the +ex_extra feature is required"
-      if `${VIM} --version` !~ /[+]ex_extra/;
+  die "A vim with the +ex_extra feature is required for \$MAY_COMMIT mode"
+      if $MAY_COMMIT eq 'true' and `${VIM} --version` !~ /[+]ex_extra/;
 
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
