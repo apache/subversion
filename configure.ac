@@ -1517,9 +1517,9 @@ if test "$svn_have_berkeley_db" = "no6" && test "$enable_bdb6" != "no"; then
 
 
 Berkeley DB 6 was found, but not used.  Please re-run configure (see
-./config.nice) with the '--enable-banging-head-against-wall' flag to use it,
-or explicitly specify '--disable-banging-head-against-wall' or 
-'--without-berkeley-db' to silence this warning.
+./config.nice) with the '--enable-bdb6' flag to use it,
+or explicitly specify '--disable-bdb6' or '--without-berkeley-db'
+to silence this warning.
 
 Please note that some versions of Berkeley DB 6+ are under the GNU Affero
 General Public License, version 3:
