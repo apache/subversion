@@ -416,7 +416,7 @@ sub vote {
   };
 
   system "$SVN diff -- $STATUS";
-  say "Voting '$_->[0]' on $_->[1]->{header}." for @votes;
+  say "Voting '$_->[0]' on $_->[1]->{id}." for @votes;
   # say $logmsg;
   if (prompt "Commit these votes? ") {
     my ($logmsg_fh, $logmsg_filename) = tempfile();
