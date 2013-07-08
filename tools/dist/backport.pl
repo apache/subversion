@@ -355,18 +355,19 @@ sub vote {
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
     $had_empty_line = /\n\n\z/;
-    unless (exists $votes->{$.}) {
-      (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
+    my $key = digest_string $_;
+    unless (exists $votes->{$key}) {
+      (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
 
-    my ($vote, $entry) = @{$votes->{$.}};
-    push @{$votes->{$.}}, 1;
+    my ($vote, $entry) = @{$votes->{$key}};
+    push @{$votes->{$key}}, 1;
     push @votes, [$vote, $entry, undef]; # ->[2] later set to $digest
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
-      (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
+      (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
     
@@ -375,7 +376,7 @@ sub vote {
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
         if $vote ne '+1';
     $votes[$#votes]->[2] = digest_string $_;
-    (exists $approved->{$.}) ? ($raw_approved .= $_) : (print VOTES);
+    (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
   print VOTES "\n" if $raw_approved and !$had_empty_line;
@@ -526,6 +527,7 @@ sub handle_entry {
 
     # See above for why the while(1).
     QUESTION: while (1) {
+    my $key = $entry{digest};
     given (prompt 'Run a merge? [y,l,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
@@ -565,18 +567,18 @@ sub handle_entry {
         exit_stage_left $state, $approved, $votes;
       }
       when (/^a/i) {
-        $approved->{$.} = \%entry;
+        $approved->{$key} = \%entry;
         next PROMPT;
       }
       when (/^([+-][01])\s*$/i) {
-        $votes->{$.} = [$1, \%entry];
+        $votes->{$key} = [$1, \%entry];
         say "Your '$1' vote has been recorded." if $VERBOSE;
       }
       when (/^e/i) {
         my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header},
                         trailing_eol => 2;
-        $votes->{$.} = ['edit', \%entry] # marker for the 2nd pass
+        $votes->{$key} = ['edit', \%entry] # marker for the 2nd pass
             if $original ne $entry{raw};
       }
       when (/^N/i) {
