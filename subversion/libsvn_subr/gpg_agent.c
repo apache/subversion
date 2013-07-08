@@ -309,11 +309,6 @@ password_get_gpg_agent(svn_boolean_t *done,
           return SVN_NO_ERROR;
         }
     }
-  else
-    {
-      close(sd);
-      return SVN_NO_ERROR;
-    }
 
   /* Send TTY_TYPE to the gpg-agent daemon. */
   tty_type = getenv("TERM");
@@ -324,11 +319,6 @@ password_get_gpg_agent(svn_boolean_t *done,
           close(sd);
           return SVN_NO_ERROR;
         }
-    }
-  else
-    {
-      close(sd);
-      return SVN_NO_ERROR;
     }
 
   /* Compute LC_CTYPE. */
