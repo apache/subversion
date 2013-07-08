@@ -415,7 +415,7 @@ password_get_gpg_agent(svn_boolean_t *done,
    worked.  But it isn't.  GPG Agent stores the password provided by
    the user via the pinentry program immediately upon its provision
    (and regardless of its accuracy as passwords go), so we just need
-   to check if a usable GPG Agent exists. */
+   to check if a running GPG Agent exists. */
 static svn_error_t *
 password_set_gpg_agent(svn_boolean_t *done,
                        apr_hash_t *creds,
@@ -436,11 +436,7 @@ password_set_gpg_agent(svn_boolean_t *done,
     return SVN_NO_ERROR;
 
   close(sd);
-
-  /* Also ensure that GPG_TTY is set in the evironment.
-   * If it isn't set the user won't be prompted by the agent. */
-  tty_name = getenv("GPG_TTY");
-  *done = (tty_name != NULL);
+  *done = TRUE;
 
   return SVN_NO_ERROR;
 }
