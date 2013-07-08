@@ -81,7 +81,7 @@ Candidate changes:
      Makes 'make install-tools' work when DESTDIR is set.
    Votes:
      +1: philip (without r1499403)
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
@@ -136,6 +136,10 @@ Candidate changes:
      Makes the test more likely to exercise the bug.
    Votes:
      +1: danielsh, stefan2
+     -0: stsp (I don't really see a reason for backporting this.
+               I don't think this test will ever find a regression in 1.8.x
+               which we won't find on trunk. Having these changes in trunk
+               is good of course.)
 
  * r1498851
    Provide an explicit error in the serf xml parser when the root element
@@ -161,20 +165,6 @@ Candidate changes:
      Regression from 1.7.
    Votes:
      +1: stsp
-
- * r1498885
-   Correctly initialize the node kind in the Ev2 shims' change table.
-   Justification:
-     Fixes a bug introduced bu the svn_kind_t -> svn_node_kind_t merge
-     from r1455559, making the shims work again.
-   Notes:
-     I [brane] realise that this is an unusual backport request;
-     the motivation is to make the JavaHL extensions backported to the
-     javahl-1.8-extensions branch work with stock 1.8.x binary distros.
-     Incidentally, that backport will serve as a real-life test of the
-     Ev2 API, as that is what JavaHL exposes.
-   Votes:
-      +1: brane, gstein
 
  * r1500226
    Fixes copyfrom URL construction in Ev2 commit editor shims.
@@ -247,13 +237,14 @@ Candidate changes:
    Votes:
      +1: philip
      -0: danielsh (loses functionality; patch sent with alternative fix)
+     stsp: where exactly is the alternative patch?
 
  * r1500074
    Format a path correctly in an error message.
    Justification:
      The error message includes a path not related to the working copy
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1488693, r1490721
    (Perl bindings) Documentation fixes: document some SVN::Client methods
@@ -278,3 +269,16 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1498885
+   Correctly initialize the node kind in the Ev2 shims' change table.
+   Justification:
+     Fixes a bug introduced bu the svn_kind_t -> svn_node_kind_t merge
+     from r1455559, making the shims work again.
+   Notes:
+     I [brane] realise that this is an unusual backport request;
+     the motivation is to make the JavaHL extensions backported to the
+     javahl-1.8-extensions branch work with stock 1.8.x binary distros.
+     Incidentally, that backport will serve as a real-life test of the
+     Ev2 API, as that is what JavaHL exposes.
+   Votes:
+      +1: brane, gstein, stsp
