@@ -175,13 +175,6 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1500857
-   A further clarification after r1500837
-   Justification:
-     Save users a tour to $SEARCH_ENGINE.
-   Votes:
-     +1: danielsh, lgo
-
 Veto-blocked changes:
 =====================
 
@@ -334,4 +327,13 @@ Approved changes:
      Depends on the r1489117 group (logically, not merge-wise).
    Votes:
      +1: lgo, rhuijben, danielsh
+
+ * r1500857
+   A further clarification after r1500837
+   Justification:
+     Save users a tour to $SEARCH_ENGINE.
+   Votes:
+     +1: danielsh, lgo
+     +1: rhuijben (but also +1 on not applying it if that would be the
+                   consensus)
 
