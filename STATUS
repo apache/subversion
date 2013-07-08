@@ -29,7 +29,7 @@ Candidate changes:
    Justification:
      Resolver is not invoked after some updates which flag new tree conflicts.
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp, rhuijben, breser
 
  * r1491756
    Fix issue #4364: Correctly remove the stale entries from the lock table
@@ -37,7 +37,7 @@ Candidate changes:
    Justification:
      Keep wc.db as consistent and clean as possible.
    Votes:
-     +1: rhuijben, stsp
+     +1: rhuijben, stsp, breser
      +1 (nonbinding): schabi
 
  * ^/subversion/branches/1.8.x-r1495063
@@ -60,7 +60,7 @@ Candidate changes:
    Justification:
      Makes 'make install-tools' work when DESTDIR is set.
    Votes:
-     +1: philip (without r1499403)
+     +1: philip (without r1499403), breser
      +1: danielsh, stsp
 
  * r1496007, r1496111
@@ -68,7 +68,7 @@ Candidate changes:
    Justification:
      Crash, regression from 1.7.
    Votes:
-     +1: stsp
+     +1: stsp, breser
      +0: rhuijben (looks good)
 
  * r1496470
@@ -83,7 +83,7 @@ Candidate changes:
      proposal becomes redundant if that branch is merged.
    Votes:
      +1: ivan
-     -0: gstein, brane (we should dynamically detect the problem; should fix name)
+     -0: gstein, brane, breser (we should dynamically detect the problem; should fix name)
 
  * r1498483, r1498484, r1498486
    fs: Improve a regression test.
@@ -95,7 +95,7 @@ Candidate changes:
    Justification:
      Makes the test more likely to exercise the bug.
    Votes:
-     +1: danielsh, stefan2
+     +1: danielsh, stefan2, breser
      -0: stsp (I don't really see a reason for backporting this.
                I don't think this test will ever find a regression in 1.8.x
                which we won't find on trunk. Having these changes in trunk
@@ -111,7 +111,7 @@ Candidate changes:
      It is not present in the extracted source tarball, so doesn't belong in
      the source dir.
    Votes:
-     +1: danielsh
+     +1: danielsh, breser
 
  * r1499064
    Fix issue #4387, svn merge --record-only errors out on renamed path.
@@ -119,7 +119,7 @@ Candidate changes:
      Record-only merge shouldn't be flagging tree conflicts.
      Regression from 1.7.
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp, rhuijben, breser
 
  * r1500226
    Fixes copyfrom URL construction in Ev2 commit editor shims.
@@ -128,7 +128,7 @@ Candidate changes:
    Notes:
      See note under r1498885, above.
    Votes:
-     +1: brane
+     +1: brane, breser
       0: rhuijben (Ev2 shims aren't used by production code. (-0)
                    Only by JavaHL 1.7/1.8 extensions branch (+0))
 
@@ -141,7 +141,6 @@ Candidate changes:
      on non-chunk-enabled proxies.
    Votes:
      +1: rhuijben, ivan
-
  * r1496127
    Fix occasional failure of checkout_tests.py 12.
    Justification:
@@ -173,9 +172,10 @@ Candidate changes:
      Make it easier for users, particularly those on Windows using notepad,
      which will only save UTF-8 encoded text files with a BOM.
    Votes:
-     +1: breser
+     +1: breser, breser
 
 Veto-blocked changes:
+     +1: breser
 =====================
 
 Approved changes:
