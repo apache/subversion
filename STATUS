@@ -32,20 +32,6 @@ Candidate changes:
      +1: stsp, breser
      +0: rhuijben (looks good)
 
- * r1496470
-   Add runtime configuration option to control using of chunked transfer
-   encoding for HTTP requests body.
-   Branch: ^/subversion/branches/1.8.x-r1496470
-   Justification:
-     Workaround for issue with busted proxies that don't support chunked
-     transfer encoding for request body. Reported many times on mailing list.
-   Notes:
-     This revision is part of the 1.8.x-busted-proxy branch and so this
-     proposal becomes redundant if that branch is merged.
-   Votes:
-     +1: ivan
-     -0: gstein, brane, breser (we should dynamically detect the problem; should fix name)
-
  * r1498000
    Improve error handling for inherited property requests by using the
    transition based xml parser in libsvn_ra_serf.
@@ -308,8 +294,7 @@ Approved changes:
      r1499438 and r1499460 add an opt-in
      r1500928 fixes the help string to be consistent with our convention
    Votes:
-     +1: stsp (without r1500928)
-     +1: danielsh, breser, stefan2
+     +1: danielsh, breser, stefan2, stsp
 
  * r1500226
    Fixes copyfrom URL construction in Ev2 commit editor shims.
