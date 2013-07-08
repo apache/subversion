@@ -121,15 +121,6 @@ Candidate changes:
                which we won't find on trunk. Having these changes in trunk
                is good of course.)
 
- * r1498851
-   Provide an explicit error in the serf xml parser when the root element
-   isn't matched in the transition table.
-   Notes:
-     This turns a class of previously invisible errors in an easy to diagnose
-     error message.
-   Votes:
-     +1: rhuijben, gstein
-
  * r1499034, r1500175
    sqlite3.m4: allow placing the amalgamation in the build dir.
    Justification:
@@ -279,3 +270,12 @@ Approved changes:
      The error message includes a path not related to the working copy
    Votes:
      +1: danielsh, stsp, ivan
+
+ * r1498851
+   Provide an explicit error in the serf xml parser when the root element
+   isn't matched in the transition table.
+   Notes:
+     This turns a class of previously invisible errors in an easy to diagnose
+     error message.
+   Votes:
+     +1: rhuijben, gstein, ivan
