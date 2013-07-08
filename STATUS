@@ -175,6 +175,13 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1500857
+   A further clarification after r1500837
+   Justification:
+     Save users a tour to $SEARCH_ENGINE.
+   Votes:
+     +1: danielsh, lgo
+
 Veto-blocked changes:
 =====================
 
