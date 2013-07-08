@@ -179,7 +179,7 @@ Candidate changes:
      makes it possible to properly detect if this request should be restarted
      on non-chunk-enabled proxies.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1496127
    Fix occasional failure of checkout_tests.py 12.
