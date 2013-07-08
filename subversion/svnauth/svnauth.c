@@ -50,11 +50,11 @@ struct svnauth_opt_state
   svn_boolean_t show_passwords;                     /* --show-passwords */
 };
 
-typedef enum svn_cl__longopt_t {
+typedef enum svnauth__longopt_t {
   opt_config_dir = SVN_OPT_FIRST_LONGOPT_ID,
   opt_show_passwords,
   opt_version
-} svn_cl__longopt_t;
+} svnauth__longopt_t;
 
 /** Subcommands. **/
 static svn_opt_subcommand_t
