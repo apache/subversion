@@ -47,6 +47,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 }
 // warn "Username for commits (of votes/merges) not found";
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
+my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 my $VERBOSE = 0;
 $DEBUG = 'true' if exists $ENV{DEBUG};
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
@@ -507,7 +508,7 @@ sub handle_entry {
                 or warn "Creating an interactive subshell failed ($?): $!"
             }
             when (/^d/) {
-              system($SVN, 'diff') == 0
+              system("$SVN diff | $PAGER") == 0
                 or warn "diff failed ($?): $!";
               next;
             }
