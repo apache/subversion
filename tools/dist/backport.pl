@@ -34,7 +34,6 @@ my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
-# TODO: convert $SVN and $SVNq to arrays.
 
 # Mode flags.
 #    svn-role:      YES=1 MAY_COMMIT=1
@@ -416,12 +415,19 @@ sub vote {
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
   };
 
-  system $SVN, qw/diff --/, $STATUS;
+  system "$SVN diff -- $STATUS";
   say "Voting '$_->[0]' on $_->[1]->{header}." for @votes;
   # say $logmsg;
   if (prompt "Commit these votes? ") {
-    system($SVN, qw/commit -m/, $logmsg, qw/--/, $STATUS);
-    warn "Committing the votes failed($?): $!" and return if $? or $!;
+    my ($logmsg_fh, $logmsg_filename) = tempfile();
+    print $logmsg_fh $logmsg;
+    close $logmsg_fh;
+    warn "Tempfile name '$logmsg_filename' not shell-safe; "
+         ."refraining from commit.\n"
+        unless $logmsg_filename =~ /^([A-Z0-9._-]|\x2f)+$/i;
+    system("$SVN commit -F $logmsg_filename -- $STATUS") == 0
+        or warn("Committing the votes failed($?): $!") and return;
+    unlink $logmsg_filename;
 
     $state->{$approved->{$_}->{digest}}++ for keys %$approved;
     $state->{$_->[2]}++ for @votes;
@@ -636,7 +642,7 @@ sub main {
   if (`$SVN status -q $STATUS`) {
     die  "Local mods to STATUS file $STATUS" if $YES;
     warn "Local mods to STATUS file $STATUS";
-    system $SVN, qw/diff --/, $STATUS;
+    system "$SVN diff -- $STATUS";
     prompt "Press the 'any' key to continue...\n", dontprint => 1;
   }
 
