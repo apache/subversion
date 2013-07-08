@@ -47,10 +47,12 @@ struct svnauth_opt_state
   const char *config_dir;                           /* --config-dir */
   svn_boolean_t version;                            /* --version */
   svn_boolean_t help;                               /* --help */
+  svn_boolean_t show_passwords;                     /* --show-passwords */
 };
 
 typedef enum svn_cl__longopt_t {
   opt_config_dir = SVN_OPT_FIRST_LONGOPT_ID,
+  opt_show_passwords,
   opt_version
 } svn_cl__longopt_t;
 
@@ -72,7 +74,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"list", subcommand_list, {0}, N_
    ("usage: svnauth list\n\n"
     "List cached authentication credentials.\n"),
-   {0} },
+   {opt_show_passwords} },
 
   {NULL}
 };
@@ -87,6 +89,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"config-dir",    opt_config_dir, 1,
                       N_("use auth cache in config directory ARG")},
+
+    {"show-passwords", opt_show_passwords, 0,
+                      N_("show cached passwords")},
 
     {"version",       opt_version, 0,
      N_("show program version information")},
@@ -157,12 +162,13 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 /* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
 list_credentials(svn_boolean_t *delete_cred,
-                 void *cleanup_baton,
+                 void *baton,
                  const char *cred_kind,
                  const char *realmstring,
                  apr_hash_t *hash,
                  apr_pool_t *scratch_pool)
 {
+  struct svnauth_opt_state *opt_state = baton;
   apr_array_header_t *sorted_hash_items;
   int i;
 
@@ -185,7 +191,10 @@ list_credentials(svn_boolean_t *delete_cred,
       item = APR_ARRAY_IDX(sorted_hash_items, i, svn_sort__item_t);
       key = item.key;
       value = item.value;
-      SVN_ERR(svn_cmdline_printf(scratch_pool, "%s: %s\n", key, value->data));
+      if (!opt_state->show_passwords && strcmp(key, "password") == 0)
+        SVN_ERR(svn_cmdline_printf(scratch_pool, "%s: [not shown]\n", key));
+      else
+        SVN_ERR(svn_cmdline_printf(scratch_pool, "%s: %s\n", key, value->data));
     }
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
@@ -204,7 +213,7 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                           opt_state->config_dir, NULL,
                                           pool));
 
-  SVN_ERR(svn_config_walk_auth_data(config_path, list_credentials, NULL,
+  SVN_ERR(svn_config_walk_auth_data(config_path, list_credentials, opt_state,
                                     pool));
   return SVN_NO_ERROR;
 }
@@ -269,6 +278,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_config_dir:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        break;
+      case opt_show_passwords:
+        opt_state.show_passwords = TRUE;
         break;
       case opt_version:
         opt_state.version = TRUE;
