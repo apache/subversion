@@ -261,7 +261,7 @@ Candidate changes:
     Justification:
       Errors show paths with wrong separators on some platforms.
     Votes:
-      +1: stsp
+      +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
