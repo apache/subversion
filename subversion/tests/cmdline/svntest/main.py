@@ -1444,9 +1444,9 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
-    if options.http_proxy-username:
+    if options.http_proxy_username:
       args.append('--http-proxy-username=' + options.http_proxy_username)
-    if options.http_proxy-password:
+    if options.http_proxy_password:
       args.append('--http-proxy-password=' + options.http_proxy_password)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
