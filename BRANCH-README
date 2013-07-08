@@ -8,6 +8,11 @@ This branch implements the 'invoke-diff-cmd' feature.
 
 Also see: http://subversion.tigris.org/issues/show_bug.cgi?id=2044
 
+DONE
+
+   * deprechate svn_io_run_diff2()
+
+
 TODO:
 
   * figure out if/how to solve file-type issue
@@ -18,7 +23,4 @@ TODO:
   * consider adding to svn up, see issue:
     http://subversion.tigris.org/issues/show_bug.cgi?id=3836
 
-  * Write a docstring for svn_io_run_external_diff()
 
-  * (question) Should svn_io_run_diff2() be deprecated in favour of
-    svn_io_run_external_diff()?
