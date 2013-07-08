@@ -24,22 +24,6 @@ Candidate changes:
      +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
 
- * r1491868, r1494657
-   Add missing conflict callback invocations to the update editor.
-   Justification:
-     Resolver is not invoked after some updates which flag new tree conflicts.
-   Votes:
-     +1: stsp, rhuijben, breser
-
- * r1491756
-   Fix issue #4364: Correctly remove the stale entries from the lock table
-   when committing deletions.
-   Justification:
-     Keep wc.db as consistent and clean as possible.
-   Votes:
-     +1: rhuijben, stsp, breser
-     +1 (nonbinding): schabi
-
  * ^/subversion/branches/1.8.x-r1495063
    r1495806, r1495985
    Fix crash in FSFS DAG caching code on strict-alignment architectures.
@@ -54,14 +38,6 @@ Candidate changes:
      them into one small patch.
    Votes:
      +1: stefan2, stsp
-
- * r1495329, r1499403
-   Fix symlink for svnmucc in svn-tools.
-   Justification:
-     Makes 'make install-tools' work when DESTDIR is set.
-   Votes:
-     +1: philip (without r1499403)
-     +1: danielsh, stsp, breser
 
  * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
@@ -85,26 +61,6 @@ Candidate changes:
      +1: ivan
      -0: gstein, brane, breser (we should dynamically detect the problem; should fix name)
 
- * r1498483, r1498484, r1498486
-   fs: Improve a regression test.
-   Notes:
-     r1498483 adds a helper function.
-     r1498484 extends the test to perform additional verifications, and
-       switches it to a blacklist approach.
-     r1498486 renames a local variable; no functional change.
-   Justification:
-     Makes the test more likely to exercise the bug.
-   Votes:
-     +1: danielsh, stefan2, breser
-     -0: stsp (I don't really see a reason for backporting this.
-               I don't think this test will ever find a regression in 1.8.x
-               which we won't find on trunk. Having these changes in trunk
-               is good of course.
-               <danielsh>  Let's not assume that all bugs that occur in 1.8.x
-               also occur in trunk; we have had counterexamples in our history.
-               Agreed though that the crash fixers elsewhere in the file are
-               more important to have.)
-
  * r1499034, r1500175
    sqlite3.m4: allow placing the amalgamation in the build dir.
    Justification:
@@ -112,14 +68,6 @@ Candidate changes:
      the source dir.
    Votes:
      +1: danielsh, breser
-
- * r1499064
-   Fix issue #4387, svn merge --record-only errors out on renamed path.
-   Justification:
-     Record-only merge shouldn't be flagging tree conflicts.
-     Regression from 1.7.
-   Votes:
-     +1: stsp, rhuijben, breser
 
  * r1500226
    Fixes copyfrom URL construction in Ev2 commit editor shims.
@@ -338,3 +286,56 @@ Approved changes:
      r1500802 fixes a build warning introduced in r1500799
    Votes:
      +1: stsp, danielsh, breser
+
+ * r1498483, r1498484, r1498486
+   fs: Improve a regression test.
+   Notes:
+     r1498483 adds a helper function.
+     r1498484 extends the test to perform additional verifications, and
+       switches it to a blacklist approach.
+     r1498486 renames a local variable; no functional change.
+   Justification:
+     Makes the test more likely to exercise the bug.
+   Votes:
+     +1: danielsh, stefan2, breser
+     -0: stsp (I don't really see a reason for backporting this.
+               I don't think this test will ever find a regression in 1.8.x
+               which we won't find on trunk. Having these changes in trunk
+               is good of course.
+               <danielsh>  Let's not assume that all bugs that occur in 1.8.x
+               also occur in trunk; we have had counterexamples in our history.
+               Agreed though that the crash fixers elsewhere in the file are
+               more important to have.)
+
+ * r1491868, r1494657
+   Add missing conflict callback invocations to the update editor.
+   Justification:
+     Resolver is not invoked after some updates which flag new tree conflicts.
+   Votes:
+     +1: stsp, rhuijben, breser
+
+ * r1491756
+   Fix issue #4364: Correctly remove the stale entries from the lock table
+   when committing deletions.
+   Justification:
+     Keep wc.db as consistent and clean as possible.
+   Votes:
+     +1: rhuijben, stsp, breser
+     +1 (nonbinding): schabi
+
+ * r1495329, r1499403
+   Fix symlink for svnmucc in svn-tools.
+   Justification:
+     Makes 'make install-tools' work when DESTDIR is set.
+   Votes:
+     +1: philip (without r1499403)
+     +1: danielsh, stsp, breser
+
+ * r1499064
+   Fix issue #4387, svn merge --record-only errors out on renamed path.
+   Justification:
+     Record-only merge shouldn't be flagging tree conflicts.
+     Regression from 1.7.
+   Votes:
+     +1: stsp, rhuijben, breser
+
