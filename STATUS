@@ -132,17 +132,6 @@ Candidate changes:
       0: rhuijben (Ev2 shims aren't used by production code. (-0)
                    Only by JavaHL 1.7/1.8 extensions branch (+0))
 
- * 1500837
-   Follow up to the r1489117 group, modifies the 411 Content length required
-   error message to point the user to the busted-proxy option.
-   Justification:
-     The original error message was meaningless, this patch at least guides
-     the user in the right direction.
-   Notes:
-     Depends on the r1489117 group (logically, not merge-wise).
-   Votes:
-     +1: lgo, rhuijben
-
  * r1498000
    Improve error handling for inherited property requests by using the
    transition based xml parser in libsvn_ra_serf.
@@ -327,3 +316,15 @@ Approved changes:
                since we cannot add a symbol in a patch release.
    Votes:
      +1: gstein, philip, lgo
+
+ * r1500837
+   Follow up to the r1489117 group, modifies the 411 Content length required
+   error message to point the user to the busted-proxy option.
+   Justification:
+     The original error message was meaningless, this patch at least guides
+     the user in the right direction.
+   Notes:
+     Depends on the r1489117 group (logically, not merge-wise).
+   Votes:
+     +1: lgo, rhuijben, danielsh
+
