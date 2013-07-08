@@ -245,13 +245,6 @@ Candidate changes:
      +1: rschupp
      +1: danielsh (r1488693 only)
 
- * r1500680
-    Use local style for paths in error messages for 'svn diff --old A --new B'
-    Justification:
-      Errors show paths with wrong separators on some platforms.
-    Votes:
-      +1: stsp, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -277,6 +270,13 @@ Approved changes:
    Justification:
      Usability enhancement for quicker conflict resolution in some cases.
      Very simple change. Only affects interactive mode, not scripts.
+   Votes:
+     +1: stsp, danielsh, stefan2
+
+ * r1500680
+   Use local style for paths in error messages for 'svn diff --old A --new B'
+   Justification:
+     Errors show paths with wrong separators on some platforms.
    Votes:
      +1: stsp, danielsh, stefan2
 
