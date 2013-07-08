@@ -344,6 +344,7 @@ sub edit_string {
 
 sub vote {
   my ($state, $approved, $votes) = @_;
+  my (%approvedcheck, %votescheck);
   my $raw_approved = "";
   my @votes;
   return unless %$approved or %$votes;
@@ -356,13 +357,16 @@ sub vote {
   while (<STATUS>) {
     $had_empty_line = /\n\n\z/;
     my $key = digest_string $_;
+
+    $approvedcheck{$key}++ if exists $approved->{$key};
+    $votescheck{$key}++ if exists $votes->{$key};
+
     unless (exists $votes->{$key}) {
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
 
     my ($vote, $entry) = @{$votes->{$key}};
-    push @{$votes->{$key}}, 1;
     push @votes, [$vote, $entry, undef]; # ->[2] later set to $digest
 
     if ($vote eq 'edit') {
@@ -382,8 +386,14 @@ sub vote {
   print VOTES "\n" if $raw_approved and !$had_empty_line;
   print VOTES $raw_approved;
   close VOTES;
-  die "Some vote chunks weren't found: "
-    if grep scalar(@$_) != 3, values %$votes;
+  die "Some vote chunks weren't found: ",
+    map $votes->{$_}->[1]->{id},
+    grep { !$votescheck{$_} } keys %$votes
+    if scalar(keys %$votes) != scalar(keys %votescheck);
+  die "Some approval chunks weren't found: ",
+    map $approved->{$_}->{id},
+    grep { !$approvedcheck{$_} } keys %$approved
+    if scalar(keys %$approved) != scalar(keys %approvedcheck);
   move "$STATUS.$$.tmp", $STATUS;
 
   my $logmsg = do {
