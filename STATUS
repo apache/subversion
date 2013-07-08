@@ -191,16 +191,6 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: dev@, subject "checkout_tests", Friday 5 Jul
 
- * r1488693, r1490721
-   (Perl bindings) Documentation fixes: document some SVN::Client methods
-   and at least list all wrapped -though still undocumented - methods.
-   Justification:
-     Save users from staring at the Perl source, trying to figure out
-     what is wrapped.
-   Votes:
-     +1: rschupp
-     +1: danielsh (r1488693 only)
-
  * r1500762
    Make gpg-agent password store verify that a usable GPG agent exists.
    Justification:
@@ -292,4 +282,15 @@ Approved changes:
    Branch: ^/subversion/branches/1.8.x-r1497310-partial
    Votes:
      +1: stsp, danielsh, stefan2
+
+ * r1488693, r1490721
+   (Perl bindings) Documentation fixes: document some SVN::Client methods
+   and at least list all wrapped -though still undocumented - methods.
+   Justification:
+     Save users from staring at the Perl source, trying to figure out
+     what is wrapped.
+   Votes:
+     +1: rschupp
+     +1: danielsh (r1488693)
+     +0: danielsh (r1490721)
 
