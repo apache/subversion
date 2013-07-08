@@ -316,6 +316,8 @@ Approved changes:
                since we cannot add a symbol in a patch release.
    Votes:
      +1: gstein, philip, lgo
+     -0: breser, danielsh (option name will be regretted since RFC is likely
+                           being updated to allow HTTP/1.1 without chunked)
 
  * r1500837
    Follow up to the r1489117 group, modifies the 411 Content length required
