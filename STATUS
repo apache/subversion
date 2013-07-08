@@ -141,7 +141,7 @@ Candidate changes:
    Notes:
      Depends on the r1489117 group (logically, not merge-wise).
    Votes:
-     +1: lgo
+     +1: lgo, rhuijben
 
  * r1498000
    Improve error handling for inherited property requests by using the
