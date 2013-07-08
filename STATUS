@@ -24,21 +24,6 @@ Candidate changes:
      +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
 
- * ^/subversion/branches/1.8.x-r1495063
-   r1495806, r1495985
-   Fix crash in FSFS DAG caching code on strict-alignment architectures.
-   Also, improve hash hash effectiveness and efficiency.
-   Justification:
-     FSFS shouldn't crash.
-     See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
-   Branch: 1.8.x-r1495063
-   Notes:
-     It took a while to figure out the "right way" to fix the hash function.
-     The branch takes all the individual back-and-forth changes and combines
-     them into one small patch.
-   Votes:
-     +1: stefan2, stsp
-
  * r1496007, r1496111
    Fix issue #4383, "Subversion 1.8.0 crash when WC path is symlink"
    Justification:
@@ -100,6 +85,35 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: dev@, subject "checkout_tests", Friday 5 Jul
 
+ * r1499438, r1499447, r1499460, r1500695, r1500928
+   Make building with BDB 6 an opt-in feature.
+   In configure, do not warn if BDB was not found.
+   Justification (r1499447):
+     The BDB backend is deprecated and the check is buggy.
+   Justification (r1499438, r1499460):
+     License change on a dependency.  libsvn_fs_base has not been tested with
+     bdb6, and is deprecated so we are unlikely to test it.
+   Notes:
+     Two orthogonal changes that conflict with each other.
+     r1499447 removes the warning.
+     r1499438 and r1499460 add an opt-in
+     r1500928 fixes the help string to be consistent with our convention
+   Votes:
+     +1: stsp, stefan2 (without r1500928)
+     +1: danielsh, breser
+
+ * r1488693, r1490721, r1500904
+   (Perl bindings) Documentation fixes: document some SVN::Client methods
+   and at least list all wrapped -though still undocumented - methods.
+   Justification:
+     Save users from staring at the Perl source, trying to figure out
+     what is wrapped.
+   Votes:
+     +1: breser
+     +1: rschupp (without r1500904)
+     +1: danielsh (r1488693)
+     +0: danielsh (r1490721)
+
 Veto-blocked changes:
 =====================
 
@@ -133,7 +147,7 @@ Approved changes:
    Justification:
      Errors show paths with wrong separators on some platforms.
    Votes:
-     +1: stsp, danielsh, stefan2
+     +1: stsp, danielsh, stefan2, breser
 
  * r1491739, r1491755, r1491762, r1492152
    Improve interactive conflict resolution menu.
@@ -160,39 +174,13 @@ Approved changes:
    Votes:
      +1: rhuijben, gstein, ivan
 
- * r1499438, r1499447, r1499460, r1500695
-   Make building with BDB 6 an opt-in feature.
-   In configure, do not warn if BDB was not found.
-   Justification (r1499447):
-     The BDB backend is deprecated and the check is buggy.
-   Justification (r1499438, r1499460):
-     License change on a dependency.  libsvn_fs_base has not been tested with
-     bdb6, and is deprecated so we are unlikely to test it.
-   Notes:
-     Two orthogonal changes that conflict with each other.
-     r1499447 removes the warning.
-     r1499438 and r1499460 add an opt-in
-   Votes:
-     +1: stsp, danielsh, stefan2
-
  * r1497310
    Backport 'svn help cleanup' improvements made in r1497310.
    Justification:
      The current output doesn't explain what the command actually does.
    Branch: ^/subversion/branches/1.8.x-r1497310-partial
    Votes:
-     +1: stsp, danielsh, stefan2
-
- * r1488693, r1490721
-   (Perl bindings) Documentation fixes: document some SVN::Client methods
-   and at least list all wrapped -though still undocumented - methods.
-   Justification:
-     Save users from staring at the Perl source, trying to figure out
-     what is wrapped.
-   Votes:
-     +1: rschupp
-     +1: danielsh (r1488693)
-     +0: danielsh (r1490721)
+     +1: stsp, danielsh, stefan2, breser
 
  * r1498449, r1498455, r1498997
    kidney blame: convert a client segfault into a correct failure mode.  To
@@ -204,7 +192,7 @@ Approved changes:
    Justification:
      Segfault.  (1.8.0 didn't have the segfaulting code.)
    Votes:
-     +1: danielsh, stsp, rhuijben
+     +1: danielsh, stsp, rhuijben, breser
 
  * r1500801
    Don't require GPG_TTY and TERM when getting passwords from gpg-agent.
@@ -253,14 +241,14 @@ Approved changes:
    Notes:
      Depends on the r1489117 group (logically, not merge-wise).
    Votes:
-     +1: lgo, rhuijben, danielsh
+     +1: lgo, rhuijben, danielsh, breser
 
  * r1500857
    A further clarification after r1500837
    Justification:
      Save users a tour to $SEARCH_ENGINE.
    Votes:
-     +1: danielsh, lgo
+     +1: danielsh, lgo, breser
      +1: rhuijben (but also +1 on not applying it if that would be the
                    consensus)
 
@@ -339,3 +327,17 @@ Approved changes:
    Votes:
      +1: breser, stsp, danielsh
 
+ * ^/subversion/branches/1.8.x-r1495063
+   r1495806, r1495985
+   Fix crash in FSFS DAG caching code on strict-alignment architectures.
+   Also, improve hash hash effectiveness and efficiency.
+   Justification:
+     FSFS shouldn't crash.
+     See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
+   Branch: 1.8.x-r1495063
+   Notes:
+     It took a while to figure out the "right way" to fix the hash function.
+     The branch takes all the individual back-and-forth changes and combines
+     them into one small patch.
+   Votes:
+     +1: stefan2, stsp, breser
