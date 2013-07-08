@@ -46,14 +46,6 @@ Candidate changes:
      +1: ivan
      -0: gstein, brane, breser (we should dynamically detect the problem; should fix name)
 
- * r1499034, r1500175
-   sqlite3.m4: allow placing the amalgamation in the build dir.
-   Justification:
-     It is not present in the extracted source tarball, so doesn't belong in
-     the source dir.
-   Votes:
-     +1: danielsh, breser
-
  * r1498000
    Improve error handling for inherited property requests by using the
    transition based xml parser in libsvn_ra_serf.
@@ -329,6 +321,14 @@ Approved changes:
      +1: brane, breser, stefan2
       0: rhuijben (Ev2 shims aren't used by production code. (-0)
                    Only by JavaHL 1.7/1.8 extensions branch (+0))
+
+ * r1499034, r1500175
+   sqlite3.m4: allow placing the amalgamation in the build dir.
+   Justification:
+     It is not present in the extracted source tarball, so doesn't belong in
+     the source dir.
+   Votes:
+     +1: danielsh, breser, stefan2
 
  * r1488693, r1490721, r1500904
    (Perl bindings) Documentation fixes: document some SVN::Client methods
