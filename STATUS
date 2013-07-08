@@ -271,10 +271,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1487094
-   (Perl bindings) Silence compiler warnings.
-   Justification:
-     Clean builds make it more likely to notice real compiler warnings.
-   Votes:
-     +1: rschupp, danielsh
-
