@@ -34,7 +34,7 @@ Candidate changes:
      +1: stsp
      +0.5: danielsh (+1 for everything, except the last hunk; trusting stsp
                      that removing 'r' from the interactive resolver is a good
-                     idea)
+                     idea (before unnominating r1492670,r1492682))
 
  * r1491816, r1494089
    Add two additional options to interactive file merge.
