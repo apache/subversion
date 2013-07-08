@@ -85,14 +85,6 @@ Candidate changes:
      +1: ivan
      -0: gstein, brane (we should dynamically detect the problem; should fix name)
 
- * r1497310
-   Backport 'svn help cleanup' improvements made in r1497310.
-   Justification:
-     The current output doesn't explain what the command actually does.
-   Branch: ^/subversion/branches/1.8.x-r1497310-partial
-   Votes:
-     +1: stsp, danielsh
-
  * r1498449, r1498455, r1498997
    kidney blame: convert a client segfault into a correct failure mode.  To
    reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
@@ -277,6 +269,14 @@ Approved changes:
      Two orthogonal changes that conflict with each other.
      r1499447 removes the warning.
      r1499438 and r1499460 add an opt-in
+   Votes:
+     +1: stsp, danielsh, stefan2
+
+ * r1497310
+   Backport 'svn help cleanup' improvements made in r1497310.
+   Justification:
+     The current output doesn't explain what the command actually does.
+   Branch: ^/subversion/branches/1.8.x-r1497310-partial
    Votes:
      +1: stsp, danielsh, stefan2
 
