@@ -725,7 +725,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
  */
 typedef svn_error_t *
 (*svn_config_auth_walk_func_t)(svn_boolean_t *delete_cred,
-                               void *cleanup_baton,
+                               void *walk_baton,
                                const char *cred_kind,
                                const char *realmstring,
                                apr_hash_t *hash,
