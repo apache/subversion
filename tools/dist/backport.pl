@@ -46,6 +46,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
   $_
 }
 // warn "Username for commits (of votes/merges) not found";
+my $MERGED_SOMETHING = 0;
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 my $VERBOSE = 0;
@@ -136,6 +137,7 @@ sub prompt {
 
 sub merge {
   my %entry = @_;
+  $MERGED_SOMETHING++;
 
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my ($mergeargs, $pattern);
@@ -403,7 +405,7 @@ sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
   # @_ is 'INT' in the former case and () in the latter.
   delete $SIG{INT} unless @_;
-  revert if !$YES and prompt 'Revert? ';
+  revert if !$YES and $MERGED_SOMETHING and prompt 'Revert? ';
   (@_ ? exit : return);
 }
 
