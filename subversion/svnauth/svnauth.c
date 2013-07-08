@@ -150,6 +150,10 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* The separator between credentials . */
+#define SEP_STRING \
+  "------------------------------------------------------------------------\n"
+
 /* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
 list_credentials(svn_boolean_t *delete_cred,
@@ -164,6 +168,7 @@ list_credentials(svn_boolean_t *delete_cred,
 
   *delete_cred = FALSE;
 
+  SVN_ERR(svn_cmdline_printf(scratch_pool, SEP_STRING));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("Credential kind: %s\n"), cred_kind));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
