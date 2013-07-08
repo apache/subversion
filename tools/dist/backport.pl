@@ -529,8 +529,10 @@ sub handle_entry {
         say "Your '$1' vote has been recorded." if $VERBOSE;
       }
       when (/^e/i) {
+        my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header};
-        $votes->{$.} = ['edit', \%entry]; # marker for the 2nd pass
+        $votes->{$.} = ['edit', \%entry] # marker for the 2nd pass
+            if $original ne $entry{raw};
       }
       when (/^N/i) {
         $state->{$entry{digest}}++;
