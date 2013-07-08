@@ -194,7 +194,15 @@ Candidate changes:
               a running agent).
      r1500802 fixes a build warning introduced in r1500799
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
+
+ * r1500801
+   Don't require GPG_TTY and TERM when getting passwords from gpg-agent.
+   Justification:
+     Requiring those variables can prevent some gpg-agent setups from working.
+     We cannot assume that everyone using gpg-agent is also using a TTY.
+   Votes:
+     +1: stsp, danielsh
 
 Veto-blocked changes:
 =====================
