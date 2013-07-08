@@ -74,18 +74,6 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: dev@, subject "checkout_tests", Friday 5 Jul
 
- * r1488693, r1490721, r1500904
-   (Perl bindings) Documentation fixes: document some SVN::Client methods
-   and at least list all wrapped -though still undocumented - methods.
-   Justification:
-     Save users from staring at the Perl source, trying to figure out
-     what is wrapped.
-   Votes:
-     +1: breser
-     +1: rschupp (without r1500904)
-     +1: danielsh (r1488693)
-     +0: danielsh (r1490721)
-
 Veto-blocked changes:
 =====================
 
@@ -341,4 +329,16 @@ Approved changes:
      +1: brane, breser, stefan2
       0: rhuijben (Ev2 shims aren't used by production code. (-0)
                    Only by JavaHL 1.7/1.8 extensions branch (+0))
+
+ * r1488693, r1490721, r1500904
+   (Perl bindings) Documentation fixes: document some SVN::Client methods
+   and at least list all wrapped -though still undocumented - methods.
+   Justification:
+     Save users from staring at the Perl source, trying to figure out
+     what is wrapped.
+   Votes:
+     +1: breser
+     +1: rschupp (without r1500904)
+     +1: danielsh (r1488693, r1500904)
+     +0: danielsh (r1490721)
 
