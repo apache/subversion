@@ -1863,36 +1863,6 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
                                        const char *local_abspath,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
-
-
-/** Create a new administrative area for @a local_abspath, so
- * that @a local_abspath is a working copy subdir based on @a url at @a
- * revision, with depth @a depth, and with repository UUID @a repos_uuid
- * and repository root URL @a repos_root_url.
- *
- * @a depth must be a definite depth, it cannot be #svn_depth_unknown.
- * @a repos_uuid and @a repos_root_url MUST NOT be @c NULL, and
- * @a repos_root_url must be a prefix of @a url.
- *
- * If the administrative area already exists, raise an error.
- *
- * Do not ensure existence of @a local_abspath itself; if @a local_abspath
- * does not exist, return error.
- *
- * Use @a scratch_pool for temporary allocations.
- *
- * @since New in 1.9.
- */
-svn_error_t *
-svn_wc__init_adm(svn_wc_context_t *wc_ctx,
-                 const char *local_abspath,
-                 const char *url,
-                 const char *repos_root_url,
-                 const char *repos_uuid,
-                 svn_revnum_t revision,
-                 svn_depth_t depth,
-                 apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
