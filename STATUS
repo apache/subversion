@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1499100, r1499483, r1499492, r1499496, r1499498
-   Allow configuration files with an UTF-8 Byte Order Mark.
-   Justification:
-     Make it easier for users, particularly those on Windows using notepad,
-     which will only save UTF-8 encoded text files with a BOM.
-   Votes:
-     +1: breser, stsp, danielsh
-
  * ^/subversion/branches/1.8.x-r1495063
    r1495806, r1495985
    Fix crash in FSFS DAG caching code on strict-alignment architectures.
