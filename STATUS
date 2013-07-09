@@ -59,6 +59,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1495597
+   Fix a build warning.
+   Justification:
+     Makes the build warning-free (which in turn makes the bot useful).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
