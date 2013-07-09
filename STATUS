@@ -120,21 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/1.8.x-r1495063
-   r1495806, r1495985
-   Fix crash in FSFS DAG caching code on strict-alignment architectures.
-   Also, improve hash hash effectiveness and efficiency.
-   Justification:
-     FSFS shouldn't crash.
-     See http://svn.haxx.se/dev/archive-2013-06/0432.shtml
-   Branch: 1.8.x-r1495063
-   Notes:
-     It took a while to figure out the "right way" to fix the hash function.
-     The branch takes all the individual back-and-forth changes and combines
-     them into one small patch.
-   Votes:
-     +1: stefan2, stsp, breser
-
  * r1499438, r1499447, r1499460, r1500695, r1500928
    Make building with BDB 6 an opt-in feature.
    In configure, do not warn if BDB was not found.
