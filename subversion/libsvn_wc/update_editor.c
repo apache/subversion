@@ -1814,6 +1814,7 @@ delete_entry(const char *path,
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
                                      FALSE /* keep_as_working */,
                                      FALSE /* queue_deletes */,
+                                     FALSE /* remove_locks */,
                                      SVN_INVALID_REVNUM /* not_present_rev */,
                                      NULL, NULL,
                                      scratch_pool));
@@ -1912,7 +1913,7 @@ delete_entry(const char *path,
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, queue_deletes,
+                                     keep_as_working, queue_deletes, FALSE,
                                      SVN_INVALID_REVNUM /* not_present_rev */,
                                      tree_conflict, NULL,
                                      scratch_pool));
@@ -1921,7 +1922,7 @@ delete_entry(const char *path,
     {
       /* Delete, leaving a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, queue_deletes,
+                                     keep_as_working, queue_deletes, FALSE,
                                      *eb->target_revision,
                                      tree_conflict, NULL,
                                      scratch_pool));
@@ -4735,6 +4736,7 @@ close_edit(void *edit_baton,
               SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
                                              FALSE /* keep_as_working */,
                                              FALSE /* queue_deletes */,
+                                             FALSE /* remove_locks */,
                                              SVN_INVALID_REVNUM,
                                              NULL, NULL, scratch_pool));
             }
