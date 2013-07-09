@@ -133,11 +133,11 @@ static const apr_getopt_option_t options_table[] =
   {"no-diff-deleted",   svnlook__no_diff_deleted, 0,
    N_("do not print differences for deleted files")},
 
+  {"diff-cmd",          svnlook__diff_cmd, 1,
+   N_("use ARG as diff command")},
+
   {"invoke-diff-cmd",   svnlook__invoke_diff_cmd, 1,
    N_("Customizable diff command (see svn help diff)")},
-
-  {"diff-cmd",          svnlook__diff_cmd, 1,
-   N_("deprecated, use --invoke-diff-cmd instead")},
 
   {"ignore-properties",   svnlook__ignore_properties, 0,
    N_("ignore properties during the operation")},

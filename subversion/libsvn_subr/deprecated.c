@@ -1324,10 +1324,11 @@ svn_io_run_diff2(const char *dir,
   if (user_args != NULL)
     {
       int j;
-      for (j = 0; j < num_user_args; ++j) {
-        svn_stringbuf_appendcstr(com, user_args[j]);
-        svn_stringbuf_appendcstr(com, " ");
-      }
+      for (j = 0; j < num_user_args; ++j) 
+        {
+          svn_stringbuf_appendcstr(com, user_args[j]);
+          svn_stringbuf_appendcstr(com, " ");
+        }
     }
   else /* assume -u if the user didn't give us any args */
     svn_stringbuf_appendcstr(com, "-u "); 

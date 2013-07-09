@@ -2845,7 +2845,7 @@ svn_io_create_custom_diff_cmd(const char *label1,
   apr_array_header_t *tmp;
   const char ** result;
   int argv;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);; 
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   tmp = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
 
