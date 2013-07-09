@@ -120,13 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1500680
-   Use local style for paths in error messages for 'svn diff --old A --new B'
-   Justification:
-     Errors show paths with wrong separators on some platforms.
-   Votes:
-     +1: stsp, danielsh, stefan2, breser
-
  * r1491739, r1491755, r1491762, r1492152
    Improve interactive conflict resolution menu.
    Justification:
