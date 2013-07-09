@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1495329, r1499403
-   Fix symlink for svnmucc in svn-tools.
-   Justification:
-     Makes 'make install-tools' work when DESTDIR is set.
-   Votes:
-     +1: philip (without r1499403)
-     +1: danielsh, stsp, breser
-
  * r1499064
    Fix issue #4387, svn merge --record-only errors out on renamed path.
    Justification:
