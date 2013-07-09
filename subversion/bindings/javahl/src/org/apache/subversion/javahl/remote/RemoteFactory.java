@@ -41,6 +41,14 @@ import java.util.HashSet;
 public class RemoteFactory
 {
     /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
+    /**
      * Default constructor.
      */
     public RemoteFactory() {}
