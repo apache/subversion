@@ -61,6 +61,7 @@ svn_ra_serf__wrap_err(apr_status_t status,
 
       if (serf_err_msg)
         {
+          err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
           err_msg = serf_err_msg;
         }
       else
