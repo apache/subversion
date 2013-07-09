@@ -55,6 +55,61 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+ * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
+   Support for HTTP/1.1 reverse proxies that require Content-Length headers
+   and deny chunked requests.
+   Branch: ^/subversion/branches/1.8.x-busted-proxy
+   Justification:
+     Older nginx servers cannot handle chunked requests. This patch will
+     keep HTTP/1.1 features in the connection, but will always use C-L
+     headers for the length (at a variant performance cost). This increases
+     svn's compatibility in various environments. Most installations will
+     never see this; the runtime test is only enabled with a config settting.
+   Notes:
+     r1489117: this is actually unrelated to the proxy work, but it removes
+               some redundant minimum-serf-version checking and allows the
+               actual work to cleanly merge.
+     r1496470: add/respect using_chunked_requests flag to session state
+     r1497975: rename config variable, tweak session variables
+     r1497980: add runtime/dynamic checking of proxy support
+     r1498012: remove improper check of client-side proxy; the real problem
+               is within the server-side reverse proxy
+     r1499423: fix 411 handling
+     r1499595: don't probe when a redirect occurs
+     
+     Local to branch:
+     r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
+               since we cannot add a symbol in a patch release.
+   Votes:
+     +1: gstein, philip, lgo
+     -0: breser (option name will be regretted since RFC is likely
+                 being updated to allow HTTP/1.1 without chunked)
+     -1: danielsh (option name is wrong. Those proxies follow the spec, so they
+                   are not busted, period.)
+
+ * r1500837
+   Follow up to the r1489117 group, modifies the 411 Content length required
+   error message to point the user to the busted-proxy option.
+   Justification:
+     The original error message was meaningless, this patch at least guides
+     the user in the right direction.
+   Notes:
+     Depends on the r1489117 group (logically, not merge-wise).
+   Votes:
+     +1: lgo, rhuijben, danielsh, breser
+     -1: (not vetoed, but depends on the r1489117 group which is)
+
+ * r1500857
+   A further clarification after r1500837
+   Justification:
+     Save users a tour to $SEARCH_ENGINE.
+   Depends: r1500837
+   Votes:
+     +1: danielsh, lgo, breser
+     +1: rhuijben (but also +1 on not applying it if that would be the
+                   consensus)
+     -1: (not vetoed, but depends on the r1489117 group which is)
+
 Approved changes:
 =================
 
@@ -139,57 +194,6 @@ Approved changes:
      We cannot assume that everyone using gpg-agent is also using a TTY.
    Votes:
      +1: stsp, danielsh, rhuijben, breser
-
- * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
-   Support for HTTP/1.1 reverse proxies that require Content-Length headers
-   and deny chunked requests.
-   Branch: ^/subversion/branches/1.8.x-busted-proxy
-   Justification:
-     Older nginx servers cannot handle chunked requests. This patch will
-     keep HTTP/1.1 features in the connection, but will always use C-L
-     headers for the length (at a variant performance cost). This increases
-     svn's compatibility in various environments. Most installations will
-     never see this; the runtime test is only enabled with a config settting.
-   Notes:
-     r1489117: this is actually unrelated to the proxy work, but it removes
-               some redundant minimum-serf-version checking and allows the
-               actual work to cleanly merge.
-     r1496470: add/respect using_chunked_requests flag to session state
-     r1497975: rename config variable, tweak session variables
-     r1497980: add runtime/dynamic checking of proxy support
-     r1498012: remove improper check of client-side proxy; the real problem
-               is within the server-side reverse proxy
-     r1499423: fix 411 handling
-     r1499595: don't probe when a redirect occurs
-     
-     Local to branch:
-     r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
-               since we cannot add a symbol in a patch release.
-   Votes:
-     +1: gstein, philip, lgo
-     -0: breser, danielsh (option name will be regretted since RFC is likely
-                           being updated to allow HTTP/1.1 without chunked)
-
- * r1500837
-   Follow up to the r1489117 group, modifies the 411 Content length required
-   error message to point the user to the busted-proxy option.
-   Justification:
-     The original error message was meaningless, this patch at least guides
-     the user in the right direction.
-   Notes:
-     Depends on the r1489117 group (logically, not merge-wise).
-   Votes:
-     +1: lgo, rhuijben, danielsh, breser
-
- * r1500857
-   A further clarification after r1500837
-   Justification:
-     Save users a tour to $SEARCH_ENGINE.
-   Depends: r1500837
-   Votes:
-     +1: danielsh, lgo, breser
-     +1: rhuijben (but also +1 on not applying it if that would be the
-                   consensus)
 
  * r1500762, r1500799, r1500802
    Make gpg-agent password store verify that a usable GPG agent exists.
