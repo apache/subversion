@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1499064
-   Fix issue #4387, svn merge --record-only errors out on renamed path.
-   Justification:
-     Record-only merge shouldn't be flagging tree conflicts.
-     Regression from 1.7.
-   Votes:
-     +1: stsp, rhuijben, breser
-
  * r1499100, r1499483, r1499492, r1499496, r1499498
    Allow configuration files with an UTF-8 Byte Order Mark.
    Justification:
