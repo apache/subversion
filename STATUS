@@ -120,15 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1491756
-   Fix issue #4364: Correctly remove the stale entries from the lock table
-   when committing deletions.
-   Justification:
-     Keep wc.db as consistent and clean as possible.
-   Votes:
-     +1: rhuijben, stsp, breser
-     +1 (nonbinding): schabi
-
  * r1495329, r1499403
    Fix symlink for svnmucc in svn-tools.
    Justification:
