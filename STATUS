@@ -120,20 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498885
-   Correctly initialize the node kind in the Ev2 shims' change table.
-   Justification:
-     Fixes a bug introduced bu the svn_kind_t -> svn_node_kind_t merge
-     from r1455559, making the shims work again.
-   Notes:
-     I [brane] realise that this is an unusual backport request;
-     the motivation is to make the JavaHL extensions backported to the
-     javahl-1.8-extensions branch work with stock 1.8.x binary distros.
-     Incidentally, that backport will serve as a real-life test of the
-     Ev2 API, as that is what JavaHL exposes.
-   Votes:
-      +1: brane, gstein, stsp
-
  * r1491816, r1494089
    Add two additional options to interactive file merge.
    Justification:

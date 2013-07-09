@@ -218,6 +218,7 @@ locate_change(struct ev2_edit_baton *eb,
   change = apr_pcalloc(eb->edit_pool, sizeof(*change));
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
+  change->kind = svn_node_unknown;
 
   svn_hash_sets(eb->changes, relpath, change);
 
