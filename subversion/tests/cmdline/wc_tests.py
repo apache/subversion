@@ -340,7 +340,6 @@ def cleanup_dir_external(sbox):
                                      sbox.ospath(""))
 
 @Issue(4390)
-@XFail()
 def checkout_within_locked_wc(sbox):
   """checkout within a locked working copy"""
 
@@ -348,8 +347,13 @@ def checkout_within_locked_wc(sbox):
 
   # lock working copy and create outstanding work queue items
   svntest.actions.lock_admin_dir(sbox.ospath(""), True, True)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     [], "checkout", sbox.repo_url,
+  expected_output = [
+  "A    %s\n" % sbox.ospath("nested-wc/alpha"),
+  "A    %s\n" % sbox.ospath("nested-wc/beta"),
+  "Checked out revision 1.\n"
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], "checkout", sbox.repo_url + '/A/B/E',
                                      sbox.ospath("nested-wc"))
 
 
