@@ -82,8 +82,8 @@ Veto-blocked changes:
                since we cannot add a symbol in a patch release.
    Votes:
      +1: gstein, philip, lgo
-     -0: breser (option name will be regretted since RFC is likely
-                 being updated to allow HTTP/1.1 without chunked)
+     -1: breser (given danielsh's veto, the discussion on IRC and my email to
+                 dev I think we need to discuss this more before approving)
      -1: danielsh (option name is wrong. Those proxies follow the spec, so they
                    are not busted, period.)
 
