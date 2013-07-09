@@ -49,7 +49,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_nativeDispose(
     JNIEnv *env, jobject jthis)
 {
-  JNIEntry(RemoteSession, dispose);
+  JNIEntry(RemoteSession, nativeDispose);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   if (ras != NULL)
     ras->dispose(jthis);
@@ -188,6 +188,79 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionProperty(
   return ras->getRevisionProperty(jrevision, jname);
 }
 
+JNIEXPORT jlong JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetFile(
+    JNIEnv *env, jobject jthis, jlong jrevision, jstring jpath,
+    jobject jcontents, jobject jproperties)
+{
+  JNIEntry(SVNReposAccess, nativeGetFile);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
+
+  return ras->getFile(jrevision, jpath, jcontents, jproperties);
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeGetDirectory(
+    JNIEnv *env, jobject jthis, jlong jrevision, jstring jpath,
+    jint jdirent_fields, jobject jdirents, jobject jproperties)
+{
+  JNIEntry(SVNReposAccess, nativeGetDirectory);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, SVN_INVALID_REVNUM);
+
+  return ras->getDirectory(jrevision, jpath,
+                           jdirent_fields, jdirents, jproperties);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getMergeinfo(
+    JNIEnv *env, jobject jthis, jobject jpaths, jlong jrevision,
+    jobject jinherit, jboolean jinclude_descendants)
+{
+  JNIEntry(SVNReposAccess, getMergeinfo);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getMergeinfo(jpaths, jrevision, jinherit, jinclude_descendants);
+}
+
+// TODO: update
+// TODO: switch
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_nativeStatus(
+    JNIEnv *env, jobject jthis, jstring jstatus_target, jlong jrevision,
+    jobject jdepth, jobject jstatus_editor, jobject jreporter)
+{
+  JNIEntry(SVNReposAccess, nativeStatus);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras,);
+
+  ras->status(jthis, jstatus_target, jrevision, jdepth,
+              jstatus_editor, jreporter);
+}
+
+// TODO: diff
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getLog(
+    JNIEnv *env, jobject jthis, jobject jpaths,
+    jlong jstartrev, jlong jendrev, jint jlimit,
+    jboolean jstrict_node_history, jboolean jdiscover_changed_paths,
+    jboolean jinclude_merged_revisions,
+    jobject jrevprops, jobject jlog_callback)
+{
+  JNIEntry(SVNReposAccess, getLog);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras,);
+
+  ras->getLog(jpaths, jstartrev, jendrev, jlimit,
+              jstrict_node_history, jdiscover_changed_paths,
+              jinclude_merged_revisions,
+              jrevprops, jlog_callback);
+}
+
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(
     JNIEnv *env, jobject jthis, jstring jpath, jlong jrevision)
@@ -199,6 +272,14 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(
   return ras->checkPath(jpath, jrevision);
 }
 
+// TODO: stat
+// TODO: getLocations
+// TODO: getLocationSegments
+// TODO: getFileRevisions
+// TODO: lock
+// TODO: unlock
+// TODO: getLock
+
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getLocks(
     JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth)
@@ -209,6 +290,11 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getLocks(
 
   return ras->getLocks(jpath, jdepth);
 }
+
+// TODO: replayRange
+// TODO: replay
+// TODO: getDeletedRevision
+// TODO: getInheritedProperties
 
 JNIEXPORT jboolean JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_nativeHasCapability(

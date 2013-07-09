@@ -339,6 +339,90 @@ svn_wc_conflict_version_dup(const svn_wc_conflict_version_t *version,
   return new_version;
 }
 
+apr_array_header_t *
+svn_wc__cd3_array_to_cd2_array(const apr_array_header_t *conflicts,
+                               apr_pool_t *result_pool)
+{
+  apr_array_header_t *new_conflicts;
+  int i;
+
+  new_conflicts = apr_array_make(result_pool, conflicts->nelts,
+                                 sizeof (svn_wc_conflict_description2_t *));
+
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      svn_wc_conflict_description3_t *cd;
+      svn_wc_conflict_description2_t *cd2;
+      
+      cd = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description3_t *);
+      cd2 = svn_wc__cd3_to_cd2(cd, result_pool);
+      APR_ARRAY_PUSH(new_conflicts, svn_wc_conflict_description2_t *) = cd2;
+    }
+
+  return new_conflicts;
+}
+
+svn_wc_conflict_description2_t *
+svn_wc__cd3_to_cd2(const svn_wc_conflict_description3_t *conflict,
+                   apr_pool_t *result_pool)
+{
+  svn_wc_conflict_description2_t *new_conflict;
+
+  if (conflict == NULL)
+    return NULL;
+
+  new_conflict = apr_pcalloc(result_pool, sizeof(*new_conflict));
+
+  if (conflict->local_abspath)
+    new_conflict->local_abspath = apr_pstrdup(result_pool,
+                                              conflict->local_abspath);
+  new_conflict->node_kind = conflict->node_kind;
+  new_conflict->kind = conflict->kind;
+  if (conflict->property_name)
+    new_conflict->property_name = apr_pstrdup(result_pool,
+                                              conflict->property_name);
+  new_conflict->is_binary = conflict->is_binary;
+  if (conflict->mime_type)
+    new_conflict->mime_type = apr_pstrdup(result_pool, conflict->mime_type);
+  new_conflict->action = conflict->action;
+  new_conflict->reason = conflict->reason;
+  if (conflict->base_abspath)
+    new_conflict->base_abspath = apr_pstrdup(result_pool,
+                                             conflict->base_abspath);
+
+  if (conflict->kind == svn_wc_conflict_kind_property)
+    {
+      /* For property conflicts, cd2 stored prop_reject_abspath in
+       * their_abspath, and stored theirs_abspath in merged_file. */
+      if (conflict->prop_reject_abspath)
+        new_conflict->their_abspath = apr_pstrdup(result_pool,
+                                                  conflict->prop_reject_abspath);
+      if (conflict->their_abspath)
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->their_abspath);
+    }
+  else
+    {
+      if (conflict->their_abspath)
+        new_conflict->their_abspath = apr_pstrdup(result_pool,
+                                                  conflict->their_abspath);
+
+      if (conflict->merged_file)
+        new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                conflict->merged_file);
+    }
+  if (conflict->my_abspath)
+    new_conflict->my_abspath = apr_pstrdup(result_pool, conflict->my_abspath);
+  new_conflict->operation = conflict->operation;
+  if (conflict->src_left_version)
+    new_conflict->src_left_version =
+      svn_wc_conflict_version_dup(conflict->src_left_version, result_pool);
+  if (conflict->src_right_version)
+    new_conflict->src_right_version =
+      svn_wc_conflict_version_dup(conflict->src_right_version, result_pool);
+
+  return new_conflict;
+}
 
 svn_wc_conflict_description_t *
 svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,

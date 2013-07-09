@@ -47,7 +47,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 typedef enum blame_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   FILE_REVS_REPORT,
   FILE_REV,
   REV_PROP,
@@ -110,7 +110,6 @@ static const svn_ra_serf__xml_transition_t blame_ttable[] = {
 
   { 0 }
 };
-
 
 /* Conforms to svn_ra_serf__xml_opened_t  */
 static svn_error_t *
@@ -332,6 +331,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url;
   svn_error_t *err;
+  svn_revnum_t peg_rev;
 
   blame_ctx = apr_pcalloc(pool, sizeof(*blame_ctx));
   blame_ctx->pool = pool;
@@ -342,18 +342,26 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->end = end;
   blame_ctx->include_merged_revisions = include_merged_revisions;
 
+  /* Since Subversion 1.8 we allow retrieving blames backwards. So we can't
+     just unconditionally use end_rev as the peg revision as before */
+  if (end > start)
+    peg_rev = end;
+  else
+    peg_rev = start;
+
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
                                       session, NULL /* conn */,
-                                      NULL /* url */, end,
+                                      NULL /* url */, peg_rev,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(blame_ttable,
                                            blame_opened,
                                            blame_closed,
                                            blame_cdata,
+                                           NULL,
                                            blame_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;

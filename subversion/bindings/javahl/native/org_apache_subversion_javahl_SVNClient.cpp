@@ -50,7 +50,7 @@
 #include "ImportFilterCallback.h"
 #include "ChangelistCallback.h"
 #include "StringArray.h"
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "VersionExtended.h"
 #include "DiffOptions.h"
 #include "svn_version.h"
@@ -384,7 +384,7 @@ Java_org_apache_subversion_javahl_SVNClient_remove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -498,7 +498,7 @@ Java_org_apache_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -539,7 +539,7 @@ Java_org_apache_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -577,7 +577,7 @@ Java_org_apache_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -610,7 +610,7 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -761,7 +761,7 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1012,7 +1012,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1632,6 +1632,21 @@ Java_org_apache_subversion_javahl_SVNClient_setConfigDirectory
     return;
 
   cl->getClientContext().setConfigDirectory(configDir);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler
+(JNIEnv *env, jobject jthis, jobject jconfigHandler)
+{
+  JNIEntry(SVNClient, setConfigDirectory);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setConfigCallback(jconfigHandler);
 }
 
 JNIEXPORT jstring JNICALL

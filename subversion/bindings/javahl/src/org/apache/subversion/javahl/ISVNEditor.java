@@ -27,7 +27,6 @@ import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,10 +46,10 @@ public interface ISVNEditor
     /**
      * Create a new directory at <code>relativePath</code>.
      * The immediate parent of <code>relativePath</code> is expected to exist.
-     *
+     * <p>
      * For descriptions of <code>properties</code> and
      * <code>replacesRevision</code>, see #addFile().
-     *
+     * <p>
      * A complete listing of the immediate children of
      * <code>relativePath</code> that will be added subsequently is
      * given in <code>children</code>. <code>children</code> is a
@@ -70,26 +69,26 @@ public interface ISVNEditor
     /**
      * Create a new file at <code>relativePath</code>.
      * The immediate parent of <code>relativePath</code> is expected to exist.
-     *
+     * <p>
      * The file's contents are specified in <code>contents</code>
      * which has a checksum matching <code>checksum</code>. Both
      * values must be non-<code>null</code>.
-     *
+     * <p>
      * Set the properties of the new file to
      * <code>properties</code>. If no properties are being set on the
      * new file, <code>properties</code> must be empty. It is an error
      * to pass <code>null</code> for <code>properties</code>.
-     *
+     * <p>
      * If this add is expected to replace a previously existing file,
      * symlink or directory at <code>relativePath</code>, the revision
      * number of the node to be replaced must be given in
      * <code>replacesRevision</code>. Otherwise,
      * <code>replacesRevision</code> must be
      * Revision.SVN_INVALID_REVNUM.
-     *
-     * @note It is not allowed to call a "delete" followed by an "add" on the
-     *       same path. Instead, an "add" with <code>replacesRevision</code>
-     *       set accordingly MUST be used.
+     * <p>
+     * <b>Note:</b> It is not allowed to call a "delete" followed by
+     * an "add" on the same path. Instead, an "add" with
+     * <code>replacesRevision</code> set accordingly <em>must</em> be used.
      *
      * @throws ClientException
      */
@@ -132,7 +131,7 @@ public interface ISVNEditor
 
     /**
      * Alter the properties of the directory at <code>relativePath</code>.
-     *
+     * <p>
      * <code>revision</code> specifies the revision at which the
      * receiver should expect to find this node. That is,
      * <code>relativePath</code> at the start of the whole edit and
@@ -143,13 +142,13 @@ public interface ISVNEditor
      * corresponding revision in the repository (e.g. it has not yet
      * been committed), then <code>revision</code> should be
      * Revision.SVN_INVALID_REVNUM.
-     *
+     * <p>
      * If any changes to the set of children will be made in the
      * future of the edit drive, then <code>children</code>
      * <em>must</em> specify the resulting set of children. See
      * #addDirectory() for the format of <code>children</code>.  If
      * not changes will be made, then NULL may be specified.
-     *
+     * <p>
      * For a description of <code>properties</code>, see
      * #addFile(). If no changes to the properties will be made
      * (ie. only future changes to the set of children), then
@@ -168,7 +167,7 @@ public interface ISVNEditor
      * <code>relativePath</code> with <code>revision</code> as its
      * expected revision. See #alterDirectory() for more information
      * about <code>revision</code>.
-     *
+     * <p>
      * If <code>contents</code> is non-<code>null</code>, then the
      * stream will be copied to the file, and its checksum must match
      * <code>checksum</code> (which must also be
@@ -176,13 +175,13 @@ public interface ISVNEditor
      * <code>null</code>, then <code>checksum</code> must also be
      * <code>null</code>, and no change will be applied to the file's
      * contents.
-     *
+     * <p>
      * If <code>properties</code> is non-<code>null</code>, then the
      * properties will be applied.
-     *
+     * <p>
      * For a description of <code>checksum</code> and
      * <code>contents</code>, see #addFile().
-     *
+     * <p>
      * This function allows <code>properties</code> to be
      * <code>null</code>, but the parameter is otherwise described by
      * #addFile().
@@ -201,17 +200,17 @@ public interface ISVNEditor
      * <code>relativePath</code> with <code>revision</code> as its
      * expected revision. See #alterDirectory() for more information
      * about <code>revision</code>.
-     *
+     * <p>
      * If <code>target</code> is non-<code>null</code>, then the
      * symlink's target will be updated.
-     *
+     * <p>
      * If <code>properties</code> is non-<code>null</code>, then the
      * properties will be applied.
-     *
+     * <p>
      * The target and/or the properties must be changed. It is an
      * error to pass <code>null</code> for both <code>target</code>
      * and <code>properties</code>.
-     *
+     * <p>
      * This function allows <code>properties</code> to be
      * <code>null</code>, but the parameter is otherwise described by
      * #addFile().
@@ -237,11 +236,11 @@ public interface ISVNEditor
     /**
      * Move the node at <code>sourceRelativePath</code> to
      * <code>destinationRelativePath</code>.
-     *
+     * <p>
      * For a description of <code>replacesRevision</code>, see #addFile().
-     *
-     * @note See the general instructions on paths for this API. Since
-     * the <code>sourceRelativePath</code> argument must generally be
+     * <p>
+     * <b>Note:</b> See the general instructions on paths for this API.
+     * Sice the <code>sourceRelativePath</code> argument must generally be
      * able to reference any node in the repository, the implication
      * is that the editor's root must be the repository root.
      *
@@ -256,7 +255,7 @@ public interface ISVNEditor
     /**
      * Move the node at <code>sourceRelativePath</code> to
      * <code>destinationRelativePath</code>.
-     *
+     * <p>
      * <code>sourceRevision</code> specifies the revision at which the
      * receiver should expect to find this node.  That is,
      * <code>sourceRelativePath</code> at the start of the whole edit
@@ -264,7 +263,7 @@ public interface ISVNEditor
      * <code>sourceRevision</code> must lie within the same node-rev
      * (aka history-segment).  This is just like the #delete() and
      * #rotate().
-     *
+     * <p>
      * For a description of <code>replacesRevision</code>, see #addFile().
      *
      * @throws ClientException
@@ -274,40 +273,42 @@ public interface ISVNEditor
               String destinationRelativePath,
               long replacesRevision)
             throws ClientException;
-    /**
-     * Perform a rotation among multiple nodes in the target tree.
-     *
-     * The <code>elements</code> list specifies the nodes in the tree
-     * which are located at a path and expected to be at a specific
-     * revision. These nodes are simultaneously moved in a rotation
-     * pattern.  For example, the node at index 0
-     * <code>elements</code> will be moved to the relative path
-     * specified at index 1 of <code>elements</code>. The node at
-     * index 1 will be moved to the location at index 2. The node at
-     * index N-1 will be moved to the relative path specified at index 0.
-     *
-     * The simplest form of this operation is to swap nodes A and
-     * B. One may think to move A to a temporary location T, then move
-     * B to A, then move T to B. However, this last move violations
-     * the Once Rule by moving T (which had already by edited by the
-     * move from A). In order to keep the restrictions against
-     * multiple moves of a single node, the rotation operation is
-     * needed for certain types of tree edits.
-     *
-     * @throws ClientException
-     */
-    void rotate(List<RotatePair> elements) throws ClientException;
 
-    public static final class RotatePair
-    {
-        public RotatePair(String relativePath, long revision)
-        {
-            this.relativePath = relativePath;
-            this.revision = revision;
-        }
-        public final String relativePath;
-        public final long revision;
-    }
+// Not implemented in the native API
+//    /**
+//     * Perform a rotation among multiple nodes in the target tree.
+//     * <p>
+//     * The <code>elements</code> list specifies the nodes in the tree
+//     * which are located at a path and expected to be at a specific
+//     * revision. These nodes are simultaneously moved in a rotation
+//     * pattern.  For example, the node at index 0
+//     * <code>elements</code> will be moved to the relative path
+//     * specified at index 1 of <code>elements</code>. The node at
+//     * index 1 will be moved to the location at index 2. The node at
+//     * index N-1 will be moved to the relative path specified at index 0.
+//     * <p>
+//     * The simplest form of this operation is to swap nodes A and
+//     * B. One may think to move A to a temporary location T, then move
+//     * B to A, then move T to B. However, this last move violations
+//     * the Once Rule by moving T (which had already by edited by the
+//     * move from A). In order to keep the restrictions against
+//     * multiple moves of a single node, the rotation operation is
+//     * needed for certain types of tree edits.
+//     *
+//     * @throws ClientException
+//     */
+//    void rotate(Iterable<RotatePair> elements) throws ClientException;
+//
+//    public static final class RotatePair
+//    {
+//        public RotatePair(String relativePath, long revision)
+//        {
+//            this.relativePath = relativePath;
+//            this.revision = revision;
+//        }
+//        public final String relativePath;
+//        public final long revision;
+//    }
 
     /**
      * Signal that the edit has been completed successfully.

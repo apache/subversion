@@ -523,6 +523,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(HTTP_PROXY)" != ""; then                                \
 	    flags="--http-proxy $(HTTP_PROXY) $$flags";                      \
 	  fi;                                                                \
+	  if test "$(EXCLUSIVE_WC_LOCKS)" != ""; then                        \
+	    flags="--exclusive-wc-locks $$flags";                            \
+	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
@@ -642,9 +645,10 @@ doc-javahl:
 	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl \
-      org.apache.subversion.javahl \
-      org.apache.subversion.javahl.callback \
-      org.apache.subversion.javahl.types
+	  org.apache.subversion.javahl \
+	  org.apache.subversion.javahl.remote \
+	  org.apache.subversion.javahl.callback \
+	  org.apache.subversion.javahl.types
 
 doc-clean:
 	rm -rf $(top_srcdir)/doc/doxygen
@@ -912,5 +916,5 @@ INSTALL_EXTRA_TOOLS=\
   test -n "$$SVN_SVNMUCC_IS_SVNSYITF" && \
   ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
   if test "$(DESTDIR)$(bindir)" != "$(DESTDIR)$(toolsdir)"; then \
-    ln -sf ../svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
+    ln -sf $(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
   fi

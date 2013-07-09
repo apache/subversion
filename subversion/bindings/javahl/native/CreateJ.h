@@ -31,6 +31,7 @@
 #include "svn_wc.h"
 #include "svn_repos.h"
 #include "svn_client.h"
+#include "svn_mergeinfo.h"
 
 #include <vector>
 
@@ -47,6 +48,10 @@ class CreateJ
 
   static jobject
   Checksum(const svn_checksum_t *checksum);
+
+  static jobject
+  DirEntry(const char *path, const char *absPath,
+           const svn_dirent_t *dirent);
 
   static jobject
   Info(const char *path, const svn_client_info2_t *info);
@@ -80,13 +85,21 @@ class CreateJ
   RevisionRangeList(svn_rangelist_t *ranges);
 
   static jobject
-  StringSet(apr_array_header_t *strings);
+  StringSet(const apr_array_header_t *strings);
 
   static jobject
-  PropertyMap(apr_hash_t *prop_hash);
+  PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool = NULL);
+
+  static void
+  FillPropertyMap(jobject map, apr_hash_t* prop_hash,
+                  apr_pool_t* scratch_pool,
+                  jmethodID put_method_id = 0);
 
   static jobject
   InheritedProps(apr_array_header_t *inherited_props);
+
+  static jobject
+  Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool);
 
   /* This creates a set of Objects.  It derefs the members of the vector
    * after putting them in the set, so they caller doesn't need to. */

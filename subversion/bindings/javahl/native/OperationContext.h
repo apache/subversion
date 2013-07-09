@@ -31,6 +31,7 @@
 
 #include "svn_types.h"
 #include "svn_client.h"
+#include "private/svn_atomic.h"
 
 #include <jni.h>
 #include "Pool.h"
@@ -51,14 +52,16 @@ class OperationContext
   apr_hash_t * m_config;
 
   Prompter *m_prompter;
-  bool m_cancelOperation;
+  svn_atomic_t m_cancelOperation;
 
  protected:
   SVN::Pool *m_pool;
 
   jobject m_jctx;
+  jobject m_jcfgcb;
   static void progress(apr_off_t progressVal, apr_off_t total,
                        void *baton, apr_pool_t *pool);
+  void notifyConfigLoad();
  public:
   OperationContext(SVN::Pool &pool);
   void attachJavaObject(jobject contextHolder, const char *contextClassType, const char *contextFieldName, jfieldID * ctxFieldID);
@@ -76,6 +79,7 @@ class OperationContext
   virtual bool isCancelledOperation();
   jobject getSelf() const;
   const char *getConfigDirectory() const;
+  jobject getConfigCallback() const;
   const char *getUsername() const;
   const char *getPassword() const;
   const Prompter& getPrompter() const;
@@ -86,6 +90,12 @@ class OperationContext
    * specified location.
    */
   void setConfigDirectory(const char *configDir);
+
+  /**
+   * Set the config ConfigCallback instance to call when configuration
+   * is loaded..
+   */
+  void setConfigCallback(jobject configCallback);
 
   /**
    * Return configuration data for the context.

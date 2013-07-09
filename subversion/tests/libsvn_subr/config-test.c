@@ -336,6 +336,22 @@ test_stream_interface(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_ignore_bom(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  svn_string_t *cfg_string = svn_string_create("\xEF\xBB\xBF[s1]\nfoo=bar\n",
+                                               pool);
+  svn_stream_t *stream = svn_stream_from_string(cfg_string, pool);
+
+  SVN_ERR(svn_config_parse(&cfg, stream, TRUE, TRUE, pool));
+
+  if (! svn_config_has_section(cfg, "s1"))
+    return fail(pool, "failed to find section s1");
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -359,5 +375,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test case-sensitive option name lookup"),
     SVN_TEST_PASS2(test_stream_interface,
                    "test svn_config_parse"),
+    SVN_TEST_PASS2(test_ignore_bom, "test parsing config file with BOM"),
     SVN_TEST_NULL
   };

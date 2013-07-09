@@ -4025,12 +4025,41 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
+ * If @a include_externals is @c TRUE, recurse into externals and clean
+ * them up as well.
+ *
+ * If @a remove_unversioned_items is @c TRUE, remove unversioned items
+ * in @a dir after successfull working copy cleanup.
+ * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
+ * in @a dir after successfull working copy cleanup.
+ *
+ * When asked to remove unversioned or ignored items, and the working copy
+ * is already locked via a different client or WC context than @a ctx, return
+ * #SVN_ERR_WC_LOCKED. This prevents accidental working copy corruption in
+ * case users run the cleanup operation to remove unversioned items while
+ * another client is performing some other operation on the working copy.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically #SVN_ERR_CANCELLED), return that error
  * immediately.
  *
  * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_cleanup2(const char *dir,
+                    svn_boolean_t include_externals,
+                    svn_boolean_t remove_unversioned_items,
+                    svn_boolean_t remove_ignored_items,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool);
+
+/* Like svn_client_cleanup2(), but no support for removing unversioned items
+ * and cleaning up externals.
+ *
+ * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_client_cleanup(const char *dir,

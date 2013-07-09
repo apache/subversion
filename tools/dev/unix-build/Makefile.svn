@@ -39,6 +39,7 @@ endif
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
+EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
@@ -126,7 +127,7 @@ LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
-JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+JUNIT_URL	= http://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -1192,8 +1193,9 @@ else
 endif
 
 ifdef PROFILE
-SVN_ALL_STATIC=--enable-all-static
+SVN_STATIC_FLAG=--enable-all-static
 else
+SVN_STATIC_FLAG=--disable-static
 SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 	--with-apache-libexecdir="$(PREFIX)/httpd/modules/svn-$(WC)"
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
@@ -1223,7 +1225,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
-			$(SVN_ALL_STATIC) \
+			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
 
@@ -1421,7 +1423,8 @@ define do_check
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
+	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \
