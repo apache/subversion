@@ -517,6 +517,32 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
+svn_wc__init_adm(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 const char *url,
+                 const char *repos_root_url,
+                 const char *repos_uuid,
+                 svn_revnum_t revision,
+                 svn_depth_t depth,
+                 apr_pool_t *scratch_pool)
+
+{
+  const char *repos_relpath = svn_uri_skip_ancestor(repos_root_url, url,
+                                                    scratch_pool);
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(url != NULL);
+  SVN_ERR_ASSERT(repos_root_url != NULL);
+  SVN_ERR_ASSERT(repos_uuid != NULL);
+  SVN_ERR_ASSERT(repos_relpath != NULL);
+  SVN_ERR_ASSERT(depth != svn_depth_unknown);
+
+  return svn_error_trace(init_adm(wc_ctx->db, local_abspath,
+                                  repos_relpath, repos_root_url, repos_uuid,
+                                  revision, depth, scratch_pool));
+}
+
+svn_error_t *
 svn_wc__adm_destroy(svn_wc__db_t *db,
                     const char *dir_abspath,
                     svn_cancel_func_t cancel_func,
