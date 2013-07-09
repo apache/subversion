@@ -120,18 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498449, r1498455, r1498997
-   kidney blame: convert a client segfault into a correct failure mode.  To
-   reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
-   Notes:
-     r1498449 breaks out a helper function
-     r1498455 fixes the segfault.
-     r1498997 is a minor optimisation
-   Justification:
-     Segfault.  (1.8.0 didn't have the segfaulting code.)
-   Votes:
-     +1: danielsh, stsp, rhuijben, breser
-
  * r1500801
    Don't require GPG_TTY and TERM when getting passwords from gpg-agent.
    Justification:
