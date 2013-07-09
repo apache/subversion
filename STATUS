@@ -120,21 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1500762, r1500799, r1500802
-   Make gpg-agent password store verify that a usable GPG agent exists.
-   Justification:
-     gpg-agent password store might lie about having stored passwords
-     which breaks password caching in the default configuration.
-     See http://svn.haxx.se/users/archive-2013-07/0093.shtml
-   Notes:
-     r1500762 is the first part of the fix.
-     r1500799 fixes the fix by not requiring GPG_TTY to be set (we cannot
-              assume that GPG_TTY will always be set, but we can require
-              a running agent).
-     r1500802 fixes a build warning introduced in r1500799
-   Votes:
-     +1: stsp, danielsh, breser
-
  * r1498483, r1498484, r1498486
    fs: Improve a regression test.
    Notes:
