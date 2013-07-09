@@ -42,6 +42,7 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
+UnorderedOutput = svntest.verify.UnorderedOutput
 
 ######################################################################
 # Tests
@@ -200,6 +201,24 @@ def cleanup_below_wc_root(sbox):
   svntest.actions.run_and_verify_svn("Cleanup below wc root", None, [],
                                      "cleanup", sbox.ospath("A"))
 
+@Issue(4390)
+def checkout_within_locked_wc(sbox):
+  """checkout within a locked working copy"""
+
+  sbox.build(read_only = True)
+
+  # lock working copy and create outstanding work queue items
+  svntest.actions.lock_admin_dir(sbox.ospath(""), True, True)
+  expected_output = [
+  "A    %s\n" % sbox.ospath("nested-wc/alpha"),
+  "A    %s\n" % sbox.ospath("nested-wc/beta"),
+  "Checked out revision 1.\n"
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], "checkout", sbox.repo_url + '/A/B/E',
+                                     sbox.ospath("nested-wc"))
+
+
 ########################################################################
 # Run the tests
 
@@ -218,6 +237,7 @@ test_list = [ None,
               status_without_wc_db_and_entries,
               status_with_missing_wc_db_and_maybe_valid_entries,
               cleanup_below_wc_root,
+              checkout_within_locked_wc,
              ]
 
 if __name__ == '__main__':
