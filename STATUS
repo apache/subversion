@@ -52,19 +52,22 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
 
- * r1501049
-   ra_serf: Return Subversion error codes in svn_error_t.
-   Justification:
-     Other error codes are useless to API users.
-   Votes:
-     +1: danielsh
-
  * r1495597
    Fix a build warning.
    Justification:
      Makes the build warning-free (which in turn makes the bot useful).
    Votes:
      +1: danielsh
+
+ * r1501199, r1501207
+   Verify the result of the xml parser in ra serf, instead of assuming the
+   parsing always succeeds.
+   Justification:
+     While in general we can just rely on the parsed result being incomplete,
+     this makes many network (and server implementation) problems easier to
+     diagnose.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -123,6 +126,23 @@ Veto-blocked changes:
      +1: rhuijben (but also +1 on not applying it if that would be the
                    consensus)
      -1: (not vetoed, but depends on the r1489117 group which is)
+
+* r1501049
+   ra_serf: Return Subversion error codes in svn_error_t.
+   Justification:
+     Other error codes are useless to API users.
+   Votes:
+     +1: danielsh
+     -1: rhuijben (We also report apr and OS statuses, which are certainly
+                   not useless, as GUI clients depend on this extensive error
+                   codes to provide proper workarounds.
+                   This use-case should be fixed by directly setting
+                   the right message in the error chain when leaving ra_serf.
+                   This adds up to a -0 for me.
+                   
+                   The reason for the -1 is the re-use of a specific error code
+                   that is automatically unwrapped in some ra_serf code, to avoid
+                   handling codes like APR_EOF as non fatal)
 
 Approved changes:
 =================
