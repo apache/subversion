@@ -314,7 +314,6 @@ sub parse_entry {
   $id = $branch                    if $branch;
   warn "No header for [@lines]" unless $header;
 
-  warn "$id: depends=$depends\n";
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
