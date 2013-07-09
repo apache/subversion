@@ -50,7 +50,14 @@ Candidate changes:
      +1: philip, rhuijben
      -0: danielsh (loses functionality; patch sent with alternative fix)
      stsp: where exactly is the alternative patch?
-     danielsh: dev@, subject "checkout_tests", Friday 5 Jul
+     danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
+
+ * r1501049
+   ra_serf: Return Subversion error codes in svn_error_t.
+   Justification:
+     Other error codes are useless to API users.
+   Votes:
+     +1: danielsh
 
 Veto-blocked changes:
 =====================
