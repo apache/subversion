@@ -120,15 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498851
-   Provide an explicit error in the serf xml parser when the root element
-   isn't matched in the transition table.
-   Notes:
-     This turns a class of previously invisible errors in an easy to diagnose
-     error message.
-   Votes:
-     +1: rhuijben, gstein, ivan
-
  * r1497310
    Backport 'svn help cleanup' improvements made in r1497310.
    Justification:
