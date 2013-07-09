@@ -120,13 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1500074
-   Format a path correctly in an error message.
-   Justification:
-     The error message includes a path not related to the working copy
-   Votes:
-     +1: danielsh, stsp, ivan
-
  * r1498851
    Provide an explicit error in the serf xml parser when the root element
    isn't matched in the transition table.
