@@ -1391,6 +1391,10 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   int xml_status;
 
   xml_status = XML_Parse(ctx->xmlp, data, (int) len, 0);
+
+if (ctx->error && !ctx->ignore_errors)
+    return svn_error_trace(ctx->error);
+
   if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
     {
       if (sl == NULL)
@@ -1401,9 +1405,6 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
                                _("XML parsing failed: (%d %s)"),
                                sl->code, sl->reason);
     }
-
-  if (ctx->error && !ctx->ignore_errors)
-    return svn_error_trace(ctx->error);
 
   return SVN_NO_ERROR;
 }
@@ -1706,12 +1707,16 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
+              XML_Status xml_status;
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
               /* Ignore the return status. We just don't care.  */
-              (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
+              xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
 
               apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
+
+              if (ctx->xmlp->
+
               add_done_item(ctx);
             }
 
