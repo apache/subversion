@@ -13534,7 +13534,7 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
     }
 
   if (enforce_empty_wq)
-    svn_wc__db_verify_no_work(wcroot->sdb);
+    SVN_ERR(svn_wc__db_verify_no_work(wcroot->sdb));
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
