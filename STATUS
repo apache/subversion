@@ -69,7 +69,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1501293, r1501338
+ * r1501293, r1501338, r1501360
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
    Justification:
      Regression from 1.6. User complained. See issue for details.
