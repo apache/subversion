@@ -120,13 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1491868, r1494657
-   Add missing conflict callback invocations to the update editor.
-   Justification:
-     Resolver is not invoked after some updates which flag new tree conflicts.
-   Votes:
-     +1: stsp, rhuijben, breser
-
  * r1491756
    Fix issue #4364: Correctly remove the stale entries from the lock table
    when committing deletions.
