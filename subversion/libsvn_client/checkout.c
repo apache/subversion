@@ -58,9 +58,9 @@ initialize_area(const char *local_abspath,
     depth = svn_depth_infinity;
 
   /* Make the unversioned directory into a versioned one.  */
-  SVN_ERR(svn_wc__init_adm(ctx->wc_ctx, local_abspath, pathrev->url,
-                           pathrev->repos_root_url, pathrev->repos_uuid,
-                           pathrev->rev, depth, pool));
+  SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, pathrev->url,
+                             pathrev->repos_root_url, pathrev->repos_uuid,
+                             pathrev->rev, depth, pool));
   return SVN_NO_ERROR;
 }
 
