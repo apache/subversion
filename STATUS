@@ -77,6 +77,7 @@ Candidate changes:
      ^/subversion/branches/1.8.x-issue4390
    Votes:
      +1: stsp
+     -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
 
 Veto-blocked changes:
 =====================
