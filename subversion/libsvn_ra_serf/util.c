@@ -1392,19 +1392,21 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
 
   xml_status = XML_Parse(ctx->xmlp, data, (int) len, 0);
 
-if (ctx->error && !ctx->ignore_errors)
-    return svn_error_trace(ctx->error);
-
-  if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
+  if (! ctx->ignore_errors)
     {
-      if (sl == NULL)
-        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                 _("XML parsing failed"));
+      SVN_ERR(ctx->error);
 
-      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                               _("XML parsing failed: (%d %s)"),
-                               sl->code, sl->reason);
-    }
+      if (xml_status != XML_STATUS_OK)
+        {
+          if (sl == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("XML parsing failed"));
+
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("XML parsing failed: (%d %s)"),
+                                   sl->code, sl->reason);
+        }
+     }
 
   return SVN_NO_ERROR;
 }
@@ -1485,14 +1487,24 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   if (pending_empty &&
       parser->pending->network_eof)
     {
+      int xml_status;
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
-      /* Tell the parser that no more content will be parsed. Ignore the
-         return status. We just don't care.  */
-      (void) XML_Parse(parser->xmlp, NULL, 0, 1);
+      /* Tell the parser that no more content will be parsed. */
+      xml_status = XML_Parse(parser->xmlp, NULL, 0, 1);
 
       apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
+
+      if (! parser->ignore_errors)
+        {
+          SVN_ERR(parser->error);
+
+          if (xml_status != XML_STATUS_OK)
+            {
+            }
+        }
+
       add_done_item(parser);
     }
 
@@ -1707,15 +1719,24 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
-              XML_Status xml_status;
+              int xml_status;
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
-              /* Ignore the return status. We just don't care.  */
               xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
 
               apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
 
-              if (ctx->xmlp->
+              if (! ctx->ignore_errors)
+                {
+                  SVN_ERR(ctx->error);
+
+                  if (xml_status != XML_STATUS_OK)
+                    {
+                      return svn_error_create(
+                                    SVN_ERR_XML_MALFORMED, NULL,
+                                    _("The XML response contains invalid XML"));
+                    }
+                }
 
               add_done_item(ctx);
             }
