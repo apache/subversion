@@ -120,26 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1498483, r1498484, r1498486
-   fs: Improve a regression test.
-   Notes:
-     r1498483 adds a helper function.
-     r1498484 extends the test to perform additional verifications, and
-       switches it to a blacklist approach.
-     r1498486 renames a local variable; no functional change.
-   Justification:
-     Makes the test more likely to exercise the bug.
-   Votes:
-     +1: danielsh, stefan2, breser
-     -0: stsp (I don't really see a reason for backporting this.
-               I don't think this test will ever find a regression in 1.8.x
-               which we won't find on trunk. Having these changes in trunk
-               is good of course.
-               <danielsh>  Let's not assume that all bugs that occur in 1.8.x
-               also occur in trunk; we have had counterexamples in our history.
-               Agreed though that the crash fixers elsewhere in the file are
-               more important to have.)
-
  * r1491868, r1494657
    Add missing conflict callback invocations to the update editor.
    Justification:
