@@ -127,7 +127,7 @@ Veto-blocked changes:
                    consensus)
      -1: (not vetoed, but depends on the r1489117 group which is)
 
-* r1501049
+ * r1501049
    ra_serf: Return Subversion error codes in svn_error_t.
    Justification:
      Other error codes are useless to API users.
