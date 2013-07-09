@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1500801
-   Don't require GPG_TTY and TERM when getting passwords from gpg-agent.
-   Justification:
-     Requiring those variables can prevent some gpg-agent setups from working.
-     We cannot assume that everyone using gpg-agent is also using a TTY.
-   Votes:
-     +1: stsp, danielsh, rhuijben, breser
-
  * r1500762, r1500799, r1500802
    Make gpg-agent password store verify that a usable GPG agent exists.
    Justification:
