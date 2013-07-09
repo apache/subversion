@@ -1529,7 +1529,6 @@ svn_wc__db_init(svn_wc__db_t *db,
                         apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
-                        FALSE /* enforce_empty_wq */,
                         db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -12300,7 +12299,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                                    dir_abspath),
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
-                                       FALSE /* enforce_empty_wq */,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -13680,6 +13678,9 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  if (db->enforce_empty_wq)
+    SVN_ERR(svn_wc__db_verify_no_work(wcroot->sdb));
 
   if (!steal_lock)
     {
