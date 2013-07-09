@@ -267,6 +267,7 @@ sub sanitize_branch {
 sub parse_entry {
   my $raw = shift;
   my @lines = @_;
+  my $depends;
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
@@ -295,6 +296,10 @@ sub parse_entry {
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
+  # depends
+  # TODO: parse the value of this.
+  $depends = grep /^Depends:/, @_;
+
   # branch
   while (@_) {
     shift and next unless $_[0] =~ s/^\s*Branch(es)?:\s*//;
@@ -309,11 +314,13 @@ sub parse_entry {
   $id = $branch                    if $branch;
   warn "No header for [@lines]" unless $header;
 
+  warn "$id: depends=$depends\n";
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
     branch => $branch,
     header => $header,
+    depends => $depends,
     id => $id,
     votes => [@votes],
     entry => [@lines],
@@ -512,12 +519,19 @@ sub handle_entry {
         # Scan-for-conflicts mode
         merge %entry;
 
-        my $output;
-        if (($output = `$SVN status`) =~ /^(C|.C|...C)/m) {
-          $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}!";
+        my $output = `$SVN status`;
+        my (@conflicts) = ($output =~ m#^(?:C|.C|...C).*/(.*)#mg);
+        if (@conflicts and !$entry{depends}) {
+          $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}: "
+                                  . (join ', ', @conflicts);
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
           say STDERR $output;
+        } elsif (!@conflicts and $entry{depends}) {
+          warn "No conflicts merging the $entry{header}, but conflicts were "
+              ."expected ('Depends:' header set)\n";
+        } elsif (@conflicts) {
+          say "Conflicts found merging $entry{id}, as expected.";
         }
         revert;
       }
