@@ -185,6 +185,7 @@ Approved changes:
    A further clarification after r1500837
    Justification:
      Save users a tour to $SEARCH_ENGINE.
+   Depends: r1500837
    Votes:
      +1: danielsh, lgo, breser
      +1: rhuijben (but also +1 on not applying it if that would be the
