@@ -25,6 +25,7 @@ Candidate changes:
      http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
      with the paradigm that the target of an editor drive may never have more
      than one path component (which according to cmpilato is an API violation).
+   Depends: conflicts on diff_tests.py
    Notes:
      Please read the branch and related trunk log messages for detailed notes
      about these changes.
@@ -53,6 +54,7 @@ Candidate changes:
    Justification:
      Without this patch the identical suffix might show up as an added or
      deleted suffix of a file.
+   Depends: (conflicts, doesn't compile)
    Notes:
      Will probably conflict if r1426752 and/or r1427278 are merged to
      1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
