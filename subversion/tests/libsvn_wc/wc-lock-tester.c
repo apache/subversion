@@ -52,9 +52,7 @@ obtain_lock(const char *path, svn_boolean_t recursive,
 
   SVN_ERR(svn_path_cstring_to_utf8(&path, path, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-      SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool,
-                                    scratch_pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
 
   if (recursive)
     {
