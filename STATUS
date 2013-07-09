@@ -120,17 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1500226
-   Fixes copyfrom URL construction in Ev2 commit editor shims.
-   Justification:
-     Makes Ev2 shims work for commit via (at least) ra_serf.
-   Notes:
-     See note under r1498885, above.
-   Votes:
-     +1: brane, breser, stefan2
-      0: rhuijben (Ev2 shims aren't used by production code. (-0)
-                   Only by JavaHL 1.7/1.8 extensions branch (+0))
-
  * r1499034, r1500175
    sqlite3.m4: allow placing the amalgamation in the build dir.
    Justification:
