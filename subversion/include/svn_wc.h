@@ -1255,7 +1255,11 @@ typedef enum svn_wc_notify_action_t
    * copy + delete. The notified path is the move source (the deleted path).
    * ### TODO: Provide path to move destination as well?
    * @since New in 1.8. */
-  svn_wc_notify_move_broken
+  svn_wc_notify_move_broken,
+
+  /** Running cleanup on an external module.
+   * @since New in 1.9. */
+  svn_wc_notify_cleanup_external,
 
 } svn_wc_notify_action_t;
 
@@ -1810,8 +1814,6 @@ typedef struct svn_wc_conflict_description3_t
   const char *base_abspath;  /* common ancestor of the two files being merged */
 
   /** their version of the file */
-  /* ### BH: For properties this field contains the reference to
-             the property rejection (.prej) file */
   const char *their_abspath;
 
   /** my locally-edited version of the file */
@@ -1819,6 +1821,9 @@ typedef struct svn_wc_conflict_description3_t
 
   /** merged version; may contain conflict markers */
   const char *merged_file;
+
+  /* For property conflicts, the path to the property reject file. */
+  const char *prop_reject_abspath;
 
   /** The operation that exposed the conflict.
    * Used only for tree conflicts.
@@ -4249,6 +4254,9 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * @a ignore_patterns is an array of file patterns matching
  * unversioned files to ignore for the purposes of status reporting,
  * or @c NULL if the default set of ignorable file patterns should be used.
+ * Patterns from #SVN_PROP_IGNORE (and, as of 1.8,
+ * #SVN_PROP_INHERITABLE_IGNORES) properties are always used, even if not
+ * specified in @a ignore_patterns.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
  * to determine if the client has canceled the operation.

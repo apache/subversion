@@ -42,6 +42,7 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
+UnorderedOutput = svntest.verify.UnorderedOutput
 
 ######################################################################
 # Tests
@@ -200,6 +201,144 @@ def cleanup_below_wc_root(sbox):
   svntest.actions.run_and_verify_svn("Cleanup below wc root", None, [],
                                      "cleanup", sbox.ospath("A"))
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(4383)
+def update_through_unversioned_symlink(sbox):
+  """update through unversioned symlink"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  state = svntest.actions.get_virginal_state(wc_dir, 1)
+  symlink = sbox.get_tempname()
+  os.symlink(os.path.abspath(sbox.wc_dir), symlink)
+  expected_output = []
+  expected_disk = []
+  expected_status = []
+  # Subversion 1.8.0 crashes when updating a working copy through a symlink
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        None, None, None, None, None, 1,
+                                        symlink)
+
+@Issue(3549)
+def cleanup_unversioned_items(sbox):
+  """cleanup --remove-unversioned / --remove-ignored"""
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # create some unversioned items
+  os.mkdir(sbox.ospath('dir1'))
+  os.mkdir(sbox.ospath('dir2'))
+  contents = "This is an unversioned file\n."
+  svntest.main.file_write(sbox.ospath('dir1/dir1_child1'), contents)
+  svntest.main.file_write(sbox.ospath('dir2/dir2_child1'), contents)
+  os.mkdir(sbox.ospath('dir2/foo_child2'))
+  svntest.main.file_write(sbox.ospath('file_foo'), contents),
+  os.mkdir(sbox.ospath('dir_foo'))
+  svntest.main.file_write(sbox.ospath('dir_foo/foo_child1'), contents)
+  os.mkdir(sbox.ospath('dir_foo/foo_child2'))
+  # a file that matches a default ignore pattern
+  svntest.main.file_write(sbox.ospath('foo.o'), contents)
+
+  # ignore some of the unversioned items
+  sbox.simple_propset('svn:ignore', '*_foo', '.')
+
+  os.chdir(wc_dir)
+
+  expected_output = [
+        ' M      .\n',
+        '?       dir1\n',
+        '?       dir2\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
+  expected_output += [
+        'I       dir_foo\n',
+        'I       file_foo\n',
+        'I       foo.o\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status', '--no-ignore')
+
+  expected_output = [
+        'D         dir1\n',
+        'D         dir2\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'cleanup', '--remove-unversioned')
+  expected_output = [
+        ' M      .\n',
+        'I       dir_foo\n',
+        'I       file_foo\n',
+        'I       foo.o\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status', '--no-ignore')
+
+  # remove ignored items, with an empty global-ignores list
+  expected_output = [
+        'D         dir_foo\n',
+        'D         file_foo\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'cleanup', '--remove-ignored',
+                                     '--config-option',
+                                     'config:miscellany:global-ignores=')
+
+  # the file matching global-ignores should still be present
+  expected_output = [
+        ' M      .\n',
+        'I       foo.o\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status', '--no-ignore')
+
+  # un-ignore the file matching global ignores, making it unversioned,
+  # and remove it with --remove-unversioned
+  expected_output = [
+        'D         foo.o\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'cleanup', '--remove-unversioned',
+                                     '--config-option',
+                                     'config:miscellany:global-ignores=')
+  expected_output = [
+        ' M      .\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'status', '--no-ignore')
+
+def cleanup_unversioned_items_in_locked_wc(sbox):
+  """cleanup unversioned items in locked WC should fail"""
+
+  sbox.build(read_only = True)
+
+  contents = "This is an unversioned file\n."
+  svntest.main.file_write(sbox.ospath('unversioned_file'), contents)
+
+  svntest.actions.lock_admin_dir(sbox.ospath(""), True)
+  for option in ['--remove-unversioned', '--remove-ignored']:
+    svntest.actions.run_and_verify_svn(None, None,
+                                       "svn: E155004: Working copy locked;.*",
+                                       "cleanup", option,
+                                       sbox.ospath(""))
+
+def cleanup_dir_external(sbox):
+  """cleanup --include-externals"""
+
+  sbox.build(read_only = True)
+
+  # configure a directory external
+  sbox.simple_propset("svn:externals", "^/A A_ext", ".")
+  sbox.simple_update()
+
+  svntest.actions.lock_admin_dir(sbox.ospath("A_ext"), True)
+  svntest.actions.run_and_verify_svn(None, ["Performing cleanup on external " +
+                                     "item at '%s'.\n" % sbox.ospath("A_ext")],
+                                     [], "cleanup", '--include-externals',
+                                     sbox.ospath(""))
+
 ########################################################################
 # Run the tests
 
@@ -218,6 +357,10 @@ test_list = [ None,
               status_without_wc_db_and_entries,
               status_with_missing_wc_db_and_maybe_valid_entries,
               cleanup_below_wc_root,
+              update_through_unversioned_symlink,
+              cleanup_unversioned_items,
+              cleanup_unversioned_items_in_locked_wc,
+              cleanup_dir_external,
              ]
 
 if __name__ == '__main__':

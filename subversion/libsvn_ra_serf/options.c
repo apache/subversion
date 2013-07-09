@@ -50,7 +50,7 @@
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
 enum options_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF
@@ -362,6 +362,8 @@ options_response_handler(serf_request_t *request,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
                     capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                    capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
@@ -399,10 +401,10 @@ create_options_req(options_context_t **opt_ctx,
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   xmlctx = svn_ra_serf__xml_context_create(options_ttable,
-                                           NULL, options_closed, NULL,
+                                           NULL, options_closed, NULL, NULL,
                                            new_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "OPTIONS";
   handler->path = session->session_url.path;
@@ -513,6 +515,65 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       serf_sess->activity_collection_url =
         apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+create_simple_options_body(serf_bucket_t **body_bkt,
+                           void *baton,
+                           serf_bucket_alloc_t *alloc,
+                           apr_pool_t *pool)
+{
+  serf_bucket_t *body;
+  serf_bucket_t *s;
+
+  body = serf_bucket_aggregate_create(alloc);
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
+
+  s = SERF_BUCKET_SIMPLE_STRING("<D:options xmlns:D=\"DAV:\" />", alloc);
+  serf_bucket_aggregate_append(body, s);
+
+  *body_bkt = body;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+                         apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__handler_t *handler;
+
+  handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+  handler->handler_pool = scratch_pool;
+  handler->method = "OPTIONS";
+  handler->path = serf_sess->session_url.path;
+  handler->conn = serf_sess->conns[0];
+  handler->session = serf_sess;
+
+  /* We don't care about the response body, so discard it.  */
+  handler->response_handler = svn_ra_serf__handle_discard_body;
+
+  /* We need a simple body, in order to send it in chunked format.  */
+  handler->body_delegate = create_simple_options_body;
+
+  /* No special headers.  */
+
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+  /* Some versions of nginx in reverse proxy mode will return 411. They want
+     a Content-Length header, rather than chunked requests. We can keep other
+     HTTP/1.1 features, but will disable the chunking.  */
+  if (handler->sline.code == 411)
+    {
+      serf_sess->using_chunked_requests = FALSE;
+
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       handler->path,
+                                       handler->location));
 
   return SVN_NO_ERROR;
 }

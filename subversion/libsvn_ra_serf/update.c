@@ -49,6 +49,10 @@
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
 
+/*
+#define USE_TRANSITION_PARSER
+*/
+
 
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
@@ -64,7 +68,7 @@
  */
 typedef enum report_state_e {
     NONE = 0,
-    INITIAL = 0,
+    INITIAL = XML_STATE_INITIAL /* = 0 */,
     UPDATE_REPORT,
     TARGET_REVISION,
     OPEN_DIR,
@@ -77,6 +81,17 @@ typedef enum report_state_e {
     IGNORE_PROP_NAME,
     NEED_PROP_NAME,
     TXDELTA
+
+#ifdef USE_TRANSITION_PARSER
+    ,
+
+    CHECKED_IN,
+    CHECKED_IN_HREF,
+
+    SET_PROP,
+
+    MD5_CHECKSUM
+#endif
 } report_state_e;
 
 
@@ -375,9 +390,6 @@ struct report_context_t {
   /* The path to the REPORT request */
   const char *path;
 
-  /* Are we done parsing the REPORT response? */
-  svn_boolean_t done;
-
   /* Did we receive all data from the network? */
   svn_boolean_t report_received;
 
@@ -392,13 +404,14 @@ struct report_context_t {
 };
 
 
-#ifdef NOT_USED_YET
+#ifdef USE_TRANSITION_PARSER
 
 #define D_ "DAV:"
 #define S_ SVN_XML_NAMESPACE
+#define V_ SVN_DAV_PROP_NS_DAV
 static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { INITIAL, S_, "update-report", UPDATE_REPORT,
-    FALSE, { NULL }, FALSE },
+    FALSE, { NULL }, TRUE },
 
   { UPDATE_REPORT, S_, "target-revision", TARGET_REVISION,
     FALSE, { "rev", NULL }, TRUE },
@@ -410,19 +423,19 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
     FALSE, { "rev", "name", NULL }, TRUE },
 
   { OPEN_DIR, S_, "add-directory", ADD_DIR,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ADD_DIR, S_, "add-directory", ADD_DIR,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { OPEN_DIR, S_, "open-file", OPEN_FILE,
     FALSE, { "rev", "name", NULL }, TRUE },
 
   { OPEN_DIR, S_, "add-file", ADD_FILE,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ADD_DIR, S_, "add-file", ADD_FILE,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { OPEN_DIR, S_, "delete-entry", OPEN_FILE,
     FALSE, { "?rev", "name", NULL }, TRUE },
@@ -439,65 +452,45 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { ADD_DIR, S_, "absent-file", ABSENT_FILE,
     FALSE, { "name", NULL }, TRUE },
 
+
+  { OPEN_DIR, D_, "checked-in", CHECKED_IN,
+    FALSE, { NULL }, FALSE },
+
+  { ADD_DIR, D_, "checked-in", CHECKED_IN,
+    FALSE, { NULL }, FALSE },
+
+  { ADD_FILE, D_, "checked-in", CHECKED_IN,
+    FALSE, { NULL }, FALSE },
+
+
+  { OPEN_DIR, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { ADD_DIR, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { OPEN_FILE, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { ADD_FILE, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+
+  { OPEN_FILE, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+  { ADD_FILE, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+
+  { CHECKED_IN, D_, "href", CHECKED_IN_HREF,
+    TRUE, { NULL }, TRUE },
+
+  { PROP, V_, "md5-checksum", MD5_CHECKSUM,
+    TRUE, { NULL }, TRUE },
+
   { 0 }
 };
 
-
-
-/* Conforms to svn_ra_serf__xml_opened_t  */
-static svn_error_t *
-update_opened(svn_ra_serf__xml_estate_t *xes,
-              void *baton,
-              int entered_state,
-              const svn_ra_serf__dav_props_t *tag,
-              apr_pool_t *scratch_pool)
-{
-  report_context_t *ctx = baton;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Conforms to svn_ra_serf__xml_closed_t  */
-static svn_error_t *
-update_closed(svn_ra_serf__xml_estate_t *xes,
-              void *baton,
-              int leaving_state,
-              const svn_string_t *cdata,
-              apr_hash_t *attrs,
-              apr_pool_t *scratch_pool)
-{
-  report_context_t *ctx = baton;
-
-  if (leaving_state == TARGET_REVISION)
-    {
-      const char *rev = svn_hash_gets(attrs, "rev");
-
-      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
-                                                      SVN_STR_TO_REV(rev),
-                                                      ctx->sess->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Conforms to svn_ra_serf__xml_cdata_t  */
-static svn_error_t *
-update_cdata(svn_ra_serf__xml_estate_t *xes,
-             void *baton,
-             int current_state,
-             const char *data,
-             apr_size_t len,
-             apr_pool_t *scratch_pool)
-{
-  report_context_t *ctx = baton;
-
-  return SVN_NO_ERROR;
-}
-
-#endif /* NOT_USED_YET */
+#endif /* USE_TRANSITION_PARSER */
 
 
 /* Returns best connection for fetching files/properties. */
@@ -2539,6 +2532,72 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+#ifdef USE_TRANSITION_PARSER
+/* Conforms to svn_ra_serf__xml_opened_t  */
+static svn_error_t *
+update_opened(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int entered_state,
+              const svn_ra_serf__dav_props_t *tag,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+  SVN_DBG(("Enter state: %d", entered_state));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Conforms to svn_ra_serf__xml_closed_t  */
+static svn_error_t *
+update_closed(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int leaving_state,
+              const svn_string_t *cdata,
+              apr_hash_t *attrs,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  SVN_DBG(("Leaving state: %d", leaving_state));
+
+  if (leaving_state == UPDATE_REPORT)
+    {
+      ctx->report_completed = TRUE;
+    }
+  else if (leaving_state == TARGET_REVISION)
+    {
+      const char *revstr = svn_hash_gets(attrs, "rev");
+      apr_int64_t rev;
+
+      SVN_ERR(svn_cstring_atoi64(&rev, revstr));
+
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      (svn_revnum_t)rev,
+                                                      ctx->sess->pool));
+    }
+
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Conforms to svn_ra_serf__xml_cdata_t  */
+static svn_error_t *
+update_cdata(svn_ra_serf__xml_estate_t *xes,
+             void *baton,
+             int current_state,
+             const char *data,
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+  SVN_DBG(("Got CDATA in state %d\n", current_state));
+  return SVN_NO_ERROR;
+}
+#endif /* USE_TRANSITION_PARSER */
+
 
 /** Editor callbacks given to callers to create request body */
 
@@ -2739,7 +2798,7 @@ setup_update_report_headers(serf_bucket_t *headers,
   if (report->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "gzip;svndiff1;q=0.9,svndiff;q=0.8");
+                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
     }
   else
     {
@@ -2757,7 +2816,11 @@ finish_report(void *report_baton,
   report_context_t *report = report_baton;
   svn_ra_serf__session_t *sess = report->sess;
   svn_ra_serf__handler_t *handler;
+#ifdef USE_TRANSITION_PARSER
+  svn_ra_serf__xml_context_t *xmlctx;
+#else
   svn_ra_serf__xml_parser_t *parser_ctx;
+#endif
   const char *report_target;
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -2787,7 +2850,16 @@ finish_report(void *report_baton,
   /* create and deliver request */
   report->path = report_target;
 
+#ifdef USE_TRANSITION_PARSER
+  xmlctx = svn_ra_serf__xml_context_create(update_ttable,
+                                           update_opened, update_closed,
+                                           update_cdata,
+                                           report,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+#else
   handler = apr_pcalloc(pool, sizeof(*handler));
+#endif
 
   handler->handler_pool = pool;
   handler->method = "REPORT";
@@ -2801,6 +2873,7 @@ finish_report(void *report_baton,
   handler->conn = sess->conns[0];
   handler->session = sess;
 
+#ifndef USE_TRANSITION_PARSER
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
   parser_ctx->pool = pool;
@@ -2809,12 +2882,13 @@ finish_report(void *report_baton,
   parser_ctx->start = start_report;
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
-  parser_ctx->done = &report->done;
+  parser_ctx->done = &handler->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
   report->parser_ctx = parser_ctx;
+#endif
 
   svn_ra_serf__request_create(handler);
 
@@ -2828,7 +2902,7 @@ finish_report(void *report_baton,
      network or because we've spooled the entire response into our "pending"
      content of the XML parser. The DONE flag will get set when all the
      XML content has been received *and* parsed.  */
-  while (!report->done
+  while (!handler->done
          || report->num_active_fetches
          || report->num_active_propfinds)
     {
@@ -2865,8 +2939,10 @@ finish_report(void *report_baton,
          the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          /* If there is a pending error, handle it.
+             Unlikely case, as this should have made serf_context run return
+             an error but we shouldn't ignore true errors */
+          SVN_ERR(err);
           status = 0;
 
           if (sess->timeout)
@@ -3068,6 +3144,7 @@ finish_report(void *report_baton,
         }
       report->done_dir_propfinds = NULL;
 
+#ifndef USE_TRANSITION_PARSER
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */
       if (parser_ctx->paused
@@ -3082,6 +3159,7 @@ finish_report(void *report_baton,
         SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
                                              &report->report_received,
                                              iterpool_inner));
+#endif
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
@@ -3202,7 +3280,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   report->update_editor = update_editor;
   report->update_baton = update_baton;
-  report->done = FALSE;
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;

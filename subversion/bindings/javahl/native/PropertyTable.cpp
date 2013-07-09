@@ -20,13 +20,14 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevpropTable.cpp
- * @brief Implementation of the class RevpropTable
+ * @file PropertyTable.cpp
+ * @brief Implementation of the class PropertyTable
  */
 
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
+#include "JNIByteArray.h"
 #include "Array.h"
 #include <apr_tables.h>
 #include <apr_strings.h>
@@ -35,13 +36,13 @@
 #include "svn_props.h"
 #include <iostream>
 
-RevpropTable::~RevpropTable()
+PropertyTable::~PropertyTable()
 {
   if (m_revpropTable != NULL)
     JNIUtil::getEnv()->DeleteLocalRef(m_revpropTable);
 }
 
-apr_hash_t *RevpropTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
+apr_hash_t *PropertyTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
 {
   if (m_revprops.size() == 0 && nullIfEmpty)
     return NULL;
@@ -62,8 +63,9 @@ apr_hash_t *RevpropTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
           return NULL;
         }
 
-      svn_string_t *propval = svn_string_create(it->second.c_str(),
-                                                pool.getPool());
+      svn_string_t *propval = svn_string_ncreate(it->second.c_str(),
+                                                 it->second.size(),
+                                                 pool.getPool());
 
       apr_hash_set(revprop_table, propname, APR_HASH_KEY_STRING, propval);
     }
@@ -71,7 +73,7 @@ apr_hash_t *RevpropTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
   return revprop_table;
 }
 
-RevpropTable::RevpropTable(jobject jrevpropTable)
+PropertyTable::PropertyTable(jobject jrevpropTable, bool bytearray_values)
 {
   m_revpropTable = jrevpropTable;
 
@@ -116,12 +118,27 @@ RevpropTable::RevpropTable(jobject jrevpropTable)
           if (JNIUtil::isExceptionThrown())
             return;
 
-          JNIStringHolder propval((jstring)jpropval);
-          if (JNIUtil::isExceptionThrown())
-            return;
+          std::string pv;
+          if (bytearray_values)
+            {
+              JNIByteArray propval((jbyteArray)jpropval);
+              if (JNIUtil::isExceptionThrown())
+                return;
+              if (!propval.isNull())
+                pv = std::string(
+                    reinterpret_cast<const char*>(propval.getBytes()),
+                    propval.getLength());
+            }
+          else
+            {
+              JNIStringHolder propval((jstring)jpropval);
+              if (JNIUtil::isExceptionThrown())
+                return;
+              if (NULL != static_cast<const char *>(propval))
+                pv = static_cast<const char *>(propval);
+            }
 
-          m_revprops[std::string(static_cast<const char *>(propname))]
-            = std::string(static_cast<const char *>(propval));
+          m_revprops[std::string(static_cast<const char *>(propname))] = pv;
 
           JNIUtil::getEnv()->DeleteLocalRef(jpropval);
         }

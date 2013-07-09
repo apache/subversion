@@ -924,7 +924,6 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, scratch_pool);
       db->already_notified = TRUE;
-
     }
 
   return SVN_NO_ERROR;
@@ -2928,7 +2927,7 @@ close_directory(void *dir_baton,
                                              eb->conflict_func,
                                              eb->conflict_baton,
                                              eb->cancel_func,
-                                             eb->conflict_baton,
+                                             eb->cancel_baton,
                                              scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if

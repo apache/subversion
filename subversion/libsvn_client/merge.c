@@ -1198,7 +1198,7 @@ struct merge_dir_baton_t
   apr_hash_t *pending_deletes;
 
   /* NULL, or an hashtable mapping const char * LOCAL_ABSPATHs to
-     a const svn_wc_conflict_description2_t * instance, describing the just
+     a const svn_wc_conflict_description3_t * instance, describing the just
      installed conflict */
   apr_hash_t *new_tree_conflicts;
 
@@ -1301,11 +1301,14 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                      svn_node_kind_t node_kind,
                      svn_wc_conflict_action_t action,
                      svn_wc_conflict_reason_t reason,
-                     const svn_wc_conflict_description2_t *existing_conflict,
+                     const svn_wc_conflict_description3_t *existing_conflict,
                      svn_boolean_t notify_tc,
                      apr_pool_t *scratch_pool)
 {
   svn_wc_context_t *wc_ctx = merge_b->ctx->wc_ctx;
+
+  if (merge_b->record_only)
+    return SVN_NO_ERROR;
 
   if (merge_b->merge_source.ancestral
       || merge_b->reintegrate_merge)
@@ -1316,10 +1319,9 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
   alloc_and_store_path(&merge_b->conflicted_paths, local_abspath,
                        merge_b->pool);
 
-
-  if (!merge_b->record_only && !merge_b->dry_run)
+  if (!merge_b->dry_run)
     {
-       svn_wc_conflict_description2_t *conflict;
+       svn_wc_conflict_description3_t *conflict;
        const svn_wc_conflict_version_t *left;
        const svn_wc_conflict_version_t *right;
        apr_pool_t *result_pool = parent_baton ? parent_baton->pool
@@ -1358,7 +1360,7 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
       if (existing_conflict != NULL && existing_conflict->src_left_version)
           left = existing_conflict->src_left_version;
 
-      conflict = svn_wc_conflict_description_create_tree2(
+      conflict = svn_wc_conflict_description_create_tree3(
                         local_abspath, node_kind, svn_wc_operation_merge,
                         left, right, result_pool);
 
@@ -1848,7 +1850,7 @@ merge_file_opened(void **new_file_baton,
     }
   else
     {
-      const svn_wc_conflict_description2_t *old_tc = NULL;
+      const svn_wc_conflict_description3_t *old_tc = NULL;
 
       /* The node doesn't exist pre-merge: We have an addition */
       fb->added = TRUE;
@@ -2605,7 +2607,7 @@ merge_dir_opened(void **new_dir_baton,
     }
   else
     {
-      const svn_wc_conflict_description2_t *old_tc = NULL;
+      const svn_wc_conflict_description3_t *old_tc = NULL;
 
       /* The node doesn't exist pre-merge: We have an addition */
       db->added = TRUE;

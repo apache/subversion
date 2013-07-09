@@ -601,32 +601,8 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
   struct gls_receiver_baton_t gls_receiver_baton;
   const char *old_session_url;
   svn_error_t *err;
-  const char *rel_path;
 
   *segments = apr_array_make(pool, 8, sizeof(svn_location_segment_t *));
-
-  /* Save us an RA layer round trip if we are on the repository root and
-     know the result in advance.  It's fair to assume that the repo root
-     has already been cached in ra_session.
-
-     We also assume that all parameters are valid and reivisons properly
-     ordered.  Otherwise, the error behavior might differ.
-   */
-  SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &rel_path, url, pool));
-  if (rel_path && rel_path[0] == 0)
-    {
-      svn_location_segment_t *segment = apr_pcalloc(pool, sizeof(*segment));
-      segment->range_start
-        = end_revision <= start_revision ? end_revision : 0;
-      segment->range_end
-        = end_revision <= start_revision ? start_revision : 0;
-      segment->path = rel_path;
-      APR_ARRAY_PUSH(*segments, svn_location_segment_t *) = segment;
-
-      return SVN_NO_ERROR;
-    }
-
-  /* Do it the hard way and ask the repository layer. */
   gls_receiver_baton.segments = *segments;
   gls_receiver_baton.ctx = ctx;
   gls_receiver_baton.pool = pool;
@@ -651,6 +627,9 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
  * END_REVNUM must be valid revision numbers except that END_REVNUM may
  * be SVN_INVALID_REVNUM if END_URL is NULL.
  *
+ * YOUNGEST_REV is the already retrieved youngest revision of the ra session,
+ * but can be SVN_INVALID_REVNUM if the value is not already retrieved.
+ *
  * RA_SESSION is an open RA session parented at URL.
  */
 static svn_error_t *
@@ -661,6 +640,7 @@ repos_locations(const char **start_url,
                 svn_revnum_t peg_revnum,
                 svn_revnum_t start_revnum,
                 svn_revnum_t end_revnum,
+                svn_revnum_t youngest_rev,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -668,9 +648,9 @@ repos_locations(const char **start_url,
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
 
-  SVN_ERR_ASSERT(peg_revnum != SVN_INVALID_REVNUM);
-  SVN_ERR_ASSERT(start_revnum != SVN_INVALID_REVNUM);
-  SVN_ERR_ASSERT(end_revnum != SVN_INVALID_REVNUM || end_url == NULL);
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(peg_revnum));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_revnum));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(end_revnum) || end_url == NULL);
 
   /* Avoid a network request in the common easy case. */
   if (start_revnum == peg_revnum
@@ -684,6 +664,27 @@ repos_locations(const char **start_url,
     }
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, scratch_pool));
+
+  /* Handle another common case: The repository root can't move */
+  if (! strcmp(repos_url, url))
+    {
+      if (! SVN_IS_VALID_REVNUM(youngest_rev))
+        SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest_rev,
+                                         scratch_pool));
+
+      if (start_revnum > youngest_rev
+          || (SVN_IS_VALID_REVNUM(end_revnum) && (end_revnum > youngest_rev)))
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 _("No such revision %ld"),
+                                 (start_revnum > youngest_rev) 
+                                        ? start_revnum : end_revnum);
+
+      if (start_url)
+        *start_url = apr_pstrdup(result_pool, repos_url);
+      if (end_url)
+        *end_url = apr_pstrdup(result_pool, repos_url);
+      return SVN_NO_ERROR;
+    }
 
   revs = apr_array_make(scratch_pool, 2, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(revs, svn_revnum_t) = start_revnum;
@@ -740,7 +741,7 @@ svn_client__repos_location(svn_client__pathrev_t **op_loc_p,
                                             peg_loc->url, scratch_pool));
   err = repos_locations(&op_url, NULL, ra_session,
                         peg_loc->url, peg_loc->rev,
-                        op_revnum, SVN_INVALID_REVNUM,
+                        op_revnum, SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                         result_pool, scratch_pool);
   SVN_ERR(svn_error_compose_create(
             err, svn_ra_reparent(ra_session, old_session_url, scratch_pool)));
@@ -880,7 +881,7 @@ svn_client__repos_locations(const char **start_url,
 
   SVN_ERR(repos_locations(start_url, end_url,
                           ra_session, url, peg_revnum,
-                          start_revnum, end_revnum,
+                          start_revnum, end_revnum, youngest_rev,
                           pool, subpool));
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;

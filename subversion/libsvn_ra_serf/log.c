@@ -48,8 +48,8 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-enum {
-  INITIAL = 0,
+enum log_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   ITEM,
   VERSION,
@@ -579,10 +579,10 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(log_ttable,
-                                           log_opened, log_closed, NULL,
+                                           log_opened, log_closed, NULL, NULL,
                                            log_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;

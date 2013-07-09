@@ -28,14 +28,16 @@ import org.apache.subversion.javahl.callback.*;
 
 import org.apache.subversion.javahl.ISVNRemote;
 import org.apache.subversion.javahl.ISVNEditor;
+import org.apache.subversion.javahl.ISVNReporter;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
 
 import java.lang.ref.WeakReference;
-import java.util.HashSet;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
+import java.io.OutputStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -44,17 +46,27 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 {
     public void dispose()
     {
-        if (editors != null)
+        if (editorReference != null)
         {
-            // Deactivate all open editors
-            for (WeakReference<ISVNEditor> ref : editors)
+            // Deactivate the open editor
+            ISVNEditor ed = editorReference.get();
+            if (ed != null)
             {
-                ISVNEditor ed = ref.get();
-                if (ed == null)
-                    continue;
                 ed.dispose();
-                ref.clear();
+                editorReference.clear();
             }
+            editorReference = null;
+        }
+        if (reporterReference != null)
+        {
+            // Deactivate the open reporter
+            ISVNReporter rp = reporterReference.get();
+            if (rp != null)
+            {
+                rp.dispose();
+                reporterReference.clear();
+            }
+            reporterReference = null;
         }
         nativeDispose();
     }
@@ -107,20 +119,99 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native byte[] getRevisionProperty(long revision, String propertyName)
             throws ClientException;
 
-    public ISVNEditor getCommitEditor() throws ClientException
+    public ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                                      CommitCallback commitCallback,
+                                      Set<Lock> lockTokens,
+                                      boolean keepLocks)
+            throws ClientException
     {
-        ISVNEditor ed = CommitEditor.createInstance(this);
-        if (editors == null)
-            editors = new HashSet<WeakReference<ISVNEditor>>();
-        editors.add(new WeakReference<ISVNEditor>(ed));
+        check_inactive(editorReference, reporterReference);
+        ISVNEditor ed =
+            CommitEditor.createInstance(this, revisionProperties,
+                                        commitCallback, lockTokens, keepLocks);
+        if (editorReference != null)
+            editorReference.clear();
+        editorReference = new WeakReference<ISVNEditor>(ed);
         return ed;
     }
+
+    public long getFile(long revision, String path,
+                        OutputStream contents,
+                        Map<String, byte[]> properties)
+            throws ClientException
+    {
+        maybe_clear(properties);
+        return nativeGetFile(revision, path, contents, properties);
+    }
+
+    public long getDirectory(long revision, String path,
+                             int direntFields,
+                             Map<String, DirEntry> dirents,
+                             Map<String, byte[]> properties)
+            throws ClientException
+    {
+        maybe_clear(dirents);
+        maybe_clear(properties);
+        return nativeGetDirectory(revision, path,
+                                  direntFields, dirents, properties);
+    }
+
+    public native Map<String, Mergeinfo>
+        getMergeinfo(Iterable<String> paths, long revision,
+                     Mergeinfo.Inheritance inherit,
+                     boolean includeDescendants)
+            throws ClientException;
+
+    // TODO: update
+    // TODO: switch
+
+    public ISVNReporter status(String statusTarget,
+                               long revision, Depth depth,
+                               RemoteStatus receiver)
+            throws ClientException
+    {
+        check_inactive(editorReference, reporterReference);
+        StateReporter rp = StateReporter.createInstance(this);
+
+        // At this point, the reporter is not active/valid.
+        StatusEditor editor = new StatusEditor(receiver);
+        nativeStatus(statusTarget, revision, depth, editor, rp);
+        // Now it should be valid.
+
+        if (reporterReference != null)
+            reporterReference.clear();
+        reporterReference = new WeakReference<ISVNReporter>(rp);
+        return rp;
+    }
+
+    // TODO: diff
+
+    public native void getLog(Iterable<String> paths,
+                              long startRevision, long endRevision, int limit,
+                              boolean strictNodeHistory, boolean discoverPath,
+                              boolean includeMergedRevisions,
+                              Iterable<String> revisionProperties,
+                              LogMessageCallback callback)
+            throws ClientException;
 
     public native NodeKind checkPath(String path, long revision)
             throws ClientException;
 
+    // TODO: stat
+    // TODO: getLocations
+    // TODO: getLocationSegments
+    // TODO: getFileRevisions
+    // TODO: lock
+    // TODO: unlock
+    // TODO: getLock
+
     public native Map<String, Lock> getLocks(String path, Depth depth)
             throws ClientException;
+
+    // TODO: replayRange
+    // TODO: replay
+    // TODO: getDeletedRevision
+    // TODO: getInheritedProperties
 
     public boolean hasCapability(Capability capability)
             throws ClientException
@@ -148,6 +239,20 @@ public class RemoteSession extends JNIObject implements ISVNRemote
                                                      byte[] oldValue,
                                                      byte[] newValue)
             throws ClientException;
+    private native long nativeGetFile(long revision, String path,
+                                      OutputStream contents,
+                                      Map<String, byte[]> properties)
+            throws ClientException;
+    private native long nativeGetDirectory(long revision, String path,
+                                           int direntFields,
+                                           Map<String, DirEntry> dirents,
+                                           Map<String, byte[]> properties)
+            throws ClientException;
+    private native void nativeStatus(String statusTarget,
+                                     long revision, Depth depth,
+                                     ISVNEditor statusEditor,
+                                     ISVNReporter reporter)
+            throws ClientException;
     private native boolean nativeHasCapability(String capability)
             throws ClientException;
 
@@ -158,8 +263,75 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     private class RemoteSessionContext extends OperationContext {}
 
     /*
-     * The set of open editors. We need this in order to dispose/abort
-     * the editors when the session is disposed.
+     * A reference to the current active editor. We need this in order
+     * to dispose/abort the editor when the session is disposed. And
+     * furthermore, there can be only one editor or reporter active at
+     * any time.
      */
-    private HashSet<WeakReference<ISVNEditor>> editors;
+    private WeakReference<ISVNEditor> editorReference;
+
+    /*
+     * The commit editor calls this when disposed to clear the
+     * reference. Note that this function will be called during our
+     * dispose, so make sure they don't step on each others' toes.
+     */
+    void disposeEditor(ISVNEditor editor)
+    {
+        if (editorReference == null)
+            return;
+        ISVNEditor ed = editorReference.get();
+        if (ed == null)
+            return;
+        if (ed != editor)
+            throw new IllegalStateException("Disposing unknown editor");
+        editorReference.clear();
+    }
+
+    /*
+     * A reference to the current active reporter. We need this in
+     * order to dispose/abort the report when the session is
+     * disposed. And furthermore, there can be only one reporter or
+     * editor active at any time.
+     */
+    private WeakReference<ISVNReporter> reporterReference;
+
+    /*
+     * The update reporter calls this when disposed to clear the
+     * reference. Note that this function will be called during our
+     * dispose, so make sure they don't step on each others' toes.
+     */
+    void disposeReporter(ISVNReporter reporter)
+    {
+        if (reporterReference == null)
+            return;
+        ISVNReporter rp = reporterReference.get();
+        if (rp == null)
+            return;
+        if (rp != reporter)
+            throw new IllegalStateException("Disposing unknown reporter");
+        reporterReference.clear();
+    }
+
+    /*
+     * Private helper methods.
+     */
+    private final static void maybe_clear(Map clearable)
+    {
+        if (clearable != null && !clearable.isEmpty())
+            try {
+                clearable.clear();
+            } catch (UnsupportedOperationException ex) {
+                // ignored
+            }
+    }
+
+    private final static
+        void check_inactive(WeakReference<ISVNEditor> editorReference,
+                            WeakReference<ISVNReporter> reporterReference)
+    {
+        if (editorReference != null && editorReference.get() != null)
+            throw new IllegalStateException("An editor is already active");
+        if (reporterReference != null && reporterReference.get() != null)
+            throw new IllegalStateException("A reporter is already active");
+    }
 }

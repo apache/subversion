@@ -289,7 +289,13 @@ fs_open_for_recovery(svn_fs_t *fs,
 
 /* This implements the fs_library_vtable_t.upgrade_fs() API. */
 static svn_error_t *
-fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+fs_upgrade(svn_fs_t *fs,
+           const char *path,
+           svn_fs_upgrade_notify_t notify_func,
+           void *notify_baton,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
+           apr_pool_t *pool,
            apr_pool_t *common_pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
@@ -297,7 +303,8 @@ fs_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
   SVN_ERR(fs_serialized_init(fs, common_pool, pool));
-  return svn_fs_fs__upgrade(fs, pool);
+  return svn_fs_fs__upgrade(fs, notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool);
 }
 
 static svn_error_t *

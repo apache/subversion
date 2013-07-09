@@ -40,9 +40,10 @@
 OperationContext::OperationContext(SVN::Pool &pool)
   : m_config(NULL),
     m_prompter(NULL),
-    m_cancelOperation(false),
+    m_cancelOperation(0),
     m_pool(&pool),
-    m_jctx(NULL)
+    m_jctx(NULL),
+    m_jcfgcb(NULL)
 {}
 
 void
@@ -84,6 +85,8 @@ OperationContext::~OperationContext()
 
   JNIEnv *env = JNIUtil::getEnv();
   env->DeleteGlobalRef(m_jctx);
+  if (m_jcfgcb)
+    env->DeleteGlobalRef(m_jcfgcb);
 }
 
 apr_hash_t *
@@ -101,6 +104,7 @@ OperationContext::getConfigData()
         configDir = NULL;
       SVN_JNI_ERR(
           svn_config_get_config(&m_config, configDir, m_pool->getPool()), NULL);
+      notifyConfigLoad();
     }
 
   return m_config;
@@ -215,10 +219,7 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
 
 jobject OperationContext::getSelf() const
 {
-  jobject jctx = JNIUtil::getEnv()->NewGlobalRef(m_jctx);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-  return jctx;
+  return m_jctx;
 }
 
 void
@@ -253,10 +254,32 @@ OperationContext::setConfigDirectory(const char *configDir)
   m_config = NULL;
 }
 
+void
+OperationContext::setConfigCallback(jobject configCallback)
+{
+  JNIEnv* env = JNIUtil::getEnv();
+
+  if (m_jcfgcb)
+    {
+      env->DeleteGlobalRef(m_jcfgcb);
+      m_jcfgcb = NULL;
+    }
+  if (configCallback)
+    {
+      m_jcfgcb = env->NewGlobalRef(configCallback);
+      env->DeleteLocalRef(configCallback);
+    }
+}
+
 const char *
 OperationContext::getConfigDirectory() const
 {
   return (m_configDir.empty() ? NULL : m_configDir.c_str());
+}
+
+jobject OperationContext::getConfigCallback() const
+{
+  return m_jcfgcb;
 }
 
 const char *
@@ -279,19 +302,19 @@ const Prompter& OperationContext::getPrompter() const
 void
 OperationContext::cancelOperation()
 {
-  m_cancelOperation = true;
+  svn_atomic_set(&m_cancelOperation, 1);
 }
 
 void
 OperationContext::resetCancelRequest()
 {
-  m_cancelOperation = false;
+  svn_atomic_set(&m_cancelOperation, 0);
 }
 
 bool
 OperationContext::isCancelledOperation()
 {
-  return m_cancelOperation;
+  return bool(svn_atomic_read(&m_cancelOperation));
 }
 
 svn_error_t *
@@ -366,4 +389,55 @@ OperationContext::clientName(void *baton, const char **name, apr_pool_t *pool)
   *name = that->getClientName();
 
   return SVN_NO_ERROR;
+}
+
+void
+OperationContext::notifyConfigLoad()
+{
+  if (!m_jcfgcb)
+    return;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  static jmethodID onload_mid = 0;
+  if (0 == onload_mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/ConfigEvent");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      onload_mid = env->GetMethodID(cls, "onLoad",
+                                    "(L"JAVA_PACKAGE"/ISVNConfig;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/ConfigImpl");
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  static jmethodID ctor_mid = 0;
+  if (0 == ctor_mid)
+    {
+      ctor_mid = env->GetMethodID(cfg_cls, "<init>", "(J)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+  static jmethodID dispose_mid = 0;
+  if (0 == dispose_mid)
+    {
+      dispose_mid = env->GetMethodID(cfg_cls, "dispose", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+  jobject jcbimpl = env->NewObject(cfg_cls, ctor_mid,
+                                   reinterpret_cast<jlong>(this));
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  env->CallVoidMethod(m_jcfgcb, onload_mid, jcbimpl);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+  env->CallVoidMethod(jcbimpl, dispose_mid);
+  env->DeleteLocalRef(jcbimpl);
 }

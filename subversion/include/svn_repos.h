@@ -256,12 +256,20 @@ typedef enum svn_repos_notify_action_t
   /** A revision is found with corruption/errors. @since New in 1.9. */
   svn_repos_notify_failure,
 
+  /** A revprop shard got packed. @since New in 1.9. */
+  svn_repos_notify_pack_revprops,
+
+  /** A non-packed revprop shard got removed. @since New in 1.9. */
+  svn_repos_notify_cleanup_revprops,
+
+  /** The repository format got bumped. @since New in 1.9. */
+  svn_repos_notify_format_bumped,
+
   /** Summary of corrupt revisions. @since New in 1.9. */
   svn_repos_notify_failure_summary,
 
   /** Summary title string. @since New in 1.9. */
   svn_repos_notify_summary
-
 } svn_repos_notify_action_t;
 
 /** The type of error occurring.
@@ -304,7 +312,8 @@ typedef struct svn_repos_notify_t
   svn_repos_notify_action_t action;
 
   /** For #svn_repos_notify_dump_rev_end and #svn_repos_notify_verify_rev_end,
-   * the revision which just completed. */
+   * the revision which just completed.
+   * For #svn_fs_upgrade_format_bumped, the new format version. */
   svn_revnum_t revision;
 
   /** For #svn_repos_notify_warning, the warning object. */
@@ -313,6 +322,8 @@ typedef struct svn_repos_notify_t
 
   /** For #svn_repos_notify_pack_shard_start,
       #svn_repos_notify_pack_shard_end,
+      #svn_repos_notify_pack_revprops,
+      #svn_repos_notify_cleanup_revprops
       #svn_repos_notify_pack_shard_start_revprop, and
       #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
@@ -2636,7 +2647,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
  * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
  *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 SVN_DEPRECATED
 svn_error_t *

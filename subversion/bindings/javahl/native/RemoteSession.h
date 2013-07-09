@@ -35,6 +35,8 @@
 #include "RemoteSessionContext.h"
 #include "Prompter.h"
 
+class CommitEditor;
+
 /*
  * This class wraps Ra based operations from svn_ra.h
  */
@@ -45,11 +47,13 @@ class RemoteSession : public SVNBase
     static jobject open(jint jretryAttempts,
                         jstring jurl, jstring juuid,
                         jstring jconfigDirectory,
+                        jobject jconfigHandler,
                         jstring jusername, jstring jpassword,
                         jobject jprompter, jobject jprogress);
     static jobject open(jint jretryAttempts,
                         const char* url, const char* uuid,
                         const char* configDirectory,
+                        jobject jconfigHandler,
                         const char* username, const char* password,
                         Prompter* prompter, jobject jprogress);
     ~RemoteSession();
@@ -71,14 +75,43 @@ class RemoteSession : public SVNBase
                                 jbyteArray jvalue);
     jobject getRevisionProperties(jlong jrevision);
     jbyteArray getRevisionProperty(jlong jrevision, jstring jname);
-    jobject getLocks(jstring jpath, jobject jdepth);
+    jlong getFile(jlong jrevision, jstring jpath,
+                  jobject jcontents, jobject jproperties);
+    jlong getDirectory(jlong jrevision, jstring jpath, jint jdirent_fields,
+                       jobject jdirents, jobject jproperties);
+    jobject getMergeinfo(jobject jpaths, jlong jrevision, jobject jinherit,
+                         jboolean jinclude_descendants);
+    // TODO: update
+    // TODO: switch
+    void status(jobject jthis, jstring jstatus_target,
+                jlong jrevision, jobject jdepth,
+                jobject jstatus_editor, jobject jreporter);
+    // TODO: diff
+    void getLog(jobject jpaths, jlong jstartrev, jlong jendrev, jint jlimit,
+                jboolean jstrict_node_history, jboolean jdiscover_changed_paths,
+                jboolean jinclude_merged_revisions,
+                jobject jrevprops, jobject jlog_callback);
     jobject checkPath(jstring jpath, jlong jrevision);
+    // TODO: stat
+    // TODO: getLocations
+    // TODO: getLocationSegments
+    // TODO: getFileRevisions
+    // TODO: lock
+    // TODO: unlock
+    // TODO: getLock
+    jobject getLocks(jstring jpath, jobject jdepth);
+    // TODO: replayRange
+    // TODO: replay
+    // TODO: getDeletedRevision
+    // TODO: getInheritedProperties
     jboolean hasCapability(jstring capability);
 
   private:
+    friend class CommitEditor;
     RemoteSession(jobject*, int retryAttempts,
                   const char* url, const char* uuid,
                   const char* configDirectory,
+                  jobject jconfigHandler,
                   const char* username, const char* password,
                   Prompter* prompter, jobject jprogress);
 

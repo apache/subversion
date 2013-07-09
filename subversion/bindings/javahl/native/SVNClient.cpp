@@ -51,7 +51,7 @@
 #include "CommitMessage.h"
 #include "EnumMapper.h"
 #include "StringArray.h"
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "DiffOptions.h"
 #include "CreateJ.h"
 #include "svn_auth.h"
@@ -229,23 +229,23 @@ rev_range_vector_to_apr_array(std::vector<RevisionRange> &revRanges,
     std::vector<RevisionRange>::const_iterator it;
     for (it = revRanges.begin(); it != revRanges.end(); ++it)
     {
-        if (it->toRange(subPool)->start.kind
-            == svn_opt_revision_unspecified
-            && it->toRange(subPool)->end.kind
-            == svn_opt_revision_unspecified)
+        const svn_opt_revision_range_t *range = it->toRange(subPool);
+
+        if (range->start.kind == svn_opt_revision_unspecified
+            && range->end.kind == svn_opt_revision_unspecified)
         {
-            svn_opt_revision_range_t *range =
+            svn_opt_revision_range_t *full =
                 reinterpret_cast<svn_opt_revision_range_t *>
                     (apr_pcalloc(subPool.getPool(), sizeof(*range)));
-            range->start.kind = svn_opt_revision_number;
-            range->start.value.number = 1;
-            range->end.kind = svn_opt_revision_head;
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
+            full->start.kind = svn_opt_revision_number;
+            full->start.value.number = 1;
+            full->end.kind = svn_opt_revision_head;
+            full->end.value.number = 0;
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = full;
         }
         else
         {
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
-                it->toRange(subPool);
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
         }
         if (JNIUtil::isExceptionThrown())
             return NULL;
@@ -319,7 +319,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
 }
 
 void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
-                       bool keep_local, RevpropTable &revprops,
+                       bool keep_local, PropertyTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -419,7 +419,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 void SVNClient::commit(Targets &targets, CommitMessage *message,
                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                       StringArray &changelists, RevpropTable &revprops,
+                       StringArray &changelists, PropertyTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -444,7 +444,7 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      CommitMessage *message, bool copyAsChild,
                      bool makeParents, bool ignoreExternals,
-                     RevpropTable &revprops, CommitCallback *callback)
+                     PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -473,7 +473,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      CommitMessage *message, bool force, bool moveAsChild,
                      bool makeParents, bool metadataOnly, bool allowMixRev,
-                     RevpropTable &revprops, CommitCallback *callback)
+                     PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -498,7 +498,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
 }
 
 void SVNClient::mkdir(Targets &targets, CommitMessage *message,
-                      bool makeParents, RevpropTable &revprops,
+                      bool makeParents, PropertyTable &revprops,
                       CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -616,7 +616,7 @@ void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
                          bool noIgnore, bool noAutoProps,
                          bool ignoreUnknownNodeTypes,
-                         RevpropTable &revprops,
+                         PropertyTable &revprops,
                          ImportFilterCallback *ifCallback,
                          CommitCallback *commitCallback)
 {
@@ -752,8 +752,6 @@ jobject
 SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
 {
     SVN::Pool subPool(pool);
-    JNIEnv *env = JNIUtil::getEnv();
-
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
         return NULL;
@@ -768,57 +766,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
                 NULL);
     if (mergeinfo == NULL)
         return NULL;
-
-    // Transform mergeinfo into Java Mergeinfo object.
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Mergeinfo");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    static jmethodID ctor = 0;
-    if (ctor == 0)
-    {
-        ctor = env->GetMethodID(clazz, "<init>", "()V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    static jmethodID addRevisions = 0;
-    if (addRevisions == 0)
-    {
-        addRevisions = env->GetMethodID(clazz, "addRevisions",
-                                        "(Ljava/lang/String;"
-                                        "Ljava/util/List;)V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    jobject jmergeinfo = env->NewObject(clazz, ctor);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    apr_hash_index_t *hi;
-    for (hi = apr_hash_first(subPool.getPool(), mergeinfo);
-         hi;
-         hi = apr_hash_next(hi))
-    {
-        const void *path;
-        void *val;
-        apr_hash_this(hi, &path, NULL, &val);
-
-        jstring jpath =
-            JNIUtil::makeJString(reinterpret_cast<const char *>(path));
-        jobject jranges =
-            CreateJ::RevisionRangeList(reinterpret_cast<svn_rangelist_t *>(val));
-
-        env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
-
-        env->DeleteLocalRef(jranges);
-        env->DeleteLocalRef(jpath);
-    }
-
-    env->DeleteLocalRef(clazz);
-
-    return jmergeinfo;
+    return CreateJ::Mergeinfo(mergeinfo, subPool.getPool());
 }
 
 void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
@@ -957,7 +905,7 @@ void SVNClient::propertySetRemote(const char *path, long base_rev,
                                   const char *name,
                                   CommitMessage *message,
                                   JNIByteArray &value, bool force,
-                                  RevpropTable &revprops,
+                                  PropertyTable &revprops,
                                   CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -1468,7 +1416,7 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
                                         &set_rev, ctx, subPool.getPool()),
                 NULL);
 
-    return CreateJ::PropertyMap(props);
+    return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
 struct info_baton
@@ -1576,25 +1524,16 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
        by creating a copy of the prompter here. */
     Prompter* prompter = new Prompter(context.getPrompter());
     if (!prompter)
-    {
-        /* context.getSelf() created a new global reference. */
-        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
-        JNIUtil::throwNullPointerException("allocating Prompter");
-        return NULL;
-    }
+      return NULL;
 
     jobject jremoteSession = RemoteSession::open(
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
+        context.getConfigCallback(),
         context.getUsername(), context.getPassword(),
         prompter, jctx);
     if (JNIUtil::isJavaExceptionThrown())
-    {
-        /* context.getSelf() created a new global reference. */
-        JNIUtil::getEnv()->DeleteGlobalRef(jctx);
-        jremoteSession = NULL;
-        delete prompter;
-    }
+      delete prompter;
 
     return jremoteSession;
 }

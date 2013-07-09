@@ -19,32 +19,24 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+package org.apache.subversion.javahl.callback;
 
-#include <jni.h>
-#include "Pool.h"
+import org.apache.subversion.javahl.ISVNConfig;
 
-struct apr_hash_t;
-
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+/**
+ * Interface for configuration-change hooks.
+ * @since 1.9
+ */
+public interface ConfigEvent
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
-};
-
-#endif // REVPROPTABLE_H
+    /**
+     * Called by the native configuration loader every time the
+     * configuration is parsed into memory.
+     * @params configuration A reference to the in-memory configuration
+     *                       data. This object is only valid during the
+     *                       call and must not be accessed otherwise.
+     */
+    void onLoad(ISVNConfig configuration);
+}
