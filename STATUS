@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1497310
-   Backport 'svn help cleanup' improvements made in r1497310.
-   Justification:
-     The current output doesn't explain what the command actually does.
-   Branch: ^/subversion/branches/1.8.x-r1497310-partial
-   Votes:
-     +1: stsp, danielsh, stefan2, breser
-
  * r1498449, r1498455, r1498997
    kidney blame: convert a client segfault into a correct failure mode.  To
    reproduce run 'svn blame -r 2:1' against a 1.7 server with a 1.8.x binary.
