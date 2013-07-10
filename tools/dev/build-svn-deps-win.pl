@@ -135,7 +135,7 @@ our $SRCDIR; # directory where we store package files
 # Some other options
 our $VS_VER;
 our $NEON;
-our $SVN_VER = '1.8.x';
+our $SVN_VER = '1.9.x';
 
 # Utility function to remove dots from a string
 sub remove_dots {
