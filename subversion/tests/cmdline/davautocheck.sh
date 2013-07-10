@@ -318,7 +318,13 @@ HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_ACCESS_LOG="$HTTPD_ROOT/access_log"
 HTTPD_ERROR_LOG="$HTTPD_ROOT/error_log"
 HTTPD_MIME_TYPES="$HTTPD_ROOT/mime.types"
-BASE_URL="http://localhost:$HTTPD_PORT"
+if [ -z "$BASE_URL" ]; then
+  BASE_URL="http://localhost:$HTTPD_PORT"
+else
+  # Specify the public name of the host when using a proxy on another host, the
+  # port number will be appended.
+  BASE_URL="$BASE_URL:$HTTPD_PORT"
+fi
 HTTPD_USERS="$HTTPD_ROOT/users"
 
 mkdir "$HTTPD_ROOT" \
@@ -439,6 +445,9 @@ TypesConfig         "$HTTPD_MIME_TYPES"
 StartServers        4
 MaxRequestsPerChild 0
 <IfModule worker.c>
+  ThreadsPerChild   8
+</IfModule>
+<IfModule event.c>
   ThreadsPerChild   8
 </IfModule>
 MaxClients          32

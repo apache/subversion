@@ -28,6 +28,7 @@
 
 #include "svn_repos.h"
 #include "svn_compat.h"
+#include "svn_hash.h"
 #include "svn_props.h"
 
 #include "svn_private_config.h"
@@ -56,13 +57,11 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
 {
   apr_hash_t *revprop_table = apr_hash_make(pool);
   if (user)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(user, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(user, pool));
   if (log_msg)
-    apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                 APR_HASH_KEY_STRING,
-                 svn_string_create(log_msg, pool));
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
   return svn_repos_get_commit_editor5(editor, edit_baton, repos, txn,
                                       repos_url, base_path, revprop_table,
                                       commit_callback, commit_baton,
@@ -728,6 +727,27 @@ svn_repos_dump_fs2(svn_repos_t *repos,
 }
 
 svn_error_t *
+svn_repos_verify_fs2(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool)
+{
+  return svn_error_trace(svn_repos_verify_fs3(repos,
+                                              start_rev,
+                                              end_rev,
+                                              FALSE,
+                                              notify_func,
+                                              notify_baton,
+                                              cancel_func,
+                                              cancel_baton,
+                                              pool));
+}
+
+svn_error_t *
 svn_repos_verify_fs(svn_repos_t *repos,
                     svn_stream_t *feedback_stream,
                     svn_revnum_t start_rev,
@@ -1014,5 +1034,5 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
 {
   return svn_repos__authz_read(authz_p, file, NULL, must_exist,
-                               FALSE, NULL, pool);
+                               FALSE, pool);
 }

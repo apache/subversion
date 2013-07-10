@@ -544,7 +544,7 @@ def relpath_escaping(sbox):
               'URL' : '.*/path.*with.*space.*',
               'Relative URL' : '.*/path.*with.*space.*',
              }
-             
+
   svntest.actions.run_and_verify_info([expected], sbox.ospath(name))
 
   info = svntest.actions.run_and_parse_info(sbox.ospath(name), sbox.ospath(name2))

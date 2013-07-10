@@ -21,8 +21,6 @@
  * ====================================================================
  */
 
-#include "svn_private_config.h"
-
 #include <assert.h>
 #include <stdio.h>
 
@@ -42,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_checksum.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
@@ -57,6 +56,7 @@ struct svn_stream_t {
   svn_stream_mark_fn_t mark_fn;
   svn_stream_seek_fn_t seek_fn;
   svn_stream__is_buffered_fn_t is_buffered_fn;
+  apr_file_t *file; /* Maybe NULL */
 };
 
 
@@ -82,6 +82,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->mark_fn = NULL;
   stream->seek_fn = NULL;
   stream->is_buffered_fn = NULL;
+  stream->file = NULL;
   return stream;
 }
 
@@ -914,11 +915,18 @@ svn_stream_from_aprfile2(apr_file_t *file,
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
   svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
+  stream->file = file;
 
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
 
   return stream;
+}
+
+apr_file_t *
+svn_stream__aprfile(svn_stream_t *stream)
+{
+  return stream->file;
 }
 
 
@@ -1677,6 +1685,9 @@ typedef struct lazyopen_baton_t {
   svn_stream_t *real_stream;
   apr_pool_t *pool;
 
+  /* Whether to open the wrapped stream on a close call. */
+  svn_boolean_t open_on_close;
+
 } lazyopen_baton_t;
 
 
@@ -1748,7 +1759,9 @@ close_handler_lazyopen(void *baton)
 {
   lazyopen_baton_t *b = baton;
 
-  if (b->real_stream != NULL)
+  if (b->open_on_close)
+    SVN_ERR(lazyopen_if_unopened(b));
+  if (b->real_stream)
     SVN_ERR(svn_stream_close(b->real_stream));
 
   return SVN_NO_ERROR;
@@ -1781,9 +1794,23 @@ seek_handler_lazyopen(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream__is_buffered_fn_t */
+static svn_boolean_t
+is_buffered_lazyopen(void *baton)
+{
+  lazyopen_baton_t *b = baton;
+
+  /* No lazy open as we cannot handle an open error. */
+  if (!b->real_stream)
+    return FALSE;
+
+  return svn_stream__is_buffered(b->real_stream);
+}
+
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
+                           svn_boolean_t open_on_close,
                            apr_pool_t *result_pool)
 {
   lazyopen_baton_t *lob = apr_pcalloc(result_pool, sizeof(*lob));
@@ -1793,6 +1820,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   lob->open_baton = open_baton;
   lob->real_stream = NULL;
   lob->pool = result_pool;
+  lob->open_on_close = open_on_close;
 
   stream = svn_stream_create(lob, result_pool);
   svn_stream_set_read(stream, read_handler_lazyopen);
@@ -1801,6 +1829,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_close(stream, close_handler_lazyopen);
   svn_stream_set_mark(stream, mark_handler_lazyopen);
   svn_stream_set_seek(stream, seek_handler_lazyopen);
-  
+  svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
+
   return stream;
 }

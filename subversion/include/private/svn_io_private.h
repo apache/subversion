@@ -81,13 +81,20 @@ svn_stream__set_is_buffered(svn_stream_t *stream,
 
 /** Return whether this generic @a stream uses internal buffering.
  * This may be used to work around subtle differences between buffered
- * an non-buffered APR files.
+ * an non-buffered APR files.  A lazy-open stream cannot report the
+ * true buffering state until after the lazy open: a stream that
+ * initially reports as non-buffered may report as buffered later.
  *
  * @since New in 1.7.
  */
 svn_boolean_t
 svn_stream__is_buffered(svn_stream_t *stream);
 
+/** Return the underlying file, if any, associated with the stream, or
+ * NULL if not available.  Accessing the file bypasses the stream.
+ */
+apr_file_t *
+svn_stream__aprfile(svn_stream_t *stream);
 
 #ifdef __cplusplus
 }

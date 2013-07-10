@@ -50,7 +50,7 @@
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
 enum options_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF
@@ -177,7 +177,8 @@ capabilities_headers_iterator_callback(void *baton,
         {
           /* The server doesn't know what repository we're referring
              to, so it can't just say capability_yes. */
-          if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
+          if (!svn_hash_gets(session->capabilities,
+                             SVN_RA_CAPABILITY_MERGEINFO))
             {
               svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                             capability_server_yes);
@@ -203,7 +204,7 @@ capabilities_headers_iterator_callback(void *baton,
           svn_hash_sets(session->capabilities,
                         SVN_RA_CAPABILITY_INHERITED_PROPS, capability_yes);
         }
-      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_GET_FILE_REVS_REVERSE,
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS,
                                  vals))
         {
           svn_hash_sets(session->capabilities,
@@ -361,6 +362,8 @@ options_response_handler(serf_request_t *request,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
                     capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                    capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
@@ -398,10 +401,10 @@ create_options_req(options_context_t **opt_ctx,
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   xmlctx = svn_ra_serf__xml_context_create(options_ttable,
-                                           NULL, options_closed, NULL,
+                                           NULL, options_closed, NULL, NULL,
                                            new_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "OPTIONS";
   handler->path = session->session_url.path;
@@ -435,8 +438,12 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *youngest = opt_ctx->youngest_rev;
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*youngest));
 
   return SVN_NO_ERROR;
 }
@@ -455,6 +462,10 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
+
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
+                                       opt_ctx->handler->path,
+                                       opt_ctx->handler->location));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -490,11 +501,81 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_compose_create(
-             svn_ra_serf__error_on_status(opt_ctx->handler->sline.code,
-                                          serf_sess->session_url.path,
-                                          opt_ctx->handler->location),
-             err);
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(opt_ctx->handler->sline,
+                                           serf_sess->session_url.path,
+                                           opt_ctx->handler->location),
+              err));
+
+  /* Opportunistically cache any reported activity URL.  (We don't
+     want to have to ask for this again later, potentially against an
+     unreadable commit anchor URL.)  */
+  if (opt_ctx->activity_collection)
+    {
+      serf_sess->activity_collection_url =
+        apr_pstrdup(serf_sess->pool, opt_ctx->activity_collection);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+create_simple_options_body(serf_bucket_t **body_bkt,
+                           void *baton,
+                           serf_bucket_alloc_t *alloc,
+                           apr_pool_t *pool)
+{
+  serf_bucket_t *body;
+  serf_bucket_t *s;
+
+  body = serf_bucket_aggregate_create(alloc);
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
+
+  s = SERF_BUCKET_SIMPLE_STRING("<D:options xmlns:D=\"DAV:\" />", alloc);
+  serf_bucket_aggregate_append(body, s);
+
+  *body_bkt = body;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+                         apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__handler_t *handler;
+
+  handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+  handler->handler_pool = scratch_pool;
+  handler->method = "OPTIONS";
+  handler->path = serf_sess->session_url.path;
+  handler->conn = serf_sess->conns[0];
+  handler->session = serf_sess;
+
+  /* We don't care about the response body, so discard it.  */
+  handler->response_handler = svn_ra_serf__handle_discard_body;
+
+  /* We need a simple body, in order to send it in chunked format.  */
+  handler->body_delegate = create_simple_options_body;
+
+  /* No special headers.  */
+
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+  /* Some versions of nginx in reverse proxy mode will return 411. They want
+     a Content-Length header, rather than chunked requests. We can keep other
+     HTTP/1.1 features, but will disable the chunking.  */
+  if (handler->sline.code == 411)
+    {
+      serf_sess->using_chunked_requests = FALSE;
+
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       handler->path,
+                                       handler->location));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -514,17 +595,14 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
       return SVN_NO_ERROR;
     }
 
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability,
-                            APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
     SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool));
 
   /* Try again, now that we've fetched the capabilities. */
-  cap_result = apr_hash_get(serf_sess->capabilities,
-                            capability, APR_HASH_KEY_STRING);
+  cap_result = svn_hash_gets(serf_sess->capabilities, capability);
 
   /* Some capabilities depend on the repository as well as the server. */
   if (cap_result == capability_server_yes)

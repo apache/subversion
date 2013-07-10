@@ -2867,9 +2867,9 @@ def revert_depth_files(sbox):
   "depth immediate+files should revert deleted files"
 
   sbox.build(read_only = True)
-  
+
   expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
-  
+
   # Apply an unrelated delete one level to deep
   sbox.simple_rm('A/D/gamma')
 

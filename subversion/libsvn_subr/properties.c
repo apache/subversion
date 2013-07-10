@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <string.h>       /* for strncmp() */
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_error.h"
@@ -331,7 +332,7 @@ svn_prop__patch(const apr_hash_t *original_props,
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
 
-      apr_hash_set(props, p->name, APR_HASH_KEY_STRING, p->value);
+      svn_hash_sets(props, p->name, p->value);
     }
   return props;
 }
@@ -429,7 +430,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
   for (i = 0; i < properties->nelts; i++)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(properties, i, svn_prop_t);
-      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
+      svn_hash_sets(prop_hash, prop->name, prop->value);
     }
 
   return prop_hash;
@@ -497,7 +498,7 @@ svn_prop_get_value(const apr_hash_t *props,
   if (!props)
     return NULL;
 
-  str = apr_hash_get((apr_hash_t *)props, prop_name, APR_HASH_KEY_STRING);
+  str = svn_hash_gets((apr_hash_t *)props, prop_name);
 
   if (str)
     return str->data;

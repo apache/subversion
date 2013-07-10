@@ -67,7 +67,7 @@ svn_rdump__normalize_props(apr_hash_t **normal_props,
       SVN_ERR(svn_rdump__normalize_prop(key, &value,
                                         result_pool));
 
-      apr_hash_set(*normal_props, key, APR_HASH_KEY_STRING, value);
+      svn_hash_sets(*normal_props, key, value);
     }
   return SVN_NO_ERROR;
 }

@@ -507,8 +507,8 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
   while (result == SASL_CONTINUE)
     {
       /* Read the server response */
-      SVN_ERR(svn_ra_svn_read_tuple(sess->conn, pool, "w(?s)",
-                                    &status, &in));
+      SVN_ERR(svn_ra_svn__read_tuple(sess->conn, pool, "w(?s)",
+                                     &status, &in));
 
       if (strcmp(status, "failure") == 0)
         {
@@ -553,18 +553,18 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
           /* For CRAM-MD5, we don't use base64-encoding. */
           if (strcmp(mech, "CRAM-MD5") != 0)
             arg = svn_base64_encode_string2(arg, TRUE, pool);
-          SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, arg->data));
+          SVN_ERR(svn_ra_svn__write_cstring(sess->conn, pool, arg->data));
         }
       else
         {
-          SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, ""));
+          SVN_ERR(svn_ra_svn__write_cstring(sess->conn, pool, ""));
         }
     }
 
   if (!status || strcmp(status, "step") == 0)
     {
       /* This is a client-send-last mech.  Read the last server response. */
-      SVN_ERR(svn_ra_svn_read_tuple(sess->conn, pool, "w(?s)",
+      SVN_ERR(svn_ra_svn__read_tuple(sess->conn, pool, "w(?s)",
               &status, &in));
 
       if (strcmp(status, "failure") == 0)
@@ -734,7 +734,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
           const void *maxsize;
 
           /* Flush the connection, as we're about to replace its stream. */
-          SVN_ERR(svn_ra_svn_flush(conn, pool));
+          SVN_ERR(svn_ra_svn__flush(conn, pool));
 
           /* Create and initialize the stream baton. */
           sasl_baton = apr_pcalloc(conn->pool, sizeof(*sasl_baton));

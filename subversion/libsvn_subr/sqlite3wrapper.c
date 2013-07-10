@@ -39,6 +39,17 @@
 #      pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #    endif
 #  endif
+#  ifdef __APPLE__
+#    include <Availability.h>
+#    if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
+       /* <libkern/OSAtomic.h> is included on OS X by sqlite3.c, and
+          on old systems (Leopard or older), it cannot be compiled
+          with -std=c89 because it uses inline. This is a work-around. */
+#      define inline __inline__
+#      include <libkern/OSAtomic.h>
+#      undef inline
+#    endif
+#  endif
 #  include <sqlite3.c>
 #  if __GNUC__ > 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ >= 6))
 #    pragma GCC diagnostic pop

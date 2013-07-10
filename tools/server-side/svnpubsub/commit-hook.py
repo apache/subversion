@@ -19,8 +19,10 @@
 SVNLOOK="/usr/local/svn-install/current/bin/svnlook"
 #SVNLOOK="/usr/local/bin/svnlook"
 
+HOST="127.0.0.1"
+PORT=2069
+
 import sys
-import subprocess
 try:
     import simplejson as json
 except ImportError:
@@ -28,37 +30,34 @@ except ImportError:
 
 import urllib2
 
-HOST="127.0.0.1"
-PORT=2069
+import svnpubsub.util
 
-def svncmd(cmd):
-    return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+def svnlook(cmd, **kwargs):
+    args = [SVNLOOK] + cmd
+    return svnpubsub.util.check_output(args, **kwargs)
 
-def svncmd_uuid(repo):
-    cmd = "%s uuid %s" % (SVNLOOK, repo)
-    p = svncmd(cmd)
-    return p.stdout.read().strip()
+def svnlook_uuid(repo):
+    cmd = ["uuid", "--", repo]
+    return svnlook(cmd).strip()
 
-def svncmd_info(repo, revision):
-    cmd = "%s info -r %s %s" % (SVNLOOK, revision, repo)
-    p = svncmd(cmd)
-    data = p.stdout.read().split("\n")
+def svnlook_info(repo, revision):
+    cmd = ["info", "-r", revision, "--", repo]
+    data = svnlook(cmd, universal_newlines=True).split("\n")
     #print data
     return {'author': data[0].strip(),
             'date': data[1].strip(),
             'log': "\n".join(data[3:]).strip()}
 
-def svncmd_changed(repo, revision):
-    cmd = "%s changed -r %s %s" % (SVNLOOK, revision, repo)
-    p = svncmd(cmd)
-    changed = {} 
-    while True:
-        line = p.stdout.readline()
-        if not line:
-            break
+def svnlook_changed(repo, revision):
+    cmd = ["changed", "-r", revision, "--", repo]
+    lines = svnlook(cmd, universal_newlines=True).split("\n")
+    changed = {}
+    for line in lines:
         line = line.strip()
+        if not line:
+            continue
         (flags, filename) = (line[0:3], line[4:])
-        changed[filename] = {'flags': flags} 
+        changed[filename] = {'flags': flags}
     return changed
 
 def do_put(body):
@@ -71,23 +70,23 @@ def do_put(body):
 
 def main(repo, revision):
     revision = revision.lstrip('r')
-    i = svncmd_info(repo, revision)
+    i = svnlook_info(repo, revision)
     data = {'type': 'svn',
             'format': 1,
             'id': int(revision),
             'changed': {},
-            'repository': svncmd_uuid(repo),
+            'repository': svnlook_uuid(repo),
             'committer': i['author'],
             'log': i['log'],
             'date': i['date'],
             }
-    data['changed'].update(svncmd_changed(repo, revision))
+    data['changed'].update(svnlook_changed(repo, revision))
     body = json.dumps(data)
     do_put(body)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print "invalid args"
-        sys.exit(0)
+    if len(sys.argv) not in (3, 4):
+        sys.stderr.write("invalid args\n")
+        sys.exit(1)
 
-    main(sys.argv[1], sys.argv[2])
+    main(*sys.argv[1:3])

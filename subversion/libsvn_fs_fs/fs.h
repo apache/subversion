@@ -221,7 +221,11 @@ typedef struct fs_fs_shared_data_t
 /* Data structure for the 1st level DAG node cache. */
 typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
 
-/* Key type for all caches that use revision + offset / counter as key. */
+/* Key type for all caches that use revision + offset / counter as key.
+
+   NOTE: always initialize this using calloc() or '= {0};'!  This is used
+   as a cahe key and the padding bytes on 32 bit archs should be zero for
+   cache effectiveness. */
 typedef struct pair_cache_key_t
 {
   svn_revnum_t revision;
@@ -349,7 +353,7 @@ typedef struct fs_fs_data_t
 
   /* Whether packed revprop files shall be compressed. */
   svn_boolean_t compress_packed_revprops;
-  
+
   /* Whether directory nodes shall be deltified just like file nodes. */
   svn_boolean_t deltify_directories;
 
@@ -362,6 +366,10 @@ typedef struct fs_fs_data_t
   /* Maximum number of length of the linear part at the top of the
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
+
+  /* Pointer to svn_fs_open. */
+  svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
+                               apr_pool_t *);
 } fs_fs_data_t;
 
 

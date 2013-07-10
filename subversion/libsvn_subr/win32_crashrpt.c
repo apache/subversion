@@ -33,6 +33,7 @@ typedef int win32_crashrpt__dummy;
 #include <direct.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "svn_version.h"
 

@@ -1288,7 +1288,6 @@ def run_and_verify_mergeinfo(error_re_string = None,
     return
 
   out = [_f for _f in [x.rstrip()[1:] for x in out] if _f]
-  expected_output.sort()
   extra_out = []
   if out != expected_output:
     exp_hash = dict.fromkeys(expected_output)
@@ -1629,7 +1628,7 @@ def run_and_verify_inherited_prop_xml(path_or_url,
   expected_iprops = {}
   for x in expected_inherited_props:
     if sandbox.is_url(x):
-      expected_iprops[x] = expected_inherited_props[x]    
+      expected_iprops[x] = expected_inherited_props[x]
     else:
       expected_iprops[os.path.abspath(x)] = expected_inherited_props[x]
 
@@ -1917,11 +1916,11 @@ def get_virginal_state(wc_dir, rev):
   return state
 
 # Cheap administrative directory locking
-def lock_admin_dir(wc_dir, recursive=False):
+def lock_admin_dir(wc_dir, recursive=False, work_queue=False):
   "Lock a SVN administrative directory"
   db, root_path, relpath = wc.open_wc_db(wc_dir)
 
-  svntest.main.run_wc_lock_tester(recursive, wc_dir)
+  svntest.main.run_wc_lock_tester(recursive, wc_dir, work_queue)
 
 def set_incomplete(wc_dir, revision):
   "Make wc_dir incomplete at revision"

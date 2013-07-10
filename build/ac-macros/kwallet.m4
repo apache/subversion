@@ -35,73 +35,69 @@ AC_DEFUN(SVN_LIB_KWALLET,
     AC_MSG_RESULT([yes])
     if test "$svn_enable_shared" = "yes"; then
       if test "$APR_HAS_DSO" = "yes"; then
-        if test "$USE_NLS" = "yes"; then
-          if test -n "$PKG_CONFIG"; then
-            if test "$HAVE_DBUS" = "yes"; then
-              AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
-              if $PKG_CONFIG --exists QtCore QtDBus QtGui; then
-                AC_MSG_RESULT([yes])
-                if test "$svn_lib_kwallet" != "yes"; then
-                  AC_MSG_CHECKING([for kde4-config])
-                  KDE4_CONFIG="$svn_lib_kwallet/bin/kde4-config"
-                  if test -f "$KDE4_CONFIG" && test -x "$KDE4_CONFIG"; then
-                    AC_MSG_RESULT([yes])
-                  else
-                    KDE4_CONFIG=""
-                    AC_MSG_RESULT([no])
-                  fi
+        if test -n "$PKG_CONFIG"; then
+          if test "$HAVE_DBUS" = "yes"; then
+            AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
+            if $PKG_CONFIG --exists QtCore QtDBus QtGui; then
+              AC_MSG_RESULT([yes])
+              if test "$svn_lib_kwallet" != "yes"; then
+                AC_MSG_CHECKING([for kde4-config])
+                KDE4_CONFIG="$svn_lib_kwallet/bin/kde4-config"
+                if test -f "$KDE4_CONFIG" && test -x "$KDE4_CONFIG"; then
+                  AC_MSG_RESULT([yes])
                 else
-                  AC_PATH_PROG(KDE4_CONFIG, kde4-config)
+                  KDE4_CONFIG=""
+                  AC_MSG_RESULT([no])
                 fi
-                if test -n "$KDE4_CONFIG"; then
-                  AC_MSG_CHECKING([for KWallet])
-                  old_CXXFLAGS="$CXXFLAGS"
-                  old_LDFLAGS="$LDFLAGS"
-                  old_LIBS="$LIBS"
-                  for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui`]; do
-                    if test -n ["`echo "$d" | $EGREP -- '^-D[^[:space:]]*'`"]; then
-                      CPPFLAGS="$CPPFLAGS $d"
-                    fi
-                  done
-                  qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
-                  kde_dir="`$KDE4_CONFIG --prefix`"
-                  SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
-                  qt_libs_other_options="`$PKG_CONFIG --libs-only-other QtCore QtDBus QtGui`"
-                  SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
-                  CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
-                  LIBS="$LIBS $SVN_KWALLET_LIBS"
-                  qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
-                  kde_lib_suffix="`$KDE4_CONFIG --libsuffix`"
-                  LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_dir/lib$kde_lib_suffix)`"
-                  AC_LANG(C++)
-                  AC_LINK_IFELSE([AC_LANG_SOURCE([[
+              else
+                AC_PATH_PROG(KDE4_CONFIG, kde4-config)
+              fi
+              if test -n "$KDE4_CONFIG"; then
+                AC_MSG_CHECKING([for KWallet])
+                old_CXXFLAGS="$CXXFLAGS"
+                old_LDFLAGS="$LDFLAGS"
+                old_LIBS="$LIBS"
+                for d in [`$PKG_CONFIG --cflags QtCore QtDBus QtGui`]; do
+                  if test -n ["`echo "$d" | $EGREP -- '^-D[^[:space:]]*'`"]; then
+                    CPPFLAGS="$CPPFLAGS $d"
+                  fi
+                done
+                qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
+                kde_dir="`$KDE4_CONFIG --prefix`"
+                SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
+                qt_libs_other_options="`$PKG_CONFIG --libs-only-other QtCore QtDBus QtGui`"
+                SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
+                CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
+                LIBS="$LIBS $SVN_KWALLET_LIBS"
+                qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
+                kde_lib_suffix="`$KDE4_CONFIG --libsuffix`"
+                LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_dir/lib$kde_lib_suffix)`"
+                AC_LANG(C++)
+                AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <kwallet.h>
 int main()
 {KWallet::Wallet::walletList();}]])], svn_lib_kwallet="yes", svn_lib_kwallet="no")
-                  AC_LANG(C)
-                  if test "$svn_lib_kwallet" = "yes"; then
-                    AC_MSG_RESULT([yes])
-                    CXXFLAGS="$old_CXXFLAGS"
-                    LIBS="$old_LIBS"
-                  else
-                    AC_MSG_RESULT([no])
-                    AC_MSG_ERROR([cannot find KWallet])
-                  fi
+                AC_LANG(C)
+                if test "$svn_lib_kwallet" = "yes"; then
+                  AC_MSG_RESULT([yes])
+                  CXXFLAGS="$old_CXXFLAGS"
+                  LIBS="$old_LIBS"
                 else
-                  AC_MSG_ERROR([cannot find kde4-config])
+                  AC_MSG_RESULT([no])
+                  AC_MSG_ERROR([cannot find KWallet])
                 fi
               else
-                AC_MSG_RESULT([no])
-                AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
+                AC_MSG_ERROR([cannot find kde4-config])
               fi
             else
-              AC_MSG_ERROR([cannot find D-Bus])
+              AC_MSG_RESULT([no])
+              AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
             fi
           else
-            AC_MSG_ERROR([cannot find pkg-config])
+            AC_MSG_ERROR([cannot find D-Bus])
           fi
         else
-          AC_MSG_ERROR([missing support for internationalization])
+          AC_MSG_ERROR([cannot find pkg-config])
         fi
       else
         AC_MSG_ERROR([APR does not have support for DSOs])

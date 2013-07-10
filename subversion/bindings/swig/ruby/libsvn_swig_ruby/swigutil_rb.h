@@ -74,7 +74,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Ruby 1.9 changed the file name of this header */
+#ifdef HAVE_RUBY_IO_H
+#include <ruby/io.h>
+#else
 #include <rubyio.h>
+#endif
 
 typedef struct apr_pool_wrapper_t
 {

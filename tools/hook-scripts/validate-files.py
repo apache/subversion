@@ -61,7 +61,7 @@ class Config(configparser.SafeConfigParser):
 
     def get_rule_section_name(self, rule):
         """Given a rule name provide the section name it is defined in."""
-        return 'rule:%s' % (rule) 
+        return 'rule:%s' % (rule)
 
 class Commands:
     """Class to handle logic of running commands"""
@@ -74,9 +74,9 @@ class Commands:
         cmd = "'%s' changed -t '%s' '%s'" % (svnlook, txn, repo)
         p = subprocess.Popen(cmd, shell=True,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        changed = [] 
-        while True: 
+
+        changed = []
+        while True:
             line = p.stdout.readline()
             if not line:
                 break
@@ -87,7 +87,7 @@ class Commands:
             if line[-1] != "/" and (text_mod == "A" or text_mod == "U"):
                 changed.append(line[4:])
 
-        # wait on the command to finish so we can get the 
+        # wait on the command to finish so we can get the
         # returncode/stderr output
         data = p.communicate()
         if p.returncode != 0:
@@ -127,7 +127,7 @@ def main(repo, txn):
     # this shouldn't ever happen
     if len(changed) == 0:
         sys.exit(0)
-    
+
     for rule in rules:
         section = config.get_rule_section_name(rule)
         pattern = config.get(section, 'pattern')
@@ -145,7 +145,7 @@ def main(repo, txn):
                 sys.stderr.write(err_mesg)
                 exitcode = 1
 
-    return exitcode 
+    return exitcode
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

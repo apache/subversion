@@ -29,6 +29,7 @@
 
 /* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
+#include <limits.h> /* for ULONG_MAX */
 
 #include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
 #include <apr_errno.h>   /* for apr_status_t */
@@ -71,10 +72,16 @@ extern "C" {
  * Unaligned access on other machines (e.g. IA64) will trigger memory
  * access faults or simply misbehave.
  *
+ * Note: Some platforms may only support unaligned access for integers
+ * (PowerPC).  As a result this macro should only be used to determine
+ * if unaligned access is supported for integers.
+ *
  * @since New in 1.7.
  */
 #ifndef SVN_UNALIGNED_ACCESS_IS_OK
-# if defined(_M_IX86) || defined(_M_X64) || defined(i386) || defined(__x86_64)
+# if defined(_M_IX86) || defined(i386) \
+     || defined(_M_X64) || defined(__x86_64) \
+     || defined(__powerpc__) || defined(__ppc__)
 #  define SVN_UNALIGNED_ACCESS_IS_OK 1
 # else
 #  define SVN_UNALIGNED_ACCESS_IS_OK 0
@@ -216,33 +223,7 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
 
 
 
-/** A node kind.
- *
- * @since New in 1.8. Replaces svn_node_kind_t.
- */
-typedef enum svn_kind_t
-{
-  /** something's here, but we don't know what */
-  svn_kind_unknown,
-
-  /** absent */
-  svn_kind_none,
-
-  /** regular file */
-  svn_kind_file,
-
-  /** directory */
-  svn_kind_dir,
-
-  /** symbolic link */
-  svn_kind_symlink
-
-} svn_kind_t;
-
-/** The various types of nodes in the Subversion filesystem.
- *
- * This type is superseded by #svn_kind_t and will be deprecated when
- * transition to the new type is complete. */
+/** The various types of nodes in the Subversion filesystem. */
 typedef enum svn_node_kind_t
 {
   /** absent */
@@ -255,7 +236,14 @@ typedef enum svn_node_kind_t
   svn_node_dir,
 
   /** something's here, but we don't know what */
-  svn_node_unknown
+  svn_node_unknown,
+
+  /**
+   * symbolic link
+   * @note This value is not currently used by the public API.
+   * @since New in 1.8.
+   */
+  svn_node_symlink
 } svn_node_kind_t;
 
 /** Return a constant string expressing @a kind as an English word, e.g.,
@@ -277,24 +265,6 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
 
-/** Return the #svn_node_kind_t corresponding to the given #svn_kind_t;
- * #svn_kind_symlink will become #svn_node_file.
- *
- * @since New in 1.8.
- */
-svn_node_kind_t
-svn__node_kind_from_kind(svn_kind_t kind);
-
-/** Return the #svn_kind_t corresponding to the given #svn_node_kind_t,
- * or #svn_kind_symlink if @a is_symlink is true.
- *
- * @since New in 1.8.
- */
-svn_kind_t
-svn__kind_from_node_kind(svn_node_kind_t kind,
-                         svn_boolean_t is_symlink);
-
-
 
 /** Generic three-state property to represent an unknown value for values
  * that are just like booleans.  The values have been set deliberately to
@@ -306,8 +276,11 @@ svn__kind_from_node_kind(svn_node_kind_t kind,
  * @since New in 1.7. */
 typedef enum svn_tristate_t
 {
+  /** state known to be false (the constant does not evaulate to false) */
   svn_tristate_false = 2,
+  /** state known to be true */
   svn_tristate_true,
+  /** state could be true or false */
   svn_tristate_unknown
 } svn_tristate_t;
 

@@ -660,8 +660,13 @@ def checkout_peg_rev_date(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # note the current time to use it as peg revision date.
-  current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
+  exit_code, output, errput = svntest.main.run_svn(None, 'propget', 'svn:date',
+                                                   '--revprop', '-r1',
+                                                   '--strict',
+                                                   sbox.repo_url)
+  if exit_code or errput != [] or len(output) != 1:
+    raise svntest.Failure("svn:date propget failed")
+  r1_time = output[0]
 
   # sleep till the next second.
   time.sleep(1.1)
@@ -686,7 +691,7 @@ def checkout_peg_rev_date(sbox):
 
   # use an old date to checkout, that way we're sure we get the first revision
   svntest.actions.run_and_verify_checkout(sbox.repo_url +
-                                          '@{' + current_time + '}',
+                                          '@{' + r1_time + '}',
                                           checkout_target,
                                           expected_output,
                                           expected_wc)

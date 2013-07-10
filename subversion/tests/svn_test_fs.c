@@ -33,6 +33,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_hash.h"
 
 #include "svn_test_fs.h"
 
@@ -81,8 +82,8 @@ make_fs_config(const char *fs_type,
                fs_type);
   if (server_minor_version)
     {
-      if (server_minor_version == 6)
-        /* no SVN_FS_CONFIG_PRE_1_7_COMPATIBLE */;
+      if (server_minor_version == 6 || server_minor_version == 7)
+        svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
       else if (server_minor_version == 5)
         apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
                      APR_HASH_KEY_STRING, "1");
@@ -354,6 +355,8 @@ get_dir_entries(apr_hash_t *tree_entries,
 }
 
 
+/* Verify that PATH under ROOT is: a directory if contents is NULL;
+   a file with contents CONTENTS otherwise. */
 static svn_error_t *
 validate_tree_entry(svn_fs_root_t *root,
                     const char *path,
@@ -513,6 +516,42 @@ svn_test__validate_tree(svn_fs_root_t *root,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_test__validate_changes(svn_fs_root_t *root,
+                           apr_hash_t *expected,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *actual;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_paths_changed2(&actual, root, pool));
+
+#if 0
+  /* Print ACTUAL and EXPECTED. */
+  {
+    int i;
+    for (i=0, hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
+      SVN_DBG(("expected[%d] = '%s'\n", i++, svn__apr_hash_index_key(hi)));
+    for (i=0, hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
+      SVN_DBG(("actual[%d] = '%s'\n", i++, svn__apr_hash_index_key(hi)));
+  }
+#endif
+
+  for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
+    if (NULL == svn_hash_gets(actual, svn__apr_hash_index_key(hi)))
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Path '%s' missing from actual changed-paths",
+                               svn__apr_hash_index_key(hi));
+
+  for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
+    if (NULL == svn_hash_gets(expected, svn__apr_hash_index_key(hi)))
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Path '%s' missing from expected changed-paths",
+                               svn__apr_hash_index_key(hi));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_test__txn_script_exec(svn_fs_root_t *txn_root,

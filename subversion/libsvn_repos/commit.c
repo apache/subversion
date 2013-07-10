@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_hash.h"
 #include "svn_compat.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -35,6 +36,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_checksum.h"
+#include "svn_ctype.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_private_config.h"
@@ -257,7 +259,6 @@ make_dir_baton(struct edit_baton *edit_baton,
   return db;
 }
 
-
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
    parameter here is IS_DIR, which is TRUE when adding a directory,
@@ -276,6 +277,9 @@ add_file_or_directory(const char *path,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t was_copied = FALSE;
   const char *full_path;
+
+  /* Reject paths which contain control characters (related to issue #4340). */
+  SVN_ERR(svn_path_check_valid(path, pool));
 
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
@@ -850,14 +854,13 @@ fetch_props_func(apr_hash_t **props,
 }
 
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
-  svn_node_kind_t node_kind;
   svn_fs_root_t *fs_root;
 
   if (!SVN_IS_VALID_REVNUM(base_revision))
@@ -865,8 +868,7 @@ fetch_kind_func(svn_kind_t *kind,
 
   SVN_ERR(svn_fs_revision_root(&fs_root, eb->fs, base_revision, scratch_pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, fs_root, path, scratch_pool));
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
+  SVN_ERR(svn_fs_check_path(kind, fs_root, path, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1085,7 +1087,7 @@ add_symlink_cb(void *baton,
 static svn_error_t *
 add_absent_cb(void *baton,
               const char *relpath,
-              svn_kind_t kind,
+              svn_node_kind_t kind,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
@@ -1118,15 +1120,15 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision, props,
-                                checksum, contents));
+  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision,
+                                checksum, contents, props));
   return SVN_NO_ERROR;
 }
 
@@ -1136,14 +1138,14 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision, props,
-                                   target));
+  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision,
+                                   target, props));
   return SVN_NO_ERROR;
 }
 
@@ -1221,10 +1223,16 @@ complete_cb(void *baton,
   const char *conflict_path;
   svn_error_t *err;
   const char *post_commit_errstr;
+  apr_hash_t *hooks_env;
+
+  /* Parse the hooks-env file (if any). */
+  SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, eb->repos->hooks_env_path,
+                                     scratch_pool, scratch_pool));
 
   /* The transaction has been fully edited. Let the pre-commit hook
      have a look at the thing.  */
-  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, eb->txn_name, scratch_pool));
+  SVN_ERR(svn_repos__hooks_pre_commit(eb->repos, hooks_env,
+                                      eb->txn_name, scratch_pool));
 
   /* Hook is done. Let's do the actual commit.  */
   SVN_ERR(svn_fs__editor_commit(&revision, &post_commit_err, &conflict_path,
@@ -1240,8 +1248,8 @@ complete_cb(void *baton,
      Other errors may have occurred within the FS (specified by the
      POST_COMMIT_ERR localvar), but we need to run the hooks.  */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  err = svn_repos__hooks_post_commit(eb->repos, revision, eb->txn_name,
-                                     scratch_pool);
+  err = svn_repos__hooks_post_commit(eb->repos, hooks_env, revision,
+                                     eb->txn_name, scratch_pool);
   if (err)
     err = svn_error_create(SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
                            _("Commit succeeded, but post-commit hook failed"));
@@ -1331,12 +1339,16 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   };
   struct ev2_baton *eb;
   const svn_string_t *author;
+  apr_hash_t *hooks_env;
+
+  /* Parse the hooks-env file (if any). */
+  SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
+                                     scratch_pool, scratch_pool));
 
   /* Can the user modify the repository at all?  */
   /* ### check against AUTHZ.  */
 
-  author = apr_hash_get(revprops, SVN_PROP_REVISION_AUTHOR,
-                        APR_HASH_KEY_STRING);
+  author = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   eb = apr_palloc(result_pool, sizeof(*eb));
   eb->repos = repos;
@@ -1355,7 +1367,8 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
   SVN_ERR(apply_revprops(repos->fs, eb->txn_name, revprops, scratch_pool));
 
   /* Okay... some access is allowed. Let's run the start-commit hook.  */
-  SVN_ERR(svn_repos__hooks_start_commit(repos, author ? author->data : NULL,
+  SVN_ERR(svn_repos__hooks_start_commit(repos, hooks_env,
+                                        author ? author->data : NULL,
                                         repos->client_capabilities,
                                         eb->txn_name, scratch_pool));
 

@@ -135,7 +135,7 @@ typedef struct svn_ra__vtable_t {
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
-  /* See svn_ra_do_update2(). */
+  /* See svn_ra_do_update3(). */
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,
@@ -143,10 +143,12 @@ typedef struct svn_ra__vtable_t {
                             const char *update_target,
                             svn_depth_t depth,
                             svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry,
                             const svn_delta_editor_t *update_editor,
                             void *update_baton,
-                            apr_pool_t *pool);
-  /* See svn_ra_do_switch2(). */
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* See svn_ra_do_switch3(). */
   svn_error_t *(*do_switch)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,

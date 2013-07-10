@@ -118,7 +118,7 @@ static apr_status_t
 cleanup_test_shm(void *arg)
 {
   apr_pool_t *pool = arg;
-  
+
   svn_error_clear(svn_atomic_namespace__cleanup(name_namespace, pool));
   svn_error_clear(svn_atomic_namespace__cleanup(name_namespace1, pool));
   svn_error_clear(svn_atomic_namespace__cleanup(name_namespace2, pool));

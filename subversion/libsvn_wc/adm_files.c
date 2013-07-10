@@ -171,7 +171,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -180,7 +180,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_kind_file)
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -224,7 +224,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *sha1_checksum;
 
   if (size)
@@ -236,7 +236,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_kind_file)
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),

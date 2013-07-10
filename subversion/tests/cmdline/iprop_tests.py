@@ -99,7 +99,7 @@ def iprops_basic_working(sbox):
     D_path, expected_iprops, expected_explicit_props)
 
   ### Propget Directory Targets
-  
+
   # Propget directory target with only explicit props.
   expected_iprops = {}
   expected_explicit_props = {'RootProp2' : 'Root-Prop-Val2'}
@@ -315,7 +315,7 @@ def iprops_switched_subtrees(sbox):
 
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A',
                        sbox.repo_url + '/branch2', '-m', 'Make branch2')
-  
+
   # Create a root property and two branch properties
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   sbox.simple_propset('Root-Prop-1', 'Root-Prop-Val1', '.')
@@ -430,7 +430,7 @@ def iprops_pegged_wc_targets(sbox):
   sbox.simple_propset('RootProp1', 'Root-Prop-Val-1-set-in-r2', '.')
   sbox.simple_propset('RootProp2', 'Root-Prop-Val-2-set-in-r2', '.')
   sbox.simple_propset('D-Prop', 'D-Prop-Val-set-in-r2', 'A/D')
-  svntest.main.file_write(alpha_path, "Edit in r2.\n")  
+  svntest.main.file_write(alpha_path, "Edit in r2.\n")
   svntest.main.run_svn(None, 'commit', '-m', 'Add some properties',
                        wc_dir)
 

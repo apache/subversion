@@ -31,6 +31,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -48,6 +49,10 @@
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
 
+/*
+#define USE_TRANSITION_PARSER
+*/
+
 
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
@@ -63,7 +68,7 @@
  */
 typedef enum report_state_e {
     NONE = 0,
-    INITIAL = 0,
+    INITIAL = XML_STATE_INITIAL /* = 0 */,
     UPDATE_REPORT,
     TARGET_REVISION,
     OPEN_DIR,
@@ -76,6 +81,17 @@ typedef enum report_state_e {
     IGNORE_PROP_NAME,
     NEED_PROP_NAME,
     TXDELTA
+
+#ifdef USE_TRANSITION_PARSER
+    ,
+
+    CHECKED_IN,
+    CHECKED_IN_HREF,
+
+    SET_PROP,
+
+    MD5_CHECKSUM
+#endif
 } report_state_e;
 
 
@@ -93,8 +109,8 @@ typedef enum report_state_e {
 
    We measure outstanding requests as the sum of NUM_ACTIVE_FETCHES and
    NUM_ACTIVE_PROPFINDS in the report_context_t structure.  */
-#define REQUEST_COUNT_TO_PAUSE 1000
-#define REQUEST_COUNT_TO_RESUME 100
+#define REQUEST_COUNT_TO_PAUSE 50
+#define REQUEST_COUNT_TO_RESUME 40
 
 
 /* Forward-declare our report context. */
@@ -374,9 +390,6 @@ struct report_context_t {
   /* The path to the REPORT request */
   const char *path;
 
-  /* Are we done parsing the REPORT response? */
-  svn_boolean_t done;
-
   /* Did we receive all data from the network? */
   svn_boolean_t report_received;
 
@@ -391,13 +404,14 @@ struct report_context_t {
 };
 
 
-#ifdef NOT_USED_YET
+#ifdef USE_TRANSITION_PARSER
 
 #define D_ "DAV:"
 #define S_ SVN_XML_NAMESPACE
+#define V_ SVN_DAV_PROP_NS_DAV
 static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { INITIAL, S_, "update-report", UPDATE_REPORT,
-    FALSE, { NULL }, FALSE },
+    FALSE, { NULL }, TRUE },
 
   { UPDATE_REPORT, S_, "target-revision", TARGET_REVISION,
     FALSE, { "rev", NULL }, TRUE },
@@ -409,19 +423,19 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
     FALSE, { "rev", "name", NULL }, TRUE },
 
   { OPEN_DIR, S_, "add-directory", ADD_DIR,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ADD_DIR, S_, "add-directory", ADD_DIR,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { OPEN_DIR, S_, "open-file", OPEN_FILE,
     FALSE, { "rev", "name", NULL }, TRUE },
 
   { OPEN_DIR, S_, "add-file", ADD_FILE,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ADD_DIR, S_, "add-file", ADD_FILE,
-    FALSE, { "rev", "name", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+    FALSE, { "name", "?rev", "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { OPEN_DIR, S_, "delete-entry", OPEN_FILE,
     FALSE, { "?rev", "name", NULL }, TRUE },
@@ -438,65 +452,45 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { ADD_DIR, S_, "absent-file", ABSENT_FILE,
     FALSE, { "name", NULL }, TRUE },
 
+
+  { OPEN_DIR, D_, "checked-in", CHECKED_IN,
+    FALSE, { NULL }, FALSE },
+
+  { ADD_DIR, D_, "checked-in", CHECKED_IN,
+    FALSE, { NULL }, FALSE },
+
+  { ADD_FILE, D_, "checked-in", CHECKED_IN,
+    FALSE, { NULL }, FALSE },
+
+
+  { OPEN_DIR, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { ADD_DIR, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { OPEN_FILE, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+  { ADD_FILE, S_, "set-prop", SET_PROP,
+    TRUE, { "name", "?encoding", NULL }, TRUE },
+
+
+  { OPEN_FILE, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+  { ADD_FILE, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+
+  { CHECKED_IN, D_, "href", CHECKED_IN_HREF,
+    TRUE, { NULL }, TRUE },
+
+  { PROP, V_, "md5-checksum", MD5_CHECKSUM,
+    TRUE, { NULL }, TRUE },
+
   { 0 }
 };
 
-
-
-/* Conforms to svn_ra_serf__xml_opened_t  */
-static svn_error_t *
-update_opened(svn_ra_serf__xml_estate_t *xes,
-              void *baton,
-              int entered_state,
-              const svn_ra_serf__dav_props_t *tag,
-              apr_pool_t *scratch_pool)
-{
-  report_context_t *ctx = baton;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/* Conforms to svn_ra_serf__xml_closed_t  */
-static svn_error_t *
-update_closed(svn_ra_serf__xml_estate_t *xes,
-              void *baton,
-              int leaving_state,
-              const svn_string_t *cdata,
-              apr_hash_t *attrs,
-              apr_pool_t *scratch_pool)
-{
-  report_context_t *ctx = baton;
-
-  if (leaving_state == TARGET_REVISION)
-    {
-      const char *rev = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
-
-      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
-                                                      SVN_STR_TO_REV(rev),
-                                                      ctx->sess->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Conforms to svn_ra_serf__xml_cdata_t  */
-static svn_error_t *
-update_cdata(svn_ra_serf__xml_estate_t *xes,
-             void *baton,
-             int current_state,
-             const char *data,
-             apr_size_t len,
-             apr_pool_t *scratch_pool)
-{
-  report_context_t *ctx = baton;
-
-  return SVN_NO_ERROR;
-}
-
-#endif /* NOT_USED_YET */
+#endif /* USE_TRANSITION_PARSER */
 
 
 /* Returns best connection for fetching files/properties. */
@@ -516,7 +510,7 @@ get_best_connection(report_context_t *ctx)
      ### editor implementations (such as svnrdump's dump editor)
      ### simply can't handle the way ra_serf violates the editor v1
      ### drive ordering requirements.
-     ### 
+     ###
      ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
   */
   if (ctx->report_received && (ctx->sess->max_connections > 2))
@@ -1023,26 +1017,6 @@ open_updated_file(report_info_t *info,
   if (info->lock_token)
     check_lock(info);
 
-  /* Set all of the properties we received */
-  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      set_file_props, info,
-                                      scratch_pool));
-  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
-                                      info->base_name,
-                                      info->base_rev,
-                                      remove_file_props, info,
-                                      scratch_pool));
-  if (info->fetch_props)
-    {
-      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
-                                          info->url,
-                                          ctx->target_rev,
-                                          set_file_props, info,
-                                          scratch_pool));
-    }
-
   /* Get (maybe) a textdelta window handler for transmitting file
      content changes. */
   if (info->fetch_file || force_apply_textdelta)
@@ -1063,6 +1037,28 @@ static svn_error_t *
 close_updated_file(report_info_t *info,
                    apr_pool_t *scratch_pool)
 {
+  report_context_t *ctx = info->dir->report_context;
+
+  /* Set all of the properties we received */
+  SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      set_file_props, info,
+                                      scratch_pool));
+  SVN_ERR(svn_ra_serf__walk_all_props(info->dir->removed_props,
+                                      info->base_name,
+                                      info->base_rev,
+                                      remove_file_props, info,
+                                      scratch_pool));
+  if (info->fetch_props)
+    {
+      SVN_ERR(svn_ra_serf__walk_all_props(info->props,
+                                          info->url,
+                                          ctx->target_rev,
+                                          set_file_props, info,
+                                          scratch_pool));
+    }
+
   /* Close the file via the editor. */
   SVN_ERR(info->dir->report_context->update_editor->close_file(
             info->file_baton, info->final_checksum, scratch_pool));
@@ -1265,7 +1261,7 @@ handle_stream(serf_request_t *request,
   /* ### new field. make sure we didn't miss some initialization.  */
   SVN_ERR_ASSERT(fetch_ctx->handler != NULL);
 
-  err = svn_ra_serf__error_on_status(fetch_ctx->handler->sline.code,
+  err = svn_ra_serf__error_on_status(fetch_ctx->handler->sline,
                                      fetch_ctx->info->name,
                                      fetch_ctx->handler->location);
   if (err)
@@ -1358,7 +1354,7 @@ maybe_close_dir_chain(report_dir_t *dir)
   report_dir_t *cur_dir = dir;
 
   SVN_ERR(ensure_dir_opened(cur_dir));
-                  
+
   while (cur_dir
          && !cur_dir->ref_count
          && cur_dir->tag_closed
@@ -1411,7 +1407,7 @@ handle_propchange_only(report_info_t *info,
 {
   SVN_ERR(open_updated_file(info, FALSE, scratch_pool));
   SVN_ERR(close_updated_file(info, scratch_pool));
-  
+
   /* We're done with our pool. */
   svn_pool_destroy(info->pool);
 
@@ -1502,7 +1498,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
         {
           svn_error_t *err = NULL;
           svn_checksum_t *checksum = NULL;
-         
+
           /* Parse the optional SHA1 checksum (1.7+) */
           err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
                                        info->final_sha1_checksum,
@@ -1534,7 +1530,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
         {
           /* If we'll be doing a PROPFIND for this file... */
           if (info->propfind_handler)
-            { 
+            {
               /* ... then we'll just leave ourselves a little "todo"
                  about that fact (and we'll deal with the file content
                  stuff later, after we've handled that PROPFIND
@@ -1687,8 +1683,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
 
-      info->dir->repos_relpath = apr_hash_get(ctx->switched_paths, "",
-                                              APR_HASH_KEY_STRING);
+      info->dir->repos_relpath = svn_hash_gets(ctx->switched_paths, "");
 
       if (!info->dir->repos_relpath)
         SVN_ERR(svn_ra_serf__get_relative_path(&info->dir->repos_relpath,
@@ -1742,8 +1737,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
                                    dir->pool);
       info->name = dir->name;
 
-      dir->repos_relpath = apr_hash_get(ctx->switched_paths, dir->name,
-                                        APR_HASH_KEY_STRING);
+      dir->repos_relpath = svn_hash_gets(ctx->switched_paths, dir->name);
 
       if (!dir->repos_relpath)
         dir->repos_relpath = svn_relpath_join(dir->parent_dir->repos_relpath,
@@ -2198,7 +2192,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (info->dir->fetch_props)
         {
           svn_ra_serf__list_t *list_item;
- 
+
           SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind_handler,
                                              info->dir->props, ctx->sess,
                                              get_best_connection(ctx),
@@ -2247,8 +2241,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                         info->pool);
         }
 
-      info->lock_token = apr_hash_get(ctx->lock_path_tokens, info->name,
-                                      APR_HASH_KEY_STRING);
+      info->lock_token = svn_hash_gets(ctx->lock_path_tokens, info->name);
 
       if (info->lock_token && !info->fetch_props)
         info->fetch_props = TRUE;
@@ -2267,8 +2260,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* If this file is switched vs the editor root we should provide
              its real url instead of the one calculated from the session root.
            */
-          repos_relpath = apr_hash_get(ctx->switched_paths, info->name,
-                                       APR_HASH_KEY_STRING);
+          repos_relpath = svn_hash_gets(ctx->switched_paths, info->name);
 
           if (!repos_relpath)
             {
@@ -2279,8 +2271,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                   SVN_ERR_ASSERT(*svn_relpath_dirname(info->name, info->pool)
                                     == '\0');
 
-                  repos_relpath = apr_hash_get(ctx->switched_paths, "",
-                                               APR_HASH_KEY_STRING);
+                  repos_relpath = svn_hash_gets(ctx->switched_paths, "");
                 }
               else
                 repos_relpath = svn_relpath_join(info->dir->repos_relpath,
@@ -2541,6 +2532,72 @@ cdata_report(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
+#ifdef USE_TRANSITION_PARSER
+/* Conforms to svn_ra_serf__xml_opened_t  */
+static svn_error_t *
+update_opened(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int entered_state,
+              const svn_ra_serf__dav_props_t *tag,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+  SVN_DBG(("Enter state: %d", entered_state));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Conforms to svn_ra_serf__xml_closed_t  */
+static svn_error_t *
+update_closed(svn_ra_serf__xml_estate_t *xes,
+              void *baton,
+              int leaving_state,
+              const svn_string_t *cdata,
+              apr_hash_t *attrs,
+              apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+
+  SVN_DBG(("Leaving state: %d", leaving_state));
+
+  if (leaving_state == UPDATE_REPORT)
+    {
+      ctx->report_completed = TRUE;
+    }
+  else if (leaving_state == TARGET_REVISION)
+    {
+      const char *revstr = svn_hash_gets(attrs, "rev");
+      apr_int64_t rev;
+
+      SVN_ERR(svn_cstring_atoi64(&rev, revstr));
+
+      SVN_ERR(ctx->update_editor->set_target_revision(ctx->update_baton,
+                                                      (svn_revnum_t)rev,
+                                                      ctx->sess->pool));
+    }
+
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Conforms to svn_ra_serf__xml_cdata_t  */
+static svn_error_t *
+update_cdata(svn_ra_serf__xml_estate_t *xes,
+             void *baton,
+             int current_state,
+             const char *data,
+             apr_size_t len,
+             apr_pool_t *scratch_pool)
+{
+  report_context_t *ctx = baton;
+  SVN_DBG(("Got CDATA in state %d\n", current_state));
+  return SVN_NO_ERROR;
+}
+#endif /* USE_TRANSITION_PARSER */
+
 
 /** Editor callbacks given to callers to create request body */
 
@@ -2582,10 +2639,9 @@ set_path(void *report_baton,
 
   if (lock_token)
     {
-      apr_hash_set(report->lock_path_tokens,
-                   apr_pstrdup(report->pool, path),
-                   APR_HASH_KEY_STRING,
-                   apr_pstrdup(report->pool, lock_token));
+      svn_hash_sets(report->lock_path_tokens,
+                    apr_pstrdup(report->pool, path),
+                    apr_pstrdup(report->pool, lock_token));
     }
 
   return SVN_NO_ERROR;
@@ -2657,16 +2713,16 @@ link_path(void *report_baton,
   /* Store the switch roots to allow generating repos_relpaths from just
      the working copy paths. (Needed for HTTPv2) */
   path = apr_pstrdup(report->pool, path);
-  apr_hash_set(report->switched_paths, path, APR_HASH_KEY_STRING,
-               apr_pstrdup(report->pool, link+1));
+  svn_hash_sets(report->switched_paths,
+                path, apr_pstrdup(report->pool, link + 1));
 
   if (!*path)
     report->root_is_switched = TRUE;
 
   if (lock_token)
     {
-      apr_hash_set(report->lock_path_tokens, path, APR_HASH_KEY_STRING,
-                   apr_pstrdup(report->pool, lock_token));
+      svn_hash_sets(report->lock_path_tokens,
+                    path, apr_pstrdup(report->pool, lock_token));
     }
 
   return APR_SUCCESS;
@@ -2724,7 +2780,7 @@ create_update_report_body(serf_bucket_t **body_bkt,
   apr_off_t offset;
 
   offset = 0;
-  apr_file_seek(report->body_file, APR_SET, &offset);
+  SVN_ERR(svn_io_file_seek(report->body_file, APR_SET, &offset, pool));
 
   *body_bkt = serf_bucket_file_create(report->body_file, alloc);
 
@@ -2742,7 +2798,7 @@ setup_update_report_headers(serf_bucket_t *headers,
   if (report->sess->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "gzip;svndiff1;q=0.9,svndiff;q=0.8");
+                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
     }
   else
     {
@@ -2760,7 +2816,11 @@ finish_report(void *report_baton,
   report_context_t *report = report_baton;
   svn_ra_serf__session_t *sess = report->sess;
   svn_ra_serf__handler_t *handler;
+#ifdef USE_TRANSITION_PARSER
+  svn_ra_serf__xml_context_t *xmlctx;
+#else
   svn_ra_serf__xml_parser_t *parser_ctx;
+#endif
   const char *report_target;
   svn_stringbuf_t *buf = NULL;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -2780,7 +2840,7 @@ finish_report(void *report_baton,
    * check the buffer status; but serf will fall through and create a file
    * bucket for us on the buffered svndiff handle.
    */
-  apr_file_flush(report->body_file);
+  SVN_ERR(svn_io_file_flush(report->body_file, iterpool));
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_file_buffer_set(report->body_file, NULL, 0);
 #endif
@@ -2790,7 +2850,16 @@ finish_report(void *report_baton,
   /* create and deliver request */
   report->path = report_target;
 
+#ifdef USE_TRANSITION_PARSER
+  xmlctx = svn_ra_serf__xml_context_create(update_ttable,
+                                           update_opened, update_closed,
+                                           update_cdata,
+                                           report,
+                                           pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+#else
   handler = apr_pcalloc(pool, sizeof(*handler));
+#endif
 
   handler->handler_pool = pool;
   handler->method = "REPORT";
@@ -2804,6 +2873,7 @@ finish_report(void *report_baton,
   handler->conn = sess->conns[0];
   handler->session = sess;
 
+#ifndef USE_TRANSITION_PARSER
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
   parser_ctx->pool = pool;
@@ -2812,12 +2882,13 @@ finish_report(void *report_baton,
   parser_ctx->start = start_report;
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
-  parser_ctx->done = &report->done;
+  parser_ctx->done = &handler->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
   report->parser_ctx = parser_ctx;
+#endif
 
   svn_ra_serf__request_create(handler);
 
@@ -2831,7 +2902,7 @@ finish_report(void *report_baton,
      network or because we've spooled the entire response into our "pending"
      content of the XML parser. The DONE flag will get set when all the
      XML content has been received *and* parsed.  */
-  while (!report->done
+  while (!handler->done
          || report->num_active_fetches
          || report->num_active_propfinds)
     {
@@ -2868,8 +2939,10 @@ finish_report(void *report_baton,
          the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
+          /* If there is a pending error, handle it.
+             Unlikely case, as this should have made serf_context run return
+             an error but we shouldn't ignore true errors */
+          SVN_ERR(err);
           status = 0;
 
           if (sess->timeout)
@@ -2890,6 +2963,15 @@ finish_report(void *report_baton,
           waittime_left = sess->timeout;
         }
 
+      if (status && handler->sline.code != 200)
+        {
+          return svn_error_trace(
+                    svn_error_compose_create(
+                        svn_ra_serf__error_on_status(handler->sline,
+                                                     handler->path,
+                                                     handler->location),
+                        err));
+        }
       SVN_ERR(err);
       if (status)
         {
@@ -2992,7 +3074,7 @@ finish_report(void *report_baton,
           report->num_active_fetches--;
 
           /* See if the parent directory of this fetched item (and
-             perhaps even parents of that) can be closed now. 
+             perhaps even parents of that) can be closed now.
 
              NOTE:  This could delete cur_dir->pool, from which is
              allocated the list item in report->done_fetches.
@@ -3062,6 +3144,7 @@ finish_report(void *report_baton,
         }
       report->done_dir_propfinds = NULL;
 
+#ifndef USE_TRANSITION_PARSER
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */
       if (parser_ctx->paused
@@ -3076,6 +3159,7 @@ finish_report(void *report_baton,
         SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
                                              &report->report_received,
                                              iterpool_inner));
+#endif
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
@@ -3097,8 +3181,13 @@ finish_report(void *report_baton,
       err = report->update_editor->close_edit(report->update_baton, iterpool);
     }
   else
-    err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                           _("Missing update-report close tag"));
+    {
+      /* Tell the editor that something failed */
+      err = report->update_editor->abort_edit(report->update_baton, iterpool);
+
+      err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
+                             _("Missing update-report close tag"));
+    }
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
@@ -3143,10 +3232,9 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      svn_boolean_t send_copyfrom_args,
                      const svn_delta_editor_t *update_editor,
                      void *update_baton,
-                     apr_pool_t *result_pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  /* ### would be nice to get a SCRATCH_POOL passed to us.  */
-  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
   report_context_t *report;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
@@ -3192,7 +3280,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   report->update_editor = update_editor;
   report->update_baton = update_baton;
-  report->done = FALSE;
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;
@@ -3240,6 +3327,14 @@ make_update_reporter(svn_ra_session_t *ra_session,
              supports inlining properties in update editor report. */
           if (sess->supports_inline_props)
             {
+              /* NOTE: both inlined properties and server->allows_bulk_update
+                 (flag SVN_DAV_ALLOW_BULK_UPDATES) were added in 1.8.0, so
+                 this code is never reached with a released version of
+                 mod_dav_svn.
+
+                 Basically by default a 1.8.0 client connecting to a 1.7.x or
+                 older server will always use bulk updates. */
+
               /* Inline props supported: do not use bulk updates. */
               use_bulk_updates = FALSE;
             }
@@ -3327,7 +3422,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
                                  NULL, scratch_pool));
 
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3339,17 +3433,22 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const char *update_target,
                        svn_depth_t depth,
                        svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  return make_update_reporter(ra_session, reporter, report_baton,
-                              revision_to_update_to,
-                              session->session_url.path, NULL, update_target,
-                              depth, FALSE, TRUE, send_copyfrom_args,
-                              update_editor, update_baton, pool);
+  SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
+                               revision_to_update_to,
+                               session->session_url.path, NULL, update_target,
+                               depth, ignore_ancestry, TRUE /* text_deltas */,
+                               send_copyfrom_args,
+                               update_editor, update_baton,
+                               result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3367,12 +3466,16 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  return make_update_reporter(ra_session, reporter, report_baton,
-                              revision,
-                              session->session_url.path, versus_url, diff_target,
-                              depth, ignore_ancestry, text_deltas, FALSE,
-                              diff_editor, diff_baton, pool);
+  SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
+                               revision,
+                               session->session_url.path, versus_url, diff_target,
+                               depth, ignore_ancestry, text_deltas, FALSE,
+                               diff_editor, diff_baton,
+                               pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3387,12 +3490,16 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
                        apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  return make_update_reporter(ra_session, reporter, report_baton,
-                              revision,
-                              session->session_url.path, NULL, status_target,
-                              depth, FALSE, FALSE, FALSE,
-                              status_editor, status_baton, pool);
+  SVN_ERR(make_update_reporter(ra_session, reporter, report_baton,
+                               revision,
+                               session->session_url.path, NULL, status_target,
+                               depth, FALSE, FALSE, FALSE,
+                               status_editor, status_baton,
+                               pool, scratch_pool));
+  svn_pool_destroy(scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3421,15 +3528,15 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               TRUE /* text_deltas */,
                               send_copyfrom_args,
                               switch_editor, switch_baton,
-                              result_pool);
+                              result_pool, scratch_pool);
 }
 
 /* Helper svn_ra_serf__get_file(). Attempts to fetch file contents
  * using SESSION->wc_callbacks->get_wc_contents() if sha1 property is
  * present in PROPS.
- * 
+ *
  * Sets *FOUND_P to TRUE if file contents was successfuly fetched.
- * 
+ *
  * Performs all temporary allocations in POOL.
  */
 static svn_error_t *
@@ -3455,7 +3562,7 @@ try_get_wc_contents(svn_boolean_t *found_p,
     }
 
 
-  svn_props = apr_hash_get(props, SVN_DAV_PROP_NS_DAV, APR_HASH_KEY_STRING);
+  svn_props = svn_hash_gets(props, SVN_DAV_PROP_NS_DAV);
   if (!svn_props)
     {
       /* No properties -- therefore no checksum property -- in response. */
@@ -3482,7 +3589,7 @@ try_get_wc_contents(svn_boolean_t *found_p,
       /* Ignore errors for now. */
       return SVN_NO_ERROR;
     }
-  
+
   if (wc_stream)
     {
         SVN_ERR(svn_stream_copy3(wc_stream,
@@ -3507,7 +3614,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__connection_t *conn;
   const char *fetch_url;
   apr_hash_t *fetch_props;
-  svn_kind_t res_kind;
+  svn_node_kind_t res_kind;
   const svn_ra_serf__dav_props_t *which_props;
 
   /* What connection should we go on? */
@@ -3545,7 +3652,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
     {
       which_props = check_path_props;
     }
-     
+
   SVN_ERR(svn_ra_serf__fetch_node_props(&fetch_props, conn, fetch_url,
                                         SVN_INVALID_REVNUM,
                                         which_props,
@@ -3553,7 +3660,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
 
   /* Verify that resource type is not collection. */
   SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props));
-  if (res_kind != svn_kind_file)
+  if (res_kind != svn_node_file)
     {
       return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
                               _("Can't get text contents of a directory"));

@@ -327,7 +327,7 @@ class SvnWcTest < Test::Unit::TestCase
         callbacks.ignored_errors = ignored_errors
         access.walk_entries(@wc_path, callbacks)
         sorted_ignored_errors = ignored_errors.sort_by {|path, err| path}
-        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err| 
+        sorted_ignored_errors = sorted_ignored_errors.collect! do |path, err|
           [path, err.class]
         end
         assert_equal([

@@ -438,6 +438,7 @@ print_info(void *baton,
 
       if (info->wc_info->conflicts)
         {
+          svn_boolean_t printed_prop_conflict_file = FALSE;
           int i;
 
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
@@ -473,10 +474,12 @@ print_info(void *baton,
                   break;
 
                   case svn_wc_conflict_kind_property:
-                    SVN_ERR(svn_cmdline_printf(pool,
-                              _("Conflict Properties File: %s\n"),
-                              svn_dirent_local_style(conflict->their_abspath,
-                                                     pool)));
+                    if (! printed_prop_conflict_file)
+                      SVN_ERR(svn_cmdline_printf(pool,
+                                _("Conflict Properties File: %s\n"),
+                                svn_dirent_local_style(conflict->their_abspath,
+                                                       pool)));
+                    printed_prop_conflict_file = TRUE;
                   break;
 
                   case svn_wc_conflict_kind_tree:

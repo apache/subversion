@@ -88,7 +88,7 @@ get_file_for_validation(const svn_string_t **mime_type,
                           pool));
 
   if (mime_type)
-    *mime_type = apr_hash_get(props, SVN_PROP_MIME_TYPE, APR_HASH_KEY_STRING);
+    *mime_type = svn_hash_gets(props, SVN_PROP_MIME_TYPE);
 
   return SVN_NO_ERROR;
 }
@@ -587,6 +587,9 @@ remote_propget(apr_hash_t *props,
   if (inherited_props)
     {
       const char *repos_root_url;
+      int i;
+      apr_array_header_t *final_iprops =
+        apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
 
       /* We will filter out all but PROPNAME later, making a final copy
          in RESULT_POOL, so pass SCRATCH_POOL for all pools. */
@@ -599,21 +602,13 @@ remote_propget(apr_hash_t *props,
                                                  repos_root_url,
                                                  scratch_pool,
                                                  scratch_pool));
-    }
 
-  /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
-  if (inherited_props)
-    {
-      int i;
-      apr_array_header_t *final_iprops =
-        apr_array_make(result_pool, 1, sizeof(svn_prop_inherited_item_t *));
-
+      /* Make a copy of any inherited PROPNAME properties in RESULT_POOL. */
       for (i = 0; i < (*inherited_props)->nelts; i++)
         {
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX((*inherited_props), i, svn_prop_inherited_item_t *);
-          svn_string_t *iprop_val = apr_hash_get(iprop->prop_hash, propname,
-                                                 APR_HASH_KEY_STRING);
+          svn_string_t *iprop_val = svn_hash_gets(iprop->prop_hash, propname);
 
           if (iprop_val)
             {
@@ -622,10 +617,9 @@ remote_propget(apr_hash_t *props,
               new_iprop->path_or_url =
                 apr_pstrdup(result_pool, iprop->path_or_url);
               new_iprop->prop_hash = apr_hash_make(result_pool);
-              apr_hash_set(new_iprop->prop_hash,
-                           apr_pstrdup(result_pool, propname),
-                           APR_HASH_KEY_STRING,
-                           svn_string_dup(iprop_val, result_pool));
+              svn_hash_sets(new_iprop->prop_hash,
+                            apr_pstrdup(result_pool, propname),
+                            svn_string_dup(iprop_val, result_pool));
               APR_ARRAY_PUSH(final_iprops, svn_prop_inherited_item_t *) =
                 new_iprop;
             }
@@ -634,10 +628,11 @@ remote_propget(apr_hash_t *props,
     }
 
   if (prop_hash
-      && (val = apr_hash_get(prop_hash, propname, APR_HASH_KEY_STRING)))
+      && (val = svn_hash_gets(prop_hash, propname)))
     {
-      apr_hash_set(props, apr_pstrdup(result_pool, target_full_url),
-                   APR_HASH_KEY_STRING, svn_string_dup(val, result_pool));
+      svn_hash_sets(props,
+                    apr_pstrdup(result_pool, target_full_url),
+                    svn_string_dup(val, result_pool));
     }
 
   if (depth >= svn_depth_files
@@ -704,9 +699,8 @@ recursive_propget_receiver(void *baton,
   if (apr_hash_count(props))
     {
       apr_hash_index_t *hi = apr_hash_first(scratch_pool, props);
-      apr_hash_set(b->props, apr_pstrdup(b->pool, local_abspath),
-                   APR_HASH_KEY_STRING,
-                   svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
+      svn_hash_sets(b->props, apr_pstrdup(b->pool, local_abspath),
+                    svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1044,7 +1038,7 @@ call_receiver(const char *path,
  *
  * The 'path' and keys for 'prop_hash' and 'inherited_prop' arguments to
  * RECEIVER are all URLs.
- * 
+ *
  * RESULT_POOL is used to allocated the 'path', 'prop_hash', and
  * 'inherited_prop' arguments to RECEIVER.  SCRATCH_POOL is used for all
  * other (temporary) allocations.
@@ -1133,9 +1127,9 @@ remote_proplist(const char *target_prefix,
           const char *name = svn__apr_hash_index_key(hi);
           apr_ssize_t klen = svn__apr_hash_index_klen(hi);
           svn_prop_kind_t prop_kind;
-    
+
           prop_kind = svn_property_kind2(name);
-    
+
           if (prop_kind != svn_prop_regular_kind)
             {
               apr_hash_set(prop_hash, name, klen, NULL);
@@ -1239,7 +1233,7 @@ recursive_proplist_receiver(void *baton,
 /* Helper for svn_client_proplist4 when retrieving properties and/or
    inherited properties from the repository.  Except as noted below,
    all arguments are as per svn_client_proplist4.
-   
+
    GET_EXPLICIT_PROPS controls if explicit props are retrieved. */
 static svn_error_t *
 get_remote_props(const char *path_or_url,

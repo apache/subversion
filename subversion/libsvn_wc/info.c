@@ -22,6 +22,7 @@
  */
 
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -85,7 +86,7 @@ build_info_for_node(svn_wc__info2_t **info,
   svn_wc__info2_t *tmpinfo;
   const char *repos_relpath;
   svn_wc__db_status_t status;
-  svn_kind_t db_kind;
+  svn_node_kind_t db_kind;
   const char *original_repos_relpath;
   const char *original_repos_root_url;
   const char *original_uuid;
@@ -309,10 +310,16 @@ build_info_for_node(svn_wc__info2_t **info,
                                 local_abspath, result_pool, scratch_pool));
 
   if (conflicted)
-    SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, db,
-                                   local_abspath,
-                                   TRUE /* ### create tempfiles */,
-                                   result_pool, scratch_pool));
+    {
+      const apr_array_header_t *conflicts;
+
+      SVN_ERR(svn_wc__read_conflicts(&conflicts, db,
+                                     local_abspath,
+                                     TRUE /* ### create tempfiles */,
+                                     result_pool, scratch_pool));
+      wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
+                                                          result_pool);
+    }
   else
     wc_info->conflicts = NULL;
 
@@ -372,7 +379,7 @@ struct found_entry_baton
   svn_boolean_t actual_only;
   svn_boolean_t first;
   /* The set of tree conflicts that have been found but not (yet) visited by
-   * the tree walker.  Map of abspath -> svn_wc_conflict_description2_t. */
+   * the tree walker.  Map of abspath -> empty string. */
   apr_hash_t *tree_conflicts;
   apr_pool_t *pool;
 };
@@ -427,18 +434,17 @@ info_found_node_callback(const char *local_abspath,
         {
           const char *this_basename = APR_ARRAY_IDX(victims, i, const char *);
 
-          apr_hash_set(fe_baton->tree_conflicts,
-                       svn_dirent_join(local_abspath, this_basename,
-                                       fe_baton->pool),
-                       APR_HASH_KEY_STRING, "");
+          svn_hash_sets(fe_baton->tree_conflicts,
+                        svn_dirent_join(local_abspath, this_basename,
+                                        fe_baton->pool),
+                        "");
         }
     }
 
   /* Delete this path which we are currently visiting from the list of tree
    * conflicts.  This relies on the walker visiting a directory before visiting
    * its children. */
-  apr_hash_set(fe_baton->tree_conflicts, local_abspath, APR_HASH_KEY_STRING,
-               NULL);
+  svn_hash_sets(fe_baton->tree_conflicts, local_abspath, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -523,8 +529,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
       svn_error_clear(err);
 
-      apr_hash_set(fe_baton.tree_conflicts, local_abspath,
-                   APR_HASH_KEY_STRING, "");
+      svn_hash_sets(fe_baton.tree_conflicts, local_abspath, "");
     }
   else
     SVN_ERR(err);
@@ -535,8 +540,9 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
        hi = apr_hash_next(hi))
     {
       const char *this_abspath = svn__apr_hash_index_key(hi);
-      const svn_wc_conflict_description2_t *tree_conflict;
+      const svn_wc_conflict_description3_t *tree_conflict;
       svn_wc__info2_t *info;
+      const apr_array_header_t *conflicts;
 
       svn_pool_clear(iterpool);
 
@@ -558,21 +564,22 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       info->repos_root_URL = repos_root_url;
       info->repos_UUID = repos_uuid;
 
-      SVN_ERR(svn_wc__read_conflicts(&info->wc_info->conflicts,
+      SVN_ERR(svn_wc__read_conflicts(&conflicts,
                                      wc_ctx->db, this_abspath,
                                      TRUE /* ### create tempfiles */,
                                      iterpool, iterpool));
-
-      if (! info->wc_info->conflicts || ! info->wc_info->conflicts->nelts)
+      if (! conflicts || ! conflicts->nelts)
         continue;
 
-      tree_conflict = APR_ARRAY_IDX(info->wc_info->conflicts, 0,
-                                    svn_wc_conflict_description2_t *);
+      tree_conflict = APR_ARRAY_IDX(conflicts, 0,
+                                    const svn_wc_conflict_description3_t *);
 
       if (!depth_includes(local_abspath, depth, tree_conflict->local_abspath,
                           tree_conflict->node_kind, iterpool))
         continue;
 
+      info->wc_info->conflicts = svn_wc__cd3_array_to_cd2_array(conflicts,
+                                                                iterpool);
       SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);

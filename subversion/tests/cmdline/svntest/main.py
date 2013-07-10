@@ -53,7 +53,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 8
+SVN_VER_MINOR = 9
 
 ######################################################################
 #
@@ -134,6 +134,8 @@ wc_passwd = 'rayjandom'
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
+
+stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
@@ -520,13 +522,13 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                                                         *varargs)
 
   def _line_contains_repos_diskpath(line):
-    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### Note: this assumes that either svn-test-work isn't a symlink,
     # ### or the diskpath isn't realpath()'d somewhere on the way from
     # ### the server's configuration and the client's stderr.  We could
     # ### check for both the symlinked path and the realpath.
     return \
          os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
-      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line
 
   for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
     if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
@@ -547,14 +549,20 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
   if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
     for x in stderr_lines:
       logger.warning(x.rstrip())
-    raise Failure
+    if len(varargs) <= 5:
+      brief_command = ' '.join((command,) + varargs)
+    else:
+      brief_command = ' '.join(((command,) + varargs)[:4]) + ' ...'
+    raise Failure('Command failed: "' + brief_command +
+                  '"; exit code ' + str(exit_code))
 
   return exit_code, \
          filter_dbg(stdout_lines), \
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
-                      ssl_cert=None, ssl_url=None, http_proxy=None):
+                      ssl_cert=None, ssl_url=None, http_proxy=None,
+                      exclusive_wc_locks=None):
   "Create config directories and files"
 
   # config file names
@@ -575,25 +583,41 @@ password-stores =
 [miscellany]
 interactive-conflicts = false
 """
-
+    if exclusive_wc_locks:
+      config_contents += """
+[working-copy]
+exclusive-locking = true
+"""
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
     if options.http_library:
       http_library_str = "http-library=%s" % (options.http_library)
     http_proxy_str = ""
+    http_proxy_username_str = ""
+    http_proxy_password_str = ""
     if options.http_proxy:
       http_proxy_parsed = urlparse("//" + options.http_proxy)
       http_proxy_str = "http-proxy-host=%s\n" % (http_proxy_parsed.hostname) + \
                        "http-proxy-port=%d" % (http_proxy_parsed.port or 80)
+    if options.http_proxy_username:
+      http_proxy_username_str = "http-proxy-username=%s" % \
+                                     (options.http_proxy_username)
+    if options.http_proxy_password:
+      http_proxy_password_str = "http-proxy-password=%s" % \
+                                     (options.http_proxy_password)
+
     server_contents = """
 #
 [global]
 %s
 %s
+%s
+%s
 store-plaintext-passwords=yes
 store-passwords=yes
-""" % (http_library_str, http_proxy_str)
+""" % (http_library_str, http_proxy_str, http_proxy_username_str,
+       http_proxy_password_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -776,9 +800,11 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
                      url, revision, propname, skel,
                      want_error and 1 or 0, default_config_dir)
 
-def run_wc_lock_tester(recursive, path):
+def run_wc_lock_tester(recursive, path, work_queue=False):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
-  if recursive:
+  if work_queue:
+    option = "-w"
+  elif recursive:
     option = "-r"
   else:
     option = "-1"
@@ -876,12 +902,28 @@ def create_repos(path, minor_version = None):
 
   # Skip tests if we can't create the repository.
   if stderr:
+    stderr_lines = 0
+    not_using_fsfs_backend = (options.fs_type != "fsfs")
+    backend_deprecation_warning = False
     for line in stderr:
+      stderr_lines += 1
       if line.find('Unknown FS type') != -1:
         raise Skip
-    # If the FS type is known, assume the repos couldn't be created
-    # (e.g. due to a missing 'svnadmin' binary).
-    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+      if not_using_fsfs_backend:
+        if 0 < line.find('repository back-end is deprecated, consider using'):
+          backend_deprecation_warning = True
+
+    # Creating BDB repositories will cause svnadmin to print a warning
+    # which should be ignored.
+    if (stderr_lines == 1
+        and not_using_fsfs_backend
+        and backend_deprecation_warning):
+      pass
+    else:
+      # If the FS type is known and we noticed more than just the
+      # BDB-specific warning, assume the repos couldn't be created
+      # (e.g. due to a missing 'svnadmin' binary).
+      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
@@ -1186,24 +1228,46 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
       return "--- Merging %sr%ld through r%ld into '%s':\n" \
              % (from_foreign_phrase, revstart, revend, target_re)
 
-def summary_of_conflicts(text_conflicts=0, prop_conflicts=0,
-                         tree_conflicts=0, skipped_paths=0):
+def summary_of_conflicts(text_conflicts=0,
+                         prop_conflicts=0,
+                         tree_conflicts=0,
+                         text_resolved=0,
+                         prop_resolved=0,
+                         tree_resolved=0,
+                         skipped_paths=0,
+                         as_regex=False):
   """Return a list of lines corresponding to the summary of conflicts and
      skipped paths that is printed by merge and update and switch.  If all
      parameters are zero, return an empty list.
   """
   lines = []
-  if text_conflicts or prop_conflicts or tree_conflicts or skipped_paths:
+  if (text_conflicts or prop_conflicts or tree_conflicts
+      or text_resolved or prop_resolved or tree_resolved
+      or skipped_paths):
     lines.append("Summary of conflicts:\n")
-    if text_conflicts:
-      lines.append("  Text conflicts: %d\n" % text_conflicts)
-    if prop_conflicts:
-      lines.append("  Property conflicts: %d\n" % prop_conflicts)
-    if tree_conflicts:
-      lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+    if text_conflicts or text_resolved:
+      if text_resolved == 0:
+        lines.append("  Text conflicts: %d\n" % text_conflicts)
+      else:
+        lines.append("  Text conflicts: %d remaining (and %d already resolved)\n"
+                     % (text_conflicts, text_resolved))
+    if prop_conflicts or prop_resolved:
+      if prop_resolved == 0:
+        lines.append("  Property conflicts: %d\n" % prop_conflicts)
+      else:
+        lines.append("  Property conflicts: %d remaining (and %d already resolved)\n"
+                     % (prop_conflicts, prop_resolved))
+    if tree_conflicts or tree_resolved:
+      if tree_resolved == 0:
+        lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+      else:
+        lines.append("  Tree conflicts: %d remaining (and %d already resolved)\n"
+                     % (tree_conflicts, tree_resolved))
     if skipped_paths:
       lines.append("  Skipped paths: %d\n" % skipped_paths)
 
+  if as_regex:
+    lines = map(re.escape, lines)
   return lines
 
 
@@ -1311,6 +1375,9 @@ def server_enforces_date_syntax():
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
 
+def server_has_reverse_get_file_revs():
+  return options.server_minor_version >= 8
+
 def is_plaintext_password_storage_disabled():
   try:
     predicate = re.compile("^WARNING: Plaintext password storage is enabled!")
@@ -1379,6 +1446,12 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
+    if options.http_proxy_username:
+      args.append('--http-proxy-username=' + options.http_proxy_username)
+    if options.http_proxy_password:
+      args.append('--http-proxy-password=' + options.http_proxy_password)
+    if options.exclusive_wc_locks:
+      args.append('--exclusive-wc-locks')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1724,8 +1797,14 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--http-proxy-username', action='store',
+                    help='Username for the HTTP Proxy.')
+  parser.add_option('--http-proxy-password', action='store',
+                    help='Password for the HTTP Proxy.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
+  parser.add_option('--exclusive-wc-locks', action='store_true',
+                    help='Use sqlite exclusive locking for working copies')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2047,7 +2126,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     create_config_dir(default_config_dir,
                       ssl_cert=options.ssl_cert,
                       ssl_url=options.test_area_url,
-                      http_proxy=options.http_proxy)
+                      http_proxy=options.http_proxy,
+                      exclusive_wc_locks=options.exclusive_wc_locks)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

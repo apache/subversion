@@ -46,6 +46,7 @@
 #include "svn_ctype.h"
 #include "svn_dso.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -144,7 +145,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       _set_error_mode(_OUT_TO_STDERR);
 
       /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in releas builds) */
+         (Ignored in release builds) */
+      _CrtSetReportFile( _CRT_WARN, _CRTDBG_FILE_STDERR);
+      _CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR);
       _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
       _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
       _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
@@ -233,7 +236,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   /* Create a pool for use by the UTF-8 routines.  It will be cleaned
      up by APR at exit time. */
   pool = svn_pool_create(NULL);
-  svn_utf_initialize2(pool, FALSE);
+  svn_utf_initialize2(FALSE, pool);
 
   if ((err = svn_nls_init()))
     {
@@ -747,7 +750,7 @@ svn_cmdline__apply_config_options(apr_hash_t *config,
                           APR_ARRAY_IDX(config_options, i,
                                         svn_cmdline__config_argument_t *);
 
-     cfg = apr_hash_get(config, arg->file, APR_HASH_KEY_STRING);
+     cfg = svn_hash_gets(config, arg->file);
 
      if (cfg)
        {
@@ -943,7 +946,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
       return (isatty(STDIN_FILENO) != 0);
 #endif
     }
-  else if (force_interactive) 
+  else if (force_interactive)
     return TRUE;
 
   return !non_interactive;
@@ -973,8 +976,7 @@ find_editor_binary(const char **editor,
   /* If not found then fall back on the config file. */
   if (! e)
     {
-      cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                  APR_HASH_KEY_STRING) : NULL;
+      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
       svn_config_get(cfg, &e, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
     }

@@ -110,7 +110,7 @@ static svn_error_t *
 create_delete_wq_items(svn_skel_t **work_items,
                        svn_wc__db_t *db,
                        const char *local_abspath,
-                       svn_kind_t kind,
+                       svn_node_kind_t kind,
                        svn_boolean_t conflicted,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
@@ -118,7 +118,7 @@ create_delete_wq_items(svn_skel_t **work_items,
   *work_items = NULL;
 
   /* Schedule the on-disk delete */
-  if (kind == svn_kind_dir)
+  if (kind == svn_node_dir)
     SVN_ERR(svn_wc__wq_build_dir_remove(work_items, db, local_abspath,
                                         local_abspath,
                                         TRUE /* recursive */,
@@ -185,7 +185,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_skel_t *work_items = NULL;
   apr_array_header_t *versioned_targets;
   const char *local_abspath;
@@ -244,7 +244,7 @@ svn_wc__delete_many(svn_wc_context_t *wc_ctx,
         }
 
       if (status == svn_wc__db_status_normal
-          && kind == svn_kind_dir)
+          && kind == svn_node_dir)
         {
           svn_boolean_t is_wcroot;
           SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath,
@@ -323,7 +323,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_boolean_t conflicted;
   svn_skel_t *work_items = NULL;
   const char *repos_relpath;
@@ -363,7 +363,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     }
 
   if (status == svn_wc__db_status_normal
-      && kind == svn_kind_dir)
+      && kind == svn_node_dir)
     {
       svn_boolean_t is_wcroot;
       SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, pool));
@@ -433,7 +433,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                     destroy_wf /* destroy_changes */,
                                     SVN_INVALID_REVNUM,
                                     svn_wc__db_status_not_present,
-                                    svn_kind_none,
+                                    svn_node_none,
                                     NULL, NULL,
                                     cancel_func, cancel_baton,
                                     scratch_pool));

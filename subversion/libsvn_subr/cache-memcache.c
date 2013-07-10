@@ -366,12 +366,6 @@ memcache_get_info(void *cache_void,
 
   /* we don't have any memory allocation info */
 
-  info->used_size = 0;
-  info->total_size = 0;
-  info->data_size = 0;
-  info->used_entries = 0;
-  info->total_entries = 0;
-
   return SVN_NO_ERROR;
 }
 
@@ -407,6 +401,7 @@ svn_cache__create_memcache(svn_cache__t **cache_p,
   wrapper->cache_internal = cache;
   wrapper->error_handler = 0;
   wrapper->error_baton = 0;
+  wrapper->pretend_empty = !!getenv("SVN_X_DOES_NOT_MARK_THE_SPOT");
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

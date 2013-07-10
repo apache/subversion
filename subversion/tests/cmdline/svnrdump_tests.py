@@ -367,7 +367,7 @@ def copy_bad_line_endings_load(sbox):
   "load: inconsistent line endings in svn:* props"
   run_load_test(sbox, "copy-bad-line-endings.dump",
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump")
-          
+
 def copy_bad_line_endings2_dump(sbox):
   "dump: non-LF line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings2.dump",

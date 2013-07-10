@@ -27,6 +27,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
@@ -51,8 +52,8 @@ typedef struct gls_context_t {
 
 } gls_context_t;
 
-enum {
-  INITIAL = 0,
+enum locseg_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   SEGMENT
 };
@@ -87,9 +88,9 @@ gls_closed(svn_ra_serf__xml_estate_t *xes,
 
   SVN_ERR_ASSERT(leaving_state == SEGMENT);
 
-  path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
-  start_str = apr_hash_get(attrs, "range-start", APR_HASH_KEY_STRING);
-  end_str = apr_hash_get(attrs, "range-end", APR_HASH_KEY_STRING);
+  path = svn_hash_gets(attrs, "path");
+  start_str = svn_hash_gets(attrs, "range-start");
+  end_str = svn_hash_gets(attrs, "range-end");
 
   /* The transition table said these must exist.  */
   SVN_ERR_ASSERT(start_str && end_str);
@@ -177,10 +178,10 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
-                                           NULL, gls_closed, NULL,
+                                           NULL, gls_closed, NULL, NULL,
                                            gls_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -193,7 +194,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_one(handler, pool);
 
   err = svn_error_compose_create(
-         svn_ra_serf__error_on_status(handler->sline.code,
+         svn_ra_serf__error_on_status(handler->sline,
                                       handler->path,
                                       handler->location),
          err);

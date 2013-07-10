@@ -141,7 +141,7 @@ change_file_prop(void *file_baton,
   edit_baton_t *eb = file_baton;
   eb->prop_count++;
   eb->prop_byte_count += value->len;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -250,13 +250,15 @@ bench_null_export(svn_revnum_t *result_rev,
                                                       pool));
 
           /* Manufacture a basic 'report' to the update reporter. */
-          SVN_ERR(svn_ra_do_update2(ra_session,
+          SVN_ERR(svn_ra_do_update3(ra_session,
                                     &reporter, &report_baton,
                                     loc->rev,
                                     "", /* no sub-target */
                                     depth,
                                     FALSE, /* don't want copyfrom-args */
-                                    export_editor, edit_baton, pool));
+                                    FALSE, /* don't want ignore_ancestry */
+                                    export_editor, edit_baton,
+                                    pool, pool));
 
           SVN_ERR(reporter->set_path(report_baton, "", loc->rev,
                                      /* Depth is irrelevant, as we're

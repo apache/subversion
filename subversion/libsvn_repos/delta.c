@@ -24,6 +24,7 @@
 
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
@@ -195,17 +196,6 @@ authz_root_check(svn_fs_root_t *root,
 }
 
 
-static svn_error_t *
-not_a_dir_error(const char *role,
-                const char *path)
-{
-  return svn_error_createf
-    (SVN_ERR_FS_NOT_DIRECTORY, 0,
-     "Invalid %s directory '%s'",
-     role, path ? path : "(null)");
-}
-
-
 /* Public interface to computing directory deltas.  */
 svn_error_t *
 svn_repos_dir_delta2(svn_fs_root_t *src_root,
@@ -236,7 +226,8 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   if (src_parent_dir)
     src_parent_dir = svn_relpath_canonicalize(src_parent_dir, pool);
   else
-    return not_a_dir_error("source parent", src_parent_dir);
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, 0,
+                            "Invalid source parent directory '(null)'");
 
   /* TGT_FULLPATH must be valid. */
   if (tgt_fullpath)
@@ -506,8 +497,7 @@ delta_proplists(struct context *c,
                                            pool));
 
           /* Transmit the committed-date. */
-          committed_date = apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
-                                        APR_HASH_KEY_STRING);
+          committed_date = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
           if (committed_date || source_path)
             {
               SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_COMMITTED_DATE,
@@ -515,8 +505,7 @@ delta_proplists(struct context *c,
             }
 
           /* Transmit the last-author. */
-          last_author = apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
-                                     APR_HASH_KEY_STRING);
+          last_author = svn_hash_gets(r_props, SVN_PROP_REVISION_AUTHOR);
           if (last_author || source_path)
             {
               SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
@@ -1020,7 +1009,7 @@ delta_dirs(struct context *c,
             }
 
           /*  Remove the entry from the source_hash. */
-          apr_hash_set(s_entries, key, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(s_entries, key, NULL);
         }
       else
         {

@@ -159,22 +159,22 @@ class GeneratorBase(gen_base.GeneratorBase):
       elif opt == '--with-static-openssl':
         self.static_openssl = 1
       elif opt == '--vsnet-version':
-        if val == '2002' or re.match('7(\.\d+)?', val):
+        if val == '2002' or re.match('7(\.\d+)?$', val):
           self.vs_version = '2002'
           self.sln_version = '7.00'
           self.vcproj_version = '7.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2003' or re.match('8(\.\d+)?', val):
+        elif val == '2003' or re.match('8(\.\d+)?$', val):
           self.vs_version = '2003'
           self.sln_version = '8.00'
           self.vcproj_version = '7.10'
           self.vcproj_extension = '.vcproj'
-        elif val == '2005' or re.match('9(\.\d+)?', val):
+        elif val == '2005' or re.match('9(\.\d+)?$', val):
           self.vs_version = '2005'
           self.sln_version = '9.00'
           self.vcproj_version = '8.00'
           self.vcproj_extension = '.vcproj'
-        elif val == '2008' or re.match('10(\.\d+)?', val):
+        elif val == '2008' or re.match('10(\.\d+)?$', val):
           self.vs_version = '2008'
           self.sln_version = '10.00'
           self.vcproj_version = '9.00'
@@ -189,6 +189,11 @@ class GeneratorBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '11.0'
           self.vcproj_extension = '.vcxproj'
+        elif re.match('^1\d+$', val):
+          self.vsversion = val
+          self.sln_version = '12.00'
+          self.vcproj_version = val + '.0'
+          self.vcproj_extension = '.vcxproj'
         else:
           print('WARNING: Unknown VS.NET version "%s",'
                  ' assuming "%s"\n' % (val, '7.00'))
@@ -202,15 +207,25 @@ class GeneratorBase(gen_base.GeneratorBase):
     # Initialize parent
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
 
+    # These files will be excluded from the build when they're not
+    # explicitly listed as project sources.
+    self._excluded_from_build = frozenset(self.private_includes
+                                          + self.private_built_includes)
+
     # Find Berkeley DB
     self._find_bdb()
 
   def _find_bdb(self):
     "Find the Berkeley DB library and version"
-    for ver in ("48", "47", "46", "45", "44", "43", "42", "41", "40"):
+    # Before adding "60" to this list, see build/ac-macros/berkeley-db.m4.
+    for ver in ("53", "52", "51", "50", "48", "47", "46",
+                "45", "44", "43", "42", "41", "40"):
       lib = "libdb" + ver
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
+        self.bdb_lib = lib
+        break
+      elif os.path.exists(os.path.join(path, lib + "d.lib")):
         self.bdb_lib = lib
         break
     else:
@@ -231,7 +246,8 @@ class WinGeneratorBase(GeneratorBase):
     GeneratorBase.__init__(self, fname, verfname, options)
 
     if self.bdb_lib is not None:
-      print("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
+      print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
+                                                 self.bdb_path))
     else:
       print("BDB not found, BDB fs will not be built\n")
 
@@ -331,6 +347,11 @@ class WinGeneratorBase(GeneratorBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
+  def errno_filter(self, codes):
+    "Callback for gen_base.write_errno_table()."
+    # Filter out python's SOC* codes, which alias the windows API names.
+    return set(filter(lambda code: not (10000 <= code <= 10100), codes))
+
   def find_rootpath(self):
     "Gets the root path as understand by the project system"
     return os.path.relpath('.', self.projfilesdir) + "\\"
@@ -396,7 +417,6 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
                                              or isinstance(x, gen_base.TargetJavaHeaders)
-                                             or isinstance(x, gen_base.TargetSWIGProject)
                                              or x.name == '__JAVAHL__'
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
@@ -504,6 +524,7 @@ class WinGeneratorBase(GeneratorBase):
         cbuild = None
         ctarget = None
         cdesc = None
+        cignore = None
         if isinstance(target, gen_base.TargetJavaHeaders):
           classes = self.path(target.classes)
           if self.junit_path is not None:
@@ -538,9 +559,18 @@ class WinGeneratorBase(GeneratorBase):
         if quote_path and '-' in rsrc:
           rsrc = '"%s"' % rsrc
 
+        if (not isinstance(source, gen_base.SourceFile)
+            and cbuild is None and ctarget is None and cdesc is None
+            and source in self._excluded_from_build):
+          # Make sure include dependencies are excluded from the build.
+          # This is an 'orrible 'ack that relies on the source being a
+          # string if it's an include dependency, or a SourceFile object
+          # otherwise.
+          cignore = 'yes'
+
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
                                    custom_build=cbuild, custom_target=ctarget,
-                                   custom_desc=cdesc,
+                                   custom_desc=cdesc, ignored = cignore,
                                    extension=os.path.splitext(rsrc)[1]))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
@@ -963,6 +993,9 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
 
+    if target.name.find('cxxhl') != -1:
+      fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
+
     return fakeincludes
 
   def get_win_lib_dirs(self, target, cfg):
@@ -1246,7 +1279,9 @@ class WinGeneratorBase(GeneratorBase):
     self.ruby_version = None
     self.ruby_major_version = None
     self.ruby_minor_version = None
-    proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+    # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
+    # and deprecated Config." warning if we are using Ruby 1.9.
+    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
                     "puts Config::CONFIG['ruby_version'];"
                     "puts Config::CONFIG['LIBRUBY'];"
                     "puts Config::CONFIG['archdir'];"
@@ -1433,7 +1468,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_serf(self):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (1, 2, 0)
+    minimal_serf_version = (1, 2, 1)
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
@@ -1458,7 +1493,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_apr(self):
     "Find the APR library and version"
-    
+
     minimal_apr_version = (0, 9, 0)
 
     version_file_path = os.path.join(self.apr_path, 'include',
@@ -1472,16 +1507,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
-    
+
     version = (major, minor, patch)
     self.apr_version = '%d.%d.%d' % version
 
@@ -1493,7 +1528,7 @@ class WinGeneratorBase(GeneratorBase):
       self.apr_lib = 'apr%s.lib' % suffix
     else:
       self.apr_lib = 'libapr%s.lib' % suffix
-      
+
     if version < minimal_apr_version:
       sys.stderr.write("ERROR: apr %s or higher is required "
                        "(%s found)\n" % (
@@ -1518,16 +1553,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
-    
+
     vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
-   
+
     version = (major, minor, patch)
     self.aprutil_version = '%d.%d.%d' % version
 
@@ -1539,7 +1574,7 @@ class WinGeneratorBase(GeneratorBase):
       self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
       self.aprutil_lib = 'libaprutil%s.lib' % suffix
-      
+
     if version < minimal_aprutil_version:
       sys.stderr.write("ERROR: aprutil %s or higher is required "
                        "(%s found)\n" % (
@@ -1581,7 +1616,7 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
     version = vermatch.groups()
-    
+
     # Sqlite doesn't add patch numbers for their ordinary releases
     if not version[3]:
       version = version[0:3]
@@ -1626,6 +1661,7 @@ class WinGeneratorBase(GeneratorBase):
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):
+    self.ignored = None
     vars(self).update(kw)
 
 # ============================================================================

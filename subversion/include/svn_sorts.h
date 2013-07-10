@@ -209,6 +209,8 @@ svn_sort__array_delete(apr_array_header_t *arr,
                        int elements_to_delete);
 
 /* Reverse the order of elements in @a array, in place.
+ *
+ * @note Private. For use by Subversion's own code only.
  */
 void
 svn_sort__array_reverse(apr_array_header_t *array,

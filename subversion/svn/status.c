@@ -26,6 +26,7 @@
 
 
 /*** Includes. ***/
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_dirent_uri.h"
@@ -268,14 +269,15 @@ print_status(const char *cwd_abspath, const char *path,
 
       if (tree_conflicted)
         {
-          const svn_wc_conflict_description2_t *tree_conflict;
+          const svn_wc_conflict_description3_t *tree_conflict;
           SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
                                             local_abspath, pool, pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
 
           tree_status_code = 'C';
           SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-                            &desc, tree_conflict, pool));
+                            &desc, svn_wc__cd3_to_cd2(tree_conflict, pool),
+                            pool));
           tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
           (*tree_conflicts)++;
         }
@@ -471,28 +473,27 @@ svn_cl__print_status_xml(const char *cwd_abspath,
                         "path", svn_dirent_local_style(path, pool), NULL);
 
   att_hash = apr_hash_make(pool);
-  apr_hash_set(att_hash, "item", APR_HASH_KEY_STRING,
-               generate_status_desc(combined_status(status)));
+  svn_hash_sets(att_hash, "item",
+                generate_status_desc(combined_status(status)));
 
-  apr_hash_set(att_hash, "props", APR_HASH_KEY_STRING,
-               generate_status_desc(
-                     (status->node_status != svn_wc_status_deleted)
-                                          ? status->prop_status
-                                          : svn_wc_status_none));
+  svn_hash_sets(att_hash, "props",
+                generate_status_desc(
+                   (status->node_status != svn_wc_status_deleted)
+                   ? status->prop_status
+                   : svn_wc_status_none));
   if (status->wc_is_locked)
-    apr_hash_set(att_hash, "wc-locked", APR_HASH_KEY_STRING, "true");
+    svn_hash_sets(att_hash, "wc-locked", "true");
   if (status->copied)
-    apr_hash_set(att_hash, "copied", APR_HASH_KEY_STRING, "true");
+    svn_hash_sets(att_hash, "copied", "true");
   if (status->switched)
-    apr_hash_set(att_hash, "switched", APR_HASH_KEY_STRING, "true");
+    svn_hash_sets(att_hash, "switched", "true");
   if (status->file_external)
-    apr_hash_set(att_hash, "file-external", APR_HASH_KEY_STRING, "true");
+    svn_hash_sets(att_hash, "file-external", "true");
   if (status->versioned && ! status->copied)
-    apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
-                 apr_psprintf(pool, "%ld", status->revision));
+    svn_hash_sets(att_hash, "revision",
+                  apr_psprintf(pool, "%ld", status->revision));
   if (tree_conflicted)
-    apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
-                 "true");
+    svn_hash_sets(att_hash, "tree-conflicted", "true");
   if (status->moved_from_abspath || status->moved_to_abspath)
     {
       const char *relpath;
@@ -502,14 +503,14 @@ svn_cl__print_status_xml(const char *cwd_abspath,
           relpath = make_relpath(cwd_abspath, status->moved_from_abspath,
                                  pool, pool);
           relpath = svn_dirent_local_style(relpath, pool);
-          apr_hash_set(att_hash, "moved-from", APR_HASH_KEY_STRING, relpath);
+          svn_hash_sets(att_hash, "moved-from", relpath);
         }
       if (status->moved_to_abspath)
         {
           relpath = make_relpath(cwd_abspath, status->moved_to_abspath,
                                  pool, pool);
           relpath = svn_dirent_local_style(relpath, pool);
-          apr_hash_set(att_hash, "moved-to", APR_HASH_KEY_STRING, relpath);
+          svn_hash_sets(att_hash, "moved-to", relpath);
         }
     }
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",

@@ -28,6 +28,7 @@
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_path.h"
 
 #include "svn_private_config.h"
 
@@ -443,7 +444,7 @@ add_symlink_cb(void *baton,
 static svn_error_t *
 add_absent_cb(void *baton,
               const char *relpath,
-              svn_kind_t kind,
+              svn_node_kind_t kind,
               svn_revnum_t replaces_rev,
               apr_pool_t *scratch_pool)
 {
@@ -487,9 +488,9 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
@@ -520,8 +521,8 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   struct edit_baton *eb = baton;
