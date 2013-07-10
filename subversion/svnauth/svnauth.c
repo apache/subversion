@@ -300,6 +300,7 @@ split_ascii_cert(const char *ascii_cert,
 
 /* ### from libsvn_subr/ssl_server_trust_providers.c */
 #define AUTHN_ASCII_CERT_KEY            "ascii_cert"
+#define AUTHN_FAILURES_KEY              "failures"
 
 /* Display the base64-encoded DER certificate ASCII_CERT. */
 static svn_error_t *
@@ -380,6 +381,47 @@ show_ascii_cert(const char *ascii_cert,
   return SVN_NO_ERROR;
 }
                 
+static svn_error_t *
+show_cert_failures(const char *failure_string,
+                   apr_pool_t *scratch_pool)
+{
+  unsigned int failures;
+
+  SVN_ERR(svn_cstring_atoui(&failures, failure_string));
+
+  if (0 == (failures & (SVN_AUTH_SSL_NOTYETVALID | SVN_AUTH_SSL_EXPIRED |
+                        SVN_AUTH_SSL_CNMISMATCH | SVN_AUTH_SSL_UNKNOWNCA |
+                        SVN_AUTH_SSL_OTHER)))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_cmdline_printf(
+            scratch_pool, _("Automatic certificate validity check failed "
+                            "because:\n")));
+
+  if (failures & SVN_AUTH_SSL_NOTYETVALID)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("  The certificate is not yet valid.\n")));
+
+  if (failures & SVN_AUTH_SSL_EXPIRED)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("  The certificate has expired.\n")));
+
+  if (failures & SVN_AUTH_SSL_CNMISMATCH)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("  The certificate's Common Name (hostname) "
+                              "does not match the remote hostname.\n")));
+
+  if (failures & SVN_AUTH_SSL_UNKNOWNCA)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("  The certificate issuer is unknown.\n")));
+
+  if (failures & SVN_AUTH_SSL_OTHER)
+    SVN_ERR(svn_cmdline_printf(
+              scratch_pool, _("  Unknown verification failure.\n")));
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
 list_credentials(svn_boolean_t *delete_cred,
@@ -421,6 +463,8 @@ list_credentials(svn_boolean_t *delete_cred,
         continue; /* realm string was already shown above */
       else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
         SVN_ERR(show_ascii_cert(value->data, iterpool));
+      else if (strcmp(key, AUTHN_FAILURES_KEY) == 0)
+        SVN_ERR(show_cert_failures(value->data, iterpool));
       else
         SVN_ERR(svn_cmdline_printf(iterpool, "%s: %s\n", key, value->data));
     }
