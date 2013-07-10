@@ -349,7 +349,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def errno_filter(self, codes):
     "Callback for gen_base.write_errno_table()."
-    # Filter out apr_errno.h SOC* codes, which alias the windows API names.
+    # Filter out python's SOC* codes, which alias the windows API names.
     return set(filter(lambda code: not (10000 <= code <= 10100), codes))
 
   def find_rootpath(self):
