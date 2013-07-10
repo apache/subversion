@@ -450,8 +450,8 @@ sub vote {
     my ($logmsg_fh, $logmsg_filename) = tempfile();
     print $logmsg_fh $logmsg;
     close $logmsg_fh;
-    warn "Tempfile name '$logmsg_filename' not shell-safe; "
-         ."refraining from commit.\n"
+    warn("Tempfile name '$logmsg_filename' not shell-safe; "
+         ."refraining from commit.\n") and return
         unless $logmsg_filename =~ /^([A-Z0-9._-]|\x2f)+$/i;
     system("$SVN commit -F $logmsg_filename -- $STATUS") == 0
         or warn("Committing the votes failed($?): $!") and return;
