@@ -73,6 +73,13 @@ Candidate changes:
      +1: rhuijben (for 1.8.2+)
      -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
 
+ * r1501656, r1501702
+   Fix the ability to build Debug Build with BDB FS on Windows.
+   Justification:
+     Our build system should work properly.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
