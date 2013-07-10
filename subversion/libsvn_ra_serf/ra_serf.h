@@ -191,9 +191,6 @@ struct svn_ra_serf__session_t {
   /* Are we using a proxy? */
   svn_boolean_t using_proxy;
 
-  /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
-  svn_tristate_t using_chunked_requests;
-
   const char *proxy_username;
   const char *proxy_password;
   int proxy_auth_attempts;

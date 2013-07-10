@@ -139,6 +139,7 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
+            svn_tristate_t *using_chunked_requests,
             apr_hash_t *config_hash,
             apr_pool_t *pool)
 {
@@ -226,7 +227,7 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
   /* Should we use chunked transfer encopding. */
-  SVN_ERR(svn_config_get_tristate(config, &session->using_chunked_requests,
+  SVN_ERR(svn_config_get_tristate(config, using_chunked_requests,
                                   SVN_CONFIG_SECTION_GLOBAL,
                                   SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
                                   "auto",
@@ -291,11 +292,11 @@ load_config(svn_ra_serf__session_t *session,
 
       /* Should we use chunked transfer encopding. */
       SVN_ERR(svn_config_get_tristate(
-               config, &session->using_chunked_requests,
+               config, using_chunked_requests,
                server_group,
                SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
                "auto",
-               session->using_chunked_requests));
+               *using_chunked_requests));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -408,6 +409,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_uri_t url;
   const char *client_string = NULL;
   svn_error_t *err;
+  svn_tristate_t using_chunked_requests;
 
   if (corrected_url)
     *corrected_url = NULL;
@@ -462,7 +464,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
    * proxy does not support chunked requests.  */
   serf_sess->set_CL = TRUE;
 
-  SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
+  SVN_ERR(load_config(serf_sess, &using_chunked_requests, config,
+                      serf_sess->pool));
 
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
                                     sizeof(*serf_sess->conns[0]));
@@ -517,17 +520,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
    * always use Content-Length. */ 
   if (!serf_sess->http10)
     {
-      if (serf_sess->using_chunked_requests == svn_tristate_true)
+      if (using_chunked_requests == svn_tristate_true)
         {
           /* Upgrade to chunked Transfer-Encoding. */
           serf_sess->set_CL = FALSE;
         }
-      else if (serf_sess->using_chunked_requests == svn_tristate_false)
+      else if (using_chunked_requests == svn_tristate_false)
         {
            /* Disable chunked Transfer-Encoding without probing. */
            serf_sess->set_CL = TRUE;
         }
-      else if (serf_sess->using_chunked_requests == svn_tristate_unknown)
+      else if (using_chunked_requests == svn_tristate_unknown)
         {
           svn_boolean_t supports_chunked;
           /* We have set up a useful connection (that doesn't indication a
