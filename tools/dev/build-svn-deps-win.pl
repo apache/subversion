@@ -422,7 +422,7 @@ sub download_dependencies {
   download_file($PCRE_URL, "$SRCDIR\\pcre.zip", \$PCRE_FILE);
   download_file($SQLITE_URL, "$SRCDIR\\sqlite-amalgamation.zip", \$SQLITE_FILE);
   download_file($SERF_URL, "$SRCDIR\\serf.zip", \$SERF_FILE);
-  download_file($NEON_URL, "$SRCDIR\\neon.tar.gz", \$NEON_FILE) if defined($NEON);
+  download_file($NEON_URL, "$SRCDIR\\neon.tar.gz", \$NEON_FILE) if $NEON;
 }
 
 ##############
@@ -488,7 +488,7 @@ sub extract_dependencies {
   extract_file($SERF_FILE, $INSTDIR,
                "$INSTDIR\\serf-$SERF_VER", "$INSTDIR\\serf");
   extract_file($NEON_FILE, $INSTDIR,
-               "$INSTDIR\\neon-$NEON_VER", "$INSTDIR\\neon") if defined($NEON);
+               "$INSTDIR\\neon-$NEON_VER", "$INSTDIR\\neon") if $NEON;
 }
 
 #########
