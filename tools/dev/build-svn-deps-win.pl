@@ -351,6 +351,7 @@ sub clean_structure {
   rmtree($INCDIR);
   rmtree($LIBDIR);
   rmtree("$INSTDIR\\serf");
+  rmtree("$INSTDIR\\neon");
   rmtree("$INSTDIR\\sqlite-amalgamation");
 
   # Dirs created indirectly by the install targets
