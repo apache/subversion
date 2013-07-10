@@ -427,13 +427,14 @@ sub vote {
 
   my $logmsg = do {
     my @sentences = map {
+       my $words_vote = ", approving" x $_->{approval};
+       my $words_edit = " and approve" x $_->{approval};
        exists $_->{vote}
        ? (
          ( $_->{vote} eq 'edit'
-           ? "Edit the $_->{entry}->{id} entry"
-           : "Vote $_->{vote} on the $_->{entry}->{header}"
+           ? "Edit$words_edit the $_->{entry}->{id} entry"
+           : "Vote $_->{vote} on the $_->{entry}->{header}$words_vote"
          )
-         . (", approving" x $_->{approval})
          . "."
          )
       : # exists only in $approved
