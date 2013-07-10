@@ -3,6 +3,9 @@ layer in libsvn_client.
 
 The branch should be maintained with catch-up merges from trunk.
 
+The branch is going to be merged to trunk with detailed log message describing
+all changes made in the branch.
+
 STATUS
 ======
 - Initial implementation
