@@ -247,7 +247,7 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.bdb_lib is not None:
       print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
-	                                         self.bdb_path))
+                                                 self.bdb_path))
     else:
       print("BDB not found, BDB fs will not be built\n")
 
