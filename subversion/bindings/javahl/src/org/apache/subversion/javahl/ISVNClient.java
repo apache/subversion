@@ -221,6 +221,10 @@ public interface ISVNClient
 
     /**
      * Adds a file to the repository.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version with
+     * <code>noAutoProps</code> set to <code>false</code>.
+     *
      * @param path      path to be added.
      * @param depth     the depth to recurse into subdirectories
      * @param force     if adding a directory and recurse true and path is a
@@ -232,6 +236,23 @@ public interface ISVNClient
      */
     void add(String path, Depth depth, boolean force, boolean noIgnores,
              boolean addParents)
+        throws ClientException;
+
+    /**
+     * Adds a file to the repository.
+     * @param path      path to be added.
+     * @param depth     the depth to recurse into subdirectories
+     * @param force     if adding a directory and recurse true and path is a
+     *                  directory, all not already managed files are added.
+     * @param noIgnores if false, don't add files or directories matching
+     *                  ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param addParents add any intermediate parents to the working copy
+     * @throws ClientException
+     * @since 1.8
+     */
+    void add(String path, Depth depth, boolean force,
+             boolean noIgnores, boolean noAutoProps, boolean addParents)
         throws ClientException;
 
     /**
@@ -304,12 +325,27 @@ public interface ISVNClient
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
+     * @param metadataOnly Move just the metadata and not the working files/dirs
+     * @param allowMixRev If true use copy and delete without move tracking
+     *                    when a srcPath is mixed-revision, if false return
+     *                    an error when a srcPath is mixed-revision.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback, may be <code>null</code>
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the move operation fails.
+     * @since 1.8
+     */
+    void move(Set<String> srcPaths, String destPath, boolean force,
+              boolean moveAsChild, boolean makeParents, boolean metadataOnly,
+              boolean allowMixRev, Map<String, String> revpropTable,
+              CommitMessageCallback handler, CommitCallback callback)
+        throws ClientException;
+
+    /**
+     * @deprecated Provided for backward compatibility with 1.7. Passes
+     *             metadataOnly false and allowMixRev true.
      */
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
@@ -366,6 +402,31 @@ public interface ISVNClient
      * @param depth           how deep to recurse in subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
+     * @since 1.9
+     */
+    long doExport(String srcPath, String destPath, Revision revision,
+                  Revision pegRevision, boolean force,
+                  boolean ignoreExternals, boolean ignoreKeywords,
+                  Depth depth, String nativeEOL)
+            throws ClientException;
+
+    /**
+     * Exports the contents of either a subversion repository into a
+     * 'clean' directory (meaning a directory with no administrative
+     * directories).
+     * <p>
+     * <b>Note:</b> Behaves like the 1.9 version with
+     * ignoreKeywords set to false.
+     *
+     * @param srcPath         the url of the repository path to be exported
+     * @param destPath        a destination path that must not already exist.
+     * @param revision        the revsion to be exported
+     * @param pegRevision     the revision to interpret srcPath
+     * @param force           set if it is ok to overwrite local files
+     * @param ignoreExternals ignore external during export
+     * @param depth           how deep to recurse in subdirectories
+     * @param nativeEOL       which EOL characters to use during export
+     * @throws ClientException
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
@@ -400,22 +461,47 @@ public interface ISVNClient
      * @param url       the target url
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
+     * @param noAutoProps if true, ignore any auto-props configuration
+     * @param ignoreUnknownNodeTypes whether to ignore files which
+     *                  the node type is not konwn, just as pipes
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
+     * @param messageHandler   the commit message callback
+     * @param commitCallback   the commit status callback
+     * @throws ClientException
+     * @since 1.8
+     */
+    void doImport(String path, String url, Depth depth,
+                  boolean noIgnore, boolean noAutoProps,
+                  boolean ignoreUnknownNodeTypes,
+                  Map<String, String> revpropTable,
+                  ImportFilterCallback importFilterCallback,
+                  CommitMessageCallback messageHandler,
+                  CommitCallback commitCallback)
+            throws ClientException;
+
+
+    /**
+     * Import a file or directory into a repository directory  at
+     * head.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version with noAutoProps
+     * set to false and without the filtering option.
+     *
+     * @param path      the local path
+     * @param url       the target url
+     * @param depth     depth to traverse into subdirectories
+     * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
      *                  the node type is not konwn, just as pipes
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
      * @param handler   the commit message callback
+     * @param callback  the commit status callback
      * @throws ClientException
-     *
      */
-    void doImport(String path, String url, Depth depth,
-                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
-                  Map<String, String> revpropTable,
-                  ImportFilterCallback importFilterCallback,
-                  CommitMessageCallback handler, CommitCallback commitCallback)
-            throws ClientException;
-
     void doImport(String path, String url, Depth depth,
                   boolean noIgnore, boolean ignoreUnknownNodeTypes,
                   Map<String, String> revpropTable,
@@ -442,6 +528,32 @@ public interface ISVNClient
      * @param localPath      target local path
      * @param force          overwrite local changes
      * @param depth          how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun         do not change anything
+     * @param recordOnly     record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.8
+     */
+    void merge(String path1, Revision revision1, String path2,
+               Revision revision2, String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean recordOnly)
+            throws ClientException;
+
+    /**
+     * Merge changes from two paths into a new local path.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version where ignoreAncestry
+     * maps to both ignoreMergeinfo and diffIgnoreAncestry
+     *
+     * @param path1          first path or url
+     * @param revision1      first revision
+     * @param path2          second path or url
+     * @param revision2      second revision
+     * @param localPath      target local path
+     * @param force          overwrite local changes
+     * @param depth          how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
@@ -456,7 +568,35 @@ public interface ISVNClient
      * Merge set of revisions into a new local path.
      * @param path          path or url
      * @param pegRevision   revision to interpret path
-     * @param revisions     revisions to merge
+     * @param revisions     revisions to merge; may be null, indicating that
+     *                      the optimal range should be determined automatcially
+     * @param localPath     target local path
+     * @param force         overwrite local changes
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun        do not change anything
+     * @param recordOnly    record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.8
+     */
+    void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
+               String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean recordOnly)
+             throws ClientException;
+
+    /**
+     * Merge set of revisions into a new local path.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version where ignoreAncestry
+     * maps to both ignoreMergeinfo and diffIgnoreAncestry
+     *
+     * @param path          path or url
+     * @param pegRevision   revision to interpret path
+     * @param revisions     revisions to merge;
+     *                      may be null, indicating that the optimal range
+     *                      should be determined automatcially (new in 1.8)
      * @param localPath     target local path
      * @param force         overwrite local changes
      * @param depth         how deep to traverse into subdirectories
@@ -485,6 +625,7 @@ public interface ISVNClient
      * @param localPath     target local path
      * @param dryRun        do not change anything
      * @throws ClientException
+     * @deprecated Will be removed in a future release
      */
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
@@ -503,6 +644,34 @@ public interface ISVNClient
 
     /**
      * Retrieve either merged or eligible-to-be-merged revisions.
+     * @param kind                   kind of revisions to receive
+     * @param pathOrUrl              target of merge
+     * @param pegRevision            peg rev for pathOrUrl
+     * @param mergeSourceUrl         the source of the merge
+     * @param srcPegRevision         peg rev for mergeSourceUrl
+     * @param srcStartRevieion       lower bound of the source revision range
+     * @param srcEndRevision         upper bound of the source revision range
+     * @param discoverChangedPaths   return paths of changed items
+     * @param depth                  the depth to recurse to
+     * @param revProps               the revprops to retrieve
+     * @param callback               the object to receive the log messages
+     * @since 1.8
+     */
+    void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
+                         Revision pegRevision, String mergeSourceUrl,
+                         Revision srcPegRevision,
+                         Revision srcStartRevision, Revision srcEndRevision,
+                         boolean discoverChangedPaths,
+                         Depth depth, Set<String> revProps,
+                         LogMessageCallback callback)
+        throws ClientException;
+
+    /**
+     * Retrieve either merged or eligible-to-be-merged revisions.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.8 version, with unspecified
+     * revision range.
+     *
      * @param kind                   kind of revisions to receive
      * @param pathOrUrl              target of merge
      * @param pegRevision            peg rev for pathOrUrl
@@ -536,6 +705,42 @@ public interface ISVNClient
      *                      entirety, not as diffs from their sources
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
@@ -550,6 +755,43 @@ public interface ISVNClient
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
               boolean copiesAsAdds)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths.
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
             throws ClientException;
 
     /**
@@ -659,6 +901,23 @@ public interface ISVNClient
     void properties(String path, Revision revision, Revision pegRevision,
                     Depth depth, Collection<String> changelists,
                     ProplistCallback callback)
+            throws ClientException;
+
+    /**
+     * Retrieves the properties of an item, including inherited properties.
+     *
+     * @param path        the path of the item
+     * @param revision    the revision of the item
+     * @param pegRevision the revision to interpret path
+     * @param depth       the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
+     * @param callback    the callback to use to return the properties
+     * @throws ClientException
+     * @since 1.8
+     */
+    void properties(String path, Revision revision, Revision pegRevision,
+                    Depth depth, Collection<String> changelists,
+                    InheritedProplistCallback callback)
             throws ClientException;
 
     /**
@@ -810,6 +1069,12 @@ public interface ISVNClient
     void setConfigDirectory(String configDir) throws ClientException;
 
     /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded.
+     */
+    void setConfigEventHandler(ConfigEvent configHandler);
+
+    /**
      * Get the configuration directory
      * @return  the directory
      * @throws ClientException
@@ -922,4 +1187,40 @@ public interface ISVNClient
                int stripCount, boolean reverse, boolean ignoreWhitespace,
                boolean removeTempfiles, PatchCallback callback)
             throws ClientException;
+
+    /**
+     * Open a persistent session to a repository.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
+     * @param pathOrUrl A path in a working copy from which the
+     *        session URL is derived, or the URL itself.
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
+     * @throws ClientException
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String pathOrUrl)
+            throws ClientException, SubversionException;
+
+    /**
+     * Open a persistent session to a repository.
+     * <p>
+     * <b>Note:</b> The session object inherits the progress callback,
+     * configuration directory and authentication info.
+     *
+     * @param pathOrUrl A path in a working copy from which the
+     *        session URL is derived, or the URL itself.
+     * @param retryAttempts The number of times to retry the operation
+     *        if the given URL is redirected.
+     * @throws IllegalArgumentException If <code>retryAttempts</code>
+     *         is not positive
+     * @throws remote.RetryOpenSession If the session URL was redirected
+     * @throws SubversionException If an URL redirect cycle was detected
+     * @throws ClientException
+     * @since 1.9
+     */
+    ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
+            throws ClientException, SubversionException;
 }

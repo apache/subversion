@@ -215,7 +215,7 @@ is the payload of program source code, documents, images, and so forth
 that a version control system actually manages.
 
 A Node record describes a change in properties, the addition or deletion
-of a flow, or a change in content.  It nust do at least one of these things,
+of a flow, or a change in content.  It must do at least one of these things,
 otherwise it would be a no-op and omitted.
 
 When no copyfrom is present, and the action isn't an add or copy, then
@@ -341,7 +341,7 @@ to the same directory.
 
 The properties section of a Revision record consists of some subset
 of the three reserved per-commit properties: svn:author, svn:date,
-and svn.log. These properties do not persist to later revisions.
+and svn:log. These properties do not persist to later revisions.
 
 The key thing to know about Node properties is that they are 
 persistent, once set, until modified by a future property 
@@ -485,8 +485,10 @@ that (1) properties with the same value as in the previous contents of
 the flow are not printed, and (2) deleted properties will be written
 out as
 
+-------------------------------------------------------------------
 D <name length>
 <name>
+-------------------------------------------------------------------
 
 just as a regular property is printed, but with the "K " changed to a
 "D " and with no value part.

@@ -1023,7 +1023,7 @@ def up_add_onto_add_revert(sbox):
   main.run_svn(None, 'cp', os.path.join(wc_dir, 'A/C'), dir1)
   main.run_svn(None, 'cp', os.path.join(wc2_dir, 'A/C'), dir2)
 
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Added file')
+  sbox.simple_commit(message='Added file')
 
   expected_disk = main.greek_state.copy()
   expected_disk.add({
@@ -1407,9 +1407,11 @@ def actual_only_node_behaviour(sbox):
                      "unlock", foo_path)
 
   # update (up)
+  # This doesn't skip because the update is anchored at the parent of A,
+  # the parent of A is not in conflict, and the update doesn't attempt to
+  # change foo itself.
   expected_stdout = [
-   "Skipped '%s' -- Node remains in conflict\n" % sbox.ospath('A/foo'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+   "Updating '" + foo_path + "':\n", "At revision 4.\n"]
   expected_stderr = []
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "update", foo_path)

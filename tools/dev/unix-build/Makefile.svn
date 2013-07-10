@@ -39,6 +39,7 @@ endif
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
+EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
@@ -71,10 +72,10 @@ GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.4.1
 HTTPD_VER	= 2.2.22
 NEON_VER	= 0.29.6
-SERF_VER	= 1.2.0
+SERF_VER	= 1.2.1
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
-SQLITE_VER	= 3071201
+SQLITE_VER	= 3071600
 LIBMAGIC_VER	= 5.11
 RUBY_VER	= 1.8.7-p358
 BZ2_VER	= 1.0.6
@@ -120,13 +121,13 @@ NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/tags/$(SERF_VER)
 SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
-SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
+SQLITE_URL	= http://www.sqlite.org/2013/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
-JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+JUNIT_URL	= http://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -1192,8 +1193,9 @@ else
 endif
 
 ifdef PROFILE
-SVN_ALL_STATIC=--enable-all-static
+SVN_STATIC_FLAG=--enable-all-static
 else
+SVN_STATIC_FLAG=--disable-static
 SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 	--with-apache-libexecdir="$(PREFIX)/httpd/modules/svn-$(WC)"
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
@@ -1223,7 +1225,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
-			$(SVN_ALL_STATIC) \
+			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
 
@@ -1246,7 +1248,7 @@ $(SVN_OBJDIR)/.installed: $(SVN_OBJDIR)/.compiled
 # by the same version of SWIG.
 $(SVN_OBJDIR)/.pre-generated-swig-cleaned:
 	-cd $(svn_builddir) \
-		&& make extraclean-swig
+		&& make clean-swig
 	touch $@
 
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned
@@ -1421,7 +1423,8 @@ define do_check
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
+	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \
@@ -1510,13 +1513,17 @@ svn-check: svn-check-prepare-ramdisk svn-check-local svn-check-svn \
 	svn-check-neon svn-check-serf svn-check-bindings
 
 .PHONY: sign-email
+ifdef NEON_FLAG
+NEON_STR=ra_neon | 
+NEON_VER_LINE=@echo "neon:       $(NEON_VER)"
+endif
 sign-email:
 	@echo "Summary: +1 to release"
 	@echo ""
-	@echo "Tested: [bdb | fsfs] x [ra_local | ra_svn | ra_neon | ra_serf]"
+	@echo "Tested: [bdb | fsfs] x [ra_local | ra_svn | $(NEON_STR)ra_serf]"
 	@echo "        swig bindings"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
-	@echo "	       javahl bindings"
+	@echo "        javahl bindings"
 endif
 	@echo ""
 	@echo "Test results: All passed."
@@ -1533,7 +1540,7 @@ endif
 	@echo "apr:        $(APR_VER)"
 	@echo "apr-util:   $(APR_UTIL_VER)"
 	@echo "httpd:      $(HTTPD_VER)"
-	@echo "neon:       $(NEON_VER)"
+	$(NEON_VER_LINE)
 	@echo "serf:       $(SERF_VER)"
 	@echo "cyrus-sasl: $(CYRUS_SASL_VER)"
 	@echo "sqlite:     $(SQLITE_VER)"

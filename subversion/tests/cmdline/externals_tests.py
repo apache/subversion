@@ -2556,7 +2556,7 @@ def commit_include_externals(sbox):
 
 
   # Assume everything r4, except what is pegged
-  expected_status.tweak(wc_rev='4')  
+  expected_status.tweak(wc_rev='4')
   expected_status.tweak('Xpegged/xiota', 'Xpegged/xE', 'Xpegged/xE/alpha',
                         'Xpegged/xE/beta', wc_rev=1)
 
@@ -2781,7 +2781,7 @@ def include_immediate_dir_externals(sbox):
   #
   #   >svn st
   #   X       X\XE
-  #   
+  #
   #   Performing status on external item at 'X\XE':
   #    M      C:\SVN\src-trunk\...\externals_tests-37\X\XE
   #   M       C:\SVN\src-trunk\...\externals_tests-37\X\XE\alpha
@@ -3048,15 +3048,15 @@ def duplicate_targets(sbox):
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'pg',
     'svn:externals', wc_dir)
 
-@Issue(4225)  
+@Issue(4225)
 def list_include_externals(sbox):
   "list with --include-externals"
-  
+
   externals_test_setup(sbox)
 
   wc_dir         = sbox.wc_dir
   repo_url       = sbox.repo_url
-  
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      repo_url, wc_dir)
@@ -3073,7 +3073,7 @@ def list_include_externals(sbox):
     return string
 
   expected_stdout = verify.UnorderedOutput([
-    "E/" + "\n", 
+    "E/" + "\n",
     "F/" + "\n",
     "lambda" + "\n",
     list_external_string("gamma", B_url ) + "\n",
@@ -3081,7 +3081,7 @@ def list_include_externals(sbox):
 
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', B_path)
-  
+
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', B_url)
 
@@ -3094,10 +3094,10 @@ def list_include_externals(sbox):
     "chi" + "\n",
     "omega" + "\n",
     "psi" + "\n"])
-  
+
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_path)
-  
+
   exit_code, stdout, stderr = svntest.actions.run_and_verify_svn2(
     "OUTPUT", expected_stdout, [], 0, 'ls', '--include-externals', C_url)
 

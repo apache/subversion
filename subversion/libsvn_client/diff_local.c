@@ -30,6 +30,7 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_diff.h"
@@ -126,8 +127,7 @@ do_arbitrary_files_diff(const char *local_abspath1,
                          scratch_pool));
 
   /* Try to determine the mime-type of each file. */
-  original_mime_type = apr_hash_get(original_props, SVN_PROP_MIME_TYPE,
-                                    APR_HASH_KEY_STRING);
+  original_mime_type = svn_hash_gets(original_props, SVN_PROP_MIME_TYPE);
   if (!file1_is_empty && !original_mime_type)
     {
       const char *mime_type;
@@ -138,8 +138,7 @@ do_arbitrary_files_diff(const char *local_abspath1,
         original_mime_type = svn_string_create(mime_type, scratch_pool);
     }
 
-  modified_mime_type = apr_hash_get(modified_props, SVN_PROP_MIME_TYPE,
-                                    APR_HASH_KEY_STRING);
+  modified_mime_type = svn_hash_gets(modified_props, SVN_PROP_MIME_TYPE);
   if (!file2_is_empty && !modified_mime_type)
     {
       const char *mime_type;
@@ -194,8 +193,7 @@ do_arbitrary_files_diff(const char *local_abspath1,
       /* Wrap with normalization, etc. if necessary */
       if (original_props)
         {
-          val = apr_hash_get(original_props, SVN_PROP_EOL_STYLE,
-                             APR_HASH_KEY_STRING);
+          val = svn_hash_gets(original_props, SVN_PROP_EOL_STYLE);
 
           if (val)
             {
@@ -213,8 +211,7 @@ do_arbitrary_files_diff(const char *local_abspath1,
 
       if (modified_props)
         {
-          val = apr_hash_get(modified_props, SVN_PROP_EOL_STYLE,
-                             APR_HASH_KEY_STRING);
+          val = svn_hash_gets(modified_props, SVN_PROP_EOL_STYLE);
 
           if (val)
             {
@@ -471,13 +468,13 @@ arbitrary_diff_this_dir(struct arbitrary_diff_walker_baton *b,
       if (strcmp(name, SVN_WC_ADM_DIR_NAME) == 0)
         continue;
 
-      dirent1 = apr_hash_get(dirents1, name, APR_HASH_KEY_STRING);
+      dirent1 = svn_hash_gets(dirents1, name);
       if (!dirent1)
         {
           dirent1 = svn_io_dirent2_create(iterpool);
           dirent1->kind = svn_node_none;
         }
-      dirent2 = apr_hash_get(dirents2, name, APR_HASH_KEY_STRING);
+      dirent2 = svn_hash_gets(dirents2, name);
       if (!dirent2)
         {
           dirent2 = svn_io_dirent2_create(iterpool);
@@ -610,7 +607,10 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
   if (kind1 != kind2)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is not the same node kind as '%s'"),
-                             local_abspath1, local_abspath2);
+                             svn_dirent_local_style(local_abspath1,
+                                                    scratch_pool),
+                             svn_dirent_local_style(local_abspath2,
+                                                    scratch_pool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -630,7 +630,10 @@ svn_client__arbitrary_nodes_diff(const char *local_abspath1,
   else
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("'%s' is not a file or directory"),
-                             kind1 == svn_node_none ?
-                              local_abspath1 : local_abspath2);
+                             kind1 == svn_node_none
+                               ? svn_dirent_local_style(local_abspath1,
+                                                        scratch_pool)
+                               : svn_dirent_local_style(local_abspath2,
+                                                        scratch_pool));
   return SVN_NO_ERROR;
 }

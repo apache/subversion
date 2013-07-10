@@ -112,8 +112,7 @@ svn_cl__merge_file_externally(const char *base_path,
     {
       struct svn_config_t *cfg;
       merge_tool = NULL;
-      cfg = config ? apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                  APR_HASH_KEY_STRING) : NULL;
+      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
       /* apr_env_get wants char **, this wants const char ** */
       svn_config_get(cfg, (const char **)&merge_tool,
                      SVN_CONFIG_SECTION_HELPERS,
@@ -225,8 +224,7 @@ svn_cl__make_log_msg_baton(void **baton,
     }
   else if (config)
     {
-      svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING);
+      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &(lmb->message_encoding),
                      SVN_CONFIG_SECTION_MISCELLANY,
                      SVN_CONFIG_OPTION_LOG_ENCODING,
@@ -345,21 +343,16 @@ svn_cl__get_log_message(const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      svn_stringbuf_t *log_msg_buf = svn_stringbuf_create(lmb->message, pool);
-      svn_string_t *log_msg_str = apr_pcalloc(pool, sizeof(*log_msg_str));
+      svn_string_t *log_msg_str = svn_string_create(lmb->message, pool);
 
-      /* Trim incoming messages of the EOF marker text and the junk
-         that follows it.  */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data,
-                                EDITOR_EOF_PREFIX);
-
-      /* Make a string from a stringbuf, sharing the data allocation. */
-      log_msg_str->data = log_msg_buf->data;
-      log_msg_str->len = log_msg_buf->len;
       SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
                                             log_msg_str, lmb->message_encoding,
                                             FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
+
+      /* Strip off the EOF marker text and the junk that follows it. */
+      truncate_buffer_at_prefix(&(log_msg_str->len), (char *)log_msg_str->data,
+                                EDITOR_EOF_PREFIX);
 
       *log_msg = log_msg_str->data;
       return SVN_NO_ERROR;
@@ -468,7 +461,7 @@ svn_cl__get_log_message(const char **log_msg,
       if (msg_string)
         message = svn_stringbuf_create_from_string(msg_string, pool);
 
-      /* Strip the prefix from the buffer. */
+      /* Strip off the EOF marker text and the junk that follows it. */
       if (message)
         truncate_buffer_at_prefix(&message->len, message->data,
                                   EDITOR_EOF_PREFIX);
@@ -1014,46 +1007,6 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
   return svn_dirent_local_style(relpath ? relpath : path, pool);
 }
 
-/* Return a string of the form "PATH_OR_URL@REVISION". */
-static const char *
-path_for_display(const char *path_or_url,
-                 const svn_opt_revision_t *revision,
-                 apr_pool_t *pool)
-{
-  const char *rev_str = svn_opt__revision_to_string(revision, pool);
-
-  if (! svn_path_is_url(path_or_url))
-    path_or_url = svn_dirent_local_style(path_or_url, pool);
-  return apr_psprintf(pool, "%s@%s", path_or_url, rev_str);
-}
-
-svn_error_t *
-svn_cl__check_related_source_and_target(const char *path_or_url1,
-                                        const svn_opt_revision_t *revision1,
-                                        const char *path_or_url2,
-                                        const svn_opt_revision_t *revision2,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool)
-{
-  const char *ancestor_url;
-  svn_revnum_t ancestor_rev;
-
-  SVN_ERR(svn_client__youngest_common_ancestor(
-            &ancestor_url, &ancestor_rev,
-            path_or_url1, revision1, path_or_url2, revision2,
-            ctx, pool, pool));
-
-  if (ancestor_url == NULL)
-    {
-      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("Source and target have no common ancestor: "
-                                 "'%s' and '%s'"),
-                               path_for_display(path_or_url1, revision1, pool),
-                               path_for_display(path_or_url2, revision2, pool));
-    }
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                                                const char *propname,
@@ -1100,7 +1053,7 @@ svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                     "operations will stop working on this file\n"),
                     canon_propval->data,
                     svn_dirent_local_style(local_abspath, iterpool)));
-                    
+
             }
         }
       svn_pool_destroy(iterpool);

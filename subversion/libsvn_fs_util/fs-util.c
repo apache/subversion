@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -213,8 +214,9 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
       const char *path = svn__apr_hash_index_key(hi);
       svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
 
-      apr_hash_set(*output, svn_fspath__join(path, rel_path, pool),
-                   APR_HASH_KEY_STRING, svn_rangelist_dup(rangelist, pool));
+      svn_hash_sets(*output,
+                    svn_fspath__join(path, rel_path, pool),
+                    svn_rangelist_dup(rangelist, pool));
     }
 
   return SVN_NO_ERROR;

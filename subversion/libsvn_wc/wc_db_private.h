@@ -42,7 +42,8 @@ struct svn_wc__db_t {
      opened, and found to be not-current?  */
   svn_boolean_t verify_format;
 
-  /* Should we ensure the WORK_QUEUE is empty when a WCROOT is opened?  */
+  /* Should we ensure the WORK_QUEUE is empty when a DB is locked
+   * for writing?  */
   svn_boolean_t enforce_empty_wq;
 
   /* Should we open Sqlite databases EXCLUSIVE */
@@ -57,7 +58,7 @@ struct svn_wc__db_t {
   struct
   {
     svn_stringbuf_t *abspath;
-    svn_kind_t kind;
+    svn_node_kind_t kind;
   } parse_cache;
 
   /* As we grow the state of this DB, allocate that state here. */
@@ -122,7 +123,6 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -145,6 +145,9 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+/* Return an error if the work queue in SDB is non-empty. */
+svn_error_t *
+svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb);
 
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
@@ -213,7 +216,7 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
    DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
 svn_error_t *
 svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
-                              svn_kind_t *kind,
+                              svn_node_kind_t *kind,
                               svn_revnum_t *revision,
                               const char **repos_relpath,
                               apr_int64_t *repos_id,
@@ -246,7 +249,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
    DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
 svn_error_t *
 svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
-                                  svn_kind_t *kind,
+                                  svn_node_kind_t *kind,
                                   svn_revnum_t *revision,
                                   const char **repos_relpath,
                                   apr_int64_t *repos_id,
@@ -265,7 +268,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH 
+/* Similar to svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH
  * instead of DB+LOCAL_ABSPATH, an explicit op-depth of the node to get
  * information about, and outputting REPOS_ID instead of URL+UUID, and
  * without the LOCK or UPDATE_ROOT outputs.
@@ -281,7 +284,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
  */
 svn_error_t *
 svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
-                          svn_kind_t *kind,
+                          svn_node_kind_t *kind,
                           svn_revnum_t *revision,
                           const char **repos_relpath,
                           apr_int64_t *repos_id,
@@ -358,7 +361,7 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
   SVN_SQLITE__WITH_LOCK(expr, (wcroot)->sdb)
 
 
-/* Return CHILDREN mapping const char * names to svn_kind_t * for the
+/* Return CHILDREN mapping const char * names to svn_node_kind_t * for the
    children of LOCAL_RELPATH at OP_DEPTH. */
 svn_error_t *
 svn_wc__db_get_children_op_depth(apr_hash_t **children,
@@ -410,7 +413,7 @@ svn_wc__db_get_children_op_depth(apr_hash_t **children,
 svn_error_t *
 svn_wc__db_extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                 const char *local_relpath,
-                                svn_kind_t kind,
+                                svn_node_kind_t kind,
                                 int op_depth,
                                 apr_pool_t *scratch_pool);
 

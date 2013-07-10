@@ -73,7 +73,7 @@ svn_cl__copy(apr_getopt_t *os,
       if (err)
         {
           /* Issue #3606: 'svn cp .@HEAD target' gives
-             svn: '@HEAD' is just a peg revision. Maybe try '@HEAD@' instead? 
+             svn: '@HEAD' is just a peg revision. Maybe try '@HEAD@' instead?
 
              This is caused by a first round of canonicalization in
              svn_cl__args_to_target_array_print_reserved(). Undo that in an

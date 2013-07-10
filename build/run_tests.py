@@ -30,6 +30,7 @@
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
             [--config-file=<file>] [--ssl-cert=<file>]
+            [--exclusive-wc-locks]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -43,7 +44,7 @@ separated list of test numbers; the default is to run all the tests in it.
 '''
 
 # A few useful constants
-SVN_VER_MINOR = 8
+SVN_VER_MINOR = 9
 
 import os, re, subprocess, sys, imp, threading
 from datetime import datetime
@@ -125,7 +126,8 @@ class TestHarness:
                fsfs_sharding=None, fsfs_packing=None,
                list_tests=None, svn_bin=None, mode_filter=None,
                milestone_filter=None, set_log_level=None, ssl_cert=None,
-               http_proxy=None):
+               http_proxy=None, http_proxy_username=None,
+               http_proxy_password=None, exclusive_wc_locks=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -143,6 +145,8 @@ class TestHarness:
     in conjunction with LIST_TESTS, the only tests that are listed are
     those with an associated issue in the tracker which has a target
     milestone that matches the regex.
+    HTTP_PROXY (hostname:port), HTTP_PROXY_USERNAME and HTTP_PROXY_PASSWORD
+    define the params to run the tests over a proxy server.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -178,6 +182,9 @@ class TestHarness:
     self.log = None
     self.ssl_cert = ssl_cert
     self.http_proxy = http_proxy
+    self.http_proxy_username = http_proxy_username
+    self.http_proxy_password = http_proxy_password
+    self.exclusive_wc_locks = exclusive_wc_locks
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
 
@@ -186,6 +193,7 @@ class TestHarness:
        there is a log file. Return zero iff all test programs passed.'''
     self._open_log('w')
     failed = 0
+
     for cnt, prog in enumerate(list):
       failed = self._run_test(prog, cnt, len(list)) or failed
 
@@ -481,6 +489,12 @@ class TestHarness:
       svntest.main.options.ssl_cert = self.ssl_cert
     if self.http_proxy is not None:
       svntest.main.options.http_proxy = self.http_proxy
+    if self.http_proxy_username is not None:
+          svntest.main.options.http_proxy_username = self.http_proxy_username
+    if self.http_proxy_password is not None:
+        svntest.main.options.http_proxy_password = self.http_proxy_password
+    if self.exclusive_wc_locks is not None:
+      svntest.main.options.exclusive_wc_locks = self.exclusive_wc_locks
 
     svntest.main.options.srcdir = self.srcdir
 
@@ -645,7 +659,8 @@ def main():
                             'enable-sasl', 'parallel', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
                             'mode-filter=', 'set-log-level=', 'ssl-cert=',
-                            'http-proxy='])
+                            'http-proxy=', 'http-proxy-username=',
+                            'http-proxy-password=','exclusive-wc-locks'])
   except getopt.GetoptError:
     args = []
 
@@ -656,9 +671,10 @@ def main():
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
     server_minor_version, fsfs_sharding, fsfs_packing, parallel, \
     config_file, log_to_stdout, list_tests, mode_filter, milestone_filter, \
-    set_log_level, ssl_cert, http_proxy = \
+    set_log_level, ssl_cert, http_proxy, http_proxy_username, \
+    http_proxy_password, exclusive_wc_locks = \
             None, None, None, None, None, None, None, None, None, None, None, \
-            None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -696,6 +712,12 @@ def main():
       ssl_cert = val
     elif opt in ['--http-proxy']:
       http_proxy = val
+    elif opt in ['--http-proxy-username']:
+      http_proxy_username = val
+    elif opt in ['--http-proxy-password']:
+      http_proxy_password = val
+    elif opt in ['--exclusive-wc-locks']:
+      exclusive_wc_locks = 1
     else:
       raise getopt.GetoptError
 
@@ -712,7 +734,10 @@ def main():
                    fsfs_sharding, fsfs_packing, list_tests,
                    mode_filter=mode_filter, milestone_filter=milestone_filter,
                    set_log_level=set_log_level, ssl_cert=ssl_cert,
-                   http_proxy=http_proxy)
+                   http_proxy=http_proxy,
+                   http_proxy_username=http_proxy_username,
+                   http_proxy_password=http_proxy_password,
+                   exclusive_wc_locks=exclusive_wc_locks)
 
   failed = th.run(args[2:])
   if failed:

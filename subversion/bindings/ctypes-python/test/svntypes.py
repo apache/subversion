@@ -35,7 +35,8 @@ class SvnDateTestCase(unittest.TestCase):
     def test_as_human_string(self):
         d1 = SvnDate('1999-12-31T23:59:59.000000Z')
         s1 = d1.as_human_string()
-        self.assertEqual(s1[:27], '1999-12-31 23:59:59 +0000 (')
+        self.assertRegexpMatches(s1[:27],
+            r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4} \(')
 
 
 class HashTestCase(unittest.TestCase):

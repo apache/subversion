@@ -7,9 +7,9 @@ REM   regarding copyright ownership.  The ASF licenses this file
 REM   to you under the Apache License, Version 2.0 (the
 REM   "License"); you may not use this file except in compliance
 REM   with the License.  You may obtain a copy of the License at
-REM  
+REM
 REM     http://www.apache.org/licenses/LICENSE-2.0
-REM  
+REM
 REM   Unless required by applicable law or agreed to in writing,
 REM   software distributed under the License is distributed on an
 REM   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -30,7 +30,7 @@ IF ERRORLEVEL 1 (
 )
 
 msbuild subversion_vcnet.sln /p:Configuration=Debug /p:Platform=win32 /t:__JAVAHL__ /t:__JAVAHL_TESTS__
-IF ERRORLEVEL 1 EXIT /B 1 
+IF ERRORLEVEL 1 EXIT /B 1
 
 msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__
-IF ERRORLEVEL 1 EXIT /B 1 
+IF ERRORLEVEL 1 EXIT /B 1

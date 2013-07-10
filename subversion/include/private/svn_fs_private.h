@@ -87,7 +87,7 @@ svn_fs__path_valid(const char *path, apr_pool_t *pool);
  * from the constants SVN_FS_TXN_* (#SVN_FS_TXN_CHECK_OOD etc.). It is a
  * property of the underlying transaction, and will not change if multiple
  * editors are used to refer to that transaction (see @a autocommit, below).
- * 
+ *
  * @note If you're building a txn for committing, you probably don't want
  * to call this directly.  Instead, call svn_repos__get_commit_ev2(), which
  * honors the repository's hook configurations.

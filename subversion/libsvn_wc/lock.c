@@ -127,7 +127,7 @@ svn_wc__internal_check_wc(int *wc_format,
   if (*wc_format >= SVN_WC__WC_NG_VERSION)
     {
       svn_wc__db_status_t db_status;
-      svn_kind_t db_kind;
+      svn_node_kind_t db_kind;
 
       if (check_path)
         {
@@ -161,7 +161,7 @@ svn_wc__internal_check_wc(int *wc_format,
       else
         SVN_ERR(err);
 
-      if (db_kind != svn_kind_dir)
+      if (db_kind != svn_node_dir)
         {
           /* The WC thinks there must be a file, so this is not
              a wc-directory */
@@ -595,7 +595,7 @@ open_single(svn_wc_adm_access_t **adm_access,
    ### adminstrative area.  */
 static svn_error_t *
 adm_available(svn_boolean_t *available,
-              svn_kind_t *kind,
+              svn_node_kind_t *kind,
               svn_wc__db_t *db,
               const char *local_abspath,
               apr_pool_t *scratch_pool)
@@ -603,7 +603,7 @@ adm_available(svn_boolean_t *available,
   svn_wc__db_status_t status;
 
   if (kind)
-    *kind = svn_kind_unknown;
+    *kind = svn_node_unknown;
 
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -661,7 +661,7 @@ do_open(svn_wc_adm_access_t **adm_access,
       for (i = 0; i < children->nelts; i++)
         {
           const char *node_abspath;
-          svn_kind_t kind;
+          svn_node_kind_t kind;
           svn_boolean_t available;
           const char *name = APR_ARRAY_IDX(children, i, const char *);
 
@@ -679,7 +679,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                                 node_abspath,
                                 scratch_pool));
 
-          if (kind != svn_kind_dir)
+          if (kind != svn_node_dir)
             continue;
 
           if (available)
@@ -887,7 +887,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
                     apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_kind_t kind = svn_kind_unknown;
+  svn_node_kind_t kind = svn_node_unknown;
   svn_node_kind_t wckind;
   svn_error_t *err;
 
@@ -929,12 +929,12 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
 
       if (err)
         {
-          kind = svn_kind_unknown;
+          kind = svn_node_unknown;
           svn_error_clear(err);
         }
     }
 
-  if (kind == svn_kind_dir && wckind == svn_node_file)
+  if (kind == svn_node_dir && wckind == svn_node_file)
     {
       err = svn_error_createf(
                SVN_ERR_WC_NOT_WORKING_COPY, NULL,
@@ -944,7 +944,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
       return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
     }
 
-  if (kind != svn_kind_dir && kind != svn_kind_unknown)
+  if (kind != svn_node_dir && kind != svn_node_unknown)
     {
       err = svn_error_createf(
                SVN_ERR_WC_NOT_WORKING_COPY, NULL,
@@ -954,7 +954,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
       return svn_error_create(SVN_ERR_WC_NOT_LOCKED, err, err->message);
     }
 
-  if (kind == svn_kind_unknown || wckind == svn_node_none)
+  if (kind == svn_node_unknown || wckind == svn_node_none)
     {
       err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                               _("Directory '%s' is missing"),
@@ -979,7 +979,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
 {
   const char *dir;
   const char *local_abspath;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(associated != NULL);
@@ -991,9 +991,9 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
                                FALSE /* show_hidden*/,
                                pool));
 
-  if (kind == svn_kind_dir)
+  if (kind == svn_node_dir)
     dir = path;
-  else if (kind != svn_kind_unknown)
+  else if (kind != svn_node_unknown)
     dir = svn_dirent_dirname(path, pool);
   else
     /* Not a versioned item, probe it */
@@ -1239,7 +1239,7 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
       if (! t_access)
         {
           svn_boolean_t available;
-          svn_kind_t kind;
+          svn_node_kind_t kind;
 
           err = adm_available(&available, &kind, db, local_abspath, pool);
 
@@ -1473,7 +1473,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   svn_wc__db_t *db = wc_ctx->db;
   svn_boolean_t is_wcroot;
   svn_boolean_t is_switched;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   svn_error_t *err;
 
   err = svn_wc__db_is_switched(&is_wcroot, &is_switched, &kind,
@@ -1486,18 +1486,18 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
 
       svn_error_clear(err);
 
-      kind = svn_kind_none;
+      kind = svn_node_none;
       is_wcroot = FALSE;
       is_switched = FALSE;
     }
 
-  if (!lock_root_abspath && kind != svn_kind_dir)
+  if (!lock_root_abspath && kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("Can't obtain lock on non-directory '%s'."),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  if (lock_anchor && kind == svn_kind_dir)
+  if (lock_anchor && kind == svn_node_dir)
     {
       if (is_wcroot)
         lock_anchor = FALSE;
@@ -1510,12 +1510,12 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
 
       parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-      if (kind == svn_kind_dir)
+      if (kind == svn_node_dir)
         {
           if (! is_switched)
             local_abspath = parent_abspath;
         }
-      else if (kind != svn_kind_none && kind != svn_kind_unknown)
+      else if (kind != svn_node_none && kind != svn_node_unknown)
         {
           /* In the single-DB world we know parent exists */
           local_abspath = parent_abspath;
@@ -1523,7 +1523,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
       else
         {
           /* Can't lock parents that don't exist */
-          svn_kind_t parent_kind;
+          svn_node_kind_t parent_kind;
           err = svn_wc__db_read_kind(&parent_kind, db, parent_abspath,
                                      TRUE /* allow_missing */,
                                      TRUE /* show_deleted */,
@@ -1532,12 +1532,12 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
           if (err && SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
             {
               svn_error_clear(err);
-              parent_kind = svn_kind_unknown;
+              parent_kind = svn_node_unknown;
             }
           else
             SVN_ERR(err);
 
-          if (parent_kind != svn_kind_dir)
+          if (parent_kind != svn_node_dir)
             return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
                                      _("'%s' is not a working copy"),
                                      svn_dirent_local_style(local_abspath,
@@ -1546,7 +1546,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
           local_abspath = parent_abspath;
         }
     }
-  else if (kind != svn_kind_dir)
+  else if (kind != svn_node_dir)
     {
       local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
     }

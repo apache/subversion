@@ -397,6 +397,47 @@ class SubversionClientTestCase(unittest.TestCase):
 
     core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
 
+  def proplist_receiver_trunk(self, path, props, iprops, pool):
+    self.assertEquals(props['svn:global-ignores'], '*.q\n')
+    self.proplist_receiver_trunk_calls += 1
+
+  def proplist_receiver_dir1(self, path, props, iprops, pool):
+    self.assertEquals(iprops[self.proplist_receiver_dir1_key],
+                      {'svn:global-ignores':'*.q\n'})
+    self.proplist_receiver_dir1_calls += 1
+
+  def test_inherited_props(self):
+    """Test inherited props"""
+
+    trunk_url = self.repos_uri + '/trunk'
+    client.propset_remote('svn:global-ignores', '*.q', trunk_url,
+                          False, 12, {}, None, self.client_ctx)
+
+    head = core.svn_opt_revision_t()
+    head.kind = core.svn_opt_revision_head
+    props, iprops, rev = client.propget5('svn:global-ignores', trunk_url,
+                                         head, head, core.svn_depth_infinity,
+                                         None, self.client_ctx)
+    self.assertEquals(props[trunk_url], '*.q\n')
+
+    dir1_url = trunk_url + '/dir1'
+    props, iprops, rev = client.propget5('svn:global-ignores', dir1_url,
+                                         head, head, core.svn_depth_infinity,
+                                         None, self.client_ctx)
+    self.assertEquals(iprops[trunk_url], {'svn:global-ignores':'*.q\n'})
+
+    self.proplist_receiver_trunk_calls = 0
+    client.proplist4(trunk_url, head, head, core.svn_depth_empty, None, True,
+                     self.proplist_receiver_trunk, self.client_ctx)
+    self.assertEquals(self.proplist_receiver_trunk_calls, 1)
+
+    self.proplist_receiver_dir1_calls = 0
+    self.proplist_receiver_dir1_key = trunk_url
+    client.proplist4(dir1_url, head, head, core.svn_depth_empty, None, True,
+                     self.proplist_receiver_dir1, self.client_ctx)
+    self.assertEquals(self.proplist_receiver_dir1_calls, 1)
+
+
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
       SubversionClientTestCase)

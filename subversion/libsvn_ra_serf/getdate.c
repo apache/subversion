@@ -44,7 +44,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 enum date_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   VERSION_NAME
 };
@@ -131,6 +131,7 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *report_target;
+  svn_error_t *err;
 
   date_ctx = apr_palloc(pool, sizeof(*date_ctx));
   date_ctx->time = tm;
@@ -139,10 +140,10 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(date_ttable,
-                                           NULL, date_closed, NULL,
+                                           NULL, date_closed, NULL, NULL,
                                            date_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = report_target;
@@ -155,7 +156,15 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
 
   *date_ctx->revision = SVN_INVALID_REVNUM;
 
-  /* ### use svn_ra_serf__error_on_status() ?  */
+  err = svn_ra_serf__context_run_one(handler, pool);
 
-  return svn_error_trace(svn_ra_serf__context_run_one(handler, pool));
+  SVN_ERR(svn_error_compose_create(
+              svn_ra_serf__error_on_status(handler->sline,
+                                           report_target,
+                                           handler->location),
+              err));
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*revision));
+
+  return SVN_NO_ERROR;
 }

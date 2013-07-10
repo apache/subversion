@@ -42,7 +42,7 @@
 struct print_baton {
   svn_boolean_t verbose;
   svn_client_ctx_t *ctx;
-  
+
   /* To keep track of last seen external information. */
   const char *last_external_parent_url;
   const char *last_external_target;
@@ -89,17 +89,17 @@ print_dirent(void *baton,
     }
   else
     entryname = path;
-  
+
   if (external_parent_url && external_target)
     {
-      if ((pb->last_external_parent_url == NULL 
-           && pb->last_external_target == NULL) 
+      if ((pb->last_external_parent_url == NULL
+           && pb->last_external_target == NULL)
           || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
               || strcmp(pb->last_external_target, external_target) != 0))
         {
           SVN_ERR(svn_cmdline_printf(scratch_pool,
                                      _("Listing external '%s'"
-                                       " defined on '%s':\n"), 
+                                       " defined on '%s':\n"),
                                      external_target,
                                      external_parent_url));
 
@@ -140,7 +140,7 @@ print_dirent(void *baton,
       /* we need it in UTF-8. */
       SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, timestr, scratch_pool));
 
-      sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT, 
+      sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
                              dirent->size);
 
       return svn_cmdline_printf
@@ -177,7 +177,7 @@ print_dirent_xml(void *baton,
   struct print_baton *pb = baton;
   const char *entryname;
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(scratch_pool);
-  
+
   SVN_ERR_ASSERT((external_parent_url == NULL && external_target == NULL) ||
                  (external_parent_url && external_target));
 
@@ -194,10 +194,10 @@ print_dirent_xml(void *baton,
 
   if (pb->ctx->cancel_func)
     SVN_ERR(pb->ctx->cancel_func(pb->ctx->cancel_baton));
-  
+
   if (external_parent_url && external_target)
     {
-      if ((pb->last_external_parent_url == NULL 
+      if ((pb->last_external_parent_url == NULL
            && pb->last_external_target == NULL)
           || (strcmp(pb->last_external_parent_url, external_parent_url) != 0
               || strcmp(pb->last_external_target, external_target) != 0))
@@ -339,8 +339,8 @@ svn_cl__list(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      
-      /* Initialize the following variables for 
+
+      /* Initialize the following variables for
          every list target. */
       pb.last_external_parent_url = NULL;
       pb.last_external_target = NULL;
@@ -390,10 +390,10 @@ svn_cl__list(apr_getopt_t *os,
       if (opt_state->xml)
         {
           svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
-          
+
           if (pb.in_external)
             {
-              /* close the final external item's tag */ 
+              /* close the final external item's tag */
               svn_xml_make_close_tag(&sb, pool, "external");
               pb.in_external = FALSE;
             }
@@ -404,7 +404,7 @@ svn_cl__list(apr_getopt_t *os,
     }
 
   svn_pool_destroy(subpool);
-  
+
   if (opt_state->include_externals && nwb.had_externals_error)
     {
       externals_err = svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,

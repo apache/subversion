@@ -165,6 +165,10 @@ public class Status implements java.io.Serializable
      */
     private String changelist;
 
+    private String movedFromAbspath;
+
+    private String movedToAbspath;
+
     /**
      * this constructor should only called from JNI code
      * @param path                  the file system path of item
@@ -203,6 +207,8 @@ public class Status implements java.io.Serializable
      * @param reposLastCmtAuthor    the author of the last commit, if out of
      *                              date
      * @param changelist            the changelist the item is a member of
+     * @param movedFromAbspath      path moved from
+     * @param movedToAbspath        path moved from
      */
     public Status(String path, String url, NodeKind nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -212,7 +218,8 @@ public class Status implements java.io.Serializable
                   boolean switched, boolean fileExternal, Lock localLock,
                   Lock reposLock, long reposLastCmtRevision,
                   long reposLastCmtDate, NodeKind reposKind,
-                  String reposLastCmtAuthor, String changelist)
+                  String reposLastCmtAuthor, String changelist,
+                  String movedFromAbspath, String movedToAbspath)
     {
         this.path = path;
         this.url = url;
@@ -237,6 +244,8 @@ public class Status implements java.io.Serializable
         this.reposKind = reposKind;
         this.reposLastCmtAuthor = reposLastCmtAuthor;
         this.changelist = changelist;
+        this.movedFromAbspath = movedFromAbspath;
+        this.movedToAbspath = movedToAbspath;
     }
 
     /**
@@ -583,6 +592,16 @@ public class Status implements java.io.Serializable
     public boolean isConflicted()
     {
         return isConflicted;
+    }
+
+    public String getMovedFromAbspath()
+    {
+        return movedFromAbspath;
+    }
+
+    public String getMovedToAbspath()
+    {
+        return movedToAbspath;
     }
 
     /**

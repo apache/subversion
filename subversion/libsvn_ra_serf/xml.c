@@ -26,6 +26,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -56,6 +57,7 @@ struct svn_ra_serf__xml_context_t {
   svn_ra_serf__xml_opened_t opened_cb;
   svn_ra_serf__xml_closed_t closed_cb;
   svn_ra_serf__xml_cdata_t cdata_cb;
+  svn_ra_serf__xml_done_t done_cb;
   void *baton;
 
   /* Linked list of free states.  */
@@ -218,7 +220,7 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
               return;
             }
         }
-    }    
+    }
 
   /* If the prefix is not found, then the name is NOT within a
      namespace.  */
@@ -457,11 +459,58 @@ lazy_create_pool(void *baton)
   return xes->state_pool;
 }
 
-void
-svn_ra_serf__xml_context_destroy(
-  svn_ra_serf__xml_context_t *xmlctx)
+svn_error_t *
+svn_ra_serf__xml_context_done(svn_ra_serf__xml_context_t *xmlctx)
 {
+  if (xmlctx->current->prev)
+    {
+      /* Probably unreachable as this would be an xml parser error */
+      return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+                               _("XML stream truncated: closing '%s' missing"),
+                               xmlctx->current->tag.name);
+    }
+  else if (! xmlctx->free_states)
+    {
+      /* If we have no items on the free_states list, we didn't push anything,
+         which tells us that we found an empty xml body */
+      const svn_ra_serf__xml_transition_t *scan;
+      const svn_ra_serf__xml_transition_t *document = NULL;
+      const char *msg;
+
+      for (scan = xmlctx->ttable; scan->ns != NULL; ++scan)
+        {
+          if (scan->from_state == XML_STATE_INITIAL)
+            {
+              if (document != NULL)
+                {
+                  document = NULL; /* Multiple document elements defined */
+                  break;
+                }
+              document = scan;
+            }
+        }
+
+      if (document)
+        msg = apr_psprintf(xmlctx->scratch_pool, "'%s' element not found",
+                            document->name);
+      else
+        msg = _("document element not found");
+
+      return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+                               _("XML stream truncated: %s"),
+                               msg);
+    }
+
+  if (xmlctx->done_cb != NULL)
+    {
+      START_CALLBACK(xmlctx);
+      SVN_ERR(xmlctx->done_cb(xmlctx->baton,
+                              xmlctx->scratch_pool));
+      END_CALLBACK(xmlctx);
+    }
+
   svn_pool_destroy(xmlctx->scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_ra_serf__xml_context_t *
@@ -470,6 +519,7 @@ svn_ra_serf__xml_context_create(
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
   svn_ra_serf__xml_cdata_t cdata_cb,
+  svn_ra_serf__xml_done_t done_cb,
   void *baton,
   apr_pool_t *result_pool)
 {
@@ -481,6 +531,7 @@ svn_ra_serf__xml_context_create(
   xmlctx->opened_cb = opened_cb;
   xmlctx->closed_cb = closed_cb;
   xmlctx->cdata_cb = cdata_cb;
+  xmlctx->done_cb = done_cb;
   xmlctx->baton = baton;
   xmlctx->scratch_pool = svn_pool_create(result_pool);
 
@@ -560,9 +611,9 @@ svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
   /* In all likelihood, NAME is a string constant. But we can't really
      be sure. And it isn't like we're storing a billion of these into
      the state pool.  */
-  apr_hash_set(scan->attrs,
-               apr_pstrdup(scan->state_pool, name), APR_HASH_KEY_STRING,
-               apr_pstrdup(scan->state_pool, value));
+  svn_hash_sets(scan->attrs,
+                apr_pstrdup(scan->state_pool, name),
+                apr_pstrdup(scan->state_pool, value));
 }
 
 
@@ -614,6 +665,14 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
     }
   if (scan->ns == NULL)
     {
+      if (current->state == XML_STATE_INITIAL)
+        {
+          return svn_error_createf(
+                        SVN_ERR_XML_UNEXPECTED_ELEMENT, NULL,
+                        _("XML Parsing failed: Unexpected root element '%s'"),
+                        elemname.name);
+        }
+
       xmlctx->waiting = elemname;
       /* ### return?  */
       return SVN_NO_ERROR;
@@ -668,15 +727,16 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                   name = *saveattr;
                   value = svn_xml_get_attr_value(name, attrs);
                   if (value == NULL)
-                    return svn_error_createf(SVN_ERR_XML_ATTRIB_NOT_FOUND,
-                                             NULL,
-                                             _("Missing XML attribute: '%s'"),
-                                             name);
+                    return svn_error_createf(
+                                SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                                NULL,
+                                _("Missing XML attribute '%s' on '%s' element"),
+                                name, scan->name);
                 }
 
               if (value)
-                apr_hash_set(new_xes->attrs, name, APR_HASH_KEY_STRING,
-                             apr_pstrdup(new_pool, value));
+                svn_hash_sets(new_xes->attrs, name,
+                              apr_pstrdup(new_pool, value));
             }
         }
     }

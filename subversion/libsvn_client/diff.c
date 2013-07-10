@@ -51,6 +51,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_diff_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_io_private.h"
 
 #include "svn_private_config.h"
 
@@ -67,7 +68,7 @@
  * and WC_CTX, and return the result in *REPOS_RELPATH.
  * ORIG_TARGET is the related original target passed to the diff command,
  * and may be used to derive leading path components missing from PATH.
- * ANCHOR is the local path where the diff editor is anchored. 
+ * ANCHOR is the local path where the diff editor is anchored.
  * Do all allocations in POOL. */
 static svn_error_t *
 make_repos_relpath(const char **repos_relpath,
@@ -183,7 +184,7 @@ adjust_paths_for_diff_labels(const char **index_path,
        not for file URLs.  Nor can we just use anchor1 and anchor2
        from do_diff(), at least not without some more logic here.
        What a nightmare.
-       
+
        For now, to distinguish the two paths, we'll just put the
        unique portions of the original targets in parentheses after
        the received path, with ellipses for handwaving.  This makes
@@ -692,7 +693,7 @@ diff_dir_props_changed(svn_wc_notify_state_t *state,
 /* Show differences between TMPFILE1 and TMPFILE2. DIFF_RELPATH, REV1, and
    REV2 are used in the headers to indicate the file and revisions.  If either
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
-   but instead print a warning message. 
+   but instead print a warning message.
 
    If FORCE_DIFF is TRUE, always write a diff, even for empty diffs.
 
@@ -807,14 +808,23 @@ diff_content_changed(svn_boolean_t *wrote_header,
        * ### a non-git compatible diff application.*/
 
       /* We deal in streams, but svn_io_run_diff2() deals in file handles,
-         unfortunately, so we need to make these temporary files, and then
-         copy the contents to our stream. */
-      SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
-                                       svn_io_file_del_on_pool_cleanup,
-                                       scratch_pool, scratch_pool));
+         so we may need to make temporary files and then copy the contents
+         to our stream. */
+      outfile = svn_stream__aprfile(outstream);
+      if (outfile)
+        outfilename = NULL;
+      else
+        SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         scratch_pool, scratch_pool));
+
+      errfile = svn_stream__aprfile(errstream);
+      if (errfile)
+        errfilename = NULL;
+      else
+        SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         scratch_pool, scratch_pool));
 
       SVN_ERR(svn_io_run_diff2(".",
                                diff_cmd_baton->options.for_external.argv,
@@ -824,20 +834,25 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                &exitcode, outfile, errfile,
                                diff_cmd_baton->diff_cmd, scratch_pool));
 
-      SVN_ERR(svn_io_file_close(outfile, scratch_pool));
-      SVN_ERR(svn_io_file_close(errfile, scratch_pool));
-
       /* Now, open and copy our files to our output streams. */
-      SVN_ERR(svn_stream_open_readonly(&stream, outfilename,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(outstream,
-                               scratch_pool),
-                               NULL, NULL, scratch_pool));
-      SVN_ERR(svn_stream_open_readonly(&stream, errfilename,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(errstream,
-                                                         scratch_pool),
-                               NULL, NULL, scratch_pool));
+      if (outfilename)
+        {
+          SVN_ERR(svn_io_file_close(outfile, scratch_pool));
+          SVN_ERR(svn_stream_open_readonly(&stream, outfilename,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(outstream,
+                                                             scratch_pool),
+                                   NULL, NULL, scratch_pool));
+        }
+      if (errfilename)
+        {
+          SVN_ERR(svn_io_file_close(errfile, scratch_pool));
+          SVN_ERR(svn_stream_open_readonly(&stream, errfilename,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(stream, svn_stream_disown(errstream,
+                                                             scratch_pool),
+                                   NULL, NULL, scratch_pool));
+        }
 
       /* We have a printed a diff for this path, mark it as visited. */
       *wrote_header = TRUE;
@@ -954,7 +969,7 @@ diff_file_changed(svn_wc_notify_state_t *content_state,
   if (tmpfile1)
     SVN_ERR(diff_content_changed(&wrote_header, diff_relpath,
                                  tmpfile1, tmpfile2, rev1, rev2,
-                                 mimetype1, mimetype2, 
+                                 mimetype1, mimetype2,
                                  svn_diff_op_modified, FALSE,
                                  NULL,
                                  SVN_INVALID_REVNUM, diff_cmd_baton,
@@ -1764,7 +1779,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   SVN_ERR(svn_client__get_diff_editor2(
                 &diff_editor, &diff_edit_baton,
                 extra_ra_session, depth,
-                rev1, 
+                rev1,
                 TRUE /* text_deltas */,
                 diff_processor,
                 ctx->cancel_func, ctx->cancel_baton,
@@ -1972,7 +1987,7 @@ diff_repos_wc(const char *path_or_url1,
         }
       SVN_ERR(svn_ra_reparent(ra_session, copyfrom_parent_url, pool));
 
-      /* Tell the RA layer we want a delta to change our txn to URL1 */ 
+      /* Tell the RA layer we want a delta to change our txn to URL1 */
       SVN_ERR(svn_ra_do_diff3(ra_session,
                               &reporter, &reporter_baton,
                               rev,
@@ -2008,7 +2023,7 @@ diff_repos_wc(const char *path_or_url1,
     }
   else
     {
-      /* Tell the RA layer we want a delta to change our txn to URL1 */ 
+      /* Tell the RA layer we want a delta to change our txn to URL1 */
       SVN_ERR(svn_ra_do_diff3(ra_session,
                               &reporter, &reporter_baton,
                               rev,
@@ -2451,8 +2466,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   /* See if there is a diff command and/or diff arguments. */
   if (config)
     {
-      svn_config_t *cfg = apr_hash_get(config, SVN_CONFIG_CATEGORY_CONFIG,
-                                       APR_HASH_KEY_STRING);
+      svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
       if (options == NULL)

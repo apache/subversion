@@ -369,27 +369,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
-/** Wrapper for apr_getopt_init(), which see.
- *
- * @since New in 1.4.
- *
- * This is a private API for Subversion's own use.
- */
-svn_error_t *
-svn_cmdline__getopt_init(apr_getopt_t **os,
-                         int argc,
-                         const char *argv[],
-                         apr_pool_t *pool);
-
-/* Determine whether interactive mode should be enabled, based on whether
- * the user passed the --non-interactive or --force-interactive options.
- * If neither option was passed, interactivity is enabled if standard
- * input is connected to a terminal device.
- * @since New in 1.8. */
-svn_boolean_t
-svn_cmdline__be_interactive(svn_boolean_t non_interactive,
-                            svn_boolean_t force_interactive);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

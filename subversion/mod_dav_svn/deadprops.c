@@ -28,6 +28,7 @@
 #include <httpd.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_dav.h"
@@ -177,7 +178,7 @@ save_value(dav_db *db, const dav_prop_name *name,
 
   if (propname == NULL)
     {
-      if (db->resource->info->repos->autoversioning)
+      if (resource->info->repos->autoversioning)
         /* ignore the unknown namespace of the incoming prop. */
         propname = name->name;
       else
@@ -207,10 +208,10 @@ save_value(dav_db *db, const dav_prop_name *name,
 
   /* A subpool to cope with mod_dav making multiple calls, e.g. during
      PROPPATCH with multiple values. */
-  subpool = svn_pool_create(db->resource->pool);
-  if (db->resource->baselined)
+  subpool = svn_pool_create(resource->pool);
+  if (resource->baselined)
     {
-      if (db->resource->working)
+      if (resource->working)
         {
           serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
                                               propname, value,

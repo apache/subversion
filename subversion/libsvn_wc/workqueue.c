@@ -143,6 +143,7 @@ run_base_remove(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_base_remove(db, local_abspath,
                                  FALSE /* keep_as_working */,
                                  TRUE /* queue_deletes */,
+                                 FALSE /* remove_locks */,
                                  not_present_rev,
                                  NULL, NULL, scratch_pool));
 
@@ -394,8 +395,6 @@ run_postupgrade(work_item_baton_t *wqb,
   const char *entries_path;
   const char *format_path;
   const char *wcroot_abspath;
-  const char *adm_path;
-  const char *temp_path;
   svn_error_t *err;
 
   err = svn_wc__wipe_postupgrade(wri_abspath, FALSE,
@@ -409,7 +408,6 @@ run_postupgrade(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, wri_abspath,
                                 scratch_pool, scratch_pool));
 
-  adm_path = svn_wc__adm_child(wcroot_abspath, NULL, scratch_pool);
   entries_path = svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_ENTRIES,
                                    scratch_pool);
   format_path = svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_FORMAT,
@@ -420,15 +418,13 @@ run_postupgrade(work_item_baton_t *wqb,
      ### The order may matter for some sufficiently old clients.. but
      ### this code only runs during upgrade after the files had been
      ### removed earlier during the upgrade. */
-  SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
+  SVN_ERR(svn_io_write_atomic(format_path, SVN_WC__NON_ENTRIES_STRING,
                               sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
-                              svn_io_file_del_none, scratch_pool));
-  SVN_ERR(svn_io_file_rename(temp_path, format_path, scratch_pool));
+                              NULL, scratch_pool));
 
-  SVN_ERR(svn_io_write_unique(&temp_path, adm_path, SVN_WC__NON_ENTRIES_STRING,
+  SVN_ERR(svn_io_write_atomic(entries_path, SVN_WC__NON_ENTRIES_STRING,
                               sizeof(SVN_WC__NON_ENTRIES_STRING) - 1,
-                              svn_io_file_del_none, scratch_pool));
-  SVN_ERR(svn_io_file_rename(temp_path, entries_path, scratch_pool));
+                              NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -620,14 +616,14 @@ run_file_install(work_item_baton_t *wqb,
 
   /* Tweak the on-disk file according to its properties.  */
 #ifndef WIN32
-  if (props && apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+  if (props && svn_hash_gets(props, SVN_PROP_EXECUTABLE))
     SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
                                        scratch_pool));
 #endif
 
   /* Note that this explicitly checks the pristine properties, to make sure
      that when the lock is locally set (=modification) it is not read only */
-  if (props && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+  if (props && svn_hash_gets(props, SVN_PROP_NEEDS_LOCK))
     {
       svn_wc__db_status_t status;
       svn_wc__db_lock_t *lock;
@@ -673,19 +669,25 @@ svn_wc__wq_build_file_install(svn_skel_t **work_item,
                               apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
+  const char *wri_abspath;
   *work_item = svn_skel__make_empty_list(result_pool);
 
+  /* Use the directory of the file to install as wri_abspath to avoid
+     filestats on just obtaining the wc-root */
+  wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
   /* If a SOURCE_ABSPATH was provided, then put it into the skel. If this
-     value is not provided, then the file's pristine contents will be used.  */
+     value is not provided, then the file's pristine contents will be used. */
   if (source_abspath != NULL)
     {
-      SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
-                                    source_abspath, result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath,
+                                    source_abspath,
+                                    result_pool, scratch_pool));
 
       svn_skel__prepend_str(local_relpath, *work_item, result_pool);
     }
 
-  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, wri_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
   svn_skel__prepend_int(record_fileinfo, *work_item, result_pool);

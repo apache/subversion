@@ -44,10 +44,9 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 
-# Get a couple merge helpers from merge_tests.py
-import merge_tests
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+# Get a couple merge helpers
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 def adjust_error_for_server_version(expected_err):
   "Return the expected error regexp appropriate for the server version."
@@ -384,6 +383,14 @@ def recursive_mergeinfo(sbox):
                                            sbox.repo_url + '/A2',
                                            sbox.repo_url + '/A_COPY',
                                            '--show-revs', 'eligible', '-R')
+  # Do the same as above, but test that we can request the revisions
+  # in reverse order.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           ['8*', '4*', '3'],
+                                           sbox.repo_url + '/A2',
+                                           sbox.repo_url + '/A_COPY',
+                                           '--show-revs', 'eligible', '-R',
+                                           '-r', '9:0')
 
   # Asking for merged revisions from A2 to A_COPY should show:
   #
@@ -406,6 +413,15 @@ def recursive_mergeinfo(sbox):
                                            A_COPY_path,
                                            '--show-revs', 'merged',
                                            '--depth', 'infinity')
+  # Do the same as above, but test that we can request the revisions
+  # in reverse order.
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           ['8*', '6', '5', '4*'],
+                                           A2_path,
+                                           A_COPY_path,
+                                           '--show-revs', 'merged',
+                                           '--depth', 'infinity',
+                                           '-r', '9:0')
 
   # A couple tests of problems found with initial issue #3242 fixes.
   # We should be able to check for the merged revs from a URL to a URL
@@ -763,6 +779,31 @@ def noninheritable_mergeinfo_not_always_eligible(sbox):
     [], sbox.repo_url + '/A', sbox.repo_url + '/branch',
     '--show-revs', 'eligible', '-R')
 
+@SkipUnless(server_has_mergeinfo)
+def mergeinfo_log(sbox):
+  "'mergeinfo --log' on a path with mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # make a branch 'A2'
+  sbox.simple_repo_copy('A', 'A2')  # r2
+  # make a change in branch 'A'
+  sbox.simple_mkdir('A/newdir')
+  sbox.simple_commit()  # r3
+  sbox.simple_update()
+
+  # Dummy up some mergeinfo.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', SVN_PROP_MERGEINFO, '/A:3',
+                                     sbox.ospath('A2'))
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'mergeinfo', '--show-revs=merged',
+                                     '--log', sbox.repo_url + '/A',
+                                     sbox.ospath('A2'))
+
+
 ########################################################################
 # Run the tests
 
@@ -780,6 +821,7 @@ test_list = [ None,
               wc_target_inherits_mergeinfo_from_repos,
               natural_history_is_not_eligible_nor_merged,
               noninheritable_mergeinfo_not_always_eligible,
+              mergeinfo_log,
              ]
 
 if __name__ == '__main__':

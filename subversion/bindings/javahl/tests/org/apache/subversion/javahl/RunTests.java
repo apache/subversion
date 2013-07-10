@@ -92,6 +92,7 @@ public class RunTests
             {
                 // Add default test suites.
                 suite.addTestSuite(SVNReposTests.class);
+                suite.addTestSuite(SVNRemoteTests.class);
                 suite.addTestSuite(BasicTests.class);
             }
             else

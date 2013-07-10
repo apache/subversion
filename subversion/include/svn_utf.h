@@ -63,15 +63,16 @@ extern "C" {
  * @since New in 1.8.
  */
 void
-svn_utf_initialize2(apr_pool_t *pool,
-                    svn_boolean_t assume_native_utf8);
+svn_utf_initialize2(svn_boolean_t assume_native_utf8,
+                    apr_pool_t *pool);
 
 /**
- * Like svn_utf_initialize but without the ability to force the
+ * Like svn_utf_initialize2() but without the ability to force the
  * native encoding to UTF-8.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
+SVN_DEPRECATED
 void
 svn_utf_initialize(apr_pool_t *pool);
 
@@ -238,7 +239,9 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
 /** Return the display width of UTF-8-encoded C string @a cstr.
  * If the string is not printable or invalid UTF-8, return -1.
- * @since New in 1.8. */
+ *
+ * @since New in 1.8.
+ */
 int
 svn_utf_cstring_utf8_width(const char *cstr);
 

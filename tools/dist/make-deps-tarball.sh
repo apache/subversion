@@ -25,7 +25,7 @@ APR=apr-1.4.6
 APR_UTIL=apr-util-1.4.1
 NEON=neon-0.29.6
 SERF=serf-0.3.1
-ZLIB=zlib-1.2.7
+ZLIB=zlib-1.2.8
 SQLITE_VERSION=3071400
 SQLITE=sqlite-amalgamation-$SQLITE_VERSION
 
@@ -58,13 +58,13 @@ create_deps() {
     fi
     wget -qnc http://webdav.org/neon/$NEON.tar.gz
     wget -qnc http://serf.googlecode.com/files/$SERF.tar.bz2
-    wget -qnc http://www.zlib.net/$ZLIB.tar.bz2
+    wget -qnc http://www.zlib.net/$ZLIB.tar.gz
     wget -qnc http://www.sqlite.org/$SQLITE.zip
 
     mkdir $BASEDIR/unix-dependencies
     cd $BASEDIR/unix-dependencies
     tar zxf $TEMPDIR/$NEON.tar.gz
-    tar jxf $TEMPDIR/$ZLIB.tar.bz2
+    tar zxf $TEMPDIR/$ZLIB.tar.gz
     tar jxf $TEMPDIR/$SERF.tar.bz2
     unzip -q $TEMPDIR/$SQLITE.zip
     mv $NEON neon
@@ -80,7 +80,7 @@ create_deps() {
     mkdir $BASEDIR/win32-dependencies
     cd $BASEDIR/win32-dependencies
     tar zxf $TEMPDIR/$NEON.tar.gz
-    tar jxf $TEMPDIR/$ZLIB.tar.bz2
+    tar zxf $TEMPDIR/$ZLIB.tar.gz
     tar jxf $TEMPDIR/$SERF.tar.bz2
     unzip -q $TEMPDIR/$SQLITE.zip
     mv $NEON neon

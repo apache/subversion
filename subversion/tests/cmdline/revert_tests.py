@@ -792,7 +792,7 @@ def status_of_missing_dir_after_revert(sbox):
 
   svntest.main.safe_rmtree(A_D_G_path)
   expected_status.tweak('A/D/G', status='! ')
-  
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # When using single-db, we can get back to the virginal state.
@@ -1000,7 +1000,7 @@ def revert_add_over_not_present_dir(sbox):
   wc_dir = sbox.wc_dir
 
   main.run_svn(None, 'rm', os.path.join(wc_dir, 'A/C'))
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Deleted dir')
+  sbox.simple_commit(message='Deleted dir')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/C')
@@ -1599,13 +1599,13 @@ def revert_nonexistent(sbox):
 @Issue(4168)
 def revert_obstructing_wc(sbox):
   "revert with an obstructing working copy"
-  
+
   sbox.build(create_wc=False, read_only=True)
   wc_dir = sbox.wc_dir
-  
+
   expected_output = svntest.wc.State(wc_dir, {})
-  expected_disk = svntest.wc.State(wc_dir, {})  
-  
+  expected_disk = svntest.wc.State(wc_dir, {})
+
   # Checkout wc as depth empty
   svntest.actions.run_and_verify_checkout(sbox.repo_url, wc_dir,
                                           expected_output, expected_disk,

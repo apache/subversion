@@ -218,10 +218,10 @@ add_subdir(svn_fs_root_t *source_root,
          changed path (because it was modified after the copy but before the
          commit), we remove it from the changed_paths hash so that future
          calls to path_driver_cb_func will ignore it. */
-      change = apr_hash_get(changed_paths, new_edit_path, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changed_paths, new_edit_path);
       if (change)
         {
-          apr_hash_set(changed_paths, new_edit_path, APR_HASH_KEY_STRING, NULL);
+          svn_hash_sets(changed_paths, new_edit_path, NULL);
 
           /* If it's a delete, skip this entry. */
           if (change->change_kind == svn_fs_path_change_delete)
@@ -491,7 +491,7 @@ path_driver_cb_func(void **dir_baton,
                                      edit_path))
     apr_array_pop(cb->copies);
 
-  change = apr_hash_get(cb->changed_paths, edit_path, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(cb->changed_paths, edit_path);
   if (! change)
     {
       /* This can only happen if the path was removed from cb->changed_paths
@@ -704,31 +704,45 @@ path_driver_cb_func(void **dir_baton,
       /* Handle property modifications. */
       if (change->prop_mod || downgraded_copy)
         {
-          apr_array_header_t *prop_diffs;
-          apr_hash_t *old_props;
-          apr_hash_t *new_props;
-          int i;
-
-          if (source_root)
-            SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
-                                         source_fspath, pool));
-          else
-            old_props = apr_hash_make(pool);
-
-          SVN_ERR(svn_fs_node_proplist(&new_props, root, edit_path, pool));
-
-          SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
-                                 pool));
-
-          for (i = 0; i < prop_diffs->nelts; ++i)
+          if (cb->compare_root)
             {
-              svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-               if (change->node_kind == svn_node_dir)
-                 SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
-                                                 pc->value, pool));
-               else if (change->node_kind == svn_node_file)
-                 SVN_ERR(editor->change_file_prop(file_baton, pc->name,
-                                                  pc->value, pool));
+              apr_array_header_t *prop_diffs;
+              apr_hash_t *old_props;
+              apr_hash_t *new_props;
+              int i;
+
+              if (source_root)
+                SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
+                                             source_fspath, pool));
+              else
+                old_props = apr_hash_make(pool);
+
+              SVN_ERR(svn_fs_node_proplist(&new_props, root, edit_path, pool));
+
+              SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
+                                     pool));
+
+              for (i = 0; i < prop_diffs->nelts; ++i)
+                {
+                  svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+                   if (change->node_kind == svn_node_dir)
+                     SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
+                                                     pc->value, pool));
+                   else if (change->node_kind == svn_node_file)
+                     SVN_ERR(editor->change_file_prop(file_baton, pc->name,
+                                                      pc->value, pool));
+                }
+            }
+          else
+            {
+              /* Just do a dummy prop change to signal that there are *any*
+                 propmods. */
+              if (change->node_kind == svn_node_dir)
+                SVN_ERR(editor->change_dir_prop(*dir_baton, "", NULL,
+                                                pool));
+              else if (change->node_kind == svn_node_file)
+                SVN_ERR(editor->change_file_prop(file_baton, "", NULL,
+                                                 pool));
             }
         }
 
@@ -783,14 +797,13 @@ path_driver_cb_func(void **dir_baton,
 
 #ifdef USE_EV2_IMPL
 static svn_error_t *
-fetch_kind_func(svn_kind_t *kind,
+fetch_kind_func(svn_node_kind_t *kind,
                 void *baton,
                 const char *path,
                 svn_revnum_t base_revision,
                 apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *root = baton;
-  svn_node_kind_t node_kind;
   svn_fs_root_t *prev_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
 
@@ -798,9 +811,8 @@ fetch_kind_func(svn_kind_t *kind,
     base_revision = svn_fs_revision_root_revision(root) - 1;
 
   SVN_ERR(svn_fs_revision_root(&prev_root, fs, base_revision, scratch_pool));
-  SVN_ERR(svn_fs_check_path(&node_kind, prev_root, path, scratch_pool));
+  SVN_ERR(svn_fs_check_path(kind, prev_root, path, scratch_pool));
 
-  *kind = svn__kind_from_node_kind(node_kind, FALSE);
   return SVN_NO_ERROR;
 }
 
@@ -1064,11 +1076,10 @@ add_subdir_ev2(svn_fs_root_t *source_root,
          changed path (because it was modified after the copy but before the
          commit), we remove it from the changed_paths hash so that future
          calls to path_driver_cb_func will ignore it. */
-      change = apr_hash_get(changed_paths, child_relpath, APR_HASH_KEY_STRING);
+      change = svn_hash_gets(changed_paths, child_relpath);
       if (change)
         {
-          apr_hash_set(changed_paths, child_relpath, APR_HASH_KEY_STRING,
-                       NULL);
+          svn_hash_sets(changed_paths, child_relpath, NULL);
 
           /* If it's a delete, skip this entry. */
           if (change->change_kind == svn_fs_path_change_delete)
@@ -1193,7 +1204,7 @@ replay_node(svn_fs_root_t *root,
                                        repos_relpath) == NULL) )
     apr_array_pop(copies);
 
-  change = apr_hash_get(changed_paths, repos_relpath, APR_HASH_KEY_STRING);
+  change = svn_hash_gets(changed_paths, repos_relpath);
   if (! change)
     {
       /* This can only happen if the path was removed from changed_paths
@@ -1446,8 +1457,8 @@ replay_node(svn_fs_root_t *root,
             }
 
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
-                                        SVN_INVALID_REVNUM, props, checksum,
-                                        contents));
+                                        SVN_INVALID_REVNUM,
+                                        checksum, contents, props));
         }
 
       if (change->node_kind == svn_node_dir

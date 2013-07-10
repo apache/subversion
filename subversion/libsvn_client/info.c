@@ -142,7 +142,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       child_pathrev = svn_client__pathrev_join_relpath(pathrev, name, subpool);
       fs_path = svn_client__pathrev_fspath(child_pathrev, subpool);
 
-      lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
+      lock = svn_hash_gets(locks, fs_path);
 
       SVN_ERR(build_info_from_dirent(&info, the_ent, lock, child_pathrev,
                                      subpool));

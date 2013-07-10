@@ -44,8 +44,8 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 def run_reintegrate(src_url, tgt_path):
@@ -63,7 +63,7 @@ def run_reintegrate_expect_error(src_url, tgt_path,
      unless stdout and stderr both match and the exit code is non-zero.
      Every line of stderr must match the regex EXPECTED_STDERR.
   """
-  expected_stderr += "|(.*apr_err.*)"  # In case of debug build
+  expected_stderr += "|" + svntest.main.stack_trace_regexp
 
   # The actions.run_and_verify_* methods are happy if one line of the error
   # matches the regex, but we want to check that every line matches.
@@ -1844,8 +1844,11 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
                                        None, 1, 0)
 
 #----------------------------------------------------------------------
-# Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
-@Issue(3577)
+# Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'
+# and issue #4329 'automatic merge uses reintegrate type merge if source is
+# fully synced'.
+@Issue(3577,4329)
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_with_subtree_merges(sbox):
   "reintegrate with prior subtree merges to source"
 
@@ -1857,6 +1860,7 @@ def reintegrate_with_subtree_merges(sbox):
 
   # Some paths we'll care about
   A_path        = sbox.ospath('A')
+  psi_path      = sbox.ospath('A/D/H/psi')
   mu_COPY_path  = sbox.ospath('A_COPY/mu')
   A_COPY_path   = sbox.ospath('A_COPY')
   B_COPY_path   = sbox.ospath('A_COPY/B')
@@ -1973,6 +1977,28 @@ def reintegrate_with_subtree_merges(sbox):
                              expected_A_status,
                              expected_A_skip,
                              None, 1, 1)
+
+  # Test issue #4329.  Revert previous merge and commit a new edit to
+  # A/D/H/psi. Attempt the same merge without the --reintegrate option.
+  # It should succeed because the automatic merge code should detect that
+  # a reintegrate-style merge is required, that merge should succeed and
+  # there should be not conflict on A/D/H/psi.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  svntest.main.file_write(psi_path, "Non-conflicting trunk edit.\n")
+  svntest.main.run_svn(None, 'commit', '-m',
+                       'An edit on trunk prior to reintegrate.', wc_dir)
+  sbox.simple_update()
+  expected_A_status.tweak(wc_rev=9)
+  expected_A_disk.tweak('', props={SVN_PROP_MERGEINFO: '/A_COPY:2-9'})
+  expected_A_disk.tweak('D/H/psi', contents='Non-conflicting trunk edit.\n')
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_COPY', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_A_disk, expected_A_status,
+                                       expected_A_skip, None, None, None,
+                                       None, None, True, False, A_path)
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
@@ -2558,13 +2584,13 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c3')
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r3 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r3 from A to A_COPY')
 
   # r8 - Merge r4 from A to A_COPY
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c4')
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r4 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r4 from A to A_COPY')
 
   # r9 - Merge r5 from A to A_COPY. Make an additional edit to
   # A_COPY/B/E/beta.
@@ -2572,7 +2598,7 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c5')
   svntest.main.file_write(beta_COPY_path, "Branch edit mistake.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r5 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r5 from A to A_COPY')
 
   # r10 - Delete A_COPY and replace it with A_COPY@8. This removes the edit
   # we made above in r9 to A_COPY/B/E/beta.
@@ -2580,19 +2606,17 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'delete', A_COPY_path)
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A_COPY@8',
                        A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Replace A_COPY with A_COPY@8',
-                       wc_dir)
+  sbox.simple_commit(message='Replace A_COPY with A_COPY@8')
 
   # r11 - Make an edit on A_COPY/mu.
   svntest.main.file_write(mu_COPY_path, "Branch edit.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit',
-                       wc_dir)
+  sbox.simple_commit(message='Branch edit')
 
   # r12 - Do a final sync merge of A to A_COPY in preparation for
   # reintegration.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Sycn A_COPY with A', wc_dir)
+  sbox.simple_commit(message='Sync A_COPY with A')
 
   # Reintegrate A_COPY to A.  The resulting mergeinfo should be
   # '/A_COPY:2-8,10-12' because of the replacement which removed /A_COPY:9

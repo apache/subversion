@@ -148,12 +148,12 @@ class SVNTests extends TestCase
      * Username to use in tests
      */
     protected final static String USERNAME = "jrandom";
-    
+
     /**
      * Password to use in tests
      */
     protected final static String PASSWORD = "rayjandom";
-    
+
     /**
      * Create a JUnit <code>TestCase</code> instance.
      */
@@ -324,12 +324,12 @@ class SVNTests extends TestCase
 
         public boolean prompt(String realm, String username)
         {
-            return false;
+            return true;
         }
 
         public boolean prompt(String realm, String username, boolean maySave)
         {
-            return false;
+            return true;
         }
 
         public String askQuestion(String realm, String question,

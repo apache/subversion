@@ -64,6 +64,7 @@ def main(fname, gentype, verfname=None,
 
   generator.write()
   generator.write_sqlite_headers()
+  generator.write_errno_table()
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():

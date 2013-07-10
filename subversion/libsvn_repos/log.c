@@ -27,6 +27,7 @@
 
 #include "svn_compat.h"
 #include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -209,19 +210,16 @@ detect_changed(apr_hash_t **changed,
       /* NOTE:  Much of this loop is going to look quite similar to
          svn_repos_check_revision_access(), but we have to do more things
          here, so we'll live with the duplication. */
-      const void *key;
-      void *val;
       svn_fs_path_change2_t *change;
       const char *path;
+      apr_ssize_t path_len;
       char action;
       svn_log_changed_path2_t *item;
 
       svn_pool_clear(subpool);
 
       /* KEY will be the path, VAL the change. */
-      apr_hash_this(hi, &key, NULL, &val);
-      path = (const char *) key;
-      change = val;
+      apr_hash_this(hi, (const void **)&path, &path_len, (void **)&change);
 
       /* Skip path if unreadable. */
       if (authz_read_func)
@@ -310,11 +308,15 @@ detect_changed(apr_hash_t **changed,
 
       if ((action == 'A') || (action == 'R'))
         {
-          const char *copyfrom_path;
-          svn_revnum_t copyfrom_rev;
+          const char *copyfrom_path = change->copyfrom_path;
+          svn_revnum_t copyfrom_rev = change->copyfrom_rev;
 
-          SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                     root, path, subpool));
+          /* the following is a potentially expensive operation since on FSFS
+             we will follow the DAG from ROOT to PATH and that requires
+             actually reading the directories along the way. */
+          if (!change->copyfrom_known)
+            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                      root, path, subpool));
 
           if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
             {
@@ -340,8 +342,9 @@ detect_changed(apr_hash_t **changed,
                 }
             }
         }
-      apr_hash_set(*changed, apr_pstrdup(pool, path),
-                   APR_HASH_KEY_STRING, item);
+
+      apr_hash_set(*changed, apr_pstrmemdup(pool, path, path_len), path_len,
+                   item);
     }
 
   svn_pool_destroy(subpool);
@@ -599,7 +602,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      svn:mergeinfo change and is one of our paths of interest, or a
      child or [grand]parent directory thereof. */
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, *prefetched_changes); 
+  for (hi = apr_hash_first(scratch_pool, *prefetched_changes);
        hi;
        hi = apr_hash_next(hi))
     {
@@ -715,8 +718,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root,
                                         query_paths, svn_mergeinfo_inherited,
                                         FALSE, TRUE, iterpool, iterpool));
-          tmp_mergeinfo = apr_hash_get(tmp_catalog, changed_path,
-                                        APR_HASH_KEY_STRING);
+          tmp_mergeinfo = svn_hash_gets(tmp_catalog, changed_path);
           if (tmp_mergeinfo)
             SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_value,
                                             tmp_mergeinfo,
@@ -734,8 +736,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, base_root,
                                         query_paths, svn_mergeinfo_inherited,
                                         FALSE, TRUE, iterpool, iterpool));
-          tmp_mergeinfo = apr_hash_get(tmp_catalog, base_path,
-                                        APR_HASH_KEY_STRING);
+          tmp_mergeinfo = svn_hash_gets(tmp_catalog, base_path);
           if (tmp_mergeinfo)
             SVN_ERR(svn_mergeinfo_to_string(&prev_mergeinfo_value,
                                             tmp_mergeinfo,
@@ -766,10 +767,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
 
           /* Toss interesting stuff into our return catalogs. */
           hash_path = apr_pstrdup(result_pool, changed_path);
-          apr_hash_set(*deleted_mergeinfo_catalog, hash_path,
-                       APR_HASH_KEY_STRING, deleted);
-          apr_hash_set(*added_mergeinfo_catalog, hash_path,
-                       APR_HASH_KEY_STRING, added);
+          svn_hash_sets(*deleted_mergeinfo_catalog, hash_path, deleted);
+          svn_hash_sets(*added_mergeinfo_catalog, hash_path, added);
         }
     }
 
@@ -838,6 +837,11 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
         }
     }
 
+  /* In most revisions, there will be no mergeinfo change at all. */
+  if (   apr_hash_count(deleted_mergeinfo_catalog) == 0
+      && apr_hash_count(added_mergeinfo_catalog) == 0)
+    return SVN_NO_ERROR;
+  
   /* Check our PATHS for any changes to their inherited mergeinfo.
      (We deal with changes to mergeinfo directly *on* the paths in the
      following loop.)  */
@@ -858,7 +862,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
 
       /* If this path is represented in the changed-mergeinfo hashes,
          we'll deal with it in the loop below. */
-      if (apr_hash_get(deleted_mergeinfo_catalog, path, APR_HASH_KEY_STRING))
+      if (svn_hash_gets(deleted_mergeinfo_catalog, path))
         continue;
 
       /* Figure out what path/rev to compare against.  Ignore
@@ -1080,14 +1084,10 @@ fill_log_entry(svn_log_entry_t *log_entry,
             {
               /* ... but we can only return author/date. */
               log_entry->revprops = svn_hash__make(pool);
-              apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
-                           APR_HASH_KEY_STRING,
-                           apr_hash_get(r_props, SVN_PROP_REVISION_AUTHOR,
-                                        APR_HASH_KEY_STRING));
-              apr_hash_set(log_entry->revprops, SVN_PROP_REVISION_DATE,
-                           APR_HASH_KEY_STRING,
-                           apr_hash_get(r_props, SVN_PROP_REVISION_DATE,
-                                        APR_HASH_KEY_STRING));
+              svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR,
+                            svn_hash_gets(r_props, SVN_PROP_REVISION_AUTHOR));
+              svn_hash_sets(log_entry->revprops, SVN_PROP_REVISION_DATE,
+                            svn_hash_gets(r_props, SVN_PROP_REVISION_DATE));
             }
           else
             /* ... so return all we got. */
@@ -1095,23 +1095,47 @@ fill_log_entry(svn_log_entry_t *log_entry,
         }
       else
         {
-          /* Requested only some revprops... */
           int i;
-          for (i = 0; i < revprops->nelts; i++)
+
+          /* Requested only some revprops... */
+          
+          /* often only the standard revprops got requested and delivered.
+             In that case, we can simply pass the hash on. */
+          if (revprops->nelts == apr_hash_count(r_props) && !censor_revprops)
             {
-              char *name = APR_ARRAY_IDX(revprops, i, char *);
-              svn_string_t *value = apr_hash_get(r_props, name,
-                                                 APR_HASH_KEY_STRING);
-              if (censor_revprops
-                  && !(strcmp(name, SVN_PROP_REVISION_AUTHOR) == 0
-                       || strcmp(name, SVN_PROP_REVISION_DATE) == 0))
-                /* ... but we can only return author/date. */
-                continue;
-              if (log_entry->revprops == NULL)
-                log_entry->revprops = svn_hash__make(pool);
-              apr_hash_set(log_entry->revprops, name,
-                           APR_HASH_KEY_STRING, value);
+              log_entry->revprops = r_props;
+              for (i = 0; i < revprops->nelts; i++)
+                {
+                  const svn_string_t *name
+                    = APR_ARRAY_IDX(revprops, i, const svn_string_t *);
+                  if (!apr_hash_get(r_props, name->data, name->len))
+                    {
+                      /* hash does not match list of revprops we want */
+                      log_entry->revprops = NULL;
+                      break;
+                    }
+                }
             }
+
+          /* slow, revprop-by-revprop filtering */
+          if (log_entry->revprops == NULL)
+            for (i = 0; i < revprops->nelts; i++)
+              {
+                const svn_string_t *name
+                  = APR_ARRAY_IDX(revprops, i, const svn_string_t *);
+                svn_string_t *value
+                  = apr_hash_get(r_props, name->data, name->len);
+                if (censor_revprops
+                    && !(strncmp(name->data, SVN_PROP_REVISION_AUTHOR,
+                                 name->len) == 0
+                         || strncmp(name->data, SVN_PROP_REVISION_DATE,
+                                    name->len) == 0))
+                  /* ... but we can only return author/date. */
+                  continue;
+                if (log_entry->revprops == NULL)
+                  log_entry->revprops = svn_hash__make(pool);
+                apr_hash_set(log_entry->revprops, name->data, name->len, value);
+              }
         }
     }
 
@@ -1185,32 +1209,33 @@ send_log(svn_revnum_t rev,
       && apr_hash_count(log_target_history_as_mergeinfo))
     {
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* REV was merged in, but it might already be part of the log target's
          natural history, so change our starting assumption. */
       found_rev_of_interest = FALSE;
 
       /* Look at each changed path in REV. */
-      for (hi = apr_hash_first(subpool, log_entry->changed_paths2);
+      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
            hi;
            hi = apr_hash_next(hi))
         {
           svn_boolean_t path_is_in_history = FALSE;
           const char *changed_path = svn__apr_hash_index_key(hi);
           apr_hash_index_t *hi2;
-          apr_pool_t *inner_subpool = svn_pool_create(subpool);
+
+          apr_hash_this(hi, (const void**)&changed_path, NULL, NULL);
 
           /* Look at each path on the log target's mergeinfo. */
-          for (hi2 = apr_hash_first(inner_subpool,
+          for (hi2 = apr_hash_first(iterpool,
                                     log_target_history_as_mergeinfo);
                hi2;
                hi2 = apr_hash_next(hi2))
             {
-              const char *mergeinfo_path =
-                svn__apr_hash_index_key(hi2);
-              svn_rangelist_t *rangelist =
-                svn__apr_hash_index_val(hi2);
+              const char *mergeinfo_path;
+              svn_rangelist_t *rangelist;
+              apr_hash_this(hi2, (const void**)&mergeinfo_path, NULL,
+                                 (void **)&rangelist);
 
               /* Check whether CHANGED_PATH at revision REV is a child of
                  a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
@@ -1233,7 +1258,7 @@ send_log(svn_revnum_t rev,
               if (path_is_in_history)
                 break;
             }
-          svn_pool_destroy(inner_subpool);
+          svn_pool_clear(iterpool);
 
           if (!path_is_in_history)
             {
@@ -1244,7 +1269,7 @@ send_log(svn_revnum_t rev,
               break;
             }
         }
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   /* If we only got changed paths the sake of detecting redundant merged
@@ -1767,8 +1792,7 @@ reduce_search(apr_array_header_t *paths,
   for (i = 0; i < paths->nelts; ++i)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      svn_rangelist_t *ranges = apr_hash_get(processed, path,
-                                             APR_HASH_KEY_STRING);
+      svn_rangelist_t *ranges = svn_hash_gets(processed, path);
       int j;
 
       if (!ranges)
@@ -1848,8 +1872,7 @@ store_search(svn_mergeinfo_t processed,
       range->end = end;
       range->inheritable = TRUE;
       APR_ARRAY_PUSH(ranges, svn_merge_range_t *) = range;
-      apr_hash_set(mergeinfo, apr_pstrdup(processed_pool, path),
-                   APR_HASH_KEY_STRING, ranges);
+      svn_hash_sets(mergeinfo, apr_pstrdup(processed_pool, path), ranges);
     }
   SVN_ERR(svn_mergeinfo_merge2(processed, mergeinfo,
                                apr_hash_pool_get(processed), scratch_pool));
@@ -2255,6 +2278,19 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_boolean_t descending_order;
   svn_mergeinfo_t paths_history_mergeinfo = NULL;
 
+  if (revprops)
+    {
+      int i;
+      apr_array_header_t *new_revprops
+        = apr_array_make(pool, revprops->nelts, sizeof(svn_string_t *));
+
+      for (i = 0; i < revprops->nelts; ++i)
+        APR_ARRAY_PUSH(new_revprops, svn_string_t *)
+          = svn_string_create(APR_ARRAY_IDX(revprops, i, const char *), pool);
+
+      revprops = new_revprops;
+    }
+  
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
 

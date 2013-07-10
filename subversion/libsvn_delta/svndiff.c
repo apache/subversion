@@ -216,7 +216,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
     {
       header_current = headers;
     }
-    
+
   /* Encode the action code and length.  */
   if (window->tview_len >> 6 == 0)
     {
@@ -242,7 +242,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
     header_current[i] = ibuf[i];
 
   header_len = header_current - headers + ip_len;
-    
+
   /* Write out the window.  */
   SVN_ERR(svn_stream_write(eb->output, (const char *)headers, &header_len));
   if (len)

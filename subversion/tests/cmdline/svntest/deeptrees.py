@@ -985,7 +985,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       if ignore_ancestry:
         varargs = varargs + ('--ignore-ancestry',)
 
-      run_and_verify_merge(local, None, None, incoming, None,
+      run_and_verify_merge(local, '0', 'HEAD', incoming, None,
                            x_out, None, None, x_disk, None, x_skip,
                            test_case.error_re_string,
                            None, None, None, None,

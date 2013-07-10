@@ -47,7 +47,8 @@ extern "C" {
    formats are accepted by some versions of Subversion which do not
    pay attention to the FS format number.
 */
-#define SVN_REPOS__FORMAT_NUMBER         5
+#define SVN_REPOS__FORMAT_NUMBER         SVN_REPOS__FORMAT_NUMBER_1_4
+#define SVN_REPOS__FORMAT_NUMBER_1_4     5
 #define SVN_REPOS__FORMAT_NUMBER_LEGACY  3
 
 
@@ -126,6 +127,10 @@ struct svn_repos_t
   /* The format number of this repository. */
   int format;
 
+  /* The path to the repository's hooks enviroment file. If NULL, hooks run
+   * in an empty environment. */
+  const char *hooks_env_path;
+
   /* The FS backend in use within this repository. */
   const char *fs_type;
 
@@ -147,24 +152,35 @@ struct svn_repos_t
      those constants' addresses, therefore). */
   apr_hash_t *repository_capabilities;
 
-  /* The environment inherited to hook scripts. If NULL, hooks run
-   * in an empty environment.
-   *
-   * This is a nested hash table.
-   * The entry with name SVN_REPOS__HOOKS_ENV_DEFAULT_SECTION contains the
-   * default environment for all hooks in form of an apr_hash_t with keys
-   * and values describing the names and values of environment variables.
-   * Defaults can be overridden by an entry matching the name of a hook.
-   * E.g. an entry with the name SVN_REPOS__HOOK_PRE_COMMIT provides the
-   * environment specific to the pre-commit hook. */
-  apr_hash_t *hooks_env;
+  /* Pool from which this structure was allocated.  Also used for
+     auxiliary repository-related data that requires a matching
+     lifespan.  (As the svn_repos_t structure tends to be relatively
+     long-lived, please be careful regarding this pool's usage.)  */
+  apr_pool_t *pool;
 };
 
 
 /*** Hook-running Functions ***/
 
+/* Set *HOOKS_ENV_P to the parsed contents of the hooks-env file
+   LOCAL_ABSPATH, allocated in RESULT_POOL.  (This result is suitable
+   for delivery to the various hook wrapper functions which accept a
+   'hooks_env' parameter.)  If LOCAL_ABSPATH is NULL, set *HOOKS_ENV_P
+   to NULL.
+
+   Use SCRATCH_POOL for temporary allocations.  */
+svn_error_t *
+svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
+                           const char *local_abspath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    USER is the authenticated name of the user starting the commit.
 
@@ -177,6 +193,7 @@ struct svn_repos_t
    created. */
 svn_error_t *
 svn_repos__hooks_start_commit(svn_repos_t *repos,
+                              apr_hash_t *hooks_env,
                               const char *user,
                               const apr_array_header_t *capabilities,
                               const char *txn_name,
@@ -185,18 +202,28 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
 /* Run the pre-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    TXN_NAME is the name of the transaction that is being committed.  */
 svn_error_t *
 svn_repos__hooks_pre_commit(svn_repos_t *repos,
+                            apr_hash_t *hooks_env,
                             const char *txn_name,
                             apr_pool_t *pool);
 
 /* Run the post-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, run SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    REV is the revision that was created as a result of the commit.  */
 svn_error_t *
 svn_repos__hooks_post_commit(svn_repos_t *repos,
+                             apr_hash_t *hooks_env,
                              svn_revnum_t rev,
                              const char *txn_name,
                              apr_pool_t *pool);
@@ -204,6 +231,10 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    REV is the revision whose property is being changed.
    AUTHOR is the authenticated name of the user changing the prop.
@@ -217,6 +248,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
    will be written. */
 svn_error_t *
 svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
+                                    apr_hash_t *hooks_env,
                                     svn_revnum_t rev,
                                     const char *author,
                                     const char *name,
@@ -227,6 +259,10 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
 /* Run the pre-revprop-change hook for REPOS.  Use POOL for any
    temporary allocations.  If the hook fails, return
    SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    REV is the revision whose property was changed.
    AUTHOR is the authenticated name of the user who changed the prop.
@@ -239,6 +275,7 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
    the property is being created, no data will be written. */
 svn_error_t *
 svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
+                                     apr_hash_t *hooks_env,
                                      svn_revnum_t rev,
                                      const char *author,
                                      const char *name,
@@ -248,6 +285,10 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
 /* Run the pre-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
+
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
 
    PATH is the path being locked, USERNAME is the person doing it,
    COMMENT is the comment of the lock, and is treated as an empty
@@ -261,6 +302,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
 svn_error_t *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
+                          apr_hash_t *hooks_env,
                           const char **token,
                           const char *path,
                           const char *username,
@@ -271,10 +313,15 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
 /* Run the post-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    PATHS is an array of paths being locked, USERNAME is the person
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_lock(svn_repos_t *repos,
+                           apr_hash_t *hooks_env,
                            const apr_array_header_t *paths,
                            const char *username,
                            apr_pool_t *pool);
@@ -282,11 +329,16 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
 /* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    PATH is the path being unlocked, USERNAME is the person doing it,
    TOKEN is the lock token to be unlocked which should not be NULL,
    and BREAK-LOCK is a flag if the user is breaking the lock.  */
 svn_error_t *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
+                            apr_hash_t *hooks_env,
                             const char *path,
                             const char *username,
                             const char *token,
@@ -296,10 +348,15 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
 /* Run the post-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
+   HOOKS_ENV is a hash of hook script environment information returned
+   via svn_repos__parse_hooks_env() (or NULL if no such information is
+   available).
+
    PATHS is an array of paths being unlocked, USERNAME is the person
    who did it.  */
 svn_error_t *
 svn_repos__hooks_post_unlock(svn_repos_t *repos,
+                             apr_hash_t *hooks_env,
                              const apr_array_header_t *paths,
                              const char *username,
                              apr_pool_t *pool);
@@ -310,25 +367,19 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
 /* Read authz configuration data from PATH into *AUTHZ_P, allocated
    in POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
 
-   PATH and GROUPS_PATH may be a file or a registry path and iff ACCEPT_URLS
-   is set it may also be a repos relative url or an absolute file url.  When
-   ACCEPT_URLS is FALSE REPOS_ROOT can be NULL.
+   PATH and GROUPS_PATH may be a dirent or a registry path and iff ACCEPT_URLS
+   is set it may also be an absolute file url.
 
-   If PATH or GROUPS_PATH is not a valid authz rule file, then return 
+   If PATH or GROUPS_PATH is not a valid authz rule file, then return
    SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
    undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
-   is also an error.
-
-   If PATH is a repos relative URL then REPOS_ROOT must be set to
-   the root of the repository the authz configuration will be used with.
-   The same applies to GROUPS_PATH if it is being used. */
+   is also an error. */
 svn_error_t *
 svn_repos__authz_read(svn_authz_t **authz_p,
                       const char *path,
                       const char *groups_path,
                       svn_boolean_t must_exist,
                       svn_boolean_t accept_urls,
-                      const char *repos_root,
                       apr_pool_t *pool);
 
 

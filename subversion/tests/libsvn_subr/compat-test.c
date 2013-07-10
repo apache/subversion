@@ -162,7 +162,7 @@ test_version_parsing(apr_pool_t *pool)
         }
     }
   svn_pool_destroy(iterpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -204,7 +204,7 @@ test_version_at_least(apr_pool_t *pool)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "Expected at-least to be TRUE; got FALSE");
     }
-  
+
   return SVN_NO_ERROR;
 }
 

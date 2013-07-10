@@ -112,13 +112,14 @@ RevisionRange::makeJRevisionRange(svn_merge_range_t *range)
     static jmethodID rangeCtor = 0;
     if (rangeCtor == 0)
     {
-        rangeCtor = env->GetMethodID(rangeClazz, "<init>", "(JJ)V");
+        rangeCtor = env->GetMethodID(rangeClazz, "<init>", "(JJZ)V");
         if (JNIUtil::isJavaExceptionThrown())
             return NULL;
     }
     jobject jrange = env->NewObject(rangeClazz, rangeCtor,
-                                    (jlong) range->start,
-                                    (jlong) range->end);
+                                    jlong(range->start),
+                                    jlong(range->end),
+                                    jboolean(range->inheritable));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 

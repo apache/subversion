@@ -341,10 +341,9 @@ dav_svn__log_report(const dav_resource *resource,
                                   dav_xml_get_cdata(child, resource->pool, 1));
           if (serr)
             {
-              derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+              return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
                                           "Malformed CDATA in element "
                                           "\"limit\"", resource->pool);
-              goto cleanup;
             }
         }
       else if (strcmp(child->name, "discover-changed-paths") == 0)

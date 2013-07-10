@@ -43,10 +43,10 @@ Wimp = svntest.testcase.Wimp_deco
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import svn_copy
-from merge_tests import svn_merge
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import svn_copy
+from svntest.mergetrees import svn_merge
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1329,7 +1329,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
   })
 
   # Currently this test fails because some parts of the merge
-  # start succeeding. 
+  # start succeeding.
   svntest.deeptrees.deep_trees_run_tests_scheme_for_merge(sbox,
     [ DeepTreesTestCase(
                "local_tree_missing_incoming_leaf_edit",

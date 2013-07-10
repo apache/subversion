@@ -706,7 +706,7 @@ def log(source, selection):
                 date = props["svn:date"].split(".")[0]
                 date = time.strptime(date, "%Y-%m-%dT%H:%M:%S")
                 date = time.strftime("%Y-%m-%d %H:%M:%S +0000 (%a, %d %b %Y)", date)
-                print "r%s | %s | %s | %d lines" % (self.revision,
+                print "r%s | %s | %s | %d lines" % (source.revision,
                                                     author,
                                                     date,
                                                     logentry.count(os.linesep))

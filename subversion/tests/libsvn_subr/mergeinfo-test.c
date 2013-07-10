@@ -28,6 +28,7 @@
 
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"

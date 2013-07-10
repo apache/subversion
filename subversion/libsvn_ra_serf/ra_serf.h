@@ -40,6 +40,7 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_editor.h"
 
 #include "blncache.h"
 
@@ -49,8 +50,8 @@ extern "C" {
 
 
 /* Enforce the minimum version of serf. */
-#if !SERF_VERSION_AT_LEAST(0, 7, 1)
-#error Please update your version of serf to at least 0.7.1.
+#if !SERF_VERSION_AT_LEAST(1, 2, 1)
+#error Please update your version of serf to at least 1.2.1.
 #endif
 
 /** Use this to silence compiler warnings about unused parameters. */
@@ -143,6 +144,9 @@ struct svn_ra_serf__session_t {
      HTTP/1.0. Thus, we cannot send chunked requests.  */
   svn_boolean_t http10;
 
+  /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
+  svn_boolean_t using_chunked_requests;
+
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 
@@ -180,8 +184,16 @@ struct svn_ra_serf__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Activity collection URL.  (Cached from the initial OPTIONS
+     request when run against HTTPv1 servers.)  */
+  const char *activity_collection_url;
+
   /* Are we using a proxy? */
-  int using_proxy;
+  svn_boolean_t using_proxy;
+
+  /* Should we be careful with this proxy? (some have insufficient support that
+     we need to work around).  */
+  svn_boolean_t busted_proxy;
 
   const char *proxy_username;
   const char *proxy_password;
@@ -238,7 +250,7 @@ struct svn_ra_serf__session_t {
   svn_tristate_t bulk_updates;
 
   /* Indicates if the server wants bulk update requests (Prefer) or only
-     accepts skelta requests (Off). If this value is On both options are 
+     accepts skelta requests (Off). If this value is On both options are
      allowed. */
   const char *server_allows_bulk;
 
@@ -718,6 +730,16 @@ typedef svn_error_t *
                             apr_size_t len,
                             apr_pool_t *scratch_pool);
 
+/* Called when releasing the XML parser to signal that the entire document was
+   read successfully */
+typedef svn_error_t *
+(*svn_ra_serf__xml_done_t)(void *baton,
+                           apr_pool_t *scratch_pool);
+
+
+/* Magic state value for the initial state in a svn_ra_serf__xml_transition_t
+   table */
+#define XML_STATE_INITIAL 0
 
 /* State transition table.
 
@@ -726,6 +748,8 @@ typedef svn_error_t *
 
    In a list of transitions, use { 0 } to indicate the end. Specifically,
    the code looks for NS == NULL.
+
+   The initial state for each transition table is XML_STATE_INITIAL.
 
    ### more docco
 */
@@ -771,7 +795,10 @@ typedef struct svn_ra_serf__xml_transition_t {
    COLLECT_CDATA flag). It will be called in every state, so the callback
    must examine the CURRENT_STATE parameter to decide what to do.
 
-   The same BATON value will be passed to all three callbacks.
+   If DONE_CB is not NULL, then it will be called when the parser is closed
+   after successfully parsing an entire document.
+
+   The same BATON value will be passed to all four callbacks.
 
    The context will be created within RESULT_POOL.  */
 svn_ra_serf__xml_context_t *
@@ -780,21 +807,29 @@ svn_ra_serf__xml_context_create(
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
   svn_ra_serf__xml_cdata_t cdata_cb,
+  svn_ra_serf__xml_done_t done_cb,
   void *baton,
   apr_pool_t *result_pool);
 
-/* Destroy all subpools for this structure. */
-void
-svn_ra_serf__xml_context_destroy(
-  svn_ra_serf__xml_context_t *xmlctx);
+/* Verifies if the parsing completed successfully and destroys
+   all subpools. */
+svn_error_t *
+svn_ra_serf__xml_context_done(svn_ra_serf__xml_context_t *xmlctx);
 
 /* Construct a handler with the response function/baton set up to parse
    a response body using the given XML context. The handler and its
    internal structures are allocated in RESULT_POOL.
 
+   As part of the handling the http status value is compared to 200, or
+   if EXPECTED_STATUS is not NULL to all the values in EXPECTED_STATUS.
+   EXPECTED_STATUS is expected to be a list of integers ending with a 0
+   that lives at least as long as RESULT_POOL. If the status doesn't
+   match the request has failed and will be parsed as en error response.
+
    This also initializes HANDLER_POOL to the given RESULT_POOL.  */
 svn_ra_serf__handler_t *
 svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  const int *expected_status,
                                   apr_pool_t *result_pool);
 
 
@@ -1297,7 +1332,7 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const svn_string_t *val, apr_pool_t *pool);
 
 svn_error_t *
-svn_ra_serf__get_resource_type(svn_kind_t *kind,
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
                                apr_hash_t *props);
 
 
@@ -1328,6 +1363,14 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
 
 /** OPTIONS-related functions **/
+
+/* When running with a proxy, we may need to detect and correct for problems.
+   This probing function will send a simple OPTIONS request to detect problems
+   with the connection.  */
+svn_error_t *
+svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+                         apr_pool_t *scratch_pool);
+
 
 /* On HTTPv2 connections, run an OPTIONS request over CONN to fetch the
    current youngest revnum, returning it in *YOUNGEST.
@@ -1524,9 +1567,11 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
                        const char *update_target,
                        svn_depth_t depth,
                        svn_boolean_t send_copyfrom_args,
+                       svn_boolean_t ignore_ancestry,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /* Implements svn_ra__vtable_t.do_switch(). */
 svn_error_t *
@@ -1737,7 +1782,7 @@ svn_ra_serf__credentials_callback(char **username, char **password,
  * where it necessary.
  */
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code,
+svn_ra_serf__error_on_status(serf_status_line sline,
                              const char *path,
                              const char *location);
 

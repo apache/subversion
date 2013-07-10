@@ -93,7 +93,7 @@ class JSONRecordHandler:
     obj = json.loads(record)
     if 'svnpubsub' in obj:
       actual_version = obj['svnpubsub'].get('version')
-      EXPECTED_VERSION = 1 
+      EXPECTED_VERSION = 1
       if actual_version != EXPECTED_VERSION:
         raise ValueException("Unknown svnpubsub format: %r != %d"
                              % (actual_format, expected_format))
@@ -207,7 +207,7 @@ class BigDoEverythingClasss(object):
         if path[0:1] == '/' and len(path) > 1:
             path = path[1:]
 
-        #TODO: allow URL to be configurable. 
+        #TODO: allow URL to be configurable.
         link = " - http://svn.apache.org/r%d" % (commit.id)
         left -= len(link)
         msg = "r%d in %s by %s: "  % (commit.id, path, commit.committer)

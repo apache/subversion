@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include "svn_private_config.h"         /* for SVN_HAVE_OLD_EXPAT */
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_xml.h"
 #include "svn_error.h"
@@ -533,7 +534,7 @@ svn_xml_ap_to_hash(va_list ap, apr_pool_t *pool)
   while ((key = va_arg(ap, char *)) != NULL)
     {
       const char *val = va_arg(ap, const char *);
-      apr_hash_set(ht, key, APR_HASH_KEY_STRING, val);
+      svn_hash_sets(ht, key, val);
     }
 
   return ht;

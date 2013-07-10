@@ -52,9 +52,6 @@ svn_cl__resolve(apr_getopt_t *os,
   int i;
   apr_pool_t *iterpool;
   svn_boolean_t had_error = FALSE;
-  svn_wc_conflict_resolver_func2_t conflict_func2;
-  void *conflict_baton2;
-  svn_cl__interactive_conflict_baton_t *b;
 
   switch (opt_state->accept_which)
     {
@@ -106,21 +103,6 @@ svn_cl__resolve(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
-  /* Store old state */
-  conflict_func2 = ctx->conflict_func2;
-  conflict_baton2 = ctx->conflict_baton2;
-
-  /* This subcommand always uses the interactive resolver function. */
-  ctx->conflict_func2 = svn_cl__conflict_func_interactive;
-  SVN_ERR(svn_cl__get_conflict_func_interactive_baton(&b,
-                                                      opt_state->accept_which,
-                                                      ctx->config,
-                                                      opt_state->editor_cmd,
-                                                      ctx->cancel_func,
-                                                      ctx->cancel_baton,
-                                                      scratch_pool));
-  ctx->conflict_baton2 = b;
-
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
     {
@@ -139,10 +121,6 @@ svn_cl__resolve(apr_getopt_t *os,
         }
     }
   svn_pool_destroy(iterpool);
-
-  /* Restore state */
-  ctx->conflict_func2 = conflict_func2;
-  ctx->conflict_baton2 = conflict_baton2;
 
   if (had_error)
     return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,

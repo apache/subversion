@@ -233,15 +233,6 @@ svn_checksum__from_digest_sha1(const unsigned char *digest,
  * @{
  */
 
-/**
- * Clear any key/value pairs in the hash table.  A wrapper for a
- * apr_hash_clear(), which isn't available until APR 1.3.0.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_hash__clear(apr_hash_t *hash, apr_pool_t *pool);
-
 /** @} */
 
 
@@ -318,7 +309,7 @@ svn_prop__patch(const apr_hash_t *original_props,
  */
 
 /* Set @a *version to a version structure parsed from the version
- * string representation in @a version_string.  Return 
+ * string representation in @a version_string.  Return
  * @c SVN_ERR_MALFORMED_VERSION_STRING if the string fails to parse
  * cleanly.
  *

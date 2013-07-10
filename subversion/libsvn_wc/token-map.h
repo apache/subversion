@@ -34,10 +34,10 @@ extern "C" {
 #endif
 
 static const svn_token_map_t kind_map[] = {
-  { "file", svn_kind_file }, /* MAP_FILE */
-  { "dir", svn_kind_dir }, /* MAP_DIR */
-  { "symlink", svn_kind_symlink }, /* MAP_SYMLINK */
-  { "unknown", svn_kind_unknown }, /* MAP_UNKNOWN */
+  { "file", svn_node_file }, /* MAP_FILE */
+  { "dir", svn_node_dir }, /* MAP_DIR */
+  { "symlink", svn_node_symlink }, /* MAP_SYMLINK */
+  { "unknown", svn_node_unknown }, /* MAP_UNKNOWN */
   { NULL }
 };
 

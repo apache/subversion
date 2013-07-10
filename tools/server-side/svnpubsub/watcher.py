@@ -35,6 +35,9 @@ def _commit(url, commit):
   print('COMMIT: from %s' % url)
   pprint.pprint(vars(commit), indent=2)
 
+def _metadata(url, metadata):
+  print('METADATA: from %s' % url)
+  pprint.pprint(vars(metadata), indent=2)
 
 def _event(url, event_name, event_arg):
   if event_arg:
@@ -44,7 +47,7 @@ def _event(url, event_name, event_arg):
 
 
 def main(urls):
-  mc = svnpubsub.client.MultiClient(urls, _commit, _event)
+  mc = svnpubsub.client.MultiClient(urls, _commit, _event, _metadata)
   mc.run_forever()
 
 

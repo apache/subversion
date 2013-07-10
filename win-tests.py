@@ -331,16 +331,16 @@ def locate_libs():
   else:
     suffix = ""
 
-  if cp.has_option('options', '--with-static-apr'):
+  if not cp.has_option('options', '--with-static-apr'):
     dlls.append(os.path.join(gen_obj.apr_path, objdir,
                              'libapr%s.dll' % (suffix)))
     dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
                              'libaprutil%s.dll' % (suffix)))
 
-  if gen_obj.libintl_path is not None:
+  if gen_obj.libintl_path:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
 
-  if gen_obj.bdb_lib is not None:
+  if gen_obj.bdb_path:
     partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
     if objdir == 'Debug':
       dlls.append(partial_path + 'd.dll')
@@ -364,8 +364,12 @@ def locate_libs():
                                     'mod_dav_svn', 'mod_dav_svn.so')
     mod_authz_svn_path = os.path.join(abs_objdir, 'subversion',
                                       'mod_authz_svn', 'mod_authz_svn.so')
+    mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
+                                        'mod_dontdothat', 'mod_dontdothat.so')
+
     copy_changed_file(mod_dav_svn_path, abs_objdir)
     copy_changed_file(mod_authz_svn_path, abs_objdir)
+    copy_changed_file(mod_dontdothat_path, abs_objdir)
 
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
 
@@ -392,7 +396,7 @@ class Svnserve:
     self.path = os.path.join(abs_objdir,
                              'subversion', 'svnserve', self.name)
     self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH)
-    self.proc_handle = None
+    self.proc = None
 
   def __del__(self):
     "Stop svnserve when the object is deleted"
@@ -410,26 +414,18 @@ class Svnserve:
     else:
       args = [self.name] + self.args
     print('Starting %s %s' % (self.kind, self.name))
-    try:
-      import win32process
-      import win32con
-      args = ' '.join([self._quote(x) for x in args])
-      self.proc_handle = (
-        win32process.CreateProcess(self._quote(self.path), args,
-                                   None, None, 0,
-                                   win32con.CREATE_NEW_CONSOLE,
-                                   None, None, win32process.STARTUPINFO()))[0]
-    except ImportError:
-      os.spawnv(os.P_NOWAIT, self.path, args)
+
+    self.proc = subprocess.Popen([self.path] + args[1:])
 
   def stop(self):
-    if self.proc_handle is not None:
+    if self.proc is not None:
       try:
-        import win32process
         print('Stopping %s' % self.name)
-        win32process.TerminateProcess(self.proc_handle, 0)
+        self.proc.poll();
+        if self.proc.returncode is None:
+          self.proc.kill();
         return
-      except ImportError:
+      except AttributeError:
         pass
     print('Svnserve.stop not implemented')
 
@@ -452,7 +448,7 @@ class Httpd:
       self.bulkupdates_option = 'off'
 
     self.service = service
-    self.proc_handle = None
+    self.proc = None
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
 
     if short_circuit:
@@ -471,6 +467,9 @@ class Httpd:
     self.authz_file = os.path.join(abs_builddir,
                                    CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                    'svn-test-work', 'authz')
+    self.dontdothat_file = os.path.join(abs_builddir,
+                                         CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                         'svn-test-work', 'dontdothat')
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
@@ -488,6 +487,7 @@ class Httpd:
 
     self._create_users_file()
     self._create_mime_types_file()
+    self._create_dontdothat_file()
 
     # Determine version.
     if os.path.exists(os.path.join(self.httpd_dir,
@@ -514,7 +514,7 @@ class Httpd:
     fp.write('PidFile      pid\n')
     fp.write('ErrorLog     log\n')
     fp.write('Listen       ' + str(self.httpd_port) + '\n')
-    
+
     if not no_log:
       fp.write('LogFormat    "%h %l %u %t \\"%r\\" %>s %b" common\n')
       fp.write('Customlog    log common\n')
@@ -541,6 +541,9 @@ class Httpd:
     # Write LoadModule for Subversion modules
     fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
     fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
+
+    # And for mod_dontdothat
+    fp.write(self._svn_module('dontdothat_module', 'mod_dontdothat.so'))
 
     # Don't handle .htaccess, symlinks, etc.
     fp.write('<Directory />\n')
@@ -587,6 +590,19 @@ class Httpd:
     fp = open(self.httpd_mime_types, 'w')
     fp.close()
 
+  def _create_dontdothat_file(self):
+    "Create empty mime.types file"
+    # If the tests have not previously been run or were cleaned
+    # up, then 'svn-test-work' does not exist yet.
+    parent_dir = os.path.dirname(self.dontdothat_file)
+    if not os.path.exists(parent_dir):
+      os.makedirs(parent_dir)
+
+    fp = open(self.dontdothat_file, 'w')
+    fp.write('[recursive-actions]\n')
+    fp.write('/ = deny\n')
+    fp.close()
+
   def _sys_module(self, name, path):
     full_path = os.path.join(self.httpd_dir, 'modules', path)
     return 'LoadModule ' + name + " " + self._quote(full_path) + '\n'
@@ -600,6 +616,7 @@ class Httpd:
                         CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                         'svn-test-work', name)
     location = '/svn-test-work/' + name
+    ddt_location = '/ddt-test-work/' + name
     return \
       '<Location ' + location + '>\n' \
       '  DAV             svn\n' \
@@ -612,6 +629,19 @@ class Httpd:
       '  AuthName        "Subversion Repository"\n' \
       '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
       '  Require         valid-user\n' \
+      '</Location>\n' \
+      '<Location ' + ddt_location + '>\n' \
+      '  DAV             svn\n' \
+      '  SVNParentPath   ' + self._quote(path) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '  SVNAllowBulkUpdates ' + self.bulkupdates_option + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  AuthType        Basic\n' \
+      '  AuthName        "Subversion Repository"\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require         valid-user\n' \
+      '  DontDoThatConfigFile ' + self._quote(self.dontdothat_file) + '\n' \
       '</Location>\n'
 
   def start(self):
@@ -642,27 +672,18 @@ class Httpd:
     "Start HTTPD as daemon"
     print('Starting httpd as daemon')
     print(self.httpd_args)
-    try:
-      import win32process
-      import win32con
-      args = ' '.join([self._quote(x) for x in self.httpd_args])
-      self.proc_handle = (
-        win32process.CreateProcess(self._quote(self.path), args,
-                                   None, None, 0,
-                                   win32con.CREATE_NEW_CONSOLE,
-                                   None, None, win32process.STARTUPINFO()))[0]
-    except ImportError:
-      os.spawnv(os.P_NOWAIT, self.path, self.httpd_args)
+    self.proc = subprocess.Popen([self.path] + self.httpd_args[1:])
 
   def _stop_daemon(self):
     "Stop the HTTPD daemon"
-    if self.proc_handle is not None:
+    if self.proc is not None:
       try:
-        import win32process
         print('Stopping %s' % self.name)
-        win32process.TerminateProcess(self.proc_handle, 0)
+        self.proc.poll();
+        if self.proc.returncode is None:
+          self.proc.kill();
         return
-      except ImportError:
+      except AttributeError:
         pass
     print('Httpd.stop_daemon not implemented')
 

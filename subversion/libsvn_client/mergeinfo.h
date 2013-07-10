@@ -339,7 +339,12 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool);
 
-/* Write mergeinfo into the WC.  RESULT_CATALOG maps (const char *) WC paths
+/* Write mergeinfo into the WC.
+ *
+ * For each path in RESULT_CATALOG, set the SVN_PROP_MERGEINFO
+ * property to represent the given mergeinfo, or remove the property
+ * if the given mergeinfo is null, and notify the change.  Leave
+ * other paths unchanged.  RESULT_CATALOG maps (const char *) WC paths
  * to (svn_mergeinfo_t) mergeinfo. */
 svn_error_t *
 svn_client__record_wc_mergeinfo_catalog(apr_hash_t *result_catalog,

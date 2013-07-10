@@ -34,6 +34,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -46,6 +47,7 @@
 #include "svn_time.h"
 #include "svn_utf.h"
 #include "svn_subst.h"
+#include "svn_sorts.h"
 #include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_diff.h"
@@ -55,6 +57,7 @@
 #include "private/svn_diff_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_io_private.h"
 
 #include "svn_private_config.h"
 
@@ -961,7 +964,7 @@ print_diff_tree(svn_stream_t *out_stream,
               if (diff_cmd_argc)
                 {
                   int i;
-                  diff_cmd_argv = apr_palloc(pool, 
+                  diff_cmd_argv = apr_palloc(pool,
                                              diff_cmd_argc * sizeof(char *));
                   for (i = 0; i < diff_cmd_argc; i++)
                     SVN_ERR(svn_utf_cstring_to_utf8(&diff_cmd_argv[i],
@@ -981,12 +984,21 @@ print_diff_tree(svn_stream_t *out_stream,
               SVN_ERR(generate_label(&new_label, root, path, pool));
 
               /* We deal in streams, but svn_io_run_diff2() deals in file
-                 handles, unfortunately, so we need to make these temporary
-                 files, and then copy the contents to our stream. */
-              SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
-                        svn_io_file_del_on_pool_cleanup, pool, pool));
-              SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
-                        svn_io_file_del_on_pool_cleanup, pool, pool));
+                 handles, so we may need to make temporary files and then
+                 copy the contents to our stream. */
+              outfile = svn_stream__aprfile(out_stream);
+              if (outfile)
+                outfilename = NULL;
+              else
+                SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
+                          svn_io_file_del_on_pool_cleanup, pool, pool));
+              SVN_ERR(svn_stream_for_stderr(&err_stream, pool));
+              errfile = svn_stream__aprfile(err_stream);
+              if (errfile)
+                errfilename = NULL;
+              else
+                SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
+                          svn_io_file_del_on_pool_cleanup, pool, pool));
 
               SVN_ERR(svn_io_run_diff2(".",
                                        diff_cmd_argv,
@@ -996,21 +1008,25 @@ print_diff_tree(svn_stream_t *out_stream,
                                        &exitcode, outfile, errfile,
                                        c->diff_cmd, pool));
 
-              SVN_ERR(svn_io_file_close(outfile, pool));
-              SVN_ERR(svn_io_file_close(errfile, pool));
-
               /* Now, open and copy our files to our output streams. */
-              SVN_ERR(svn_stream_for_stderr(&err_stream, pool));
-              SVN_ERR(svn_stream_open_readonly(&stream, outfilename,
-                                               pool, pool));
-              SVN_ERR(svn_stream_copy3(stream,
-                                       svn_stream_disown(out_stream, pool),
-                                       NULL, NULL, pool));
-              SVN_ERR(svn_stream_open_readonly(&stream, errfilename,
-                                               pool, pool));
-              SVN_ERR(svn_stream_copy3(stream,
-                                       svn_stream_disown(err_stream, pool),
-                                       NULL, NULL, pool));
+              if (outfilename)
+                {
+                  SVN_ERR(svn_io_file_close(outfile, pool));
+                  SVN_ERR(svn_stream_open_readonly(&stream, outfilename,
+                                                   pool, pool));
+                  SVN_ERR(svn_stream_copy3(stream,
+                                           svn_stream_disown(out_stream, pool),
+                                           NULL, NULL, pool));
+                }
+              if (errfilename)
+                {
+                  SVN_ERR(svn_io_file_close(errfile, pool));
+                  SVN_ERR(svn_stream_open_readonly(&stream, errfilename,
+                                                   pool, pool));
+                  SVN_ERR(svn_stream_copy3(stream,
+                                           svn_stream_disown(err_stream, pool),
+                                           NULL, NULL, pool));
+                }
 
               SVN_ERR(svn_stream_printf_from_utf8(out_stream, encoding, pool,
                                                   "\n"));
@@ -1166,7 +1182,6 @@ print_tree(svn_fs_root_t *root,
 {
   apr_pool_t *subpool;
   apr_hash_t *entries;
-  apr_hash_index_t *hi;
   const char* name;
 
   SVN_ERR(check_cancel(NULL));
@@ -1214,11 +1229,18 @@ print_tree(svn_fs_root_t *root,
   /* Recursively handle the node's children. */
   if (recurse || (indentation == 0))
     {
+      apr_array_header_t *sorted_entries;
+      int i;
+
       SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
       subpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+      sorted_entries = svn_sort__hash(entries,
+                                      svn_sort_compare_items_lexically, pool);
+      for (i = 0; i < sorted_entries->nelts; i++)
         {
-          svn_fs_dirent_t *entry = svn__apr_hash_index_val(hi);
+          svn_sort__item_t item = APR_ARRAY_IDX(sorted_entries, i,
+                                                svn_sort__item_t);
+          svn_fs_dirent_t *entry = item.value;
 
           svn_pool_clear(subpool);
           SVN_ERR(print_tree(root,
@@ -1762,7 +1784,7 @@ do_pget(svnlook_ctxt_t *c,
             {
               apr_hash_t *hash = apr_hash_make(pool);
 
-              apr_hash_set(hash, propname, APR_HASH_KEY_STRING, prop);
+              svn_hash_sets(hash, propname, prop);
               SVN_ERR(svn_stream_printf(stdout_stream, pool,
                       _("Properties on '%s':\n"), path));
               SVN_ERR(svn_cmdline__print_prop_hash(stdout_stream, hash,
@@ -2663,6 +2685,16 @@ main(int argc, const char *argv[])
                                     _("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
               SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+
+              /* Be kind to people who try 'svnlook verify'. */
+              if (strcmp(first_arg_utf8, "verify") == 0)
+                {
+                  svn_error_clear(
+                    svn_cmdline_fprintf(stderr, pool,
+                                        _("Try 'svnadmin verify' instead.\n")));
+                }
+
+
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }

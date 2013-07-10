@@ -66,6 +66,36 @@ svn_strerror(apr_status_t statcode,
              apr_size_t bufsize);
 
 
+/**
+ * Return the symbolic name of an error code.  If the error code
+ * is in svn_error_codes.h, return the name of the macro as a string.
+ * If the error number is not recognised, return @c NULL.
+ *
+ * An error number may not be recognised because it was defined in a future
+ * version of Subversion (e.g., a 1.9.x server may transmit a defined-in-1.9.0
+ * error number to a 1.8.x client).
+ *
+ * An error number may be recognised @em incorrectly if the @c apr_status_t
+ * value originates in another library (such as libserf) which also uses APR.
+ * (This is a theoretical concern only: the @c apr_err member of #svn_error_t
+ * should never contain a "foreign" @c apr_status_t value, and
+ * in any case Subversion and Serf use non-overlapping subsets of the
+ * @c APR_OS_START_USERERR range.)
+ *
+ * Support for error codes returned by APR itself (i.e., not in the
+ * @c APR_OS_START_USERERR range, as defined in apr_errno.h) may be implemented
+ * in the future.
+ *
+ * @note In rare cases, a single numeric code has more than one symbolic name.
+ * (For example, #SVN_ERR_WC_NOT_DIRECTORY and #SVN_ERR_WC_NOT_WORKING_COPY).
+ * In those cases, it is not guaranteed which symbolic name is returned.
+ *
+ * @since New in 1.8.
+ */
+const char *
+svn_error_symbolic_name(apr_status_t statcode);
+
+
 /** If @a err has a custom error message, return that, otherwise
  * store the generic error string associated with @a err->apr_err into
  * @a buf (terminating with NULL) and return @a buf.
@@ -210,7 +240,7 @@ void
 svn_error_clear(svn_error_t *error);
 
 
-#if defined(SVN_DEBUG)
+#if defined(SVN_ERR__TRACING)
 /** Set the error location for debug mode. */
 void
 svn_error__locate(const char *file,
@@ -409,7 +439,7 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
 
-/** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
+/** Evaluates to @c TRUE iff @a apr_err (of type apr_status_t) is in the given
  * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
  * constants.
  *
@@ -595,6 +625,11 @@ typedef svn_error_t *(*svn_error_malfunction_handler_t)
  */
 svn_error_malfunction_handler_t
 svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func);
+
+/** Return the malfunction handler that is currently in effect.
+ * @since New in 1.9. */
+svn_error_malfunction_handler_t
+svn_error_get_malfunction_handler(void);
 
 /** Handle a malfunction by returning an error object that describes it.
  *

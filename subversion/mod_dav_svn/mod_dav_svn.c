@@ -34,6 +34,7 @@
 #include <ap_provider.h>
 #include <mod_dav.h>
 
+#include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_cache_config.h"
 #include "svn_utf.h"
@@ -136,7 +137,7 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 
   /* This returns void, so we can't check for error. */
   conf = ap_get_module_config(s->module_config, &dav_svn_module);
-  svn_utf_initialize2(p, conf->use_utf8);
+  svn_utf_initialize2(conf->use_utf8, p);
 
   return OK;
 }
@@ -314,7 +315,7 @@ SVNMasterVersion_cmd(cmd_parms *cmd, void *config, const char *arg1)
       svn_error_clear(err);
       return "Malformed master server version string.";
     }
-  
+
   conf->master_version = version;
   return NULL;
 }
@@ -1149,7 +1150,7 @@ static const command_rec cmds[] =
   AP_INIT_TAKE1("SVNMasterVersion", SVNMasterVersion_cmd, NULL, ACCESS_CONF,
                 "specifies the Subversion release version of a master "
                 "Subversion server "),
-  
+
   /* per directory/location */
   AP_INIT_TAKE1("SVNActivitiesDB", SVNActivitiesDB_cmd, NULL, ACCESS_CONF,
                 "specifies the location in the filesystem in which the "
