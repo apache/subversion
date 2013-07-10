@@ -27,10 +27,17 @@
 #include <apr_getopt.h>
 #include <apr_tables.h>
 
+#include "svn_private_config.h"
+
+#ifdef SVN_HAVE_SERF
+#include <serf.h>
+#endif
+
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_utf.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
@@ -38,8 +45,6 @@
 #include "svn_sorts.h"
 
 #include "private/svn_cmdline_private.h"
-
-#include "svn_private_config.h"
 
 /* Baton for passing option/argument state to a subcommand function. */
 struct svnauth_opt_state
@@ -157,6 +162,172 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"
 
+#ifdef SVN_HAVE_SERF
+struct cert_info_key_map {
+  const char *serf_hash_key;
+  const char *display_name;
+} cert_info_key_map[] = {
+  { "CN", _("Common Name") },
+  { "E", _("Email Address") },
+  { "OU", _("Organizational Unit") },
+  { "O", _("Organization") },
+  { "L", _("Locality") },
+  { "ST", _("State or Province") },
+  { "C",  _("Country") },
+  { "sha1",  _("SHA1 Fingerprint") },
+  { "notBefore", _("Valid as of") },
+  { "notAfter",  _("Valid until") },
+  { NULL, NULL }
+};
+
+/* Show information stored in CERT_INFO.
+ * Assume all hash table keys occur in the above key map. */
+static svn_error_t *
+show_cert_info(apr_hash_t *cert_info,
+               apr_pool_t *scratch_pool)
+{
+  const char *key;
+  int i;
+
+  i = 0;
+  do
+    {
+      key = cert_info_key_map[i].serf_hash_key;
+      if (key)
+        {
+          const char *value = svn_hash_gets(cert_info, key);
+
+          if (value)
+            SVN_ERR(svn_cmdline_printf(scratch_pool, "  %s: %s\n",
+                                       cert_info_key_map[i].display_name,
+                                       value));
+        }
+      i++;
+    }
+  while (key);
+
+  return SVN_NO_ERROR;
+}
+
+#define MAX_CERT_LINE_LEN 78
+
+/* Break ASCII_CERT into lines of at most MAX_CERT_LINE_LEN characters.
+ * Otherwise, OpenSSL won't parse it due to the way it is invoked by serf. */
+static const char *
+split_ascii_cert(const char *ascii_cert,
+                 apr_pool_t *result_pool)
+{
+  apr_array_header_t *lines;
+  int i;
+  apr_size_t cert_len, nlines;
+  const char *p;
+  svn_stringbuf_t *line;
+
+  p = ascii_cert;
+  cert_len = strlen(ascii_cert);
+  nlines = cert_len / MAX_CERT_LINE_LEN;
+  lines = apr_array_make(result_pool, 22, sizeof(const char *));
+  for (i = 0; i < nlines; i++)
+    {
+      line = svn_stringbuf_create_ensure(MAX_CERT_LINE_LEN, result_pool);
+      svn_stringbuf_appendbytes(line, p, MAX_CERT_LINE_LEN);
+      p += MAX_CERT_LINE_LEN;
+      APR_ARRAY_PUSH(lines, const char *) = line->data;
+    }
+  if (*p)
+    {
+      line = svn_stringbuf_create_ensure(MAX_CERT_LINE_LEN, result_pool);
+      while (*p)
+        svn_stringbuf_appendbyte(line, *p++);
+      APR_ARRAY_PUSH(lines, const char *) = line->data;
+    }
+
+  return svn_cstring_join(lines, "\n", result_pool);
+}
+#endif /* SVN_HAVE_SERF */
+
+/* ### from libsvn_subr/ssl_server_trust_providers.c */
+#define AUTHN_ASCII_CERT_KEY            "ascii_cert"
+
+/* Display the base64-encoded DER certificate ASCII_CERT. */
+static svn_error_t *
+show_ascii_cert(const char *ascii_cert,
+                apr_pool_t *scratch_pool)
+{
+#ifdef SVN_HAVE_SERF
+  apr_file_t *pem_file;
+  const char *pem_path;
+  const char *pem;
+  apr_size_t pem_len;
+  apr_size_t written;
+  apr_status_t status;
+  serf_ssl_certificate_t *cert;
+  apr_hash_t *cert_info;
+
+  SVN_ERR(svn_io_open_unique_file3(&pem_file, &pem_path, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+  pem = apr_psprintf(scratch_pool, "%s%s%s",
+                     "-----BEGIN CERTIFICATE-----\n",
+                     split_ascii_cert(ascii_cert, scratch_pool),
+                     "-----END CERTIFICATE-----\n");
+  pem_len = strlen(pem);
+  SVN_ERR(svn_io_file_write_full(pem_file, pem, pem_len, &written,
+                                 scratch_pool));
+  if (written != pem_len)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("Base64-encoded certificate: %s\n"),
+                                 ascii_cert));
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(svn_io_file_flush_to_disk(pem_file, scratch_pool));
+
+  status = serf_ssl_load_cert_file(&cert, pem_path, scratch_pool);
+  if (status)
+    {
+      svn_error_t *err;
+      
+      err = svn_error_wrap_apr(status, _("serf error: %s"),
+                               serf_error_string(status));
+      svn_handle_warning2(stderr, err, "svnauth: ");
+      svn_error_clear(err);
+
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("Base64-encoded certificate: %s\n"),
+                                 ascii_cert));
+      return SVN_NO_ERROR;
+    }
+
+  cert_info = serf_ssl_cert_issuer(cert, scratch_pool);
+  if (cert_info && apr_hash_count(cert_info) > 0)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Certificate issuer:\n")));
+      SVN_ERR(show_cert_info(cert_info, scratch_pool));
+    }
+
+  cert_info = serf_ssl_cert_subject(cert, scratch_pool);
+  if (cert_info && apr_hash_count(cert_info) > 0)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Certificate subject:\n")));
+      SVN_ERR(show_cert_info(cert_info, scratch_pool));
+    }
+
+  cert_info = serf_ssl_cert_certificate(cert, scratch_pool);
+  if (cert_info && apr_hash_count(cert_info) > 0)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Certificate validity:\n")));
+      SVN_ERR(show_cert_info(cert_info, scratch_pool));
+    }
+#else
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             _("Base64-encoded certificate: %s\n"),
+                             ascii_cert));
+#endif /* SVN_HAVE_SERF */
+
+  return SVN_NO_ERROR;
+}
+                
 /* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
 list_credentials(svn_boolean_t *delete_cred,
@@ -169,6 +340,7 @@ list_credentials(svn_boolean_t *delete_cred,
   struct svnauth_opt_state *opt_state = baton;
   apr_array_header_t *sorted_hash_items;
   int i;
+  apr_pool_t *iterpool;
 
   *delete_cred = FALSE;
 
@@ -180,22 +352,27 @@ list_credentials(svn_boolean_t *delete_cred,
 
   sorted_hash_items = svn_sort__hash(hash, svn_sort_compare_items_lexically,
                                      scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < sorted_hash_items->nelts; i++)
     {
       svn_sort__item_t item;
       const char *key;
       svn_string_t *value;
       
+      svn_pool_clear(iterpool);
       item = APR_ARRAY_IDX(sorted_hash_items, i, svn_sort__item_t);
       key = item.key;
       value = item.value;
       if (!opt_state->show_passwords && strcmp(key, "password") == 0)
-        SVN_ERR(svn_cmdline_printf(scratch_pool, _("%s: [not shown]\n"), key));
+        SVN_ERR(svn_cmdline_printf(iterpool, _("%s: [not shown]\n"), key));
       else if (strcmp(value->data, realmstring) == 0)
         continue; /* realm string was already shown above */
+      else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
+        SVN_ERR(show_ascii_cert(value->data, iterpool));
       else
-        SVN_ERR(svn_cmdline_printf(scratch_pool, "%s: %s\n", key, value->data));
+        SVN_ERR(svn_cmdline_printf(iterpool, "%s: %s\n", key, value->data));
     }
+  svn_pool_destroy(iterpool);
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
   return SVN_NO_ERROR;
