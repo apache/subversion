@@ -1012,19 +1012,6 @@ svn_cl__local_style_skip_ancestor(const char *parent_path,
   return svn_dirent_local_style(relpath ? relpath : path, pool);
 }
 
-/* Return a string of the form "PATH_OR_URL@REVISION". */
-static const char *
-path_for_display(const char *path_or_url,
-                 const svn_opt_revision_t *revision,
-                 apr_pool_t *pool)
-{
-  const char *rev_str = svn_opt__revision_to_string(revision, pool);
-
-  if (! svn_path_is_url(path_or_url))
-    path_or_url = svn_dirent_local_style(path_or_url, pool);
-  return apr_psprintf(pool, "%s@%s", path_or_url, rev_str);
-}
-
 svn_error_t *
 svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
                                                const char *propname,
