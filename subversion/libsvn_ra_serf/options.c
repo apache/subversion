@@ -541,10 +541,13 @@ create_simple_options_body(serf_bucket_t **body_bkt,
 
 
 svn_error_t *
-svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+svn_ra_serf__probe_proxy(svn_boolean_t *supports_chunked,
+                         svn_ra_serf__session_t *serf_sess,
                          apr_pool_t *scratch_pool)
 {
   svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
+  svn_boolean_t set_CL;
 
   handler = apr_pcalloc(scratch_pool, sizeof(*handler));
   handler->handler_pool = scratch_pool;
@@ -561,13 +564,23 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
 
   /* No special headers.  */
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+  /* Disable sending Content-Length for this specific request to check server
+     support for chunked Transfer-Encoding. */
+  set_CL = serf_sess->set_CL;
+  serf_sess->set_CL = FALSE;
+  err = svn_ra_serf__context_run_one(handler, scratch_pool);
+
+  /* Revert original value back. */
+  serf_sess->set_CL = set_CL;
+
+  SVN_ERR(err);
+
   /* Some versions of nginx in reverse proxy mode will return 411. They want
      a Content-Length header, rather than chunked requests. We can keep other
      HTTP/1.1 features, but will disable the chunking.  */
   if (handler->sline.code == 411)
     {
-      serf_sess->using_chunked_requests = FALSE;
+      *supports_chunked = FALSE;
 
       return SVN_NO_ERROR;
     }
@@ -575,6 +588,7 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
                                        handler->path,
                                        handler->location));
 
+  *supports_chunked = TRUE;
   return SVN_NO_ERROR;
 }
 

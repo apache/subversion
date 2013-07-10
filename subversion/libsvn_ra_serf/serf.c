@@ -225,11 +225,12 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Is this proxy potentially busted? Do we need to take special care?  */
-  SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_BUSTED_PROXY,
-                              FALSE));
+  /* Should we use chunked transfer encopding. */
+  SVN_ERR(svn_config_get_tristate(config, &session->using_chunked_requests,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                  "auto",
+                                  svn_tristate_unknown));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -288,12 +289,13 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
-      /* Do we need to take care with this proxy?  */
-      SVN_ERR(svn_config_get_bool(
-               config, &session->busted_proxy,
+      /* Should we use chunked transfer encopding. */
+      SVN_ERR(svn_config_get_tristate(
+               config, &session->using_chunked_requests,
                server_group,
-               SVN_CONFIG_OPTION_BUSTED_PROXY,
-               session->busted_proxy));
+               SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+               "auto",
+               session->using_chunked_requests));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -455,9 +457,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
      HTTP/1.1 is supported, we can upgrade. */
   serf_sess->http10 = TRUE;
 
-  /* If we switch to HTTP/1.1, then we will use chunked requests. We may disable
-     this, if we find an intervening proxy does not support chunked requests.  */
-  serf_sess->using_chunked_requests = TRUE;
+  /* If we switch to HTTP/1.1, then we will use chunked requests instead of
+   * Content-Length. We may switch to Content-Length, if we find an intervening
+   * proxy does not support chunked requests.  */
+  serf_sess->set_CL = TRUE;
 
   SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
 
@@ -505,13 +508,39 @@ svn_ra_serf__open(svn_ra_session_t *session,
                             _("Connection to '%s' failed"), session_URL);
   SVN_ERR(err);
 
-  /* We have set up a useful connection (that doesn't indication a redirect).
-     If we've been told there is possibly a busted proxy in our path to the
-     server AND we switched to HTTP/1.1 (chunked requests), then probe for
-     problems in any proxy.  */
-  if ((corrected_url == NULL || *corrected_url == NULL)
-      && serf_sess->busted_proxy && !serf_sess->http10)
-    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
+  /* Early exit if we got the redirection. */
+  if (corrected_url && *corrected_url)
+    return SVN_NO_ERROR;
+
+  /* Determine if we're goign to use Content-Length or chunked
+   * Transfer-Encoding with a HTTP/1.1 server.  HTTP/1.0 servers
+   * always use Content-Length. */ 
+  if (!serf_sess->http10)
+    {
+      if (serf_sess->using_chunked_requests == svn_tristate_true)
+        {
+          /* Upgrade to chunked Transfer-Encoding. */
+          serf_sess->set_CL = FALSE;
+        }
+      else if (serf_sess->using_chunked_requests == svn_tristate_false)
+        {
+           /* Disable chunked Transfer-Encoding without probing. */
+           serf_sess->set_CL = TRUE;
+        }
+      else if (serf_sess->using_chunked_requests == svn_tristate_unknown)
+        {
+          svn_boolean_t supports_chunked;
+          /* We have set up a useful connection (that doesn't indication a
+             redirect). And user didn't specify preference whether to use
+             chunked requests or not. Then probe for chunked request encoding
+             support in any proxy/server.  */
+          SVN_ERR(svn_ra_serf__probe_proxy(&supports_chunked, serf_sess, pool));
+
+          /* Upgrade to chunked Transfer-Encoding after probing. */
+          if (supports_chunked)
+            serf_sess->set_CL = FALSE;
+        }
+    }
 
   return SVN_NO_ERROR;
 }

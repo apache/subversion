@@ -640,11 +640,9 @@ setup_serf_req(serf_request_t *request,
                apr_pool_t *scratch_pool)
 {
   serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
-
   svn_spillbuf_t *buf;
-  svn_boolean_t set_CL = session->http10 || !session->using_chunked_requests;
 
-  if (set_CL && body_bkt != NULL)
+  if (session->set_CL && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -672,7 +670,7 @@ setup_serf_req(serf_request_t *request,
 
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
-  if (set_CL)
+  if (session->set_CL)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
@@ -2444,8 +2442,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                     _("DAV request failed: 411 Content length required. The "
                       "server or an intermediate proxy does not accept "
-                      "chunked encoding. Try setting 'busted-proxy=yes' "
-                      "in your client configuration."));
+                      "chunked encoding. Try setting "
+                      "http-chunked-encoding=auto or no in your client "
+                      "configuration."));
     }
 
   if (sline.code >= 300)

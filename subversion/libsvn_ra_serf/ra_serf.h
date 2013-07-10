@@ -144,8 +144,8 @@ struct svn_ra_serf__session_t {
      HTTP/1.0. Thus, we cannot send chunked requests.  */
   svn_boolean_t http10;
 
-  /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
-  svn_boolean_t using_chunked_requests;
+  /* Should we use send Content-Length for HTTP requests. */
+  svn_boolean_t set_CL;
 
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
@@ -191,9 +191,8 @@ struct svn_ra_serf__session_t {
   /* Are we using a proxy? */
   svn_boolean_t using_proxy;
 
-  /* Should we be careful with this proxy? (some have insufficient support that
-     we need to work around).  */
-  svn_boolean_t busted_proxy;
+  /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
+  svn_tristate_t using_chunked_requests;
 
   const char *proxy_username;
   const char *proxy_password;
@@ -1366,9 +1365,11 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
 /* When running with a proxy, we may need to detect and correct for problems.
    This probing function will send a simple OPTIONS request to detect problems
-   with the connection.  */
+   with the connection. Sets *SUPPORTS_CHUNKED to non-zero if server supports
+   chunked Transfer-Encoding and zero otherwise. */
 svn_error_t *
-svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
+svn_ra_serf__probe_proxy(svn_boolean_t *supports_chunked,
+                         svn_ra_serf__session_t *serf_sess,
                          apr_pool_t *scratch_pool);
 
 
