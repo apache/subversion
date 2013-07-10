@@ -376,6 +376,7 @@ sub vote {
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
+      $votesarray[$#votesarray]->[2] = digest_string $_;
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
