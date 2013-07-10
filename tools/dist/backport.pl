@@ -349,6 +349,7 @@ sub edit_string {
 
 sub vote {
   my ($state, $approved, $votes) = @_;
+  # TODO: use votesarray instead of votescheck
   my (%approvedcheck, %votescheck);
   my $raw_approved = "";
   my @votesarray;
@@ -366,17 +367,34 @@ sub vote {
     $approvedcheck{$key}++ if exists $approved->{$key};
     $votescheck{$key}++ if exists $votes->{$key};
 
-    unless (exists $votes->{$key}) {
-      (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
+    unless (exists $votes->{$key} or exists $approved->{$key}) {
+      print VOTES;
       next;
     }
 
+    unless (exists $votes->{$key}) {
+      push @votesarray, {
+        entry => $approved->{$key},
+        approval => 1,
+        digest => $key,
+      };
+      $raw_approved .= $_;
+      next;
+    }
+
+    # We have a vote, and potentially an approval.
+
     my ($vote, $entry) = @{$votes->{$key}};
-    push @votesarray, [$vote, $entry, undef]; # ->[2] later set to $digest
+    push @votesarray, {
+      entry => $entry,
+      vote => $vote,
+      approval => (exists $approved->{$key}),
+      digest => $key,
+    };
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
-      $votesarray[$#votesarray]->[2] = digest_string $_;
+      $votesarray[-1]->{digest} = digest_string $_;
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
@@ -385,48 +403,49 @@ sub vote {
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
         if $vote ne '+1';
-    $votesarray[$#votesarray]->[2] = digest_string $_;
+    $votesarray[-1]->{digest} = digest_string $_;
     (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
   print VOTES "\n" if $raw_approved and !$had_empty_line;
   print VOTES $raw_approved;
   close VOTES;
-  die "Some vote chunks weren't found: ",
+  warn "Some vote chunks weren't found: ",
     join ',',
     map $votes->{$_}->[1]->{id},
     grep { !$votescheck{$_} } keys %$votes
     if scalar(keys %$votes) != scalar(keys %votescheck);
-  die "Some approval chunks weren't found: ",
+  warn "Some approval chunks weren't found: ",
     join ',',
     map $approved->{$_}->{id},
     grep { !$approvedcheck{$_} } keys %$approved
     if scalar(keys %$approved) != scalar(keys %approvedcheck);
+  prompt "Press the 'any' key to continue...\n", dontprint => 1
+    if scalar(keys %$approved) != scalar(keys %approvedcheck) 
+    or scalar(keys %$votes) != scalar(keys %votescheck);
   move "$STATUS.$$.tmp", $STATUS;
 
   my $logmsg = do {
-    my %allkeys = map { $_ => 1 } keys(%$votes), keys(%$approved);
     my @sentences = map {
-       exists $votes->{$_}
+       exists $_->{vote}
        ? (
-         ( $votes->{$_}->[0] eq 'edit'
-           ? "Edit the $votes->{$_}->[1]->{id} entry"
-           : "Vote $votes->{$_}->[0] on the $votes->{$_}->[1]->{header}"
+         ( $_->{vote} eq 'edit'
+           ? "Edit the $_->{entry}->{id} entry"
+           : "Vote $_->{vote} on the $_->{entry}->{header}"
          )
-         . (exists $approved->{$_} ? ", approving" : "")
+         . (", approving" x $_->{approval})
          . "."
          )
       : # exists only in $approved
-        "Approve the $approved->{$_}->{header}."
-      } keys %allkeys;
+        "Approve the $_->{entry}->{header}."
+      } @votesarray;
     (@sentences == 1)
     ? $sentences[0]
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
   };
 
   system "$SVN diff -- $STATUS";
-  say "Voting '$_->[0]' on $_->[1]->{id}." for @votesarray;
-  # say $logmsg;
+  printf "[[[\n%s%s]]]\n", $logmsg, ("\n" x ($logmsg !~ /\n\z/));
   if (prompt "Commit these votes? ") {
     my ($logmsg_fh, $logmsg_filename) = tempfile();
     print $logmsg_fh $logmsg;
@@ -438,8 +457,7 @@ sub vote {
         or warn("Committing the votes failed($?): $!") and return;
     unlink $logmsg_filename;
 
-    $state->{$approved->{$_}->{digest}}++ for keys %$approved;
-    $state->{$_->[2]}++ for @votesarray;
+    $state->{$_->{digest}}++ for @votesarray;
   }
 }
 
