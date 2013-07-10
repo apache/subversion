@@ -153,6 +153,9 @@ Veto-blocked changes:
                    Subversion or by APR, not by serf; can't find evidence of
                    the "automatic unwrapping", and in any case happy to change
                    the error code to something else if that's the problem.)
+     -1: gstein (apr_status_t was intended/designed to hold error codes from
+                 multiple apps/libs; check for known values, and propagate all
+                 unkown values)
 
 Approved changes:
 =================
