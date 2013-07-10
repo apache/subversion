@@ -351,7 +351,7 @@ sub vote {
   my ($state, $approved, $votes) = @_;
   my (%approvedcheck, %votescheck);
   my $raw_approved = "";
-  my @votes;
+  my @votesarray;
   return unless %$approved or %$votes;
 
   my $had_empty_line;
@@ -372,7 +372,7 @@ sub vote {
     }
 
     my ($vote, $entry) = @{$votes->{$key}};
-    push @votes, [$vote, $entry, undef]; # ->[2] later set to $digest
+    push @votesarray, [$vote, $entry, undef]; # ->[2] later set to $digest
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
@@ -384,7 +384,7 @@ sub vote {
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
         if $vote ne '+1';
-    $votes[$#votes]->[2] = digest_string $_;
+    $votesarray[$#votesarray]->[2] = digest_string $_;
     (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
@@ -392,10 +392,12 @@ sub vote {
   print VOTES $raw_approved;
   close VOTES;
   die "Some vote chunks weren't found: ",
+    join ',',
     map $votes->{$_}->[1]->{id},
     grep { !$votescheck{$_} } keys %$votes
     if scalar(keys %$votes) != scalar(keys %votescheck);
   die "Some approval chunks weren't found: ",
+    join ',',
     map $approved->{$_}->{id},
     grep { !$approvedcheck{$_} } keys %$approved
     if scalar(keys %$approved) != scalar(keys %approvedcheck);
@@ -422,7 +424,7 @@ sub vote {
   };
 
   system "$SVN diff -- $STATUS";
-  say "Voting '$_->[0]' on $_->[1]->{id}." for @votes;
+  say "Voting '$_->[0]' on $_->[1]->{id}." for @votesarray;
   # say $logmsg;
   if (prompt "Commit these votes? ") {
     my ($logmsg_fh, $logmsg_filename) = tempfile();
@@ -436,7 +438,7 @@ sub vote {
     unlink $logmsg_filename;
 
     $state->{$approved->{$_}->{digest}}++ for keys %$approved;
-    $state->{$_->[2]}++ for @votes;
+    $state->{$_->[2]}++ for @votesarray;
   }
 }
 
