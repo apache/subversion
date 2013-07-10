@@ -163,44 +163,39 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   "------------------------------------------------------------------------\n"
 
 #ifdef SVN_HAVE_SERF
-struct cert_info_key_map {
-  const char *serf_hash_key;
-  const char *display_name;
-} cert_info_key_map[] = {
-  { "CN", _("Common Name") },
-  { "E", _("Email Address") },
-  { "OU", _("Organizational Unit") },
-  { "O", _("Organization") },
-  { "L", _("Locality") },
-  { "ST", _("State or Province") },
-  { "C",  _("Country") },
-  { "sha1",  _("SHA1 Fingerprint") },
-  { "notBefore", _("Valid as of") },
-  { "notAfter",  _("Valid until") },
-  { NULL, NULL }
-};
+
+/* Because APR hash order is unstable we use a pre-defined table of keys
+ * to ensure values are always presented in the same order. */
+const char *cert_info_hash_keys[] =
+  {
+    "CN", "E", "OU", "O", "L", "ST", "C", "sha1", "notBefore", "notAfter",
+    NULL
+  };
 
 /* Show information stored in CERT_INFO.
  * Assume all hash table keys occur in the above key map. */
 static svn_error_t *
 show_cert_info(apr_hash_t *cert_info,
+               apr_hash_t *cert_info_key_map,
                apr_pool_t *scratch_pool)
 {
   const char *key;
-  int i;
+  int i = 0;
 
-  i = 0;
   do
     {
-      key = cert_info_key_map[i].serf_hash_key;
+      key = cert_info_hash_keys[i];
       if (key)
         {
           const char *value = svn_hash_gets(cert_info, key);
 
           if (value)
-            SVN_ERR(svn_cmdline_printf(scratch_pool, "  %s: %s\n",
-                                       cert_info_key_map[i].display_name,
-                                       value));
+            {
+              const char *display_key = svn_hash_gets(cert_info_key_map, key);
+
+              SVN_ERR(svn_cmdline_printf(scratch_pool, "  %s: %s\n",
+                                         display_key, value));
+            }
         }
       i++;
     }
@@ -263,6 +258,7 @@ show_ascii_cert(const char *ascii_cert,
   apr_status_t status;
   serf_ssl_certificate_t *cert;
   apr_hash_t *cert_info;
+  apr_hash_t *cert_info_key_map;
 
   SVN_ERR(svn_io_open_unique_file3(&pem_file, &pem_path, NULL,
                                    svn_io_file_del_on_pool_cleanup,
@@ -299,25 +295,38 @@ show_ascii_cert(const char *ascii_cert,
       return SVN_NO_ERROR;
     }
 
+  /* Construct key map dynamically so displayed key names can be translated. */
+  cert_info_key_map = apr_hash_make(scratch_pool);
+  svn_hash_sets(cert_info_key_map, "CN", _("Common Name"));
+  svn_hash_sets(cert_info_key_map, "E", _("Email Address"));
+  svn_hash_sets(cert_info_key_map, "OU", _("Organizational Unit"));
+  svn_hash_sets(cert_info_key_map, "O", _("Organization"));
+  svn_hash_sets(cert_info_key_map, "L", _("Locality"));
+  svn_hash_sets(cert_info_key_map, "ST", _("State or Province"));
+  svn_hash_sets(cert_info_key_map, "C",  _("Country"));
+  svn_hash_sets(cert_info_key_map, "sha1",  _("SHA1 Fingerprint"));
+  svn_hash_sets(cert_info_key_map, "notBefore", _("Valid as of"));
+  svn_hash_sets(cert_info_key_map, "notAfter",  _("Valid until")),
+
   cert_info = serf_ssl_cert_issuer(cert, scratch_pool);
   if (cert_info && apr_hash_count(cert_info) > 0)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, _("Certificate issuer:\n")));
-      SVN_ERR(show_cert_info(cert_info, scratch_pool));
+      SVN_ERR(show_cert_info(cert_info, cert_info_key_map, scratch_pool));
     }
 
   cert_info = serf_ssl_cert_subject(cert, scratch_pool);
   if (cert_info && apr_hash_count(cert_info) > 0)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, _("Certificate subject:\n")));
-      SVN_ERR(show_cert_info(cert_info, scratch_pool));
+      SVN_ERR(show_cert_info(cert_info, cert_info_key_map, scratch_pool));
     }
 
   cert_info = serf_ssl_cert_certificate(cert, scratch_pool);
   if (cert_info && apr_hash_count(cert_info) > 0)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, _("Certificate validity:\n")));
-      SVN_ERR(show_cert_info(cert_info, scratch_pool));
+      SVN_ERR(show_cert_info(cert_info, cert_info_key_map, scratch_pool));
     }
 #else
   SVN_ERR(svn_cmdline_printf(scratch_pool,
