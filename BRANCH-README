@@ -8,7 +8,9 @@ all changes made in the branch.
 
 STATUS
 ======
-- Initial implementation
++ Initial implementation
+- Do not call svn_ra_* methods in find_session_by_url() because callback
+  table may be destroyed at that time.
 - Add new RA capability to signal if RA session is stateless and reusable.
 - Implement svn_client_close_all_sessions()
 - Merge to trunk and start switching code to use new functions.
