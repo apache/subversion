@@ -1014,6 +1014,12 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
+  /** A repository access context for the client operation to use.
+   * this is initialized by svn_client_create_context() and should never
+   * be directly used or changed.
+   *
+   * @since New in 1.9.  */
+  void *ra_ctx;
 } svn_client_ctx_t;
 
 /** Initialize a client context.
@@ -1127,7 +1133,8 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 /** @} group end: Client command-line processing */
 
 /** @} */
-
+
+
 /**
  * Client working copy management functions
  *
@@ -4698,7 +4705,8 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 
 /** @} */
 
-
+
+
 /** Properties
  *
  * Note that certain svn-controlled properties must always have their
@@ -5251,7 +5259,8 @@ svn_client_revprop_list(apr_hash_t **props,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 /** @} */
-
+
+
 
 /**
  * @defgroup Export Export a tree from version control.
@@ -5699,7 +5708,8 @@ svn_client_cat(svn_stream_t *out,
 /** @} end group: cat */
 
 
-
+
+
 /** Changelist commands
  *
  * @defgroup svn_client_changelist_funcs Client Changelist Functions
@@ -5798,7 +5808,8 @@ svn_client_get_changelists(const char *path,
 /** @} */
 
 
-
+
+
 /** Locking commands
  *
  * @defgroup svn_client_locking_funcs Client Locking Functions
@@ -6235,7 +6246,8 @@ svn_client_min_max_revisions(svn_revnum_t *min_revision,
 
 /** @} */
 
-
+
+
 /**
  * @defgroup Patch Apply a patch to the working copy
  *
@@ -6343,7 +6355,8 @@ svn_client_patch(const char *patch_abspath,
  *
  */
 
-
+
+
 /* Converting paths to URLs. */
 
 /** Set @a *url to the URL for @a path_or_url allocated in result_pool.
@@ -6378,7 +6391,8 @@ svn_client_url_from_path(const char **url,
                          apr_pool_t *pool);
 
 
-
+
+
 /* Fetching a repository's root URL and UUID. */
 
 /** Set @a *repos_root_url and @a *repos_uuid, to the root URL and UUID of
@@ -6468,7 +6482,8 @@ svn_client_uuid_from_path(const char **uuid,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool);
 
-
+
+
 /* Opening RA sessions. */
 
 /** Open an RA session rooted at @a url, and return it in @a *session.

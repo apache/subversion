@@ -893,5 +893,6 @@ svn_client_log5(const apr_array_header_t *targets,
                          include_merged_revisions, revprops, real_receiver,
                          real_receiver_baton, ctx, pool));
 
+  SVN_ERR(svn_client__ra_session_release(ctx, ra_session));
   return SVN_NO_ERROR;
 }

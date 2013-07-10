@@ -38,6 +38,7 @@
 #include "svn_mergeinfo.h"
 #include "client.h"
 #include "mergeinfo.h"
+#include "ra_ctx.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -387,10 +388,10 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
           /* Try to open the RA session.  If this is our last attempt,
              don't accept corrected URLs from the RA provider. */
-          SVN_ERR(svn_ra_open4(ra_session,
-                               attempts_left == 0 ? NULL : &corrected,
-                               base_url, uuid, cbtable, cb, ctx->config,
-                               result_pool));
+          SVN_ERR(svn_client__ra_ctx_open_session(
+                    ra_session, attempts_left == 0 ? NULL : &corrected,
+                    ctx->ra_ctx, base_url, uuid, cbtable, cb, 
+                    result_pool, scratch_pool));
 
           /* No error and no corrected URL?  We're done here. */
           if (! corrected)
@@ -422,8 +423,9 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     }
   else
     {
-      SVN_ERR(svn_ra_open4(ra_session, NULL, base_url,
-                           uuid, cbtable, cb, ctx->config, result_pool));
+      SVN_ERR(svn_client__ra_ctx_open_session(ra_session, NULL, ctx->ra_ctx,
+                                              base_url, uuid, cbtable,
+                                              cb, result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1155,4 +1157,12 @@ svn_client__ra_make_cb_baton(svn_wc_context_t *wc_ctx,
   reb->relpath_map = relpath_map;
 
   return reb;
+}
+
+svn_error_t *
+svn_client__ra_session_release(svn_client_ctx_t *ctx,
+                               svn_ra_session_t *session)
+{
+    svn_client__ra_ctx_release_session(ctx->ra_ctx, session);
+    return SVN_NO_ERROR;
 }
