@@ -1,0 +1,34 @@
+This is a development branch, intended to implement RA context abstraction
+layer in libsvn_client.
+
+The branch should be maintained with catch-up merges from trunk.
+
+STATUS
+======
+- Initial implementation
+- Add new RA capability to signal if RA session is stateless and reusable.
+- Implement svn_client_close_all_sessions()
+- Merge to trunk and start switching code to use new functions.
+
+PROBLEM
+=======
+
+Currently Subversion client layer creates new RA session for every
+svn_client_* call. Even more: for some operations like svn_client_merge() it
+creates 10-15 RA sessions. Each session creation takes significant amount of
+time: TCP connection, SSL handshake, authentication and initial handshake. It 
+easily could take several seconds over WAN.
+
+PROPOSED SOLUTION
+=================
+
+The idea is introduce RA context abstraction layer for managing set of RA
+sessions for different repositories and reuse them if possible. In the first
+version it going to be implemented in libsvn_client as private layer, but
+we can make it part of ra-loader in future.
+
+LINKS
+=====
+
+[1] http://subversion.tigris.org/issues/show_bug.cgi?id=3763
+[2] http://svn.haxx.se/dev/archive-2013-06/0164.shtml
