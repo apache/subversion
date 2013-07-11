@@ -232,6 +232,15 @@ svn_stringbuf_create_ensure(apr_size_t minimum_size, apr_pool_t *pool);
 svn_stringbuf_t *
 svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool);
 
+/** Create a new stringbuf using the given @a str as initial buffer.
+ * Allocate the result in @a pool.  In contrast to #svn_stringbuf_create,
+ * the contents of @a str may change when the stringbuf gets modified.
+ *
+ * @since New in 1.9
+ */
+svn_stringbuf_t *
+svn_stringbuf_create_wrap(char *str, apr_pool_t *pool);
+
 /** Create a new stringbuf by printf-style formatting using @a fmt and the
  * variable arguments, which are as appropriate for apr_psprintf().
  */
