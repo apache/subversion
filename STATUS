@@ -118,8 +118,6 @@ Veto-blocked changes:
      +1: philip, lgo (except for r1502097, -2099, -2104, -2106)
      -1: breser (given danielsh's veto, the discussion on IRC and my email to
                  dev I think we need to discuss this more before approving)
-     -1: danielsh (option name is wrong. Those proxies follow the spec, so they
-                   are not busted, period.)
 
  * r1500837, r1500857, r1502109
    Follow up to the r1489117 group, modifies the 411 Content length required
