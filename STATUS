@@ -128,8 +128,8 @@ Veto-blocked changes:
    Notes:
      Depends on the r1489117 group (logically, not merge-wise).
    Votes:
-     +1: gstein
-     +1: lgo, danielsh, breser (except for r1502109)
+     +1: gstein, danielsh
+     +1: lgo, breser (except for r1502109)
      +1: rhuijben (except for r1502109; and ref r1500857: "but also +1 on
                    "not applying it if that would be the consensus")
      -1: (not vetoed, but depends on the r1489117 group which is)
