@@ -331,16 +331,16 @@ def locate_libs():
   else:
     suffix = ""
 
-  if cp.has_option('options', '--with-static-apr'):
+  if not cp.has_option('options', '--with-static-apr'):
     dlls.append(os.path.join(gen_obj.apr_path, objdir,
                              'libapr%s.dll' % (suffix)))
     dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
                              'libaprutil%s.dll' % (suffix)))
 
-  if gen_obj.libintl_path is not None:
+  if gen_obj.libintl_path:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
 
-  if gen_obj.bdb_lib is not None:
+  if gen_obj.bdb_path:
     partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
     if objdir == 'Debug':
       dlls.append(partial_path + 'd.dll')

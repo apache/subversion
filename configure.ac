@@ -628,6 +628,28 @@ fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl Googlemock -----------------
+AC_ARG_ENABLE([gmock],
+  AS_HELP_STRING([--disable-gmock],
+                 [Do not use the Googlemock testing framework]),
+  [enable_gmock=yes],
+  [enable_gmock="$withval"])
+
+AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_MSG_CHECKING([whether use Googlemock])
+if test "$enable_gmock" != "no"; then
+  if test -d "$GMOCK_SRCDIR"; then
+    AC_MSG_RESULT([yes])
+    SVN_USE_GMOCK=true
+  else
+    AC_MSG_RESULT([no])
+    SVN_USE_GMOCK=false
+  fi
+else
+  AC_MSG_RESULT([no])
+  SVN_USE_GMOCK_SOURCES=false
+fi
+AC_SUBST([SVN_USE_GMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
