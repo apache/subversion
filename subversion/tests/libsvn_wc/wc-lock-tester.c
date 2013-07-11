@@ -35,16 +35,19 @@
 #include "private/svn_wc_private.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
+#include "../../libsvn_wc/workqueue.h"
 
 #include "svn_private_config.h"
 
 #define USAGE_MSG \
-  "Usage: %s [-r|-1] DIRNAME\n" \
+  "Usage: %s [-1|-r|-w] DIRNAME\n" \
   "\n" \
-  "Locks one directory (-1), or a tree recursively (-r)\n"
+  "Locks one directory (-1), or a tree recursively (-r), or locks\n" \
+  "recursively and creates an outstanding work queue item (-w)\n"
 
 static svn_error_t *
 obtain_lock(const char *path, svn_boolean_t recursive,
+            svn_boolean_t populate_work_queue,
             apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
@@ -52,9 +55,7 @@ obtain_lock(const char *path, svn_boolean_t recursive,
 
   SVN_ERR(svn_path_cstring_to_utf8(&path, path, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-      SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool,
-                                    scratch_pool));
+  SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
 
   if (recursive)
     {
@@ -66,6 +67,19 @@ obtain_lock(const char *path, svn_boolean_t recursive,
     {
       SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, 0, FALSE,
                                        scratch_pool));
+    }
+
+  if (populate_work_queue)
+    {
+      svn_skel_t *work_item;
+
+      /* Add an arbitrary work item to the work queue for DB, but don't
+       * run the work queue. */
+      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, wc_ctx->db,
+                                               local_abspath, scratch_pool,
+                                               scratch_pool));
+      SVN_ERR(svn_wc__db_wq_add(wc_ctx->db, local_abspath, work_item,
+                                scratch_pool));
     }
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, "Lock on '%s' obtained, and we "
@@ -83,9 +97,11 @@ main(int argc, const char *argv[])
   int exit_code = EXIT_SUCCESS;
   svn_error_t *err;
   svn_boolean_t recursive;
+  svn_boolean_t populate_work_queue;
 
   if (argc != 3
-      || (strcmp(argv[1], "-1") && apr_strnatcmp(argv[1], "-r")))
+      || (strcmp(argv[1], "-1") && apr_strnatcmp(argv[1], "-r") &&
+          apr_strnatcmp(argv[1], "-w")))
     {
       fprintf(stderr, USAGE_MSG, argv[0]);
       exit(EXIT_FAILURE);
@@ -100,9 +116,10 @@ main(int argc, const char *argv[])
   /* set up the global pool */
   pool = svn_pool_create(NULL);
 
-  recursive = (strcmp(argv[1], "-1") != 0);
+  populate_work_queue = (strcmp(argv[1], "-w") == 0);
+  recursive = ((strcmp(argv[1], "-1") != 0) || populate_work_queue);
 
-  err = obtain_lock(argv[2], recursive, pool);
+  err = obtain_lock(argv[2], recursive, populate_work_queue, pool);
 
   if (err)
     {

@@ -143,6 +143,26 @@
 #endif
 #endif
 
+#ifdef WIN32
+/* One-time initialization of the late bound Windows API functions. */
+static volatile svn_atomic_t win_dynamic_imports_state = 0;
+
+/* Pointer to GetFinalPathNameByHandleW function from kernel32.dll. */
+typedef DWORD (WINAPI *GETFINALPATHNAMEBYHANDLE)(
+               HANDLE hFile,
+               apr_wchar_t *lpszFilePath,
+               DWORD cchFilePath,
+               DWORD dwFlags);
+
+static GETFINALPATHNAMEBYHANDLE get_final_path_name_by_handle_proc = NULL;
+
+/* Forward declaration. */
+static svn_error_t * io_win_read_link(svn_string_t **dest,
+                                      const char *path,
+                                      apr_pool_t *pool);
+
+#endif
+
 /* Forward declaration */
 static apr_status_t
 dir_is_empty(const char *dir, apr_pool_t *pool);
@@ -664,7 +684,7 @@ svn_io_read_link(svn_string_t **dest,
                  const char *path,
                  apr_pool_t *pool)
 {
-#ifdef HAVE_READLINK
+#if defined(HAVE_READLINK)
   svn_string_t dest_apr;
   const char *path_apr;
   char buf[1025];
@@ -685,6 +705,8 @@ svn_io_read_link(svn_string_t **dest,
 
   /* ### Cast needed, one of these interfaces is wrong */
   return svn_utf_string_to_utf8((const svn_string_t **)dest, &dest_apr, pool);
+#elif defined(WIN32)
+  return io_win_read_link(dest, path, pool);
 #else
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                           _("Symbolic links are not supported on this "
@@ -1701,6 +1723,46 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
             *t = L'\\';
     return APR_SUCCESS;
 }
+
+/* copy of the apr function unicode_to_utf8_path since apr doesn't export this
+ * one */
+static apr_status_t io_unicode_to_utf8_path(char* retstr, apr_size_t retlen,
+                                            const apr_wchar_t* srcstr)
+{
+    /* Skip the leading 4 characters if the path begins \\?\, or substitute
+     * // for the \\?\UNC\ path prefix, allocating the maximum string
+     * length based on the remaining string, plus the trailing null.
+     * then transform \\'s back into /'s since the \\?\ form never
+     * allows '/' path seperators, and APR always uses '/'s.
+     */
+    apr_size_t srcremains = wcslen(srcstr) + 1;
+    apr_status_t rv;
+    char *t = retstr;
+    if (srcstr[0] == L'\\' && srcstr[1] == L'\\' && 
+        srcstr[2] == L'?'  && srcstr[3] == L'\\') {
+        if (srcstr[4] == L'U' && srcstr[5] == L'N' && 
+            srcstr[6] == L'C' && srcstr[7] == L'\\') {
+            srcremains -= 8;
+            srcstr += 8;
+            retstr[0] = '\\';
+            retstr[1] = '\\';
+            retlen -= 2;
+            t += 2;
+        }
+        else {
+            srcremains -= 4;
+            srcstr += 4;
+        }
+    }
+        
+    if ((rv = apr_conv_ucs2_to_utf8(srcstr, &srcremains, t, &retlen))) {
+        return rv;
+    }
+    if (srcremains) {
+        return APR_ENAMETOOLONG;
+    }
+    return APR_SUCCESS;
+}
 #endif
 
 static apr_status_t io_win_file_attrs_set(const char *fname,
@@ -1758,6 +1820,83 @@ static apr_status_t io_win_file_attrs_set(const char *fname,
         return apr_get_os_error();
 
     return APR_SUCCESS;
+}
+
+static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
+{
+    get_final_path_name_by_handle_proc = (GETFINALPATHNAMEBYHANDLE)
+      GetProcAddress(GetModuleHandleA("kernel32.dll"),
+                     "GetFinalPathNameByHandleW");
+
+    return SVN_NO_ERROR;
+}
+
+static svn_error_t * io_win_read_link(svn_string_t **dest,
+                                      const char *path,
+                                      apr_pool_t *pool)
+{
+#if APR_HAS_UNICODE_FS
+    SVN_ERR(svn_atomic__init_once(&win_dynamic_imports_state,
+                                  win_init_dynamic_imports, NULL, pool));
+
+    if (get_final_path_name_by_handle_proc)
+      {
+        DWORD rv;
+        apr_status_t status;
+        apr_file_t *file;
+        apr_os_file_t filehand;
+        apr_wchar_t wdest[APR_PATH_MAX];
+        char buf[APR_PATH_MAX];
+
+        /* reserve one char for terminating zero. */
+        DWORD wdest_len = sizeof(wdest)/sizeof(wdest[0]) - 1;
+
+        status = apr_file_open(&file, path, APR_OPENINFO, APR_OS_DEFAULT, pool);
+
+        if (status)
+          return svn_error_wrap_apr(status,
+                                    _("Can't read contents of link"));
+
+        apr_os_file_get(&filehand, file);
+
+        rv = get_final_path_name_by_handle_proc(
+               filehand, wdest, wdest_len,
+               FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+
+        /* Save error code. */
+        status = apr_get_os_error();
+
+        /* Close file/directory handle in any case. */
+        apr_file_close(file);
+
+        /* GetFinaPathNameByHandleW returns number of characters copied to
+         * output buffer. Returns zero on error. Returns required buffer size
+         * if supplied buffer is not enough. */
+        if (rv > wdest_len || rv == 0)
+          {
+            return svn_error_wrap_apr(status,
+                                      _("Can't read contents of link"));
+          }
+
+        /* GetFinaPathNameByHandleW doesn't add terminating NUL. */
+        wdest[rv] = 0;
+
+        status = io_unicode_to_utf8_path(buf, sizeof(buf), wdest);
+        if (status)
+          return svn_error_wrap_apr(status,
+                                    _("Can't read contents of link"));
+
+        *dest = svn_string_create(buf, pool);
+
+        return SVN_NO_ERROR;
+      }
+    else
+#endif
+      {
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("Symbolic links are not supported on this "
+                                "platform"));
+      }
 }
 
 #endif

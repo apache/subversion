@@ -35,7 +35,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * remove revision property buffer limit in fsfs (r1491770)
     * reduce network usage for 'svn mergeinfo --show-revs' (r1492005)
     * resolve segfault in fsfs-stats when passing invalid path (r1492164)
-    * fix 'svnadmin upgrade' error of non-shared fsfs repositories (r1494287)
+    * fix 'svnadmin upgrade' error of non-sharded fsfs repositories (r1494287)
     * fix data loss when cancelling 'svnadmin upgrade' in last stage (r1494298)
     * deny 'svnadmin create --fs-type=fsfs --compatible-version=1.0' (r1494223)
     * improve http status handling in ra_serf (r1495104)

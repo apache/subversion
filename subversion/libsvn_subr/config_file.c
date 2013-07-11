@@ -838,9 +838,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-max-connections       Maximum number of parallel server" NL
         "###                              connections to use for any given"  NL
         "###                              HTTP operation."                   NL
-        "###   busted-proxy               The proxy may have some protocol"  NL
-        "###                              issues that Subversion needs to"   NL
-        "###                              detect and work around."           NL
+        "###   http-detect-chunking       Detect if the connection supports" NL
+        "###                              chunked requests (which some proxies"
+                                                                             NL
+        "###                              do not support). This defaults to" NL
+        "###                              off since mod_dav_svn supports "   NL
+        "###                              chunked requests and the detection"
+                                                                             NL
+        "###                              may hurt performance."             NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
