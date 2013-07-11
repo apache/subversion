@@ -147,6 +147,10 @@ struct svn_ra_serf__session_t {
   /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
   svn_boolean_t using_chunked_requests;
 
+  /* Do we need to detect whether the connection supports chunked requests?
+     i.e. is there a (reverse) proxy that does not support them?  */
+  svn_boolean_t detect_chunking;
+
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 
@@ -190,10 +194,6 @@ struct svn_ra_serf__session_t {
 
   /* Are we using a proxy? */
   svn_boolean_t using_proxy;
-
-  /* Should we be careful with this proxy? (some have insufficient support that
-     we need to work around).  */
-  svn_boolean_t busted_proxy;
 
   const char *proxy_username;
   const char *proxy_password;

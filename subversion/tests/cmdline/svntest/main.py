@@ -800,9 +800,11 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
                      url, revision, propname, skel,
                      want_error and 1 or 0, default_config_dir)
 
-def run_wc_lock_tester(recursive, path):
+def run_wc_lock_tester(recursive, path, work_queue=False):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
-  if recursive:
+  if work_queue:
+    option = "-w"
+  elif recursive:
     option = "-r"
   else:
     option = "-1"
@@ -1444,9 +1446,9 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
-    if options.http_proxy-username:
+    if options.http_proxy_username:
       args.append('--http-proxy-username=' + options.http_proxy_username)
-    if options.http_proxy-password:
+    if options.http_proxy_password:
       args.append('--http-proxy-password=' + options.http_proxy_password)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')

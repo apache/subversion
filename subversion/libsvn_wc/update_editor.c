@@ -924,7 +924,6 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, scratch_pool);
       db->already_notified = TRUE;
-
     }
 
   return SVN_NO_ERROR;

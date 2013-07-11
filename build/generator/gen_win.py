@@ -225,6 +225,9 @@ class GeneratorBase(gen_base.GeneratorBase):
       if os.path.exists(os.path.join(path, lib + ".lib")):
         self.bdb_lib = lib
         break
+      elif os.path.exists(os.path.join(path, lib + "d.lib")):
+        self.bdb_lib = lib
+        break
     else:
       self.bdb_lib = None
 
@@ -243,7 +246,8 @@ class WinGeneratorBase(GeneratorBase):
     GeneratorBase.__init__(self, fname, verfname, options)
 
     if self.bdb_lib is not None:
-      print("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
+      print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
+                                                 self.bdb_path))
     else:
       print("BDB not found, BDB fs will not be built\n")
 
@@ -345,7 +349,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def errno_filter(self, codes):
     "Callback for gen_base.write_errno_table()."
-    # Filter out apr_errno.h SOC* codes, which alias the windows API names.
+    # Filter out python's SOC* codes, which alias the windows API names.
     return set(filter(lambda code: not (10000 <= code <= 10100), codes))
 
   def find_rootpath(self):

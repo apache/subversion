@@ -138,7 +138,7 @@ keywords) 'HEAD', 'BASE', 'COMMITTED', and 'PREV' which have the same
 meanings as in the command line client.  When referencing a working copy
 you can use the string 'WORKING" to reference the BASE plus any local
 modifications.  C<undef> may be used to specify an unspecified revision.
-You may alos pass a date by specifying the date inside curly braces
+You may also pass a date by specifying the date inside curly braces
 '{}'.  The date formats accepted are the same as the command line client
 accepts. Finally a C<_p_svn_opt_revision_t> object is accepted
 (which may have been returned by some Subversion function).
