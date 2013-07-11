@@ -80,6 +80,19 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1502267
+   Enforce strict version equality between cmdline tools and libraries.
+   Justification:
+     Without this, a 1.8.1 client will use a 1.8.2 libsvn_* library if that's
+     what the runtime linker finds.  This may be a (hard-to-diagnose) problem
+     due to possible incompatibilities in the subversion/include/private/ APIs
+     used.
+   Branch: 1.8.x-r1502267
+   Notes:
+     Seen in the wild under 1.7.x.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
