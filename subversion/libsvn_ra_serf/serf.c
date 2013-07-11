@@ -1212,7 +1212,7 @@ svn_ra_serf__init(const svn_version_t *loader_version,
   int serf_minor;
   int serf_patch;
 
-  SVN_ERR(svn_ver_check_list(ra_serf_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_serf_version(), checklist, svn_ver_equal));
 
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The RA loader does a more exhaustive check. */
