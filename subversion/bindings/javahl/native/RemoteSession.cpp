@@ -107,8 +107,8 @@ RemoteSession::open(jint jretryAttempts,
 
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
-      configDirectory.c_str(), jconfigHandler,
-      usernameStr, passwordStr, prompter, jprogress);
+      (jconfigDirectory ? configDirectory.c_str() : NULL),
+      jconfigHandler, usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
