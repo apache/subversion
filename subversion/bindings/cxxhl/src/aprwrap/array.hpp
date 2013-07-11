@@ -67,9 +67,13 @@ public:
   /**
    * Create a new proxy for the APR array @a array.
    */
-  explicit Array(apr_array_header_t* array) throw()
+  explicit Array(apr_array_header_t* array) throw(std::invalid_argument)
     : m_array(array)
-    {}
+    {
+      if (m_array->elt_size != sizeof(value_type))
+        throw std::invalid_argument(
+            _("APR array element size does not match template parameter"));
+    }
 
   /**
    * @return The wrapped APR array.
@@ -223,7 +227,8 @@ public:
   /**
    * Create a new proxy for the APR array @a array.
    */
-  explicit ConstArray(const apr_array_header_t* array) throw()
+  explicit ConstArray(const apr_array_header_t* array)
+    throw(std::invalid_argument)
     : inherited(const_cast<apr_array_header_t*>(array))
     {}
 

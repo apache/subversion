@@ -89,9 +89,9 @@ apr_pool_t* Pool::get_root_pool() throw(cxxhl::InternalError)
 //
 
 void Hash<void, void>::iterate(Hash<void, void>::Iteration& callback,
-                               const Pool& pool)
+                               const Pool& scratch_pool)
 {
-  for (apr_hash_index_t* hi = apr_hash_first(pool.get(), m_hash);
+  for (apr_hash_index_t* hi = apr_hash_first(scratch_pool.get(), m_hash);
        hi; hi = apr_hash_next(hi))
     {
       key_type key;
