@@ -83,7 +83,8 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595
+ * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595,
+     r1502097  (and local: r1499225, r1502099, r1502104, r1502106)
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
    and deny chunked requests.
    Branch: ^/subversion/branches/1.8.x-busted-proxy
@@ -104,12 +105,17 @@ Veto-blocked changes:
                is within the server-side reverse proxy
      r1499423: fix 411 handling
      r1499595: don't probe when a redirect occurs
+     r1502097: uses consensus option name from the dev@ list
      
      Local to branch:
      r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
                since we cannot add a symbol in a patch release.
+     r1502099: revert r1499225
+     r1502104: similar to -9225: switch to a private symbol
+     r1502106: a simple catchup merge from 1.8.x
    Votes:
-     +1: gstein, philip, lgo
+     +1: gstein
+     +1: philip, lgo (except for r1502097, -2099, -2104, -2106)
      -1: breser (given danielsh's veto, the discussion on IRC and my email to
                  dev I think we need to discuss this more before approving)
      -1: danielsh (option name is wrong. Those proxies follow the spec, so they
