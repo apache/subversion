@@ -40,6 +40,7 @@
 #include "svn_utf.h"
 #include "svn_ctype.h"
 #include "svn_dso.h"
+#include "svn_pools.h"
 #include "mod_dav_svn.h"
 
 #include "private/svn_fspath.h"
@@ -1009,7 +1010,7 @@ merge_xml_in_filter(ap_filter_t *f,
       f->ctx = ctx = apr_palloc(r->pool, sizeof(*ctx));
       ctx->parser = apr_xml_parser_create(r->pool);
       ctx->bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
-      apr_pool_create(&ctx->pool, r->pool);
+      ctx->pool = svn_pool_create(r->pool);
     }
 
   rv = ap_get_brigade(f->next, ctx->bb, mode, block, readbytes);

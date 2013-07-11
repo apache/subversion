@@ -58,7 +58,7 @@ svn_nls_init(void)
       apr_pool_t* pool;
       apr_size_t inwords, outbytes, outlength;
 
-      apr_pool_create(&pool, 0);
+      pool = svn_pool_create(0);
       /* get exe name - our locale info will be in '../share/locale' */
       inwords = GetModuleFileNameW(0, ucs2_path,
                                    sizeof(ucs2_path) / sizeof(ucs2_path[0]));
