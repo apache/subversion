@@ -121,27 +121,19 @@ Veto-blocked changes:
      -1: danielsh (option name is wrong. Those proxies follow the spec, so they
                    are not busted, period.)
 
- * r1500837
+ * r1500837, r1500857, r1502109
    Follow up to the r1489117 group, modifies the 411 Content length required
    error message to point the user to the busted-proxy option.
    Justification:
-     The original error message was meaningless, this patch at least guides
-     the user in the right direction.
+     The original error message was meaningless, these revisions at least
+     guide the user in the right direction.
    Notes:
      Depends on the r1489117 group (logically, not merge-wise).
    Votes:
-     +1: lgo, rhuijben, danielsh, breser
-     -1: (not vetoed, but depends on the r1489117 group which is)
-
- * r1500857
-   A further clarification after r1500837
-   Justification:
-     Save users a tour to $SEARCH_ENGINE.
-   Depends: r1500837
-   Votes:
-     +1: danielsh, lgo, breser
-     +1: rhuijben (but also +1 on not applying it if that would be the
-                   consensus)
+     +1: gstein
+     +1: lgo, danielsh, breser (except for r1502109)
+     +1: rhuijben (except for r1502109; and ref r1500857: "but also +1 on
+                   "not applying it if that would be the consensus")
      -1: (not vetoed, but depends on the r1489117 group which is)
 
  * r1501049, r1501371
