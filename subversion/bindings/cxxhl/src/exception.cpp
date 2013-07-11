@@ -113,23 +113,64 @@ private:
 
 } // namespace detail
 
+//
+// Class InternalError
+//
+
+InternalError::InternalError(const char* description)
+  : m_description(detail::ErrorDescription::create(description)->reference())
+{}
+
+InternalError::InternalError(const InternalError& that) throw()
+  : m_description(that.m_description->reference())
+{}
+
+InternalError& InternalError::operator=(const InternalError& that) throw()
+{
+  if (this == &that)
+    return *this;
+
+  // This in-place destroy+copy implementation of the assignment
+  // operator is safe because both the destructor and the copy
+  // constructor do not throw exceptions.
+  this->~InternalError();
+  return *new(this) InternalError(that);
+}
+
+InternalError::~InternalError() throw()
+{
+  m_description->dereference();
+}
+
+const char* InternalError::what() const throw()
+{
+  return m_description->what();
+}
+
+InternalError::InternalError(detail::ErrorDescription* description) throw()
+  : m_description(description)
+{}
+
+//
+// Class Error
+//
 
 Error::Error(const char* description, int error_code)
-  : m_errno(error_code),
-    m_description(detail::ErrorDescription::create(description)->reference())
+  : InternalError(description),
+    m_errno(error_code)
 {}
 
 Error::Error(const char* description, int error_code,
              Error::shared_ptr nested_error)
-  : m_errno(error_code),
-    m_nested(nested_error),
-    m_description(detail::ErrorDescription::create(description)->reference())
+  : InternalError(description),
+    m_errno(error_code),
+    m_nested(nested_error)
 {}
 
 Error::Error(const Error& that) throw()
-  : m_errno(that.m_errno),
-    m_nested(that.m_nested),
-    m_description(that.m_description->reference())
+  : InternalError(that.m_description->reference()),
+    m_errno(that.m_errno),
+    m_nested(that.m_nested)
 {}
 
 Error& Error::operator=(const Error& that) throw()
@@ -144,19 +185,11 @@ Error& Error::operator=(const Error& that) throw()
   return *new(this) Error(that);
 }
 
-Error::~Error() throw()
-{
-  m_description->dereference();
-}
-
-const char* Error::what() const throw()
-{
-  return m_description->what();
-}
+Error::~Error() throw() {}
 
 Error::Error(int error_code, detail::ErrorDescription* description) throw()
-  : m_errno(error_code),
-    m_description(description)
+  : InternalError(description),
+    m_errno(error_code)
 {}
 
 void Error::throw_svn_error(svn_error_t* err)
