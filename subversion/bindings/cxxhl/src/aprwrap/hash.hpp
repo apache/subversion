@@ -44,6 +44,16 @@ template<>
 class Hash<void, void>
 {
 public:
+  struct Iteration;
+
+  /**
+   * Iterate over all the key-value pairs in the hash table, invoking
+   * @a callback for each pair.
+   * Uses @a scratch_pool for temporary allocations.
+   */
+  void iterate(Iteration& callback, const Pool& scratch_pool);
+
+public:
   /**
    * Proxy for a key in an APR hash table.
    * This is a template specialization for the default hash key type.
@@ -83,7 +93,7 @@ public:
     /**
      * The hash table wrapper must be able to call the protected constructor.
      */
-    friend class Hash;
+    friend void Hash::iterate(Hash::Iteration&, const Pool&);
 
   private:
     const key_type m_key;       ///< Immutable reference to the key
@@ -164,13 +174,6 @@ public:
     virtual bool operator() (const Key& key, value_type value) = 0;
   };
 
-  /**
-   * Iterate over all the key-value pairs in the hash table, invoking
-   * @a callback for each pair.
-   * Uses @a scratch_pool for temporary allocations.
-   */
-  void iterate(Iteration& callback, const Pool& scratch_pool);
-
 protected:
   typedef const void* const_value_type;
 
@@ -213,6 +216,12 @@ public:
   {
     typedef Hash<void, void>::Key inherited;
 
+    /**
+     * The wrapper must be able to call the private constructor and
+     * convert references to the base class.
+     */
+    friend class Hash;
+
   public:
     typedef const K* key_type;
     typedef inherited::size_type size_type;
@@ -239,17 +248,11 @@ public:
 
   private:
     /**
-     * Constructor used by the hash table wrapper.
-     * Does not make assumptions about the key size.
+     * Conversion constructor used by the derived iteration class.
      */
-    Key(key_type key, size_type size) throw()
-      : inherited(key, size)
+    explicit Key(const inherited::Key& that) throw()
+      : inherited(that)
       {}
-
-    /**
-     * The hash table wrapper must be able to call the private constructor.
-     */
-    friend class Hash;
   };
 
 public:
@@ -335,9 +338,7 @@ public:
     virtual bool operator() (const inherited::Key& raw_key,
                              inherited::value_type raw_value)
       {
-        return (*this)(
-            Key(static_cast<key_type>(raw_key.get()), raw_key.size()),
-            static_cast<value_type>(raw_value));
+        return (*this)(Key(raw_key), static_cast<value_type>(raw_value));
       }
   };
 
