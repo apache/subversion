@@ -450,7 +450,7 @@ list_credentials(svn_boolean_t *delete_cred,
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("Credential kind: %s\n"), cred_kind));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
-                              _("Authentication realm: %s\n"), realmstring));
+                             _("Authentication realm: %s\n"), realmstring));
 
   sorted_hash_items = svn_sort__hash(hash, svn_sort_compare_items_lexically,
                                      scratch_pool);
@@ -470,8 +470,8 @@ list_credentials(svn_boolean_t *delete_cred,
       else if (strcmp(key, AUTHN_PASSWORD_KEY) == 0)
         {
           if (opt_state->show_passwords)
-            SVN_ERR(svn_cmdline_printf(iterpool, _("Password: %s\n"),
-                                       value->data));
+            SVN_ERR(svn_cmdline_printf(iterpool,
+                                       _("Password: %s\n"), value->data));
           else
             SVN_ERR(svn_cmdline_printf(iterpool, _("Password: [not shown]\n")));
         }
