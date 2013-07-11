@@ -19,6 +19,8 @@
  * ====================================================================
  */
 
+// ### TODO: Convert to Googlemock/Googletest
+
 #include <algorithm>
 #include <cstdio>
 #include <iomanip>
@@ -56,7 +58,7 @@ void traceall(const char *message, const SVN::Error& err)
 void tracecheck(svn_error_t* err)
 {
   std::cout << "C-API handler:" << std::endl;
-  svn_handle_error2(err, stdout, false, "    test_exception");
+  svn_handle_error2(err, stdout, false, "    test_exception: ");
   svn_error_clear(err);
 }
 
@@ -136,7 +138,8 @@ int test_error()
   return false;
 }
 
-int main()
+
+int disabled_main()
 {
   apr_initialize();
 
