@@ -96,8 +96,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.8\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2013-07-09 19:23+0100\n"
-"PO-Revision-Date: 2013-06-28 19:41+0100\n"
+"POT-Creation-Date: 2013-07-11 20:25+0100\n"
+"PO-Revision-Date: 2013-07-11 20:22+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: German <dev@subversion.apache.org>\n"
 "Language: de\n"
@@ -4050,9 +4050,8 @@ msgid "Unrecognized URL scheme '%s'"
 msgstr "Unbekanntes URL-Schema »%s«"
 
 #: ../libsvn_ra/util.c:55
-#, fuzzy
 msgid "<repository>"
-msgstr "Pfad im Projektarchiv"
+msgstr "<Projektarchiv>"
 
 #: ../libsvn_ra/util.c:73
 #, c-format
@@ -4526,9 +4525,9 @@ msgid "The %s response contains invalid XML (%d %s)"
 msgstr "Die Antwort auf »%s« enthält ungültiges XML (%d %s)"
 
 #: ../libsvn_ra_serf/xml.c:622
-#, fuzzy, c-format
+#, c-format
 msgid "XML Parsing failed: Unexpected root element '%s'"
-msgstr "XML-Parser schlug fehl: (%d %s)"
+msgstr "XML-Parser schlug fehl: Nicht erwartetes Wurzelelement »%s«"
 
 #: ../libsvn_ra_serf/xml.c:682
 #, c-format
@@ -4619,7 +4618,7 @@ msgstr "Server gab keine Projektarchivbasis zurück"
 #: ../libsvn_ra_svn/client.c:984
 #, c-format
 msgid "ra_svn does not support not specifying a log message with pre-1.5 servers; consider passing an empty one, or upgrading the server"
-msgstr ""
+msgstr "ra_svn unterstützt die Angabe einer Logmeldung mit Servern älter als 1.5 nicht; Versuchen Sie, eine leere Logmeldung zu übergeben oder verwenden Sie eine neuere Version auf dem Server"
 
 #: ../libsvn_ra_svn/client.c:1007
 msgid "Server doesn't support setting arbitrary revision properties during commit"
@@ -6629,9 +6628,9 @@ msgid "Config error: invalid value '%s' for option '%s'"
 msgstr "Konfigurationsfehler: Ungültiger Wert »%s« für Option »%s«"
 
 #: ../libsvn_subr/sqlite.c:176
-#, fuzzy, c-format
+#, c-format
 msgid "sqlite[S%d]: %s, executing statement '%s'"
-msgstr "sqlite: %s (S%d), Ausgeführte Anweisung '%s'"
+msgstr "sqlite[S%d]: %s, Ausgeführte Anweisung '%s'"
 
 #: ../libsvn_subr/sqlite.c:265
 msgid "sqlite: Expected database row missing"
@@ -6651,9 +6650,9 @@ msgid "SQLite is required to be compiled and run in thread-safe mode"
 msgstr "Es wird erwartet, dass SQLite im Thread-sicheren Modus kompiliert und gestartet wird"
 
 #: ../libsvn_subr/sqlite.c:747
-#, fuzzy, c-format
+#, c-format
 msgid "Could not configure SQLite [S%d]"
-msgstr "Konnte SQLite nicht konfigurieren (S%d)"
+msgstr "Konnte SQLite nicht konfigurieren [S%d]"
 
 #: ../libsvn_subr/sqlite.c:749
 msgid "Could not initialize SQLite"
@@ -8122,7 +8121,6 @@ msgstr "»%s« scheint keine URL zu sein"
 msgid "local file edit"
 msgstr "lokale Datei geändert"
 
-# CHECKME, has to match first %s in "local %s, incoming %s upon %s"
 #: ../svn/cl-conflicts.c:82
 msgid "local file obstruction"
 msgstr "lokale Datei blockiert"
@@ -8159,7 +8157,6 @@ msgstr "lokale Datei hierher verschoben"
 msgid "local dir edit"
 msgstr "lokales Verzeichnis geändert"
 
-# CHECKME, has to match first %s in "local %s, incoming %s upon %s"
 #: ../svn/cl-conflicts.c:105
 msgid "local dir obstruction"
 msgstr "lokales Verzeichnis blockiert"
@@ -8236,7 +8233,6 @@ msgstr "bei Umstellung"
 msgid "upon merge"
 msgstr "bei Zusammenführung"
 
-# CHECKME! Here used beside "dir" and "file".
 #: ../svn/cl-conflicts.c:181
 msgid "upon none"
 msgstr "ohne Operation"
@@ -8253,7 +8249,6 @@ msgstr "lokal hinzugefügt"
 msgid "local delete"
 msgstr "lokal gelöscht"
 
-# CHECKME, has to match first %s in "local %s, incoming %s upon %s"
 #: ../svn/cl-conflicts.c:209
 msgid "local obstruction"
 msgstr "lokal blockiert"
@@ -8389,9 +8384,8 @@ msgstr "Akzeptiert die zusammengeführte Version der Datei"
 
 #: ../svn/conflict-callbacks.c:456 ../svn/conflict-callbacks.c:501
 #: ../svn/conflict-callbacks.c:533
-#, fuzzy
 msgid "mark resolved"
-msgstr "aufgelöst"
+msgstr "als aufgelöst markieren"
 
 #: ../svn/conflict-callbacks.c:459 ../svn/conflict-callbacks.c:498
 msgid "display conflict"
@@ -8535,7 +8529,7 @@ msgstr "Löst den Konflikt später auf  [postpone]"
 
 #: ../svn/conflict-callbacks.c:545
 msgid "apply update (recommended)"
-msgstr ""
+msgstr "Wendet Aktualisierung an (empfohlen)"
 
 #: ../svn/conflict-callbacks.c:546
 msgid "apply update to the move destination  [mine-conflict]"
@@ -8543,41 +8537,35 @@ msgstr "Wendet die Aktualisierung auf das verschobene Ziel an  [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:549
 msgid "discard update (breaks move)"
-msgstr ""
+msgstr "Verwirft Aktualisierung (Verschiebung wird Kopie)"
 
 #: ../svn/conflict-callbacks.c:549
-#, fuzzy
 msgid "discard update, mark resolved, the move will will become a copy"
-msgstr "Markiert den Konflikt als aufgelöst (wandelt Verschiebung in eine Kopie um)"
+msgstr "Verwirft die Aktualisierung, markiert den Konflikt als aufgelöst, wandelt Verschiebung in eine Kopie um"
 
 #: ../svn/conflict-callbacks.c:563
-#, fuzzy
 msgid "apply update to move destination"
-msgstr "Wendet die Aktualisierung auf das verschobene Ziel an  [mine-conflict]"
+msgstr "Wendet Aktualisierung auf das verschobene Ziel an"
 
 #: ../svn/conflict-callbacks.c:564
-#, fuzzy
 msgid "apply incoming update to move destination  [mine-conflict]"
-msgstr "Wendet die Aktualisierung auf das verschobene Ziel an  [mine-conflict]"
+msgstr "Wendet empfangene Aktualisierung auf das verschobene Ziel an  [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:577 ../svn/conflict-callbacks.c:593
 msgid "keep affected local moves"
-msgstr ""
+msgstr "Behält lokale Verschiebungen"
 
 #: ../svn/conflict-callbacks.c:577
-#, fuzzy
 msgid "keep any local moves affected by this deletion  [mine-conflict]"
-msgstr "Behält alle durch das Löschen betroffenen Verschiebungen   [mine-conflict]"
+msgstr "Behält alle durch das Löschen betroffenen lokalen Verschiebungen   [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:580 ../svn/conflict-callbacks.c:596
-#, fuzzy
 msgid "mark resolved (breaks moves)"
-msgstr "Markiert den Konflikt als aufgelöst (wandelt Verschiebung in eine Kopie um)"
+msgstr "Markiert als aufgelöst (Verschiebung wird Kopie)"
 
 #: ../svn/conflict-callbacks.c:580
-#, fuzzy
 msgid "mark resolved, any affected moves will become copies"
-msgstr "Markiert den Konflikt als aufgelöst (wandelt betroffene Verschiebungen in Kopien um)"
+msgstr "Markiert den Konflikt als aufgelöst, wandelt betroffene Verschiebungen in Kopien um"
 
 #: ../svn/conflict-callbacks.c:593
 msgid "keep any moves affected by this replacement  [mine-conflict]"
@@ -8672,7 +8660,7 @@ msgstr ""
 "\n"
 
 #: ../svn/conflict-callbacks.c:943
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option; use diff/edit/merge/launch before choosing 'mark resolved'.\n"
 "\n"
@@ -8785,7 +8773,6 @@ msgid "(2) your version (at line %lu)"
 msgstr "(2) eigene Version (in Zeile %lu)"
 
 #: ../svn/file-merge.c:657
-#, fuzzy
 msgid ""
 "Select: (1) use their version, (2) use your version,\n"
 "        (12) their version first, then yours,\n"
@@ -8797,6 +8784,8 @@ msgid ""
 "        (a) abort file merge and return to main menu: "
 msgstr ""
 "Auswahl: (1) verwendet fremde Version, (2) verwendet eigene Version,\n"
+"         (12) verwendet fremde Version zuerst, dann eigene,\n"
+"         (21) verwendet eigene Version zuerst, dann fremde,\n"
 "         (e1) bearbeitet fremde Version und verwendet das Ergebnis,\n"
 "         (e2) bearbeitet eigene Version und verwendet das Ergebnis,\n"
 "         (eb) bearbeitet beide Versionen und verwendet das Ergebnis,\n"
@@ -9336,6 +9325,7 @@ msgstr "Versuchen Sie »svn add« oder »svn add --non-recursive«."
 msgid "Try 'svn mkdir --parents' instead?"
 msgstr "Versuchen Sie »svn mkdir --parents« stattdessen?"
 
+# number of text, property or tree conflicts remaining to be resolved
 #: ../svn/notify.c:132
 #, c-format
 msgid "%d remaining"
@@ -9343,6 +9333,7 @@ msgid_plural "%d remaining"
 msgstr[0] "%d verbleibend"
 msgstr[1] "%d verbleibend"
 
+# number of already resolved text, property or tree conflicts
 #: ../svn/notify.c:141
 #, c-format
 msgid "and %d already resolved"
@@ -10625,6 +10616,20 @@ msgid ""
 "           while another client is using the working copy can corrupt\n"
 "           the working copy beyond repair!\n"
 msgstr ""
+"Räumt eine Arbeitskopie rekursiv auf, entfernt Schreibsperren, führt nicht\n"
+"beendete Operationen zu Ende usw.\n"
+"Aufruf: cleanup [AKPFAD...]\n"
+"\n"
+"  Ohne weitere Parameter führt der Aufruf unterbrochene Operationen in\n"
+"  AKPFAD zu Ende und entfernt Schreibsperren (mit »L« in »svn status«\n"
+"  angezeigt). Dies ist allgemein nur notwendig, nachdem ein Subversion-\n"
+"  Client abgestürzt ist, während dieser auf die Arbeitskopie zugriff, und so\n"
+"  die Arbeitskopie in einem nicht verwendbaren Zustand hinterließ.\n"
+"\n"
+"  WARNUNG: Es gibt keinen Mechanismus, der noch verwendete Schreib-\n"
+"           sperren anderer Subversion-Clients schützt. Die Ausführung dieses\n"
+"           Kommandos während des Zugriffs eines anderen Clients auf die\n"
+"           Arbeitskopie kann diese irreparabel beschädigen!\n"
 
 #: ../svn/svn.c:503
 msgid ""
@@ -13212,7 +13217,7 @@ msgstr "Umstellung"
 msgid "(invalid date)"
 msgstr "(ungültiges Datum)"
 
-#: ../svn/util.c:1069
+#: ../svn/util.c:1056
 #, c-format
 msgid "svn: warning: '%s' is a binary mime-type but file '%s' looks like text; diff, merge, blame, and other operations will stop working on this file\n"
 msgstr "svn: Warnung: »%s« ist ein binärer Mime-Typ, die Datei »%s« sieht aber wie Text aus; Operationen »diff« (Unterschiede anzeigen), »merge« (Unterschiede zusammenführen), »blame« (Annotieren) und andere Operationen werden auf dieser Datei nicht mehr funktionieren\n"
@@ -15683,6 +15688,296 @@ msgstr "»%s« ist unbekannten Typs\n"
 msgid "Uncommitted local addition, copy or move%s"
 msgstr "Nicht übertragenes lokal hinzugefügtes, kopiertes oder verschobenes Element%s"
 
+#~ msgid "Unexpected XML element found"
+#~ msgstr "Unerwartetes XML-Element gefunden"
+
+#~ msgid "Repository is corrupt"
+#~ msgstr "Projektarchiv ist beschädigt"
+
+#~ msgid "utf8proc library error"
+#~ msgstr "Fehler in utf8proc-Bibliothek"
+
+#~ msgid "Bad arguments to SQL operators GLOB or LIKE"
+#~ msgstr "Fehlerhafte Parameter für SQL-Operatoren GLOB oder LIKE"
+
+#~ msgid "Working copy at '%s' is already locked."
+#~ msgstr "Arbeitskopie »%s« ist schon gesperrt."
+
+#~ msgid "The XML response contains invalid XML"
+#~ msgstr "Die XML-Antwort enthält ungültiges XML"
+
+#~ msgid "DAV request failed: 411 Content length required. The server or an intermediate proxy does not accept chunked encoding. Try setting 'busted-proxy=yes' in your client configuration."
+#~ msgstr "DAV-Anfrage fehlgeschlagen: 411 Angabe zur Länge des Inhalts erforderlich. Der Server oder ein dazwischengeschalteter Proxy-Server akzeptiert Kodierung in Teilstücken nicht. Versuchen Sie, »busted-proxy=yes« in der Konfiguration des Clients."
+
+#~ msgid "XML stream truncated: closing '%s' missing"
+#~ msgstr "XML-Strom abgeschnitten: Abschließendes »%s« fehlt"
+
+#~ msgid "document element not found"
+#~ msgstr "Dokumenten-Element nicht gefunden"
+
+#~ msgid "XML stream truncated: %s"
+#~ msgstr "XML-Strom abgeschnitten: %s"
+
+#~ msgid "Missing XML attribute '%s' on '%s' element"
+#~ msgstr "Fehlendes XML-Attribut: »%s« in Element »%s«"
+
+#~ msgid "Items are nested too deeply"
+#~ msgstr "Elemente sind zu tief verschachtelt"
+
+#~ msgid "Word is too long"
+#~ msgstr "Wort ist zu lang"
+
+#~ msgid "Repository '%s' failed to verify"
+#~ msgstr "Überprüfung des Projektarchivs »%s« fehlgeschlagen"
+
+#~ msgid "Revision number longer than 10 digits '%s'"
+#~ msgstr "Revisionsnummer ist länger als 10 Ziffern »%s«"
+
+#~ msgid "Revision number too large '%s'"
+#~ msgstr "Revisionsnummer ist zu groß »%s«"
+
+#~ msgid "Invalid Unicode character U+%04lX"
+#~ msgstr "Ungültiges Unicode-Zeichen U+%04lX"
+
+#~ msgid "Cannot use a custom escape token in glob matching mode"
+#~ msgstr "Kann kein benutzerdefiniertes geschütztes Zeichen im Platzhalter-Suchmodus verwenden"
+
+#~ msgid "Escape token must be one character"
+#~ msgstr "Geschützes Zeichen muss ein einzelnes Zeichen sein"
+
+#~ msgid "Invalid escape character U+%04lX"
+#~ msgstr "Ungültiges geschütztes Zeichen U+%04lX"
+
+#~ msgid "Memory for processing UTF-8 data could not be allocated."
+#~ msgstr "Speicher für die Verarbeitung von UTF-8 Daten konnte nicht zugewiesen werden."
+
+#~ msgid "UTF-8 string is too long to be processed."
+#~ msgstr "UTF-8 Zeichenkette ist für die Verarbeitung zu lang."
+
+#~ msgid "Invalid UTF-8 string"
+#~ msgstr "Ungültige UTF-8 Zeichenkette"
+
+#~ msgid "Unassigned Unicode code point found in UTF-8 string."
+#~ msgstr "Nicht zugewiesener Unicode-Codepunkt in UTF-8 Zeichenkette gefunden."
+
+#~ msgid "Invalid options for UTF-8 processing chosen."
+#~ msgstr "Ungültige Optionen für die Verarbeitung von UTF-8 ausgewählt."
+
+#~ msgid "An unknown error occured while processing UTF-8 data."
+#~ msgstr "Ein unbekannter Fehler trat bei der Verarbeitung von UTF-8 Daten auf."
+
+#~ msgid "Working copy locked; if no other Subversion client is currently using the working copy, try running 'svn cleanup' without the --remove-unversioned and --remove-ignored options first."
+#~ msgstr "Arbeitskopie gesperrt; Wenn kein anderer Subversion-Client gerade die Arbeitskopie verwendet, versuchen Sie zuerst »svn cleanup« ohne die Optionen »--remove-unversioned« und »--remove-ignored« auszuführen."
+
+#~ msgid "Cannot remove unversioned or ignored items from something that is not a working copy"
+#~ msgstr "Kann ignorierte oder nicht versionierte Elemente nicht aus etwas entfernen, was keine Arbeitskopie ist"
+
+#~ msgid "accept my version of entire property (even non-conflicts)  [mine-full]"
+#~ msgstr "Akzeptiert eigene Version für ganze Eigenschaft (alles, nicht nur Konflikte)  [mine-full]"
+
+#~ msgid "accept their version of entire property (same)  [theirs-full]"
+#~ msgstr "Akzeptiert fremde Version für ganze Eigenschaft (ebenso)  [theirs-full]"
+
+#~ msgid "prepare for updating moved-away children, if any (recommended)"
+#~ msgstr "Bereitet die Aktualisierung von ggf. verschobenen Kindelementen vor (empfohlen)"
+
+#~ msgid "allow updating moved-away children with 'svn resolve' [mine-conflict]"
+#~ msgstr "Erlaubt die Aktualisierung von verschobenen Kindelementen mit »svn resolve« [mine-conflict]"
+
+#~ msgid "--log option valid only with --show-revs option"
+#~ msgstr "Option »--log« ist nur in Verbindung mit der Option »--show-revs« zulässig"
+
+#~ msgid "Performing cleanup on external item at '%s'.\n"
+#~ msgstr "Räume externen Verweis »%s« auf.\n"
+
+#~ msgid ""
+#~ "also operate on externals defined by\n"
+#~ "                             svn:externals properties"
+#~ msgstr ""
+#~ "Arbeitet auch auf externen Verweisen\n"
+#~ "                             (»svn:externals« Eigenschaften)"
+
+#~ msgid "show revision log message, author and date"
+#~ msgstr "Zeigt Logmeldung, Author und Datum der Revision an"
+
+#~ msgid "remove unversioned items"
+#~ msgstr "Entfernt nicht versionierte Objekte"
+
+#~ msgid "remove ignored items"
+#~ msgstr "Entfernt ignorierte Objekte"
+
+#~ msgid ""
+#~ "Send changes from your working copy to the repository.\n"
+#~ "usage: commit [PATH...]\n"
+#~ "\n"
+#~ "  A log message must be provided, but it can be empty.  If it is not\n"
+#~ "  given by a --message or --file option, an editor will be started.\n"
+#~ "  If any targets are (or contain) locked items, those will be\n"
+#~ "  unlocked after a successful commit.\n"
+#~ "\n"
+#~ "  If --include-externals is given, also commit file and directory\n"
+#~ "  externals reached by recursion. Do not commit externals with a\n"
+#~ "  fixed revision.\n"
+#~ msgstr ""
+#~ "Überträgt Änderungen Ihrer Arbeitskopie ins Projektarchiv.\n"
+#~ "Aufruf: commit [PFAD...]\n"
+#~ "\n"
+#~ "  Eine Logmeldung muss angegeben werden; diese kann jedoch leer sein.\n"
+#~ "  Wird sie nicht mittels einer --message- oder --file-Option übergeben, wird\n"
+#~ "  ein Editor gestartet.\n"
+#~ "  Falls Objekte gesperrt sind oder gesperrte Objekte enthalten, werden diese\n"
+#~ "  nach einer erfolgreichen Übertragung entsperrt.\n"
+#~ "\n"
+#~ "  Wenn --include-externals angegeben wird, werden auch Dateien und\n"
+#~ "  Verzeichnisse in externen Verweisen übertragen, die durch Rekursion\n"
+#~ "  erreicht werden. Übertragen Sie keine externen Verweise mit einer\n"
+#~ "  festgelegten Revision.\n"
+
+#~ msgid "no progress (only errors to stderr)"
+#~ msgstr "keine Fortschrittsanzeige (nur Fehler auf die Standardfehlerausgabe)"
+
+#~ msgid "continue verification after detecting a corruption"
+#~ msgstr "Setzt die Verifikation nach einer entdeckten Beschädigung fort"
+
+#~ msgid ""
+#~ "usage: svnadmin info REPOS_PATH\n"
+#~ "\n"
+#~ "Print information about the repository at REPOS_PATH.\n"
+#~ msgstr ""
+#~ "Aufruf: svnadmin info ARCHIV_PFAD\n"
+#~ "\n"
+#~ "Gibt Informationen über das Projektarchiv in ARCHIV_PFAD aus.\n"
+
+#~ msgid ""
+#~ "Successfully opened repository '%s'.\n"
+#~ "Will now crash to simulate a crashing server process.\n"
+#~ msgstr ""
+#~ "Projektarchive »%s« erfolgreich geöffnet.\n"
+#~ "Es folgt ein Abbruch, um den Absturz eines Serverprozesses zu simulieren.\n"
+
+#~ msgid "* Error verifying revision %ld.\n"
+#~ msgstr "* Fehler bei der Verifikation der Revision %ld.\n"
+
+#~ msgid "Packing revision properties in shard %s..."
+#~ msgstr "Packe Revisionseigenschaften in Fragment %s ..."
+
+#~ msgid "Removing non-packed revision properties in shard %s..."
+#~ msgstr "Entferne nicht gepackte Revisionseigenschaften in Fragment %s ..."
+
+#~ msgid "Bumped repository format to %ld\n"
+#~ msgstr "Format des Projektarchivs erhöht auf: %ld\n"
+
+#~ msgid "Repository Format: %d\n"
+#~ msgstr "Format des Projektarchivs: %d\n"
+
+#~ msgid "Compatible With Version: %d.%d.0\n"
+#~ msgstr "Kompatibel mit Version: %d.%d.0\n"
+
+#~ msgid "Repository Capability: %s\n"
+#~ msgstr "Funktion des Projektarchivs: %s\n"
+
+#~ msgid "Filesystem Type: %s\n"
+#~ msgstr "Typ des Dateisystems: %s\n"
+
+#~ msgid "Filesystem Format: %d\n"
+#~ msgstr "Format des Dateisystems: %d\n"
+
+#~ msgid "FSFS Sharded: yes\n"
+#~ msgstr "FSFS Fragmentiert: ja\n"
+
+#~ msgid "FSFS Sharded: no\n"
+#~ msgstr "FSFS Fragmentiert: nein\n"
+
+#~ msgid "FSFS Shard Size: %d\n"
+#~ msgstr "FSFS Fragmentgröße: %d\n"
+
+#~ msgid "FSFS Shards Packed: %d/%d\n"
+#~ msgstr "FSFS Fragmente gepackt: %d/%d\n"
+
+# TODO: leicht inkonsistent zu obigen Strings (tritt in svn info-Ausgabe auf)
+#~ msgid "Configuration File: %s\n"
+#~ msgstr "Konfigurationsdatei: %s\n"
+
+#~ msgid ""
+#~ "usage: svnauth help [SUBCOMMAND...]\n"
+#~ "\n"
+#~ "Describe the usage of this program or its subcommands.\n"
+#~ msgstr ""
+#~ "Aufruf: svnauth help [UNTERBEFEHL...]\n"
+#~ "\n"
+#~ "Beschreibt die Anwendung dieses Programms und seiner Unterbefehle.\n"
+
+#~ msgid ""
+#~ "usage: svnauth list\n"
+#~ "\n"
+#~ "List cached authentication credentials.\n"
+#~ msgstr ""
+#~ "Aufruf: svnauth list\n"
+#~ "\n"
+#~ "Gibt eine Liste gespeicherter Zugangsdaten aus.\n"
+
+#~ msgid "use auth cache in config directory ARG"
+#~ msgstr "Verwendet Speicherbereich für Zugangsdaten im Konfigurationsverzeichnis PAR"
+
+#~ msgid "show cached passwords"
+#~ msgstr "Zeigt gespeicherte Passwörter an"
+
+#~ msgid ""
+#~ "general usage: svnauth SUBCOMMAND [ARGS & OPTIONS ...]\n"
+#~ "Type 'svnauth help <subcommand>' for help on a specific subcommand.\n"
+#~ "Type 'svnauth --version' to see the program version and available\n"
+#~ "authentication credential caches.\n"
+#~ "\n"
+#~ "Available subcommands:\n"
+#~ msgstr ""
+#~ "Aufruf: svnauth UNTERBEFEHL [Optionen & Parameter ...]\n"
+#~ "Geben Sie »svnauth help <Unterbefehl>« ein, um Hilfe zu einem Unterbefehl\n"
+#~ "          zu erhalten.\n"
+#~ "Geben Sie »svnauth --version« ein, um die Programmversion und die verfügbaren\n"
+#~ "          Speicherbereiche für Zugangsdaten anzuzeigen\n"
+#~ "\n"
+#~ "Verfügbare Unterbefehle:\n"
+
+#~ msgid "Available authentication credential caches:\n"
+#~ msgstr "Verfügbare Speicherbereiche für Zugangsdaten:\n"
+
+#~ msgid "%s  Wincrypt cache in %s\n"
+#~ msgstr "%s  Wincrypt-Speicher in %s\n"
+
+#~ msgid "%s  Plaintext cache in %s\n"
+#~ msgstr "%s  Klartext-Speicher in %s\n"
+
+#~ msgid "Credential kind: %s\n"
+#~ msgstr "Art der Zugangsdaten: %s\n"
+
+#~ msgid "%s: [not shown]\n"
+#~ msgstr "%s: [nicht angezeigt]\n"
+
+#~ msgid "Try 'svnauth help' for more info"
+#~ msgstr "Geben Sie »svnauth help« für weitere Hilfe ein"
+
+#~ msgid "'--no-ignore' option only valid with '--remove-unversioned' option"
+#~ msgstr "Option »--no-ignore« ist nur in Verbindung mit der Option »--remove-unversioned« zulässig"
+
+#~ msgid ""
+#~ "Recursively clean up the working copy, removing locks, resuming\n"
+#~ "unfinished operations, etc.\n"
+#~ "usage: cleanup [WCPATH...]\n"
+#~ "\n"
+#~ "  If the --remove-unversioned option is given, also remove unversioned\n"
+#~ "  items within WCPATH. If --no-ignore is also given, disregard any\n"
+#~ "  ignore patterns and remove ignored unversioned items as well.\n"
+#~ msgstr ""
+#~ "Räumt eine Arbeitskopie rekursiv auf, entfernt Sperren, führt\n"
+#~ "nicht beendete Operationen zu Ende usw.\n"
+#~ "Aufruf: cleanup [AKPFAD...]\n"
+#~ "\n"
+#~ "  Wenn die Option --remove-unversioned angegeben ist, werden auch alle\n"
+#~ "  nicht versionierten Objekte in AKPFAD entfernt. Wenn --no-ignore auch\n"
+#~ "  angegeben ist, werden Einstellungen aus »global-ignores« sowie die\n"
+#~ "  Eigenschaften »svn:ignore« und »svn:global-ignores«\" nicht beachtet\n"
+#~ "  und ignorierte nicht versionierte Objekte ebenfalls entfernt.\n"
+
 #~ msgid ""
 #~ "Recursively clean up the working copy, removing locks, resuming\n"
 #~ "unfinished operations, etc.\n"
@@ -15691,3 +15986,1806 @@ msgstr "Nicht übertragenes lokal hinzugefügtes, kopiertes oder verschobenes El
 #~ "Räumt die Arbeitskopie rekursiv auf, gibt Sperren frei,\n"
 #~ "nimmt unvollständige Operationen wieder auf, usw.\n"
 #~ "Aufruf: cleanup [AKPFAD...]\n"
+
+#~ msgid "Invalid config: unknown http authtype '%s'"
+#~ msgstr "Ungültige Konfiguration: Unbekannter HTTP-Autorisationstyp »%s«"
+
+#~ msgid "OOM"
+#~ msgstr "Nicht genügend Speicher"
+
+#~ msgid "--- Checking branch relationship\n"
+#~ msgstr "--- Überprüfung des Verhältnisses der Zweige\n"
+
+#~ msgid "Source and target must be different but related branches"
+#~ msgstr "Quelle und Ziel müssen verschiedene aber verwandte Zweige sein"
+
+#~ msgid "Source and target have no common ancestor: '%s' and '%s'"
+#~ msgstr "Quelle und Ziel haben keinen gemeinsamen Vorfahren: »%s« und »%s«"
+
+#~ msgid "Pristine text not found"
+#~ msgstr "Ursprungstext nicht gefunden"
+
+#~ msgid "The pristine text with checksum '%s' was found in the DB but not on disk"
+#~ msgstr "Der Ursprungstext mit der Prüfsumme »%s« wurde in der Datenbank gefunden, aber nicht auf der Festplatte"
+
+#~ msgid "The tree '%s' is not single-revision and unswitched"
+#~ msgstr "Der Baum »%s« hat mehr als eine Revision oder umgestellte Unterbäume"
+
+#~ msgid "edit"
+#~ msgstr "editiert"
+
+#~ msgid "add"
+#~ msgstr "hinzugefügt"
+
+#~ msgid "replace"
+#~ msgstr "ersetzt"
+
+#~ msgid "missing"
+#~ msgstr "fehlend"
+
+#~ msgid "prefer local change"
+#~ msgstr "Bevorzugt lokale Änderungen "
+
+#~ msgid "prefer incoming change"
+#~ msgstr "Bevorzugt empfangene Änderungen "
+
+#~ msgid "break the move, change move destination into a copy"
+#~ msgstr "Teilt die Verschiebung auf, wandelt Ziel der Verschiebung in eine Kopie um"
+
+#~ msgid "--- Calculating automatic merge\n"
+#~ msgstr "--- Berechnung der automatischen Zusammenführung\n"
+
+#~ msgid "The required merge is reintegrate-like, and the --record-only option cannot be used with this kind of merge"
+#~ msgstr "Die benötigte Zusammenführung sieht wie eine Reintegration aus, die Option »--record-only« kann mit dieser Art der Zusammenführung aber nicht verwendet werden"
+
+#~ msgid "The required merge is reintegrate-like, and the --depth option cannot be used with this kind of merge"
+#~ msgstr "Die benötigte Zusammenführung sieht wie eine Reintegration aus, die Option »--depth« kann mit dieser Art der Zusammenführung aber nicht verwendet werden"
+
+#~ msgid "The required merge is reintegrate-like, and the --force option cannot be used with this kind of merge"
+#~ msgstr "Die benötigte Zusammenführung sieht wie eine Reintegration aus, die Option »--force« kann mit dieser Art der Zusammenführung aber nicht verwendet werden"
+
+#~ msgid "The required merge is reintegrate-like, and the --allow-mixed-revisions option cannot be used with this kind of merge"
+#~ msgstr "Die benötigte Zusammenführung sieht wie eine Reintegration aus, die Option »--allow-mixed-revisions« kann mit dieser Art der Zusammenführung aber nicht verwendet werden"
+
+#~ msgid ""
+#~ "Restore pristine working copy file (undo most local edits).\n"
+#~ "usage: revert PATH...\n"
+#~ "\n"
+#~ "  Note:  this subcommand does not require network access, and resolves\n"
+#~ "  any conflicted states.\n"
+#~ msgstr ""
+#~ "Stellt den ursprünglichen Inhalt einer Datei in der Arbeitskopie wieder her\n"
+#~ "(macht die meisten lokalen Änderungen rückgängig).\n"
+#~ "Aufruf: revert PFAD...\n"
+#~ "\n"
+#~ "  Hinweis: Dieser Unterbefehl erfordert keinen Netzwerkzugriff und löst\n"
+#~ "  Konfliktzustände auf.\n"
+
+#~ msgid ""
+#~ "usage: svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
+#~ "\n"
+#~ "Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"
+#~ msgstr ""
+#~ "Aufruf: svnadmin freeze ARCHIV_PFAD PROGRAMM [PAR...]\n"
+#~ "\n"
+#~ "Führt PROGRAMM mit den Optionen PAR aus, während ARCHIV_PFAD mit einer Schreibsperre belegt wird.\n"
+
+#~ msgid "Path '%s' has no URL"
+#~ msgstr "Pfad »%s« hat keine URL"
+
+#~ msgid "merging...\n"
+#~ msgstr "Zusammenführung...\n"
+
+#~ msgid "The node '%s' is not in a working copy."
+#~ msgstr "Der Knoten »%s« ist nicht in einer Arbeitskopie."
+
+#~ msgid "Can't read stdin"
+#~ msgstr "Kann nicht aus Standardeingabe lesen"
+
+#, fuzzy
+#~ msgid ""
+#~ "    youngest  last               repos.\n"
+#~ "    common    full     tip of    path of\n"
+#~ "    ancestor  merge    branch    branch\n"
+#~ "\n"
+#~ msgstr ""
+#~ "    jüngster  letzte   neueste   Projektarchiv-\n"
+#~ "    gemeins.  vollst.  im        pfade der\n"
+#~ "    Vorgänger Merge    Zweig     Zweige\n"
+#~ "\n"
+
+#~ msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
+#~ msgstr "Quell URL »%s« ist aus einem fremden Projektarchiv; lasse sie als getrennte Arbeitskopie"
+
+#, fuzzy
+#~ msgid "Checksum doesn't match for '%s'"
+#~ msgstr "Prüfsummenfehler für »%s«"
+
+#~ msgid "calculating reintegrate merge...\n"
+#~ msgstr "Berechnung der Zusammenführung für Reintegration\n"
+
+#~ msgid "ignore ancestry when calculating merges"
+#~ msgstr "beim Zusammenführen Vorgänger ignorieren"
+
+#~ msgid "notice ancestry when calculating differences"
+#~ msgstr ""
+#~ "beim Berechnen von Differenzen Vorgänger\n"
+#~ "                             berücksichtigen"
+
+# FIXME: duplicated message (differs only in ".")
+#~ msgid "Conflict callback violated API: returned no results."
+#~ msgstr "Konflikt-Rückruffunktion verletzte die API: keine Ergebnisse wurden zurückgeliefert."
+
+#~ msgid "Conflict callback violated API: returned no merged file."
+#~ msgstr "Konflikt-Rückruffunktion verletzte die API: keine zusammengeführte Datei wurde zurückgeliefert."
+
+#~ msgid "Cannot non-recursively commit a directory deletion of a directory with child nodes"
+#~ msgstr "Das Löschen eines Verzeichnisses mit Untereinträgen kann nur rekursiv übertragen werden"
+
+#~ msgid "Unknown entry kind for '%s'"
+#~ msgstr "»%s« hat einen unbekannten Eintragstyp"
+
+#~ msgid "Entry '%s' has unexpectedly changed special status"
+#~ msgstr "Der Spezialstatus von Eintrag »%s« hat sich unerwarteterweise geändert"
+
+#~ msgid "Entry for '%s' has no URL"
+#~ msgstr "Eintrag für »%s« hat keine URL"
+
+# CHECKME
+#~ msgid "'%s' is scheduled for addition within unversioned parent"
+#~ msgstr "»%s« ist zum Hinzufügen innerhalb einer nicht versionierten Struktur vorgesehen"
+
+#~ msgid "Entry for '%s' exists (though the working file is missing)"
+#~ msgstr "Eintrag für »%s« existiert (die Arbeitsdatei fehlt jedoch)"
+
+#~ msgid "Summarizing diff can only compare repository to repository"
+#~ msgstr "Zusammenfassender Vergleich kann nur ein Projektarchiv mit einem Projektarchiv vergleichen"
+
+#~ msgid "'%s' is not a URL"
+#~ msgstr "»%s« ist keine URL"
+
+#~ msgid "Server does not support retrieving information about the repository root"
+#~ msgstr "Server unterstützt die Abfrage von Informationen über die Projektarchivwurzel nicht"
+
+#~ msgid "URL '%s' non-existent in that revision"
+#~ msgstr "URL »%s« existiert nicht in dieser Revision"
+
+#~ msgid "URLs have no scheme ('%s' and '%s')"
+#~ msgstr "Die URLs haben kein Schema (»%s« und »%s«)"
+
+#~ msgid "URL has no scheme: '%s'"
+#~ msgstr "URL hat kein Schema: »%s«"
+
+#~ msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
+#~ msgstr "Gemischte Zugriffsverfahren werden noch nicht unterstützt (»%s« and »%s«)"
+
+#~ msgid "Setting property recursively on non-local target '%s' is not supported"
+#~ msgstr "Das rekursive Setzen einer Eigenschaft für ein nicht lokales Ziel »%s« wird nicht unterstützt"
+
+#~ msgid "URL '%s' is not a child of repository root URL '%s'"
+#~ msgstr "Die URL »%s« ist kein Kind der Projektarchivwurzel-URL »%s«"
+
+#~ msgid "No newline at end of file"
+#~ msgstr "Kein Zeilenumbruch am Ende der Datei"
+
+#~ msgid "Can't grab FS mutex"
+#~ msgstr "Kann FS Mutex nicht greifen"
+
+#~ msgid "Can't ungrab FS mutex"
+#~ msgstr "Kann FS Mutex nicht loslassen"
+
+#~ msgid "Can't allocate FS mutex"
+#~ msgstr "Kann FS Mutex nicht anlegen"
+
+#~ msgid "   expected:  %s"
+#~ msgstr "   erwartet:  %s"
+
+#~ msgid "     actual:  %s"
+#~ msgstr "tatsächlich:  %s"
+
+#, fuzzy
+#~ msgid "Attempt to obliterate '%s' using itself "
+#~ msgstr "Versuch, Deltas von »%s« gegen sich selber zu erstellen"
+
+#~ msgid "Bad ID in cache"
+#~ msgstr "Fehlerhafte ID im Zwischenspeicher"
+
+#~ msgid "Kindless noderev in cache"
+#~ msgstr "Nutzlose Knotenrevision im Zwischenspeicher"
+
+#~ msgid "Unknown kind for noderev in cache: '%c'"
+#~ msgstr "Unbekannte Art der Knotenrevision im Zwischenspeicher: »%c«"
+
+#~ msgid "Unterminated ID in cache"
+#~ msgstr "Nicht abgeschlossene ID im Zwischenspeicher"
+
+#~ msgid "Bogus ID '%s' in cache"
+#~ msgstr "Fehlerhafte ID »%s« im Zwischenspeicher"
+
+#~ msgid "No created path"
+#~ msgstr "Kein erzeugter Pfad"
+
+#~ msgid "Unknown node type in cache: '%c'"
+#~ msgstr "Unbekannter Knotentyp im Zwischenspeicher: »%c«"
+
+#~ msgid "Can't create FSFS write-lock mutex"
+#~ msgstr "Kann FSFS Schreibschutz-Mutex nicht anlegen"
+
+#~ msgid "Can't create FSFS txn-current mutex"
+#~ msgstr "Kann FSFS-txn-current-Mutex nicht anlegen"
+
+# CHECKME: s/txn list/txn-list/? Compare txn-current
+#~ msgid "Can't create FSFS txn list mutex"
+#~ msgstr "Kann FSFS-txn-list-Mutex nicht anlegen"
+
+#~ msgid "Revision file '%s' does not exist, and r%ld is not packed"
+#~ msgstr "Revisionsdatei »%s« existiert nicht und r%ld ist nicht gepackt"
+
+#~ msgid "Can't grab FSFS txn list mutex"
+#~ msgstr "Kann FSFS-txn-list-Mutex nicht greifen"
+
+#~ msgid "Can't ungrab FSFS txn list mutex"
+#~ msgstr "Kann FSFS-txn-list-Mutex nicht loslassen"
+
+#~ msgid "Can't grab FSFS mutex for '%s'"
+#~ msgstr "Kann FSFS-Mutex für »%s« nicht greifen"
+
+#~ msgid "Can't ungrab FSFS mutex for '%s'"
+#~ msgstr "Kann FSFS-Mutex für »%s« nicht loslassen"
+
+#~ msgid "Manifest offset too large"
+#~ msgstr "Manifest offset zu groß"
+
+#~ msgid "svndiff data requested non-existent source"
+#~ msgstr "svndiff-Daten verlangten nicht existierende Quelle"
+
+#~ msgid "svndiff requested position beyond end of stream"
+#~ msgstr "Von svndiff verlangte Position ist jenseits des Datenstromendes"
+
+#, fuzzy
+#~ msgid "Obliteration of already-packed revision is not supported"
+#~ msgstr "Annotieren der WORKING-Revision wird nicht unterstützt"
+
+#~ msgid "Could not fetch the Version Resource URL (needed during an import or when it is missing from the local, cached props)"
+#~ msgstr "Konnte die Versionsressourcen-URL nicht bestimmen (wird für einen Import oder, falls sie in den lokalen, zwischengespeicherten Eigenschaften fehlt, benötigt)"
+
+#~ msgid "File or directory '%s' is out of date; try updating"
+#~ msgstr "Datei oder Verzeichnis »%s« ist veraltet; versuchen Sie zu aktualisieren"
+
+#~ msgid "The CHECKOUT response did not contain a 'Location:' header"
+#~ msgstr "Die CHECKOUT-Antwort enthielt keinen »Location:« Kopf"
+
+#~ msgid "Could not save the URL of the version resource"
+#~ msgstr "Konnte die URL der versionierten Ressource nicht speichern"
+
+#~ msgid "Could not get content-type from response"
+#~ msgstr "Konnte »content-type« nicht aus der Antwort lesen"
+
+#~ msgid "Could not save file"
+#~ msgstr "Konnte Datei nicht sichern"
+
+#~ msgid "Server response missing the expected deadprop-count property"
+#~ msgstr "Die Serverantwort enthält die erwartete Eigenschaft »deadprop-count« nicht"
+
+# FIXME: collect messages!
+#~ msgid "Missing rev attr in target-revision element"
+#~ msgstr "Fehlendes Revisionsattribut in Element »target-revision«"
+
+#~ msgid "Missing path attr in resource element"
+#~ msgstr "Fehlendes Pfadattribut in Ressourcen-Element"
+
+#~ msgid "Missing rev attr in open-directory element"
+#~ msgstr "Fehlendes Revisionsattribut in Element »open-directory«"
+
+#~ msgid "Missing copyfrom-rev attr in add-directory element"
+#~ msgstr "Fehlendes Attribut »copyfrom-rev« in Element »add-directory«"
+
+#~ msgid "Missing rev attr in open-file element"
+#~ msgstr "Fehlendes Revisionsattribut in Element »open-file«"
+
+#~ msgid "Missing copyfrom-rev attr in add-file element"
+#~ msgstr "Fehlendes Attribut »copyfrom-rev« in Element »add-file«"
+
+#~ msgid "Missing name attr in set-prop element"
+#~ msgstr "Fehlendes Namensattribut in Element »set-prop«"
+
+#~ msgid "Missing name attr in remove-prop element"
+#~ msgstr "Fehlendes Namensattribut in Element »remove-prop«"
+
+#~ msgid "Unknown XML encoding: '%s'"
+#~ msgstr "Unbekannte XML Kodierung: »%s«"
+
+#~ msgid "REPORT response handling failed to complete the editor drive"
+#~ msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
+
+#~ msgid "Failed to write full amount to stream"
+#~ msgstr "Konnte nicht alles in den Datenstrom schreiben"
+
+#~ msgid "The file-revs report didn't contain any revisions"
+#~ msgstr "Der Report »file-revs« enthielt keine Revisionen"
+
+#~ msgid "Server does not support date-based operations"
+#~ msgstr "Server unterstützt keine datumsbasierten Operationen"
+
+#~ msgid "Invalid server response to dated-rev request"
+#~ msgstr "Ungültige Antwort des Servers auf datierte Revisionsanfrage"
+
+#~ msgid "Expected a valid revnum and path"
+#~ msgstr "Erwartete eine gültige Revisionsnummer samt Pfad"
+
+#~ msgid "Incomplete lock data returned"
+#~ msgstr "Unvollständige Sperrdaten zurückgegeben"
+
+#~ msgid "Invalid creation date header value in response."
+#~ msgstr "Ungültiges Erzeugungsdatum im Header-Feld in Antwort."
+
+#~ msgid "Invalid timeout value"
+#~ msgstr "Ungültiger Timeout-Wert"
+
+#~ msgid "Failed to parse URI '%s'"
+#~ msgstr "Konnte URI »%s« nicht zerlegen"
+
+#~ msgid "Failed to fetch lock information"
+#~ msgstr "Konnte Sperrinformationen nicht ermitteln"
+
+#~ msgid "Missing name attr in revprop element"
+#~ msgstr "Fehlendes Namensattribut in Element »revprop«"
+
+#~ msgid "Protocol error: we told the server not to auto-merge any resources, but it said that '%s' was merged"
+#~ msgstr "Protokollfehler: Wir haben dem Server mitgeteilt, Ressourcen nicht automatisch zusammenzuführen, aber dieser behauptet, dass »%s« zusammengeführt wurde"
+
+#~ msgid "Internal error: there is an unknown parent (%d) for the 'DAV:response' element within the MERGE response"
+#~ msgstr "Interner Fehler: Es gibt ein unbekanntes Elternteil (%d) für das »DAV:response« Element innerhalb der MERGE-Antwort"
+
+#~ msgid "Protocol error: the MERGE response for the '%s' resource did not return all of the properties that we asked for (and need to complete the commit)"
+#~ msgstr "Protokollfehler: Die MERGE-Antwort für die »%s«-Ressource hat nicht alle angeforderten Eigenschaften zurück geliefert (und Übertragung muss beendet werden)"
+
+#~ msgid "The MERGE property response had an error status"
+#~ msgstr "Die MERGE-Eigenschaftsantwort hatte einen Fehlerstatus"
+
+#~ msgid "The OPTIONS response did not include the requested activity-collection-set; this often means that the URL is not WebDAV-enabled"
+#~ msgstr "Die OPTIONS-Antwort enthielt nicht das angeforderte »activity-collection-set«; dies heißt oft, dass die URL nicht WebDAV-fähig ist"
+
+#~ msgid "Failed to find label '%s' for URL '%s'"
+#~ msgstr "Marke »%s« für URL »%s« nicht gefunden"
+
+#~ msgid "'%s' was not present on the resource '%s'"
+#~ msgstr "»%s« existierte nicht für die Ressource »%s«"
+
+#~ msgid "Neon was unable to parse URL '%s'"
+#~ msgstr "Neon konnte die URL »%s« nicht zerlegen"
+
+#~ msgid "The path was not part of a repository"
+#~ msgstr "Der Pfad war kein Teil eines Projektarchivs"
+
+#~ msgid "No part of path '%s' was found in repository HEAD"
+#~ msgstr "Kein Teil des Pfades »%s« wurde in HEAD des Projektarchivs gefunden"
+
+#~ msgid "The VCC property was not found on the resource"
+#~ msgstr "Die VCC Eigenschaft wurde in der Ressource nicht gefunden"
+
+#~ msgid "The relative-path property was not found on the resource"
+#~ msgstr "Die »relative-path« Eigenschaft wurde in der Ressource nicht gefunden"
+
+#~ msgid "'DAV:baseline-collection' was not present on the baseline resource"
+#~ msgstr "»DAV:baseline-collection« ist nicht in der Baseline-Ressource enthalten"
+
+# TODO: proper translation for Baseline
+#~ msgid "'%s' was not present on the baseline resource"
+#~ msgstr "»%s« existierte nicht für die Baseline-Ressource"
+
+#~ msgid "Got apply-textdelta element without preceding add-file or open-file"
+#~ msgstr "Fand Element »apply-textdelta« ohne vorhergehendes »add-file« oder »open-file«"
+
+#~ msgid "Got close-file element without preceding add-file or open-file"
+#~ msgstr "Fand Element »close-file« ohne vorhergehendes »add-file« oder »open-file«"
+
+# FIXME: inkonsistent zu obigen Meldungen: open_directory statt opening a directory
+# (Wird Bezug zu Elementen in Dump hergestellt oder nicht?)
+#~ msgid "Got close-directory element without ever opening a directory"
+#~ msgstr "Fand Element »close-directory« ohne vorhergehendes Öffnen eines Verzeichnisses"
+
+#~ msgid "Got cdata content for a prop delete"
+#~ msgstr "Fand cdata-Inhalt für eine Eigenschaftslöschung"
+
+#~ msgid "PIN for token \"%s\" in slot \"%s\""
+#~ msgstr "PIN für Token »%s« in Slot »%s«"
+
+#~ msgid "Invalid config: illegal character in debug mask value"
+#~ msgstr "Ungültige Konfiguration: Illegales Zeichen in Debugmaske"
+
+#~ msgid "Module for accessing a repository via WebDAV protocol using Neon."
+#~ msgstr "Modul zum Zugriff auf ein Projektarchiv über das Protokoll WebDAV mittels Neon."
+
+#~ msgid "URL '%s' is malformed or the scheme or host or path is missing"
+#~ msgstr "URL »%s« ist fehlerhaft oder das Schema, der Rechner oder Pfad fehlt"
+
+#~ msgid "Network socket initialization failed"
+#~ msgstr "Initialisierung der Netzwerkverbindung schlug fehl"
+
+#~ msgid "SSL is not supported"
+#~ msgstr "SSL wird nicht unterstützt"
+
+#~ msgid "Invalid config: unable to load PKCS#11 provider '%s'"
+#~ msgstr "Ungültige Konfiguration: PKCS#11-Anbieter »%s« kann nicht geladen werden"
+
+#~ msgid "Unsupported RA loader version (%d) for ra_neon"
+#~ msgstr "Nicht unterstützte Zugriffsmodul-Laderversion (%d) für ra_neon"
+
+#~ msgid "The request response contained at least one error"
+#~ msgstr "Die Antwort auf die Anfrage enthielt zumindest einen Fehler"
+
+#~ msgid "The response contains a non-conforming HTTP status line"
+#~ msgstr "Die Antwort enthält eine nicht konforme HTTP-Statuszeile"
+
+#~ msgid "Error setting property '%s': "
+#~ msgstr "Fehler beim Setzen der Eigenschaft »%s«: "
+
+# FIXME: missing translator comments!
+#~ msgid "Server sent unexpected return value (%d %s) in response to %s request for '%s'"
+#~ msgstr "Der Server hat einen unerwarteten Rückgabewert (%d %s) in Antwort auf die Anfrage %s für »%s« zurückgeliefert"
+
+#~ msgid "authorization failed: %s"
+#~ msgstr "Autorisierung schlug fehl: %s"
+
+#~ msgid "authorization failed"
+#~ msgstr "Autorisierung schlug fehl"
+
+#~ msgid "could not connect to server"
+#~ msgstr "Konnte keine Verbindung zum Server herstellen"
+
+#~ msgid "timed out waiting for server"
+#~ msgstr "Zeitüberschreitung beim Warten auf Server"
+
+#~ msgid "Can't calculate the request body size"
+#~ msgstr "Kann die Größe der Anfrage nicht berechnen"
+
+#~ msgid "The %s request returned invalid XML in the response: %s (%s)"
+#~ msgstr "Die %s-Anfrage gab in der Antwort ungültiges XML zurück: %s (%s)"
+
+#~ msgid "Error reading spooled %s request response"
+#~ msgstr "Fehler beim Lesen der Antwort auf die %s Anfrage von Festplatte"
+
+#~ msgid "Missing 'realm' attribute in Authorization header"
+#~ msgstr "Fehlendes Attribut »realm« in Autorisations-Header"
+
+# CHECKME: full stop in error message?
+#~ msgid "Incorrect response-digest in Authentication-Info header."
+#~ msgstr "Falsche Antwortnummer im Header der Authentifizierungs-Informationen."
+
+#~ msgid ""
+#~ "Initialization of the GSSAPI context failed.\n"
+#~ " %s\n"
+#~ " %s\n"
+#~ msgstr ""
+#~ "Initialisierung des GSSAPI-Kontextes schlug fehl.\n"
+#~ " %s\n"
+#~ " %s\n"
+
+#~ msgid "Location segment report failed on '%s'@'%ld'"
+#~ msgstr "Ortssegmentreport schlug auf »%s«@»%ld« fehl"
+
+#~ msgid "Error retrieving replay REPORT (%d)"
+#~ msgstr "Fehler beim Holen des Wiederholungs-REPORT (%d)"
+
+#~ msgid "Could not lookup hostname `%s'"
+#~ msgstr "Konnte Rechnernamen »%s« nicht nachschlagen"
+
+#~ msgid "The OPTIONS response did not include the requested resourcetype value"
+#~ msgstr "Die OPTIONS-Antwort enthielt nicht den angeforderten Wert »resourcetype«"
+
+# CHECKME, has to match first %s in "local %s, incoming %s upon %s"
+#, fuzzy
+#~ msgid "Obliteration"
+#~ msgstr "blockiert"
+
+#~ msgid "Can't create pipe for hook '%s'"
+#~ msgstr "Kann »Pipe« für Aktion »%s« nicht anlegen"
+
+# CHECKME: non-inherited = losgelöst???
+#~ msgid "Can't make pipe read handle non-inherited for hook '%s'"
+#~ msgstr "Kann Pipe-Lese-Handle für Aktion »%s« nicht nicht-erbbar machen"
+
+#~ msgid "Can't make pipe write handle non-inherited for hook '%s'"
+#~ msgstr "Kann Pipe-Schreib-Handle für Aktion »%s« nicht nicht-erbbar machen"
+
+#~ msgid "Error closing write end of stderr pipe"
+#~ msgstr "Fehler beim Schließen des Schreib-Endes der Standardfehlerausgabe"
+
+#~ msgid "Error closing read end of stderr pipe"
+#~ msgstr "Fehler beim Schließen des Lese-Endes der Standardfehlerausgabe"
+
+#, fuzzy
+#~ msgid "Repository has not been enabled to accept obliteration"
+#~ msgstr "Für diese Operation wird Zugang zum Projektarchiv benötigt"
+
+#~ msgid "Creating pre-obliterate hook"
+#~ msgstr "Erzeuge Aktion »pre-obliterate«"
+
+#~ msgid "Creating post-obliterate hook"
+#~ msgstr "Erzeuge Aktion »post-obliterate«"
+
+#~ msgid "Can't grab DSO mutex"
+#~ msgstr "Kann DSO-Mutex nicht greifen"
+
+#~ msgid "Can't ungrab DSO mutex"
+#~ msgstr "Kann DSO-Mutex nicht loslassen"
+
+#~ msgid "NULL mergeinfo\n"
+#~ msgstr "Zusammenführungsinformationen sind NULL\n"
+
+#~ msgid "empty mergeinfo\n"
+#~ msgstr "Zusammenführungsinformationen sind leer\n"
+
+#~ msgid "Schema format %d not recognized"
+#~ msgstr "Schema-Format %d wird nicht erkannt"
+
+#~ msgid "Expected SQLite database not found: %s"
+#~ msgstr "Erwartete SQLite-Datenbank wurde nicht gefunden: %s"
+
+#~ msgid "Number '%s' is out of range '[%llu, %llu]'"
+#~ msgstr "Zahl »%s« ist außerhalb des zulässigen Bereichs »[%llu, %llu]«"
+
+#~ msgid "Number '%s' is out of range '[%lld, %lld]'"
+#~ msgstr "Zahl »%s« ist außerhalb des zulässigen Bereichs »[%lld, %lld]«"
+
+#~ msgid "Can't lock charset translation mutex"
+#~ msgstr "Kann das Semaphor zur Zeichensatzkonvertierung nicht sperren"
+
+#~ msgid "Can't unlock charset translation mutex"
+#~ msgstr "Kann das Semaphor zur Zeichensatzkonvertierung nicht freigeben"
+
+#~ msgid "Can't retrieve base revision for %s"
+#~ msgstr "Kann Basisrevision für »%s« nicht abfragen"
+
+#~ msgid ""
+#~ "Checksum mismatch for text base of '%s':\n"
+#~ "   expected:  %s\n"
+#~ "     actual:  %s\n"
+#~ msgstr ""
+#~ "Prüfsummenfehler für Textbasis von »%s«:\n"
+#~ "   Erwartet:    %s\n"
+#~ "   Tatsächlich: %s\n"
+
+#~ msgid "Node '%s' has no pristine base text"
+#~ msgstr "Knoten »%s« hat keine ursprüngliche Textbasis"
+
+#~ msgid "File '%s' has no text base"
+#~ msgstr "Datei »%s« hat keine Textbasis"
+
+#~ msgid "Cannot revert '%s': unsupported entry node kind"
+#~ msgstr "Kann »%s« nicht zurücksetzen: nicht unterstützter Eintragsknotentyp"
+
+#~ msgid "Cannot revert '%s': unsupported node kind in working copy"
+#~ msgstr "Kann »%s« nicht zurücksetzen: nicht unterstützter Knotentyp in Arbeitskopie"
+
+#~ msgid "'%s' is a directory, and thus cannot be a member of a changelist"
+#~ msgstr "»%s« ist ein Verzeichnis and kann deswegen nicht Element einer Änderungsliste sein"
+
+#~ msgid ""
+#~ "Trying to create property '%s' with value '%s',\n"
+#~ "but it has been locally deleted."
+#~ msgstr ""
+#~ "Versuch, die Eigenschaft »%s« mit dem Wert »%s« anzulegen,\n"
+#~ "aber die Eigenschaft wurde lokal bereits gelöscht."
+
+#~ msgid ""
+#~ "Trying to delete property '%s' with value '%s',\n"
+#~ "but it has been modified from '%s' to '%s'."
+#~ msgstr ""
+#~ "Versuch, die Eigenschaft »%s« mit dem Wert »%s« zu löschen,\n"
+#~ "aber der Wert wurde von »%s« nach »%s« geändert."
+
+#~ msgid ""
+#~ "Trying to delete property '%s' with value '%s',\n"
+#~ "but property with value '%s' is locally deleted."
+#~ msgstr ""
+#~ "Versuch, die Eigenschaft »%s« mit dem Wert »%s« zu löschen,\n"
+#~ "aber die Eigenschaft mit dem Wert »%s« wurde lokal gelöscht."
+
+#~ msgid ""
+#~ "Checksum mismatch indicates corrupt text base for file: '%s':\n"
+#~ "   expected:  %s\n"
+#~ "     actual:  %s\n"
+#~ msgstr ""
+#~ "Prüfsummenfehler ist Anzeichen für beschädigte Textbasis der Datei: »%s«\n"
+#~ "   Erwartet:    %s\n"
+#~ "   Tatsächlich: %s\n"
+
+#~ msgid "Failed to add directory '%s': a separate working copy with the same name already exists"
+#~ msgstr "Konnte Verzeichnis »%s« nicht hinzufügen: ein andere Arbeitskopie mit gleichem Namen existiert bereits"
+
+#~ msgid "Switched directory '%s' does not match expected URL '%s'"
+#~ msgstr "Umgestelltes Vereichnis »%s« entspricht nicht der erwarteten URL »%s«"
+
+#~ msgid "Failed to add directory '%s': a non-directory object of the same name already exists"
+#~ msgstr "Konnte Verzeichnis »%s« nicht hinzufügen: ein nicht-Verzeichnisobjekt mit demselben Namen existiert bereits"
+
+#~ msgid "Switched file '%s' does not match expected URL '%s'"
+#~ msgstr "Umgestellte Datei »%s« entspricht nicht der erwarteten URL »%s«"
+
+#~ msgid "Unrecognized node kind: '%s'"
+#~ msgstr "Unbekannter Knotentyp: »%s«"
+
+#~ msgid "Cannot upgrade with existing logs; please run 'svn cleanup' with Subversion 1.6"
+#~ msgstr "Kann die Arbeitskopie nicht in ein neues Format bringen; bitte führen Sie »svn cleanup« mit Subversion 1.6 aus"
+
+#~ msgid "The working copy '%s' is at format 18; use 'tools/dev/wc-ng/bump-to-19.py' to upgrade it"
+#~ msgstr "Die Arbeitskopie »%s« hat das Format 18; verwenden Sie »tools/dev/wc-ng/bump-to-19.py« um es in ein neues Format zu bringen"
+
+#~ msgid "Can't store properties for '%s' in '%s'."
+#~ msgstr "Kann Eigenschaftswert für »%s« nicht in »%s« speichern"
+
+#~ msgid "Could not find node '%s' for recording file information."
+#~ msgstr "Knoten »%s« für Aufzeichnung von Dateiinformationen nicht gefunden."
+
+#~ msgid "'%s' has no BASE_NODE"
+#~ msgstr "»%s« hat keinen »BASE_NODE«"
+
+#~ msgid "Error restoring text for '%s'"
+#~ msgstr "Fehler beim Wiederherstellen des Textes für »%s«"
+
+#~ msgid "Error processing post-commit work for '%s'"
+#~ msgstr "Fehler beim Verarbeiten der Arbeitsschritte nach Übertragung für »%s«"
+
+#~ msgid "svn: warning: The depth of this commit is '%s', but copied directories will regardless be committed with depth '%s'. You must remove unwanted children of those directories in a separate commit.\n"
+#~ msgstr "svn: Warnung: Die Tiefe dieser Übertragung ist »%s«, jedoch werden kopierte Verzeichnisse dennoch mit Tiefe »%s« übertragen. Sie müssen nicht gewollte Kinder dieser Verzeichnisse in einer gesonderten Übertragung entfernen.\n"
+
+#~ msgid "They want to delete the property, you want to change the value to '%s'.\n"
+#~ msgstr "Versuch, die Eigenschaft zu löschen, aber der Wert soll auf »%s« gesetzt werden.\n"
+
+#~ msgid "They want to change the property value to '%s', you want to delete the property.\n"
+#~ msgstr "Versuch, den Wert der Eigenschaft auf »%s« zu ändern, aber die Eigenschaft soll gelöscht werden.\n"
+
+# Once you change "Auswahl:" don't forget to adapt indentation of other strings!
+#~ msgid "Select: (p) postpone"
+#~ msgstr "Auswahl: (p) zurückstellen"
+
+#~ msgid ", (df) diff-full, (e) edit"
+#~ msgstr ", (df) voller Diff, (e) editieren"
+
+#~ msgid ""
+#~ ",\n"
+#~ "        (mc) mine-conflict, (tc) theirs-conflict"
+#~ msgstr ""
+#~ ",\n"
+#~ "         (mc) eigene konfliktbehaftete Datei, (tc) fremde konfliktbehaftete Datei"
+
+#~ msgid ""
+#~ ",\n"
+#~ "        (mf) mine-full, (tf) theirs-full"
+#~ msgstr ""
+#~ ",\n"
+#~ "         (mf) volle eigene Datei, (tf) volle fremde Datei"
+
+# CHECKME: translate mine-conflict, ... or not (sometimes used as option!)?
+#~ msgid ""
+#~ "\n"
+#~ "  (e)  edit             - change merged file in an editor\n"
+#~ "  (df) diff-full        - show all changes made to merged file\n"
+#~ "  (r)  resolved         - accept merged version of file\n"
+#~ "\n"
+#~ "  (dc) display-conflict - show all conflicts (ignoring merged version)\n"
+#~ "  (mc) mine-conflict    - accept my version for all conflicts (same)\n"
+#~ "  (tc) theirs-conflict  - accept their version for all conflicts (same)\n"
+#~ "\n"
+#~ "  (mf) mine-full        - accept my version of entire file (even non-conflicts)\n"
+#~ "  (tf) theirs-full      - accept their version of entire file (same)\n"
+#~ "\n"
+#~ "  (p)  postpone         - mark the conflict to be resolved later\n"
+#~ "  (l)  launch           - launch external tool to resolve conflict\n"
+#~ "  (s)  show all         - show this list\n"
+#~ "\n"
+#~ msgstr ""
+#~ "\n"
+#~ "  (e)  editieren          - zusammengeführte Datei in einem Editor ändern\n"
+#~ "  (df) voller Diff        - alle Änderungen in der zusammengeführten Datei anzeigen\n"
+#~ "  (r)  aufgelöst          - akzeptieren der zusammengeführten Version der Datei\n"
+#~ "  (dc) Konflikte anzeigen - alle Konflikte anzeigen (die zusammengeführte Version\n"
+#~ "                            ignorieren)\n"
+#~ "  (mc) mine-conflict      - eigene Version für alle Konflikte akzeptieren (das selbe)\n"
+#~ "  (tc) theirs-conflict    - fremde Version für alle Konflikte akzeptieren (das selbe)\n"
+#~ "\n"
+#~ "  (mf) volle eigene Datei - die eigene Version der kompletten Datei akzeptieren\n"
+#~ "                            (selbst Nicht-Konflikte)\n"
+#~ "  (tf) volle fremde Datei - die fremde Version der kompletten Datei akzeptieren\n"
+#~ "                            (das selbe)\n"
+#~ "  (p)  zurückstellen      - den Konflikt erst später auflösen\n"
+#~ "  (l)  starten            - Starten eines externen Programms zur Konfliktauflösung\n"
+#~ "  (s)  alle anzeigen      - diese Liste anzeigen\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Invalid option; cannot choose based on conflicts for properties.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Ungültige Option; Auswahl anhand von Konflikten ist für Eigenschaften nicht möglich.\n"
+#~ "\n"
+
+# TODO: merge with other messages
+#~ msgid "Select: (p) postpone, (mf) mine-full, (tf) theirs-full, (h) help:"
+#~ msgstr "Auswahl: (p) zurückstellen, (mf) volle eigene Datei, (tf) volle fremde Datei, (h) Hilfe:"
+
+#~ msgid ""
+#~ "  (p)  postpone    - resolve the conflict later\n"
+#~ "  (mf) mine-full   - accept pre-existing item (ignore upstream addition)\n"
+#~ "  (tf) theirs-full - accept incoming item (overwrite pre-existing item)\n"
+#~ "  (h)  help        - show this help\n"
+#~ "\n"
+#~ msgstr ""
+#~ "  (p)  zurückstellen      - den Konflikt erst später auflösen\n"
+#~ "  (mf) volle eigene Datei - vorher existierende Daten akzeptieren (Hinzufügungen\n"
+#~ "                            ignorieren)\n"
+#~ "  (tf) volle fremde Datei - eingehende Daten akzeptieren (überschreiben vorher\n"
+#~ "                            existierender Daten)\n"
+#~ "  (h)  Hilfe              - diese Hilfe anzeigen\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "%s:  (Not a versioned resource)\n"
+#~ "\n"
+#~ msgstr ""
+#~ "%s:  (Keine versionierte Ressource)\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "%s:  (Not a valid URL)\n"
+#~ "\n"
+#~ msgstr ""
+#~ "%s:  (Keine gültige URL)\n"
+#~ "\n"
+
+#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)\n"
+#~ msgstr "die in Revision PAR durchgeführte Änderung (wie -r PAR-1:PAR)\n"
+
+#~ msgid "ARG (some commands also take ARG1:ARG2 range)\n"
+#~ msgstr "PAR (einige Kommandos akzeptieren auch Bereiche PAR1:PAR2)\n"
+
+#~ msgid "limit operation by depth ARG ('empty', 'files',\n"
+#~ msgstr "begrenzt Operation durch Tiefe PAR (»empty«, »files«,\n"
+
+#~ msgid "do no interactive prompting"
+#~ msgstr "keine interaktiven Rückfragen ausgeben"
+
+#~ msgid "set user configuration option in the format:\n"
+#~ msgstr "Konfigurationsoption in diesem Format setzen:\n"
+
+#~ msgid "set revision property ARG in new revision\n"
+#~ msgstr "Revisionseigenschaft PAR in neuer Revision setzen\n"
+
+#~ msgid "Allow merge into mixed-revision working copy.\n"
+#~ msgstr "Erlaube Zusammenführung in eine Arbeitskopie mit verschiedenen Revisionen.\n"
+
+# FIXME: behaviour oder behavior?
+# www.example.com is a reserved URL, let's not translate it.
+#, fuzzy
+#~ msgid ""
+#~ "Show the log messages for a set of revision(s) and/or path(s).\n"
+#~ "usage: 1. log [PATH][@REV]\n"
+#~ "       2. log URL[@REV] [PATH...]\n"
+#~ "\n"
+#~ "  1. Print the log messages for the URL corresponding to PATH\n"
+#~ "     (default: '.'). If specified, REV is the revision in which the\n"
+#~ "     URL is first looked up, and the default revision range is REV:1.\n"
+#~ "     If REV is not specified, the default revision range is BASE:1,\n"
+#~ "     since the URL might not exist in the HEAD revision.\n"
+#~ "\n"
+#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+#~ "     If specified, REV is the revision in which the URL is first\n"
+#~ "     looked up, and the default revision range is REV:1; otherwise,\n"
+#~ "     the URL is looked up in HEAD, and the default revision range is\n"
+#~ "     HEAD:1.\n"
+#~ "\n"
+#~ "  Multiple '-c' or '-r' options may be specified (but not a\n"
+#~ "  combination of '-c' and '-r' options), and mixing of forward and\n"
+#~ "  reverse ranges is allowed.\n"
+#~ "\n"
+#~ "  With -v, also print all affected paths with each log message.\n"
+#~ "  With -q, don't print the log message body itself (note that this is\n"
+#~ "  compatible with -v).\n"
+#~ "\n"
+#~ "  Each log message is printed just once, even if more than one of the\n"
+#~ "  affected paths for that revision were explicitly requested.  Logs\n"
+#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+#~ "  behavior, which can be useful for determining branchpoints.\n"
+#~ "\n"
+#~ "  Examples:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log bar.c@42\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+#~ "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"
+#~ msgstr ""
+#~ "Zeigt die Logmeldungen für eine Menge von Revisionen und/oder Dateien.\n"
+#~ "Aufruf: 1. log [PFAD]\n"
+#~ "        2. log URL[@REV] [PFAD...]\n"
+#~ "\n"
+#~ "  1. Gibt die Logmeldungen für einen lokalen PFAD aus (Vorgabe: ».«).\n"
+#~ "     Die Vorgabe für den Revisionsbereich ist BASE:1.\n"
+#~ "\n"
+#~ "  2. Gibt die Logmeldungen für die PFADe (Vorgabe: ».«) unterhalb der URL aus.\n"
+#~ "     Falls angegeben, bestimmt REV, in welcher Revision die URL zuerst\n"
+#~ "     durchsucht wird und der Standardrevisionsbereich ist REV:1. Andernfalls\n"
+#~ "     wird die URL in HEAD gesucht und die Vorgabe für den Revisionsbereich\n"
+#~ "     ist HEAD:1.\n"
+#~ "\n"
+#~ "  Mehrere »-c«- oder »-r«-Optionen dürfen angegeben werden (aber keine\n"
+#~ "  Kombination von »-c« und »-r«) und das Mischen von vor- und\n"
+#~ "  rückwärtigen Bereichen ist erlaubt.\n"
+#~ "\n"
+#~ "  Mit -v werden auch die betroffenen Pfade mit jeder Logmeldung ausgegeben.\n"
+#~ "  Mit -q wird die Logmeldung selbst nicht ausgegeben (Hinweis: Diese Option\n"
+#~ "  ist kompatibel mit -v).\n"
+#~ "\n"
+#~ "  Jede Logmeldung wird nur einmal ausgegeben, selbst wenn mehr als einer\n"
+#~ "  der betroffenen Pfade explizit angefragt wurde. Logs folgen per Vorgabe\n"
+#~ "  der Historie von Kopien. Benutzen Sie »--stop-on-copy«, um dieses Verhalten,\n"
+#~ "  z.B. zum Auffinden von Verzweigungen, zu deaktivieren.\n"
+#~ "\n"
+#~ "  Beispiele:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/projekt/foo.c\n"
+#~ "    svn log http://www.example.com/repo/projekt foo.c bar.c\n"
+
+# FIXME: WCPATH oder WC_PATH?
+#, fuzzy
+#~ msgid ""
+#~ "Apply the differences between two sources to a working copy path.\n"
+#~ "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
+#~ "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
+#~ "       3. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [WCPATH]\n"
+#~ "\n"
+#~ "  1. In the first form, the source URLs are specified at revisions\n"
+#~ "     N and M.  These are the two sources to be compared.  The revisions\n"
+#~ "     default to HEAD if omitted.\n"
+#~ "\n"
+#~ "  2. In the second form, the URLs corresponding to the source working\n"
+#~ "     copy paths define the sources to be compared.  The revisions must\n"
+#~ "     be specified.\n"
+#~ "\n"
+#~ "  3. In the third form, SOURCE can be either a URL or a working copy\n"
+#~ "     path (in which case its corresponding URL is used).  SOURCE (in\n"
+#~ "     revision REV) is compared as it existed between revisions N and M\n"
+#~ "     for each revision range provided.  If REV is not specified, HEAD\n"
+#~ "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
+#~ "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
+#~ "     specified, the default range of 0:REV is used.  Multiple '-c'\n"
+#~ "     and/or '-r' options may be specified, and mixing of forward\n"
+#~ "     and reverse ranges is allowed.\n"
+#~ "\n"
+#~ "  WCPATH is the working copy path that will receive the changes.\n"
+#~ "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
+#~ "  the sources have identical basenames that match a file within '.':\n"
+#~ "  in which case, the differences will be applied to that file.\n"
+#~ "\n"
+#~ "  For each merged item a line will be printed with characters reporting\n"
+#~ "  the action taken. These characters have the following meaning:\n"
+#~ "\n"
+#~ "    A  Added\n"
+#~ "    D  Deleted\n"
+#~ "    U  Updated\n"
+#~ "    C  Conflict\n"
+#~ "    G  Merged\n"
+#~ "    E  Existed\n"
+#~ "    R  Replaced\n"
+#~ "\n"
+#~ "  Characters in the first column report about the item itself.\n"
+#~ "  Characters in the second column report about properties of the item.\n"
+#~ "  A 'C' in the third column indicates a tree conflict, while a 'C' in\n"
+#~ "  the first and second columns indicate textual conflicts in files\n"
+#~ "  and in property values, respectively.\n"
+#~ "\n"
+#~ "  NOTE:  Subversion will only record metadata to track the merge\n"
+#~ "  if the two sources are on the same line of history -- if the\n"
+#~ "  first source is an ancestor of the second, or vice-versa.  This is\n"
+#~ "  guaranteed to be the case when using the third form listed above.\n"
+#~ "  The --ignore-ancestry option overrides this, forcing Subversion to\n"
+#~ "  regard the sources as unrelated and not to track the merge.\n"
+#~ msgstr ""
+#~ "Wendet die Unterschiede zwischen zwei Quellen auf einen Arbeitskopiepfad\n"
+#~ "an.\n"
+#~ "Aufruf: 1. merge QuellURL1[@N] QuellURL2[@M] [AKPfad]\n"
+#~ "        2. merge QuellAKPfad1@N QuellAKPfad2@M [AKPfad]\n"
+#~ "        3. merge [-c M[,N...] | -r N:M ...] QUELLE[@REV] [AKPfad]\n"
+#~ "\n"
+#~ "  1. In der ersten Form werden die Quell-URLs in den Revisionen\n"
+#~ "     N und M angegeben. Dies sind die beiden Quellen, die verglichen werden.\n"
+#~ "     Die Revisionen entsprechen HEAD, wenn keine Nummern angegeben wurden.\n"
+#~ "\n"
+#~ "  2. In der zweiten Form werden die den Arbeitskopiepfaden entsprechenden\n"
+#~ "     URLs miteinander verglichen. Die Revisionen müssen angegeben werden.\n"
+#~ "\n"
+#~ "  3. In der dritten Form kann QUELLE eine URL oder ein Arbeitskopiepfad\n"
+#~ "     (in diesem Fall wird die entsprechende URL verwendet) sein. QUELLE\n"
+#~ "     (in Revision REV) wird verglichen, wie es zwischen den Revisionen N\n"
+#~ "     und M für jeden angegebenen Revisionsbereich existierte. Ohne Angabe\n"
+#~ "     von REV wird HEAD verwendet. Die Option »-c M« ist äquivalent zu\n"
+#~ "     »-r <M-1>:M« und »-c -M« kehrt dies um: »-r M:<M-1>«. Falls keine\n"
+#~ "     Revisionsbereiche angegeben wurden, wird 0:REV verwendet. Mehrere\n"
+#~ "     Angaben von »-c« und/oder »-r« sind möglich und das Mischen von\n"
+#~ "     vor- und rückwärtigen Bereichen ist erlaubt.\n"
+#~ "\n"
+#~ "  AKPfad ist der Arbeitskopiepfad, in den die Änderungen geschrieben werden.\n"
+#~ "  Die Vorgabe für AKPfad ist ».«, es sei denn, die Quellen haben einen\n"
+#~ "  identischen Basisnamen, der eine Datei unterhalb von ».« beschreibt.\n"
+#~ "  In diesem Fall werden die Änderungen auf die gefundene Datei angewandt.\n"
+#~ "\n"
+#~ "  ACHTUNG: Subversion wird nur Metadaten zum Verfolgen der Zusammenführung\n"
+#~ "  aufzeichnen, falls die zwei Quellen sich in der selben Historienabfolge\n"
+#~ "  befinden - falls die erste Quelle ein Vorgänger der zweiten ist oder\n"
+#~ "  umgekehrt. Dies ist garantiert der Fall, falls die dritte Form verwendet\n"
+#~ "  wird. Die Option --ignore-ancestry überschreibt dies und zwingt Subversion\n"
+#~ "  dazu, die Quellen als nicht zueinander bezogen zu betrachten und die\n"
+#~ "  Zusammenführung nicht aufzuzeichnen.\n"
+
+#~ msgid ""
+#~ "Display merge-related information.\n"
+#~ "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
+#~ "\n"
+#~ "  Display information related to merges (or potential merges) between\n"
+#~ "  SOURCE and TARGET (default: '.').  If the --show-revs option\n"
+#~ "  is not provided, display revisions which have been merged from\n"
+#~ "  SOURCE to TARGET; otherwise, display the type of information\n"
+#~ "  specified by the --show-revs option.\n"
+#~ msgstr ""
+#~ "Anzeige relevanter Informationen zu Zusammenführungen.\n"
+#~ "Aufruf: mergeinfo QUELLE[@REV] [ZIEL[@REV]]\n"
+#~ "\n"
+#~ "  Zeigt Informationen zu Zusammenführungen (oder potentiellen\n"
+#~ "  Zusammenführungen) zwischen QUELLE und ZIEL (Standard: ».«) an.\n"
+#~ "  Falls die Option --show-revs nicht angegeben wurde, werden\n"
+#~ "  Revisionen, die von QUELLE nach ZIEL zusammengeführt wurden,\n"
+#~ "  angezeigt. Andernfalls wird die Art der Information angezeigt,\n"
+#~ "  die durch die Option --show-revs spezifiziert wurde.\n"
+
+#~ msgid ""
+#~ "Move and/or rename something in working copy or repository.\n"
+#~ "usage: move SRC... DST\n"
+#~ "\n"
+#~ "When moving multiple sources, they will be added as children of DST,\n"
+#~ "which must be a directory.\n"
+#~ "\n"
+#~ "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
+#~ "  Note:  the --revision option has no use and is deprecated.\n"
+#~ "\n"
+#~ "  SRC and DST can both be working copy (WC) paths or URLs:\n"
+#~ "    WC  -> WC:   move and schedule for addition (with history)\n"
+#~ "    URL -> URL:  complete server-side rename.\n"
+#~ "  All the SRCs must be of the same type.\n"
+#~ msgstr ""
+#~ "Verschiebt oder benennt etwas in der Arbeitskopie oder\n"
+#~ "im Projektarchiv um.\n"
+#~ "Aufruf: move QUELLE... ZIEL\n"
+#~ "\n"
+#~ "Beim Verschieben mehrerer Quellen, werden sie als Kinder von ZIEL\n"
+#~ "hinzugefügt, was ein Verzeichnis sein muss.\n"
+#~ "\n"
+#~ "  Hinweis: Dieser Unterbefehl entspricht der Folge »copy« und »delete«.\n"
+#~ "  Hinweis: Die Option --revision bewirkt nichts und wird missbilligt.\n"
+#~ "\n"
+#~ "  QUELLE und ZIEL können beides Arbeitskopiepfade (AK) oder URLs sein:\n"
+#~ "    AK  -> AK:   Verschieben und zum Hinzufügen (mit Historie) einplanen\n"
+#~ "    URL -> URL:  Vollständig serverseitiges Verschieben.\n"
+#~ "  Alle QUELLEn müssen vom selben Typ sein.\n"
+
+#~ msgid ""
+#~ "Resolve conflicts on working copy files or directories.\n"
+#~ "usage: resolve --accept=ARG [PATH...]\n"
+#~ "\n"
+#~ "  Note:  the --accept option is currently required.\n"
+#~ msgstr ""
+#~ "Auflösen von Konflikten in Arbeitskopiedateien oder -verzeichnissen.\n"
+#~ "Aufruf: resolve --accept=PAR [PFAD...]\n"
+#~ "\n"
+#~ "  Bemerkung:  Die Option --accept wird zurzeit benötigt.\n"
+
+#~ msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
+#~ msgstr "--reintegrate kann nicht mit --ignore-ancestry oder --record-only verwendet werden"
+
+#~ msgid "A working copy merge source needs an explicit revision"
+#~ msgstr "Beim Zusammenführen von Arbeitskopien wird eine explizite Revision benötigt"
+
+#~ msgid "Wrong number of arguments"
+#~ msgstr "Falsche Anzahl von Argumenten"
+
+#~ msgid "Target must specify the revision as a number"
+#~ msgstr "Ziel muss die Revision als Zahl angegeben"
+
+#~ msgid "'%s' has lock token, but no lock owner"
+#~ msgstr "»%s« has Sperrmarke, aber keinen Sperreigner"
+
+#~ msgid "'%s' is an URL when it should be a path"
+#~ msgstr "»%s« ist eine URL, obwohl es ein Pfad sein sollte"
+
+#~ msgid ""
+#~ "use format compatible with Subversion versions\n"
+#~ "                             earlier than 1.4"
+#~ msgstr "Ein mit Subversion-Versionen vor 1.4 kompatibles Format verwenden"
+
+#~ msgid ""
+#~ "use format compatible with Subversion versions\n"
+#~ "                             earlier than 1.6"
+#~ msgstr "Ein mit Subversion-Versionen vor 1.6 kompatibles Format verwenden"
+
+#~ msgid ""
+#~ "use format compatible with Subversion versions\n"
+#~ "                             earlier than 1.7"
+#~ msgstr "Ein mit Subversion-Versionen vor 1.7 kompatibles Format verwenden"
+
+#~ msgid ""
+#~ "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
+#~ "\n"
+#~ "Makes a hot copy of a repository.\n"
+#~ msgstr ""
+#~ "Aufruf: svnadmin hotcopy ARCHIV_PFAD ARCHIV_PFAD_NEU\n"
+#~ "\n"
+#~ "Erstellt eine Kopie des Projektarchivs im laufenden Betrieb.\n"
+
+#~ msgid "Exactly one property name and one file argument required"
+#~ msgstr "Genau ein Eigenschaftsname und ein Dateiparameter erforderlich"
+
+#~ msgid "Exactly one file argument required"
+#~ msgstr "Genau ein Dateiparameter benötigt"
+
+#~ msgid "Delta property block detected - not supported by svndumpfilter"
+#~ msgstr "Delta Eigenschaftsblock erkannt - wird von svndumpfilter nicht unterstützt"
+
+#~ msgid "Pass contents of file ARG as additional args"
+#~ msgstr ""
+#~ "Inhalt der Datei PAR als zusätzliche Parameter\n"
+#~ "                             übergeben"
+
+#~ msgid ""
+#~ "Default: '-u'. When Subversion is invoking an\n"
+#~ "                             external diff program, ARG is simply passed along\n"
+#~ "                             to the program. But when Subversion is using its\n"
+#~ "                             default internal diff implementation, or when\n"
+#~ "                             Subversion is displaying blame annotations, ARG\n"
+#~ "                             could be any of the following:\n"
+#~ "                                -u (--unified):\n"
+#~ "                                   Output 3 lines of unified context.\n"
+#~ "                                -b (--ignore-space-change):\n"
+#~ "                                   Ignore changes in the amount of white space.\n"
+#~ "                                -w (--ignore-all-space):\n"
+#~ "                                   Ignore all white space.\n"
+#~ "                                --ignore-eol-style:\n"
+#~ "                                   Ignore changes in EOL style"
+#~ msgstr ""
+#~ "Vorgabe: »-u«. Wenn Subversion ein\n"
+#~ "                             externes Vergleichsprogramm aufruft, wird PAR nur\n"
+#~ "                             an das Programm weitergereicht. Wenn Subversion\n"
+#~ "                             aber sein internes Vergleichsprogramm benutzt\n"
+#~ "                             oder Annotierungen anzeigt, kann PAR einen der\n"
+#~ "                             folgenden Werte annehmen:\n"
+#~ "                                -u (--unified):\n"
+#~ "                                   Gibt 3 Zeilen Standardkontext aus.\n"
+#~ "                                -b (--ignore-space-change):\n"
+#~ "                                   Ignoriert Änderungen in der Anzahl von\n"
+#~ "                                   Leerzeichen.\n"
+#~ "                                -w (--ignore-all-space):\n"
+#~ "                                   Ignoriert sämtliche Leerzeichen.\n"
+#~ "                                --ignore-eol-style:\n"
+#~ "                                   Ignoriert Änderungen im EOL-Stil"
+
+#~ msgid "Missing path argument"
+#~ msgstr "Fehlender Pfad Parameter"
+
+#~ msgid "\"svnrdump load\"'s lock was stolen; can't remove it"
+#~ msgstr "Die Sperre von »svnrump load« wurde gestohlen und konnte nicht entfernt werden"
+
+#~ msgid ""
+#~ "general usage: svnrdump SUBCOMMAND URL [-r LOWER[:UPPER]]\n"
+#~ "Type 'svnrdump help <subcommand>' for help on a specific subcommand.\n"
+#~ "\n"
+#~ "Available subcommands:\n"
+#~ msgstr ""
+#~ "Aufruf: svnrdump UNTERBEFEHL URL [-r [ VON[:BIS]]\n"
+#~ "Geben Sie »svnrdump help <Unterbefehl>« ein, um Hilfe zu einem\n"
+#~ "          Unterbefehl zu erhalten.\n"
+#~ "\n"
+#~ "Verfügbare Unterbefehle:\n"
+
+#~ msgid "LOWER cannot be greater than UPPER.\n"
+#~ msgstr "VON kann nicht größer als BIS sein.\n"
+
+#~ msgid "Parent(s) of '%s' should have been present."
+#~ msgstr "Eltern von »%s« sollten vorhanden sein."
+
+#~ msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
+#~ msgstr "Kann nicht zurück in eine Arbeitskopie integrieren, die keine vollständig unendliche Tiefe hat"
+
+#~ msgid "Properties Last Updated"
+#~ msgstr "Eigenschaften zuletzt geändert"
+
+#~ msgid "UUID mismatch: existing file '%s' was checked out from a different repository"
+#~ msgstr "UUID-Fehler: Existierende Datei »%s« wurde aus einem anderen Projektarchiv ausgecheckt"
+
+#~ msgid "Error comparing '%s' and '%s'"
+#~ msgstr "Fehler beim Vergleichen von »%s« und »%s«"
+
+#~ msgid "Revision type requires a working copy path, not a URL"
+#~ msgstr "Revisionstyp erfordert einen Arbeitskopiepfad, keine URL"
+
+#~ msgid "Can't move source to dest"
+#~ msgstr "Kann Quelle nicht nach Ziel verschieben"
+
+#~ msgid "Can't get file perms for file at '%s' (file stat error)"
+#~ msgstr "Kann die Berechtigungen für Datei in »%s« nicht holen (Dateistatus)"
+
+#~ msgid "Error during add of '%s'"
+#~ msgstr "Fehler beim Hinzufügen von »%s«"
+
+#~ msgid "  You have added '%s' locally.\n"
+#~ msgstr "  »%s« wurde lokal hinzugefügt.\n"
+
+#~ msgid "Can't write property hash to '%s'"
+#~ msgstr "Kann Eigenschafts-Hashwert nicht nach »%s« schreiben"
+
+#~ msgid "Can't get default file perms for file at '%s' (file stat error)"
+#~ msgstr "Kann die Standardberechtigungen für Datei in »%s« nicht holen (Dateistatus)"
+
+#~ msgid "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try again"
+#~ msgstr ""
+#~ "Ihr .svn/tmp Verzeichnis könnte fehlen oder beschädigt sein; führen Sie\n"
+#~ "»svn cleanup« aus und versuchen Sie es erneut"
+
+#~ msgid ".patch"
+#~ msgstr ".patch"
+
+#~ msgid "Failed to add file '%s': a file of the same name is already scheduled for addition with history"
+#~ msgstr "Konnte Datei »%s« nicht hinzufügen: eine Datei mit dem selben Namen ist bereits zur Übertragung mit Historie eingeplant"
+
+#~ msgid "Unknown or unexpected kind for path '%s'"
+#~ msgstr "Unbekannte oder unerwartete Art für Pfad »%s«"
+
+#~ msgid "Can't parse '%s'"
+#~ msgstr "Kann »%s« nicht analysieren"
+
+#~ msgid "This action was obstructed by an item in the working copy.\n"
+#~ msgstr "Diese Aktion wurde von einem Objekt in der Arbeitskopie behindert.\n"
+
+#~ msgid ""
+#~ "  '%s' does not exist locally.\n"
+#~ "  Maybe you renamed it?\n"
+#~ msgstr ""
+#~ "  »%s« existiert lokal nicht.\n"
+#~ "  Eventuell wurde das Objekt umbenannt?\n"
+
+#~ msgid "  The merge attempted to add '%s'.\n"
+#~ msgstr "  Die Zusammenführung versuchte »%s« hinzuzufügen.\n"
+
+#~ msgid "'get-location-segments' REPORT not implemented"
+#~ msgstr "»get-locations-segments«-REPORT nicht implementiert"
+
+#~ msgid ""
+#~ "'%s' does not exist locally. Maybe you renamed it? Or has it been\n"
+#~ "renamed in the history of the branch you are merging into?\n"
+#~ msgstr ""
+#~ "»%s« existiert lokal nicht. Eventuell wurde es umbenannt? Oder es wurde\n"
+#~ "in der Geschichte des Zweiges, in den zusammengeführt wird, umbenannt?\n"
+
+#~ msgid "  The merge attempted to edit '%s'.\n"
+#~ msgstr "  Die Zusammenführung versuchte »%s« zu bearbeiten.\n"
+
+#~ msgid "Entry '%s' is already under version control"
+#~ msgstr "Eintrag »%s« ist bereits unter Versionskontrolle"
+
+#~ msgid ""
+#~ "Checksum mismatch on representation '%s':\n"
+#~ "   expected:  %s\n"
+#~ "     actual:  %s\n"
+#~ msgstr ""
+#~ "Prüfsummenfehler auf Darstellung »%s«:\n"
+#~ "   Erwartet:    %s\n"
+#~ "   Tatsächlich: %s\n"
+
+#~ msgid "property '%s' deleted (recursively) from '%s'.\n"
+#~ msgstr "Eigenschaft »%s« wurde (rekursiv) von »%s« gelöscht.\n"
+
+#~ msgid ""
+#~ "  The update attempted to delete '%s'\n"
+#~ "  (possibly as part of a rename operation).\n"
+#~ msgstr ""
+#~ "  Die Aktualisierung versuchte »%s« zu löschen\n"
+#~ "  (möglicherweise als Teil einer Umbenennung).\n"
+
+#~ msgid ""
+#~ "  The switch attempted to delete '%s'\n"
+#~ "  (possibly as part of a rename operation).\n"
+#~ msgstr ""
+#~ "  Die Umstellung versuchte »%s« zu löschen\n"
+#~ "  (möglicherweise als Teil einer Umbenennung).\n"
+
+#~ msgid "  The switch attempted to edit '%s'.\n"
+#~ msgstr "  Die Umstellung versuchte »%s« zu bearbeiten.\n"
+
+#~ msgid ""
+#~ "Lock Comment (%i lines):\n"
+#~ "%s\n"
+#~ msgstr ""
+#~ "Sperrkommentar (%i Zeilen):\n"
+#~ "%s\n"
+
+#~ msgid ""
+#~ "output in svnpatch format, implies the\n"
+#~ "                             --no-diff-deleted option"
+#~ msgstr ""
+#~ "Ausgabe in svnpatch-Format, impliziert die\n"
+#~ "                             Option --no-diff-deleted"
+
+#~ msgid "  The switch attempted to add '%s'.\n"
+#~ msgstr "  Die Umstellung versuchte »%s« hinzuzufügen.\n"
+
+#~ msgid ""
+#~ "  The merge attempted to delete '%s'\n"
+#~ "  (possibly as part of a rename operation).\n"
+#~ msgstr ""
+#~ "  Die Zusammenführung versuchte »%s« zu löschen\n"
+#~ "  (möglicherweise als Teil einer Umbenennung).\n"
+
+#~ msgid "  The update attempted to add '%s'.\n"
+#~ msgstr "  Die Aktualisierung versuchte »%s« hinzuzufügen.\n"
+
+#~ msgid ""
+#~ "Comment (%i lines):\n"
+#~ "%s\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Kommentar (%i Zeilen):\n"
+#~ "%s\n"
+#~ "\n"
+
+#~ msgid "No delimiter after 'action' in tree conflict description"
+#~ msgstr "Kein Trenner nach »action« in Baumkonfliktbeschreibung"
+
+#~ msgid "Unescaped description delimiter inside 'victim_path' in tree conflict description"
+#~ msgstr "Nicht geschützter Beschreibungstrenner innerhalb von »victim_path« der Baumkonfliktbeschreibung"
+
+#~ msgid "Expected tree conflict data but got none"
+#~ msgstr "Daten zu einem Baumkonflikt wurden erwartet aber nichts erhalten"
+
+#~ msgid "No delimiter after 'operation' in tree conflict description"
+#~ msgstr "Kein Trenner nach »operation« in Baumkonfliktbeschreibung"
+
+#~ msgid "Invalid tree conflict data in entries file, but no idea what went wrong"
+#~ msgstr "Ungültige Baumkonfliktdaten in Datei »entries«, Ursache ist unbekannt"
+
+#~ msgid "Bad node_kind in tree conflict description"
+#~ msgstr "Fehlerhafter Wert von »node_kind« in Baumkonfliktbeschreibung"
+
+#~ msgid "No delimiter after 'victim_path' in tree conflict description"
+#~ msgstr "Kein Trenner nach »victim_path« in Baumkonfliktbeschreibung"
+
+#~ msgid "Shallowing of working copy depths is not yet supported"
+#~ msgstr "Das Verringern der Arbeitskopietiefen wird nicht unterstützt"
+
+#~ msgid "Bad action in tree conflict description"
+#~ msgstr "Fehlerhafter Wert von »action« in Baumkonfliktbeschreibung"
+
+#~ msgid "Unexpected end of tree conflict description, within escape sequence in 'victim_path'"
+#~ msgstr "Unerwartetes Ende der Baumkonfliktbeschreibung innerhalb einer Escape-Sequenz in »victim_path«"
+
+#~ msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for replacement) has an invalid schedule"
+#~ msgstr ""
+#~ "Beschädigte Arbeitskopie: »%s« im Verzeichnis »%s« (welches zum Ersetzen\n"
+#~ "eingeplant ist) hat einen ungültigen Übertragungsplan"
+
+#~ msgid "No delimiter at end of tree conflict description, even though there is still data left to read"
+#~ msgstr "Es befindet sich kein Trenner am Ende der Baumkonfliktbeschreibung, obwohl weitere zu lesende Daten vorhanden sind"
+
+#~ msgid "Failed to add file '%s': object of the same name already exists"
+#~ msgstr ""
+#~ "Konnte die Datei »%s« nicht hinzufügen: ein Objekt mit demselben Namen\n"
+#~ "existiert bereits"
+
+#~ msgid ""
+#~ "Checksum mismatch, representation '%s':\n"
+#~ "   expected:  %s\n"
+#~ "     actual:  %s\n"
+#~ msgstr ""
+#~ "Prüfsummenfehler, Darstellung »%s«:\n"
+#~ "   Erwartet:    %s\n"
+#~ "   Tatsächlich: %s\n"
+
+#~ msgid "Invalid 'operation' field in tree conflict description"
+#~ msgstr "Ungültiges Feld »operation« in Baumkonfliktbeschreibung"
+
+#~ msgid "Entry '%s' has invalid depth"
+#~ msgstr "Eintrag »%s« hat eine ungültige Tiefe"
+
+#~ msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for deletion) is not itself scheduled for deletion"
+#~ msgstr ""
+#~ "Beschädigte Arbeitskopie: »%s« im Verzeichnis »%s« (welches zum Löschen\n"
+#~ "eingeplant ist) ist selbst nicht zum Löschen vorgesehen"
+
+#~ msgid "Can't rewind directory '%s'"
+#~ msgstr "Kann Verzeichnis »%s« nicht zurückspulen"
+
+#~ msgid "Illegal escaped character in 'victim_path' of tree conflict description"
+#~ msgstr "Ungültiges geschütztes Zeichen in »victim_path« der Baumkonfliktbeschreibung"
+
+#~ msgid "The OPTIONS request returned invalid XML in the response: %s (%s)"
+#~ msgstr "Die OPTIONS-Anfrage gab in der Antwort ungültiges XML zurück: %s (%s)"
+
+#~ msgid "No REPOSITORY table entry for uuid '%s'"
+#~ msgstr "Kein REPOSITORY-Tabelleneintrag für UUID »%s«"
+
+#~ msgid "UUID mismatch: existing directory '%s' was checked out from a different repository"
+#~ msgstr "UUID-Fehler: Existierendes Verzeichnis »%s« wurde aus einem anderen Projektarchiv ausgecheckt"
+
+#~ msgid ""
+#~ "Apply a patch to a working copy path.\n"
+#~ "usage: patch PATCHFILE [WCPATH]\n"
+#~ "\n"
+#~ "  PATCHFILE is an input file which, when applied, turns the working\n"
+#~ "  copy WCPATH into a modified tree that reflects all the changes the\n"
+#~ "  patch carries along.  When WCPATH is omitted '.' is assumed.\n"
+#~ "\n"
+#~ "  The format of bytes embedded in the patch can be of two types: Unified\n"
+#~ "  diff and/or svnpatch diff (see 'svn diff --svnpatch').\n"
+#~ "\n"
+#~ "  This command allows some amount of fuzzing as Unidiff is contextual\n"
+#~ "  and svnpatch revisionless.\n"
+#~ msgstr ""
+#~ "Wendet einen Patch auf einen Arbeitskopiepfad an.\n"
+#~ "Aufruf: patch PATCHDATEI [AKPfad]\n"
+#~ "\n"
+#~ "  PATCHDATEI ist eine Eingabedatei, die, wenn angewandt, die Arbeitskopie\n"
+#~ "  AKPfad in einen veränderten Baum umwandelt, der all die Änderungen umfasst,\n"
+#~ "  die der Patch enthält. Falls AKPfad weggelassen wird, wird ».« verwendet.\n"
+#~ "\n"
+#~ "  Das Format der im Patch eingebetteten Bytes kann von zwei Arten sein:\n"
+#~ "  Unified Diff und/oder svnpatch-Diff (vergleiche »svn diff --svnpatch«).\n"
+#~ "\n"
+#~ "  Dieses Kommando ermöglicht eine kleine Unschärfe, da Unidiff textabhängig\n"
+#~ "  und svnpatch revisionsunabhängig ist.\n"
+
+#~ msgid "exported%s"
+#~ msgstr "exportiert%s"
+
+#~ msgid "Path '%s' is no longer a member of a changelist.\n"
+#~ msgstr "Pfad »%s« ist nicht länger ein Element einer Änderungsliste.\n"
+
+#~ msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
+#~ msgstr "Prüfsummenfehler für »%s«; erwartet: »%s«, tatsächlich: »%s«"
+
+#~ msgid "OPTIONS request (for capabilities) got HTTP response code %d"
+#~ msgstr "OPTIONS-Anfrage (für Eigenschaften) führte zu HTTP-Antwort-Code %d"
+
+#~ msgid "'%s' is not a valid revision range"
+#~ msgstr "»%s« ist kein gültiger Revisionsbereich"
+
+#~ msgid "Path '%s' is now a member of changelist '%s'.\n"
+#~ msgstr "Pfad »%s« ist nun ein Element der Änderungsliste »%s«.\n"
+
+#~ msgid "Unrecognized node kind '%s' from server"
+#~ msgstr "Unbekannter Knotentyp »%s« vom Server"
+
+#~ msgid "File or directory '%s' is out of date"
+#~ msgstr "Datei oder Verzeichnis »%s« ist veraltet"
+
+#~ msgid "Bad type indicator"
+#~ msgstr "Falscher Typindikator"
+
+#~ msgid "Corrupt working copy: '%s' has no default entry"
+#~ msgstr "Beschädigte Arbeitskopie: »%s« hat keinen Standardeintrag"
+
+#~ msgid "Unable to parse unordered revision ranges '%s' and '%s'"
+#~ msgstr "Unsortierte Revisionsbereiche »%s« und »%s« können nicht verarbeitet werden"
+
+#~ msgid "'%s' has invalid revision"
+#~ msgstr "»%s« hat eine ungültige Revision"
+
+#~ msgid ""
+#~ "No 'patch' program was found in your system.  Please try\n"
+#~ "to use --patch-cmd or 'patch-cmd' run-time configuration\n"
+#~ "option or manually use an external tool to apply Unidiffs."
+#~ msgstr ""
+#~ "Kein »patch«-Programm wurde in Ihrem System gefunden. Bitte versuchen Sie\n"
+#~ "--patch-cmd oder die Laufzeitkonfigurationsoption »patch-cmd«. Alternativ\n"
+#~ "können Sie ein externes Werkzeug einsetzen, um Unidiffs einzuspielen."
+
+#~ msgid "use ARG as external patch command"
+#~ msgstr "PAR als externes Patch-Kommando verwenden"
+
+#~ msgid "APR_APPEND not supported for adm files"
+#~ msgstr "APR_APPEND wird für administrative Dateien nicht unterstützt"
+
+#~ msgid "Summary of conflicts in external item:\n"
+#~ msgstr "Konfliktübersicht für externen Verweis:\n"
+
+#~ msgid "; run 'svn update' to complete it"
+#~ msgstr "; vervollständigen Sie diese mit »svn update«."
+
+#~ msgid ""
+#~ "usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
+#~ "\n"
+#~ "Copy the revision properties in a given range of revisions to the\n"
+#~ "destination from the source with which it was initialized.\n"
+#~ "\n"
+#~ "If REV and REV2 are provided, copy properties for the revisions\n"
+#~ "specified by that range, inclusively.  If only REV is provided,\n"
+#~ "copy properties for that revision alone.  If REV is not provided,\n"
+#~ "copy properties for all revisions previously transferred to the\n"
+#~ "destination.\n"
+#~ "\n"
+#~ "REV and REV2 must be revisions which were previously transferred\n"
+#~ "to the destination.  You may use \"HEAD\" for either revision to\n"
+#~ "mean \"the last revision transferred\".\n"
+#~ msgstr ""
+#~ "Aufruf: svnsync copy-revprops ZIEL_URL [REV[:REV2]]\n"
+#~ "\n"
+#~ "Kopiert die Revisionseigenschaften in einem gegebenen Revisionsbereich\n"
+#~ "von der Quelle, mit der es initialisiert wurde, auf das Ziel.\n"
+#~ "\n"
+#~ "Falls REV und REV2 angegeben wurden, werden nur Eigenschaften für die\n"
+#~ "durch diesen Bereich angegebenen Revisionen kopiert. Falls nur REV\n"
+#~ "angegeben wurde, werden nur Eigenschaften für diese Revision kopiert.\n"
+#~ "Falls REV nicht angegeben wurde, werden alle Eigenschaften kopiert, für\n"
+#~ "die die Revisionen früher auf das Ziel übertragen wurden.\n"
+#~ "\n"
+#~ "REV und REV2 müssen Revisionen sein, die vorher auf das Ziel transferiert\n"
+#~ "wurden. Sie können »HEAD« für eine Revision verwenden, im Sinne von »die\n"
+#~ "letzte übertragene Revision«.\n"
+
+#~ msgid "Cannot revert"
+#~ msgstr "Kann nicht zurücksetzen"
+
+#~ msgid "Version %d is not non-negative"
+#~ msgstr "Version %d ist nicht positiv"
+
+#~ msgid "Added: %s\n"
+#~ msgstr "Hinzugefügt: %s\n"
+
+#~ msgid "External program is missing"
+#~ msgstr "Externes Programm fehlt"
+
+#~ msgid "Corrupt working copy: directory '%s' has an invalid schedule"
+#~ msgstr "Beschädigte Arbeitskopie: Verzeichnis »%s« hat einen ungültigen Plan"
+
+#~ msgid ""
+#~ "Copyright (C) 2000-2009 CollabNet.\n"
+#~ "Subversion is open source software, see http://subversion.tigris.org/\n"
+#~ "This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Copyright (C) 2000-2009 CollabNet.\n"
+#~ "Subversion ist Open-Source-Software, siehe http://subversion.tigris.org/\n"
+#~ "Dieses Produkt enthält Software, die von CollabNet (http://www.Collab.Net/) entwickelt wurde.\n"
+#~ "\n"
+
+#~ msgid "lump-merge all of source URL's unmerged changes"
+#~ msgstr ""
+#~ "komplettes Rückführen aller nicht zusammengeführten\n"
+#~ "                             Änderungen der Quell-URL"
+
+#~ msgid "Error modifying entry for '%s'"
+#~ msgstr "Fehler beim Bearbeiten des Eintrags für »%s«"
+
+#~ msgid ""
+#~ "Either you have added '%s' locally, or it has been added in the\n"
+#~ "history of the branch you are merging into.\n"
+#~ msgstr ""
+#~ "Entweder wurde »%s« lokal hinzugefügt oder dies geschah in der\n"
+#~ "Geschichte des Zweiges, in den zusammengeführt wird.\n"
+
+#~ msgid ""
+#~ "  You have deleted '%s' locally.\n"
+#~ "  Maybe you renamed it?\n"
+#~ msgstr ""
+#~ "  »%s« wurde lokal gelöscht.\n"
+#~ "  Eventuell wurde das Objekt umbenannt?\n"
+
+#~ msgid ""
+#~ "usage: svnsync synchronize DEST_URL\n"
+#~ "\n"
+#~ "Transfer all pending revisions to the destination from the source\n"
+#~ "with which it was initialized.\n"
+#~ msgstr ""
+#~ "Aufruf: svnsync synchronize ZIEL_URL\n"
+#~ "\n"
+#~ "Überträgt alle laufenden Revisionen von der Quelle, mit der es\n"
+#~ "initialisiert wurde, zum Ziel.\n"
+
+#~ msgid "Won't delete locally modified directory '%s'"
+#~ msgstr "Werde lokal verändertes Verzeichnis »%s« nicht löschen"
+
+#~ msgid "Existing sqlite database found at '%s'"
+#~ msgstr "Existierende SQLite-Datenbank wurde unter »%s« gefunden"
+
+#~ msgid "'get-deleted-rev' REPORT not implemented"
+#~ msgstr "»get-deleted-rev« REPORT nicht implementiert"
+
+#~ msgid "property '%s' set (recursively) on '%s'\n"
+#~ msgstr "Eigenschaft »%s« (rekursiv) für »%s« gesetzt\n"
+
+#~ msgid "'get-locations' REPORT not implemented"
+#~ msgstr "»get-locations« REPORT nicht implementiert"
+
+#~ msgid "Can't chmod '%s'"
+#~ msgstr "Kann »chmod '%s'« nicht durchführen"
+
+#~ msgid "Can't create a character converter from '%i' to '%i'"
+#~ msgstr "Kann keinen Zeichenkonverter von »%i« nach »%i« erzeugen"
+
+#~ msgid "Cannot initialize a repository with content in it"
+#~ msgstr "Kann kein Projektarchiv mit Inhalt initialisieren"
+
+#~ msgid ""
+#~ "Either you have edited '%s' locally, or it has been edited in the\n"
+#~ "history of the branch you are merging into, but those edits are not\n"
+#~ "present on the branch you are merging from.\n"
+#~ msgstr ""
+#~ "Entweder wurde »%s« lokal bearbeitet oder in der Geschichte des\n"
+#~ "Zweiges, in den zusammengeführt wird, editiert, aber diese\n"
+#~ "Veränderungen befinden sich nicht im Zweig, aus dem zusammengeführt wird.\n"
+
+#~ msgid ""
+#~ "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
+#~ "for addition.  Perhaps you're committing a target that is\n"
+#~ "inside an unversioned (or not-yet-versioned) directory?"
+#~ msgstr ""
+#~ "Eintrag für »%s« ist als »kopiert« markiert, aber ist selbst nicht\n"
+#~ "zum Hinzufügen geplant. Vielleicht übertragen Sie ein Ziel, das\n"
+#~ "sich in einem nicht versionierten (oder noch-nicht-versionierten)\n"
+#~ "Verzeichnis befindet?"
+
+#~ msgid "Deleted: %s%s"
+#~ msgstr "Gelöscht: %s%s"
+
+#~ msgid "Can't replace '%s' with a node of a differing type; the deletion must be committed and the parent updated before adding '%s'"
+#~ msgstr "Kann »%s« nicht durch einen Knoten eines anderen Typs ersetzen; Übertragen Sie die Löschung, aktualisieren Sie das Elternverzeichnis und fügen Sie erst dann »%s« hinzu"
+
+#~ msgid "Cannot exclude root directory"
+#~ msgstr "Kann Wurzelverzeichnis nicht exkludieren"
+
+#~ msgid "Error replacing text-base of '%s'"
+#~ msgstr "Fehler beim Ersetzen der Textbasis von »%s«"
+
+#~ msgid "Can't close directory '%s'"
+#~ msgstr "Kann Verzeichnis »%s« nicht schließen"
+
+#~ msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
+#~ msgstr ""
+#~ "»%s« ist als abwesend markiert, es kann daher nicht für die Übertragung\n"
+#~ "eingeplant werden"
+
+#~ msgid "No such entry: '%s'"
+#~ msgstr "Kein Eintrag: »%s«"
+
+#~ msgid "Error getting 'affected time' for '%s'"
+#~ msgstr "Fehler beim Ermitteln der »letzten Änderungszeit« von »%s«"
+
+#~ msgid "Write-lock stolen in '%s'"
+#~ msgstr "Schreibsperre gestohlen in »%s«"
+
+#~ msgid "Added: %s%s"
+#~ msgstr "Hinzugefügt: %s%s"
+
+#~ msgid "Error modifying entry of '%s'"
+#~ msgstr "Fehler beim Bearbeiten des Eintrags von »%s«"
+
+#~ msgid "Error getting 'affected time' on '%s'"
+#~ msgstr "Fehler beim Ermitteln der »letzten Änderungszeit« von »%s«"
+
+#~ msgid "Entry '%s' has illegal schedule"
+#~ msgstr "Eintrag »%s« hat einen ungültigen Plan"
+
+#~ msgid "Error removing changelist from entry '%s'"
+#~ msgstr "Fehler beim Entfernen der Änderungsliste von Eintrag »%s«"
+
+#~ msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
+#~ msgstr "»name«-Attribut fehlt im Log-Eintrag (Eintrag »%s« für Verzeichnis »%s«)"
+
+#~ msgid "Error getting 'affected time' of '%s'"
+#~ msgstr "Fehler beim Ermitteln der »letzten Änderungszeit« von »%s«"
+
+#~ msgid "Cannot revert addition of current directory; please try again from the parent directory"
+#~ msgstr "Kann Hinzufügen des aktuellen Verzeichnisses nicht zurücknehmen; bitte versuchen Sie es aus dem Elternverzeichnis erneut"
+
+#~ msgid "Invalid 'format' attribute"
+#~ msgstr "Ungültiges »format«-Attribut"
+
+#~ msgid "Couldn't open log"
+#~ msgstr "Kann Log-Datei nicht öffnen"
+
+#~ msgid "Expected '%s' to be a file but found a directory"
+#~ msgstr "Erwartete, dass »%s« eine Datei ist, es ist aber ein Verzeichnis"
+
+#~ msgid "Error writing entries file for '%s'"
+#~ msgstr "Fehler beim Schreiben der Eintragsdatei für »%s«"
+
+#~ msgid "Error writing log for '%s'"
+#~ msgstr "Fehler beim Schreiben des Logs für »%s«"
+
+#~ msgid "Checksum mismatch while updating '%s'; expected: '%s', actual: '%s'"
+#~ msgstr "Prüfsummenfehler beim Aktualisieren von »%s«; erwartet: »%s«, tatsächlich: »%s«"
+
+#~ msgid "Destination directory of add-with-history is missing a URL"
+#~ msgstr "Dem Zielverzeichnis von add-with-history fehlt eine URL"
+
+#~ msgid "Failed to add file '%s': a non-file object of the same name already exists"
+#~ msgstr ""
+#~ "Konnte die Datei »%s« nicht hinzufügen: ein nicht-Dateiobjekt mit demselben\n"
+#~ "Namen existiert bereits"
+
+#~ msgid "Unable to lock '%s'"
+#~ msgstr "Kann »%s« nicht sperren"
+
+#~ msgid ""
+#~ "Checksum mismatch for '%s':\n"
+#~ "   expected checksum:  %s\n"
+#~ "   actual checksum:    %s\n"
+#~ msgstr ""
+#~ "Prüfsummenfehler für »%s«:\n"
+#~ "   Erwartet:    %s\n"
+#~ "   Tatsächlich: %s\n"
+
+#~ msgid "'%s' returned error exitcode %d"
+#~ msgstr "»%s« hat Fehlerwert %d zurückgegeben"
+
+#~ msgid "At least one revision (r%ld) not yet merged from '%s'"
+#~ msgstr "Zumindest eine Revision (r%ld) aus »%s« wurde nicht zusammengeführt"
+
+#~ msgid "Error during recursive copy of '%s'"
+#~ msgstr "Fehler beim rekursiven Kopieren von »%s«"
+
+#~ msgid "Error in post-commit clean-up (details follow):"
+#~ msgstr "Fehler beim Aufräumen nach der Übertragung (Details folgen):"
+
+#~ msgid "No '.' entry in: '%s'"
+#~ msgstr "Kein ».« Eintrag in: »%s«"
+
+#~ msgid "unexpected kind for revert-base '%s'"
+#~ msgstr "Unerwartete Art für revert-base »%s«"
+
+#~ msgid "Can't add '%s' to deleted directory; try undeleting its parent directory first"
+#~ msgstr ""
+#~ "Kann »%s« in gelöschtem Verzeichnis nicht hinzufügen; versuchen Sie zuerst,\n"
+#~ "das Löschen des Elternverzeichnisses rückgängig zu machen"
+
+#~ msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
+#~ msgstr "Verzeichnis »%s« konnte nicht hinzugefügt werden: ein nicht versioniertes Verzeichnis mit demselben Namen existiert bereits"
+
+#~ msgid "Directory '%s' containing working copy admin area is missing"
+#~ msgstr "Verzeichnis »%s« mit Administrationsdateien der Arbeitskopie fehlt"
+
+#~ msgid "Malformed patch data"
+#~ msgstr "Fehlerhafte Patchdaten"
+
+#~ msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
+#~ msgstr ""
+#~ "Konnte Verzeichnis »%s« nicht hinzufügen: Parameter »copyfrom« wird noch nicht\n"
+#~ "unterstützt"
+
+#~ msgid "Log command for directory '%s' is mislocated"
+#~ msgstr "Log-Kommando für Verzeichnis »%s« ist falsch platziert"
+
+#~ msgid "In directory '%s'"
+#~ msgstr "In Verzeichnis »%s«"
+
+#~ msgid "Unrecognized logfile element '%s' in '%s'"
+#~ msgstr "Unbekanntes Log-Datei Element »%s« in »%s«"
+
+#~ msgid "Destination URLs are broken"
+#~ msgstr "Ziel-URLs sind kaputt"
+
+#~ msgid "Relocate can only change the repository part of an URL"
+#~ msgstr "Relocate kann nur den Projektarchivteil der URL ändern"
+
+#~ msgid "Cannot exclude current directory"
+#~ msgstr "Kann aktuelles Verzeichnis nicht exkludieren"
+
+#~ msgid "No fetch_func supplied to update_editor"
+#~ msgstr "Keine Angabe von fetch_func für update_editor"
+
+#~ msgid "Bad copyfrom arguments received"
+#~ msgstr "Falsche Parameter »kopieren von« erhalten"
+
+#~ msgid "Corrupt working copy: '%s' in directory '%s' has an invalid schedule"
+#~ msgstr "Beschädigte Arbeitskopie: »%s« im Verzeichnis »%s« hat einen ungültigen Plan"
+
+#~ msgid "Missing 'right' attribute in '%s'"
+#~ msgstr "Fehlendes »right« Attribut für »%s«"
+
+#~ msgid "Error reading administrative log file in '%s'"
+#~ msgstr "Fehler beim Lesen der administrativen Log-Dateien in »%s«"
+
+#~ msgid "Failed to add file '%s': an unversioned file of the same name already exists"
+#~ msgstr "Datei »%s« konnte nicht hinzugefügt werden: eine nicht versionierte Datei mit demselben Namen existiert bereits"
+
+#~ msgid "mark revisions as merged (use with -r)"
+#~ msgstr ""
+#~ "Revisionen als zusammengeführt markieren (mit -r\n"
+#~ "                             verwenden)"
+
+#~ msgid "  You have edited '%s' locally.\n"
+#~ msgstr "  »%s« wurde lokal bearbeitet.\n"
+
+#~ msgid "Can't open file at '%s'"
+#~ msgstr "Kann Datei in »%s« nicht öffnen"
+
+#~ msgid "'%s' not versioned, and not exported\n"
+#~ msgstr "»%s« nicht versioniert und nicht exportiert\n"
+
+#~ msgid "Missing 'timestamp' attribute in '%s'"
+#~ msgstr "Fehlendes »timestamp« Attribut für »%s«"
+
+#~ msgid "Bad reason in tree conflict description"
+#~ msgstr "Fehlerhafter Wert von »reason« in Baumkonfliktbeschreibung"
+
+#~ msgid ""
+#~ "Base checksum mismatch on '%s':\n"
+#~ "   expected:  %s\n"
+#~ "     actual:  %s\n"
+#~ msgstr ""
+#~ "Prüfsummenfehler für »%s«:\n"
+#~ "   Erwartet:    %s\n"
+#~ "   Tatsächlich: %s\n"
+
+#~ msgid "Use of an external editor to fetch log message is not supported on OS400; consider using the --message (-m) or --file (-F) options"
+#~ msgstr "Die Verwendung eines externen Editors zur Eingabe der Logmeldung wird auf OS400 nicht unterstützt. Verwenden Sie die Option --message (-m) oder --file (-F)"
+
+#~ msgid "No WC table entry"
+#~ msgstr "Kein AK-Tabelleneintrag"
+
+#~ msgid "  The update attempted to edit '%s'.\n"
+#~ msgstr "  Die Aktualisierung versuchte »%s« zu bearbeiten.\n"
+
+#~ msgid ".empty"
+#~ msgstr ".leer"
+
+#~ msgid "Error getting file size on '%s'"
+#~ msgstr "Fehler beim Ermitteln der Dateigröße von »%s«"
+
+#~ msgid "Target lists to diff may not contain both working copy paths and URLs"
+#~ msgstr "Ziellisten für Vergleiche dürfen nicht gleichzeitig Arbeitskopien und URLs enthalten"
+
+#~ msgid "Parent(s) of '%s' should have repository information."
+#~ msgstr "Eltern von »%s« sollten Informationen über das Projektarchiv haben."
+
+#~ msgid ""
+#~ "Comment (%i lines):\n"
+#~ "%s\n"
+#~ msgstr ""
+#~ "Kommentar (%i Zeilen):\n"
+#~ "%s\n"
+
+#~ msgid "Error removing lock from entry for '%s'"
+#~ msgstr "Fehler beim Entfernen des Sperreintrags für »%s«"
+
+#~ msgid "Unable to make any directories"
+#~ msgstr "Kann keinerlei Verzeichnisse erzeugen"
+
+#~ msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for addition) is not itself scheduled for addition"
+#~ msgstr ""
+#~ "Beschädigte Arbeitskopie: »%s« im Verzeichnis »%s« (welches zum Hinzufügen\n"
+#~ "eingeplant ist) ist selbst nicht zum Hinzufügen vorgesehen"
+
+#~ msgid "Can't replace '%s' in deleted directory; try undeleting its parent directory first"
+#~ msgstr ""
+#~ "Kann »%s« in gelöschtem Verzeichnis nicht ersetzen; versuchen Sie zuerst,\n"
+#~ "das Löschen des Elternverzeichnisses rückgängig zu machen"
+
+#~ msgid "File '%s' in directory '%s' is not a versioned resource"
+#~ msgstr "Datei »%s« im Verzeichnis »%s« ist keine versionierte Ressource"
+
+#~ msgid "Modified: %s%s"
+#~ msgstr "Geändert: %s%s"
+
+#~ msgid "Missing 'revision' attribute for '%s'"
+#~ msgstr "Fehlendes Revisions Attribut für »%s«"
+
+#~ msgid "No delimiter after 'node_kind' in tree conflict description"
+#~ msgstr "Kein Trenner nach »node_kind« in Baumkonfliktbeschreibung"
+
+#~ msgid "URL '%s' is not properly URI-encoded"
+#~ msgstr "URL »%s« ist nicht korrekt URI-kodiert"
+
+#~ msgid "No such thing as 'base' working copy properties!"
+#~ msgstr "Es gibt keine »base«-Eigenschaften der Arbeitskopie"
+
+#~ msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
+#~ msgstr "Kann Zeichenkette nicht von CCSID »%i« nach CCSID »%i« konvertieren"
