@@ -85,7 +85,7 @@ init(const char *application)
   if (svn_cmdline_init(application, stderr))
     exit(EXIT_FAILURE);
 
-  err = svn_ver_check_list(&my_version, checklist);
+  err = svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
   if (err)
     handle_error(err, NULL);
 

@@ -1764,7 +1764,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
                                "ra_local"),
                              loader_version->major);
 
-  SVN_ERR(svn_ver_check_list(ra_local_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
   /* This assumes that POOL was the pool used to load the dso. */
