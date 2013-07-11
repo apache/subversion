@@ -137,6 +137,10 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
    runtime configuration variable. */
 #define DEFAULT_HTTP_TIMEOUT 600
 
+/* Private symbol for the 1.9-public SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING  */
+#define OPTION_HTTP_DETECT_CHUNKING "http-detect-chunking"
+
+
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
@@ -229,7 +233,7 @@ load_config(svn_ra_serf__session_t *session,
      chunked requests?  */
   SVN_ERR(svn_config_get_bool(config, &session->detect_chunking,
                               SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING,
+                              OPTION_HTTP_DETECT_CHUNKING,
                               FALSE));
 
   if (config)
@@ -293,7 +297,7 @@ load_config(svn_ra_serf__session_t *session,
       SVN_ERR(svn_config_get_bool(
                config, &session->detect_chunking,
                server_group,
-               SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING,
+               OPTION_HTTP_DETECT_CHUNKING,
                session->detect_chunking));
     }
 
