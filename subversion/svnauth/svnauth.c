@@ -422,6 +422,11 @@ show_cert_failures(const char *failure_string,
   return SVN_NO_ERROR;
 }
 
+/* ### from libsvn_subr/simple_providers.c */
+#define AUTHN_USERNAME_KEY            "username"
+#define AUTHN_PASSWORD_KEY            "password"
+#define AUTHN_PASSTYPE_KEY            "passtype"
+
 /* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
 list_credentials(svn_boolean_t *delete_cred,
@@ -457,10 +462,21 @@ list_credentials(svn_boolean_t *delete_cred,
       item = APR_ARRAY_IDX(sorted_hash_items, i, svn_sort__item_t);
       key = item.key;
       value = item.value;
-      if (!opt_state->show_passwords && strcmp(key, "password") == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("%s: [not shown]\n"), key));
-      else if (strcmp(value->data, realmstring) == 0)
+      if (strcmp(value->data, realmstring) == 0)
         continue; /* realm string was already shown above */
+      else if (strcmp(key, AUTHN_PASSWORD_KEY) == 0)
+        {
+          if (opt_state->show_passwords)
+            SVN_ERR(svn_cmdline_printf(iterpool, _("Password: %s\n"),
+                                       value->data));
+          else
+            SVN_ERR(svn_cmdline_printf(iterpool, _("Password: [not shown]\n")));
+        }
+      else if (strcmp(key, AUTHN_PASSTYPE_KEY) == 0)
+        SVN_ERR(svn_cmdline_printf(iterpool, _("Password cache: %s\n"),
+                                   value->data));
+      else if (strcmp(key, AUTHN_USERNAME_KEY) == 0)
+        SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
       else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
         SVN_ERR(show_ascii_cert(value->data, iterpool));
       else if (strcmp(key, AUTHN_FAILURES_KEY) == 0)
