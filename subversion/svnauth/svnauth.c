@@ -427,6 +427,9 @@ show_cert_failures(const char *failure_string,
 #define AUTHN_PASSWORD_KEY            "password"
 #define AUTHN_PASSTYPE_KEY            "passtype"
 
+/* ### from libsvn_subr/ssl_client_cert_pw_providers.c */
+#define AUTHN_PASSPHRASE_KEY            "passphrase"
+
 /* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
 list_credentials(svn_boolean_t *delete_cred,
@@ -471,6 +474,15 @@ list_credentials(svn_boolean_t *delete_cred,
                                        value->data));
           else
             SVN_ERR(svn_cmdline_printf(iterpool, _("Password: [not shown]\n")));
+        }
+      else if (strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
+        {
+          if (opt_state->show_passwords)
+            SVN_ERR(svn_cmdline_printf(iterpool,
+                                       _("Passphrase: %s\n"), value->data));
+          else
+            SVN_ERR(svn_cmdline_printf(iterpool,
+                                       _("Passphrase: [not shown]\n")));
         }
       else if (strcmp(key, AUTHN_PASSTYPE_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Password cache: %s\n"),
