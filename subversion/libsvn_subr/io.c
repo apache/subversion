@@ -2955,6 +2955,57 @@ svn_io_run_external_diff(const char *dir,
 }
 
 svn_error_t *
+svn_io_run_diff2(const char *dir,
+                 const char *const *user_args,
+                 int num_user_args,
+                 const char *label1,
+                 const char *label2,
+                 const char *from,
+                 const char *to,
+                 int *pexitcode,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const char *diff_cmd,
+                 apr_pool_t *pool)
+{
+  svn_stringbuf_t *com;
+  com = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_appendcstr(com, diff_cmd);
+  svn_stringbuf_appendcstr(com, " ");
+
+  if (user_args != NULL)
+    {
+      int j;
+      for (j = 0; j < num_user_args; ++j) 
+        {
+          svn_stringbuf_appendcstr(com, user_args[j]);
+          svn_stringbuf_appendcstr(com, " ");
+        }
+    }
+  else /* assume -u if the user didn't give us any args */
+    svn_stringbuf_appendcstr(com, "-u "); 
+
+  if (label1 != NULL)
+    svn_stringbuf_appendcstr(com,"-L ;l1 ");
+
+  if (label2 != NULL)
+    svn_stringbuf_appendcstr(com,"-L ;l2 ");
+
+  svn_stringbuf_appendcstr(com,";f1 ;f2 "); 
+
+  return svn_io_run_external_diff(dir,
+                                  label1,
+                                  label2,
+                                  from,
+                                  to,
+                                  pexitcode,
+                                  outfile,
+                                  errfile,
+                                  com->data,
+                                  pool);
+}
+
+svn_error_t *
 svn_io_run_diff3_3(int *exitcode,
                    const char *dir,
                    const char *mine,
