@@ -225,10 +225,11 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Is this proxy potentially busted? Do we need to take special care?  */
-  SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
+  /* Do we need to detect whether an intervening proxy does not support
+     chunked requests?  */
+  SVN_ERR(svn_config_get_bool(config, &session->detect_chunking,
                               SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_BUSTED_PROXY,
+                              SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING,
                               FALSE));
 
   if (config)
@@ -290,10 +291,10 @@ load_config(svn_ra_serf__session_t *session,
 
       /* Do we need to take care with this proxy?  */
       SVN_ERR(svn_config_get_bool(
-               config, &session->busted_proxy,
+               config, &session->detect_chunking,
                server_group,
-               SVN_CONFIG_OPTION_BUSTED_PROXY,
-               session->busted_proxy));
+               SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING,
+               session->detect_chunking));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -506,11 +507,11 @@ svn_ra_serf__open(svn_ra_session_t *session,
   SVN_ERR(err);
 
   /* We have set up a useful connection (that doesn't indication a redirect).
-     If we've been told there is possibly a busted proxy in our path to the
+     If we've been told there is possibly a worrisome proxy in our path to the
      server AND we switched to HTTP/1.1 (chunked requests), then probe for
      problems in any proxy.  */
   if ((corrected_url == NULL || *corrected_url == NULL)
-      && serf_sess->busted_proxy && !serf_sess->http10)
+      && serf_sess->detect_chunking && !serf_sess->http10)
     SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
 
   return SVN_NO_ERROR;
