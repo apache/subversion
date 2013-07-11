@@ -334,7 +334,7 @@ Error::MessageList Error::compile_messages(bool show_traces) const
   empties.reserve(max_length);
 
   apr_pool_t* pool = NULL;
-  pool = svn_pool_create(NULL);
+  apr_pool_create(&pool, NULL);
   try
     {
       for (const Error* err = this; err; err = err->m_nested.get())
