@@ -137,10 +137,6 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
    runtime configuration variable. */
 #define DEFAULT_HTTP_TIMEOUT 600
 
-/* Private symbol for the 1.9-public SVN_CONFIG_OPTION_BUSTED_PROXY config var.  */
-#define OPTION_BUSTED_PROXY "busted-proxy"
-
-
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
@@ -232,7 +228,7 @@ load_config(svn_ra_serf__session_t *session,
   /* Is this proxy potentially busted? Do we need to take special care?  */
   SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
                               SVN_CONFIG_SECTION_GLOBAL,
-                              OPTION_BUSTED_PROXY,
+                              SVN_CONFIG_OPTION_BUSTED_PROXY,
                               FALSE));
 
   if (config)
@@ -296,7 +292,7 @@ load_config(svn_ra_serf__session_t *session,
       SVN_ERR(svn_config_get_bool(
                config, &session->busted_proxy,
                server_group,
-               OPTION_BUSTED_PROXY,
+               SVN_CONFIG_OPTION_BUSTED_PROXY,
                session->busted_proxy));
     }
 
