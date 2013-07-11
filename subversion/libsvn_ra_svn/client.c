@@ -50,6 +50,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "../libsvn_ra/ra_loader.h"
 
@@ -2731,7 +2732,7 @@ svn_ra_svn__init(const svn_version_t *loader_version,
       { NULL, NULL }
     };
 
-  SVN_ERR(svn_ver_check_list(svn_ra_svn_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(svn_ra_svn_version(), checklist, svn_ver_equal));
 
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The RA loader does a more exhaustive check. */
