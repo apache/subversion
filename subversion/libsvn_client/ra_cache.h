@@ -1,5 +1,5 @@
 /**
- * ra_ctx.h : RA session abstraction layer
+ * ra_cache.h : RA session abstraction layer
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,8 +21,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_RA_CTX_H
-#define SVN_LIBSVN_RA_CTX_H
+#ifndef SVN_LIBSVN_ra_cache_H
+#define SVN_LIBSVN_ra_cache_H
 
 #include <apr_pools.h>
 
@@ -34,12 +34,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct svn_client__ra_ctx_s svn_client__ra_ctx_t;
+typedef struct svn_client__ra_cache_s svn_client__ra_cache_t;
 
-/* Allocates RA_CTX structure in POOL. Will use CONFIG for
+/* Allocates ra_cache structure in POOL. Will use CONFIG for
    for RA sessions created in this context. */
-svn_client__ra_ctx_t *
-svn_client__ra_ctx_create(apr_hash_t *config,
+svn_client__ra_cache_t *
+svn_client__ra_cache_create(apr_hash_t *config,
                           apr_pool_t *pool);
 
 /* Open new repository access session to the repository at BASE_URL or
@@ -49,13 +49,13 @@ svn_client__ra_ctx_create(apr_hash_t *config,
    to reuse sessions for same repository.
 
    The created session will be automatically returned to CTX on RESULT_POOL
-   cleanup or by explicit svn_client__ra_ctx_release_session() call.
+   cleanup or by explicit svn_client__ra_cache_release_session() call.
 
    Uses SCRATCH_POOL for temporary allocations. */
 svn_error_t *
-svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
+svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
                                 const char **corrected_p,
-                                svn_client__ra_ctx_t *ctx,
+                                svn_client__ra_cache_t *ctx,
                                 const char *base_url,
                                 const char *uuid,
                                 svn_ra_callbacks2_t *cbtable,
@@ -65,11 +65,11 @@ svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
 
 /* Returns RA SESSION back to CTX. */
 void
-svn_client__ra_ctx_release_session(svn_client__ra_ctx_t *ctx,
+svn_client__ra_cache_release_session(svn_client__ra_cache_t *ctx,
                                    svn_ra_session_t *session);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_RA_CTX_H */
+#endif /* SVN_LIBSVN_ra_cache_H */

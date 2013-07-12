@@ -1014,12 +1014,12 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
-  /** A repository access context for the client operation to use.
-   * this is initialized by svn_client_create_context() and should never
+  /** A RA session cache for the client operation to use.
+   * This is initialized by svn_client_create_context() and should never
    * be directly used or changed.
    *
    * @since New in 1.9.  */
-  void *ra_ctx;
+  void *ra_cache;
 } svn_client_ctx_t;
 
 /** Initialize a client context.
