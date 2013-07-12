@@ -297,7 +297,7 @@ load_config(svn_ra_serf__session_t *session,
       SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
                                       server_group,
                                       OPTION_HTTP_CHUNKED_REQUESTS,
-                                      "auto", svn_tristate_unknown));
+                                      "auto", chunked_requests));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
