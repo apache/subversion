@@ -80,7 +80,7 @@ class SVNCommonLibrary:
       self.debug_lib_name = lib_name
       
     if debug_dll_dir:
-      self.debug_lib_dir = debug_dll_dir
+      self.debug_dll_dir = debug_dll_dir
     else:
       self.debug_dll_dir = dll_dir
       
@@ -254,8 +254,236 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       self.find_libraries(False)
       
   def find_libraries(self, show_warnings):
+  
+    self._find_apr()
+    self._find_apr_util_and_expat()
     # Find Berkeley DB
     self._find_bdb(show_warnings)
+    
+    if show_warnings:
+      # Find the right Ruby include and libraries dirs and
+      # library name to link SWIG bindings with
+      self._find_ruby()
+
+      # Find the right Perl library name to link SWIG bindings with
+      self._find_perl()
+
+      # Find the right Python include and libraries dirs for SWIG bindings
+      self._find_python()
+
+      # Find the installed SWIG version to adjust swig options
+      self._find_swig()
+
+      # Find the installed Java Development Kit
+      self._find_jdk()
+
+      # Find Sqlite
+      self._find_sqlite()
+
+      # Look for ZLib and ML
+      if self.zlib_path:
+        self._find_zlib()
+        self._find_ml()
+
+      # Find serf and its dependencies
+      if self.serf_path:
+        self._find_serf()
+    
+    if show_warnings:
+      for lib in self._libraries.values():
+        print('Found %s %s' % (lib.name, lib.version))
+    
+  def _find_apr(self):
+    "Find the APR library and version"
+
+    minimal_apr_version = (0, 9, 0)
+    
+    if not self.apr_path:
+      sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \
+                       "location.\n")
+      sys.exit(1)                       
+
+    inc_path = os.path.join(self.apr_path, 'include')
+    version_file_path = os.path.join(inc_path, 'apr_version.h')
+
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
+      sys.stderr.write("Use '--with-apr' option to configure APR location.\n")
+      sys.exit(1)
+
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    self.apr_version = apr_version = '%d.%d.%d' % version
+
+    if version < minimal_apr_version:
+      sys.stderr.write("ERROR: apr %s or higher is required "
+                       "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_apr_version),
+                          self.apr_version))
+      sys.exit(1)
+
+    suffix = ''
+    if major > 0:
+        suffix = '-%d' % major
+
+    if self.static_apr:
+      lib_name = 'apr%s.lib' % suffix
+      lib_dir = os.path.join(self.apr_path, 'LibR')
+      dll_dir = None
+      debug_dll_dir = None
+      
+      if not os.path.isdir(lib_dir) and \
+         os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
+        # Installed APR instead of APR-Source
+        lib_dir = os.path.join(self.apr_path, 'lib')
+        debug_lib_dir = None
+      else:
+        debug_lib_dir = os.path.join(self.apr_path, 'LibD')
+    else:
+      lib_name = 'libapr%s.lib' % suffix
+      lib_dir = os.path.join(self.apr_path, 'Release')
+      
+      if not os.path.isdir(lib_dir) and \
+         os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
+        # Installed APR instead of APR-Source
+        lib_dir = os.path.join(self.apr_path, 'lib')
+        debug_lib_dir = lib_dir
+      else:
+        debug_lib_dir = os.path.join(self.apr_path, 'Debug')
+        
+      dll_name = 'libapr%s.dll' % suffix
+      if os.path.isfile(os.path.join(lib_dir, dll_name)):
+        dll_dir = lib_dir
+        debug_dll_dir = debug_lib_dir
+      else:
+        dll_dir = lib_dir
+        debug_dll_dir = debug_lib_dir
+      
+    self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
+                                              apr_version,
+                                              debug_lib_dir=debug_lib_dir,
+                                              dll_dir=dll_dir,
+                                              dll_name=dll_name,
+                                              debug_dll_dir=debug_dll_dir)
+
+  def _find_apr_util_and_expat(self):
+    "Find the APR-util library and version"
+
+    minimal_aprutil_version = (0, 9, 0)
+    
+    inc_path = os.path.join(self.apr_util_path, 'include')
+    version_file_path = os.path.join(inc_path, 'apu_version.h')
+
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
+      sys.exit(1)
+
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    self.aprutil_version = aprutil_version = '%d.%d.%d' % version
+
+    suffix = ''
+    if major > 0:
+        suffix = '-%d' % major
+
+    if self.static_apr:
+      lib_name = 'aprutil%s.lib' % suffix
+      lib_dir = os.path.join(self.aprutil_path, 'LibR')
+      dll_dir = None
+      debug_dll_dir = None
+      
+      if not os.path.isdir(lib_dir) and \
+         os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
+        # Installed APR-Util instead of APR-Util-Source
+        lib_dir = os.path.join(self.apr_util_path, 'lib')
+        debug_lib_dir = None
+      else:
+        debug_lib_dir = os.path.join(self.apr_util_path, 'LibD')
+    else:
+      lib_name = 'libaprutil%s.lib' % suffix
+      lib_dir = os.path.join(self.apr_util_path, 'Release')
+      
+      if not os.path.isdir(lib_dir) and \
+         os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
+        # Installed APR-Util instead of APR-Util-Source
+        lib_dir = os.path.join(apr_util_path, 'lib')
+        debug_lib_dir = lib_dir
+      else:
+        debug_lib_dir = os.path.join(self.apr_util_path, 'Debug')
+        
+      dll_name = 'libaprutil%s.dll' % suffix
+      if os.path.isfile(os.path.join(lib_dir, dll_name)):
+        dll_dir = lib_dir
+        debug_dll_dir = debug_lib_dir
+      else:
+        dll_dir = lib_dir
+        debug_dll_dir = debug_lib_dir
+      
+    self._libraries['aprutil'] = SVNCommonLibrary('apr-util', inc_path, lib_dir,
+                                                   lib_name,
+                                                   aprutil_version,
+                                                   debug_lib_dir=debug_lib_dir,
+                                                   dll_dir=dll_dir,
+                                                   dll_name=dll_name,
+                                                   debug_dll_dir=debug_dll_dir)
+
+    # And now find expat
+    # If we have apr-util as a source location, it is in a subdir.
+    # If we have an install package it is in the lib subdir
+    if os.path.exists(os.path.join(self.apr_util_path, 'xml/expat')):
+      inc_path = os.path.join(self.apr_util_path, 'xml/expat/lib')
+      lib_dir = os.path.join(self.apr_util_path, 'xml/expat/lib/LibR')
+      debug_lib_dir = os.path.join(self.apr_util_path, 'xml/expat/lib/LibD')
+    else:
+      inc_path = os.path.join(self.apr_util_path, 'include')
+      lib_dir = os.path.join(self.apr_util_path, 'lib')
+      debug_lib_dir = None
+      
+    version_file_path = os.path.join(inc_path, 'expat.h')
+
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util's XML location.\n");
+      sys.exit(1)
+      
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+XML_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+XML_MINOR_VERSION\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+XML_MICRO_VERSION\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    xml_version = '%d.%d.%d' % version
+
+    self._libraries['xml'] = SVNCommonLibrary('expat', inc_path, lib_dir,
+                                               'xml.lib', xml_version,
+                                               debug_lib_dir = debug_lib_dir)
 
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
@@ -578,99 +806,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         print('openssl not found, ra_serf will not be built\n')
     else:
       print('serf not found, ra_serf will not be built\n')
-
-  def _find_apr(self):
-    "Find the APR library and version"
-
-    minimal_apr_version = (0, 9, 0)
-
-    version_file_path = os.path.join(self.apr_path, 'include',
-                                     'apr_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr' option to configure APR location.\n");
-      sys.exit(1)
-
-    fp = open(version_file_path)
-    txt = fp.read()
-    fp.close()
-
-    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
-    major = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
-    minor = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
-    patch = int(vermatch.group(1))
-
-    version = (major, minor, patch)
-    self.apr_version = '%d.%d.%d' % version
-
-    suffix = ''
-    if major > 0:
-        suffix = '-%d' % major
-
-    if self.static_apr:
-      self.apr_lib = 'apr%s.lib' % suffix
-    else:
-      self.apr_lib = 'libapr%s.lib' % suffix
-
-    if version < minimal_apr_version:
-      sys.stderr.write("ERROR: apr %s or higher is required "
-                       "(%s found)\n" % (
-                          '.'.join(str(v) for v in minimal_apr_version),
-                          self.apr_version))
-      sys.exit(1)
-    else:
-      print('Found apr %s' % self.apr_version)
-
-  def _find_apr_util(self):
-    "Find the APR-util library and version"
-
-    minimal_aprutil_version = (0, 9, 0)
-    version_file_path = os.path.join(self.apr_util_path, 'include',
-                                     'apu_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
-      sys.exit(1)
-
-    fp = open(version_file_path)
-    txt = fp.read()
-    fp.close()
-
-    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
-    major = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
-    minor = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
-    patch = int(vermatch.group(1))
-
-    version = (major, minor, patch)
-    self.aprutil_version = '%d.%d.%d' % version
-
-    suffix = ''
-    if major > 0:
-        suffix = '-%d' % major
-
-    if self.static_apr:
-      self.aprutil_lib = 'aprutil%s.lib' % suffix
-    else:
-      self.aprutil_lib = 'libaprutil%s.lib' % suffix
-
-    if version < minimal_aprutil_version:
-      sys.stderr.write("ERROR: aprutil %s or higher is required "
-                       "(%s found)\n" % (
-                          '.'.join(str(v) for v in minimal_aprutil_version),
-                          self.aprutil_version))
-      sys.exit(1)
-    else:
-      print('Found aprutil %s' % self.aprutil_version)
 
   def _find_sqlite(self):
     "Find the Sqlite library and version"

@@ -140,41 +140,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     else:
       print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
-  def find_libraries(self, show_warnings):
-  
-    gen_win_dependencies.GenDependenciesBase.find_libraries(self, show_warnings)
-    # Find the right Ruby include and libraries dirs and
-    # library name to link SWIG bindings with
-    self._find_ruby()
-
-    # Find the right Perl library name to link SWIG bindings with
-    self._find_perl()
-
-    # Find the right Python include and libraries dirs for SWIG bindings
-    self._find_python()
-
-    # Find the installed SWIG version to adjust swig options
-    self._find_swig()
-
-    # Find the installed Java Development Kit
-    self._find_jdk()
-
-    # Find APR and APR-util version
-    self._find_apr()
-    self._find_apr_util()
-
-    # Find Sqlite
-    self._find_sqlite()
-
-    # Look for ZLib and ML
-    if self.zlib_path:
-      self._find_zlib()
-      self._find_ml()
-
-    # Find serf and its dependencies
-    if self.serf_path:
-      self._find_serf()
-
   def errno_filter(self, codes):
     "Callback for gen_base.write_errno_table()."
     # Filter out python's SOC* codes, which alias the windows API names.
@@ -949,13 +914,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           if sasllib:
             nondeplibs.append(sasllib)
-
-        elif external_lib == 'apr':
-          nondeplibs.append(self.apr_lib)
-        elif external_lib == 'aprutil':
-          nondeplibs.append(self.aprutil_lib)
-        elif external_lib == 'xml':
-          nondeplibs.append('xml.lib')
 
         elif external_lib == 'zlib' or \
              external_lib == 'apr_memcache' or \
