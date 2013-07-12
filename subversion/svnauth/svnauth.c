@@ -258,6 +258,9 @@ show_cert_info(apr_hash_t *cert_info,
                 break;
               case SVN_TOKEN_UNKNOWN:
               default:
+#ifdef SVN_DEBUG
+                SVN_ERR_MALFUNCTION();
+#endif
                 break;
             }
         }
