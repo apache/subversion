@@ -48,6 +48,9 @@ typedef struct cached_session_s
   /* Current callbacks table. */
   void *cb_baton;
 
+  /* Repository root URL. */
+  const char *root_url;
+
   /* ID of RA session. Used only for diagnostics purpose. */
   int id;
 } cached_session_t;
@@ -265,31 +268,11 @@ find_session_by_url(cached_session_t **cache_entry_p,
       {
         cached_session_t *cache_entry = svn__apr_hash_index_val(hi);
 
-        if (cache_entry->owner_pool == NULL)
+        if (cache_entry->owner_pool == NULL &&
+            svn_uri__is_ancestor(cache_entry->root_url, url))
           {
-            const char *root_url;
-            SVN_ERR(svn_ra_get_repos_root2(cache_entry->session, &root_url,
-                                           scratch_pool));
-
-            if (svn_uri__is_ancestor(root_url, url))
-              {
-                const char *session_url;
-                SVN_ERR(svn_ra_get_session_url(cache_entry->session,
-                                               &session_url, scratch_pool));
-
-                if (strcmp(session_url, url) != 0)
-                  {
-                    RCTX_DBG(("SESSION(%d): Reparent from '%s' to '%s'\n",
-                             cache_entry->id, session_url, url));
-                    SVN_ERR(svn_ra_reparent(cache_entry->session, url,
-                                            scratch_pool));
-                  }
-
-                RCTX_DBG(("SESSION(%d): Reused\n", cache_entry->id));
-
-                *cache_entry_p = cache_entry;
-                return SVN_NO_ERROR;
-              }
+            *cache_entry_p = cache_entry;
+            return SVN_NO_ERROR;
           }
       }
 
@@ -317,6 +300,21 @@ svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
 
   if (cache_entry)
     {
+      const char *session_url;
+
+      /* Attach new callback table and baton. */
+      cache_entry->cb_table = cbtable;
+      cache_entry->cb_baton = callback_baton;
+
+      SVN_ERR(svn_ra_get_session_url(cache_entry->session, &session_url,
+                                     scratch_pool));
+
+      if (strcmp(session_url, base_url) != 0)
+        {
+          SVN_ERR(svn_ra_reparent(cache_entry->session, base_url,
+                                  scratch_pool));
+        }
+
       /* We found existing applicable session. Check UUID if requested. */
       if (uuid)
         {
@@ -333,6 +331,8 @@ svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
                                        repository_uuid, uuid);
             }
         }
+
+      RCTX_DBG(("SESSION(%d): Reused\n", cache_entry->id));
     }
   else
     {
@@ -371,6 +371,9 @@ svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
         }
 
       cache_entry->session = session;
+
+      SVN_ERR(svn_ra_get_repos_root2(session, &cache_entry->root_url,
+                                     ctx->pool));
 
       RCTX_DBG(("SESSION(%d): Open('%s')\n", cache_entry->id, base_url));
 
