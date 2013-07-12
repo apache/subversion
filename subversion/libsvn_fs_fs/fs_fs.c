@@ -60,6 +60,7 @@
 #include "low_level.h"
 #include "rep-cache.h"
 #include "temp_serializer.h"
+#include "util.h"
 
 #include "private/svn_string_private.h"
 #include "private/svn_fs_util.h"
@@ -133,11 +134,6 @@ static txn_vtable_t txn_vtable = {
 /* Declarations. */
 
 static svn_error_t *
-read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
-                      const char *path,
-                      apr_pool_t *pool);
-
-static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool);
 
 static svn_error_t *
@@ -150,15 +146,6 @@ verify_walker(representation_t *rep,
               apr_pool_t *scratch_pool);
 
 /* Pathname helper functions */
-
-/* Return TRUE is REV is packed in FS, FALSE otherwise. */
-static svn_boolean_t
-is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  return (rev < ffd->min_unpacked_rev);
-}
 
 /* Return TRUE is REV is packed in FS, FALSE otherwise. */
 static svn_boolean_t
@@ -215,22 +202,6 @@ path_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 static const char *
-path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
-                apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  assert(ffd->max_files_per_dir);
-  assert(is_packed_rev(fs, rev));
-
-  return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
-                              apr_psprintf(pool,
-                                           "%ld" PATH_EXT_PACKED_SHARD,
-                                           rev / ffd->max_files_per_dir),
-                              kind, NULL);
-}
-
-static const char *
 path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -247,7 +218,7 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  assert(! is_packed_rev(fs, rev));
+  assert(! svn_fs_fs__is_packed_rev(fs, rev));
 
   if (ffd->max_files_per_dir)
     {
@@ -269,13 +240,13 @@ svn_fs_fs__path_rev_absolute(const char **path,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
-      || ! is_packed_rev(fs, rev))
+      || ! svn_fs_fs__is_packed_rev(fs, rev))
     {
       *path = path_rev(fs, rev, pool);
     }
   else
     {
-      *path = path_rev_packed(fs, rev, PATH_PACKED, pool);
+      *path = svn_fs_fs__path_rev_packed(fs, rev, PATH_PACKED, pool);
     }
 
   return SVN_NO_ERROR;
@@ -360,13 +331,6 @@ path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
 }
-
-static APR_INLINE const char *
-path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
-}
-
 
 static APR_INLINE const char *
 path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
@@ -1318,34 +1282,13 @@ write_config(svn_fs_t *fs,
 }
 
 static svn_error_t *
-read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
-                      const char *path,
-                      apr_pool_t *pool)
-{
-  char buf[80];
-  apr_file_t *file;
-  apr_size_t len;
-
-  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  len = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  *min_unpacked_rev = SVN_STR_TO_REV(buf);
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT);
 
-  return read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                               path_min_unpacked_rev(fs, pool),
-                               pool);
+  return svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
 }
 
 svn_error_t *
@@ -1603,7 +1546,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* If our filesystem is new enough, write the min unpacked rev file. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
+                               "0\n", pool));
 
   /* If the file system supports revision packing but not revprop packing
      *and* the FS has been sharded, pack the revprops up to the point that
@@ -1921,41 +1865,6 @@ open_pack_or_rev_file(apr_file_t **file,
   return svn_error_trace(err);
 }
 
-/* Reads a line from STREAM and converts it to a 64 bit integer to be
- * returned in *RESULT.  If we encounter eof, set *HIT_EOF and leave
- * *RESULT unchanged.  If HIT_EOF is NULL, EOF causes an "corrupt FS"
- * error return.
- * SCRATCH_POOL is used for temporary allocations.
- */
-static svn_error_t *
-read_number_from_stream(apr_int64_t *result,
-                        svn_boolean_t *hit_eof,
-                        svn_stream_t *stream,
-                        apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *sb;
-  svn_boolean_t eof;
-  svn_error_t *err;
-
-  SVN_ERR(svn_stream_readline(stream, &sb, "\n", &eof, scratch_pool));
-  if (hit_eof)
-    *hit_eof = eof;
-  else
-    if (eof)
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, _("Unexpected EOF"));
-
-  if (!eof)
-    {
-      err = svn_cstring_atoi64(result, sb->data);
-      if (err)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                                 _("Number '%s' invalid or too large"),
-                                 sb->data);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
    Use POOL for temporary allocations. */
 static svn_error_t *
@@ -1989,8 +1898,9 @@ get_packed_offset(apr_off_t *rev_offset,
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
-                                   path_rev_packed(fs, rev, PATH_MANIFEST,
-                                                   pool),
+                                   svn_fs_fs__path_rev_packed(fs, rev,
+                                                              PATH_MANIFEST,
+                                                              pool),
                                    pool, pool));
 
   /* While we're here, let's just read the entire manifest file into an array,
@@ -2003,7 +1913,8 @@ get_packed_offset(apr_off_t *rev_offset,
       apr_int64_t val;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(read_number_from_stream(&val, &eof, manifest_stream, iterpool));
+      SVN_ERR(svn_fs_fs__read_number_from_stream(&val, &eof, manifest_stream,
+                                                 iterpool));
       if (eof)
         break;
 
@@ -2035,7 +1946,7 @@ open_and_seek_revision(apr_file_t **file,
 
   SVN_ERR(open_pack_or_rev_file(&rev_file, fs, rev, pool));
 
-  if (is_packed_rev(fs, rev))
+  if (svn_fs_fs__is_packed_rev(fs, rev))
     {
       apr_off_t rev_offset;
 
@@ -2381,7 +2292,8 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if (is_packed_rev(fs, rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if (svn_fs_fs__is_packed_rev(fs, rev)
+      && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(get_packed_offset(&offset, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -2393,7 +2305,7 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   /* Offset of the revision from the start of the pack file, if applicable. */
-  if (is_packed_rev(fs, rev))
+  if (svn_fs_fs__is_packed_rev(fs, rev))
     SVN_ERR(get_packed_offset(&rev_offset, fs, rev, pool));
   else
     rev_offset = 0;
@@ -3125,8 +3037,10 @@ parse_packed_revprops(svn_fs_t *fs,
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
-  SVN_ERR(read_number_from_stream(&first_rev, NULL, stream, iterpool));
-  SVN_ERR(read_number_from_stream(&count, NULL, stream, iterpool));
+  SVN_ERR(svn_fs_fs__read_number_from_stream(&first_rev, NULL, stream,
+                                             iterpool));
+  SVN_ERR(svn_fs_fs__read_number_from_stream(&count, NULL, stream,
+                                             iterpool));
 
   /* make PACKED_REVPROPS point to the first char after the header.
    * This is where the serialized revprops are. */
@@ -3158,7 +3072,8 @@ parse_packed_revprops(svn_fs_t *fs,
       svn_revnum_t revision = (svn_revnum_t)(first_rev + i);
 
       /* read & check the serialized size */
-      SVN_ERR(read_number_from_stream(&size, NULL, stream, iterpool));
+      SVN_ERR(svn_fs_fs__read_number_from_stream(&size, NULL, stream,
+                                                 iterpool));
       if (size + offset > (apr_int64_t)revprops->packed_revprops->len)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                         _("Packed revprop size exceeds pack file size"));
@@ -7949,7 +7864,8 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
+                               "0\n", pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
@@ -8929,30 +8845,6 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
 
 /****** Packing FSFS shards *********/
 
-/* Write a file FILENAME in directory FS_PATH, containing a single line
- * with the number REVNUM in ASCII decimal.  Move the file into place
- * atomically, overwriting any existing file.
- *
- * Similar to write_current(). */
-static svn_error_t *
-write_revnum_file(const char *fs_path,
-                  const char *filename,
-                  svn_revnum_t revnum,
-                  apr_pool_t *scratch_pool)
-{
-  const char *final_path;
-  char buf[SVN_INT64_BUFFER_SIZE];
-  apr_size_t len = svn__i64toa(buf, revnum);
-  buf[len] = '\n';
-
-  final_path = svn_dirent_join(fs_path, filename, scratch_pool);
-
-  SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
-                              final_path /* copy_perms */, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Pack the revision SHARD containing exactly MAX_FILES_PER_DIR revisions
  * from SHARD_PATH into the PACK_FILE_DIR, using POOL for allocations.
  * CANCEL_FUNC and CANCEL_BATON are what you think they are.
@@ -9291,7 +9183,7 @@ delete_revprops_shard(const char *shard_path,
 static svn_error_t *
 pack_shard(const char *revs_dir,
            const char *revsprops_dir,
-           const char *fs_path,
+           svn_fs_t *fs,
            apr_int64_t shard,
            int max_files_per_dir,
            apr_off_t max_pack_size,
@@ -9347,7 +9239,7 @@ pack_shard(const char *revs_dir,
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
    * update_min_unpacked_rev() when necessary.) */
-  SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REV,
+  SVN_ERR(svn_fs_fs__write_revnum_file(fs,
                             (svn_revnum_t)((shard + 1) * max_files_per_dir),
                             pool));
 
@@ -9439,9 +9331,8 @@ pack_body(void *baton,
   if (!ffd.max_files_per_dir)
     return SVN_NO_ERROR;
 
-  SVN_ERR(read_min_unpacked_rev(&ffd.min_unpacked_rev,
-                                path_min_unpacked_rev(pb->fs, pool),
-                                pool));
+  SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd.min_unpacked_rev, pb->fs,
+                                           pool));
 
   SVN_ERR(get_youngest(&youngest, pb->fs->path, pool));
   completed_shards = (youngest + 1) / ffd.max_files_per_dir;
@@ -9466,7 +9357,7 @@ pack_body(void *baton,
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
       SVN_ERR(pack_shard(rev_data_path, revprops_data_path,
-                         pb->fs->path, i, ffd.max_files_per_dir,
+                         pb->fs, i, ffd.max_files_per_dir,
                          ffd.revprop_pack_size,
                          ffd.compress_packed_revprops
                            ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
@@ -9954,9 +9845,8 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   if (*dst_min_unpacked_rev < rev + max_files_per_dir)
     {
       *dst_min_unpacked_rev = rev + max_files_per_dir;
-      SVN_ERR(write_revnum_file(dst_fs->path, PATH_MIN_UNPACKED_REV,
-                                *dst_min_unpacked_rev,
-                                scratch_pool));
+      SVN_ERR(svn_fs_fs__write_revnum_file(dst_fs, *dst_min_unpacked_rev,
+                                           scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -10232,21 +10122,10 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* Copy the min unpacked rev, and read its value. */
   if (src_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
     {
-      const char *min_unpacked_rev_path;
-
-      min_unpacked_rev_path = svn_dirent_join(src_fs->path,
-                                              PATH_MIN_UNPACKED_REV,
-                                              pool);
-      SVN_ERR(read_min_unpacked_rev(&src_min_unpacked_rev,
-                                    min_unpacked_rev_path,
-                                    pool));
-
-      min_unpacked_rev_path = svn_dirent_join(dst_fs->path,
-                                              PATH_MIN_UNPACKED_REV,
-                                              pool);
-      SVN_ERR(read_min_unpacked_rev(&dst_min_unpacked_rev,
-                                    min_unpacked_rev_path,
-                                    pool));
+      SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&src_min_unpacked_rev,
+                                               src_fs, pool));
+      SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&dst_min_unpacked_rev,
+                                               dst_fs, pool));
 
       /* We only support packs coming from the hotcopy source.
        * The destination should not be packed independently from
@@ -10362,9 +10241,9 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                * If the youngest revision ended up being packed, don't try
                * to be smart and work around this. Just abort the hotcopy. */
               SVN_ERR(update_min_unpacked_rev(src_fs, pool));
-              if (is_packed_rev(src_fs, rev))
+              if (svn_fs_fs__is_packed_rev(src_fs, rev))
                 {
-                  if (is_packed_rev(src_fs, src_youngest))
+                  if (svn_fs_fs__is_packed_rev(src_fs, src_youngest))
                     return svn_error_createf(
                              SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("The assumed HEAD revision (%lu) of the "
@@ -10553,8 +10432,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(dst_fs, pool),
-                                                     "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(dst_fs, pool),
+                                                                "0\n", pool));
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
