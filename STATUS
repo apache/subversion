@@ -151,7 +151,7 @@ Candidate changes:
    Notes:
      Revision is actually from ^/subversion/branches/tristate-chunked-request
      If we reach a consensus on this design it'll be merged to trunk as well.
-     Subsumes ^/subversion/branches/1.8.x-busted-proxy.
+     Subsumes ^/subversion/branches/1.8.x-busted-proxy and the r1500837 group.
    Votes:
      +1: breser, ivan, danielsh, philip
 
