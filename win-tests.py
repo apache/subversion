@@ -108,12 +108,12 @@ CMDLINE_TEST_SCRIPT_NATIVE_PATH = CMDLINE_TEST_SCRIPT_PATH.replace('/', os.sep)
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
-import gen_win
+import gen_win_dependencies
 version_header = os.path.join('subversion', 'include', 'svn_version.h')
 cp = configparser.ConfigParser()
 cp.read('gen-make.opts')
-gen_obj = gen_win.GeneratorBase('build.conf', version_header,
-                                cp.items('options'))
+gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
+                                                   cp.items('options'))
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
 client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
