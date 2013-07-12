@@ -60,7 +60,8 @@ class SVNCommonLibrary:
 
   def __init__(self, name, include_dir, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
-               dll_name=None, debug_dll_dir=None, debug_dll_name=None):
+               dll_name=None, debug_dll_dir=None, debug_dll_name=None,
+               is_src=False):
     self.name = name
     self.include_dir = include_dir
     self.lib_dir = lib_dir
@@ -68,6 +69,7 @@ class SVNCommonLibrary:
     self.version = version
     self.dll_dir = dll_dir
     self.dll_name = dll_name
+    self.is_src = is_src
 
     if debug_lib_dir:
       self.debug_lib_dir = debug_lib_dir
@@ -402,6 +404,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = (major, minor, patch)
     self.aprutil_version = aprutil_version = '%d.%d.%d' % version
+    
+    if version < minimal_aprutil_version:
+      sys.stderr.write("ERROR: apr-util %s or higher is required "
+                       "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_aprutil_version),
+                          aprutil_version))
+      sys.exit(1)
 
     suffix = ''
     if major > 0:
@@ -484,6 +493,64 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._libraries['xml'] = SVNCommonLibrary('expat', inc_path, lib_dir,
                                                'xml.lib', xml_version,
                                                debug_lib_dir = debug_lib_dir)
+
+  def _find_zlib(self):
+    "Find the ZLib library and version"
+
+    minimal_zlib_version = (1, 2, 5)
+
+    if not self.zlib_path or not os.path.isdir(self.zlib_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % self.zlib_path);
+      sys.stderr.write("Use '--with-zlib' option to configure ZLib location.\n");
+      sys.exit(1)
+
+    if os.path.isdir(os.path.join(self.zlib_path, 'include')):
+      # We have an install location
+      inc_path = os.path.join(self.zlib_path, 'include')
+      lib_path = os.path.join(self.zlib_path, 'lib')
+      is_src = False
+      
+      # Different build options produce different library names :(
+      if os.path.exists(os.path.join(lib_path, 'zlibstatic.lib')):
+        # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
+        lib_name = 'zlibstatic.lib'
+      else:
+        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)      
+        lib_name = 'zlib.lib'
+      debug_lib_name = None
+    else:
+      # We have a source location
+      inc_path = lib_path = self.zlib_path
+      is_src = True
+      lib_name = 'zlibstat.lib'
+      debug_lib_name = 'zlibstatD.lib'
+      
+    version_file_path = os.path.join(inc_path, 'zlib.h')
+    
+    if not os.path.exists(version_file_path):
+      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
+      sys.stderr.write("Use '--with-zlib' option to configure ZLib location.\n");
+      sys.exit(1)
+      
+    txt = open(version_file_path).read()
+    vermatch = re.search(
+                r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"',
+                 txt, re.M)
+
+    version = tuple(map(int, vermatch.groups()))
+    self.zlib_version = '%d.%d.%d' % version
+    
+    if version < minimal_zlib_version:
+      sys.stderr.write("ERROR: ZLib %s or higher is required "
+                       "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_zlib_version),
+                          self.zlib_version))
+      sys.exit(1)
+
+    self._libraries['zlib'] = SVNCommonLibrary('zlib', inc_path, lib_path, lib_name,
+                                                self.zlib_version,
+                                                debug_lib_name=debug_lib_name,
+                                                is_src=is_src)
 
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
@@ -856,30 +923,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       sys.exit(1)
     else:
       print('Found SQLite %s' % self.sqlite_version)
-
-  def _find_zlib(self):
-    "Find the ZLib library and version"
-
-    if not self.zlib_path:
-      self.zlib_version = '1'
-      return
-
-    header_file = os.path.join(self.zlib_path, 'zlib.h')
-
-    if not os.path.exists(header_file):
-      self.zlib_version = '1'
-      return
-
-    fp = open(header_file)
-    txt = fp.read()
-    fp.close()
-    vermatch = re.search(r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
-
-    version = tuple(map(int, vermatch.groups()))
-
-    self.zlib_version = '%d.%d.%d' % version
-
-    print('Found ZLib %s' % self.zlib_version)
 
 # ============================================================================
 # This is a cut-down and modified version of code from:
