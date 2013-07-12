@@ -220,6 +220,11 @@ show_cert_info(apr_hash_t *cert_info,
                 SVN_ERR(svn_cmdline_printf(scratch_pool,
                                            _("  Email Address: %s\n"), value));
                 break;
+              case svnauth__cert_key_o:
+                SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                           _("  Organization Name: %s\n"),
+                                           value));
+                break;
               case svnauth__cert_key_ou:
                 SVN_ERR(svn_cmdline_printf(scratch_pool,
                                            _("  Organizational Unit: %s\n"),
