@@ -1145,13 +1145,18 @@ main(int argc, const char **argv)
           break;
         case 'r':
           {
+            const char *saved_arg = arg;
             char *digits_end = NULL;
+            while (*arg == 'r')
+              arg++;
             base_revision = strtol(arg, &digits_end, 10);
             if ((! SVN_IS_VALID_REVNUM(base_revision))
                 || (! digits_end)
                 || *digits_end)
-              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                            NULL, "Invalid revision number"),
+              handle_error(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                             NULL,
+                                             _("Invalid revision number '%s'"),
+                                             saved_arg),
                            pool);
           }
           break;
