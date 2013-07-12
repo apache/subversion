@@ -127,6 +127,7 @@ Candidate changes:
      +1: gstein
      +0.5: breser (+1 if also merging in the tristate changes)
      +1: philip, lgo (except for r1502097, -2099, -2104, -2106)
+     danielsh: thinks the knob's default value should be flipped s/FALSE/TRUE/
 
  * r1500837, r1500857, r1502109
    Follow up to the r1489117 group, modifies the 411 Content length required
@@ -157,7 +158,7 @@ Candidate changes:
        svn merge --accept=tc -c 1502440 ^/subversion/branches/1.8.x-tristate-chunked-request
    Depends: ^/subversion/branches/1.8.x-busted-proxy, r1500837, r1500857, r1502109   
    Votes:
-     +1: breser, ivan
+     +1: breser, ivan, danielsh
 
  * r1502577
    Change malfunctions to errors.
