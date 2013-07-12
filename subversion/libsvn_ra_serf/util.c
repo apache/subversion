@@ -2413,8 +2413,10 @@ svn_ra_serf__error_on_status(serf_status_line sline,
 
       case 411:
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                _("DAV request failed: "
-                                  "Content length required"));
+                    _("DAV request failed: 411 Content length required. The "
+                      "server or an intermediate proxy does not accept "
+                      "chunked encoding. Try setting 'http-chunked-requests' "
+                      "to 'auto' or 'no' in your client configuration."));
     }
 
   if (sline.code >= 300)
