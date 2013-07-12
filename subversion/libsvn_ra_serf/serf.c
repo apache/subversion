@@ -149,6 +149,7 @@ load_config(svn_ra_serf__session_t *session,
   const char *timeout_str = NULL;
   const char *exceptions;
   apr_port_t proxy_port;
+  svn_tristate_t chunked_requests;
 
   if (config_hash)
     {
@@ -225,12 +226,11 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Do we need to detect whether an intervening proxy does not support
-     chunked requests?  */
-  SVN_ERR(svn_config_get_bool(config, &session->detect_chunking,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING,
-                              FALSE));
+  /* Should we use chunked transfer encoding. */ 
+  SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                  "auto", svn_tristate_unknown));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -289,12 +289,11 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
-      /* Do we need to take care with this proxy?  */
-      SVN_ERR(svn_config_get_bool(
-               config, &session->detect_chunking,
-               server_group,
-               SVN_CONFIG_OPTION_HTTP_DETECT_CHUNKING,
-               session->detect_chunking));
+      /* Should we use chunked transfer encoding. */ 
+      SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
+                                      server_group,
+                                      SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                      "auto", svn_tristate_unknown));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -367,6 +366,24 @@ load_config(svn_ra_serf__session_t *session,
   else
     {
       session->using_proxy = FALSE;
+    }
+
+  /* Setup detect_chunking and using_chunked_requests based on
+   * the chunked_requests tristate */
+  if (chunked_requests == svn_tristate_unknown)
+    {
+      session->detect_chunking = TRUE;
+      session->using_chunked_requests = TRUE;
+    }
+  else if (chunked_requests == svn_tristate_true)
+    {
+      session->detect_chunking = FALSE;
+      session->using_chunked_requests = TRUE;
+    }
+  else /* chunked_requests == svn_tristate_false */
+    {
+      session->detect_chunking = FALSE;
+      session->using_chunked_requests = FALSE;
     }
 
   /* Setup authentication. */
