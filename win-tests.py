@@ -324,13 +324,6 @@ def locate_libs():
 
   dlls = []
 
-  # look for APR 1.x dll's and use those if found
-  apr_test_path = os.path.join(gen_obj.apr_path, objdir, 'libapr-1.dll')
-  if os.path.exists(apr_test_path):
-    suffix = "-1"
-  else:
-    suffix = ""
-    
   debug = (objdir == 'Debug')
   
   for lib in gen_obj._libraries.values():
@@ -342,12 +335,6 @@ def locate_libs():
       
     if name and dir:
       dlls.append(os.path.join(dir, name))
-
-  if not cp.has_option('options', '--with-static-apr'):
-    dlls.append(os.path.join(gen_obj.apr_path, objdir,
-                             'libapr%s.dll' % (suffix)))
-    dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
-                             'libaprutil%s.dll' % (suffix)))
 
   if gen_obj.libintl_path:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
