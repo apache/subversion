@@ -159,6 +159,13 @@ Candidate changes:
    Votes:
      +1: breser, ivan
 
+ * r1502577
+   Change malfunctions to errors.
+   Justification:
+     There is no reason to invoke malfunction_handler in those failure modes.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
