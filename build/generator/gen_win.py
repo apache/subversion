@@ -52,6 +52,38 @@ else:
 import gen_base
 import ezt
 
+class SVNCommonLibrary:
+
+  def __init__(self, name, include_dir, lib_dir, lib_name, version=None,
+               debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
+               dll_name=None, debug_dll_dir=None, debug_dll_name=None):
+    self.name = name
+    self.include_dir = include_dir
+    self.lib_dir = lib_dir
+    self.lib_name = lib_name
+    self.version = version
+    self.dll_dir = dll_dir
+    self.dll_name = dll_name
+
+    if debug_lib_dir:
+      self.debug_lib_dir = debug_lib_dir
+    else:
+      self.debug_lib_dir = lib_dir
+      
+    if debug_lib_name:
+      self.debug_lib_name = debug_lib_name
+    else:
+      self.debug_lib_name = lib_name
+      
+    if debug_dll_dir:
+      self.debug_lib_dir = debug_dll_dir
+    else:
+      self.debug_dll_dir = dll_dir
+      
+    if debug_dll_name:
+      self.debug_dll_name = debug_dll_name
+    else:
+      self.debug_dll_name = dll_name
 
 class GeneratorBase(gen_base.GeneratorBase):
   """This intermediate base class exists to be instantiated by win-tests.py,
@@ -65,6 +97,8 @@ class GeneratorBase(gen_base.GeneratorBase):
     ('pyd', 'target'): '.pyd',
     ('pyd', 'object'): '.obj',
     }
+
+  _libraries = {}     # Dict of SVNCommonLibrary instances of found libraries
 
   def parse_options(self, options):
     self.apr_path = 'apr'
@@ -217,19 +251,74 @@ class GeneratorBase(gen_base.GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkeley DB library and version"
-    # Before adding "60" to this list, see build/ac-macros/berkeley-db.m4.
-    for ver in ("53", "52", "51", "50", "48", "47", "46",
-                "45", "44", "43", "42", "41", "40"):
-      lib = "libdb" + ver
-      path = os.path.join(self.bdb_path, "lib")
-      if os.path.exists(os.path.join(path, lib + ".lib")):
-        self.bdb_lib = lib
-        break
-      elif os.path.exists(os.path.join(path, lib + "d.lib")):
-        self.bdb_lib = lib
-        break
+
+    # Default to not found
+    self.bdb_lib = None
+
+    inc_path = os.path.join(self.bdb_path, 'include')
+    db_h_path = os.path.join(inc_path, 'db.h')
+
+    if not self.bdb_path or not os.path.isfile(db_h_path):
+      return
+
+    # Obtain bdb version from db.h
+    txt = open(db_h_path).read()
+
+    maj_match = re.search(r'DB_VERSION_MAJOR\s+(\d+)', txt)
+    min_match = re.search(r'DB_VERSION_MINOR\s+(\d+)', txt)
+    patch_match = re.search(r'DB_VERSION_PATCH\s+(\d+)', txt)
+
+    if maj_match and min_match and patch_match:
+      ver = (int(maj_match.group(1)),
+             int(min_match.group(1)),
+             int(patch_match.group(1)))
     else:
-      self.bdb_lib = None
+      return
+
+    version = '%d.%d.%d' % ver
+    versuffix = '%d%d' % (ver[0], ver[1])
+
+    # Before adding "60" to this list, see build/ac-macros/berkeley-db.m4.
+    if versuffix not in (
+            '50', '51', '52', '53',
+            '40', '41', '42', '43', '44', '45', '46', '47', '48',
+       ):
+      return
+
+    lib_dir = os.path.join(self.bdb_path, 'lib')
+    lib_name = 'libdb%s.lib' % (versuffix,)
+
+    if not os.path.exists(os.path.join(lib_dir, lib_name)):
+      return
+
+    # Do we have a debug version?
+    debug_lib_name = 'libdb%sd.lib' % (versuffix,)
+    if not os.path.isfile(os.path.join(lib_dir, debug_lib_name)):
+      debug_lib_name = None
+
+    dll_dir = os.path.join(self.bdb_path, 'bin')
+
+    # Are there binaries we should copy for testing?
+    dll_name = os.path.splitext(lib_name)[0] + '.dll'
+    if not os.path.isfile(os.path.join(dll_dir, dll_name)):
+      dll_name = None
+
+    if debug_lib_name:
+      debug_dll_name = os.path.splitext(debug_lib_name)[0] + '.dll'
+      if not os.path.isfile(os.path.join(dll_dir, debug_dll_name)):
+        debug_dll_name = None
+    else:
+      debug_dll_name = None
+
+    self._libraries['db'] = SVNCommonLibrary('db', inc_path, lib_dir, lib_name,
+                                              version,
+                                              debug_lib_name=debug_lib_name,
+                                              dll_dir=dll_dir,
+                                              dll_name=dll_name,
+                                              debug_dll_name=debug_dll_name)
+
+    # For compatibility with old code
+    self.bdb_lib = self._libraries['db'].lib_name
 
 class WinGeneratorBase(GeneratorBase):
   "Base class for all Windows project files generators"
@@ -245,11 +334,11 @@ class WinGeneratorBase(GeneratorBase):
     # Initialize parent
     GeneratorBase.__init__(self, fname, verfname, options)
 
-    if self.bdb_lib is not None:
-      print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
-                                                 self.bdb_path))
+    if self._libraries['db']:
+      db = self._libraries['db']
+      print('Found BDB %s in %s' % (db.version, self.bdb_path))
     else:
-      print("BDB not found, BDB fs will not be built\n")
+      print('BDB not found, BDB fs will not be built')
 
     if subdir == 'vcnet-vcproj':
       print('Generating for Visual Studio %s\n' % self.vs_version)
@@ -1044,9 +1133,11 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
+    debug = (cfg == 'Debug')
+
     dblib = None
     if self.bdb_lib:
-      dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+      dblib = self.bdb_lib+(debug and 'd.lib' or '.lib')
 
     if self.serf_lib:
       if self.serf_ver_maj != 0:
@@ -1090,26 +1181,52 @@ class WinGeneratorBase(GeneratorBase):
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
 
-      if dep.external_lib == '$(SVN_DB_LIBS)':
-        nondeplibs.append(dblib)
+      if dep.external_lib and \
+         dep.external_lib.startswith('$(SVN_') and \
+         dep.external_lib.endswith('_LIBS)'):
 
-      if dep.external_lib == '$(SVN_SQLITE_LIBS)' and not self.sqlite_inline:
-        nondeplibs.append('sqlite3.lib')
+        external_lib = dep.external_lib[6:-6].lower()
 
-      if self.serf_lib and dep.external_lib == '$(SVN_SERF_LIBS)':
-        nondeplibs.append(serflib)
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
 
-      if dep.external_lib == '$(SVN_SASL_LIBS)':
-        nondeplibs.append(sasllib)
+          if debug:
+            nondeplibs.append(lib.debug_lib_name)
+          else:
+            nondeplibs.append(lib.lib_name)
 
-      if dep.external_lib == '$(SVN_APR_LIBS)':
-        nondeplibs.append(self.apr_lib)
+        elif external_lib == 'sqlite':
 
-      if dep.external_lib == '$(SVN_APRUTIL_LIBS)':
-        nondeplibs.append(self.aprutil_lib)
+          if not self.sqlite_inline:
+            nondeplibs.append('sqlite3.lib')
+          # else: # Is not a linkable library
 
-      if dep.external_lib == '$(SVN_XML_LIBS)':
-        nondeplibs.append('xml.lib')
+        elif external_lib == 'serf':
+
+          if self.serf_lib:
+            nondeplibs.append(serflib)
+
+        elif external_lib == 'sasl':
+
+          if sasllib:
+            nondeplibs.append(sasllib)
+
+        elif external_lib == 'apr':
+          nondeplibs.append(self.apr_lib)
+        elif external_lib == 'aprutil':
+          nondeplibs.append(self.aprutil_lib)
+        elif external_lib == 'xml':
+          nondeplibs.append('xml.lib')
+
+        elif external_lib == 'zlib' or \
+             external_lib == 'apr_memcache' or \
+             external_lib == 'magic':
+          # Currently unhandled
+          lib = None
+
+        else:
+          print('Warning: Using underclared dependency \'%s\'' % \
+                (dep.external_lib,))
 
     return gen_base.unique(nondeplibs)
 

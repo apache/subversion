@@ -330,6 +330,18 @@ def locate_libs():
     suffix = "-1"
   else:
     suffix = ""
+    
+  debug = (objdir == 'Debug')
+  
+  for lib in gen_obj._libraries.values():
+
+    if debug:
+      name, dir = lib.debug_dll_name, lib.debug_dll_dir
+    else:
+      name, dir = lib.dll_name, lib.dll_dir
+      
+    if name and dir:
+      dlls.append(os.path.join(dir, name))
 
   if not cp.has_option('options', '--with-static-apr'):
     dlls.append(os.path.join(gen_obj.apr_path, objdir,
@@ -339,13 +351,6 @@ def locate_libs():
 
   if gen_obj.libintl_path:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
-
-  if gen_obj.bdb_path:
-    partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
-    if objdir == 'Debug':
-      dlls.append(partial_path + 'd.dll')
-    else:
-      dlls.append(partial_path + '.dll')
 
   if gen_obj.sasl_path is not None:
     dlls.append(os.path.join(gen_obj.sasl_path, 'lib', 'libsasl.dll'))
