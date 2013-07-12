@@ -93,75 +93,12 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595,
-     r1502097  (and local: r1499225, r1502099, r1502104, r1502106)
-   Support for HTTP/1.1 reverse proxies that require Content-Length headers
-   and deny chunked requests.
-   Branch: ^/subversion/branches/1.8.x-busted-proxy
-   Justification:
-     Older nginx servers cannot handle chunked requests. This patch will
-     keep HTTP/1.1 features in the connection, but will always use C-L
-     headers for the length (at a variant performance cost). This increases
-     svn's compatibility in various environments. Most installations will
-     never see this; the runtime test is only enabled with a config settting.
-   Notes:
-     r1489117: this is actually unrelated to the proxy work, but it removes
-               some redundant minimum-serf-version checking and allows the
-               actual work to cleanly merge.
-     r1496470: add/respect using_chunked_requests flag to session state
-     r1497975: rename config variable, tweak session variables
-     r1497980: add runtime/dynamic checking of proxy support
-     r1498012: remove improper check of client-side proxy; the real problem
-               is within the server-side reverse proxy
-     r1499423: fix 411 handling
-     r1499595: don't probe when a redirect occurs
-     r1502097: uses consensus option name from the dev@ list
-     .
-     Local to branch:
-     r1499225: remove SVN_CONFIG_OPTION_BUSTED_PROXY from the public API,
-               since we cannot add a symbol in a patch release.
-     r1502099: revert r1499225
-     r1502104: similar to -9225: switch to a private symbol
-     r1502106: a simple catchup merge from 1.8.x
-   Votes:
-     +1: gstein
-     +0.5: breser (+1 if also merging in the tristate changes)
-     +1: lgo (except for r1502097, -2099, -2104, -2106)
-     -0: philip (prefer 1.8.x-tristate-chunked-request)
-     danielsh: thinks the knob's default value should be flipped s/FALSE/TRUE/
-
- * r1500837, r1500857, r1502109
-   Follow up to the r1489117 group, modifies the 411 Content length required
-   error message to point the user to the busted-proxy option.
-   Justification:
-     The original error message was meaningless, these revisions at least
-     guide the user in the right direction.
-   Notes:
-     Depends on the r1489117 group (logically, not merge-wise).
-   Votes:
-     +1: gstein, danielsh, breser
-     +1: lgo (except for r1502109)
-     +1: rhuijben (except for r1502109; and ref r1500857: "but also +1 on
-                   "not applying it if that would be the consensus")
-
- * r1502401
-   Implement the tristate version of http-chunked-request.
-   Branch: ^/subversion/branches/1.8.x-tristate-chunked-request
-   Justification:
-     Better behavior over the boolean (see the mailing list for details)
-   Notes:
-     Revision is actually from ^/subversion/branches/tristate-chunked-request
-     If we reach a consensus on this design it'll be merged to trunk as well.
-     Subsumes ^/subversion/branches/1.8.x-busted-proxy and the r1500837 group.
-   Votes:
-     +1: breser, ivan, danielsh, philip
-
  * r1502577
    Change malfunctions to errors.
    Justification:
      There is no reason to invoke malfunction_handler in those failure modes.
    Votes:
-     +1: danielsh
+     +1: danielsh, gstein
 
 Veto-blocked changes:
 =====================
@@ -194,3 +131,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1502401
+   Implement the tristate version of http-chunked-request.
+   Branch: ^/subversion/branches/1.8.x-tristate-chunked-request
+   Justification:
+     Better behavior over the boolean (see the mailing list for details)
+   Notes:
+     Revision is actually from ^/subversion/branches/tristate-chunked-request
+     If we reach a consensus on this design it'll be merged to trunk as well.
+     Subsumes ^/subversion/branches/1.8.x-busted-proxy and the r1500837 group.
+   Votes:
+     +1: breser, ivan, danielsh, philip
+     -0: gstein
