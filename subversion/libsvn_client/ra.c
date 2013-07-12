@@ -38,7 +38,7 @@
 #include "svn_mergeinfo.h"
 #include "client.h"
 #include "mergeinfo.h"
-#include "ra_ctx.h"
+#include "ra_cache.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -388,9 +388,9 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
           /* Try to open the RA session.  If this is our last attempt,
              don't accept corrected URLs from the RA provider. */
-          SVN_ERR(svn_client__ra_ctx_open_session(
+          SVN_ERR(svn_client__ra_cache_open_session(
                     ra_session, attempts_left == 0 ? NULL : &corrected,
-                    ctx->ra_ctx, base_url, uuid, cbtable, cb, 
+                    ctx->ra_cache, base_url, uuid, cbtable, cb, 
                     result_pool, scratch_pool));
 
           /* No error and no corrected URL?  We're done here. */
@@ -423,7 +423,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     }
   else
     {
-      SVN_ERR(svn_client__ra_ctx_open_session(ra_session, NULL, ctx->ra_ctx,
+      SVN_ERR(svn_client__ra_cache_open_session(ra_session, NULL, ctx->ra_cache,
                                               base_url, uuid, cbtable,
                                               cb, result_pool, scratch_pool));
     }
@@ -1163,6 +1163,6 @@ svn_error_t *
 svn_client__ra_session_release(svn_client_ctx_t *ctx,
                                svn_ra_session_t *session)
 {
-    svn_client__ra_ctx_release_session(ctx->ra_ctx, session);
+    svn_client__ra_cache_release_session(ctx->ra_cache, session);
     return SVN_NO_ERROR;
 }

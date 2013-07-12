@@ -1,5 +1,5 @@
 /*
- * ra.c :  RA session abstraction layer
+ * ra_cache.c :  RA session cache layer
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -26,7 +26,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_private_config.h"
 
-#include "ra_ctx.h"
+#include "ra_cache.h"
 #include "private/svn_debug.h"
 
 #if 0
@@ -55,7 +55,7 @@ typedef struct cached_session_s
   int id;
 } cached_session_t;
 
-struct svn_client__ra_ctx_s
+struct svn_client__ra_cache_s
 {
   /* Hashtable of cached RA sessions. Keys are RA_SESSION_T and values
    * are CACHED_SESION_T pointers. */
@@ -81,11 +81,11 @@ cleanup_session(void *data)
   return APR_SUCCESS;
 }
 
-svn_client__ra_ctx_t *
-svn_client__ra_ctx_create(apr_hash_t *config,
+svn_client__ra_cache_t *
+svn_client__ra_cache_create(apr_hash_t *config,
                           apr_pool_t *pool)
 {
-  svn_client__ra_ctx_t *ctx = apr_pcalloc(pool, sizeof(*ctx));
+  svn_client__ra_cache_t *ctx = apr_pcalloc(pool, sizeof(*ctx));
 
   ctx->pool = pool;
   ctx->cached_session = apr_hash_make(pool);
@@ -257,7 +257,7 @@ progress_func(apr_off_t progress,
 
 static svn_error_t *
 find_session_by_url(cached_session_t **cache_entry_p,
-                    svn_client__ra_ctx_t *ctx,
+                    svn_client__ra_cache_t *ctx,
                     const char *url,
                     apr_pool_t *scratch_pool)
 {
@@ -281,15 +281,15 @@ find_session_by_url(cached_session_t **cache_entry_p,
 }
 
 svn_error_t *
-svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
-                                const char **corrected_p,
-                                svn_client__ra_ctx_t *ctx,
-                                const char *base_url,
-                                const char *uuid,
-                                svn_ra_callbacks2_t *cbtable,
-                                void *callback_baton,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
+svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
+                                  const char **corrected_p,
+                                  svn_client__ra_cache_t *ctx,
+                                  const char *base_url,
+                                  const char *uuid,
+                                  svn_ra_callbacks2_t *cbtable,
+                                  void *callback_baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
 {
   cached_session_t *cache_entry;
 
@@ -394,8 +394,8 @@ svn_client__ra_ctx_open_session(svn_ra_session_t **session_p,
 }
 
 void
-svn_client__ra_ctx_release_session(svn_client__ra_ctx_t *ctx,
-                                   svn_ra_session_t *session)
+svn_client__ra_cache_release_session(svn_client__ra_cache_t *ctx,
+                                     svn_ra_session_t *session)
 {
   cached_session_t *cache_entry = apr_hash_get(ctx->cached_session,
                                                &session, sizeof(session));
