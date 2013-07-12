@@ -193,10 +193,12 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
                                                             and x.install == 'bdb-test')]
 
-    # Drop the serf target if we don't have both serf and openssl
-    if not self.serf_lib:
-      install_targets = [x for x in install_targets if x.name != 'serf']
+    # Drop the ra_serf target if we don't have serf
+    if 'serf' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
+    # Drop the serf target if we don't build serf ourselves
+    if 'serf' not in self._libraries or not self._libraries['serf'].is_src:
+      install_targets = [x for x in install_targets if x.name != 'serf']
 
     # Drop the swig targets if we don't have swig
     if not self.swig_path and not self.swig_libdir:
@@ -521,7 +523,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             and target.external_project):
       return None
 
-    if target.external_project[:5] == 'serf/' and self.serf_lib:
+    if target.external_project[:5] == 'serf/' and 'serf' in self._libraries:
       path = self.serf_path + target.external_project[4:]
     elif target.external_project.find('/') != -1:
       path = target.external_project
@@ -718,7 +720,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
     # XXX: know these things for itself.
-    if self.bdb_lib:
+    if 'db' in self._libraries:
       fakedefines.append("APU_HAVE_DB=1")
       fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
 
@@ -726,7 +728,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
 
-    if self.serf_lib:
+    if 'serf' in self._libraries:
       fakedefines.append("SVN_HAVE_SERF")
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
@@ -781,9 +783,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
-
-    if self.serf_lib:
-      fakeincludes.append(self.apath(self.serf_path))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -851,8 +850,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
-    if self.serf_lib:
-      fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
@@ -879,12 +876,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     dblib = None
     if self.bdb_lib:
       dblib = self.bdb_lib+(debug and 'd.lib' or '.lib')
-
-    if self.serf_lib:
-      if self.serf_ver_maj != 0:
-        serflib = 'serf-%d.lib' % self.serf_ver_maj
-      else:
-        serflib = 'serf.lib'
 
     sasllib = None
     if self.sasl_path:
@@ -939,11 +930,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           if not self.sqlite_inline:
             nondeplibs.append('sqlite3.lib')
           # else: # Is not a linkable library
-
-        elif external_lib == 'serf':
-
-          if self.serf_lib:
-            nondeplibs.append(serflib)
 
         elif external_lib == 'sasl':
 
@@ -1033,8 +1019,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                         ))
 
   def write_serf_project_file(self, name):
-    if not self.serf_lib:
+    if 'serf' not in self._libraries:
       return
+      
+    serf = self._libraries['serf']
+    
+    if not serf.is_src:
+      return # Using an installed library
 
     serf_path = os.path.abspath(self.serf_path)
     serf_sources = map(lambda x : os.path.relpath(x, self.serf_path),
@@ -1046,10 +1037,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                        glob.glob(os.path.join(serf_path, '*.h'))
                        + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
                        + glob.glob(os.path.join(serf_path, 'buckets', '*.h')))
-    if self.serf_ver_maj != 0:
-      serflib = 'serf-%d.lib' % self.serf_ver_maj
-    else:
-      serflib = 'serf.lib'
 
     apr_static = self.static_apr and 'APR_STATIC=1' or ''
     openssl_static = self.static_openssl and 'OPENSSL_STATIC=1' or ''
@@ -1067,7 +1054,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                          ('project_guid', self.makeguid('serf')),
                          ('apr_static', apr_static),
                          ('openssl_static', openssl_static),
-                         ('serf_lib', serflib),
+                         ('serf_lib', serf.lib_name),
                         ))
 
   def move_proj_file(self, path, name, params=()):

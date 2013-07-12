@@ -111,7 +111,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.serf_path = None
-    self.serf_lib = None
     self.bdb_path = 'db4-win32'
     self.httpd_path = None
     self.libintl_path = None
@@ -256,11 +255,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       self.find_libraries(False)
       
   def find_libraries(self, show_warnings):
-  
+
+    # Required dependencies
     self._find_apr()
     self._find_apr_util_and_expat()
-    # Find Berkeley DB
+    self._find_zlib()
+
+    # Optional dependencies
     self._find_bdb(show_warnings)
+    self._find_openssl(show_warnings)
+    self._find_serf(show_warnings)
+    
     
     if show_warnings:
       # Find the right Ruby include and libraries dirs and
@@ -282,17 +287,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Find Sqlite
       self._find_sqlite()
 
-      # Look for ZLib and ML
-      if self.zlib_path:
-        self._find_zlib()
-        self._find_ml()
-
-      # Find serf and its dependencies
-      if self.serf_path:
-        self._find_serf()
     
     if show_warnings:
+      printed = []
       for lib in self._libraries.values():
+        if lib.name in printed:
+          continue 
+        printed.append(lib.name)
         print('Found %s %s' % (lib.name, lib.version))
     
   def _find_apr(self):
@@ -551,6 +552,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                 self.zlib_version,
                                                 debug_lib_name=debug_lib_name,
                                                 is_src=is_src)
+    if is_src:
+      self._find_ml()
 
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
@@ -564,7 +567,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not self.bdb_path or not os.path.isfile(db_h_path):
       if show_warnings and self.bdb_path:
         print('WARNING: \'%s\' not found' % (db_h_path,))
-        print("Use '--with-berkeley-db' to configure BDB location.\n");
+        print("Use '--with-berkeley-db' to configure BDB location.");
       return
 
     # Obtain bdb version from db.h
@@ -625,6 +628,61 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     # For compatibility with old code
     self.bdb_lib = self._libraries['db'].lib_name
+
+  def _find_openssl(self, show_warnings):
+    "Find openssl"
+    
+    if not self.openssl_path:
+      return
+      
+    version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
+    if os.path.isfile(version_path):
+      # We have an OpenSSL Source location
+      # For legacy reason
+      inc_dir = os.path.join(self.openssl_path, 'inc32')
+      if self.static_openssl:
+        lib_dir = os.path.join(self.openssl_path, 'out32')
+      else:
+        lib_dir = os.path.join(self.openssl_path, 'out32dll')
+        bin_dir = os.path.join(self.openssl_path, 'out32dll')
+    elif os.path.isfile(os.path.join(self.openssl_path,
+                        'include/openssl/opensslv.h')):
+      version_path = os.path.join(self.openssl_path,
+                                  'include/openssl/opensslv.h')
+      inc_dir = os.path.join(self.openssl_path, 'include')
+      lib_dir = os.path.join(self.openssl_path, 'lib')
+      if self.static_openss:
+        self.bin_dir = None
+      else:
+        self.bin_dir = os.path.join(self.openssl_path, 'bin')
+    else:
+      if show_warning:
+        print('WARNING: \'opensslv.h\' not found')
+        print("Use '--with-openssl' to configure openssl location.");
+      return
+
+    txt = open(version_path).read()
+
+    vermatch = re.search(
+      r'#define OPENSSL_VERSION_TEXT	"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
+      txt)
+  
+    version = (int(vermatch.group(2)), 
+               int(vermatch.group(3)),
+               int(vermatch.group(4)))
+    openssl_version = vermatch.group(1)
+  
+    self._libraries['ssleay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
+                                                    'ssleay32.lib',
+                                                    openssl_version,
+                                                    dll_name='ssleay32.dll',
+                                                    dll_dir=bin_dir)
+
+    self._libraries['libeay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
+                                                    'libeay32.lib',
+                                                    openssl_version,
+                                                    dll_name='libeay32.dll',
+                                                    dll_dir=bin_dir)                                                    
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -820,21 +878,21 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     finally:
       fp.close()
 
-  def _get_serf_version(self):
+  def _get_serf_version(self, inc_dir):
     "Retrieves the serf version from serf.h"
 
     # shouldn't be called unless serf is there
-    assert self.serf_path and os.path.exists(self.serf_path)
+    assert inc_dir and os.path.exists(inc_dir)
 
     self.serf_ver_maj = None
     self.serf_ver_min = None
     self.serf_ver_patch = None
 
     # serf.h should be present
-    if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
+    if not os.path.exists(os.path.join(inc_dir, 'serf.h')):
       return None, None, None
 
-    txt = open(os.path.join(self.serf_path, 'serf.h')).read()
+    txt = open(os.path.join(inc_dir, 'serf.h')).read()
 
     maj_match = re.search(r'SERF_MAJOR_VERSION\s+(\d+)', txt)
     min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
@@ -848,31 +906,60 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
 
-  def _find_serf(self):
+  def _find_serf(self, show_warning):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 2, 1)
-    self.serf_lib = None
-    if self.serf_path and os.path.exists(self.serf_path):
-      if self.openssl_path and os.path.exists(self.openssl_path):
-        self.serf_lib = 'serf'
-        version = self._get_serf_version()
-        if None in version:
-          msg = 'Unknown serf version found; but, will try to build ' \
-                'ra_serf.'
-        else:
-          self.serf_ver = '.'.join(str(v) for v in version)
-          if version < minimal_serf_version:
-            self.serf_lib = None
-            msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
-                  (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
-          else:
-            msg = 'Found serf %s' % self.serf_ver
-        print(msg)
+    
+    if not self.serf_path:
+      return
+    
+    inc_dir = self.serf_path
+    
+    if os.path.isfile(os.path.join(inc_dir, 'serf.h')):
+      # Source layout
+      version = self._get_serf_version(inc_dir)
+      
+      if version < (1, 3, 0):
+        lib_dir = os.path.join(self.serf_path, 'Release')
+        debug_lib_dir = os.path.join(self.serf_path, 'Debug')
       else:
-        print('openssl not found, ra_serf will not be built\n')
+        lib_dir = self.serf_path
+        debug_lib_dir = None
+      is_src = True
+    elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-1/serf.h')):
+      # Install layout
+      inc_dir = os.path.join(self.serf_path, 'include/serf-1')
+      version = self._get_serf_version(inc_dir)
+      lib_dir = os.path.join(inc_dir, 'lib')
+      debug_lib_dir = None
+      is_src = False
     else:
-      print('serf not found, ra_serf will not be built\n')
+      if show_warning:
+        print('WARNING: \'serf.h\' not found')
+        print("Use '--with-serf' to configure serf location.");
+      return
+    
+    if is_src and 'ssleay32' not in self._libraries:
+      if show_warning:
+        print('openssl not found, serf and ra_serf will not be built')
+      return
+    
+    if version < minimal_serf_version:
+      msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
+            (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
+      return
+      
+    if self.serf_ver_maj > 0:
+      lib_name = 'serf-%d.lib' % (self.serf_ver_maj,)
+    else:
+      lib_name = 'serf.lib'
+      
+    serf_version = '.'.join(str(v) for v in version)
+    self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
+                                                lib_name, serf_version,
+                                                debug_lib_dir=debug_lib_dir,
+                                                is_src=is_src)
 
   def _find_sqlite(self):
     "Find the Sqlite library and version"
