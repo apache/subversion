@@ -151,14 +151,9 @@ Candidate changes:
    Notes:
      Revision is actually from ^/subversion/branches/tristate-chunked-request
      If we reach a consensus on this design it'll be merged to trunk as well.
-     To review do the following merges (it should just merge once the other
-       two are commited but I could be wrong):
-       svn merge ^/subversion/branches/1.8.x-busted-proxy
-       svn merge -c 'r1500837, r1500857, r1502109' ^/subversion/trunk
-       svn merge --accept=tc -c 1502440 ^/subversion/branches/1.8.x-tristate-chunked-request
-   Depends: ^/subversion/branches/1.8.x-busted-proxy, r1500837, r1500857, r1502109   
+     Subsumes ^/subversion/branches/1.8.x-busted-proxy.
    Votes:
-     +1: breser, ivan, danielsh
+     +1: breser, ivan, danielsh, philip
 
  * r1502577
    Change malfunctions to errors.
