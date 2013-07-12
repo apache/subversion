@@ -126,7 +126,8 @@ Candidate changes:
    Votes:
      +1: gstein
      +0.5: breser (+1 if also merging in the tristate changes)
-     +1: philip, lgo (except for r1502097, -2099, -2104, -2106)
+     +1: lgo (except for r1502097, -2099, -2104, -2106)
+     -0: philip (prefer 1.8.x-tristate-chunked-request)
      danielsh: thinks the knob's default value should be flipped s/FALSE/TRUE/
 
  * r1500837, r1500857, r1502109
