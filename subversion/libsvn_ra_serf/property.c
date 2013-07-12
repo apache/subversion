@@ -143,7 +143,7 @@ static const int propfind_expected_status[] = {
 
 /* Return the HTTP status code contained in STATUS_LINE, or 0 if
    there's a problem parsing it. */
-static int parse_status_code(const char *status_line)
+static apr_int64_t parse_status_code(const char *status_line)
 {
   /* STATUS_LINE should be of form: "HTTP/1.1 200 OK" */
   if (status_line[0] == 'H' &&
@@ -261,7 +261,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
          that we wish to ignore.  (Typically, if it's not a 200, the
          status will be 404 to indicate that a property we
          specifically requested from the server doesn't exist.)  */
-      int status = parse_status_code(cdata->data);
+      apr_int64_t status = parse_status_code(cdata->data);
       if (status != 200)
         svn_ra_serf__xml_note(xes, PROPSTAT, "ignore-prop", "*");
     }
