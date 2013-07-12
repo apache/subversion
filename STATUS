@@ -157,7 +157,7 @@ Candidate changes:
        svn merge --accept=tc -c 1502440 ^/subversion/branches/1.8.x-tristate-chunked-request
    Depends: ^/subversion/branches/1.8.x-busted-proxy, r1500837, r1500857, r1502109   
    Votes:
-     +1: breser
+     +1: breser, ivan
 
 Veto-blocked changes:
 =====================
