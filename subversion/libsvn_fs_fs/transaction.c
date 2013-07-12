@@ -1783,7 +1783,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   void *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
   int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
-  svn_fs_fs__rep_header_t header = { TRUE };
+  svn_fs_fs__rep_header_t header = { 0 };
 
   b = apr_pcalloc(pool, sizeof(*b));
 
@@ -2303,7 +2303,7 @@ write_hash_delta_rep(representation_t *rep,
   representation_t *base_rep;
   representation_t *old_rep;
   svn_stream_t *source;
-  svn_fs_fs__rep_header_t header = { TRUE };
+  svn_fs_fs__rep_header_t header = { 0 };
 
   apr_off_t rep_end = 0;
   apr_off_t delta_start = 0;

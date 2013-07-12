@@ -1821,7 +1821,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   svn_txdelta_window_handler_t wh;
   void *whb;
   int diff_version = 1;
-  svn_fs_x__rep_header_t header = { TRUE };
+  svn_fs_x__rep_header_t header = { 0 };
 
   b = apr_pcalloc(pool, sizeof(*b));
 
@@ -2253,7 +2253,7 @@ write_hash_delta_rep(representation_t *rep,
   representation_t *base_rep;
   representation_t *old_rep;
   svn_stream_t *source;
-  svn_fs_x__rep_header_t header = { TRUE };
+  svn_fs_x__rep_header_t header = { 0 };
 
   apr_off_t rep_end = 0;
   apr_off_t delta_start = 0;
