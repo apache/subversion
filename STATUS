@@ -93,9 +93,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
-Veto-blocked changes:
-=====================
-
  * r1489117, r1496470, r1497975, r1497980, r1498012, r1499423, r1499595,
      r1502097  (and local: r1499225, r1502099, r1502104, r1502106)
    Support for HTTP/1.1 reverse proxies that require Content-Length headers
@@ -128,9 +125,8 @@ Veto-blocked changes:
      r1502106: a simple catchup merge from 1.8.x
    Votes:
      +1: gstein
+     +0.5: breser (+1 if also merging in the tristate changes)
      +1: philip, lgo (except for r1502097, -2099, -2104, -2106)
-     -1: breser (given danielsh's veto, the discussion on IRC and my email to
-                 dev I think we need to discuss this more before approving)
 
  * r1500837, r1500857, r1502109
    Follow up to the r1489117 group, modifies the 411 Content length required
@@ -141,11 +137,13 @@ Veto-blocked changes:
    Notes:
      Depends on the r1489117 group (logically, not merge-wise).
    Votes:
-     +1: gstein, danielsh
-     +1: lgo, breser (except for r1502109)
+     +1: gstein, danielsh, breser
+     +1: lgo (except for r1502109)
      +1: rhuijben (except for r1502109; and ref r1500857: "but also +1 on
                    "not applying it if that would be the consensus")
-     -1: (not vetoed, but depends on the r1489117 group which is)
+
+Veto-blocked changes:
+=====================
 
  * r1501049, r1501371
    ra_serf: Return Subversion error codes in svn_error_t.
