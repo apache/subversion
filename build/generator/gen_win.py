@@ -188,7 +188,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
     # Drop the libsvn_fs_base target and tests if we don't have BDB
-    if not self.bdb_lib:
+    if 'db' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_fs_base']
       install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
                                                             and x.install == 'bdb-test')]
@@ -214,6 +214,12 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
 
+    # If we don't build 'ZLib' ourself, remove this target and all the dependencies on it
+    if not self._libraries['zlib'].is_src:
+      install_targets = [x for x in install_targets if x.name != 'zlib']
+      # TODO: Fixup dependencies
+
+    # Create DLL targets for libraries
     dll_targets = []
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib):
@@ -538,8 +544,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
 
-    # Build ZLib as a dependency of Serf if we have it
-    if self.zlib_path and name == 'serf':
+    # Make ZLib a dependency of serf if we build the zlib src
+    if name == 'serf' and self._libraries['zlib'].is_src:
       depends.extend(self.sections['zlib'].get_targets())
 
     # To set the correct build order of the JavaHL targets, the javahl-javah
@@ -561,7 +567,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     dep_dict = {}
 
-    if isinstance(target, gen_base.TargetLib) and target.msvc_static:
+    if mode == FILTER_EXTERNALLIBS:
+      self.get_externallib_depends(target, dep_dict)
+    elif isinstance(target, gen_base.TargetLib) and target.msvc_static:
       self.get_static_win_depends(target, dep_dict)
     else:
       self.get_linked_win_depends(target, dep_dict)
@@ -573,6 +581,10 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         if is_proj:
           deps.append(dep)
     elif mode == FILTER_LIBS:
+      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
+        if is_static or (is_lib and not is_proj):
+          deps.append(dep)
+    elif mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
           deps.append(dep)
@@ -659,6 +671,16 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       elif is_static:
         self.get_linked_win_depends(dep, deps, 1)
 
+  def get_externallib_depends(self, target, deps):
+    """Find externallib dependencies for a project"""
+    
+    direct_deps = self.get_direct_depends(target)
+    for dep, dep_kind in direct_deps:
+      self.get_externallib_depends(dep, deps)
+      
+      if isinstance(target, gen_base.TargetLinked) and dep.external_lib:
+        deps[dep] = dep_kind
+        
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
 
@@ -723,18 +745,29 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
   def get_win_includes(self, target):
     "Return the list of include directories for target"
 
-    fakeincludes = [ self.path("subversion/include"),
-                     self.path("subversion"),
-                     self.apath(self.apr_path, "include"),
-                     self.apath(self.apr_util_path, "include") ]
+    fakeincludes = [ self.apath("subversion/include"),
+                     self.apath("subversion") ]
+                     
+    for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+      if dep.external_lib and \
+         dep.external_lib.startswith('$(SVN_') and \
+         dep.external_lib.endswith('_LIBS)'):
+
+        external_lib = dep.external_lib[6:-6].lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+          inc_dir = self.apath(lib.include_dir)
+      
+          # Avoid duplicate items
+          if inc_dir and inc_dir not in fakeincludes:
+            fakeincludes.extend([inc_dir])
 
     if target.name == 'mod_authz_svn':
       fakeincludes.extend([ self.apath(self.httpd_path, "modules/aaa") ])
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
-                            self.apath(self.httpd_path, "include"),
-                            self.apath(self.bdb_path, "include") ])
+      fakeincludes.extend([ self.apath(self.httpd_path, "include") ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
@@ -744,9 +777,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                             self.path("subversion/bindings/swig/include"),
                             self.path(util_includes) ])
     else:
-      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
-                            self.path("subversion/bindings/swig/proxy"),
-                            self.apath(self.bdb_path, "include") ])
+      fakeincludes.extend([ self.path("subversion/bindings/swig/proxy") ])
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
@@ -772,8 +803,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.append(self.apath(self.zlib_path))
-
     if self.sqlite_inline:
       fakeincludes.append(self.apath(self.sqlite_path))
     else:
@@ -794,15 +823,28 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
-    expatlibcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
-    if self.static_apr:
-      libcfg = expatlibcfg
-    else:
-      libcfg = cfg
+    debug = (cfg == 'Debug')
 
-    fakelibdirs = [ self.apath(self.bdb_path, "lib"),
-                    self.apath(self.zlib_path),
-                    ]
+    fakelibdirs = []
+                    
+    for dep in self.get_win_depends(target, FILTER_LIBS):
+      if dep.external_lib and \
+         dep.external_lib.startswith('$(SVN_') and \
+         dep.external_lib.endswith('_LIBS)'):
+
+        external_lib = dep.external_lib[6:-6].lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+          
+          if debug:
+            lib_dir = self.apath(lib.debug_lib_dir)
+          else:
+            lib_dir = self.apath(lib.lib_dir)
+      
+          # Avoid duplicate items
+          if lib_dir and lib_dir not in fakelibdirs:
+            fakelibdirs.extend([lib_dir])
 
     if not self.sqlite_inline:
       fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
@@ -811,11 +853,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
       fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
-
-    fakelibdirs.append(self.apath(self.apr_path, libcfg))
-    fakelibdirs.append(self.apath(self.apr_util_path, libcfg))
-    fakelibdirs.append(self.apath(self.apr_util_path, 'xml', 'expat',
-                                  'lib', expatlibcfg))
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
@@ -849,7 +886,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       else:
         serflib = 'serf.lib'
 
-    zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
     if self.sasl_path:
       sasllib = 'libsasl.lib'
@@ -861,7 +897,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
-    nondeplibs.append(zlib)
     if self.enable_nls:
       if self.libintl_path:
         nondeplibs.append(self.apath(self.libintl_path,
@@ -915,8 +950,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           if sasllib:
             nondeplibs.append(sasllib)
 
-        elif external_lib == 'zlib' or \
-             external_lib == 'apr_memcache' or \
+        elif external_lib == 'apr_memcache' or \
              external_lib == 'magic':
           # Currently unhandled
           lib = None
@@ -1067,6 +1101,7 @@ class ProjectItem:
 
 FILTER_LIBS = 1
 FILTER_PROJECTS = 2
+FILTER_EXTERNALLIBS = 3
 
 class POFile:
   "Item class for holding po file info"
