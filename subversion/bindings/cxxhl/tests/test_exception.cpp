@@ -138,7 +138,7 @@ int test_error()
   return false;
 }
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
 
 TEST(Exceptions, DummyTest)
 {
