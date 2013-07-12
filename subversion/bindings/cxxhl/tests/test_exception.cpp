@@ -138,17 +138,13 @@ int test_error()
   return false;
 }
 
+#include "gmock/gmock.h"
 
-int disabled_main()
+TEST(Exceptions, DummyTest)
 {
-  apr_initialize();
-
   const char *stat  = (test_cancel() ? "OK" : "ERROR");
   std::cerr << "test_cancel .... " << stat << std::endl;
 
   stat = (test_error() ? "OK" : "ERROR");
   std::cerr << "test_error ..... " << stat << std::endl;
-
-  apr_terminate();
-  return 0;
 }
