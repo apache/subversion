@@ -142,6 +142,23 @@ Candidate changes:
      +1: rhuijben (except for r1502109; and ref r1500857: "but also +1 on
                    "not applying it if that would be the consensus")
 
+ * r1502401
+   Implement the tristate version of http-chunked-request.
+   Branch: ^/subversion/branches/1.8.x-tristate-chunked-request
+   Justification:
+     Better behavior over the boolean (see the mailing list for details)
+   Notes:
+     Revision is actually from ^/subversion/branches/tristate-chunked-request
+     If we reach a consensus on this design it'll be merged to trunk as well.
+     To review do the following merges (it should just merge once the other
+       two are commited but I could be wrong):
+       svn merge ^/subversion/branches/1.8.x-busted-proxy
+       svn merge -c 'r1500837, r1500857, r1502109' ^/subversion/trunk
+       svn merge --accept=tc -c 1502440 ^/subversion/branches/1.8.x-tristate-chunked-request
+   Depends: ^/subversion/branches/1.8.x-busted-proxy, r1500837, r1500857, r1502109   
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
