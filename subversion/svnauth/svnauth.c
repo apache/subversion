@@ -179,7 +179,7 @@ typedef enum svnauth__cert_info_keys {
   svnauth__cert_key_not_after,
 } svnauth__cert_info_keys;
 
-svn_token_map_t cert_info_key_map[] = {
+static svn_token_map_t cert_info_key_map[] = {
     { "CN",         svnauth__cert_key_cn },
     { "E",          svnauth__cert_key_e },
     { "OU",         svnauth__cert_key_ou },
