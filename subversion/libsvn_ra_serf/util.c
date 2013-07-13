@@ -1502,6 +1502,8 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
           if (xml_status != XML_STATUS_OK)
             {
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                       _("XML parsing failed"));
             }
         }
 
