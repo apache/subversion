@@ -141,7 +141,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 
@@ -1810,9 +1810,9 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         if (fsfs_info->shard_size)
           {
             const int shard_size = fsfs_info->shard_size;
-            const int shards_packed = fsfs_info->min_unpacked_rev / shard_size;
-            const int shards_full = (youngest + 1) / shard_size;
-            SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %d/%d\n"),
+            const long shards_packed = fsfs_info->min_unpacked_rev / shard_size;
+            const long shards_full = (youngest + 1) / shard_size;
+            SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %ld/%ld\n"),
                                        shards_packed, shards_full));
           }
       }

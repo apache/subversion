@@ -3557,6 +3557,101 @@ svn_io_file_seek(apr_file_t *file, apr_seek_where_t where,
              pool);
 }
 
+svn_error_t *
+svn_io_file_aligned_seek(apr_file_t *file,
+                         apr_off_t block_size,
+                         apr_off_t *buffer_start,
+                         apr_off_t offset,
+                         apr_pool_t *pool)
+{
+  const apr_size_t apr_default_buffer_size = 4096;
+  apr_size_t file_buffer_size = apr_default_buffer_size;
+  apr_off_t desired_offset = 0;
+  apr_off_t current = 0;
+  apr_off_t aligned_offset = 0;
+  svn_boolean_t fill_buffer = FALSE;
+
+  /* paranoia check: huge blocks on 32 bit machines may cause overflows */
+  SVN_ERR_ASSERT(block_size == (apr_size_t)block_size);
+
+  /* default for invalid block sizes */
+  if (block_size == 0)
+    block_size = apr_default_buffer_size;
+
+  /* on old APRs, we are simply stuck with 4k blocks */
+#if APR_VERSION_AT_LEAST(1,3,0)
+  file_buffer_size = apr_file_buffer_size_get(file);
+
+  /* don't try to set a buffer size for non-buffered files! */
+  if (file_buffer_size == 0)
+    {
+      aligned_offset = offset;
+    }
+  else if (file_buffer_size != (apr_size_t)block_size)
+    {
+      /* FILE has the wrong buffer size. correct it */
+      char *buffer;
+      file_buffer_size = (apr_size_t)block_size;
+      buffer = apr_palloc(apr_file_pool_get(file), file_buffer_size);
+      apr_file_buffer_set(file, buffer, file_buffer_size);
+
+      /* seek to the start of the block and cause APR to read 1 block */
+      aligned_offset = offset - (offset % block_size);
+      fill_buffer = TRUE;
+    }
+#endif
+    {
+      aligned_offset = offset - (offset % file_buffer_size);
+
+      /* We have no way to determine the block start of an APR file.
+         Furthermore, we don't want to throw away the current buffer
+         contents.  Thus, we re-align the buffer only if the CURRENT
+         offset definitely lies outside the desired, aligned buffer.
+         This covers the typical case of linear reads getting very
+         close to OFFSET but reading the previous / following block.
+
+         Note that ALIGNED_OFFSET may still be within the current
+         buffer and no I/O will actually happen in the FILL_BUFFER
+         section below.
+       */
+      SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+      fill_buffer = aligned_offset + file_buffer_size <= current
+                 || current <= aligned_offset;
+    }
+
+  if (fill_buffer)
+    {
+      char dummy;
+      apr_status_t status;
+
+      /* seek to the start of the block and cause APR to read 1 block */
+      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
+      status = apr_file_getc(&dummy, file);
+
+      /* read may fail if we seek to or behind EOF.  That's ok then. */
+      if (status != APR_SUCCESS && !APR_STATUS_IS_EOF(status))
+        return do_io_file_wrapper_cleanup(file, status,
+                                          N_("Can't read file '%s'"),
+                                          N_("Can't read stream"),
+                                          pool);
+    }
+
+  /* finally, seek to the OFFSET the caller wants */
+  desired_offset = offset;
+  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  if (desired_offset != offset)
+    return do_io_file_wrapper_cleanup(file, APR_EOF,
+                                      N_("Can't seek in file '%s'"),
+                                      N_("Can't seek in stream"),
+                                      pool);
+
+  /* return the buffer start that we (probably) enforced */
+  if (buffer_start)
+    *buffer_start = aligned_offset;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_io_file_write(apr_file_t *file, const void *buf,

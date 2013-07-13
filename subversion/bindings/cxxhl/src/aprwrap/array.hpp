@@ -60,7 +60,7 @@ public:
   /**
    * Create a new proxy for the APR array wrapped by @a that.
    */
-  explicit Array(const Array& that) throw()
+  Array(const Array& that) throw()
     : m_array(that.m_array)
     {}
 
@@ -105,7 +105,7 @@ public:
    */
   const value_type& at(size_type index) const throw(std::out_of_range)
     {
-      if (index < 0 || index > size())
+      if (index < 0 || index >= size())
         throw std::out_of_range(_("APR array index is out of range"));
       return (*this)[index];
     }
@@ -124,7 +124,7 @@ public:
    */
   value_type& at(size_type index) throw(std::out_of_range)
     {
-      if (index < 0 || index > size())
+      if (index < 0 || index >= size())
         throw std::out_of_range(_("APR array index is out of range"));
       return (*this)[index];
     }
@@ -213,7 +213,7 @@ public:
   /**
    * Create a new proxy for the APR array wrapped by @a that.
    */
-  explicit ConstArray(const ConstArray& that) throw()
+  ConstArray(const ConstArray& that) throw()
     : inherited(that)
     {}
 
@@ -268,13 +268,13 @@ public:
   /**
    * Abstract base class for immutable iteration callback functors.
    */
-  typedef typename inherited::ConstIteration ConstIteration;
+  typedef typename inherited::ConstIteration Iteration;
 
   /**
    * Iterate over all the values pairs in the array, invoking
    * @a callback for each one.
    */
-  void iterate(ConstIteration& callback) const
+  void iterate(Iteration& callback) const
     {
       inherited::iterate(callback);
     }

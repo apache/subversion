@@ -628,6 +628,28 @@ fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl Googlemock -----------------
+AC_ARG_ENABLE([gmock],
+  AS_HELP_STRING([--disable-gmock],
+                 [Do not use the Googlemock testing framework]),
+  [enable_gmock=yes],
+  [enable_gmock="$withval"])
+
+AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_MSG_CHECKING([whether use Googlemock])
+if test "$enable_gmock" != "no"; then
+  if test -d "$GMOCK_SRCDIR"; then
+    AC_MSG_RESULT([yes])
+    SVN_USE_GMOCK=true
+  else
+    AC_MSG_RESULT([no])
+    SVN_USE_GMOCK=false
+  fi
+else
+  AC_MSG_RESULT([no])
+  SVN_USE_GMOCK_SOURCES=false
+fi
+AC_SUBST([SVN_USE_GMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -710,6 +732,26 @@ AH_BOTTOM([
 #define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
+#endif
+
+/* compiler hints */
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
+# define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+# define SVN__PREDICT_FALSE(x)
+# define SVN__PREDICT_TRUE(x)
+#endif
+
+#if defined(SVN_DEBUG)
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#elif defined(__GNUC__)
+# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__PREVENT_INLINE __attribute__ ((noinline))
+#else
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
 #endif
 ])
 
@@ -1003,6 +1045,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
 
         CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
         CFLAGS="$CFLAGS_KEEP"

@@ -108,12 +108,12 @@ CMDLINE_TEST_SCRIPT_NATIVE_PATH = CMDLINE_TEST_SCRIPT_PATH.replace('/', os.sep)
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
-import gen_win
+import gen_win_dependencies
 version_header = os.path.join('subversion', 'include', 'svn_version.h')
 cp = configparser.ConfigParser()
 cp.read('gen-make.opts')
-gen_obj = gen_win.GeneratorBase('build.conf', version_header,
-                                cp.items('options'))
+gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
+                                                   cp.items('options'))
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
 client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
@@ -324,28 +324,20 @@ def locate_libs():
 
   dlls = []
 
-  # look for APR 1.x dll's and use those if found
-  apr_test_path = os.path.join(gen_obj.apr_path, objdir, 'libapr-1.dll')
-  if os.path.exists(apr_test_path):
-    suffix = "-1"
-  else:
-    suffix = ""
+  debug = (objdir == 'Debug')
+  
+  for lib in gen_obj._libraries.values():
 
-  if not cp.has_option('options', '--with-static-apr'):
-    dlls.append(os.path.join(gen_obj.apr_path, objdir,
-                             'libapr%s.dll' % (suffix)))
-    dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
-                             'libaprutil%s.dll' % (suffix)))
+    if debug:
+      name, dir = lib.debug_dll_name, lib.debug_dll_dir
+    else:
+      name, dir = lib.dll_name, lib.dll_dir
+      
+    if name and dir:
+      dlls.append(os.path.join(dir, name))
 
   if gen_obj.libintl_path:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
-
-  if gen_obj.bdb_path:
-    partial_path = os.path.join(gen_obj.bdb_path, 'bin', gen_obj.bdb_lib)
-    if objdir == 'Debug':
-      dlls.append(partial_path + 'd.dll')
-    else:
-      dlls.append(partial_path + '.dll')
 
   if gen_obj.sasl_path is not None:
     dlls.append(os.path.join(gen_obj.sasl_path, 'lib', 'libsasl.dll'))
