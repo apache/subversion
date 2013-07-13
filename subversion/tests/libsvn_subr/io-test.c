@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "private/svn_skel.h"
+#include "private/svn_dep_compat.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
