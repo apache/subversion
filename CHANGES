@@ -61,6 +61,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * update: fix some tree conflicts not triggering resolver (r1491868 et al)
     * commit: remove stale entries from wc lock table when deleting (r1491756)
     * merge: fix --record-only erroring out on renamed path (issue #4387)
+    * svnmucc: fix 'make install' symlink to work when DESTDIR is set (r1501072)
 
   - Server-side bugfixes:
     * fsfs: resolve endless loop problem when repos/db/uuid has \r\n (r1492145)
@@ -73,7 +74,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * svnadmin upgrade: fix error of non-sharded fsfs repositories (r1494287)
     * svnadmin create: deny '--fs-type=fsfs --compatible-version=1.0' (r1494223)
     * svnadmin upgrade: fix data loss when cancelling in last stage (r1494298)
-    * svnmucc: fix 'make install' symlink to work when DESTDIR is set (r1501072)
 
   - Other tool improvements and bugfixes:
     * fsfs-stats (tool): resolve segfault when passing invalid path (r1492164)
