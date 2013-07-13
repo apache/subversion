@@ -137,6 +137,11 @@ Candidate changes:
      the data where possible.
    Votes:
      +1: rhuijben
+     =0: danielsh (like the idea, but it's an API violation:
+		   * If any invocation of @a receiver returns error, return
+		   * that error immediately and without wrapping it.
+		   says svn_ra_get_logs2().  The patch discards the error
+                   chain the receiver returned.)
 
  * r1468980, r1478987, r1502811
    Reduce the number of ra sessions for automatic merge calculations to two.
