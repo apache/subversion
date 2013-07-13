@@ -1501,6 +1501,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_boolean_t want_author = FALSE;
   svn_boolean_t want_message = FALSE;
   svn_boolean_t want_date = FALSE;
+  svn_boolean_t cease_invocation = FALSE;
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1646,8 +1647,10 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         cphash = NULL;
 
       nreceived = 0;
-      if (! (limit && (nest_level == 0) && (++nreceived > limit)))
+      if (! (limit && (nest_level == 0) && (++nreceived > limit))
+          && ! cease_invocation)
         {
+          svn_error_t *err;
           log_entry = svn_log_entry_create(iterpool);
 
           log_entry->changed_paths = cphash;
@@ -1671,7 +1674,12 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             svn_hash_sets(log_entry->revprops,
                           SVN_PROP_REVISION_LOG, message);
 
-          SVN_ERR(receiver(receiver_baton, log_entry, iterpool));
+          err = receiver(receiver_baton, log_entry, iterpool);
+          if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+            {
+              svn_error_clear(err);
+              cease_invocation = TRUE;
+            }
           if (log_entry->has_children)
             {
               nest_level++;
@@ -1686,7 +1694,16 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
   /* Read the response. */
-  return svn_ra_svn__read_cmd_response(conn, pool, "");
+  {
+    svn_error_t *err = svn_ra_svn__read_cmd_response(conn, pool, "");
+
+    if (cease_invocation)
+      err = svn_error_compose_create(
+                svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL),
+                err);
+
+    return svn_error_trace(err);
+  }
 }
 
 
