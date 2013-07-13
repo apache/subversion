@@ -52,7 +52,7 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
 
- * r1501199, r1501207
+ * r1501199, r1501207, r1502777
    Verify the result of the xml parser in ra serf, instead of assuming the
    parsing always succeeds.
    Justification:
