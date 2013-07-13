@@ -85,7 +85,7 @@ init(const char *application)
   if (svn_cmdline_init(application, stderr))
     exit(EXIT_FAILURE);
 
-  err = svn_ver_check_list(&my_version, checklist);
+  err = svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
   if (err)
     handle_error(err, NULL);
 
@@ -1145,13 +1145,18 @@ main(int argc, const char **argv)
           break;
         case 'r':
           {
+            const char *saved_arg = arg;
             char *digits_end = NULL;
+            while (*arg == 'r')
+              arg++;
             base_revision = strtol(arg, &digits_end, 10);
             if ((! SVN_IS_VALID_REVNUM(base_revision))
                 || (! digits_end)
                 || *digits_end)
-              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                            NULL, "Invalid revision number"),
+              handle_error(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                             NULL,
+                                             _("Invalid revision number '%s'"),
+                                             saved_arg),
                            pool);
           }
           break;

@@ -38,6 +38,7 @@ import string
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
+import gen_win_dependencies
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -52,186 +53,7 @@ else:
 import gen_base
 import ezt
 
-
-class GeneratorBase(gen_base.GeneratorBase):
-  """This intermediate base class exists to be instantiated by win-tests.py,
-  in order to obtain information from build.conf and library paths without
-  actually doing any generation."""
-  _extension_map = {
-    ('exe', 'target'): '.exe',
-    ('exe', 'object'): '.obj',
-    ('lib', 'target'): '.dll',
-    ('lib', 'object'): '.obj',
-    ('pyd', 'target'): '.pyd',
-    ('pyd', 'object'): '.obj',
-    }
-
-  def parse_options(self, options):
-    self.apr_path = 'apr'
-    self.apr_util_path = 'apr-util'
-    self.apr_iconv_path = 'apr-iconv'
-    self.serf_path = None
-    self.serf_lib = None
-    self.bdb_path = 'db4-win32'
-    self.httpd_path = None
-    self.libintl_path = None
-    self.zlib_path = 'zlib'
-    self.openssl_path = None
-    self.jdk_path = None
-    self.junit_path = None
-    self.swig_path = None
-    self.vs_version = '2002'
-    self.sln_version = '7.00'
-    self.vcproj_version = '7.00'
-    self.vcproj_extension = '.vcproj'
-    self.sqlite_path = 'sqlite-amalgamation'
-    self.skip_sections = { 'mod_dav_svn': None,
-                           'mod_authz_svn': None,
-                           'mod_dontdothat' : None,
-                           'libsvn_auth_kwallet': None,
-                           'libsvn_auth_gnome_keyring': None }
-
-    # Instrumentation options
-    self.disable_shared = None
-    self.static_apr = None
-    self.static_openssl = None
-    self.instrument_apr_pools = None
-    self.instrument_purify_quantify = None
-    self.configure_apr_util = None
-    self.sasl_path = None
-
-    # NLS options
-    self.enable_nls = None
-
-    # ML (assembler) is disabled by default; use --enable-ml to detect
-    self.enable_ml = None
-
-    for opt, val in options:
-      if opt == '--with-berkeley-db':
-        self.bdb_path = val
-      elif opt == '--with-apr':
-        self.apr_path = val
-      elif opt == '--with-apr-util':
-        self.apr_util_path = val
-      elif opt == '--with-apr-iconv':
-        self.apr_iconv_path = val
-      elif opt == '--with-serf':
-        self.serf_path = val
-      elif opt == '--with-httpd':
-        self.httpd_path = val
-        del self.skip_sections['mod_dav_svn']
-        del self.skip_sections['mod_authz_svn']
-        del self.skip_sections['mod_dontdothat']
-      elif opt == '--with-libintl':
-        self.libintl_path = val
-        self.enable_nls = 1
-      elif opt == '--with-jdk':
-        self.jdk_path = val
-      elif opt == '--with-junit':
-        self.junit_path = val
-      elif opt == '--with-zlib':
-        self.zlib_path = val
-      elif opt == '--with-swig':
-        self.swig_path = val
-      elif opt == '--with-sqlite':
-        self.sqlite_path = val
-      elif opt == '--with-sasl':
-        self.sasl_path = val
-      elif opt == '--with-openssl':
-        self.openssl_path = val
-      elif opt == '--enable-purify':
-        self.instrument_purify_quantify = 1
-        self.instrument_apr_pools = 1
-      elif opt == '--enable-quantify':
-        self.instrument_purify_quantify = 1
-      elif opt == '--enable-pool-debug':
-        self.instrument_apr_pools = 1
-      elif opt == '--enable-nls':
-        self.enable_nls = 1
-      elif opt == '--enable-bdb-in-apr-util':
-        self.configure_apr_util = 1
-      elif opt == '--enable-ml':
-        self.enable_ml = 1
-      elif opt == '--disable-shared':
-        self.disable_shared = 1
-      elif opt == '--with-static-apr':
-        self.static_apr = 1
-      elif opt == '--with-static-openssl':
-        self.static_openssl = 1
-      elif opt == '--vsnet-version':
-        if val == '2002' or re.match('7(\.\d+)?$', val):
-          self.vs_version = '2002'
-          self.sln_version = '7.00'
-          self.vcproj_version = '7.00'
-          self.vcproj_extension = '.vcproj'
-        elif val == '2003' or re.match('8(\.\d+)?$', val):
-          self.vs_version = '2003'
-          self.sln_version = '8.00'
-          self.vcproj_version = '7.10'
-          self.vcproj_extension = '.vcproj'
-        elif val == '2005' or re.match('9(\.\d+)?$', val):
-          self.vs_version = '2005'
-          self.sln_version = '9.00'
-          self.vcproj_version = '8.00'
-          self.vcproj_extension = '.vcproj'
-        elif val == '2008' or re.match('10(\.\d+)?$', val):
-          self.vs_version = '2008'
-          self.sln_version = '10.00'
-          self.vcproj_version = '9.00'
-          self.vcproj_extension = '.vcproj'
-        elif val == '2010':
-          self.vs_version = '2010'
-          self.sln_version = '11.00'
-          self.vcproj_version = '10.0'
-          self.vcproj_extension = '.vcxproj'
-        elif val == '2012' or val == '11':
-          self.vs_version = '2012'
-          self.sln_version = '12.00'
-          self.vcproj_version = '11.0'
-          self.vcproj_extension = '.vcxproj'
-        elif re.match('^1\d+$', val):
-          self.vsversion = val
-          self.sln_version = '12.00'
-          self.vcproj_version = val + '.0'
-          self.vcproj_extension = '.vcxproj'
-        else:
-          print('WARNING: Unknown VS.NET version "%s",'
-                 ' assuming "%s"\n' % (val, '7.00'))
-
-
-  def __init__(self, fname, verfname, options):
-
-    # parse (and save) the options that were passed to us
-    self.parse_options(options)
-
-    # Initialize parent
-    gen_base.GeneratorBase.__init__(self, fname, verfname, options)
-
-    # These files will be excluded from the build when they're not
-    # explicitly listed as project sources.
-    self._excluded_from_build = frozenset(self.private_includes
-                                          + self.private_built_includes)
-
-    # Find Berkeley DB
-    self._find_bdb()
-
-  def _find_bdb(self):
-    "Find the Berkeley DB library and version"
-    # Before adding "60" to this list, see build/ac-macros/berkeley-db.m4.
-    for ver in ("53", "52", "51", "50", "48", "47", "46",
-                "45", "44", "43", "42", "41", "40"):
-      lib = "libdb" + ver
-      path = os.path.join(self.bdb_path, "lib")
-      if os.path.exists(os.path.join(path, lib + ".lib")):
-        self.bdb_lib = lib
-        break
-      elif os.path.exists(os.path.join(path, lib + "d.lib")):
-        self.bdb_lib = lib
-        break
-    else:
-      self.bdb_lib = None
-
-class WinGeneratorBase(GeneratorBase):
+class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
   "Base class for all Windows project files generators"
 
   def __init__(self, fname, verfname, options, subdir):
@@ -243,48 +65,19 @@ class WinGeneratorBase(GeneratorBase):
     """
 
     # Initialize parent
-    GeneratorBase.__init__(self, fname, verfname, options)
-
-    if self.bdb_lib is not None:
-      print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
-                                                 self.bdb_path))
-    else:
-      print("BDB not found, BDB fs will not be built\n")
+    gen_win_dependencies.GenDependenciesBase.__init__(self, fname, verfname,
+                                                      options, find_libs=False)
 
     if subdir == 'vcnet-vcproj':
       print('Generating for Visual Studio %s\n' % self.vs_version)
 
-    # Find the right Ruby include and libraries dirs and
-    # library name to link SWIG bindings with
-    self._find_ruby()
+    self.find_libraries(True)
 
-    # Find the right Perl library name to link SWIG bindings with
-    self._find_perl()
-
-    # Find the right Python include and libraries dirs for SWIG bindings
-    self._find_python()
-
-    # Find the installed SWIG version to adjust swig options
-    self._find_swig()
-
-    # Find the installed Java Development Kit
-    self._find_jdk()
-
-    # Find APR and APR-util version
-    self._find_apr()
-    self._find_apr_util()
-
-    # Find Sqlite
-    self._find_sqlite()
-
-    # Look for ZLib and ML
-    if self.zlib_path:
-      self._find_zlib()
-      self._find_ml()
-
-    # Find serf and its dependencies
-    if self.serf_path:
-      self._find_serf()
+    if self._libraries['db']:
+      db = self._libraries['db']
+      print('Found BDB %s in %s' % (db.version, self.bdb_path))
+    else:
+      print('BDB not found, BDB fs will not be built')
 
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
@@ -395,15 +188,17 @@ class WinGeneratorBase(GeneratorBase):
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
     # Drop the libsvn_fs_base target and tests if we don't have BDB
-    if not self.bdb_lib:
+    if 'db' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_fs_base']
       install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
                                                             and x.install == 'bdb-test')]
 
-    # Drop the serf target if we don't have both serf and openssl
-    if not self.serf_lib:
-      install_targets = [x for x in install_targets if x.name != 'serf']
+    # Drop the ra_serf target if we don't have serf
+    if 'serf' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
+    # Drop the serf target if we don't build serf ourselves
+    if 'serf' not in self._libraries or not self._libraries['serf'].is_src:
+      install_targets = [x for x in install_targets if x.name != 'serf']
 
     # Drop the swig targets if we don't have swig
     if not self.swig_path and not self.swig_libdir:
@@ -421,6 +216,12 @@ class WinGeneratorBase(GeneratorBase):
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
 
+    # If we don't build 'ZLib' ourself, remove this target and all the dependencies on it
+    if not self._libraries['zlib'].is_src:
+      install_targets = [x for x in install_targets if x.name != 'zlib']
+      # TODO: Fixup dependencies
+
+    # Create DLL targets for libraries
     dll_targets = []
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib):
@@ -722,7 +523,7 @@ class WinGeneratorBase(GeneratorBase):
             and target.external_project):
       return None
 
-    if target.external_project[:5] == 'serf/' and self.serf_lib:
+    if target.external_project[:5] == 'serf/' and 'serf' in self._libraries:
       path = self.serf_path + target.external_project[4:]
     elif target.external_project.find('/') != -1:
       path = target.external_project
@@ -745,8 +546,8 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
 
-    # Build ZLib as a dependency of Serf if we have it
-    if self.zlib_path and name == 'serf':
+    # Make ZLib a dependency of serf if we build the zlib src
+    if name == 'serf' and self._libraries['zlib'].is_src:
       depends.extend(self.sections['zlib'].get_targets())
 
     # To set the correct build order of the JavaHL targets, the javahl-javah
@@ -768,7 +569,9 @@ class WinGeneratorBase(GeneratorBase):
 
     dep_dict = {}
 
-    if isinstance(target, gen_base.TargetLib) and target.msvc_static:
+    if mode == FILTER_EXTERNALLIBS:
+      self.get_externallib_depends(target, dep_dict)
+    elif isinstance(target, gen_base.TargetLib) and target.msvc_static:
       self.get_static_win_depends(target, dep_dict)
     else:
       self.get_linked_win_depends(target, dep_dict)
@@ -780,6 +583,10 @@ class WinGeneratorBase(GeneratorBase):
         if is_proj:
           deps.append(dep)
     elif mode == FILTER_LIBS:
+      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
+        if is_static or (is_lib and not is_proj):
+          deps.append(dep)
+    elif mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
           deps.append(dep)
@@ -866,6 +673,16 @@ class WinGeneratorBase(GeneratorBase):
       elif is_static:
         self.get_linked_win_depends(dep, deps, 1)
 
+  def get_externallib_depends(self, target, deps):
+    """Find externallib dependencies for a project"""
+    
+    direct_deps = self.get_direct_depends(target)
+    for dep, dep_kind in direct_deps:
+      self.get_externallib_depends(dep, deps)
+      
+      if isinstance(target, gen_base.TargetLinked) and dep.external_lib:
+        deps[dep] = dep_kind
+        
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
 
@@ -903,7 +720,7 @@ class WinGeneratorBase(GeneratorBase):
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
     # XXX: know these things for itself.
-    if self.bdb_lib:
+    if 'db' in self._libraries:
       fakedefines.append("APU_HAVE_DB=1")
       fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
 
@@ -911,7 +728,7 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
 
-    if self.serf_lib:
+    if 'serf' in self._libraries:
       fakedefines.append("SVN_HAVE_SERF")
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
@@ -930,18 +747,29 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_includes(self, target):
     "Return the list of include directories for target"
 
-    fakeincludes = [ self.path("subversion/include"),
-                     self.path("subversion"),
-                     self.apath(self.apr_path, "include"),
-                     self.apath(self.apr_util_path, "include") ]
+    fakeincludes = [ self.apath("subversion/include"),
+                     self.apath("subversion") ]
+                     
+    for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+      if dep.external_lib and \
+         dep.external_lib.startswith('$(SVN_') and \
+         dep.external_lib.endswith('_LIBS)'):
+
+        external_lib = dep.external_lib[6:-6].lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+          inc_dir = self.apath(lib.include_dir)
+      
+          # Avoid duplicate items
+          if inc_dir and inc_dir not in fakeincludes:
+            fakeincludes.extend([inc_dir])
 
     if target.name == 'mod_authz_svn':
       fakeincludes.extend([ self.apath(self.httpd_path, "modules/aaa") ])
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
-                            self.apath(self.httpd_path, "include"),
-                            self.apath(self.bdb_path, "include") ])
+      fakeincludes.extend([ self.apath(self.httpd_path, "include") ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
@@ -951,15 +779,10 @@ class WinGeneratorBase(GeneratorBase):
                             self.path("subversion/bindings/swig/include"),
                             self.path(util_includes) ])
     else:
-      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
-                            self.path("subversion/bindings/swig/proxy"),
-                            self.apath(self.bdb_path, "include") ])
+      fakeincludes.extend([ self.path("subversion/bindings/swig/proxy") ])
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
-
-    if self.serf_lib:
-      fakeincludes.append(self.apath(self.serf_path))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -978,8 +801,6 @@ class WinGeneratorBase(GeneratorBase):
         fakeincludes.extend(self.python_includes)
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
-
-    fakeincludes.append(self.apath(self.zlib_path))
 
     if self.sqlite_inline:
       fakeincludes.append(self.apath(self.sqlite_path))
@@ -1001,28 +822,34 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
-    expatlibcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
-    if self.static_apr:
-      libcfg = expatlibcfg
-    else:
-      libcfg = cfg
+    debug = (cfg == 'Debug')
 
-    fakelibdirs = [ self.apath(self.bdb_path, "lib"),
-                    self.apath(self.zlib_path),
-                    ]
+    fakelibdirs = []
+                    
+    for dep in self.get_win_depends(target, FILTER_LIBS):
+      if dep.external_lib and \
+         dep.external_lib.startswith('$(SVN_') and \
+         dep.external_lib.endswith('_LIBS)'):
+
+        external_lib = dep.external_lib[6:-6].lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+          
+          if debug:
+            lib_dir = self.apath(lib.debug_lib_dir)
+          else:
+            lib_dir = self.apath(lib.lib_dir)
+      
+          # Avoid duplicate items
+          if lib_dir and lib_dir not in fakelibdirs:
+            fakelibdirs.extend([lib_dir])
 
     if not self.sqlite_inline:
       fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
 
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
-    if self.serf_lib:
-      fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
-
-    fakelibdirs.append(self.apath(self.apr_path, libcfg))
-    fakelibdirs.append(self.apath(self.apr_util_path, libcfg))
-    fakelibdirs.append(self.apath(self.apr_util_path, 'xml', 'expat',
-                                  'lib', expatlibcfg))
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
@@ -1044,17 +871,12 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
+    debug = (cfg == 'Debug')
+
     dblib = None
     if self.bdb_lib:
-      dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+      dblib = self.bdb_lib+(debug and 'd.lib' or '.lib')
 
-    if self.serf_lib:
-      if self.serf_ver_maj != 0:
-        serflib = 'serf-%d.lib' % self.serf_ver_maj
-      else:
-        serflib = 'serf.lib'
-
-    zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
     if self.sasl_path:
       sasllib = 'libsasl.lib'
@@ -1066,7 +888,6 @@ class WinGeneratorBase(GeneratorBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
-    nondeplibs.append(zlib)
     if self.enable_nls:
       if self.libintl_path:
         nondeplibs.append(self.apath(self.libintl_path,
@@ -1090,26 +911,39 @@ class WinGeneratorBase(GeneratorBase):
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
 
-      if dep.external_lib == '$(SVN_DB_LIBS)':
-        nondeplibs.append(dblib)
+      if dep.external_lib and \
+         dep.external_lib.startswith('$(SVN_') and \
+         dep.external_lib.endswith('_LIBS)'):
 
-      if dep.external_lib == '$(SVN_SQLITE_LIBS)' and not self.sqlite_inline:
-        nondeplibs.append('sqlite3.lib')
+        external_lib = dep.external_lib[6:-6].lower()
 
-      if self.serf_lib and dep.external_lib == '$(SVN_SERF_LIBS)':
-        nondeplibs.append(serflib)
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
 
-      if dep.external_lib == '$(SVN_SASL_LIBS)':
-        nondeplibs.append(sasllib)
+          if debug:
+            nondeplibs.append(lib.debug_lib_name)
+          else:
+            nondeplibs.append(lib.lib_name)
 
-      if dep.external_lib == '$(SVN_APR_LIBS)':
-        nondeplibs.append(self.apr_lib)
+        elif external_lib == 'sqlite':
 
-      if dep.external_lib == '$(SVN_APRUTIL_LIBS)':
-        nondeplibs.append(self.aprutil_lib)
+          if not self.sqlite_inline:
+            nondeplibs.append('sqlite3.lib')
+          # else: # Is not a linkable library
 
-      if dep.external_lib == '$(SVN_XML_LIBS)':
-        nondeplibs.append('xml.lib')
+        elif external_lib == 'sasl':
+
+          if sasllib:
+            nondeplibs.append(sasllib)
+
+        elif external_lib == 'apr_memcache' or \
+             external_lib == 'magic':
+          # Currently unhandled
+          lib = None
+
+        else:
+          print('Warning: Using underclared dependency \'%s\'' % \
+                (dep.external_lib,))
 
     return gen_base.unique(nondeplibs)
 
@@ -1185,8 +1019,13 @@ class WinGeneratorBase(GeneratorBase):
                         ))
 
   def write_serf_project_file(self, name):
-    if not self.serf_lib:
+    if 'serf' not in self._libraries:
       return
+      
+    serf = self._libraries['serf']
+    
+    if not serf.is_src:
+      return # Using an installed library
 
     serf_path = os.path.abspath(self.serf_path)
     serf_sources = map(lambda x : os.path.relpath(x, self.serf_path),
@@ -1198,10 +1037,6 @@ class WinGeneratorBase(GeneratorBase):
                        glob.glob(os.path.join(serf_path, '*.h'))
                        + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
                        + glob.glob(os.path.join(serf_path, 'buckets', '*.h')))
-    if self.serf_ver_maj != 0:
-      serflib = 'serf-%d.lib' % self.serf_ver_maj
-    else:
-      serflib = 'serf.lib'
 
     apr_static = self.static_apr and 'APR_STATIC=1' or ''
     openssl_static = self.static_openssl and 'OPENSSL_STATIC=1' or ''
@@ -1219,7 +1054,7 @@ class WinGeneratorBase(GeneratorBase):
                          ('project_guid', self.makeguid('serf')),
                          ('apr_static', apr_static),
                          ('openssl_static', openssl_static),
-                         ('serf_lib', serflib),
+                         ('serf_lib', serf.lib_name),
                         ))
 
   def move_proj_file(self, path, name, params=()):
@@ -1243,421 +1078,6 @@ class WinGeneratorBase(GeneratorBase):
 
     raise NotImplementedError
 
-  def _find_perl(self):
-    "Find the right perl library name to link swig bindings with"
-    self.perl_includes = []
-    self.perl_libdir = None
-    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
-    try:
-      line = fp.readline()
-      if line:
-        msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + line.rstrip() + '.lib'
-      else:
-        msg = 'Could not detect perl version.'
-        self.perl_lib = 'perl56.lib'
-      print('%s\n  Perl bindings will be linked with %s\n'
-             % (msg, self.perl_lib))
-    finally:
-      fp.close()
-
-    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print $Config{archlib}'), 'r')
-    try:
-      line = fp.readline()
-      if line:
-        self.perl_libdir = os.path.join(line, 'CORE')
-        self.perl_includes = [os.path.join(line, 'CORE')]
-    finally:
-      fp.close()
-
-  def _find_ruby(self):
-    "Find the right Ruby library name to link swig bindings with"
-    self.ruby_includes = []
-    self.ruby_libdir = None
-    self.ruby_version = None
-    self.ruby_major_version = None
-    self.ruby_minor_version = None
-    # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
-    # and deprecated Config." warning if we are using Ruby 1.9.
-    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                    "puts Config::CONFIG['ruby_version'];"
-                    "puts Config::CONFIG['LIBRUBY'];"
-                    "puts Config::CONFIG['archdir'];"
-                    "puts Config::CONFIG['libdir'];"), 'r')
-    try:
-      rubyver = proc.readline()[:-1]
-      if rubyver:
-        self.ruby_version = rubyver
-        self.ruby_major_version = string.atoi(self.ruby_version[0])
-        self.ruby_minor_version = string.atoi(self.ruby_version[2])
-        libruby = proc.readline()[:-1]
-        if libruby:
-          msg = 'Found installed ruby %s' % rubyver
-          self.ruby_lib = libruby
-          self.ruby_includes.append(proc.readline()[:-1])
-          self.ruby_libdir = proc.readline()[:-1]
-      else:
-        msg = 'Could not detect Ruby version, assuming 1.8.'
-        self.ruby_version = "1.8"
-        self.ruby_major_version = 1
-        self.ruby_minor_version = 8
-        self.ruby_lib = 'msvcrt-ruby18.lib'
-      print('%s\n  Ruby bindings will be linked with %s\n'
-             % (msg, self.ruby_lib))
-    finally:
-      proc.close()
-
-  def _find_python(self):
-    "Find the appropriate options for creating SWIG-based Python modules"
-    self.python_includes = []
-    self.python_libdir = ""
-    try:
-      from distutils import sysconfig
-      inc = sysconfig.get_python_inc()
-      plat = sysconfig.get_python_inc(plat_specific=1)
-      self.python_includes.append(inc)
-      if inc != plat:
-        self.python_includes.append(plat)
-      self.python_libdir = self.apath(sysconfig.PREFIX, "libs")
-    except ImportError:
-      pass
-
-  def _find_jdk(self):
-    if not self.jdk_path:
-      jdk_ver = None
-      try:
-        try:
-          # Python >=3.0
-          import winreg
-        except ImportError:
-          # Python <3.0
-          import _winreg as winreg
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                           r"SOFTWARE\JavaSoft\Java Development Kit")
-        # Find the newest JDK version.
-        num_values = winreg.QueryInfoKey(key)[1]
-        for i in range(num_values):
-          (name, value, key_type) = winreg.EnumValue(key, i)
-          if name == "CurrentVersion":
-            jdk_ver = value
-            break
-
-        # Find the JDK path.
-        if jdk_ver is not None:
-          key = winreg.OpenKey(key, jdk_ver)
-          num_values = winreg.QueryInfoKey(key)[1]
-          for i in range(num_values):
-            (name, value, key_type) = winreg.EnumValue(key, i)
-            if name == "JavaHome":
-              self.jdk_path = value
-              break
-        winreg.CloseKey(key)
-      except (ImportError, EnvironmentError):
-        pass
-      if self.jdk_path:
-        print("Found JDK version %s in %s\n" % (jdk_ver, self.jdk_path))
-    else:
-      print("Using JDK in %s\n" % (self.jdk_path))
-
-  def _find_swig(self):
-    # Require 1.3.24. If not found, assume 1.3.25.
-    default_version = '1.3.25'
-    minimum_version = '1.3.24'
-    vernum = 103025
-    minimum_vernum = 103024
-    libdir = ''
-
-    if self.swig_path is not None:
-      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
-    else:
-      self.swig_exe = 'swig'
-
-    try:
-      outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
-      txt = outfp.read()
-      if txt:
-        vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
-                   .search(txt)
-      else:
-        vermatch = None
-
-      if vermatch:
-        version = tuple(map(int, vermatch.groups()))
-        # build/ac-macros/swig.m4 explains the next incantation
-        vernum = int('%d%02d%03d' % version)
-        print('Found installed SWIG version %d.%d.%d\n' % version)
-        if vernum < minimum_vernum:
-          print('WARNING: Subversion requires version %s\n'
-                 % minimum_version)
-
-        libdir = self._find_swig_libdir()
-      else:
-        print('Could not find installed SWIG,'
-               ' assuming version %s\n' % default_version)
-        self.swig_libdir = ''
-      outfp.close()
-    except OSError:
-      print('Could not find installed SWIG,'
-             ' assuming version %s\n' % default_version)
-      self.swig_libdir = ''
-
-    self.swig_vernum = vernum
-    self.swig_libdir = libdir
-
-  def _find_swig_libdir(self):
-    fp = os.popen(self.swig_exe + ' -swiglib', 'r')
-    try:
-      libdir = fp.readline().rstrip()
-      if libdir:
-        print('Using SWIG library directory %s\n' % libdir)
-        return libdir
-      else:
-        print('WARNING: could not find SWIG library directory\n')
-    finally:
-      fp.close()
-    return ''
-
-  def _find_ml(self):
-    "Check if the ML assembler is in the path"
-    if not self.enable_ml:
-      self.have_ml = 0
-      return
-    fp = os.popen('ml /help', 'r')
-    try:
-      line = fp.readline()
-      if line:
-        msg = 'Found ML, ZLib build will use ASM sources'
-        self.have_ml = 1
-      else:
-        msg = 'Could not find ML, ZLib build will not use ASM sources'
-        self.have_ml = 0
-      print('%s\n' % (msg,))
-    finally:
-      fp.close()
-
-  def _get_serf_version(self):
-    "Retrieves the serf version from serf.h"
-
-    # shouldn't be called unless serf is there
-    assert self.serf_path and os.path.exists(self.serf_path)
-
-    self.serf_ver_maj = None
-    self.serf_ver_min = None
-    self.serf_ver_patch = None
-
-    # serf.h should be present
-    if not os.path.exists(os.path.join(self.serf_path, 'serf.h')):
-      return None, None, None
-
-    txt = open(os.path.join(self.serf_path, 'serf.h')).read()
-
-    maj_match = re.search(r'SERF_MAJOR_VERSION\s+(\d+)', txt)
-    min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
-    patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
-    if maj_match:
-      self.serf_ver_maj = int(maj_match.group(1))
-    if min_match:
-      self.serf_ver_min = int(min_match.group(1))
-    if patch_match:
-      self.serf_ver_patch = int(patch_match.group(1))
-
-    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
-
-  def _find_serf(self):
-    "Check if serf and its dependencies are available"
-
-    minimal_serf_version = (1, 2, 1)
-    self.serf_lib = None
-    if self.serf_path and os.path.exists(self.serf_path):
-      if self.openssl_path and os.path.exists(self.openssl_path):
-        self.serf_lib = 'serf'
-        version = self._get_serf_version()
-        if None in version:
-          msg = 'Unknown serf version found; but, will try to build ' \
-                'ra_serf.'
-        else:
-          self.serf_ver = '.'.join(str(v) for v in version)
-          if version < minimal_serf_version:
-            self.serf_lib = None
-            msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
-                  (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
-          else:
-            msg = 'Found serf %s' % self.serf_ver
-        print(msg)
-      else:
-        print('openssl not found, ra_serf will not be built\n')
-    else:
-      print('serf not found, ra_serf will not be built\n')
-
-  def _find_apr(self):
-    "Find the APR library and version"
-
-    minimal_apr_version = (0, 9, 0)
-
-    version_file_path = os.path.join(self.apr_path, 'include',
-                                     'apr_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr' option to configure APR location.\n");
-      sys.exit(1)
-
-    fp = open(version_file_path)
-    txt = fp.read()
-    fp.close()
-
-    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
-    major = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
-    minor = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
-    patch = int(vermatch.group(1))
-
-    version = (major, minor, patch)
-    self.apr_version = '%d.%d.%d' % version
-
-    suffix = ''
-    if major > 0:
-        suffix = '-%d' % major
-
-    if self.static_apr:
-      self.apr_lib = 'apr%s.lib' % suffix
-    else:
-      self.apr_lib = 'libapr%s.lib' % suffix
-
-    if version < minimal_apr_version:
-      sys.stderr.write("ERROR: apr %s or higher is required "
-                       "(%s found)\n" % (
-                          '.'.join(str(v) for v in minimal_apr_version),
-                          self.apr_version))
-      sys.exit(1)
-    else:
-      print('Found apr %s' % self.apr_version)
-
-  def _find_apr_util(self):
-    "Find the APR-util library and version"
-
-    minimal_aprutil_version = (0, 9, 0)
-    version_file_path = os.path.join(self.apr_util_path, 'include',
-                                     'apu_version.h')
-
-    if not os.path.exists(version_file_path):
-      sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
-      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n");
-      sys.exit(1)
-
-    fp = open(version_file_path)
-    txt = fp.read()
-    fp.close()
-
-    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
-    major = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
-    minor = int(vermatch.group(1))
-
-    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
-    patch = int(vermatch.group(1))
-
-    version = (major, minor, patch)
-    self.aprutil_version = '%d.%d.%d' % version
-
-    suffix = ''
-    if major > 0:
-        suffix = '-%d' % major
-
-    if self.static_apr:
-      self.aprutil_lib = 'aprutil%s.lib' % suffix
-    else:
-      self.aprutil_lib = 'libaprutil%s.lib' % suffix
-
-    if version < minimal_aprutil_version:
-      sys.stderr.write("ERROR: aprutil %s or higher is required "
-                       "(%s found)\n" % (
-                          '.'.join(str(v) for v in minimal_aprutil_version),
-                          self.aprutil_version))
-      sys.exit(1)
-    else:
-      print('Found aprutil %s' % self.aprutil_version)
-
-  def _find_sqlite(self):
-    "Find the Sqlite library and version"
-
-    minimal_sqlite_version = (3, 7, 12)
-
-    header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
-
-    # First check for compiled version of SQLite.
-    if os.path.exists(header_file):
-      # Compiled SQLite seems found, check for sqlite3.lib file.
-      lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
-      if not os.path.exists(lib_file):
-        sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
-        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-        sys.exit(1)
-      self.sqlite_inline = False
-    else:
-      # Compiled SQLite not found. Try amalgamation version.
-      amalg_file = os.path.join(self.sqlite_path, 'sqlite3.c')
-      if not os.path.exists(amalg_file):
-        sys.stderr.write("ERROR: SQLite not found in '%s' directory.\n" % self.sqlite_path)
-        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-        sys.exit(1)
-      header_file = os.path.join(self.sqlite_path, 'sqlite3.h')
-      self.sqlite_inline = True
-
-    fp = open(header_file)
-    txt = fp.read()
-    fp.close()
-    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
-
-    version = vermatch.groups()
-
-    # Sqlite doesn't add patch numbers for their ordinary releases
-    if not version[3]:
-      version = version[0:3]
-
-    version = tuple(map(int, version))
-
-    self.sqlite_version = '.'.join(str(v) for v in version)
-
-    if version < minimal_sqlite_version:
-      sys.stderr.write("ERROR: sqlite %s or higher is required "
-                       "(%s found)\n" % (
-                          '.'.join(str(v) for v in minimal_sqlite_version),
-                          self.sqlite_version))
-      sys.exit(1)
-    else:
-      print('Found SQLite %s' % self.sqlite_version)
-
-  def _find_zlib(self):
-    "Find the ZLib library and version"
-
-    if not self.zlib_path:
-      self.zlib_version = '1'
-      return
-
-    header_file = os.path.join(self.zlib_path, 'zlib.h')
-
-    if not os.path.exists(header_file):
-      self.zlib_version = '1'
-      return
-
-    fp = open(header_file)
-    txt = fp.read()
-    fp.close()
-    vermatch = re.search(r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
-
-    version = tuple(map(int, vermatch.groups()))
-
-    self.zlib_version = '%d.%d.%d' % version
-
-    print('Found ZLib %s' % self.zlib_version)
-
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
   def __init__(self, **kw):
@@ -1665,32 +1085,10 @@ class ProjectItem:
     vars(self).update(kw)
 
 # ============================================================================
-# This is a cut-down and modified version of code from:
-#   subversion/subversion/bindings/swig/python/svn/core.py
-#
-if sys.platform == "win32":
-  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
-
-  def escape_shell_arg(arg):
-    # The (very strange) parsing rules used by the C runtime library are
-    # described at:
-    # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
-
-    # double up slashes, but only if they are followed by a quote character
-    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
-
-    # surround by quotes and escape quotes inside
-    arg = '"' + arg.replace('"', '"^""') + '"'
-    return arg
-
-else:
-  def escape_shell_arg(str):
-    return "'" + str.replace("'", "'\\''") + "'"
-
-# ============================================================================
 
 FILTER_LIBS = 1
 FILTER_PROJECTS = 2
+FILTER_EXTERNALLIBS = 3
 
 class POFile:
   "Item class for holding po file info"

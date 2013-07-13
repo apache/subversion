@@ -179,7 +179,7 @@ typedef enum svnauth__cert_info_keys {
   svnauth__cert_key_not_after,
 } svnauth__cert_info_keys;
 
-svn_token_map_t cert_info_key_map[] = {
+static svn_token_map_t cert_info_key_map[] = {
     { "CN",         svnauth__cert_key_cn },
     { "E",          svnauth__cert_key_e },
     { "OU",         svnauth__cert_key_ou },
@@ -220,6 +220,11 @@ show_cert_info(apr_hash_t *cert_info,
                 SVN_ERR(svn_cmdline_printf(scratch_pool,
                                            _("  Email Address: %s\n"), value));
                 break;
+              case svnauth__cert_key_o:
+                SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                           _("  Organization Name: %s\n"),
+                                           value));
+                break;
               case svnauth__cert_key_ou:
                 SVN_ERR(svn_cmdline_printf(scratch_pool,
                                            _("  Organizational Unit: %s\n"),
@@ -253,6 +258,9 @@ show_cert_info(apr_hash_t *cert_info,
                 break;
               case SVN_TOKEN_UNKNOWN:
               default:
+#ifdef SVN_DEBUG
+                SVN_ERR_MALFUNCTION();
+#endif
                 break;
             }
         }

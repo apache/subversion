@@ -4740,7 +4740,7 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   *gap_start = *gap_end = SVN_INVALID_REVNUM;
 
   /* Easy out: There can't be a gap between adjacent revisions. */
-  if (abs(source->loc1->rev - source->loc2->rev) == 1)
+  if (labs(source->loc1->rev - source->loc2->rev) == 1)
     return SVN_NO_ERROR;
 
   /* Get SOURCE as mergeinfo. */

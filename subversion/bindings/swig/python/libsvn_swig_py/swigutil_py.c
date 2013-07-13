@@ -93,7 +93,7 @@ void svn_swig_py_release_py_lock(void)
   if (_saved_thread_key == NULL)
     {
       /* Obviously, creating a top-level pool for this is pretty stupid. */
-      apr_pool_create(&_saved_thread_pool, NULL);
+      _saved_thread_pool = svn_pool_create(NULL);
       apr_threadkey_private_create(&_saved_thread_key, NULL,
                                    _saved_thread_pool);
     }

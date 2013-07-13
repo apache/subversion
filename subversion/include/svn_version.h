@@ -192,6 +192,8 @@ struct svn_version_t
  * unreleased library. A development client is always compatible with
  * a previous released library.
  *
+ * @note Implements the #svn_ver_check_list2.@a comparator interface.
+ *
  * @since New in 1.1.
  */
 svn_boolean_t
@@ -200,6 +202,8 @@ svn_ver_compatible(const svn_version_t *my_version,
 
 /**
  * Check if @a my_version and @a lib_version encode the same version number.
+ *
+ * @note Implements the #svn_ver_check_list2.@a comparator interface.
  *
  * @since New in 1.2.
  */
@@ -228,10 +232,31 @@ typedef struct svn_version_checklist_t
  * my_version is compatible with each entry in @a checklist. @a
  * checklist must end with an entry whose label is @c NULL.
  *
- * @see svn_ver_compatible()
+ * @a my_version is considered to be compatible with a version in @a checklist
+ * if @a comparator returns #TRUE when called with @a my_version as the first
+ * parammeter and the @a checklist version as the second parameter.
  *
- * @since New in 1.1.
+ * @see svn_ver_compatible(), svn_ver_equal()
+ *
+ * @note Subversion's own code invariably uses svn_ver_equal() as @a comparator,
+ * since the cmdline tools sometimes use non-public APIs (such as utility
+ * functions that haven't been promoted to svn_cmdline.h).  Third-party code
+ * SHOULD use svn_ver_compatible() as @a comparator.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_ver_check_list2(const svn_version_t *my_version,
+                    const svn_version_checklist_t *checklist,
+                    svn_boolean_t (*comparator)(const svn_version_t *,
+                                                const svn_version_t *));
+
+/** Similar to svn_ver_check_list2(), with @a comparator set to
+ * #svn_ver_compatible.
+ *
+ * @deprecated Provided for backward compatibility with 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ver_check_list(const svn_version_t *my_version,
                    const svn_version_checklist_t *checklist);

@@ -979,7 +979,6 @@ merge_xml_filter_insert(request_rec *r)
 typedef struct merge_ctx_t {
   apr_bucket_brigade *bb;
   apr_xml_parser *parser;
-  apr_pool_t *pool;
 } merge_ctx_t;
 
 
@@ -1009,7 +1008,6 @@ merge_xml_in_filter(ap_filter_t *f,
       f->ctx = ctx = apr_palloc(r->pool, sizeof(*ctx));
       ctx->parser = apr_xml_parser_create(r->pool);
       ctx->bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
-      apr_pool_create(&ctx->pool, r->pool);
     }
 
   rv = ap_get_brigade(f->next, ctx->bb, mode, block, readbytes);

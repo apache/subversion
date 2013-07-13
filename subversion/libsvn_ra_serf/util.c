@@ -476,7 +476,7 @@ connection_closed(svn_ra_serf__connection_t *conn,
 {
   if (why)
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_wrap_apr(why, NULL);
     }
 
   if (conn->session->using_ssl)
@@ -1502,6 +1502,8 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 
           if (xml_status != XML_STATUS_OK)
             {
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                       _("XML parsing failed"));
             }
         }
 
@@ -2444,9 +2446,8 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                     _("DAV request failed: 411 Content length required. The "
                       "server or an intermediate proxy does not accept "
-                      "chunked encoding. Try setting "
-                      "'http-detect-chunking=yes' "
-                      "in your client configuration."));
+                      "chunked encoding. Try setting 'http-chunked-requests' "
+                      "to 'auto' or 'no' in your client configuration."));
     }
 
   if (sline.code >= 300)

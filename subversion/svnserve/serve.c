@@ -2092,7 +2092,7 @@ static svn_error_t *log_receiver(void *baton,
   apr_hash_index_t *h;
   svn_boolean_t invalid_revnum = FALSE;
   const svn_string_t *author, *date, *message;
-  apr_uint64_t revprop_count;
+  unsigned revprop_count;
 
   if (log_entry->revision == SVN_INVALID_REVNUM)
     {

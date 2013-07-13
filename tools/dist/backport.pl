@@ -549,7 +549,9 @@ sub handle_entry {
           say STDERR "";
           say STDERR $output;
         } elsif (!@conflicts and $entry{depends}) {
-          warn "No conflicts merging the $entry{header}, but conflicts were "
+          # Not a warning since svn-role may commit the dependency without
+          # also committing the dependent in hte same pass.
+          print "No conflicts merging $entry{id}, but conflicts were "
               ."expected ('Depends:' header set)\n";
         } elsif (@conflicts) {
           say "Conflicts found merging $entry{id}, as expected.";

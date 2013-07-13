@@ -2269,7 +2269,9 @@ abort_edit(void *edit_baton,
       && handler->sline.code != 404
       )
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("DELETE returned unexpected status: %d"),
+                               handler->sline.code);
     }
 
   return SVN_NO_ERROR;

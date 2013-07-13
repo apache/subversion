@@ -542,13 +542,13 @@ svn_test__validate_changes(svn_fs_root_t *root,
     if (NULL == svn_hash_gets(actual, svn__apr_hash_index_key(hi)))
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Path '%s' missing from actual changed-paths",
-                               svn__apr_hash_index_key(hi));
+                               (const char *)svn__apr_hash_index_key(hi));
 
   for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
     if (NULL == svn_hash_gets(expected, svn__apr_hash_index_key(hi)))
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Path '%s' missing from expected changed-paths",
-                               svn__apr_hash_index_key(hi));
+                               (const char *)svn__apr_hash_index_key(hi));
 
   return SVN_NO_ERROR;
 }
