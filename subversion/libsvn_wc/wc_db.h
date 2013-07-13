@@ -2124,7 +2124,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
  * paths relative to the repository root URL for cached inherited
  * properties and absolute working copy paths otherwise.
  *
- * If ACTUAL_PROPS is not NULL, then set *ACTUAL_PROPS to the actual
+ * If ACTUAL_PROPS is not NULL, then set *ACTUAL_PROPS to ALL the actual
  * properties stored on LOCAL_ABSPATH.
  *
  * Allocate @a *iprops in @a result_pool.  Use @a scratch_pool
