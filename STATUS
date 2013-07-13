@@ -112,6 +112,20 @@ Candidate changes:
      +1: ivan, philip (without r1502674)
      -0: gstein
 
+ * r1468980, r1478987, r1502811
+   Reduce the number of ra sessions for automatic merge calculations to two.
+   Justification:
+     10 concurrent ra sessions open to a single server at the same time breaks
+     in certain setups (e.g. xinetd svnserve), while we really don't need this
+     many. Opening ra session is still a performance killer in all other
+     scenarios, so reducing the number of sessions is a good thing.
+   Notes:
+     r1468980 is a small performance tweak needed for a clean merge.
+     r1478987 removes a common ra session.
+     r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
+   Votes:
+     +1: rhuijben (for 1.8.2)
+
 Veto-blocked changes:
 =====================
 
