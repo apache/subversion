@@ -625,7 +625,8 @@ aligned_seek_test(apr_pool_t *pool)
                               svn_io_file_del_on_pool_cleanup, pool));
 
   /* now, access read data with varying alignment sizes */
-  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
   SVN_ERR(aligned_read(f, contents,   0x1000, pool)); /* APR default */
   SVN_ERR(aligned_read(f, contents,   0x8000, pool)); /* "unusual" 32K */
   SVN_ERR(aligned_read(f, contents,  0x10000, pool)); /* FSX default */
