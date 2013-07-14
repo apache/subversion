@@ -170,7 +170,7 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
- * r1503058, r1503061
+ * r1503010, r1503058, r1503061
    svn_utf_*: Describe APR errors as coming from APR.
    Justification:
      It is not obvious what needs to be recompiled to resolve "This function
