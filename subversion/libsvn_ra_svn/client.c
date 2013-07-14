@@ -1648,6 +1648,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
       else
         cphash = NULL;
 
+      /* Maybe invoke RECEIVER. */
       nreceived = 0;
       if (! (limit && (nest_level == 0) && (++nreceived > limit))
           && ! *outer_error)
