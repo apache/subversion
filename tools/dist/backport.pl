@@ -626,6 +626,7 @@ sub handle_entry {
       when (/^([+-][01])\s*$/i) {
         $votes->{$key} = [$1, \%entry];
         say "Your '$1' vote has been recorded." if $VERBOSE;
+        last PROMPT;
       }
       when (/^e/i) {
         my $original = $entry{raw};
@@ -633,9 +634,11 @@ sub handle_entry {
                         trailing_eol => 2;
         $votes->{$key} = ['edit', \%entry] # marker for the 2nd pass
             if $original ne $entry{raw};
+        last PROMPT;
       }
       when (/^N/i) {
         $state->{$entry{digest}}++;
+        last PROMPT;
       }
       when (/^\x20/) {
         last PROMPT; # Fall off the end of the given/when block.
