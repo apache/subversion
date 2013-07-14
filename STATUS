@@ -170,8 +170,8 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1503030, r1503032
-   Describe APR errors as coming from APR.
+ * r1503058
+   svn_utf_*: Describe APR errors as coming from APR.
    Justification:
      It is not obvious what needs to be recompiled to resolve "This function
      has not been implemented on this platform".  We do the same for SQLite.
