@@ -2010,7 +2010,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
         {
           svn_stream_t *stream;
 
-          if (d_handler)
+          if (d_handler && d_handler != svn_delta_noop_window_handler)
             stream = svn_txdelta_parse_svndiff(d_handler, d_baton, TRUE,
                                                rev_pool);
           else
