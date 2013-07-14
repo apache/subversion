@@ -151,7 +151,7 @@ Candidate changes:
      r1478987 removes a common ra session.
      r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
    Votes:
-     +1: rhuijben (for 1.8.2, after the r1502901 and r1502909a groups are
+     +1: rhuijben (for 1.8.2, after the r1502901 and r1502909 groups are
                    backported)
 
  * r1503009
