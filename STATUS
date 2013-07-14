@@ -168,7 +168,7 @@ Candidate changes:
      doesn't describe how it failed.  (ENOTIMPL for example is actionable upon
      by rebuilding APR.)  User complained.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1503058, r1503061
    svn_utf_*: Describe APR errors as coming from APR.
