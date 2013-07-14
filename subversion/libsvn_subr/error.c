@@ -684,7 +684,7 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
       offset = 5;
     }
 
-  return apr_strerror(statcode, buf + offset, bufsize) - offset;
+  return apr_strerror(statcode, buf + offset, bufsize - offset) - offset;
 }
 
 #ifdef SVN_DEBUG
