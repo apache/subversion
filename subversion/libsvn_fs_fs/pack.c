@@ -360,7 +360,7 @@ struct pack_baton
      extension, on not having to use a retry when calling
      svn_fs_fs__path_rev_absolute() and friends).  If you add a call
      to this function, consider whether you have to call
-     update_min_unpacked_rev().
+     svn_fs_fs__update_min_unpacked_rev().
      See this thread: http://thread.gmane.org/1291206765.3782.3309.camel@edith
  */
 static svn_error_t *
