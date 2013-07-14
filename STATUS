@@ -151,7 +151,8 @@ Candidate changes:
      r1478987 removes a common ra session.
      r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
    Votes:
-     +1: rhuijben (for 1.8.2, after r1502901 and r1502909a are backported)
+     +1: rhuijben (for 1.8.2, after the r1502901 and r1502909a groups are
+                   backported)
 
  * r1503009
    Short-circuit the UTF-8 conversion when the source encoding is UTF-8.
@@ -159,7 +160,7 @@ Candidate changes:
      Fixes svnsync_authz_tests.py 5 when apr_xlate_open() fails and
      --source-prop-encoding wasn't passed.  User complained.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1503010
    svn_utf_*: Improve error handling.
@@ -167,6 +168,8 @@ Candidate changes:
      The error chain discards information: says "apr_xlate_open" failed but
      doesn't describe how it failed.  (ENOTIMPL for example is actionable upon
      by rebuilding APR.)  User complained.
+   Note:
+     This patch is also part of the r1503058 group.
    Votes:
      +1: danielsh, rhuijben
 
