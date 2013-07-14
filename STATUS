@@ -170,7 +170,7 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1503030
+ * r1503030, r1503032
    Describe APR errors as coming from APR.
    Justification:
      It is not obvious what needs to be recompiled to resolve "This function
