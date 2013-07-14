@@ -125,7 +125,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1502909
+ * r1502909, r1502952
    Make ra_svn sessions reusable after a log callback uses the
    SVN_ERR_CEASE_INVOCATION error.
    Justification:
@@ -137,11 +137,13 @@ Candidate changes:
      the data where possible.
    Votes:
      +1: rhuijben
-     =0: danielsh (like the idea, but it's an API violation:
+     =0: danielsh (without r1502952) (like the idea, but it's an API violation:
 		   * If any invocation of @a receiver returns error, return
 		   * that error immediately and without wrapping it.
 		   says svn_ra_get_logs2().  The patch discards the error
                    chain the receiver returned.)
+         (rhuijben: making the ra-session unusable after an error was no
+                    api violation?)
 
  * r1468980, r1478987, r1502811
    Reduce the number of ra sessions for automatic merge calculations to two.
