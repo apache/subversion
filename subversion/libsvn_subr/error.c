@@ -669,7 +669,6 @@ char *
 svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 {
   const err_defn *defn;
-  apr_size_t offset = 0;
 
   for (defn = error_table; defn->errdesc != NULL; ++defn)
     if (defn->errcode == (svn_errno_t)statcode)
@@ -678,13 +677,7 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
         return buf;
       }
 
-  if (bufsize > 5)
-    {
-      strcpy(buf, "APR: ");
-      offset = 5;
-    }
-
-  return apr_strerror(statcode, buf + offset, bufsize - offset) - offset;
+  return apr_strerror(statcode, buf, bufsize);
 }
 
 #ifdef SVN_DEBUG
