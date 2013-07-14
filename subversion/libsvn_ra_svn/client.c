@@ -1504,6 +1504,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
   svn_boolean_t want_author = FALSE;
   svn_boolean_t want_message = FALSE;
   svn_boolean_t want_date = FALSE;
+  int nreceived = 0;
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "log"));
   if (paths)
@@ -1565,7 +1566,6 @@ perform_ra_svn_log(svn_error_t **outer_error,
       svn_ra_svn_item_t *item;
       apr_hash_t *cphash;
       svn_revnum_t rev;
-      int nreceived;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
@@ -1648,8 +1648,10 @@ perform_ra_svn_log(svn_error_t **outer_error,
       else
         cphash = NULL;
 
-      /* Maybe invoke RECEIVER. */
-      nreceived = 0;
+      /* Invoke RECEIVER
+          - Except if the server sends more than a >= 1 limit top level items
+          - Or when the callback reported a SVN_ERR_CEASE_INVOCATION
+            in an earlier invocation. */
       if (! (limit && (nest_level == 0) && (++nreceived > limit))
           && ! *outer_error)
         {
