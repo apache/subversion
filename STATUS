@@ -176,7 +176,7 @@ Candidate changes:
      It is not obvious what needs to be recompiled to resolve "This function
      has not been implemented on this platform".  We do the same for SQLite.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
