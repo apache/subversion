@@ -78,7 +78,7 @@ Candidate changes:
    Justification:
      Our build system should work properly.
    Votes:
-     +1: breser
+     +1: breser, stefan2
 
  * r1502267
    Enforce strict version equality between cmdline tools and libraries.
@@ -92,13 +92,6 @@ Candidate changes:
      Seen in the wild under 1.7.x.
    Votes:
      +1: danielsh
-
- * r1502577
-   Change malfunctions to errors.
-   Justification:
-     There is no reason to invoke malfunction_handler in those failure modes.
-   Votes:
-     +1: danielsh, gstein
 
  * r1502401, r1502674
    Implement the tristate version of http-chunked-request.
@@ -123,19 +116,6 @@ Candidate changes:
      which is mostly the same behavior as not re-using the ra session.
    Votes:
      +1: rhuijben, stefan2
-
- * r1502909, r1502952
-   Make ra_svn sessions reusable after a log callback uses the
-   SVN_ERR_CEASE_INVOCATION error.
-   Justification:
-     Without this patch a new session would be required for each of these
-     usages.
-     Required by the r1468980 group.
-   Notes:
-     Reads the remaining data before returning, but avoids processing
-     the data where possible.
-   Votes:
-     +1: rhuijben, danielsh, stefan2
 
  * r1468980, r1478987, r1502811
    Reduce the number of ra sessions for automatic merge calculations to two.
@@ -203,6 +183,26 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1502577
+   Change malfunctions to errors.
+   Justification:
+     There is no reason to invoke malfunction_handler in those failure modes.
+   Votes:
+     +1: danielsh, gstein, stefan2
+
+ * r1502909, r1502952
+   Make ra_svn sessions reusable after a log callback uses the
+   SVN_ERR_CEASE_INVOCATION error.
+   Justification:
+     Without this patch a new session would be required for each of these
+     usages.
+     Required by the r1468980 group.
+   Notes:
+     Reads the remaining data before returning, but avoids processing
+     the data where possible.
+   Votes:
+     +1: rhuijben, danielsh, stefan2
 
  * r1503009
    Short-circuit the UTF-8 conversion when the source encoding is UTF-8.
