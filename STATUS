@@ -141,7 +141,7 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben, stefan2
 
- * r1503010, r1503058, r1503061
+ * r1503010, r1503058, r1503061, r1503211
    svn_utf_*: Describe APR errors as coming from APR.
    Justification:
      It is not obvious what needs to be recompiled to resolve "This function
@@ -151,7 +151,8 @@ Candidate changes:
      is being discussed on dev@ still.  The "Justification" field uses that
      error code is used as an example only.
    Votes:
-     +1: danielsh, rhuijben, stefan2
+     +1: danielsh
+     +1 (without r1503211): rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
