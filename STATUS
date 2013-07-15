@@ -141,6 +141,10 @@ Candidate changes:
      by rebuilding APR.)  User complained.
    Note:
      This patch is also part of the r1503058 group.
+     .
+     The current code will not enter the error path in the ENOTIMPL case; that
+     is being discussed on dev@ still.  The "Justification" field uses that
+     error code is used as an example only.
    Votes:
      +1: danielsh, rhuijben, stefan2
 
@@ -149,6 +153,10 @@ Candidate changes:
    Justification:
      It is not obvious what needs to be recompiled to resolve "This function
      has not been implemented on this platform".  We do the same for SQLite.
+     .
+     The current code will not enter the error path in the ENOTIMPL case; that
+     is being discussed on dev@ still.  The "Justification" field uses that
+     error code is used as an example only.
    Votes:
      +1: danielsh, rhuijben, stefan2
 
