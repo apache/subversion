@@ -122,7 +122,7 @@ get_page_id_from_name(UINT *page_id_p, const char *page_name, apr_pool_t *pool)
     {
       apr_status_t saved = err->apr_err;
       svn_error_clear(err);
-      return err->apr_err; /* probably SVN_ERR_ATOMIC_INIT_FAILURE */
+      return saved; /* probably SVN_ERR_ATOMIC_INIT_FAILURE */
     }
 
   hr = CoCreateInstance(&CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER,
