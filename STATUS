@@ -108,8 +108,7 @@ Candidate changes:
    Notes:
      Revisions are actually from ^/subversion/branches/tristate-chunked-request
    Votes:
-     +1: breser, danielsh, ivan
-     +1: philip (without r1502674)
+     +1: breser, danielsh, ivan, philip
      -0: gstein
 
  * r1502901
