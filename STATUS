@@ -71,6 +71,12 @@ Candidate changes:
      Our build system should work properly.
    Votes:
      +1: breser, stefan2
+     -0: rhuijben (Not a regression and I don't think we should encourage
+                   building with just a debug BDB (even for release mode)
+                   by backporting this change. That would require using the
+                   non-distributable debug CRT. Trunk has a cleaner
+                   detection of BDB (via db.h) and even while debugging a
+                   maintainer build of Subversion a release BDB works fine)
 
  * r1502267
    Enforce strict version equality between cmdline tools and libraries.
@@ -93,7 +99,7 @@ Candidate changes:
    Notes:
      Revisions are actually from ^/subversion/branches/tristate-chunked-request
    Votes:
-     +1: breser, danielsh, ivan, philip
+     +1: breser, danielsh, ivan, philip, rhuijben
      -0: gstein
 
  * r1502901
@@ -122,8 +128,7 @@ Candidate changes:
      r1478987 removes a common ra session.
      r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
    Votes:
-     +1: rhuijben (for 1.8.2, after the r1502901 and r1502909 groups are
-                   backported)
+     +1: rhuijben (for 1.8.2)
      +1: stefan2
 
  * r1503010
@@ -151,8 +156,8 @@ Candidate changes:
      is being discussed on dev@ still.  The "Justification" field uses that
      error code is used as an example only.
    Votes:
-     +1: danielsh
-     +1 (without r1503211): rhuijben, stefan2
+     +1: danielsh, rhuijben
+     +1 (without r1503211): stefan2
 
 Veto-blocked changes:
 =====================
