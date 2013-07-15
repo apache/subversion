@@ -122,7 +122,7 @@ Candidate changes:
      Resets the connection used by ra_serf to avoid having to read all data,
      which is mostly the same behavior as not re-using the ra session.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1502909, r1502952
    Make ra_svn sessions reusable after a log callback uses the
@@ -135,7 +135,7 @@ Candidate changes:
      Reads the remaining data before returning, but avoids processing
      the data where possible.
    Votes:
-     +1: rhuijben, danielsh
+     +1: rhuijben, danielsh, stefan2
 
  * r1468980, r1478987, r1502811
    Reduce the number of ra sessions for automatic merge calculations to two.
@@ -153,14 +153,6 @@ Candidate changes:
      +1: rhuijben (for 1.8.2, after the r1502901 and r1502909 groups are
                    backported)
 
- * r1503009
-   Short-circuit the UTF-8 conversion when the source encoding is UTF-8.
-   Justification:
-     Fixes svnsync_authz_tests.py 5 when apr_xlate_open() fails and
-     --source-prop-encoding wasn't passed.  User complained.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r1503010
    svn_utf_*: Improve error handling.
    Justification:
@@ -170,7 +162,7 @@ Candidate changes:
    Note:
      This patch is also part of the r1503058 group.
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh, rhuijben, stefan2
 
  * r1503010, r1503058, r1503061
    svn_utf_*: Describe APR errors as coming from APR.
@@ -178,7 +170,7 @@ Candidate changes:
      It is not obvious what needs to be recompiled to resolve "This function
      has not been implemented on this platform".  We do the same for SQLite.
    Votes:
-     +1: danielsh, rhuijben
+     +1: danielsh, rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
@@ -211,3 +203,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1503009
+   Short-circuit the UTF-8 conversion when the source encoding is UTF-8.
+   Justification:
+     Fixes svnsync_authz_tests.py 5 when apr_xlate_open() fails and
+     --source-prop-encoding wasn't passed.  User complained.
+   Votes:
+     +1: danielsh, rhuijben, stefan2
+
