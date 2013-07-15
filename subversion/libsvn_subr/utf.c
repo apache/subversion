@@ -259,7 +259,7 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
       svn_strerror(apr_err, apr_strerr, sizeof(apr_strerr));
       return svn_error_createf(SVN_ERR_PLUGIN_LOAD_FAILURE, 
                                svn_error_create(apr_err, NULL, apr_strerr),
-                               "%s: %s", name, errstr);
+                               "%s%s", name, errstr);
     }
 
   /* Allocate and initialize the node. */
