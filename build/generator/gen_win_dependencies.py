@@ -651,7 +651,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                   'include/openssl/opensslv.h')
       inc_dir = os.path.join(self.openssl_path, 'include')
       lib_dir = os.path.join(self.openssl_path, 'lib')
-      if self.static_openss:
+      if self.static_openssl:
         self.bin_dir = None
       else:
         self.bin_dir = os.path.join(self.openssl_path, 'bin')
@@ -664,7 +664,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     txt = open(version_path).read()
 
     vermatch = re.search(
-      r'#define OPENSSL_VERSION_TEXT	"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
+      r'#define OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
       txt)
   
     version = (int(vermatch.group(2)), 

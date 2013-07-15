@@ -73,10 +73,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     self.find_libraries(True)
 
-    if self._libraries['db']:
-      db = self._libraries['db']
-      print('Found BDB %s in %s' % (db.version, self.bdb_path))
-    else:
+    if 'db' not in self._libraries:
       print('BDB not found, BDB fs will not be built')
 
     #Make some files for the installer so that we don't need to
