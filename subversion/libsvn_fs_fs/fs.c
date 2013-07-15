@@ -40,6 +40,7 @@
 #include "id.h"
 #include "pack.h"
 #include "rep-cache.h"
+#include "revprops.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -186,7 +187,7 @@ fs_info(const void **fsfs_info,
 static fs_vtable_t fs_vtable = {
   svn_fs_fs__youngest_rev,
   svn_fs_fs__revision_prop,
-  svn_fs_fs__revision_proplist,
+  svn_fs_fs__get_revision_proplist,
   svn_fs_fs__change_rev_prop,
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,

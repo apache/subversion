@@ -174,14 +174,6 @@ svn_error_t *svn_fs_fs__get_proplist(apr_hash_t **proplist,
                                      node_revision_t *noderev,
                                      apr_pool_t *pool);
 
-/* Set *PROPLIST to be an apr_hash_t containing the property list of
-   revision REV as seen in filesystem FS.  Use POOL for temporary
-   allocations. */
-svn_error_t *svn_fs_fs__revision_proplist(apr_hash_t **proplist,
-                                          svn_fs_t *fs,
-                                          svn_revnum_t rev,
-                                          apr_pool_t *pool);
-
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__file_length(svn_filesize_t *length,
@@ -430,46 +422,6 @@ svn_error_t *svn_fs_fs__revision_prop(svn_string_t **value_p, svn_fs_t *fs,
                                       svn_revnum_t rev,
                                       const char *propname,
                                       apr_pool_t *pool);
-
-/* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
- *
- * NOTE: Keep the old non-packed shards around until after the format bump.
- * Otherwise, re-running upgrade will drop the packed revprop shard but
- * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
- * the bump.
- *
- * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
- * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
- */
-svn_error_t *
-svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
-                               const char *shard_path,
-                               apr_int64_t shard,
-                               int max_files_per_dir,
-                               apr_off_t max_pack_size,
-                               int compression_level,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
-                               apr_pool_t *scratch_pool);
-
-/* In the filesystem FS, remove all non-packed revprop shards up to
- * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
- *
- * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
- * used in the usual way.  Cancellation is supported in the sense that we
- * will cleanly abort the operation.  However, there will be remnant shards
- * that must be removed manually.
- *
- * See upgrade_pack_revprops for more info.
- */
-svn_error_t *
-svn_fs_fs__delete_revprops_shard(const char *shard_path,
-                                 apr_int64_t shard,
-                                 int max_files_per_dir,
-                                 svn_cancel_func_t cancel_func,
-                                 void *cancel_baton,
-                                 apr_pool_t *scratch_pool);
-
 
 /* Change, add, or delete a property on a revision REV in filesystem
    FS.  NAME gives the name of the property, and value, if non-NULL,
