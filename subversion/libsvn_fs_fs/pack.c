@@ -33,6 +33,7 @@
 #include "util.h"
 #include "id.h"
 #include "low_level.h"
+#include "revprops.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
