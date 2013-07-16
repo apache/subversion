@@ -1789,7 +1789,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
 /* Represents where in the current svndiff data block each
    representation is. */
-struct rep_state
+typedef struct rep_state_t
 {
   apr_file_t *file;
                     /* The txdelta window cache to use or NULL. */
@@ -1802,11 +1802,11 @@ struct rep_state
   apr_off_t end;    /* The end offset of the raw data. */
   int ver;          /* If a delta, what svndiff version? */
   int chunk_index;
-};
+} rep_state_t;
 
 /* See create_rep_state, which wraps this and adds another error. */
 static svn_error_t *
-create_rep_state_body(struct rep_state **rep_state,
+create_rep_state_body(rep_state_t **rep_state,
                       svn_fs_fs__rep_header_t **rep_header,
                       apr_file_t **file_hint,
                       svn_revnum_t *rev_hint,
@@ -1815,7 +1815,7 @@ create_rep_state_body(struct rep_state **rep_state,
                       apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  struct rep_state *rs = apr_pcalloc(pool, sizeof(*rs));
+  rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
   svn_fs_fs__rep_header_t *rh;
   unsigned char buf[4];
 
@@ -1890,7 +1890,7 @@ create_rep_state_body(struct rep_state **rep_state,
 }
 
 /* Read the rep args for REP in filesystem FS and create a rep_state
-   for reading the representation.  Return the rep_state in *REP_STATE
+   for reading the representation.  Return the rep_state_tin *REP_STATE
    and the rep header in *REP_HEADER, both allocated in POOL.
 
    When reading multiple reps, i.e. a skip delta chain, you may provide
@@ -1900,7 +1900,7 @@ create_rep_state_body(struct rep_state **rep_state,
    result in significant savings in I/O for packed files.
  */
 static svn_error_t *
-create_rep_state(struct rep_state **rep_state,
+create_rep_state(rep_state_t **rep_state,
                  svn_fs_fs__rep_header_t **rep_header,
                  apr_file_t **file_hint,
                  svn_revnum_t *rev_hint,
@@ -1945,7 +1945,7 @@ struct rep_read_baton
   apr_array_header_t *rs_list;
 
   /* The plaintext state, if there is a plaintext. */
-  struct rep_state *src_state;
+  rep_state_t *src_state;
 
   /* The index of the current delta chunk, if we are reading a delta. */
   int chunk_index;
@@ -1989,7 +1989,7 @@ struct rep_read_baton
  * a cache lookup key.  Allocations will be made from POOL.  May return
  * NULL if the key cannot be constructed. */
 static const char*
-get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
+get_window_key(rep_state_t *rs, apr_off_t offset, apr_pool_t *pool)
 {
   const char *name;
   const char *last_part;
@@ -2040,7 +2040,7 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
  */
 static svn_error_t *
 get_cached_window(svn_txdelta_window_t **window_p,
-                  struct rep_state *rs,
+                  rep_state_t *rs,
                   svn_boolean_t *is_cached,
                   apr_pool_t *pool)
 {
@@ -2081,7 +2081,7 @@ get_cached_window(svn_txdelta_window_t **window_p,
  * Temporary allocations will be made from SCRATCH_POOL. */
 static svn_error_t *
 set_cached_window(svn_txdelta_window_t *window,
-                  struct rep_state *rs,
+                  rep_state_t *rs,
                   apr_off_t offset,
                   apr_pool_t *scratch_pool)
 {
@@ -2112,7 +2112,7 @@ set_cached_window(svn_txdelta_window_t *window,
  */
 static svn_error_t *
 get_cached_combined_window(svn_stringbuf_t **window_p,
-                           struct rep_state *rs,
+                           rep_state_t *rs,
                            svn_boolean_t *is_cached,
                            apr_pool_t *pool)
 {
@@ -2139,7 +2139,7 @@ get_cached_combined_window(svn_stringbuf_t **window_p,
  * Temporary allocations will be made from SCRATCH_POOL. */
 static svn_error_t *
 set_cached_combined_window(svn_stringbuf_t *window,
-                           struct rep_state *rs,
+                           rep_state_t *rs,
                            apr_off_t offset,
                            apr_pool_t *scratch_pool)
 {
@@ -2156,7 +2156,7 @@ set_cached_combined_window(svn_stringbuf_t *window,
   return SVN_NO_ERROR;
 }
 
-/* Build an array of rep_state structures in *LIST giving the delta
+/* Build an array of rep_state_t structures in *LIST giving the delta
    reps from first_rep to a plain-text or self-compressed rep.  Set
    *SRC_STATE to the plain-text rep we find at the end of the chain,
    or to NULL if the final delta representation is self-compressed.
@@ -2171,20 +2171,20 @@ set_cached_combined_window(svn_stringbuf_t *window,
 static svn_error_t *
 build_rep_list(apr_array_header_t **list,
                svn_stringbuf_t **window_p,
-               struct rep_state **src_state,
+               rep_state_t **src_state,
                svn_filesize_t *expanded_size,
                svn_fs_t *fs,
                representation_t *first_rep,
                apr_pool_t *pool)
 {
   representation_t rep;
-  struct rep_state *rs = NULL;
+  rep_state_t *rs = NULL;
   svn_fs_fs__rep_header_t *rep_header;
   svn_boolean_t is_cached = FALSE;
   apr_file_t *last_file = NULL;
   svn_revnum_t last_revision;
 
-  *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
+  *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
 
   /* The value as stored in the data struct.
@@ -2216,7 +2216,7 @@ build_rep_list(apr_array_header_t **list,
       if (is_cached)
         {
           /* We already have a reconstructed window in our cache.
-             Write a pseudo rep_state with the full length. */
+             Write a pseudo rep_state_twith the full length. */
           rs->off = rs->start;
           rs->end = rs->start + (*window_p)->len;
           *src_state = rs;
@@ -2231,7 +2231,7 @@ build_rep_list(apr_array_header_t **list,
         }
 
       /* Push this rep onto the list.  If it's self-compressed, we're done. */
-      APR_ARRAY_PUSH(*list, struct rep_state *) = rs;
+      APR_ARRAY_PUSH(*list, rep_state_t *) = rs;
       if (rep_header->type == svn_fs_fs__rep_self_delta)
         {
           *src_state = NULL;
@@ -2297,7 +2297,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
    window into *NWIN. */
 static svn_error_t *
 read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
-                  struct rep_state *rs, apr_pool_t *pool)
+                  rep_state_t *rs, apr_pool_t *pool)
 {
   svn_stream_t *stream;
   svn_boolean_t is_cached;
@@ -2346,7 +2346,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
 
 /* Read SIZE bytes from the representation RS and return it in *NWIN. */
 static svn_error_t *
-read_plain_window(svn_stringbuf_t **nwin, struct rep_state *rs,
+read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
                   apr_size_t size, apr_pool_t *pool)
 {
   /* RS->FILE may be shared between RS instances -> make sure we point
@@ -2376,7 +2376,7 @@ get_combined_window(svn_stringbuf_t **result,
   int i;
   apr_array_header_t *windows;
   svn_stringbuf_t *source, *buf = rb->base_window;
-  struct rep_state *rs;
+  rep_state_t *rs;
 
   /* Read all windows that we need to combine. This is fine because
      the size of each window is relatively small (100kB) and skip-
@@ -2388,7 +2388,7 @@ get_combined_window(svn_stringbuf_t **result,
     {
       svn_txdelta_window_t *window;
 
-      rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
+      rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
       SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
       APR_ARRAY_PUSH(windows, svn_txdelta_window_t *) = window;
@@ -2405,7 +2405,7 @@ get_combined_window(svn_stringbuf_t **result,
     {
       svn_txdelta_window_t *window;
 
-      rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
+      rs = APR_ARRAY_IDX(rb->rs_list, i, rep_state_t *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
 
       /* Maybe, we've got a PLAIN start representation.  If we do, read
@@ -2477,7 +2477,7 @@ get_contents(struct rep_read_baton *rb,
 {
   apr_size_t copy_len, remaining = *len;
   char *cur = buf;
-  struct rep_state *rs;
+  rep_state_t *rs;
 
   /* Special case for when there are no delta reps, only a plain
      text. */
@@ -2489,7 +2489,7 @@ get_contents(struct rep_read_baton *rb,
       if (rb->base_window != NULL)
         {
           /* We got the desired rep directly from the cache.
-             This is where we need the pseudo rep_state created
+             This is where we need the pseudo rep_state_t created
              by build_rep_list(). */
           apr_size_t offset = (apr_size_t)(rs->off - rs->start);
           if (copy_len + offset > rb->base_window->len)
@@ -2540,7 +2540,7 @@ get_contents(struct rep_read_baton *rb,
         {
           svn_stringbuf_t *sbuf = NULL;
 
-          rs = APR_ARRAY_IDX(rb->rs_list, 0, struct rep_state *);
+          rs = APR_ARRAY_IDX(rb->rs_list, 0, rep_state_t *);
           if (rs->off == rs->end)
             break;
 
@@ -2678,7 +2678,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
 /* Baton used when reading delta windows. */
 struct delta_read_baton
 {
-  struct rep_state *rs;
+  rep_state_t *rs;
   svn_checksum_t *checksum;
 };
 
@@ -2723,7 +2723,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
      then just use that delta. */
   if (source && source->data_rep && target->data_rep)
     {
-      struct rep_state *rep_state;
+      rep_state_t *rep_state;
       svn_fs_fs__rep_header_t *rep_header;
 
       /* Read target's base rep if any. */
@@ -4388,7 +4388,7 @@ choose_delta_base(representation_t **rep,
        * MAX_CHAIN_LENGTH steps. */
       for (; max_chain_length; --max_chain_length)
         {
-          struct rep_state *rep_state;
+          rep_state_t *rep_state;
           svn_fs_fs__rep_header_t *rep_header;
 
           SVN_ERR(create_rep_state_body(&rep_state,
@@ -6892,7 +6892,7 @@ verify_walker(representation_t *rep,
               svn_fs_t *fs,
               apr_pool_t *scratch_pool)
 {
-  struct rep_state *rs;
+  rep_state_t *rs;
   svn_fs_fs__rep_header_t *rep_header;
 
   if (baton)
