@@ -33,7 +33,7 @@ SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
 SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
 
 
-HTTPD=httpd-2.2.19
+HTTPD=httpd-2.2.25
 APR_ICONV=apr-iconv-1.2.1
 
 BASEDIR=`pwd`
