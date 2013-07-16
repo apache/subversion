@@ -102,6 +102,27 @@ svn_fs_fs__path_rev_packed(svn_fs_t *fs,
                            const char *kind,
                            apr_pool_t *pool);
 
+/* Return the full path of the "txn-current" file in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_current(svn_fs_t *fs,
+                            apr_pool_t *pool);
+
+/* Return the full path of the "txn-current-lock" file in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_current_lock(svn_fs_t *fs,
+                                 apr_pool_t *pool);
+
+/* Return the full path of the global write lock file in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_lock(svn_fs_t *fs,
+                     apr_pool_t *pool);
+
 /* Return the full path of the revprop generation file in FS.
  * Allocate the result in POOL.
  */

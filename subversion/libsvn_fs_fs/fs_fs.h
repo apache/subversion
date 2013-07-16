@@ -309,6 +309,15 @@ svn_error_t *svn_fs_fs__txn_changes_fetch(apr_hash_t **changes,
 const char *
 svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool);
 
+/* Write the format number and maximum number of files per directory
+   for FS, possibly expecting to overwrite a previously existing file.
+
+   Use POOL for temporary allocation. */
+svn_error_t *
+svn_fs_fs__write_format(svn_fs_t *fs,
+                        svn_boolean_t overwrite,
+                        apr_pool_t *pool);
+
 /* Obtain a write lock on the filesystem FS in a subpool of POOL, call
    BODY with BATON and that subpool, destroy the subpool (releasing the write
    lock) and return what BODY returned. */
