@@ -91,17 +91,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1502401, r1502674
-   Implement the tristate version of http-chunked-request.
-   Branch: ^/subversion/branches/1.8.x-tristate-chunked-request
-   Justification:
-     Better behavior over the boolean (see the mailing list for details)
-   Notes:
-     Revisions are actually from ^/subversion/branches/tristate-chunked-request
-   Votes:
-     +1: breser, danielsh, ivan, philip, rhuijben
-     -0: gstein
-
  * r1502901
    Make ra_serf sessions reusable after a log callback uses the
    SVN_ERR_CEASE_INVOCATION error.
@@ -130,21 +119,6 @@ Candidate changes:
    Votes:
      +1: rhuijben (for 1.8.2)
      +1: stefan2
-
- * r1503010
-   svn_utf_*: Improve error handling.
-   Justification:
-     The error chain discards information: says "apr_xlate_open" failed but
-     doesn't describe how it failed.  (ENOTIMPL for example is actionable upon
-     by rebuilding APR.)  User complained.
-   Note:
-     This patch is also part of the r1503058 group.
-     .
-     The current code will not enter the error path in the ENOTIMPL case; that
-     is being discussed on dev@ still.  The "Justification" field uses that
-     error code is used as an example only.
-   Votes:
-     +1: danielsh, rhuijben, stefan2
 
  * r1503010, r1503058, r1503061, r1503211
    svn_utf_*: Describe APR errors as coming from APR.
@@ -201,4 +175,30 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1502401, r1502674
+   Implement the tristate version of http-chunked-request.
+   Branch: ^/subversion/branches/1.8.x-tristate-chunked-request
+   Justification:
+     Better behavior over the boolean (see the mailing list for details)
+   Notes:
+     Revisions are actually from ^/subversion/branches/tristate-chunked-request
+   Votes:
+     +1: breser, danielsh, ivan, philip, rhuijben
+     -0: gstein
+
+ * r1503010
+   svn_utf_*: Improve error handling.
+   Justification:
+     The error chain discards information: says "apr_xlate_open" failed but
+     doesn't describe how it failed.  (ENOTIMPL for example is actionable upon
+     by rebuilding APR.)  User complained.
+   Note:
+     This patch is also part of the r1503058 group.
+     .
+     The current code will not enter the error path in the ENOTIMPL case; that
+     is being discussed on dev@ still.  The "Justification" field uses that
+     error code is used as an example only.
+   Votes:
+     +1: danielsh, rhuijben, stefan2
 
