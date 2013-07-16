@@ -1890,7 +1890,7 @@ create_rep_state_body(rep_state_t **rep_state,
 }
 
 /* Read the rep args for REP in filesystem FS and create a rep_state
-   for reading the representation.  Return the rep_state_tin *REP_STATE
+   for reading the representation.  Return the rep_state_t in *REP_STATE
    and the rep header in *REP_HEADER, both allocated in POOL.
 
    When reading multiple reps, i.e. a skip delta chain, you may provide
@@ -1931,6 +1931,90 @@ create_rep_state(rep_state_t **rep_state,
     }
   /* ### Call representation_string() ? */
   return svn_error_trace(err);
+}
+
+/* Check that the presentation REP actually exists in FS.  Use POOL for
+   allocations.
+
+   When reading multiple reps, i.e. a skip delta chain, you may provide
+   non-NULL FILE_HINT and REV_HINT.  (If FILE_HINT is not NULL, in the
+   first call it should be a pointer to NULL.)  The function will use these
+   variables to store the previous call results and tries to re-use them.
+   This may result in significant I/O reduction for packed files.
+ */
+static svn_error_t *
+check_rep(representation_t *rep,
+          svn_fs_t *fs,
+          apr_file_t **file_hint,
+          svn_revnum_t *rev_hint,
+          apr_pool_t *pool)
+{
+  rep_state_t *rs;
+  svn_fs_fs__rep_header_t *rep_header;
+
+  /* ### Should this be using read_rep_line() directly? */
+  SVN_ERR(create_rep_state(&rs, &rep_header, file_hint, rev_hint, rep,
+                           fs, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* In FS, determine the number of base representations in REP's delta
+   chain and return the value in *CHAIN_LENGTH.  Use POOL for allocations.
+ */
+static svn_error_t *
+rep_chain_length(int *chain_length,
+                 representation_t *rep,
+                 svn_fs_t *fs,
+                 apr_pool_t *pool)
+{
+  int count = 0;
+  apr_pool_t *sub_pool = svn_pool_create(pool);
+  svn_boolean_t is_delta = FALSE;
+  
+  /* Check whether the length of the deltification chain is acceptable.
+   * Otherwise, shared reps may form a non-skipping delta chain in
+   * extreme cases. */
+  representation_t base_rep = *rep;
+
+  /* re-use open files between iterations */
+  apr_file_t *file_hint = NULL;
+  svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
+
+  svn_fs_fs__rep_header_t *header;
+
+  /* follow the delta chain towards the end but for at most
+   * MAX_CHAIN_LENGTH steps. */
+  do
+    {
+      rep_state_t *rep_state;
+      SVN_ERR(create_rep_state_body(&rep_state,
+                                    &header,
+                                    &file_hint,
+                                    &rev_hint,
+                                    &base_rep,
+                                    fs,
+                                    sub_pool));
+
+      base_rep.revision = header->base_revision;
+      base_rep.offset = header->base_offset;
+      base_rep.size = header->base_length;
+      base_rep.txn_id = NULL;
+      is_delta = header->type == svn_fs_fs__rep_delta;
+
+      ++count;
+      if (count % 16 == 0)
+        {
+          file_hint = NULL;
+          svn_pool_clear(sub_pool);
+        }
+    }
+  while (is_delta && base_rep.revision);
+
+  *chain_length = count;
+  svn_pool_destroy(sub_pool);
+
+  return SVN_NO_ERROR;
 }
 
 struct rep_read_baton
@@ -2216,7 +2300,7 @@ build_rep_list(apr_array_header_t **list,
       if (is_cached)
         {
           /* We already have a reconstructed window in our cache.
-             Write a pseudo rep_state_twith the full length. */
+             Write a pseudo rep_state_t with the full length. */
           rs->off = rs->start;
           rs->end = rs->start + (*window_p)->len;
           *src_state = rs;
@@ -3542,13 +3626,13 @@ get_changes(apr_array_header_t **changes,
 {
   apr_off_t changes_offset;
   apr_file_t *revision_file;
-  svn_boolean_t found;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* try cache lookup first */
 
   if (ffd->changes_cache)
     {
+      svn_boolean_t found;
       SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
                              &rev, pool));
       if (found)
@@ -3557,8 +3641,7 @@ get_changes(apr_array_header_t **changes,
 
   /* read changes from revision file */
 
-  SVN_ERR(ensure_revision_exists(fs, rev, pool));
-
+  SVN_ERR(svn_fs_fs__revision_exists(rev, fs, pool));
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
   SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
@@ -4373,45 +4456,13 @@ choose_delta_base(representation_t **rep,
       /* Check whether the length of the deltification chain is acceptable.
        * Otherwise, shared reps may form a non-skipping delta chain in
        * extreme cases. */
-      apr_pool_t *sub_pool = svn_pool_create(pool);
-      representation_t base_rep = **rep;
+      int chain_length = 0;
+      SVN_ERR(rep_chain_length(&chain_length, *rep, fs, pool));
 
       /* Some reasonable limit, depending on how acceptable longer linear
        * chains are in this repo.  Also, allow for some minimal chain. */
-      int max_chain_length = 2 * (int)ffd->max_linear_deltification + 2;
-
-      /* re-use open files between iterations */
-      svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
-      apr_file_t *file_hint = NULL;
-
-      /* follow the delta chain towards the end but for at most
-       * MAX_CHAIN_LENGTH steps. */
-      for (; max_chain_length; --max_chain_length)
-        {
-          rep_state_t *rep_state;
-          svn_fs_fs__rep_header_t *rep_header;
-
-          SVN_ERR(create_rep_state_body(&rep_state,
-                                        &rep_header,
-                                        &file_hint,
-                                        &rev_hint,
-                                        &base_rep,
-                                        fs,
-                                        sub_pool));
-          if (rep_header->type != svn_fs_fs__rep_delta)
-            break;
-
-          base_rep.revision = rep_header->base_revision;
-          base_rep.offset = rep_header->base_offset;
-          base_rep.size = rep_header->base_length;
-          base_rep.txn_id = NULL;
-        }
-
-      /* start new delta chain if the current one has grown too long */
-      if (max_chain_length == 0)
+      if (chain_length >= 2 * (int)ffd->max_linear_deltification + 2)
         *rep = NULL;
-
-      svn_pool_destroy(sub_pool);
     }
 
   return SVN_NO_ERROR;
@@ -6282,6 +6333,7 @@ recover_body(void *baton, apr_pool_t *pool)
         {
           apr_file_t *rev_file;
           apr_off_t root_offset;
+          svn_fs_id_t *root_id;
 
           svn_pool_clear(iterpool);
 
@@ -6290,8 +6342,9 @@ recover_body(void *baton, apr_pool_t *pool)
 
           SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev,
                                                    iterpool));
-          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, fs, rev,
-                                          iterpool));
+          SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, iterpool));
+
+          root_offset = svn_fs_fs__id_offset(root_id);
           SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
           SVN_ERR(svn_io_file_close(rev_file, iterpool));
@@ -6892,9 +6945,6 @@ verify_walker(representation_t *rep,
               svn_fs_t *fs,
               apr_pool_t *scratch_pool)
 {
-  rep_state_t *rs;
-  svn_fs_fs__rep_header_t *rep_header;
-
   if (baton)
     {
       verify_walker_baton_t *walker_baton = baton;
@@ -6923,9 +6973,8 @@ verify_walker(representation_t *rep,
 
       /* access the repo data */
       previous_file = walker_baton->file_hint;
-      SVN_ERR(create_rep_state(&rs, &rep_header, &walker_baton->file_hint,
-                               &walker_baton->rev_hint, rep, fs,
-                               walker_baton->pool));
+      SVN_ERR(check_rep(rep, fs, &walker_baton->file_hint,
+                        &walker_baton->rev_hint, walker_baton->pool));
 
       /* update resource usage counters */
       walker_baton->iteration_count++;
@@ -6935,8 +6984,7 @@ verify_walker(representation_t *rep,
   else
     {
       /* ### Should this be using read_rep_line() directly? */
-      SVN_ERR(create_rep_state(&rs, &rep_header, NULL, NULL, rep, fs,
-                               scratch_pool));
+      SVN_ERR(check_rep(rep, fs, NULL, NULL, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -7336,14 +7384,17 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
     {
       apr_off_t root_offset;
       apr_file_t *rev_file;
+      svn_fs_id_t *root_id;
 
       if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         SVN_ERR(svn_fs_fs__update_min_unpacked_rev(dst_fs, scratch_pool));
 
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, dst_fs,
                                                new_youngest, scratch_pool));
-      SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
-                                      dst_fs, new_youngest, scratch_pool));
+      SVN_ERR(svn_fs_fs__rev_get_root(&root_id, dst_fs, new_youngest,
+                                      scratch_pool));
+
+      root_offset = svn_fs_fs__id_offset(root_id);
       SVN_ERR(recover_find_max_ids(dst_fs, new_youngest, rev_file,
                                    root_offset, next_node_id, next_copy_id,
                                    scratch_pool));
