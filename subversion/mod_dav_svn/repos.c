@@ -2390,21 +2390,12 @@ get_parent_path(const char *path,
                 svn_boolean_t is_urlpath,
                 apr_pool_t *pool)
 {
-  apr_size_t len;
-  char *tmp = apr_pstrdup(pool, path);
-
-  len = strlen(tmp);
-
-  if (len > 0)
+  if (*path != '\0') /* not an empty string */
     {
-      /* Remove any trailing slash; else svn_path_dirname() asserts. */
-      if (tmp[len-1] == '/')
-        tmp[len-1] = '\0';
-
       if (is_urlpath)
-        return svn_urlpath__dirname(tmp, pool);
+        return svn_urlpath__dirname(path, pool);
       else
-        return svn_fspath__dirname(tmp, pool);
+        return svn_fspath__dirname(path, pool);
     }
 
   return path;
@@ -2440,7 +2431,9 @@ get_parent_resource(const dav_resource *resource,
       parent->versioned = 1;
       parent->hooks = resource->hooks;
       parent->pool = resource->pool;
-      parent->uri = get_parent_path(resource->uri, TRUE, resource->pool);
+      parent->uri = get_parent_path(svn_urlpath__canonicalize(resource->uri,
+                                                              resource->pool),
+                                    TRUE, resource->pool);
       parent->info = parentinfo;
 
       parentinfo->uri_path =
