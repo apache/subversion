@@ -477,7 +477,7 @@ connection_closed(svn_ra_serf__connection_t *conn,
 {
   if (why)
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_wrap_apr(why, NULL);
     }
 
   if (conn->session->using_ssl)
