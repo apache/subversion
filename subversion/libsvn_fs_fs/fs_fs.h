@@ -57,14 +57,6 @@ svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
                                  void *cancel_baton,
                                  apr_pool_t *pool);
 
-/* Recover the fsfs associated with filesystem FS.
-   Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
-   Use POOL for temporary allocations. */
-svn_error_t *svn_fs_fs__recover(svn_fs_t *fs,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *pool);
-
 /* Store NODEREV as the node-revision for the node whose id is ID in
    FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
    necessary temporary allocation in POOL. */

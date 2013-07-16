@@ -235,6 +235,17 @@ svn_fs_fs__write_revnum_file(svn_fs_t *fs,
                              svn_revnum_t revnum,
                              apr_pool_t *scratch_pool);
 
+/* Atomically update the 'current' file to hold the specifed REV,
+   NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
+   ignored and may be 0 if the FS format does not use them.)
+   Perform temporary allocations in POOL. */
+svn_error_t *
+svn_fs_fs__write_current(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         const char *next_node_id,
+                         const char *next_copy_id,
+                         apr_pool_t *pool);
+
 /* Read the file at PATH and return its content in *CONTENT. *CONTENT will
  * not be modified unless the whole file was read successfully.
  *
