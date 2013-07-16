@@ -41,6 +41,7 @@
 #include "pack.h"
 #include "rep-cache.h"
 #include "revprops.h"
+#include "verify.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
