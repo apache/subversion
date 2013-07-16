@@ -34,6 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * improve sqlite error message output (r1497804)
     * support platforms lacking mmap (r1498136)
     * allow configuration files to start with UTF-8 BOM (r1499100 et al)
+    * don't fail on UTF-8 data when encoding conversion not available (r1503009)
 
   - Client-side bugfixes:
     * merge: rename 'automatic merge' to 'complete merge' (r1491432)
@@ -62,6 +63,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * commit: remove stale entries from wc lock table when deleting (r1491756)
     * merge: fix --record-only erroring out on renamed path (issue #4387)
     * svnmucc: fix 'make install' symlink to work when DESTDIR is set (r1501072)
+    * wc: fix crash when target is symlink to a working copy root (issue #4383)
+    * ra_serf: change "internal malfunction" errors to normal errors (r1502577)
 
   - Server-side bugfixes:
     * fsfs: resolve endless loop problem when repos/db/uuid has \r\n (r1492145)
@@ -97,6 +100,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * fs: improve test against newlines in filenames (r1498483 et al)
     * make building with BDB 6 an opt-in feature (r1499438)
     * sqlite: allow placing amalgamation in build dir (r1499034, r1500175) 
+    * ra_svn: make sessions usable after log callback early out (r1503554)
 
   - Bindings:
     * swig-rb: fix tests with out-of-tree-builds (r1492295)
