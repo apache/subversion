@@ -202,11 +202,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1503009
-   Short-circuit the UTF-8 conversion when the source encoding is UTF-8.
-   Justification:
-     Fixes svnsync_authz_tests.py 5 when apr_xlate_open() fails and
-     --source-prop-encoding wasn't passed.  User complained.
-   Votes:
-     +1: danielsh, rhuijben, stefan2
-
