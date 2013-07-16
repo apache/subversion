@@ -52,6 +52,7 @@
 
 #include "fs.h"
 #include "key-gen.h"
+#include "cached_data.h"
 #include "dag.h"
 #include "lock.h"
 #include "tree.h"

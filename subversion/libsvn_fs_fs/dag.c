@@ -28,6 +28,7 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
+#include "cached_data.h"
 #include "dag.h"
 #include "fs.h"
 #include "key-gen.h"
@@ -909,7 +910,7 @@ svn_fs_fs__dag_get_contents(svn_stream_t **contents_p,
 
   /* Get a stream to the contents. */
   SVN_ERR(svn_fs_fs__get_contents(&contents, file->fs,
-                                  noderev, pool));
+                                  noderev->data_rep, pool));
 
   *contents_p = contents;
 
