@@ -306,6 +306,30 @@ svn_fs_fs__write_revnum_file(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_fs__write_current(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         const char *next_node_id,
+                         const char *next_copy_id,
+                         apr_pool_t *pool)
+{
+  char *buf;
+  const char *name;
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* Now we can just write out this line. */
+  if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+    buf = apr_psprintf(pool, "%ld\n", rev);
+  else
+    buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
+
+  name = svn_fs_fs__path_current(fs, pool);
+  SVN_ERR(svn_io_write_atomic(name, buf, strlen(buf),
+                              name /* copy_perms_path */, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__try_stringbuf_from_file(svn_stringbuf_t **content,
                                    svn_boolean_t *missing,
                                    const char *path,

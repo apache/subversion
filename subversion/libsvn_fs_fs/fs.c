@@ -39,6 +39,7 @@
 #include "lock.h"
 #include "id.h"
 #include "pack.h"
+#include "recovery.h"
 #include "rep-cache.h"
 #include "revprops.h"
 #include "verify.h"
