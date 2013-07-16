@@ -77,6 +77,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * svnadmin upgrade: fix error of non-sharded fsfs repositories (r1494287)
     * svnadmin create: deny '--fs-type=fsfs --compatible-version=1.0' (r1494223)
     * svnadmin upgrade: fix data loss when cancelling in last stage (r1494298)
+    * mod_dav_svn: fix incorrect path canonicalization (r1503528)
 
   - Other tool improvements and bugfixes:
     * fsfs-stats (tool): resolve segfault when passing invalid path (r1492164)
