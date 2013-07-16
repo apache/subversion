@@ -202,19 +202,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1502909, r1502952
-   Make ra_svn sessions reusable after a log callback uses the
-   SVN_ERR_CEASE_INVOCATION error.
-   Justification:
-     Without this patch a new session would be required for each of these
-     usages.
-     Required by the r1468980 group.
-   Notes:
-     Reads the remaining data before returning, but avoids processing
-     the data where possible.
-   Votes:
-     +1: rhuijben, danielsh, stefan2
-
  * r1503009
    Short-circuit the UTF-8 conversion when the source encoding is UTF-8.
    Justification:
