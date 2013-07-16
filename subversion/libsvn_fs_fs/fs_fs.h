@@ -45,18 +45,6 @@ svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
                                 void *cancel_baton,
                                 apr_pool_t *pool);
 
-/* Copy the fsfs filesystem SRC_FS at SRC_PATH into a new copy DST_FS at
- * DST_PATH. If INCREMENTAL is TRUE, do not re-copy data which already
- * exists in DST_FS. Use POOL for temporary allocations. */
-svn_error_t * svn_fs_fs__hotcopy(svn_fs_t *src_fs,
-                                 svn_fs_t *dst_fs,
-                                 const char *src_path,
-                                 const char *dst_path,
-                                 svn_boolean_t incremental,
-                                 svn_cancel_func_t cancel_func,
-                                 void *cancel_baton,
-                                 apr_pool_t *pool);
-
 /* Store NODEREV as the node-revision for the node whose id is ID in
    FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
    necessary temporary allocation in POOL. */

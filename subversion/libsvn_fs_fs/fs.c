@@ -37,6 +37,7 @@
 #include "fs_fs.h"
 #include "tree.h"
 #include "lock.h"
+#include "hotcopy.h"
 #include "id.h"
 #include "pack.h"
 #include "recovery.h"
