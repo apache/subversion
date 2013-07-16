@@ -55,6 +55,27 @@ svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_txn_current(svn_fs_t *fs,
+                            apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT, pool);
+}
+
+const char *
+svn_fs_fs__path_txn_current_lock(svn_fs_t *fs,
+                                 apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
+}
+
+const char *
+svn_fs_fs__path_lock(svn_fs_t *fs,
+                     apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
+}
+
+const char *
 svn_fs_fs__path_revprop_generation(svn_fs_t *fs,
                                    apr_pool_t *pool)
 {

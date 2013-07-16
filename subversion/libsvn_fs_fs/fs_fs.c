@@ -792,21 +792,25 @@ read_format(int *pformat, int *max_files_per_dir,
    previously existing file.
 
    Use POOL for temporary allocation. */
-static svn_error_t *
-write_format(const char *path, int format, int max_files_per_dir,
-             svn_boolean_t overwrite, apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__write_format(svn_fs_t *fs,
+                        svn_boolean_t overwrite,
+                        apr_pool_t *pool)
 {
   svn_stringbuf_t *sb;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *path = path_format(fs, pool);
 
-  SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+  SVN_ERR_ASSERT(1 <= ffd->format
+                 && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
 
-  sb = svn_stringbuf_createf(pool, "%d\n", format);
+  sb = svn_stringbuf_createf(pool, "%d\n", ffd->format);
 
-  if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
+  if (ffd->format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
-      if (max_files_per_dir)
+      if (ffd->max_files_per_dir)
         svn_stringbuf_appendcstr(sb, apr_psprintf(pool, "layout sharded %d\n",
-                                                  max_files_per_dir));
+                                                  ffd->max_files_per_dir));
       else
         svn_stringbuf_appendcstr(sb, "layout linear\n");
     }
@@ -1142,6 +1146,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
 {
   struct upgrade_baton_t *upgrade_baton = baton;
   svn_fs_t *fs = upgrade_baton->fs;
+  fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
@@ -1216,8 +1221,9 @@ upgrade_body(void *baton, apr_pool_t *pool)
     }
 
   /* Bump the format file. */
-  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER,
-                       max_files_per_dir, TRUE, pool));
+  ffd->format = SVN_FS_FS__FORMAT_NUMBER;
+  ffd->max_files_per_dir = max_files_per_dir;
+  SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
   if (upgrade_baton->notify_func)
     SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
                                        SVN_FS_FS__FORMAT_NUMBER,
@@ -4158,8 +4164,7 @@ svn_fs_fs__create(svn_fs_t *fs,
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR(write_format(path_format(fs, pool),
-                       ffd->format, ffd->max_files_per_dir, FALSE, pool));
+  SVN_ERR(svn_fs_fs__write_format(fs,FALSE, pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
@@ -5440,8 +5445,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(dst_fs));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
-  SVN_ERR(write_format(svn_dirent_join(dst_fs->path, PATH_FORMAT, pool),
-                       dst_ffd->format, max_files_per_dir, TRUE, pool));
+  dst_ffd->max_files_per_dir = max_files_per_dir;
+  SVN_ERR(svn_fs_fs__write_format(dst_fs, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
