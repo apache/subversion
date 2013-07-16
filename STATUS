@@ -202,13 +202,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1502577
-   Change malfunctions to errors.
-   Justification:
-     There is no reason to invoke malfunction_handler in those failure modes.
-   Votes:
-     +1: danielsh, gstein, stefan2
-
  * r1502909, r1502952
    Make ra_svn sessions reusable after a log callback uses the
    SVN_ERR_CEASE_INVOCATION error.
