@@ -169,6 +169,67 @@ svn_fs_fs__path_revprops(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_txn_dir(svn_fs_t *fs,
+                        const char *txn_id,
+                        apr_pool_t *pool)
+{
+  SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
+  return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
+                              apr_pstrcat(pool, txn_id, PATH_EXT_TXN,
+                                          (char *)NULL),
+                              NULL);
+}
+
+const char *
+svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
+                              const char *txn_id,
+                              apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                                apr_pstrcat(pool, txn_id, PATH_EXT_REV,
+                                            (char *)NULL),
+                                NULL);
+  else
+    return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                           PATH_REV, pool);
+}
+
+const char *
+svn_fs_fs__path_txn_node_rev(svn_fs_t *fs,
+                             const svn_fs_id_t *id,
+                             apr_pool_t *pool)
+{
+  const char *txn_id = svn_fs_fs__id_txn_id(id);
+  const char *node_id = svn_fs_fs__id_node_id(id);
+  const char *copy_id = svn_fs_fs__id_copy_id(id);
+  const char *name = apr_psprintf(pool, PATH_PREFIX_NODE "%s.%s",
+                                  node_id, copy_id);
+
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool), name,
+                         pool);
+}
+
+const char *
+svn_fs_fs__path_txn_node_props(svn_fs_t *fs,
+                               const svn_fs_id_t *id,
+                               apr_pool_t *pool)
+{
+  return apr_pstrcat(pool, svn_fs_fs__path_txn_node_rev(fs, id, pool),
+                     PATH_EXT_PROPS, (char *)NULL);
+}
+
+const char *
+svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
+                                  const svn_fs_id_t *id,
+                                  apr_pool_t *pool)
+{
+  return apr_pstrcat(pool, svn_fs_fs__path_txn_node_rev(fs, id, pool),
+                     PATH_EXT_CHILDREN, (char *)NULL);
+}
+
+const char *
 svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs,
                                  apr_pool_t *pool)
 {
@@ -286,6 +347,22 @@ svn_fs_fs__try_stringbuf_from_file(svn_stringbuf_t **content,
 }
 
 svn_error_t *
+svn_fs_fs__get_file_offset(apr_off_t *offset_p,
+                           apr_file_t *file,
+                           apr_pool_t *pool)
+{
+  apr_off_t offset;
+
+  /* Note that, for buffered files, one (possibly surprising) side-effect
+     of this call is to flush any unwritten data to disk. */
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, pool));
+  *offset_p = offset;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__read_content(svn_stringbuf_t **content,
                         const char *fname,
                         apr_pool_t *pool)
@@ -391,3 +468,54 @@ svn_fs_fs__move_into_place(const char *old_filename,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
+                                 svn_fs_t *fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_error_t *err;
+  svn_boolean_t retry = FALSE;
+
+  do
+    {
+      const char *path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
+
+      /* open the revision file in buffered r/o mode */
+      err = svn_io_file_open(file, path,
+                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+            {
+              /* Could not open the file. This may happen if the
+               * file once existed but got packed later. */
+              svn_error_clear(err);
+
+              /* if that was our 2nd attempt, leave it at that. */
+              if (retry)
+                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                         _("No such revision %ld"), rev);
+
+              /* We failed for the first time. Refresh cache & retry. */
+              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+
+              retry = TRUE;
+            }
+          else
+            {
+              svn_error_clear(err);
+              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       _("No such revision %ld"), rev);
+            }
+        }
+      else
+        {
+          retry = FALSE;
+        }
+    }
+  while (retry);
+
+  return svn_error_trace(err);
+}

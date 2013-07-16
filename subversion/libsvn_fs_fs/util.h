@@ -155,6 +155,47 @@ const char *
 svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs,
                                  apr_pool_t *pool);
 
+/* Return the path of the directory containing the transaction TXN_ID in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_dir(svn_fs_t *fs,
+                        const char *txn_id,
+                        apr_pool_t *pool);
+
+/* Return the path of the proto-revision file for transaction TXN_ID in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
+                              const char *txn_id,
+                              apr_pool_t *pool);
+
+/* Return the path of the file containing the in-transaction node revision
+ * identified by ID in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_node_rev(svn_fs_t *fs,
+                             const svn_fs_id_t *id,
+                             apr_pool_t *pool);
+
+/* Return the path of the file containing the in-transaction properties of
+ * the node identified by ID in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_node_props(svn_fs_t *fs,
+                               const svn_fs_id_t *id,
+                               apr_pool_t *pool);
+
+/* Return the path of the file containing the directory entries of the
+ * in-transaction directory node identified by ID in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
+                                  const svn_fs_id_t *id,
+                                  apr_pool_t *pool);
+
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
  * by #svn_fs_fs__path_min_unpacked_rev() for FS.
  * Use POOL for temporary allocations.
@@ -210,6 +251,12 @@ svn_fs_fs__try_stringbuf_from_file(svn_stringbuf_t **content,
                                    svn_boolean_t last_attempt,
                                    apr_pool_t *pool);
 
+/* Fetch the current offset of FILE into *OFFSET_P. */
+svn_error_t *
+svn_fs_fs__get_file_offset(apr_off_t *offset_p,
+                           apr_file_t *file,
+                           apr_pool_t *pool);
+
 /* Read the file FNAME and store the contents in *BUF.
    Allocations are performed in POOL. */
 svn_error_t *
@@ -241,5 +288,22 @@ svn_fs_fs__move_into_place(const char *old_filename,
                            const char *new_filename,
                            const char *perms_reference,
                            apr_pool_t *pool);
+
+/* Open the correct revision file for REV.  If the filesystem FS has
+   been packed, *FILE will be set to the packed file; otherwise, set *FILE
+   to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
+   file doesn't exist.
+
+   TODO: Consider returning an indication of whether this is a packed rev
+         file, so the caller need not rely on is_packed_rev() which in turn
+         relies on the cached FFD->min_unpacked_rev value not having changed
+         since the rev file was opened.
+
+   Use POOL for allocations. */
+svn_error_t *
+svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
+                                 svn_fs_t *fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool);
 
 #endif
