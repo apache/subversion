@@ -947,7 +947,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         print("Use '--with-serf' to configure serf location.");
       return
     
-    if is_src and 'ssleay32' not in self._libraries:
+    if is_src and 'openssl' not in self._libraries:
       if show_warning:
         print('openssl not found, serf and ra_serf will not be built')
       return
