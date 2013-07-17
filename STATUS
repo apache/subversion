@@ -61,8 +61,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4390
    Votes:
-     +1: stsp
-     +1: rhuijben (for 1.8.2+)
+     +1: stsp, rhuijben
      -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
 
  * r1501656, r1501702
@@ -117,8 +116,7 @@ Candidate changes:
      r1478987 removes a common ra session.
      r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
    Votes:
-     +1: rhuijben (for 1.8.2)
-     +1: stefan2
+     +1: rhuijben, stefan2
 
  * r1503010, r1503058, r1503061, r1503211
    svn_utf_*: Describe APR errors as coming from APR.
@@ -142,8 +140,16 @@ Candidate changes:
       recieved N bytes of original request response and continue with
       remaining bytes from retried request. 
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
      +0: danielsh
+
+ * r1504192
+   Make 'svn diff' continue on missing and obstructing files.
+   This resolves issue 4396
+   Justification:
+     Regression since 1.7.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
