@@ -99,6 +99,9 @@ struct revision_baton
   apr_int32_t rev_offset;
   svn_boolean_t skipped;
 
+  /* Array of svn_prop_t with revision properties. */
+  apr_array_header_t *revprops;
+
   struct parse_baton *pb;
   apr_pool_t *pool;
 };
@@ -448,6 +451,7 @@ make_revision_baton(apr_hash_t *headers,
   rb->pb = pb;
   rb->pool = pool;
   rb->rev = SVN_INVALID_REVNUM;
+  rb->revprops = apr_array_make(rb->pool, 8, sizeof(svn_prop_t));
 
   if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER)))
     {
@@ -698,10 +702,12 @@ set_revision_property(void *baton,
 
   if (rb->rev > 0)
     {
-      if (rb->pb->validate_props)
-        SVN_ERR(svn_repos_fs_change_txn_prop(rb->txn, name, value, rb->pool));
-      else
-        SVN_ERR(svn_fs_change_txn_prop(rb->txn, name, value, rb->pool));
+      svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
+
+      /* Collect property changes to apply them in one FS call in
+         close_revision. */
+      prop->name = apr_pstrdup(rb->pool, name);
+      prop->value = svn_string_dup(value, rb->pool);
 
       /* Remember any datestamp that passes through!  (See comment in
          close_revision() below.) */
@@ -919,6 +925,12 @@ close_revision(void *baton)
      number, we're done here. */
   if (rb->skipped || (rb->rev <= 0))
     return SVN_NO_ERROR;
+
+  /* Apply revision property changes. */
+  if (rb->pb->validate_props)
+    SVN_ERR(svn_repos_fs_change_txn_props(rb->txn, rb->revprops, rb->pool));
+  else
+    SVN_ERR(svn_fs_change_txn_props(rb->txn, rb->revprops, rb->pool));
 
   /* Get the txn name and hooks environment if they will be needed. */
   if (pb->use_pre_commit_hook || pb->use_post_commit_hook)
