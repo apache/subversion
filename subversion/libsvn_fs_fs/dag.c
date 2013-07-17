@@ -34,6 +34,7 @@
 #include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "transaction.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
