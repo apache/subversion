@@ -254,7 +254,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     }
 
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep->item_index = (apr_off_t)val;
+  rep->offset = (apr_off_t)val;
 
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -531,7 +531,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
     return svn_stringbuf_createf
             (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
-             rep->revision, rep->item_index, rep->size,
+             rep->revision, rep->offset, rep->size,
              rep->expanded_size,
              format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
 
@@ -539,7 +539,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
   return svn_stringbuf_createf
           (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
            " %" SVN_FILESIZE_T_FMT " %s %s %s/%s",
-           rep->revision, rep->item_index, rep->size,
+           rep->revision, rep->offset, rep->size,
            rep->expanded_size,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
@@ -666,7 +666,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   if (! str)
     goto error;
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  (*header)->base_item_index = (apr_off_t)val;
+  (*header)->base_offset = (apr_off_t)val;
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
@@ -701,7 +701,7 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
       default:
         text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
                             SVN_FILESIZE_T_FMT "\n",
-                            header->base_revision, header->base_item_index,
+                            header->base_revision, header->base_offset,
                             header->base_length);
     }
 

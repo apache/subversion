@@ -56,7 +56,7 @@ svn_fs_fs__item_offset(apr_off_t *offset,
 
   /* older fsfs formats use the manifest file to re-map the offsets */
   *offset = (apr_off_t)item_index;
-  if (!txn_id && is_packed_rev(fs, revision))
+  if (!txn_id && svn_fs_fs__is_packed_rev(fs, revision))
     {
       apr_off_t rev_offset;
 

@@ -240,7 +240,7 @@ typedef struct pair_cache_key_t
   apr_uint64_t second;
 } pair_cache_key_t;
 
-/* Key type that identifies a represenation / rep header. */
+/* Key type that identifies a representation / rep header. */
 typedef struct representation_cache_key_t
 {
   /* Revision that contains the representation */
@@ -249,8 +249,8 @@ typedef struct representation_cache_key_t
   /* Packed or non-packed representation? */
   svn_boolean_t is_packed;
 
-  /* Item index of the representation */
-  apr_uint64_t item_index;
+  /* Item offset of the representation */
+  apr_uint64_t offset;
 } representation_cache_key_t;
 
 /* Key type that identifies a txdelta window. */
@@ -262,8 +262,8 @@ typedef struct window_cache_key_t
   /* Window number within that representation */
   int chunk_index;
 
-  /* Item index of the representation */
-  apr_uint64_t item_index;
+  /* Offset of the representation within REVISION */
+  apr_uint64_t offset;
 } window_cache_key_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
@@ -455,8 +455,8 @@ typedef struct representation_t
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
-  /* Item index with the the revision. */
-  apr_uint64_t item_index;
+  /* Item offset within the revision. */
+  apr_uint64_t offset;
 
   /* The size of the representation in bytes as seen in the revision
      file. */

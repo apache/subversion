@@ -186,7 +186,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
   SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs, rev, NULL,
-                                 noderev->data_rep->item_index, pool));
+                                 noderev->data_rep->offset, pool));
   SVN_ERR_ASSERT(sub_item == 0);
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
 

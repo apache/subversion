@@ -177,7 +177,7 @@ static svn_error_t *check_experimental(void)
 struct key_t
 {
   svn_revnum_t revision;
-  apr_uint64_t item_index;
+  apr_uint64_t offset;
 };
 
 /* What we need to know about a rep. */
@@ -211,7 +211,7 @@ static svn_error_t *record(apr_hash_t *records,
    */
   key = apr_pcalloc(result_pool, sizeof(*key));
   key->revision = rep->revision;
-  key->item_index = rep->item_index;
+  key->offset = rep->offset;
 
   /* Update or create the value. */
   if ((value = apr_hash_get(records, key, sizeof(*key))))

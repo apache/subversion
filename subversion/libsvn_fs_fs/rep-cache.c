@@ -204,7 +204,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       rep->has_sha1 = TRUE;
       memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
       rep->revision = svn_sqlite__column_revnum(stmt, 1);
-      rep->item_index = svn_sqlite__column_int64(stmt, 2);
+      rep->offset = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
       rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
 
@@ -259,7 +259,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
              sizeof((*rep)->sha1_digest));
       (*rep)->has_sha1 = TRUE;
       (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);
+      (*rep)->offset = svn_sqlite__column_int64(stmt, 1);
       (*rep)->size = svn_sqlite__column_int64(stmt, 2);
       (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
@@ -301,7 +301,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
                             svn_checksum_to_cstring(&checksum, pool),
                             (apr_int64_t) rep->revision,
-                            (apr_int64_t) rep->item_index,
+                            (apr_int64_t) rep->offset,
                             (apr_int64_t) rep->size,
                             (apr_int64_t) rep->expanded_size));
 
@@ -324,7 +324,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
       if (old_rep)
         {
           if (reject_dup && ((old_rep->revision != rep->revision)
-                             || (old_rep->item_index != rep->item_index)
+                             || (old_rep->offset != rep->offset)
                              || (old_rep->size != rep->size)
                              || (old_rep->expanded_size != rep->expanded_size)))
             return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -337,9 +337,9 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                               SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
                               SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
                  svn_checksum_to_cstring_display(&checksum, pool),
-                 fs->path, old_rep->revision, old_rep->item_index,
+                 fs->path, old_rep->revision, old_rep->offset,
                  old_rep->size, old_rep->expanded_size, rep->revision,
-                 rep->item_index, rep->size, rep->expanded_size);
+                 rep->offset, rep->size, rep->expanded_size);
           else
             return SVN_NO_ERROR;
         }
