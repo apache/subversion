@@ -672,11 +672,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                int(vermatch.group(4)))
     openssl_version = vermatch.group(1)
   
-    self._libraries['ssleay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
-                                                    'ssleay32.lib',
-                                                    openssl_version,
-                                                    dll_name='ssleay32.dll',
-                                                    dll_dir=bin_dir)
+    self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
+                                                  'ssleay32.lib',
+                                                  openssl_version,
+                                                  dll_name='ssleay32.dll',
+                                                  dll_dir=bin_dir)
 
     self._libraries['libeay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                     'libeay32.lib',
@@ -930,6 +930,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-1/serf.h')):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-1')
+      version = self._get_serf_version(inc_dir)
+      lib_dir = os.path.join(inc_dir, 'lib')
+      debug_lib_dir = None
+      is_src = False
+    elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-2/serf.h')):
+      # Install layout
+      inc_dir = os.path.join(self.serf_path, 'include/serf-2')
       version = self._get_serf_version(inc_dir)
       lib_dir = os.path.join(inc_dir, 'lib')
       debug_lib_dir = None
