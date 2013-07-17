@@ -118,9 +118,8 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
-                                   path_rev_packed(fs, rev, PATH_MANIFEST,
-                                                   pool),
-                                   pool, pool));
+                 svn_fs_fs__path_rev_packed(fs, rev, PATH_MANIFEST, pool),
+                 pool, pool));
 
   /* While we're here, let's just read the entire manifest file into an array,
      so we can cache the entire thing. */
@@ -132,7 +131,8 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
       apr_int64_t val;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(read_number_from_stream(&val, &eof, manifest_stream, iterpool));
+      SVN_ERR(svn_fs_fs__read_number_from_stream(&val, &eof, manifest_stream,
+                                                 iterpool));
       if (eof)
         break;
 
@@ -339,7 +339,7 @@ pack_shard(const char *revs_dir,
     }
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard. */
-  SVN_ERR(write_revnum_file(fs,
+  SVN_ERR(svn_fs_fs__write_revnum_file(fs,
                             (svn_revnum_t)((shard + 1) * max_files_per_dir),
                             pool));
   ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
@@ -426,7 +426,8 @@ pack_body(void *baton,
   if (!ffd->max_files_per_dir)
     return SVN_NO_ERROR;
 
-  SVN_ERR(read_min_unpacked_rev(&ffd->min_unpacked_rev, pb->fs, pool));
+  SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, pb->fs,
+                                           pool));
 
   SVN_ERR(svn_fs_fs__youngest_rev(&youngest, pb->fs, pool));
   completed_shards = (youngest + 1) / ffd->max_files_per_dir;

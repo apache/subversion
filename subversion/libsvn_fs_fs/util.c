@@ -33,35 +33,18 @@
 
 #include "svn_private_config.h"
 
-/* Following are defines that specify the textual elements of the
-   native filesystem directories and revision files. */
-
-/* Notes:
-
-To avoid opening and closing the rev-files all the time, it would
-probably be advantageous to keep each rev-file open for the
-lifetime of the transaction object.  I'll leave that as a later
-optimization for now.
-
-I didn't keep track of pool lifetimes at all in this code.  There
-are likely some errors because of that.
-
-*/
-
-/* Pathname helper functions */
-
-/* Return TRUE is REV is packed in FS, FALSE otherwise. */
 svn_boolean_t
-is_packed_rev(svn_fs_t *fs, svn_revnum_t rev)
+svn_fs_fs__is_packed_rev(svn_fs_t *fs,
+                         svn_revnum_t rev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   return (rev < ffd->min_unpacked_rev);
 }
 
-/* Return TRUE is REV is packed in FS, FALSE otherwise. */
 svn_boolean_t
-is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
+svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
+                             svn_revnum_t rev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -72,13 +55,13 @@ is_packed_revprop(svn_fs_t *fs, svn_revnum_t rev)
 }
 
 const char *
-path_format(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_format(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_FORMAT, pool);
 }
 
 const char *
-path_uuid(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_uuid(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_UUID, pool);
 }
@@ -90,37 +73,43 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 const char *
-path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_txn_current(svn_fs_t *fs,
+                            apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_TXN_CURRENT, pool);
 }
 
 const char *
-path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_txn_current_lock(svn_fs_t *fs,
+                                 apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
 }
 
 const char *
-path_lock(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_lock(svn_fs_t *fs,
+                     apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
 }
 
 const char *
-path_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_revprop_generation(svn_fs_t *fs,
+                                   apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_REVPROP_GENERATION, pool);
 }
 
 const char *
-path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
-                apr_pool_t *pool)
+svn_fs_fs__path_rev_packed(svn_fs_t *fs,
+                           svn_revnum_t rev,
+                           const char *kind,
+                           apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   assert(ffd->max_files_per_dir);
-  assert(is_packed_rev(fs, rev));
+  assert(svn_fs_fs__is_packed_rev(fs, rev));
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool,
@@ -130,7 +119,7 @@ path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, const char *kind,
 }
 
 const char *
-path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_fs__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -142,15 +131,15 @@ path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
-path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  assert(! is_packed_rev(fs, rev));
+  assert(! svn_fs_fs__is_packed_rev(fs, rev));
 
   if (ffd->max_files_per_dir)
     {
-      return svn_dirent_join(path_rev_shard(fs, rev, pool),
+      return svn_dirent_join(svn_fs_fs__path_rev_shard(fs, rev, pool),
                              apr_psprintf(pool, "%ld", rev),
                              pool);
     }
@@ -167,13 +156,15 @@ svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   return (   ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
-          || ! is_packed_rev(fs, rev))
-       ? path_rev(fs, rev, pool)
-       : path_rev_packed(fs, rev, PATH_PACKED, pool);
+          || ! svn_fs_fs__is_packed_rev(fs, rev))
+       ? svn_fs_fs__path_rev(fs, rev, pool)
+       : svn_fs_fs__path_rev_packed(fs, rev, PATH_PACKED, pool);
 }
 
 const char *
-path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_fs__path_revprops_shard(svn_fs_t *fs,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -185,7 +176,9 @@ path_revprops_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
-path_revprops_pack_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_fs__path_revprops_pack_shard(svn_fs_t *fs,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -197,13 +190,15 @@ path_revprops_pack_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
-path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+svn_fs_fs__path_revprops(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   if (ffd->max_files_per_dir)
     {
-      return svn_dirent_join(path_revprops_shard(fs, rev, pool),
+      return svn_dirent_join(svn_fs_fs__path_revprops_shard(fs, rev, pool),
                              apr_psprintf(pool, "%ld", rev),
                              pool);
     }
@@ -225,9 +220,9 @@ combine_txn_id_string(const svn_fs_fs__id_part_t *txn_id,
 }
 
 const char *
-path_txn_dir(svn_fs_t *fs,
-             const svn_fs_fs__id_part_t *txn_id,
-             apr_pool_t *pool)
+svn_fs_fs__path_txn_dir(svn_fs_t *fs,
+                        const svn_fs_fs__id_part_t *txn_id,
+                        apr_pool_t *pool)
 {
   SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
   return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
@@ -236,58 +231,58 @@ path_txn_dir(svn_fs_t *fs,
                               NULL);
 }
 
-/* Return the name of the sha1->rep mapping file in transaction TXN_ID
- * within FS for the given SHA1 checksum.  Use POOL for allocations.
- */
 const char *
-path_txn_sha1(svn_fs_t *fs,
-              const svn_fs_fs__id_part_t *txn_id,
-              const unsigned char *sha1,
-              apr_pool_t *pool)
+svn_fs_fs__path_txn_sha1(svn_fs_t *fs,
+                         const svn_fs_fs__id_part_t *txn_id,
+                         const unsigned char *sha1,
+                         apr_pool_t *pool)
 {
   svn_checksum_t checksum;
   checksum.digest = sha1;
   checksum.kind = svn_checksum_sha1;
   
-  return svn_dirent_join(path_txn_dir(fs, txn_id, pool),
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                          svn_checksum_to_cstring(&checksum, pool),
                          pool);
 }
 
 const char *
-path_txn_changes(svn_fs_t *fs,
-                 const svn_fs_fs__id_part_t *txn_id,
-                 apr_pool_t *pool)
+svn_fs_fs__path_txn_changes(svn_fs_t *fs,
+                            const svn_fs_fs__id_part_t *txn_id,
+                            apr_pool_t *pool)
 {
-  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_CHANGES, pool);
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_CHANGES, pool);
 }
 
 const char *
-path_txn_props(svn_fs_t *fs,
-               const svn_fs_fs__id_part_t *txn_id,
-               apr_pool_t *pool)
+svn_fs_fs__path_txn_props(svn_fs_t *fs,
+                          const svn_fs_fs__id_part_t *txn_id,
+                          apr_pool_t *pool)
 {
-  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_TXN_PROPS, pool);
 }
 
 const char *
-path_txn_next_ids(svn_fs_t *fs,
-                  const svn_fs_fs__id_part_t *txn_id,
-                  apr_pool_t *pool)
+svn_fs_fs__path_txn_next_ids(svn_fs_t *fs,
+                             const svn_fs_fs__id_part_t *txn_id,
+                             apr_pool_t *pool)
 {
-  return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_NEXT_IDS, pool);
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_NEXT_IDS, pool);
 }
 
 const char *
-path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
 }
 
 const char *
-path_txn_proto_rev(svn_fs_t *fs,
-                   const svn_fs_fs__id_part_t *txn_id,
-                   apr_pool_t *pool)
+svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
+                              const svn_fs_fs__id_part_t *txn_id,
+                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
@@ -296,13 +291,14 @@ path_txn_proto_rev(svn_fs_t *fs,
                                                       pool),
                                 NULL);
   else
-    return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_REV, pool);
+    return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                           PATH_REV, pool);
 }
 
 const char *
-path_txn_proto_rev_lock(svn_fs_t *fs,
-                        const svn_fs_fs__id_part_t *txn_id,
-                        apr_pool_t *pool)
+svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
+                                   const svn_fs_fs__id_part_t *txn_id,
+                                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
@@ -312,40 +308,47 @@ path_txn_proto_rev_lock(svn_fs_t *fs,
                                                       pool),
                                 NULL);
   else
-    return svn_dirent_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK,
-                           pool);
+    return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                           PATH_REV_LOCK, pool);
 }
 
 const char *
-path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_fs__path_txn_node_rev(svn_fs_t *fs,
+                             const svn_fs_id_t *id,
+                             apr_pool_t *pool)
 {
   char *filename = (char *)svn_fs_fs__id_unparse(id, pool)->data;
   *strrchr(filename, '.') = '\0';
 
-  return svn_dirent_join(path_txn_dir(fs, svn_fs_fs__id_txn_id(id), pool),
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, svn_fs_fs__id_txn_id(id),
+                                                 pool),
                          apr_psprintf(pool, PATH_PREFIX_NODE "%s",
                                       filename),
                          pool);
 }
 
 const char *
-path_txn_node_props(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_fs__path_txn_node_props(svn_fs_t *fs,
+                               const svn_fs_id_t *id,
+                               apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool), PATH_EXT_PROPS,
-                     (char *)NULL);
+  return apr_pstrcat(pool, svn_fs_fs__path_txn_node_rev(fs, id, pool),
+                     PATH_EXT_PROPS, (char *)NULL);
 }
 
 const char *
-path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
+svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
+                                  const svn_fs_id_t *id,
+                                  apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool),
+  return apr_pstrcat(pool, svn_fs_fs__path_txn_node_rev(fs, id, pool),
                      PATH_EXT_CHILDREN, (char *)NULL);
 }
 
 const char *
-path_node_origin(svn_fs_t *fs,
-                 const svn_fs_fs__id_part_t *node_id,
-                 apr_pool_t *pool)
+svn_fs_fs__path_node_origin(svn_fs_t *fs,
+                            const svn_fs_fs__id_part_t *node_id,
+                            apr_pool_t *pool)
 {
   char buffer[SVN_INT64_BUFFER_SIZE];
   apr_size_t len = svn__ui64tobase36(buffer, node_id->number);
@@ -357,17 +360,12 @@ path_node_origin(svn_fs_t *fs,
                               buffer, NULL);
 }
 
-
-/* Check that BUF, a nul-terminated buffer of text from file PATH,
-   contains only digits at OFFSET and beyond, raising an error if not.
-   TITLE contains a user-visible description of the file, usually the
-   short file name.
-
-   Uses POOL for temporary allocation. */
 svn_error_t *
-check_file_buffer_numeric(const char *buf, apr_off_t offset,
-                          const char *path, const char *title,
-                          apr_pool_t *pool)
+svn_fs_fs__check_file_buffer_numeric(const char *buf,
+                                     apr_off_t offset,
+                                     const char *path,
+                                     const char *title,
+                                     apr_pool_t *pool)
 {
   const char *p;
 
@@ -381,16 +379,16 @@ check_file_buffer_numeric(const char *buf, apr_off_t offset,
 }
 
 svn_error_t *
-read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool)
+svn_fs_fs__read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
+                                 svn_fs_t *fs,
+                                 apr_pool_t *pool)
 {
   char buf[80];
   apr_file_t *file;
   apr_size_t len;
 
   SVN_ERR(svn_io_file_open(&file,
-                           path_min_unpacked_rev(fs, pool),
+                           svn_fs_fs__path_min_unpacked_rev(fs, pool),
                            APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT,
                            pool));
@@ -403,31 +401,27 @@ read_min_unpacked_rev(svn_revnum_t *min_unpacked_rev,
 }
 
 svn_error_t *
-update_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__update_min_unpacked_rev(svn_fs_t *fs,
+                                   apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT);
 
-  return read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
+  return svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs, pool);
 }
 
-/* Write a file FILENAME in directory FS_PATH, containing a single line
- * with the number REVNUM in ASCII decimal.  Move the file into place
- * atomically, overwriting any existing file.
- *
- * Similar to write_current(). */
 svn_error_t *
-write_revnum_file(svn_fs_t *fs,
-                  svn_revnum_t revnum,
-                  apr_pool_t *scratch_pool)
+svn_fs_fs__write_revnum_file(svn_fs_t *fs,
+                             svn_revnum_t revnum,
+                             apr_pool_t *scratch_pool)
 {
   const char *final_path;
   char buf[SVN_INT64_BUFFER_SIZE];
   apr_size_t len = svn__i64toa(buf, revnum);
   buf[len] = '\n';
 
-  final_path = path_min_unpacked_rev(fs, scratch_pool);
+  final_path = svn_fs_fs__path_min_unpacked_rev(fs, scratch_pool);
 
   SVN_ERR(svn_io_write_atomic(final_path, buf, len + 1,
                               final_path /* copy_perms */, scratch_pool));
@@ -435,13 +429,12 @@ write_revnum_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Atomically update the 'current' file to hold the specifed REV,
-   NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
-   ignored and may be NULL if the FS format does not use them.)
-   Perform temporary allocations in POOL. */
 svn_error_t *
-write_current(svn_fs_t *fs, svn_revnum_t rev, apr_uint64_t next_node_id,
-              apr_uint64_t next_copy_id, apr_pool_t *pool)
+svn_fs_fs__write_current(svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_uint64_t next_node_id,
+                         apr_uint64_t next_copy_id,
+                         apr_pool_t *pool)
 {
   char *buf;
   const char *tmp_name, *name;
@@ -468,26 +461,15 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, apr_uint64_t next_node_id,
                               buf, strlen(buf),
                               svn_io_file_del_none, pool));
 
-  return move_into_place(tmp_name, name, name, pool);
+  return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
 }
 
-
-
-/* Read the file at PATH and return its content in *CONTENT. *CONTENT will
- * not be modified unless the whole file was read successfully.
- *
- * ESTALE, EIO and ENOENT will not cause this function to return an error
- * unless LAST_ATTEMPT has been set.  If MISSING is not NULL, indicate
- * missing files (ENOENT) there.
- *
- * Use POOL for allocations.
- */
 svn_error_t *
-try_stringbuf_from_file(svn_stringbuf_t **content,
-                        svn_boolean_t *missing,
-                        const char *path,
-                        svn_boolean_t last_attempt,
-                        apr_pool_t *pool)
+svn_fs_fs__try_stringbuf_from_file(svn_stringbuf_t **content,
+                                   svn_boolean_t *missing,
+                                   const char *path,
+                                   svn_boolean_t last_attempt,
+                                   apr_pool_t *pool)
 {
   svn_error_t *err = svn_stringbuf_from_file2(content, path, pool);
   if (missing)
@@ -523,9 +505,10 @@ try_stringbuf_from_file(svn_stringbuf_t **content,
   return svn_error_trace(err);
 }
 
-/* Fetch the current offset of FILE into *OFFSET_P. */
 svn_error_t *
-get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
+svn_fs_fs__get_file_offset(apr_off_t *offset_p,
+                           apr_file_t *file,
+                           apr_pool_t *pool)
 {
   apr_off_t offset;
 
@@ -538,18 +521,18 @@ get_file_offset(apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Read the 'current' file FNAME and store the contents in *BUF.
-   Allocations are performed in POOL. */
 svn_error_t *
-read_content(svn_stringbuf_t **content, const char *fname, apr_pool_t *pool)
+svn_fs_fs__read_content(svn_stringbuf_t **content,
+                        const char *fname,
+                        apr_pool_t *pool)
 {
   int i;
   *content = NULL;
 
-  for (i = 0; !*content && (i < RECOVERABLE_RETRY_COUNT); ++i)
-    SVN_ERR(try_stringbuf_from_file(content, NULL,
-                                    fname, i + 1 < RECOVERABLE_RETRY_COUNT,
-                                    pool));
+  for (i = 0; !*content && (i < SVN_FS_FS__RECOVERABLE_RETRY_COUNT); ++i)
+    SVN_ERR(svn_fs_fs__try_stringbuf_from_file(content, NULL,
+                        fname, i + 1 < SVN_FS_FS__RECOVERABLE_RETRY_COUNT,
+                        pool));
 
   if (!*content)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -559,17 +542,11 @@ read_content(svn_stringbuf_t **content, const char *fname, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Reads a line from STREAM and converts it to a 64 bit integer to be
- * returned in *RESULT.  If we encounter eof, set *HIT_EOF and leave
- * *RESULT unchanged.  If HIT_EOF is NULL, EOF causes an "corrupt FS"
- * error return.
- * SCRATCH_POOL is used for temporary allocations.
- */
 svn_error_t *
-read_number_from_stream(apr_int64_t *result,
-                        svn_boolean_t *hit_eof,
-                        svn_stream_t *stream,
-                        apr_pool_t *scratch_pool)
+svn_fs_fs__read_number_from_stream(apr_int64_t *result,
+                                   svn_boolean_t *hit_eof,
+                                   svn_stream_t *stream,
+                                   apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *sb;
   svn_boolean_t eof;
@@ -594,19 +571,11 @@ read_number_from_stream(apr_int64_t *result,
   return SVN_NO_ERROR;
 }
 
-
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from POOL.
-
-   This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
 svn_error_t *
-move_into_place(const char *old_filename,
-                const char *new_filename,
-                const char *perms_reference,
-                apr_pool_t *pool)
+svn_fs_fs__move_into_place(const char *old_filename,
+                           const char *new_filename,
+                           const char *perms_reference,
+                           apr_pool_t *pool)
 {
   svn_error_t *err;
 

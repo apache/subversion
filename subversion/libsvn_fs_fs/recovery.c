@@ -414,7 +414,7 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
-  SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
+  SVN_ERR(svn_io_check_path(svn_fs_fs__path_revprops(fs, max_rev, pool),
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
     {
@@ -459,7 +459,8 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
-  return write_current(fs, max_rev, next_node_id, next_copy_id, pool);
+  return svn_fs_fs__write_current(fs, max_rev, next_node_id, next_copy_id,
+                                  pool);
 }
 
 /* This implements the fs_library_vtable_t.recover() API. */

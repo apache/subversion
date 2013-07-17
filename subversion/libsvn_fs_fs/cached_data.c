@@ -29,9 +29,10 @@
 #include "private/svn_temp_serializer.h"
 
 #include "fs_fs.h"
+#include "id.h"
 #include "low_level.h"
-#include "util.h"
 #include "pack.h"
+#include "util.h"
 #include "temp_serializer.h"
 #include "index.h"
 
@@ -200,7 +201,8 @@ open_and_seek_transaction(apr_file_t **file,
   apr_uint32_t sub_item = 0;
 
   SVN_ERR(svn_io_file_open(&rev_file,
-                           path_txn_proto_rev(fs, &rep->txn_id, pool),
+                           svn_fs_fs__path_txn_proto_rev(fs, &rep->txn_id,
+                                                         pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs, SVN_INVALID_REVNUM,
@@ -259,7 +261,8 @@ get_node_revision_body(node_revision_t **noderev_p,
     {
       /* This is a transaction node-rev.  Its storage logic is very
          different from that of rev / pack files. */
-      err = svn_io_file_open(&revision_file, path_txn_node_rev(fs, id, pool),
+      err = svn_io_file_open(&revision_file,
+                             svn_fs_fs__path_txn_node_rev(fs, id, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
       if (err)
         {
@@ -423,7 +426,8 @@ get_root_changes_offset(apr_off_t *root_offset,
      Unless the next revision is in a different file, in which case, we can
      just seek to the end of the pack file -- just like we do in the
      non-packed case. */
-  if (is_packed_rev(fs, rev) && ((rev + 1) % ffd->max_files_per_dir != 0))
+  if (svn_fs_fs__is_packed_rev(fs, rev)
+      && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
       SVN_ERR(svn_fs_fs__get_packed_offset(&offset, fs, rev + 1, pool));
       seek_relative = APR_SET;
@@ -435,7 +439,7 @@ get_root_changes_offset(apr_off_t *root_offset,
     }
 
   /* Offset of the revision from the start of the pack file, if applicable. */
-  if (is_packed_rev(fs, rev))
+  if (svn_fs_fs__is_packed_rev(fs, rev))
     SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
   else
     rev_offset = 0;
@@ -660,7 +664,7 @@ create_rep_state_body(rep_state_t **rep_state,
         }
 
       SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->file->stream, pool));
-      SVN_ERR(get_file_offset(&rs->start, rs->file->file, pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&rs->start, rs->file->file, pool));
 
       if (! svn_fs_fs__id_txn_used(&rep->txn_id))
         if (ffd->rep_header_cache)
@@ -1259,7 +1263,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
       SVN_ERR(svn_txdelta_skip_svndiff_window(rs->file->file, rs->ver,
                                               pool));
       rs->chunk_index++;
-      SVN_ERR(get_file_offset(&start_offset, rs->file->file, pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&start_offset, rs->file->file,
+                                         pool));
       rs->current = start_offset - rs->start;
       if (rs->current >= rs->size)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1271,7 +1276,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   /* Actually read the next window. */
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, rs->file->stream, rs->ver,
                                           pool));
-  SVN_ERR(get_file_offset(&end_offset, rs->file->file, pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&end_offset, rs->file->file, pool));
   rs->current = end_offset - rs->start;
   if (rs->current > rs->size)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1788,7 +1793,8 @@ get_dir_contents(apr_hash_t *entries,
 
   if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
-      const char *filename = path_txn_node_children(fs, noderev->id, pool);
+      const char *filename
+        = svn_fs_fs__path_txn_node_children(fs, noderev->id, pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
@@ -2027,7 +2033,8 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
 
   if (noderev->prop_rep && svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
     {
-      const char *filename = path_txn_node_props(fs, noderev->id, pool);
+      const char *filename
+        = svn_fs_fs__path_txn_node_props(fs, noderev->id, pool);
       proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));

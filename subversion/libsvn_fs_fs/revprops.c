@@ -203,7 +203,7 @@ read_revprop_generation_file(apr_int64_t *current,
   apr_file_t *file;
   char buf[80];
   apr_size_t len;
-  const char *path = path_revprop_generation(fs, pool);
+  const char *path = svn_fs_fs__path_revprop_generation(fs, pool);
 
   err = svn_io_file_open(&file, path,
                          APR_READ | APR_BUFFERED,
@@ -221,8 +221,8 @@ read_revprop_generation_file(apr_int64_t *current,
   SVN_ERR(svn_io_read_length_line(file, buf, &len, pool));
 
   /* Check that the first line contains only digits. */
-  SVN_ERR(check_file_buffer_numeric(buf, 0, path,
-                                    "Revprop Generation", pool));
+  SVN_ERR(svn_fs_fs__check_file_buffer_numeric(buf, 0, path,
+                                               "Revprop Generation", pool));
   SVN_ERR(svn_cstring_atoi64(current, buf));
 
   return svn_io_file_close(file, pool);
@@ -239,7 +239,7 @@ write_revprop_generation_file(svn_fs_t *fs,
   apr_size_t len = svn__i64toa(buf, current);
   buf[len] = '\n';
 
-  SVN_ERR(svn_io_write_atomic(path_revprop_generation(fs, pool),
+  SVN_ERR(svn_io_write_atomic(svn_fs_fs__path_revprop_generation(fs, pool),
                               buf, len + 1,
                               NULL /* copy_perms */, pool));
 
@@ -641,14 +641,16 @@ read_non_packed_revprop(apr_hash_t **properties,
   svn_boolean_t missing = FALSE;
   int i;
 
-  for (i = 0; i < RECOVERABLE_RETRY_COUNT && !missing && !content; ++i)
+  for (i = 0;
+       i < SVN_FS_FS__RECOVERABLE_RETRY_COUNT && !missing && !content;
+  ++i)
     {
       svn_pool_clear(iterpool);
-      SVN_ERR(try_stringbuf_from_file(&content,
-                                      &missing,
-                                      path_revprops(fs, rev, iterpool),
-                                      i + 1 < RECOVERABLE_RETRY_COUNT,
-                                      iterpool));
+      SVN_ERR(svn_fs_fs__try_stringbuf_from_file(&content,
+                               &missing,
+                               svn_fs_fs__path_revprops(fs, rev, iterpool),
+                               i + 1 < SVN_FS_FS__RECOVERABLE_RETRY_COUNT,
+                               iterpool));
     }
 
   if (content)
@@ -676,10 +678,11 @@ get_revprop_packname(svn_fs_t *fs,
   int idx;
 
   /* read content of the manifest file */
-  revprops->folder = path_revprops_pack_shard(fs, revprops->revision, pool);
+  revprops->folder
+    = svn_fs_fs__path_revprops_pack_shard(fs, revprops->revision, pool);
   manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST, pool);
 
-  SVN_ERR(read_content(&content, manifest_file_path, pool));
+  SVN_ERR(svn_fs_fs__read_content(&content, manifest_file_path, pool));
 
   /* parse the manifest. Every line is a file name */
   revprops->manifest = apr_array_make(pool, ffd->max_files_per_dir,
@@ -739,8 +742,10 @@ parse_packed_revprops(svn_fs_t *fs,
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
-  SVN_ERR(read_number_from_stream(&first_rev, NULL, stream, iterpool));
-  SVN_ERR(read_number_from_stream(&count, NULL, stream, iterpool));
+  SVN_ERR(svn_fs_fs__read_number_from_stream(&first_rev, NULL, stream,
+                                             iterpool));
+  SVN_ERR(svn_fs_fs__read_number_from_stream(&count, NULL, stream,
+                                             iterpool));
 
   /* make PACKED_REVPROPS point to the first char after the header.
    * This is where the serialized revprops are. */
@@ -772,7 +777,8 @@ parse_packed_revprops(svn_fs_t *fs,
       svn_revnum_t revision = (svn_revnum_t)(first_rev + i);
 
       /* read & check the serialized size */
-      SVN_ERR(read_number_from_stream(&size, NULL, stream, iterpool));
+      SVN_ERR(svn_fs_fs__read_number_from_stream(&size, NULL, stream,
+                                                 iterpool));
       if (size + offset > (apr_int64_t)revprops->packed_revprops->len)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                         _("Packed revprop size exceeds pack file size"));
@@ -829,10 +835,10 @@ read_pack_revprop(packed_revprops_t **revprops,
   int i;
 
   /* someone insisted that REV is packed. Double-check if necessary */
-  if (!is_packed_revprop(fs, rev))
-     SVN_ERR(update_min_unpacked_rev(fs, iterpool));
+  if (!svn_fs_fs__is_packed_revprop(fs, rev))
+     SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, iterpool));
 
-  if (!is_packed_revprop(fs, rev))
+  if (!svn_fs_fs__is_packed_revprop(fs, rev))
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                               _("No such packed revision %ld"), rev);
 
@@ -843,7 +849,9 @@ read_pack_revprop(packed_revprops_t **revprops,
 
   /* try to read the packed revprops. This may require retries if we have
    * concurrent writers. */
-  for (i = 0; i < RECOVERABLE_RETRY_COUNT && !result->packed_revprops; ++i)
+  for (i = 0;
+       i < SVN_FS_FS__RECOVERABLE_RETRY_COUNT && !result->packed_revprops;
+       ++i)
     {
       const char *file_path;
 
@@ -854,11 +862,11 @@ read_pack_revprop(packed_revprops_t **revprops,
       file_path  = svn_dirent_join(result->folder,
                                    result->filename,
                                    iterpool);
-      SVN_ERR(try_stringbuf_from_file(&result->packed_revprops,
-                                      &missing,
-                                      file_path,
-                                      i + 1 < RECOVERABLE_RETRY_COUNT,
-                                      pool));
+      SVN_ERR(svn_fs_fs__try_stringbuf_from_file(&result->packed_revprops,
+                                &missing,
+                                file_path,
+                                i + 1 < SVN_FS_FS__RECOVERABLE_RETRY_COUNT,
+                                pool));
 
       /* If we could not find the file, there was a write.
        * So, we should refresh our revprop generation info as well such
@@ -926,7 +934,7 @@ get_revision_proplist(apr_hash_t **proplist_p,
   /* if REV had not been packed when we began, try reading it from the
    * non-packed shard.  If that fails, we will fall through to packed
    * shard reads. */
-  if (!is_packed_revprop(fs, rev))
+  if (!svn_fs_fs__is_packed_revprop(fs, rev))
     {
       svn_error_t *err = read_non_packed_revprop(proplist_p, fs, rev,
                                                  generation, pool);
@@ -976,7 +984,7 @@ write_non_packed_revprop(const char **final_path,
                          apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  *final_path = path_revprops(fs, rev, pool);
+  *final_path = svn_fs_fs__path_revprops(fs, rev, pool);
 
   /* ### do we have a directory sitting around already? we really shouldn't
      ### have to get the dirname here. */
@@ -1013,7 +1021,8 @@ switch_to_new_revprop(svn_fs_t *fs,
   if (bump_generation)
     SVN_ERR(begin_revprop_change(fs, pool));
 
-  SVN_ERR(move_into_place(tmp_path, final_path, perms_reference, pool));
+  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, perms_reference,
+                                     pool));
 
   /* Indicate that the update (if relevant) has been completed. */
   if (bump_generation)
@@ -1372,7 +1381,7 @@ set_revision_proplist(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   /* this info will not change while we hold the global FS write lock */
-  is_packed = is_packed_revprop(fs, rev);
+  is_packed = svn_fs_fs__is_packed_revprop(fs, rev);
 
   /* Test whether revprops already exist for this revision.
    * Only then will we need to bump the revprop generation. */
@@ -1385,8 +1394,8 @@ set_revision_proplist(svn_fs_t *fs,
       else
         {
           svn_node_kind_t kind;
-          SVN_ERR(svn_io_check_path(path_revprops(fs, rev, pool), &kind,
-                                    pool));
+          SVN_ERR(svn_io_check_path(svn_fs_fs__path_revprops(fs, rev, pool),
+                                    &kind, pool));
           bump_generation = kind != svn_node_none;
         }
     }
@@ -1427,14 +1436,15 @@ packed_revprop_available(svn_boolean_t *missing,
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */
-  const char *folder = path_revprops_pack_shard(fs, revision, pool);
+  const char *folder
+    = svn_fs_fs__path_revprops_pack_shard(fs, revision, pool);
   const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST, pool);
 
-  svn_error_t *err = try_stringbuf_from_file(&content,
-                                             missing,
-                                             manifest_path,
-                                             FALSE,
-                                             pool);
+  svn_error_t *err = svn_fs_fs__try_stringbuf_from_file(&content,
+                                                        missing,
+                                                        manifest_path,
+                                                        FALSE,
+                                                        pool);
 
   /* if the manifest cannot be read, consider the pack files inaccessible
    * even if the file itself exists. */

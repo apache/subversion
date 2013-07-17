@@ -80,7 +80,8 @@ static svn_error_t *
 check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
                                  const char *path, apr_pool_t *pool)
 {
-  return check_file_buffer_numeric(buf, offset, path, "Format", pool);
+  return svn_fs_fs__check_file_buffer_numeric(buf, offset, path, "Format",
+                                              pool);
 }
 
 static svn_error_t *
@@ -172,7 +173,7 @@ svn_fs_fs__write_format(svn_fs_t *fs,
                         apr_pool_t *pool)
 {
   svn_stringbuf_t *sb;
-  const char *path = path_format(fs, pool);
+  const char *path = svn_fs_fs__path_format(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
@@ -247,8 +248,9 @@ get_youngest(svn_revnum_t *youngest_p,
              apr_pool_t *pool)
 {
   svn_stringbuf_t *buf;
-  SVN_ERR(read_content(&buf, svn_dirent_join(fs_path, PATH_CURRENT, pool),
-                       pool));
+  SVN_ERR(svn_fs_fs__read_content(&buf,
+                                  svn_dirent_join(fs_path, PATH_CURRENT, pool),
+                                  pool));
 
   *youngest_p = SVN_STR_TO_REV(buf->data);
 
@@ -479,7 +481,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
-                      path_format(fs, pool), pool));
+                      svn_fs_fs__path_format(fs, pool), pool));
   SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
@@ -487,7 +489,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->max_files_per_dir = max_files_per_dir;
 
   /* Read in and cache the repository uuid. */
-  SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),
+  SVN_ERR(svn_io_file_open(&uuid_file, svn_fs_fs__path_uuid(fs, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   limit = sizeof(buf);
@@ -498,7 +500,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the min unpacked revision. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(update_min_unpacked_rev(fs, pool));
+    SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, pool));
@@ -539,7 +541,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = upgrade_baton->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
-  const char *format_path = path_format(fs, pool);
+  const char *format_path = svn_fs_fs__path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
@@ -573,10 +575,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(create_file_ignore_eexist(path_txn_current(fs, pool), "0\n",
-                                        pool));
-      SVN_ERR(create_file_ignore_eexist(path_txn_current_lock(fs, pool), "",
-                                        pool));
+      SVN_ERR(create_file_ignore_eexist(
+                                    svn_fs_fs__path_txn_current(fs, pool),
+                                    "0\n", pool));
+      SVN_ERR(create_file_ignore_eexist(
+                               svn_fs_fs__path_txn_current_lock(fs, pool),
+                               "", pool));
     }
 
   /* If our filesystem predates the existance of the 'txn-protorevs'
@@ -591,7 +595,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* If our filesystem is new enough, write the min unpacked rev file. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
+                               "0\n", pool));
 
   /* If the file system supports revision packing but not revprop packing
      *and* the FS has been sharded, pack the revprops up to the point that
@@ -737,7 +742,7 @@ svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
                                          _("No such revision %ld"), rev);
 
               /* We failed for the first time. Refresh cache & retry. */
-              SVN_ERR(update_min_unpacked_rev(fs, pool));
+              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
 
               retry = TRUE;
             }
@@ -860,7 +865,7 @@ svn_fs_fs__rep_copy(representation_t *rep,
 static svn_error_t *
 write_revision_zero(svn_fs_t *fs)
 {
-  const char *path_revision_zero = path_rev(fs, 0, fs->pool);
+  const char *path_revision_zero = svn_fs_fs__path_rev(fs, 0, fs->pool);
   apr_hash_t *proplist;
   svn_string_t date;
 
@@ -926,7 +931,8 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the revision data directories. */
   if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(path_rev_shard(fs, 0, pool), pool));
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(fs, 0, pool),
+                                        pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
                                                         pool),
@@ -934,8 +940,9 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the revprops directory. */
   if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(path_revprops_shard(fs, 0, pool),
-                                        pool));
+    SVN_ERR(svn_io_make_dir_recursively(
+                              svn_fs_fs__path_revprops_shard(fs, 0, pool),
+                              pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
                                                         PATH_REVPROPS_DIR,
@@ -958,7 +965,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                               (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                                ? "0\n" : "0 1 1\n"),
                              pool));
-  SVN_ERR(svn_io_file_create_empty(path_lock(fs, pool), pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
@@ -969,14 +976,18 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the min unpacked rev file. */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(fs, pool),
+                               "0\n", pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool), "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty(path_txn_current_lock(fs, pool), pool));
+      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(fs, pool),
+                                 "0\n", pool));
+      SVN_ERR(svn_io_file_create_empty(
+                                 svn_fs_fs__path_txn_current_lock(fs, pool),
+                                 pool));
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */
@@ -993,7 +1004,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 {
   char *my_uuid;
   apr_size_t my_uuid_len;
-  const char *uuid_path = path_uuid(fs, pool);
+  const char *uuid_path = svn_fs_fs__path_uuid(fs, pool);
 
   if (! uuid)
     uuid = svn_uuid_generate(pool);
@@ -1075,7 +1086,8 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 
   *origin_id = NULL;
   SVN_ERR(get_node_origins_from_file(fs, &node_origins,
-                                     path_node_origin(fs, node_id, pool),
+                                     svn_fs_fs__path_node_origin(fs, node_id,
+                                                                 pool),
                                      pool));
   if (node_origins)
     {
@@ -1160,7 +1172,7 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *filename = path_node_origin(fs, node_id, pool);
+  const char *filename = svn_fs_fs__path_node_origin(fs, node_id, pool);
 
   err = set_node_origins_for_file(fs, filename,
                                   node_id,
