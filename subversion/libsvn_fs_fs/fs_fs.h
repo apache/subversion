@@ -316,6 +316,15 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                            void *baton,
                            apr_pool_t *pool);
 
+/* Run BODY (with BATON and POOL) while the txn-current file
+   of FS is locked. */
+svn_error_t *
+svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
+                                 svn_error_t *(*body)(void *baton,
+                                                      apr_pool_t *pool),
+                                 void *baton,
+                                 apr_pool_t *pool);
+
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
    from POOL. */
