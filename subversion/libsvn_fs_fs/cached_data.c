@@ -1436,8 +1436,8 @@ get_contents(struct rep_read_baton *rb,
   rep_state_t *rs;
 
   /* Special case for when there are no delta reps, only a plain
-     text or containered text. */
-  if (rb->rs_list->nelts == 0 && rb->buf == NULL)
+     text. */
+  if (rb->rs_list->nelts == 0)
     {
       copy_len = remaining;
       rs = rb->src_state;
@@ -1622,7 +1622,6 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
   return SVN_NO_ERROR;
 }
 
-
 /* Baton for cache_access_wrapper. Wraps the original parameters of
  * svn_fs_fs__try_process_file_content().
  */
@@ -1751,7 +1750,6 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
-
           drb->rs = rep_state;
           memcpy(drb->md5_digest, target->data_rep->md5_digest,
                  sizeof(drb->md5_digest));
@@ -2077,8 +2075,6 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
-
-
 /* Fetch the list of change in revision REV in FS and return it in *CHANGES.
  * Allocate the result in POOL.
  */
@@ -2088,40 +2084,40 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  apr_off_t changes_offset = 0;
+  apr_off_t changes_offset;
   apr_file_t *revision_file;
-  svn_boolean_t found;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* try cache lookup first */
 
   if (ffd->changes_cache)
-    SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
-                            &rev, pool));
-
-  if (!found)
     {
-      /* read changes from revision file */
-
-      SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
-      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
-                                               pool));
-
-      SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                      revision_file, fs, rev, pool));
-      SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset,
-                                pool));
-      SVN_ERR(svn_fs_fs__read_changes(changes,
-                  svn_stream_from_aprfile2(revision_file, TRUE, pool),
-                                      pool));
-
-      /* cache for future reference */
-
-      if (ffd->changes_cache)
-        SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
-
-      SVN_ERR(svn_io_file_close(revision_file, pool));
+      svn_boolean_t found;
+      SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
+                             &rev, pool));
+      if (found)
+        return SVN_NO_ERROR;
     }
+
+  /* read changes from revision file */
+
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
+
+  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
+                                  rev, pool));
+
+  SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
+  SVN_ERR(svn_fs_fs__read_changes(changes,
+                      svn_stream_from_aprfile2(revision_file, TRUE, pool),
+                                  pool));
+
+  SVN_ERR(svn_io_file_close(revision_file, pool));
+
+  /* cache for future reference */
+
+  if (ffd->changes_cache)
+    SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
 
   SVN_ERR(dgb__log_access(fs, rev, changes_offset, *changes,
                           SVN_FS_FS__ITEM_TYPE_CHANGES, pool));
