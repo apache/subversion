@@ -34,6 +34,7 @@
 #include "id.h"
 #include "low_level.h"
 #include "revprops.h"
+#include "transaction.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
