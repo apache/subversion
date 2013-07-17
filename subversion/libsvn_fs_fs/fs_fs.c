@@ -147,18 +147,6 @@ svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 static APR_INLINE const char *
-path_txn_current(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_TXN_CURRENT, pool);
-}
-
-static APR_INLINE const char *
-path_txn_current_lock(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_TXN_CURRENT_LOCK, pool);
-}
-
-static APR_INLINE const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
@@ -440,21 +428,21 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
 
 /* Run BODY (with BATON and POOL) while the txn-current file
    of FS is locked. */
-static svn_error_t *
-with_txn_current_lock(svn_fs_t *fs,
-                      svn_error_t *(*body)(void *baton,
-                                           apr_pool_t *pool),
-                      void *baton,
-                      apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
+                                 svn_error_t *(*body)(void *baton,
+                                                      apr_pool_t *pool),
+                                 void *baton,
+                                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
 
   SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
                        with_some_lock_file(fs, body, baton,
-                                           path_txn_current_lock(fs, pool),
-                                           FALSE,
-                                           pool));
+                               svn_fs_fs__path_txn_current_lock(fs, pool),
+                               FALSE,
+                               pool));
 
   return SVN_NO_ERROR;
 }
@@ -1182,10 +1170,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(create_file_ignore_eexist(path_txn_current(fs, pool), "0\n",
-                                        pool));
-      SVN_ERR(create_file_ignore_eexist(path_txn_current_lock(fs, pool), "",
-                                        pool));
+      SVN_ERR(create_file_ignore_eexist(
+                           svn_fs_fs__path_txn_current(fs, pool), "0\n",
+                           pool));
+      SVN_ERR(create_file_ignore_eexist(
+                           svn_fs_fs__path_txn_current_lock(fs, pool), "",
+                           pool));
     }
 
   /* If our filesystem predates the existance of the 'txn-protorevs'
@@ -1918,7 +1908,8 @@ static svn_error_t *
 get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
-  const char *txn_current_filename = path_txn_current(cb->fs, pool);
+  const char *txn_current_filename
+    = svn_fs_fs__path_txn_current(cb->fs, pool);
   char next_txn_id[MAX_KEY_SIZE+3];
   apr_size_t len;
 
@@ -1959,10 +1950,10 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
      number the transaction is based off into the transaction id. */
   cb.pool = pool;
   cb.fs = fs;
-  SVN_ERR(with_txn_current_lock(fs,
-                                get_and_increment_txn_key_body,
-                                &cb,
-                                pool));
+  SVN_ERR(svn_fs_fs__with_txn_current_lock(fs,
+                                           get_and_increment_txn_key_body,
+                                           &cb,
+                                           pool));
   *id_p = apr_psprintf(pool, "%ld-%s", rev, cb.txn_id);
 
   txn_dir = svn_dirent_join_many(pool,
@@ -4157,9 +4148,9 @@ svn_fs_fs__create(svn_fs_t *fs,
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
+      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(fs, pool),
                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
+      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current_lock(fs, pool),
                                  "", pool));
     }
 
