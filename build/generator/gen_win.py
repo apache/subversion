@@ -98,7 +98,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       os.makedirs(self.projfilesdir)
 
     # Generate the build_zlib.bat file
-    if self.zlib_path:
+    if self._libraries['zlib'].is_src:
       data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
               'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
@@ -937,6 +937,10 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
              external_lib == 'magic':
           # Currently unhandled
           lib = None
+          
+        elif external_lib in ['db',
+                              'serf']:
+          lib = None                              
 
         else:
           print('Warning: Using underclared dependency \'%s\'' % \
@@ -993,7 +997,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     self.write_file_if_changed(fname, fout.getvalue())
 
   def write_zlib_project_file(self, name):
-    if not self.zlib_path:
+    if not self._libraries['zlib'].is_src:
       return
     zlib_path = os.path.abspath(self.zlib_path)
     zlib_sources = map(lambda x : os.path.relpath(x, self.projfilesdir),
