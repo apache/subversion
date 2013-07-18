@@ -775,23 +775,28 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     else:
       fakeincludes.extend([ self.path("subversion/bindings/swig/proxy") ])
 
-    if self.swig_libdir \
-       and (isinstance(target, gen_base.TargetSWIG)
-            or isinstance(target, gen_base.TargetSWIGLib)):
-      if self.swig_vernum >= 103028:
-        fakeincludes.append(self.apath(self.swig_libdir, target.lang))
-        if target.lang == 'perl':
+    if (isinstance(target, gen_base.TargetSWIG)
+        or isinstance(target, gen_base.TargetSWIGLib)):
+
+      # Projects aren't generated unless we have swig
+      assert self.swig_libdir
+
+      fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+
+      if target.lang == "perl":
+        if self.swig_vernum >= 103028:
           # At least swigwin 1.3.38+ uses perl5 as directory name. Just add it
           # to the list to make sure we don't break old versions
           fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
-      else:
-        fakeincludes.append(self.swig_libdir)
-      if target.lang == "perl":
         fakeincludes.extend(self.perl_includes)
-      if target.lang == "python":
+      elif target.lang == "python":
         fakeincludes.extend(self.python_includes)
-      if target.lang == "ruby":
+      elif target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
+
+      # And after the language specific includes, include the generic libdir,
+      # to allow overriding a generic with a per language include
+      fakeincludes.append(self.swig_libdir)
 
     if self.sqlite_inline:
       fakeincludes.append(self.apath(self.sqlite_path))
