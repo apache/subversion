@@ -878,9 +878,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # shouldn't be called unless serf is there
     assert inc_dir and os.path.exists(inc_dir)
 
-    self.serf_ver_maj = None
-    self.serf_ver_min = None
-    self.serf_ver_patch = None
+    serf_ver_maj = None
+    serf_ver_min = None
+    serf_ver_patch = None
 
     # serf.h should be present
     if not os.path.exists(os.path.join(inc_dir, 'serf.h')):
@@ -892,28 +892,28 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
     patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
     if maj_match:
-      self.serf_ver_maj = int(maj_match.group(1))
+      serf_ver_maj = int(maj_match.group(1))
     if min_match:
-      self.serf_ver_min = int(min_match.group(1))
+      serf_ver_min = int(min_match.group(1))
     if patch_match:
-      self.serf_ver_patch = int(patch_match.group(1))
+      serf_ver_patch = int(patch_match.group(1))
 
-    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
+    return serf_ver_maj, serf_ver_min, serf_ver_patch
 
   def _find_serf(self, show_warning):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 2, 1)
-    
+
     if not self.serf_path:
       return
-    
+
     inc_dir = self.serf_path
-    
+
     if os.path.isfile(os.path.join(inc_dir, 'serf.h')):
       # Source layout
       version = self._get_serf_version(inc_dir)
-      
+
       if version < (1, 3, 0):
         lib_dir = os.path.join(self.serf_path, 'Release')
         debug_lib_dir = os.path.join(self.serf_path, 'Debug')
@@ -940,23 +940,25 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         print('WARNING: \'serf.h\' not found')
         print("Use '--with-serf' to configure serf location.");
       return
-    
+
     if is_src and 'openssl' not in self._libraries:
       if show_warning:
         print('openssl not found, serf and ra_serf will not be built')
       return
-    
+    serf_version = '.'.join(str(v) for v in version)
+
     if version < minimal_serf_version:
       msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
-            (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
+            (serf_version, '.'.join(str(v) for v in minimal_serf_version))
       return
-      
-    if self.serf_ver_maj > 0:
-      lib_name = 'serf-%d.lib' % (self.serf_ver_maj,)
+
+    serf_ver_maj = version[0]
+
+    if serf_ver_maj > 0:
+      lib_name = 'serf-%d.lib' % (serf_ver_maj,)
     else:
       lib_name = 'serf.lib'
-      
-    serf_version = '.'.join(str(v) for v in version)
+
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
                                                 lib_name, serf_version,
                                                 debug_lib_dir=debug_lib_dir,
