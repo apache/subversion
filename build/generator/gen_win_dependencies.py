@@ -693,13 +693,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the right perl library name to link swig bindings with"
 
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}\\n"; '
+                  'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}.'
+                          '$Config{PERL_SUBVERSION}\\n"; '
                   'print "$Config{archlib}\\n"'), 'r')
     try:
       line = fp.readline()
       if line:
         perl_version = line.strip()
-        perl_lib = 'perl%s.lib' % (perl_version.replace('.',''),)
+        perlv = perl_version.split('.')
+        perl_lib = 'perl%s%s.lib' % (perlv[0], perlv[1])
       else:
         return
 
@@ -757,7 +759,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       from distutils import sysconfig
 
       inc_dir = sysconfig.get_python_inc()
-      lib_dir = self.apath(sysconfig.PREFIX, "libs")
+      lib_dir = os.path.join(sysconfig.PREFIX, "libs")
     except ImportError:
       return
 

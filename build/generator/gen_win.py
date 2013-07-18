@@ -717,8 +717,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # rather than ruby_errinfo.
     if isinstance(target, gen_base.TargetSWIGLib) and target.lang == 'ruby':
       ver = self._libraries['ruby'].version.split('.')
-
-      if (ver > (1, 8, 0)):
+      ver = tuple(map(int, ver))
+      if ver > (1, 8, 0):
         fakedefines.extend(["HAVE_RB_ERRINFO"])
 
     if self.static_apr:
