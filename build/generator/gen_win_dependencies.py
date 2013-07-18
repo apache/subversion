@@ -262,17 +262,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_sasl(show_warnings)
     self._find_libintl(show_warnings)
 
+    # Swig (optional) dependencies
+    self._find_perl(show_warnings)
+    self._find_python(show_warnings)
+    self._find_ruby(show_warnings)
+
     if show_warnings:
-      # Find the right Ruby include and libraries dirs and
-      # library name to link SWIG bindings with
-      self._find_ruby()
-
-      # Find the right Perl library name to link SWIG bindings with
-      self._find_perl()
-
-      # Find the right Python include and libraries dirs for SWIG bindings
-      self._find_python()
-
       # Find the installed SWIG version to adjust swig options
       self._find_swig()
 
@@ -694,86 +689,80 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                     dll_name='libeay32.dll',
                                                     dll_dir=bin_dir)
 
-  def _find_perl(self):
+  def _find_perl(self, show_warnings):
     "Find the right perl library name to link swig bindings with"
-    self.perl_includes = []
-    self.perl_libdir = None
+
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
+                  'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}\\n"; '
+                  'print "$Config{archlib}\\n"'), 'r')
     try:
       line = fp.readline()
       if line:
-        msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + line.rstrip() + '.lib'
+        perl_version = line.strip()
+        perl_lib = 'perl%s.lib' % (perl_version.replace('.',''),)
       else:
-        msg = 'Could not detect perl version.'
-        self.perl_lib = 'perl56.lib'
-      print('%s\n  Perl bindings will be linked with %s\n'
-             % (msg, self.perl_lib))
-    finally:
-      fp.close()
+        return
 
-    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print $Config{archlib}'), 'r')
-    try:
       line = fp.readline()
       if line:
-        self.perl_libdir = os.path.join(line, 'CORE')
-        self.perl_includes = [os.path.join(line, 'CORE')]
+        lib_dir = os.path.join(line.strip(), 'CORE')
+        inc_dir = lib_dir
     finally:
       fp.close()
 
-  def _find_ruby(self):
+    self._libraries['perl'] = SVNCommonLibrary('perl', inc_dir, lib_dir,
+                                               perl_lib, perl_version)
+
+  def _find_ruby(self, show_warnings):
     "Find the right Ruby library name to link swig bindings with"
-    self.ruby_includes = []
-    self.ruby_libdir = None
-    self.ruby_version = None
-    self.ruby_major_version = None
-    self.ruby_minor_version = None
+
+    lib_dir = None
+
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
-    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                    "puts Config::CONFIG['ruby_version'];"
-                    "puts Config::CONFIG['LIBRUBY'];"
-                    "puts Config::CONFIG['archdir'];"
-                    "puts Config::CONFIG['libdir'];"), 'r')
+    fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
+                  "puts Config::CONFIG['ruby_version'];"
+                  "puts Config::CONFIG['LIBRUBY'];"
+                  "puts Config::CONFIG['archdir'];"
+                  "puts Config::CONFIG['libdir'];"), 'r')
     try:
-      rubyver = proc.readline()[:-1]
-      if rubyver:
-        self.ruby_version = rubyver
-        self.ruby_major_version = string.atoi(self.ruby_version[0])
-        self.ruby_minor_version = string.atoi(self.ruby_version[2])
-        libruby = proc.readline()[:-1]
-        if libruby:
-          msg = 'Found installed ruby %s' % rubyver
-          self.ruby_lib = libruby
-          self.ruby_includes.append(proc.readline()[:-1])
-          self.ruby_libdir = proc.readline()[:-1]
-      else:
-        msg = 'Could not detect Ruby version, assuming 1.8.'
-        self.ruby_version = "1.8"
-        self.ruby_major_version = 1
-        self.ruby_minor_version = 8
-        self.ruby_lib = 'msvcrt-ruby18.lib'
-      print('%s\n  Ruby bindings will be linked with %s\n'
-             % (msg, self.ruby_lib))
-    finally:
-      proc.close()
+      line = fp.readline()
+      if line:
+        ruby_version = line.strip()
 
-  def _find_python(self):
+      line = fp.readline()
+      if line:
+        ruby_lib = line.strip()
+
+      line = fp.readline()
+      if line:
+        inc_dir = line.strip()
+
+      line = fp.readline()
+      if line:
+        lib_dir = line.strip()
+    finally:
+      fp.close()
+
+    if not lib_dir:
+      return
+
+    self._libraries['ruby'] = SVNCommonLibrary('ruby', inc_dir, lib_dir,
+                                               ruby_lib, ruby_version)
+
+  def _find_python(self, show_warnings):
     "Find the appropriate options for creating SWIG-based Python modules"
-    self.python_includes = []
-    self.python_libdir = ""
+
     try:
       from distutils import sysconfig
-      inc = sysconfig.get_python_inc()
-      plat = sysconfig.get_python_inc(plat_specific=1)
-      self.python_includes.append(inc)
-      if inc != plat:
-        self.python_includes.append(plat)
-      self.python_libdir = self.apath(sysconfig.PREFIX, "libs")
+
+      inc_dir = sysconfig.get_python_inc()
+      lib_dir = self.apath(sysconfig.PREFIX, "libs")
     except ImportError:
-      pass
+      return
+
+    self._libraries['python'] = SVNCommonLibrary('python', inc_dir, lib_dir, None,
+                                                 sys.version.split(' ')[0])
 
   def _find_jdk(self):
     if not self.jdk_path:
@@ -941,14 +930,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-1')
       version = self._get_serf_version(inc_dir)
-      lib_dir = os.path.join(inc_dir, 'lib')
+      lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
       is_src = False
     elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-2/serf.h')):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-2')
       version = self._get_serf_version(inc_dir)
-      lib_dir = os.path.join(inc_dir, 'lib')
+      lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
       is_src = False
     else:

@@ -197,12 +197,14 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if 'serf' not in self._libraries or not self._libraries['serf'].is_src:
       install_targets = [x for x in install_targets if x.name != 'serf']
 
-    # Drop the swig targets if we don't have swig
-    if not self.swig_path and not self.swig_libdir:
-      install_targets = [x for x in install_targets
-                                     if not (isinstance(x, gen_base.TargetSWIG)
-                                             or isinstance(x, gen_base.TargetSWIGLib)
-                                             or isinstance(x, gen_base.TargetSWIGProject))]
+    # Drop the swig targets if we don't have swig or language support
+    install_targets = [x for x in install_targets
+                       if (not (isinstance(x, gen_base.TargetSWIG)
+                                or isinstance(x, gen_base.TargetSWIGLib)
+                                or isinstance(x, gen_base.TargetSWIGProject))
+                           or (x.lang in self._libraries
+                               and self.swig_path
+                               and self.swig_libdir))]
 
     # Drop the Java targets if we don't have a JDK
     if not self.jdk_path:
@@ -670,16 +672,21 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       elif is_static:
         self.get_linked_win_depends(dep, deps, 1)
 
+      # and recurse over the external library dependencies for swig libraries,
+      # to include the language runtime
+      elif isinstance(dep, gen_base.TargetSWIGLib):
+        self.get_externallib_depends(dep, deps)
+
   def get_externallib_depends(self, target, deps):
     """Find externallib dependencies for a project"""
-    
+
     direct_deps = self.get_direct_depends(target)
     for dep, dep_kind in direct_deps:
       self.get_externallib_depends(dep, deps)
-      
+
       if isinstance(target, gen_base.TargetLinked) and dep.external_lib:
         deps[dep] = dep_kind
-        
+
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
 
@@ -687,6 +694,11 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                    "_CRT_SECURE_NO_DEPRECATE=",
                    "_CRT_NONSTDC_NO_DEPRECATE=",
                    "_CRT_SECURE_NO_WARNINGS="]
+
+    if cfg == 'Debug':
+      fakedefines.extend(["_DEBUG","SVN_DEBUG"])
+    elif cfg == 'Release':
+      fakedefines.append("NDEBUG")
 
     if self.sqlite_inline:
       fakedefines.append("SVN_SQLITE_INLINE")
@@ -701,15 +713,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
-    # Expect rb_errinfo() to be avilable in Ruby 1.9+,
+    # Expect rb_errinfo() to be available in Ruby 1.9+,
     # rather than ruby_errinfo.
-    if (self.ruby_major_version > 1 or self.ruby_minor_version > 8):
-      fakedefines.extend(["HAVE_RB_ERRINFO"])
+    if isinstance(target, gen_base.TargetSWIGLib) and target.lang == 'ruby':
+      ver = self._libraries['ruby'].version.split('.')
 
-    if cfg == 'Debug':
-      fakedefines.extend(["_DEBUG","SVN_DEBUG"])
-    elif cfg == 'Release':
-      fakedefines.append("NDEBUG")
+      if (ver > (1, 8, 0)):
+        fakedefines.extend(["HAVE_RB_ERRINFO"])
 
     if self.static_apr:
       fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
@@ -781,21 +791,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       # Projects aren't generated unless we have swig
       assert self.swig_libdir
 
-      fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+      if target.lang == "perl" and self.swig_vernum >= 103028:
+        # At least swigwin 1.3.38+ uses perl5 as directory name.
+        lang_subdir = 'perl5'
+      else:
+        lang_subdir = target.lang
 
-      if target.lang == "perl":
-        if self.swig_vernum >= 103028:
-          # At least swigwin 1.3.38+ uses perl5 as directory name. Just add it
-          # to the list to make sure we don't break old versions
-          fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
-        fakeincludes.extend(self.perl_includes)
-      elif target.lang == "python":
-        fakeincludes.extend(self.python_includes)
-      elif target.lang == "ruby":
-        fakeincludes.extend(self.ruby_includes)
-
-      # And after the language specific includes, include the generic libdir,
+      # After the language specific includes include the generic libdir,
       # to allow overriding a generic with a per language include
+      fakeincludes.append(self.apath(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
     if self.sqlite_inline:
@@ -844,15 +848,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       if target.name == 'mod_dav_svn':
         fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main",
                                       cfg))
-    if self.swig_libdir \
-       and (isinstance(target, gen_base.TargetSWIG)
-            or isinstance(target, gen_base.TargetSWIGLib)):
-      if target.lang == "perl" and self.perl_libdir:
-        fakelibdirs.append(self.perl_libdir)
-      if target.lang == "python" and self.python_libdir:
-        fakelibdirs.append(self.python_libdir)
-      if target.lang == "ruby" and self.ruby_libdir:
-        fakelibdirs.append(self.ruby_libdir)
 
     return gen_base.unique(fakelibdirs)
 
@@ -875,16 +870,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
-
-    if ((isinstance(target, gen_base.TargetSWIG)
-         or isinstance(target, gen_base.TargetSWIGLib))
-        and target.lang == 'perl'):
-      nondeplibs.append(self.perl_lib)
-
-    if ((isinstance(target, gen_base.TargetSWIG)
-         or isinstance(target, gen_base.TargetSWIGLib))
-        and target.lang == 'ruby'):
-      nondeplibs.append(self.ruby_lib)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
@@ -917,7 +902,10 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         elif external_lib in ['db',
                               'intl',
                               'serf',
-                              'sasl']:
+                              'sasl',
+                              'perl',
+                              'python',
+                              'ruby']:
           lib = None # Suppress warnings for optional library
 
         else:
