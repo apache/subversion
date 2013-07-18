@@ -337,7 +337,7 @@ def locate_libs():
       dlls.append(os.path.join(dir, name))
 
   for dll in dlls:
-    copy_changed_file(dll, abs_objdir)
+    copy_changed_file(dll, abs_builddir)
 
   # Copy the Subversion library DLLs
   if not cp.has_option('options', '--disable-shared'):
@@ -357,7 +357,7 @@ def locate_libs():
     copy_changed_file(mod_authz_svn_path, abs_objdir)
     copy_changed_file(mod_dontdothat_path, abs_objdir)
 
-  os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+  os.environ['PATH'] = abs_builddir + os.pathsep + os.environ['PATH']
 
 def fix_case(path):
     path = os.path.normpath(path)
