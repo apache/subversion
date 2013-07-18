@@ -756,11 +756,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
         if external_lib in self._libraries:
           lib = self._libraries[external_lib]
-          inc_dir = self.apath(lib.include_dir)
-      
-          # Avoid duplicate items
-          if inc_dir and inc_dir not in fakeincludes:
-            fakeincludes.extend([inc_dir])
+
+          fakeincludes.append(self.apath(lib.include_dir))
 
     if target.name == 'mod_authz_svn':
       fakeincludes.extend([ self.apath(self.httpd_path, "modules/aaa") ])
@@ -777,9 +774,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                             self.path(util_includes) ])
     else:
       fakeincludes.extend([ self.path("subversion/bindings/swig/proxy") ])
-
-    if self.libintl_path:
-      fakeincludes.append(self.apath(self.libintl_path, 'inc'))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -811,7 +805,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if target.name.find('cxxhl') != -1:
       fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
-    return fakeincludes
+    return gen_base.unique(fakeincludes)
 
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
@@ -819,7 +813,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     debug = (cfg == 'Debug')
 
     fakelibdirs = []
-                    
+
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib and \
          dep.external_lib.startswith('$(SVN_') and \
@@ -835,9 +829,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           else:
             lib_dir = self.apath(lib.lib_dir)
       
-          # Avoid duplicate items
-          if lib_dir and lib_dir not in fakelibdirs:
-            fakelibdirs.extend([lib_dir])
+          fakelibdirs.append(lib_dir)
 
     if not self.sqlite_inline:
       fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
@@ -857,7 +849,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       if target.lang == "ruby" and self.ruby_libdir:
         fakelibdirs.append(self.ruby_libdir)
 
-    return fakelibdirs
+    return gen_base.unique(fakelibdirs)
 
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
@@ -875,12 +867,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
-    if self.enable_nls:
-      if self.libintl_path:
-        nondeplibs.append(self.apath(self.libintl_path,
-                                     'lib', 'intl3_svn.lib'))
-      else:
-        nondeplibs.append('intl3_svn.lib')
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
@@ -924,6 +910,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           lib = None
           
         elif external_lib in ['db',
+                              'intl',
                               'serf',
                               'sasl']:
           lib = None # Suppress warnings for optional library
