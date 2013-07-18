@@ -342,7 +342,7 @@ def locate_libs():
   # Copy the Subversion library DLLs
   if not cp.has_option('options', '--disable-shared'):
     for svn_dll in svn_dlls:
-      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_objdir)
+      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_builddir)
 
   # Copy the Apache modules
   if run_httpd and cp.has_option('options', '--with-httpd'):
@@ -353,9 +353,9 @@ def locate_libs():
     mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
                                         'mod_dontdothat', 'mod_dontdothat.so')
 
-    copy_changed_file(mod_dav_svn_path, abs_objdir)
-    copy_changed_file(mod_authz_svn_path, abs_objdir)
-    copy_changed_file(mod_dontdothat_path, abs_objdir)
+    copy_changed_file(mod_dav_svn_path, abs_builddir)
+    copy_changed_file(mod_authz_svn_path, abs_builddir)
+    copy_changed_file(mod_dontdothat_path, abs_builddir)
 
   os.environ['PATH'] = abs_builddir + os.pathsep + os.environ['PATH']
 
