@@ -541,13 +541,14 @@ sub handle_entry {
         merge %entry;
 
         my $output = `$SVN status`;
-        my (@conflicts) = ($output =~ m#^(?:C|.C|...C).*/(.*)#mg);
+        my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
           $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}: "
-                                  . (join ', ', @conflicts);
+                                  . (join ', ', map m#.*/(.*)#, @conflicts);
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
           say STDERR $output;
+          system "$SVN diff -- @conflicts";
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
           # also committing the dependent in hte same pass.
