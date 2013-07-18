@@ -260,6 +260,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_openssl(show_warnings)
     self._find_serf(show_warnings)
     self._find_sasl(show_warnings)
+    self._find_libintl(show_warnings)
 
     if show_warnings:
       # Find the right Ruby include and libraries dirs and
@@ -300,14 +301,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                        "location.\n")
       sys.exit(1)                       
 
-    inc_path = os.path.join(self.apr_path, 'include')
-    version_file_path = os.path.join(inc_path, 'apr_version.h')
+    inc_base = os.path.join(self.apr_path, 'include')
 
-    if not os.path.exists(version_file_path):
+    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apr_version.h')):
+      inc_path = os.path.join(inc_base, 'apr-1')
+    elif os.path.isfile(os.path.join(inc_path, 'apr_version.h')):
+      inc_path = inc_base
+    else:
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
       sys.stderr.write("Use '--with-apr' option to configure APR location.\n")
       sys.exit(1)
 
+    version_file_path = os.path.join(inc_path, 'apr_version.h')
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
@@ -363,8 +368,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         dll_dir = lib_dir
         debug_dll_dir = debug_lib_dir
       else:
-        dll_dir = lib_dir
-        debug_dll_dir = debug_lib_dir
+        dll_dir = os.path.join(self.apr_path, 'bin')
+        debug_dll_dir = None
       
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
@@ -377,8 +382,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the APR-util library and version"
 
     minimal_aprutil_version = (0, 9, 0)
-    
-    inc_path = os.path.join(self.apr_util_path, 'include')
+
+    inc_base = os.path.join(self.apr_util_path, 'include')
+
+    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apu_version.h')):
+      inc_path = os.path.join(inc_base, 'apr-1')
+    elif os.path.isfile(os.path.join(inc_path, 'apu_version.h')):
+      inc_path = inc_base
+    else:
+      sys.stderr.write("ERROR: 'apu_version' not found.\n")
+      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n")
+      sys.exit(1)
+
     version_file_path = os.path.join(inc_path, 'apu_version.h')
 
     if not os.path.exists(version_file_path):
@@ -413,7 +428,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if self.static_apr:
       lib_name = 'aprutil%s.lib' % suffix
-      lib_dir = os.path.join(self.aprutil_path, 'LibR')
+      lib_dir = os.path.join(self.apr_util_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
       
@@ -431,7 +446,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
-        lib_dir = os.path.join(apr_util_path, 'lib')
+        lib_dir = os.path.join(self.apr_util_path, 'lib')
         debug_lib_dir = lib_dir
       else:
         debug_lib_dir = os.path.join(self.apr_util_path, 'Debug')
@@ -441,9 +456,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         dll_dir = lib_dir
         debug_dll_dir = debug_lib_dir
       else:
-        dll_dir = lib_dir
-        debug_dll_dir = debug_lib_dir
-      
+        dll_dir = os.path.join(self.apr_util_path, 'bin')
+        debug_dll_dir = None
+
     self._libraries['aprutil'] = SVNCommonLibrary('apr-util', inc_path, lib_dir,
                                                    lib_name,
                                                    aprutil_version,
@@ -636,9 +651,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_dir = os.path.join(self.openssl_path, 'inc32')
       if self.static_openssl:
         lib_dir = os.path.join(self.openssl_path, 'out32')
+        bin_dir = None
       else:
         lib_dir = os.path.join(self.openssl_path, 'out32dll')
-        bin_dir = os.path.join(self.openssl_path, 'out32dll')
+        bin_dir = lib_dir
     elif os.path.isfile(os.path.join(self.openssl_path,
                         'include/openssl/opensslv.h')):
       version_path = os.path.join(self.openssl_path,
@@ -646,9 +662,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_dir = os.path.join(self.openssl_path, 'include')
       lib_dir = os.path.join(self.openssl_path, 'lib')
       if self.static_openssl:
-        self.bin_dir = None
+        bin_dir = None
       else:
-        self.bin_dir = os.path.join(self.openssl_path, 'bin')
+        bin_dir = os.path.join(self.openssl_path, 'bin')
     else:
       if show_warning:
         print('WARNING: \'opensslv.h\' not found')
@@ -676,7 +692,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                     'libeay32.lib',
                                                     openssl_version,
                                                     dll_name='libeay32.dll',
-                                                    dll_dir=bin_dir)                                                    
+                                                    dll_dir=bin_dir)
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -1016,6 +1032,59 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     self._libraries['sasl'] = SVNCommonLibrary('sasl', inc_dir, lib_dir,
                                                'libsasl.lib', sasl_version,
+                                               dll_dir=dll_dir,
+                                               dll_name=dll_name)
+
+  def _find_libintl(self, show_warning):
+    "Find gettext support"
+    minimal_libintl_version = (0, 14, 1)
+
+    if not self.enable_nls or not self.libintl_path:
+      return;
+
+    # We support 2 scenarios.
+    if os.path.isfile(os.path.join(self.libintl_path, 'inc', 'libintl.h')) and\
+       os.path.isfile(os.path.join(self.libintl_path, 'lib', 'intl3_svn.lib')):
+
+      # 1. Subversion's custom libintl based on gettext 0.14.1
+      inc_dir = os.path.join(self.libintl_path, 'inc')
+      lib_dir = os.path.join(self.libintl_path, 'lib')
+      dll_dir = os.path.join(self.libintl_path, 'bin')
+
+      lib_name = 'intl3_svn.lib'
+      dll_name = 'intl3_svn.dll'
+    elif os.path.isfile(os.path.join(self.libintl_path, \
+                                     'include', 'libintl.h')):
+      # 2. A gettext install
+      inc_dir = os.path.join(self.libintl_path, 'include')
+      lib_dir = os.path.join(self.libintl_path, 'lib')
+      dll_dir = os.path.join(self.libintl_path, 'bin')
+
+      lib_name = 'intl.lib'
+      dll_name = 'intl.dll'
+    else:
+      if (show_warning):
+        print('WARNING: \'libintl.h\' not found')
+        print("Use '--with-libintl' to configure libintl location.")
+      return
+
+    version_file_path = os.path.join(inc_dir, 'libintl.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+LIBINTL_VERSION\s+((0x)?[0-9A-Fa-f]+)', txt, re.M)
+
+    ver = int(vermatch.group(1), 0)
+    version = (ver >> 16, (ver >> 8) & 0xFF, ver & 0xFF)
+
+    libintl_version = '.'.join(str(v) for v in version)
+
+    if version < minimal_libintl_version:
+      msg = 'Found libintl %s, but >= %s is required.\n' % \
+            (libintl_version, '.'.join(str(v) for v in minimal_libintl_version))
+      return
+
+    self._libraries['intl'] = SVNCommonLibrary('libintl', inc_dir, lib_dir,
+                                               lib_name, libintl_version,
                                                dll_dir=dll_dir,
                                                dll_name=dll_name)
 
