@@ -4626,6 +4626,13 @@ def diff_local_missing_obstruction(sbox):
   ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
 
+  # Create an external. This produces an error in 1.8.0.
+  sbox.simple_propset('svn:externals', 'AA/BB ' + sbox.repo_url + '/A', '.')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'diff', wc_dir)
+
 
 ########################################################################
 #Run the tests
