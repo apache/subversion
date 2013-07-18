@@ -730,7 +730,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
     # check we have sasl
-    if self.sasl_path:
+    if 'sasl' in self._libraries:
       fakedefines.append("SVN_HAVE_SASL")
 
     if target.name.endswith('svn_subr'):
@@ -804,9 +804,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     else:
       fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
 
-    if self.sasl_path:
-      fakeincludes.append(self.apath(self.sasl_path, 'include'))
-
     if target.name == "libsvnjavahl" and self.jdk_path:
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
@@ -845,9 +842,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if not self.sqlite_inline:
       fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
 
-    if self.sasl_path:
-      fakelibdirs.append(self.apath(self.sasl_path, "lib"))
-
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -873,10 +867,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     dblib = None
     if self.bdb_lib:
       dblib = self.bdb_lib+(debug and 'd.lib' or '.lib')
-
-    sasllib = None
-    if self.sasl_path:
-      sasllib = 'libsasl.lib'
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -928,22 +918,18 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             nondeplibs.append('sqlite3.lib')
           # else: # Is not a linkable library
 
-        elif external_lib == 'sasl':
-
-          if sasllib:
-            nondeplibs.append(sasllib)
-
         elif external_lib == 'apr_memcache' or \
              external_lib == 'magic':
           # Currently unhandled
           lib = None
           
         elif external_lib in ['db',
-                              'serf']:
-          lib = None                              
+                              'serf',
+                              'sasl']:
+          lib = None # Suppress warnings for optional library
 
         else:
-          print('Warning: Using underclared dependency \'%s\'' % \
+          print('Warning: Using undeclared dependency \'%s\'' % \
                 (dep.external_lib,))
 
     return gen_base.unique(nondeplibs)
