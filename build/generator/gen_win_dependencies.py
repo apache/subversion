@@ -27,12 +27,6 @@
 #
 
 import os
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
 import sys
 import fnmatch
 import re
@@ -265,8 +259,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_bdb(show_warnings)
     self._find_openssl(show_warnings)
     self._find_serf(show_warnings)
-    
-    
+    self._find_sasl(show_warnings)
+
     if show_warnings:
       # Find the right Ruby include and libraries dirs and
       # library name to link SWIG bindings with
@@ -967,6 +961,61 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                 lib_name, serf_version,
                                                 debug_lib_dir=debug_lib_dir,
                                                 is_src=is_src)
+
+  def _find_sasl(self, show_warning):
+    "Check if sals is available"
+
+    minimal_sasl_version = (2, 0, 0)
+
+    if not self.sasl_path:
+      return
+
+    inc_dir = os.path.join(self.sasl_path, 'include')
+
+    version_file_path = os.path.join(inc_dir, 'sasl.h')
+
+    if not os.path.isfile(version_file_path):
+      if show_warning:
+        print('WARNING: \'%s\' not found' % (version_file_path,))
+        print("Use '--with-sasl' to configure sasl location.");
+      return
+
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MAJOR\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MINOR\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_STEP\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    sasl_version = '.'.join(str(v) for v in version)
+
+    if version < minimal_sasl_version:
+      msg = 'Found sasl %s, but >= %s is required. sals support will not be built.\n' % \
+            (sasl_version, '.'.join(str(v) for v in minimal_serf_version))
+      return
+
+    lib_dir = os.path.join(self.sasl_path, 'lib')
+
+    if os.path.isfile(os.path.join(lib_dir, 'libsasl.dll')):
+      dll_dir = lib_dir
+      dll_name = 'libsasl.dll'
+    elif os.path.isfile(os.path.join(self.sasl_path, 'bin', 'libsasl.dll')):
+      dll_dir = os.path.join(self.sasl_path, 'bin')
+      dll_name = 'libsasl.dll'
+    else:
+      # Probably a static compilation
+      dll_dir = None
+      dll_name = None
+
+    self._libraries['sasl'] = SVNCommonLibrary('sasl', inc_dir, lib_dir,
+                                               'libsasl.lib', sasl_version,
+                                               dll_dir=dll_dir,
+                                               dll_name=dll_name)
 
   def _find_sqlite(self):
     "Find the Sqlite library and version"

@@ -339,9 +339,6 @@ def locate_libs():
   if gen_obj.libintl_path:
     dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
 
-  if gen_obj.sasl_path is not None:
-    dlls.append(os.path.join(gen_obj.sasl_path, 'lib', 'libsasl.dll'))
-
   for dll in dlls:
     copy_changed_file(dll, abs_objdir)
 
