@@ -926,6 +926,15 @@ close_revision(void *baton)
   if (rb->skipped || (rb->rev <= 0))
     return SVN_NO_ERROR;
 
+  if (!rb->datestamp)
+    {
+      /* Remove 'svn:date' revision property that was set by FS layer when TXN
+         created if source dump doesn't have 'svn:date' property. */
+      svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
+      prop->name = SVN_PROP_REVISION_DATE;
+      prop->value = NULL;
+    }
+
   /* Apply revision property changes. */
   if (rb->pb->validate_props)
     SVN_ERR(svn_repos_fs_change_txn_props(rb->txn, rb->revprops, rb->pool));
@@ -959,7 +968,8 @@ close_revision(void *baton)
     }
 
   /* Commit. */
-  err = svn_fs_commit_txn(&conflict_msg, &committed_rev, rb->txn, rb->pool);
+  err = svn_fs_commit_txn2(&conflict_msg, &committed_rev, rb->txn, FALSE,
+                           rb->pool);
   if (SVN_IS_VALID_REVNUM(committed_rev))
     {
       if (err)
@@ -1016,15 +1026,6 @@ close_revision(void *baton)
 
   /* Deltify the predecessors of paths changed in this revision. */
   SVN_ERR(svn_fs_deltify_revision(pb->fs, committed_rev, rb->pool));
-
-  /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
-     current clock-time.  We don't want that, we want to preserve
-     history exactly.  Good thing revision props aren't versioned!
-     Note that if rb->datestamp is NULL, that's fine -- if the dump
-     data doesn't carry a datestamp, we want to preserve that fact in
-     the load. */
-  SVN_ERR(change_rev_prop(pb->repos, committed_rev, SVN_PROP_REVISION_DATE,
-                          rb->datestamp, pb->validate_props, rb->pool));
 
   if (pb->notify_func)
     {

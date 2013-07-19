@@ -787,8 +787,9 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
 
 
 svn_error_t *
-svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
-                  svn_fs_txn_t *txn, apr_pool_t *pool)
+svn_fs_commit_txn2(const char **conflict_p, svn_revnum_t *new_rev,
+                   svn_fs_txn_t *txn, svn_boolean_t set_timestamp,
+                   apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -796,7 +797,7 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   if (conflict_p)
     *conflict_p = NULL;
 
-  err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
+  err = txn->vtable->commit(conflict_p, new_rev, txn, set_timestamp, pool);
 
 #ifdef SVN_DEBUG
   /* Check postconditions. */
@@ -829,6 +830,12 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
+                  svn_fs_txn_t *txn, apr_pool_t *pool)
+{
+  return svn_fs_commit_txn2(conflict_p, new_rev, txn, TRUE, pool);
+}
 
 svn_error_t *
 svn_fs_abort_txn(svn_fs_txn_t *txn, apr_pool_t *pool)
