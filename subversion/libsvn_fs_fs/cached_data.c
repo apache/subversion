@@ -1752,11 +1752,12 @@ get_dir_contents(apr_hash_t *entries,
 
 /* Given a hash STR_ENTRIES with values as svn_string_t as specified
    in an FSFS directory contents listing, return a hash of dirents in
-   *ENTRIES_P.  Perform allocations in POOL. */
+   *ENTRIES_P.  Use ID to generate more helpful error messages.
+   Perform allocations in POOL. */
 static svn_error_t *
 parse_dir_entries(apr_hash_t **entries_p,
                   apr_hash_t *str_entries,
-                  const char *unparsed_id,
+                  const svn_fs_id_t *id,
                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -1778,7 +1779,7 @@ parse_dir_entries(apr_hash_t **entries_p,
       if (str == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Directory entry corrupt in '%s'"),
-                                 unparsed_id);
+                                 svn_fs_fs__id_unparse(id, pool)->data);
 
       if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
         {
@@ -1792,14 +1793,14 @@ parse_dir_entries(apr_hash_t **entries_p,
         {
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Directory entry corrupt in '%s'"),
-                                   unparsed_id);
+                                   svn_fs_fs__id_unparse(id, pool)->data);
         }
 
       str = svn_cstring_tokenize(" ", &last_str);
       if (str == NULL)
           return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                    _("Directory entry corrupt in '%s'"),
-                                   unparsed_id);
+                                   svn_fs_fs__id_unparse(id, pool)->data);
 
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
@@ -1847,7 +1848,7 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   unparsed_entries = apr_hash_make(pool);
   SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
   SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries,
-                            unparsed_id, pool));
+                            noderev->id, pool));
 
   /* Update the cache, if we are to use one. */
   if (cache)
