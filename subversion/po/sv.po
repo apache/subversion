@@ -1165,9 +1165,8 @@ msgid "Test skipped"
 msgstr "Test hoppades över"
 
 #: ../include/svn_error_codes.h:1293
-#, fuzzy
 msgid "APR memcache library not available"
-msgstr "apr memcache-bibliotek ej tillgängligt"
+msgstr "APR memcache-bibliotek ej tillgängligt"
 
 #: ../include/svn_error_codes.h:1298
 msgid "Couldn't perform atomic initialization"
@@ -1977,7 +1976,7 @@ msgstr "Låskommentaren innehåller otillåtna tecken"
 
 #: ../libsvn_client/log.c:309
 msgid "No valid target found"
-msgstr "Inget giltigt mål hittades"
+msgstr "Ogiltig målsökväg"
 
 #: ../libsvn_client/log.c:340
 #, c-format
@@ -4068,9 +4067,8 @@ msgid "Unrecognized URL scheme '%s'"
 msgstr "Okänt URL-schema \"%s\""
 
 #: ../libsvn_ra/util.c:55
-#, fuzzy
 msgid "<repository>"
-msgstr "arkivsökväg"
+msgstr "<arkiv>"
 
 #: ../libsvn_ra/util.c:73
 #, c-format
@@ -4078,9 +4076,9 @@ msgid "Retrieval of mergeinfo unsupported by '%s'"
 msgstr "Hämtning av sammanslagningsinformation stöds inte av \"%s\""
 
 #: ../libsvn_ra/util.c:99
-#, fuzzy, c-format
+#, c-format
 msgid "The '%s' feature is not supported by '%s'"
-msgstr "Hämtning av sammanslagningsinformation stöds inte av \"%s\""
+msgstr "Funktionen \"%s\" stöds inte av \"%s\""
 
 #: ../libsvn_ra/util.c:142
 #, c-format
@@ -4216,9 +4214,9 @@ msgid "MERGE request failed: returned %d (during commit)"
 msgstr "MERGE-begäran misslyckades: returnerade %d (under arkivering)"
 
 #: ../libsvn_ra_serf/commit.c:2273
-#, fuzzy, c-format
+#, c-format
 msgid "DELETE returned unexpected status: %d"
-msgstr "GET-begäran gav oväntad deltabas: %s"
+msgstr "DELETE gav oväntad felkod: %d"
 
 #: ../libsvn_ra_serf/commit.c:2466
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
@@ -4323,9 +4321,9 @@ msgid "Module for accessing a repository via WebDAV protocol using serf."
 msgstr "Modul för åtkomst av arkiv via protokollet WebDAV med hjälp av serf."
 
 #: ../libsvn_ra_serf/serf.c:122
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown %s '%s'"
-msgstr "Felaktig konfiguration: okänt HTTP-bibliotek \"%s\""
+msgstr "Felaktig konfiguration: okänd %s \"%s\""
 
 #: ../libsvn_ra_serf/serf.c:316
 msgid "Invalid config: illegal character in timeout value"
@@ -4358,9 +4356,9 @@ msgid "Illegal URL '%s'"
 msgstr "Otillåten URL \"%s\""
 
 #: ../libsvn_ra_serf/serf.c:523
-#, fuzzy, c-format
+#, c-format
 msgid "Connection to '%s' failed"
-msgstr "Nätverksanslutningen gick ut"
+msgstr "Anslutning till \"%s\" misslyckades"
 
 #: ../libsvn_ra_serf/serf.c:1193
 msgid "The UUID property was not found on the resource or any of its parents"
@@ -4536,12 +4534,12 @@ msgstr "\"%s\": ingen låsidentifierare tillgänglig"
 #: ../libsvn_ra_serf/util.c:2433
 #, c-format
 msgid "DAV request failed: 411 Content length required. The server or an intermediate proxy does not accept chunked encoding. Try setting 'http-chunked-requests' to 'auto' or 'no' in your client configuration."
-msgstr ""
+msgstr "DAV-begäran misslyckades: 411, innehållslängd krävs. Servern eller en mellanliggande proxy godtar inte styckvis kodning. Försök med att sätta \"http-chunked-requests\" till \"auto\" eller \"no\" i klientinställningarna."
 
 #: ../libsvn_ra_serf/util.c:2441
-#, fuzzy, c-format
+#, c-format
 msgid "Unexpected HTTP status %d '%s' on '%s'\n"
-msgstr "Oväntad nodtyp %d för \"%s\""
+msgstr "Oväntat HTTP-fel %d \"%s\" för \"%s\"\n"
 
 #: ../libsvn_ra_serf/util.c:2616
 #, c-format
@@ -4564,9 +4562,9 @@ msgid "XML stream truncated: %s"
 msgstr ""
 
 #: ../libsvn_ra_serf/xml.c:672
-#, fuzzy, c-format
+#, c-format
 msgid "XML Parsing failed: Unexpected root element '%s'"
-msgstr "XML-tolkning misslyckades: (%d %s)"
+msgstr "XML-tolkning misslyckades: Oväntat rotelement \"%s\""
 
 #: ../libsvn_ra_serf/xml.c:733
 #, fuzzy, c-format
@@ -4657,7 +4655,7 @@ msgstr "Servern skickade ingen arkivrot"
 #: ../libsvn_ra_svn/client.c:985
 #, c-format
 msgid "ra_svn does not support not specifying a log message with pre-1.5 servers; consider passing an empty one, or upgrading the server"
-msgstr ""
+msgstr "ra_svn stöder inte att ett loggmeddelande anges med en server äldre än 1.5; använd ett tomt loggmeddelande eller uppgradera servern"
 
 #: ../libsvn_ra_svn/client.c:1008
 msgid "Server doesn't support setting arbitrary revision properties during commit"
@@ -6065,9 +6063,9 @@ msgid "Error waiting for process '%s'"
 msgstr "Fel då processen \"%s\" inväntades"
 
 #: ../libsvn_subr/io.c:2950
-#, fuzzy, c-format
+#, c-format
 msgid "Process '%s' failed (signal %d, core dumped)"
-msgstr "Processen \"%s\" misslyckades (orsak %d)"
+msgstr "Processen \"%s\" misslyckades (signal %d, minnesutskrift skapad)"
 
 #: ../libsvn_subr/io.c:2955
 #, fuzzy, c-format
@@ -6692,9 +6690,9 @@ msgid "Config error: invalid value '%s' for option '%s'"
 msgstr "Konfigurationsfel: felaktigt värde \"%s\" för inställningen \"%s\""
 
 #: ../libsvn_subr/sqlite.c:195
-#, fuzzy, c-format
+#, c-format
 msgid "sqlite[S%d]: %s, executing statement '%s'"
-msgstr "sqlite: %s (S%d), körning av \"%s\""
+msgstr "sqlite[S%d]: %s, körning av \"%s\""
 
 #: ../libsvn_subr/sqlite.c:284
 msgid "sqlite: Expected database row missing"
@@ -6714,9 +6712,9 @@ msgid "SQLite is required to be compiled and run in thread-safe mode"
 msgstr "SQLite måste vara kompilerad för och köras i trådsäkert läge"
 
 #: ../libsvn_subr/sqlite.c:766
-#, fuzzy, c-format
+#, c-format
 msgid "Could not configure SQLite [S%d]"
-msgstr "Kunde inte konfigurera SQLite (S%d)"
+msgstr "Kunde inte konfigurera SQLite [S%d]"
 
 #: ../libsvn_subr/sqlite.c:768
 msgid "Could not initialize SQLite"
@@ -8509,7 +8507,6 @@ msgstr "godta sammanslagen version av fil"
 
 #: ../svn/conflict-callbacks.c:458 ../svn/conflict-callbacks.c:503
 #: ../svn/conflict-callbacks.c:535
-#, fuzzy
 msgid "mark resolved"
 msgstr "markera som löst"
 
@@ -8616,22 +8613,19 @@ msgstr "godta andras version av hela filen (likaså)  [theirs-full]"
 
 #: ../svn/conflict-callbacks.c:500
 msgid "show conflicts in this property"
-msgstr "visa konflikter för denna egenskap"
+msgstr "visa konflikter i denna egenskap"
 
 #: ../svn/conflict-callbacks.c:501
-#, fuzzy
 msgid "change merged property value in an editor  [edit]"
-msgstr "redigera sammanslagen fil i en editor  [edit]"
+msgstr "redigera sammanslagen egenskap i en editor  [edit]"
 
 #: ../svn/conflict-callbacks.c:501
-#, fuzzy
 msgid "edit property"
-msgstr "Felaktigt egenskapsnamn"
+msgstr "redigera egenskap"
 
 #: ../svn/conflict-callbacks.c:503
-#, fuzzy
 msgid "accept edited version of property"
-msgstr "godta sammanslagen version av fil"
+msgstr "godta redigerad version av egenskap"
 
 #: ../svn/conflict-callbacks.c:510 ../svn/conflict-callbacks.c:528
 #: ../svn/conflict-callbacks.c:541 ../svn/conflict-callbacks.c:555
@@ -8663,14 +8657,12 @@ msgid "resolve the conflict later  [postpone]"
 msgstr "lös konflikten senare  [postpone]"
 
 #: ../svn/conflict-callbacks.c:547
-#, fuzzy
 msgid "apply update to move destination (recommended)"
-msgstr "utför uppdateringen på målet för flyttningen  [mine-conflict]"
+msgstr "utför uppdateringen på målet för flyttningen (rekommenderas)"
 
 #: ../svn/conflict-callbacks.c:548
-#, fuzzy
 msgid "apply incoming update to move destination  [mine-conflict]"
-msgstr "utför uppdateringen på målet för flyttningen  [mine-conflict]"
+msgstr "utför inkommande uppdatering på målet för flyttningen  [mine-conflict]"
 
 #: ../svn/conflict-callbacks.c:561
 msgid "prepare for updating moved-away children, if any (recommended)"
@@ -8778,9 +8770,7 @@ msgstr "Konflikt för egenskapen \"%s\" upptäcktes på \"%s\".\n"
 msgid ""
 "Invalid option; please edit the property first.\n"
 "\n"
-msgstr ""
-"Felaktig väljare; det finns ingen sammanslagen version att behandla.\n"
-"\n"
+msgstr "Felaktigt val; redigera egenskapen först.\n\n"
 
 #: ../svn/conflict-callbacks.c:1044
 #, c-format
@@ -8887,6 +8877,8 @@ msgid ""
 "        (a) abort file merge and return to main menu: "
 msgstr ""
 "Välj: (1) använd andras version, (2) använd din version,\n"
+"      (12) deras version först, sedan din,\n"
+"      (21) din version först, sedan deras,\n"
 "      (e1) redigera andras version och använd resultatet,\n"
 "      (e2) redigera din version och använd resultatet,\n"
 "      (eb) redigera båda versionerna och använd resultatet,\n"
@@ -10719,6 +10711,7 @@ msgstr ""
 "  om vilken åtgärd som utfördes.\n"
 
 #: ../svn/svn.c:493
+#, fuzzy
 msgid ""
 "Recursively clean up the working copy, removing write locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -10742,6 +10735,19 @@ msgid ""
 "  Note that the 'svn status' command shows unversioned items as '?',\n"
 "  and ignored items as 'I' if the --no-ignore option is given to it.\n"
 msgstr ""
+"Städa i arbetskopian och dess underkataloger rekursivt.\n"
+"Skrivlås tas bort, avbrutet arbete återupptas o.s.v.\n"
+"användning: cleanup [AKSÖKVÄG...]\n"
+"\n"
+"  Slutför ofullbordat arbete i arbetskopian i AKSÖKVÄG och ta bort skrivlås\n"
+"  (visade som \"L\" av kommandot \"svn status\") från arbetskopian. Vanligtvis\n"
+"  är detta bara nödvändigt om en Subversionklient kraschade medan en\n"
+"  arbetskopia användes och lämnade den i ett oanvändbart tillstånd.\n"
+"\n"
+"  VARNING: Det finns ingen mekanism som skyddar skrivlås som fortfarande\n"
+"           används av en annan Subversionklient. Om detta kommando körs\n"
+"           medan en annan klient använder arbetskopian kan denna förstöras\n"
+"           utan möjlighet till reparation!\n"
 
 #: ../svn/svn.c:518
 #, fuzzy
@@ -11554,18 +11560,18 @@ msgid ""
 msgstr ""
 "Sammanslagning av ändringar i en arbetskopia.\n"
 "användning: 1. merge KÄLLA[@REV] [AKSÖKVÄGSMÅL]\n"
-"               (\"automatisk\" sammanslagning)\n"
+"               (\"fullständig\" sammanslagning)\n"
 "            2. merge [-c M[,N...] | -r N:M ...] KÄLLA[@REV] [AKSÖKVÄGSMÅL]\n"
 "               (sammanslagning av utvalda ändringar)\n"
 "            3. merge KÄLLA1[@REV1] KÄLLA2[@REV2] [AKSÖKVÄGSMÅL]\n"
 "               (sammanslagning av skillnaden mellan 2 URL:er)\n"
 "\n"
 "  1. Denna form, med en källsökväg och utan revisionsområde, kallas en\n"
-"     \"automatisk\" sammanslagning:\n"
+"     \"fullständig\" sammanslagning:\n"
 "\n"
 "       svn merge KÄLLA[@REV] [AKSÖKVÄGSMÅL]\n"
 "\n"
-"     Den automatiska sammanslagningen används för synkronisering och\n"
+"     Den fullständiga sammanslagningen används för synkronisering och\n"
 "     återförening enligt mönstret av \"karaktärsgrenar\" beskrivet nedan.\n"
 "     Alla ändringar i källgrenen ännu ej införda i målgrenen kommer att\n"
 "     slås samman med arbetskopian. Sammanslagningsföljning används\n"
@@ -11705,7 +11711,7 @@ msgstr ""
 "     uppdateringen).\n"
 "\n"
 "     AKSÖKVÄGSMÅL är en sökväg till en arbetskopia; om ej angiven antas \".\".\n"
-"     De särskilda fallen ovan för den \"automatiska\" sammanslagningsformen\n"
+"     De särskilda fallen ovan för den \"fullständiga\" sammanslagningsformen\n"
 "     gäller även här.\n"
 "\n"
 "     Revisionerna som införas anges med flaggorna \"-r\" och/eller \"-c\".\n"
@@ -11774,7 +11780,7 @@ msgstr ""
 "     De tre inblandade grenarna kan vara helt obesläktade.\n"
 "\n"
 "     AKSÖKVÄGSMÅL är en sökväg till en arbetskopia; om ej angiven antas \".\".\n"
-"     De särskilda fallen ovan för den \"automatiska\" sammanslagningsformen\n"
+"     De särskilda fallen ovan för den \"fullständiga\" sammanslagningsformen\n"
 "     gäller även här.\n"
 "\n"
 "     KÄLLA1 och/eller KÄLLA2 kan också anges som sökvägar i en arbetskopia,\n"
@@ -11916,7 +11922,7 @@ msgstr ""
 "     visar, från vänster till höger:\n"
 "       grenarnas yngsta gemensamma ursprung;\n"
 "       den senaste fulla sammanslagningen i endera riktningen, och alltså\n"
-"         den gemensamma basen som kommer användas för nästa automatiska\n"
+"         den gemensamma basen som kommer användas för nästa fullständiga\n"
 "         sammanslagning;\n"
 "       arkivsökväg och revisionsnummer för varje grenspets.\n"
 "\n"
@@ -12631,9 +12637,10 @@ msgstr ""
 "      \" \" inga ändringar\n"
 "      \"C\" i konflikt\n"
 "      \"M\" det finns ändringar\n"
-"    Tredje kolumen: Visar om katalogen i arbetskopian är låst\n"
-"      \" \" olåst\n"
-"      \"L\" låst\n"
+"    Tredje kolumen: Visar om arbetskopian är låst för skrivning av en\n"
+"                    annan Subversionklient som ändrar arbetskopian\n"
+"      \" \" ej låst för skrivning\n"
+"      \"L\" låst för skrivning\n"
 "    Fjärde kolumnen: Kommande arkiveringar kommer att innehålla tillägg med\n"
 "    historik\n"
 "      \" \" ingen historik schemalagd\n"
@@ -12642,16 +12649,17 @@ msgstr ""
 "      \" \" normalt\n"
 "      \"S\" objektet är växlat med avseende på dess föräldrakatalog\n"
 "      \"X\" en versionshanterad fil skapad av en extern-definition\n"
-"    Sjätte kolumnen: Arkivlås\n"
+"    Sjätte kolumnen: Visar om objektet är låst i arkivet för exklusiv\n"
+"                     arkivering\n"
 "      (utan -u)\n"
-"      \" \" ingen låsidentifierare\n"
-"      \"K\" låsidentifierare finns\n"
+"      \" \" inte låst av denna arbetskopia\n"
+"      \"K\" låst av denna arbetskopia, men låset kan stjälas eller brytas upp\n"
 "      (med -u)\n"
-"      \" \" ej låst i arkivet, ingen låsidentifierare\n"
-"      \"K\" låst i arkivet, låsidentifierare finns\n"
-"      \"O\" låst i arkivet, låsidentifierare i någon annan arbetskopia\n"
-"      \"T\" låst i arkivet; låsidentifierare finns, men låset är stulet\n"
-"      \"B\" ej låst i arkivet, låsidentifierare finns, men låset är uppbrutet\n"
+"      \" \" ej låst i arkivet, ej låst av denna arbetskopia\n"
+"      \"K\" låst i arkivet, lås ägt av denna arbetskopia\n"
+"      \"O\" låst i arkivet, lås ägt av någon annan arbetskopia\n"
+"      \"T\" låst i arkivet, lås ägt av denna arbetskopia men är stulet\n"
+"      \"B\" ej låst i arkivet, lås ägt av denna arbetskopia men är uppbrutet\n"
 "    Sjunde kolumnen: Huruvida objektet är föremål för en trädkonflikt\n"
 "      \" \" normalt\n"
 "      \"C\" trädkonflikt\n"
@@ -13758,7 +13766,7 @@ msgstr "%svarning: Arkivmekanismen \"%s\" är föråldrad; överväg att använd
 
 #: ../svnadmin/svnadmin.c:712
 msgid "Repositories compatible with 1.0.x must use --fs-type=bdb"
-msgstr ""
+msgstr "Arkiv kompatibla med 1.0.x måste använda --fs-type=bdb"
 
 #: ../svnadmin/svnadmin.c:755 ../svnadmin/svnadmin.c:1096
 #: ../svnadmin/svnadmin.c:1277
@@ -15996,75 +16004,3 @@ msgstr "\"%s\" är av okänd typ\n"
 #, c-format
 msgid "Uncommitted local addition, copy or move%s"
 msgstr "Oarkiverad lokalt tillagd, kopierad eller flyttad fil eller katalog%s"
-
-#~ msgid "Missing revision attr in delete-entry element"
-#~ msgstr "Attributet revision saknas på delete-entry-elementet"
-
-#~ msgid "Start revision must precede end revision"
-#~ msgstr "Startrevisionen måste komma före slutrevisionen"
-
-#~ msgid "Missing revision attr in open-root element"
-#~ msgstr "Attributet \"revision\" saknas på open-root-elementet"
-
-#~ msgid "Invalid config: unknown http authtype '%s'"
-#~ msgstr "Felaktig konfiguration: okänd http-authtype \"%s\""
-
-#~ msgid "Too many nested items"
-#~ msgstr "För många nästlade objekt"
-
-#~ msgid "OOM"
-#~ msgstr "Slut på minne"
-
-#~ msgid "Can't write to terminal"
-#~ msgstr "Kan inte skriva till terminal"
-
-#~ msgid "mark resolved (the move will become a copy)"
-#~ msgstr "markera som löst (flyttningen blir en kopia)"
-
-#~ msgid "keep any moves affected by this deletion  [mine-conflict]"
-#~ msgstr "behåll flyttningar som påverkats av denna radering  [mine-conflict]"
-
-#~ msgid "mark resolved (any affected moves will become copies)"
-#~ msgstr "markera som löst (påverkade flyttningar blir kopior)"
-
-#~ msgid "keep any moves affected by this replacement  [mine-conflict]"
-#~ msgstr "behåll flyttningar påverkade av denna ersättning  [mine-conflict]"
-
-#~ msgid "--- Checking branch relationship\n"
-#~ msgstr "--- Kontrollerar grensläktskap\n"
-
-#~ msgid "Source and target must be different but related branches"
-#~ msgstr "Källa och mål måste vara skilda men besläktade grenar"
-
-#~ msgid ""
-#~ "Also commit file and dir externals reached by\n"
-#~ "                             recursion. This does not include externals with a\n"
-#~ "                             fixed revision. (See the svn:externals property)"
-#~ msgstr ""
-#~ "Arkivera även externa filer och kataloger som nås\n"
-#~ "                             rekursivt, utom externa objekt med en\n"
-#~ "                             angiven revision. (Se egenskapen svn:externals)"
-
-#~ msgid ""
-#~ "Recursively clean up the working copy, removing locks, resuming\n"
-#~ "unfinished operations, etc.\n"
-#~ "usage: cleanup [WCPATH...]\n"
-#~ msgstr ""
-#~ "Städa i arbetskopian och dess underkataloger rekursivt. Lås tas bort,\n"
-#~ "avbrutna operationer återupptas o.s.v.\n"
-#~ "användning: cleanup [AKSÖKVÄG...]\n"
-
-#~ msgid "include externals definitions"
-#~ msgstr "tag med externals-definitioner"
-
-#~ msgid "Source and target have no common ancestor: '%s' and '%s'"
-#~ msgstr "Källa och mål saknar gemensamt ursprung: \"%s\" och \"%s\""
-
-#~ msgid "FSFS Packed: partly\n"
-#~ msgstr "FSFS packad: delvis\n"
-
-#~ msgid "FSFS Packed: no\n"
-#~ msgstr "FSFS packad: nej\n"
-
-#~ msgid "FSFS Packed: yes\n"
-#~ msgstr "FSFS packad: ja\n"
