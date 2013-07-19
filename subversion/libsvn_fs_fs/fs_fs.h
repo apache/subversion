@@ -53,9 +53,9 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
 
 /* Return an error iff REV does not exist in FS. */
 svn_error_t *
-svn_fs_fs__revision_exists(svn_revnum_t rev,
-                           svn_fs_t *fs,
-                           apr_pool_t *pool);
+svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
+                                  svn_fs_t *fs,
+                                  apr_pool_t *pool);
 
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV.  Use POOL for temporary allocations. */

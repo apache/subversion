@@ -58,7 +58,7 @@ rep_has_been_born(representation_t *rep,
 {
   SVN_ERR_ASSERT(rep);
 
-  SVN_ERR(svn_fs_fs__revision_exists(rep->revision, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rep->revision, fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -163,7 +163,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
       max = svn_sqlite__column_revnum(stmt, 0);
       SVN_ERR(svn_sqlite__reset(stmt));
       if (SVN_IS_VALID_REVNUM(max))  /* The rep-cache could be empty. */
-        SVN_ERR(svn_fs_fs__revision_exists(max, fs, iterpool));
+        SVN_ERR(svn_fs_fs__ensure_revision_exists(max, fs, iterpool));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db,

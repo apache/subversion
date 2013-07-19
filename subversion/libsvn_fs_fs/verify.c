@@ -180,8 +180,8 @@ svn_fs_fs__verify(svn_fs_t *fs,
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
     end = youngest;
-  SVN_ERR(svn_fs_fs__revision_exists(start, fs, pool));
-  SVN_ERR(svn_fs_fs__revision_exists(end, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(start, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(end, fs, pool));
 
   /* rep cache consistency */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)

@@ -171,7 +171,7 @@ open_and_seek_revision(apr_file_t **file,
 {
   apr_file_t *rev_file;
 
-  SVN_ERR(svn_fs_fs__revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
 
@@ -512,7 +512,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   svn_fs_id_t *root_id = NULL;
   svn_boolean_t is_cached;
 
-  SVN_ERR(svn_fs_fs__revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
                          ffd->rev_root_id_cache, &rev, pool));
@@ -1993,7 +1993,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
   /* read changes from revision file */
 
-  SVN_ERR(svn_fs_fs__revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
   SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,

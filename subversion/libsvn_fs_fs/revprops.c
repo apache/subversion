@@ -916,7 +916,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   *proplist_p = NULL;
 
   /* should they be available at all? */
-  SVN_ERR(svn_fs_fs__revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   /* Try cache lookup first. */
   if (has_revprop_cache(fs, pool))
@@ -1381,7 +1381,7 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   const char *perms_reference;
   apr_array_header_t *files_to_delete = NULL;
 
-  SVN_ERR(svn_fs_fs__revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_fs__is_packed_revprop(fs, rev);
