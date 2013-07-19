@@ -537,7 +537,42 @@ test24(apr_pool_t *pool)
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
 
-  return test_stringbuf_unequal("abc", "abb", pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+sub_test_base36(apr_uint64_t value, const char *base36)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_size_t length;
+  apr_size_t expected_length = strlen(base36);
+  const char *end = buffer;
+  apr_uint64_t result;
+
+  length = svn__ui64tobase36(buffer, value);
+  SVN_TEST_ASSERT(length == expected_length);
+  SVN_TEST_STRING_ASSERT(buffer, base36);
+
+  result = svn__base36toui64(&end, buffer);
+  SVN_TEST_ASSERT(end - buffer == length);
+  SVN_TEST_ASSERT(result == value);
+
+  result = svn__base36toui64(NULL, buffer);
+  SVN_TEST_ASSERT(result == value);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_base36(apr_pool_t *pool)
+{
+  SVN_ERR(sub_test_base36(0, "0"));
+  SVN_ERR(sub_test_base36(1234567890ull, "kf12oi"));
+  SVN_ERR(sub_test_base36(0x7fffffffffffffffull, "1y2p0ij32e8e7"));
+  SVN_ERR(sub_test_base36(0x8000000000000000ull, "1y2p0ij32e8e8"));
+  SVN_ERR(sub_test_base36(0xffffffffffffffffull, "3w5e11264sgsf"));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -770,6 +805,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "compare stringbufs; same length, different content"),
     SVN_TEST_PASS2(test24,
                    "verify i64toa"),
+    SVN_TEST_PASS2(test_base36,
+                   "verify base36 conversion"),
     SVN_TEST_PASS2(test_stringbuf_insert,
                    "check inserting into svn_stringbuf_t"),
     SVN_TEST_PASS2(test_stringbuf_remove,
