@@ -59,7 +59,8 @@
 
 #include "svn_private_config.h"
 
-
+
+
 /* Initializing a filesystem.  */
 
 struct dag_node_t
@@ -90,7 +91,8 @@ struct dag_node_t
 };
 
 
-
+
+
 /* Trivial helper/accessor functions. */
 svn_node_kind_t svn_fs_base__dag_node_kind(dag_node_t *node)
 {
@@ -265,7 +267,8 @@ svn_fs_base__dag_init_fs(svn_fs_t *fs)
 }
 
 
-
+
+
 /*** Directory node functions ***/
 
 /* Some of these are helpers for functions outside this section. */
@@ -538,7 +541,8 @@ svn_fs_base__dag_set_entry(dag_node_t *node,
 }
 
 
-
+
+
 /*** Proplists. ***/
 
 svn_error_t *
@@ -669,7 +673,8 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
 }
 
 
-
+
+
 /*** Roots. ***/
 
 svn_error_t *
@@ -1450,7 +1455,8 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
 }
 
 
-
+
+
 /*** Deltification ***/
 
 /* Maybe change the representation identified by TARGET_REP_KEY to be
@@ -1569,17 +1575,18 @@ svn_fs_base__dag_index_checksums(dag_node_t *node,
 }
 
 
-
+
+
 /*** Committing ***/
 
 svn_error_t *
 svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                             svn_fs_txn_t *txn,
                             trail_t *trail,
+                            svn_boolean_t set_timestamp,
                             apr_pool_t *pool)
 {
   revision_t revision;
-  svn_string_t date;
   apr_hash_t *txnprops;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
@@ -1605,15 +1612,22 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));
 
-  /* Set a date on the commit.  We wait until now to fetch the date,
-     so it's definitely newer than any previous revision's date. */
-  date.data = svn_time_to_cstring(apr_time_now(), pool);
-  date.len = strlen(date.data);
-  return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
-                                   NULL, &date, trail, pool);
+  if (set_timestamp)
+    {
+      /* Set a date on the commit if requested.  We wait until now to fetch the
+         date, so it's definitely newer than any previous revision's date. */
+      svn_string_t date;
+      date.data = svn_time_to_cstring(apr_time_now(), pool);
+      date.len = strlen(date.data);
+      SVN_ERR(svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
+                                        NULL, &date, trail, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
-
+
+
 /*** Comparison. ***/
 
 svn_error_t *
@@ -1657,7 +1671,8 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
 }
 
 
-
+
+
 /*** Mergeinfo tracking stuff ***/
 
 svn_error_t *
