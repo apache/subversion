@@ -300,7 +300,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apr_version.h')):
       inc_path = os.path.join(inc_base, 'apr-1')
-    elif os.path.isfile(os.path.join(inc_path, 'apr_version.h')):
+    elif os.path.isfile(os.path.join(inc_base, 'apr_version.h')):
       inc_path = inc_base
     else:
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
@@ -382,7 +382,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apu_version.h')):
       inc_path = os.path.join(inc_base, 'apr-1')
-    elif os.path.isfile(os.path.join(inc_path, 'apu_version.h')):
+    elif os.path.isfile(os.path.join(inc_base, 'apu_version.h')):
       inc_path = inc_base
     else:
       sys.stderr.write("ERROR: 'apu_version' not found.\n")
