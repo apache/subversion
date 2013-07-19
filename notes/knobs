@@ -68,6 +68,7 @@ SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
+SVN_FS_FS__LOG_ACCESS
 SVN_UTF_NO_UNINITIALISED_ACCESS
 
 2.4 Test-only
@@ -395,7 +396,17 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
-5.14 SVN_UTF_NO_UNINITIALISED_ACCESS
+5.14 SVN_FS_FS__LOG_ACCESS
+  
+  Scope:     libsvn_fs_fs/cached_data.c
+  Purpose:   logs type and location info for any fsfs data access above the
+             cache layer to console (i.e. what data gets requested from FSFS
+             rather than disk)
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.15 SVN_UTF_NO_UNINITIALISED_ACCESS
 
   Scope:     libsvn_subr
   Purpose:   Disables some code that triggers warnings in memory tools

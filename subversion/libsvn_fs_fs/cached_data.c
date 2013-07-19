@@ -39,6 +39,116 @@
 
 #include "svn_private_config.h"
 
+/* Defined this to enable access logging via dgb__log_access
+#define SVN_FS_FS__LOG_ACCESS
+ */
+
+/* Data / item types.
+ */
+#define SVN_FS_FS__ITEM_TYPE_ANY_REP    1  /* item is a representation. */
+#define SVN_FS_FS__ITEM_TYPE_NODEREV    2  /* item is a noderev */
+#define SVN_FS_FS__ITEM_TYPE_CHANGES    3  /* item is a changed paths list */
+
+/* When SVN_FS_FS__LOG_ACCESS has been defined, write a line to console
+ * showing where REVISION, ITEM_INDEX is located in FS and use ITEM to
+ * show details on it's contents if not NULL.  To support format 6 and
+ * earlier repos, ITEM_TYPE (SVN_FS_FS__ITEM_TYPE_*) must match ITEM.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * For pre-format7 repos, the display will be restricted.
+ */
+static svn_error_t *
+dgb__log_access(svn_fs_t *fs,
+                svn_revnum_t revision,
+                apr_off_t offset,
+                void *item,
+                int item_type,
+                apr_pool_t *scratch_pool)
+{
+  /* no-op if this macro is not defined */
+#ifdef SVN_FS_FS__LOG_ACCESS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  static const char *types[] = {"<n/a>", "rep ", "node ", "chgs "};
+  const char *description = "";
+  const char *type = types[item_type];
+  const char *pack = "";
+  apr_off_t offset_in_rev = offset;
+
+  /* determine rev / pack file offset */
+  if (svn_fs_fs__is_packed_rev(fs, revision))
+    {
+      apr_off_t rev_offset;
+      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, revision,
+                                           scratch_pool));
+      offset += rev_offset;
+    }
+
+  /* constructing the pack file description */
+  if (revision < ffd->min_unpacked_rev)
+    pack = apr_psprintf(scratch_pool, "%4ld|",
+                        revision / ffd->max_files_per_dir);
+
+  /* construct description if possible */
+  if (item_type == SVN_FS_FS__ITEM_TYPE_NODEREV && item != NULL)
+    {
+      node_revision_t *node = item;
+      const char *data_rep
+        = node->data_rep
+        ? apr_psprintf(scratch_pool, " d=%ld/%" APR_UINT64_T_FMT,
+                       node->data_rep->revision,
+                       node->data_rep->offset)
+        : "";
+      const char *prop_rep
+        = node->prop_rep
+        ? apr_psprintf(scratch_pool, " p=%ld/%" APR_UINT64_T_FMT,
+                       node->prop_rep->revision,
+                       node->prop_rep->offset)
+        : "";
+      description = apr_psprintf(scratch_pool, "%s   (pc=%d%s%s)",
+                                 node->created_path,
+                                 node->predecessor_count,
+                                 data_rep,
+                                 prop_rep);
+    }
+  else if (item_type == SVN_FS_FS__ITEM_TYPE_ANY_REP)
+    {
+      svn_fs_fs__rep_header_t *header = item;
+      if (header == NULL)
+        description = "  (txdelta window)";
+      else if (header->type == svn_fs_fs__rep_plain)
+        description = "  PLAIN";
+      else if (header->type == svn_fs_fs__rep_self_delta)
+        description = "  DELTA";
+      else
+        description = apr_psprintf(scratch_pool,
+                                   "  DELTA against %ld/%" APR_UINT64_T_FMT,
+                                   header->base_revision,
+                                   header->base_offset);
+    }
+  else if (item_type == SVN_FS_FS__ITEM_TYPE_CHANGES && item != NULL)
+    {
+      apr_array_header_t *changes = item;
+      switch (changes->nelts)
+        {
+          case 0:  description = "  no change";
+                   break;
+          case 1:  description = "  1 change";
+                   break;
+          default: description = apr_psprintf(scratch_pool, "  %d changes",
+                                              changes->nelts);
+        }
+    }
+
+  printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
+          "   %s\n",
+          pack, (apr_uint64_t)(offset), type, revision, offset_in_rev,
+          description);
+
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 /* Convenience wrapper around svn_io_file_aligned_seek. */
 static svn_error_t *
 aligned_seek(apr_file_t *file,
@@ -264,6 +374,14 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                                "Corrupt node-revision '%s'",
                                id_string->data);
     }
+
+  SVN_ERR(dgb__log_access(fs,
+                          svn_fs_fs__id_rev(id),
+                          svn_fs_fs__id_offset(id),
+                          *noderev_p,
+                          SVN_FS_FS__ITEM_TYPE_NODEREV,
+                          pool));
+
   return svn_error_trace(err);
 }
 
@@ -450,6 +568,10 @@ typedef struct rep_state_t
   svn_cache__t *window_cache;
                     /* Caches un-deltified windows. May be NULL. */
   svn_cache__t *combined_cache;
+                    /* revision containing the representation */
+  svn_revnum_t revision;
+                    /* representation's offset in REVISION */
+  apr_uint64_t offset;
   apr_off_t start;  /* The starting offset for the raw
                        svndiff/plaintext data minus header. */
   apr_off_t current;/* The current offset relative to START. */
@@ -490,6 +612,8 @@ create_rep_state_body(rep_state_t **rep_state,
 
   /* continue constructing RS and RA */
   rs->size = rep->size;
+  rs->revision = rep->revision;
+  rs->offset = rep->offset;
   rs->window_cache = ffd->txdelta_window_cache;
   rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
@@ -523,6 +647,9 @@ create_rep_state_body(rep_state_t **rep_state,
       if (shared_file)
         *shared_file = file;
     }
+
+  SVN_ERR(dgb__log_access(fs, rep->revision, rep->offset, rh,
+                          SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
 
   SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->file->stream, pool));
   SVN_ERR(svn_fs_fs__get_file_offset(&rs->start, rs->file->file, pool));
@@ -1044,6 +1171,9 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   apr_off_t start_offset;
   apr_off_t end_offset;
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
+
+  SVN_ERR(dgb__log_access(rs->file->fs, rs->revision, rs->offset,
+                          NULL, SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
 
   /* someone has to actually read the data from file */
   SVN_ERR(auto_read_diff_version(rs, pool));
@@ -1880,6 +2010,9 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
   if (ffd->changes_cache)
     SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
+
+  SVN_ERR(dgb__log_access(fs, rev, changes_offset, *changes,
+                          SVN_FS_FS__ITEM_TYPE_CHANGES, pool));
 
   return SVN_NO_ERROR;
 }
