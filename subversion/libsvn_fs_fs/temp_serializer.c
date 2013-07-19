@@ -106,12 +106,11 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
 
   /* the "string" content may actually be arbitrary binary data.
    * Thus, we cannot use svn_temp_serializer__add_string. */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&string->data,
-                            string->len + 1);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&string->data,
+                                string->len + 1);
 
   /* back to the caller's nesting level */
-  svn_temp_serializer__pop(context);
   svn_temp_serializer__pop(context);
 }
 
@@ -144,12 +143,11 @@ serialize_checksum(svn_temp_serializer__context_t *context,
 
   /* The digest is arbitrary binary data.
    * Thus, we cannot use svn_temp_serializer__add_string. */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&checksum->digest,
-                            svn_checksum_size(checksum));
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&checksum->digest,
+                                svn_checksum_size(checksum));
 
   /* return to the caller's nesting level */
-  svn_temp_serializer__pop(context);
   svn_temp_serializer__pop(context);
 }
 
@@ -434,10 +432,9 @@ serialize_txdelta_ops(svn_temp_serializer__context_t *context,
     return;
 
   /* the ops form a contiguous chunk of memory with no further references */
-  svn_temp_serializer__push(context,
-                            (const void * const *)ops,
-                            count * sizeof(svn_txdelta_op_t));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)ops,
+                                count * sizeof(svn_txdelta_op_t));
 }
 
 /* Utility function to serialize W in the given serialization CONTEXT.
@@ -1274,22 +1271,19 @@ svn_fs_fs__serialize_mergeinfo(void **data,
   svn_temp_serializer__pop(context);
 
   /* key lengths array */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&merges.key_lengths,
-                            merges.count * sizeof(*merges.key_lengths));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&merges.key_lengths,
+                                merges.count * sizeof(*merges.key_lengths));
 
   /* range counts array */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&merges.range_counts,
-                            merges.count * sizeof(*merges.range_counts));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&merges.range_counts,
+                                merges.count * sizeof(*merges.range_counts));
 
   /* ranges */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&merges.ranges,
-                            range_count * sizeof(*merges.ranges));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&merges.ranges,
+                                range_count * sizeof(*merges.ranges));
 
   /* return the serialized result */
   serialized = svn_temp_serializer__get(context);
