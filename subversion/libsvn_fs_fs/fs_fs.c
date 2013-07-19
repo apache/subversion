@@ -602,7 +602,7 @@ get_lock_on_filesystem(const char *lock_filename,
       svn_error_clear(err);
       err = NULL;
 
-      SVN_ERR(svn_io_file_create(lock_filename, "", pool));
+      SVN_ERR(svn_io_file_create_empty(lock_filename, pool));
       SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
     }
 
@@ -6633,16 +6633,16 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
 
   /* Create an empty rev file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_proto_rev(fs, txn->id, pool),
+                                   pool));
 
   /* Create an empty rev-lock file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev_lock(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_proto_rev_lock(fs, txn->id, pool),
+                                   pool));
 
   /* Create an empty changes file. */
-  SVN_ERR(svn_io_file_create(path_txn_changes(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_changes(fs, txn->id, pool),
+                                   pool));
 
   /* Create the next-ids file. */
   return svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
@@ -8867,7 +8867,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                               ? "0\n" : "0 1 1\n"),
                              pool));
-  SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create_empty(path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
@@ -8884,10 +8884,8 @@ svn_fs_fs__create(svn_fs_t *fs,
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool), "0\n", pool));
+      SVN_ERR(svn_io_file_create_empty(path_txn_current_lock(fs, pool), pool));
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */
@@ -11482,7 +11480,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                              pool));
 
   /* Create lock file and UUID. */
-  SVN_ERR(svn_io_file_create(path_lock(dst_fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create_empty(path_lock(dst_fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
@@ -11495,8 +11493,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
     {
       SVN_ERR(svn_io_file_create(path_txn_current(dst_fs, pool),
                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(dst_fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create_empty(path_txn_current_lock(dst_fs, pool),
+                                       pool));
     }
 
   dst_ffd->youngest_rev_cache = 0;
