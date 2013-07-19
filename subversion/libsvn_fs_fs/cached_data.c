@@ -410,11 +410,35 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   return SVN_NO_ERROR;
 }
 
+/* Describes a lazily opened rev / pack file.  Instances will be shared
+   between multiple instances of rep_state_t. */
+typedef struct shared_file_t
+{
+  /* The opened file. NULL while file is not open, yet. */
+  apr_file_t *file;
+
+  /* Stream wrapper around FILE. NULL while file is not open, yet. */
+  svn_stream_t *stream;
+
+  /* file system to open the file in */
+  svn_fs_t *fs;
+
+  /* a revision contained in the FILE.  Since this file may be shared,
+     that value may be different from REP_STATE_T->REVISION. */
+  svn_revnum_t revision;
+
+  /* pool to use when creating the FILE.  This guarantees that the file
+     remains open / valid beyond the respective local context that required
+     the file to be opened eventually. */
+  apr_pool_t *pool;
+} shared_file_t;
+
 /* Represents where in the current svndiff data block each
    representation is. */
 typedef struct rep_state_t
 {
-  apr_file_t *file;
+                    /* shared lazy-open rev/pack file structure */
+  shared_file_t *file;
                     /* The txdelta window cache to use or NULL. */
   svn_cache__t *window_cache;
                     /* Caches un-deltified windows. May be NULL. */
@@ -423,16 +447,16 @@ typedef struct rep_state_t
                        svndiff/plaintext data minus header. */
   apr_off_t current;/* The current offset relative to START. */
   apr_off_t size;   /* The on-disk size of the representation. */
-  int ver;          /* If a delta, what svndiff version? */
-  int chunk_index;
+  int ver;          /* If a delta, what svndiff version? 
+                       -1 for unknown delta version. */
+  int chunk_index;  /* number of the window to read */
 } rep_state_t;
 
 /* See create_rep_state, which wraps this and adds another error. */
 static svn_error_t *
 create_rep_state_body(rep_state_t **rep_state,
                       svn_fs_fs__rep_header_t **rep_header,
-                      apr_file_t **file_hint,
-                      svn_revnum_t *rev_hint,
+                      shared_file_t **shared_file,
                       representation_t *rep,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
@@ -440,7 +464,6 @@ create_rep_state_body(rep_state_t **rep_state,
   fs_fs_data_t *ffd = fs->fsap_data;
   rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
   svn_fs_fs__rep_header_t *rh;
-  unsigned char buf[4];
 
   /* If the hint is
    * - given,
@@ -448,14 +471,23 @@ create_rep_state_body(rep_state_t **rep_state,
    * - refers to a packed revision,
    * - as does the rep we want to read, and
    * - refers to the same pack file as the rep
-   * ...
+   * we can re-use the same, already open file object
    */
-  if (   file_hint && rev_hint && *file_hint
-      && SVN_IS_VALID_REVNUM(*rev_hint)
-      && *rev_hint < ffd->min_unpacked_rev
+  svn_boolean_t reuse_shared_file
+    =    shared_file && *shared_file && (*shared_file)->file
+      && SVN_IS_VALID_REVNUM((*shared_file)->revision)
+      && (*shared_file)->revision < ffd->min_unpacked_rev
       && rep->revision < ffd->min_unpacked_rev
-      && (   (*rev_hint / ffd->max_files_per_dir)
-          == (rep->revision / ffd->max_files_per_dir)))
+      && (   ((*shared_file)->revision / ffd->max_files_per_dir)
+          == (rep->revision / ffd->max_files_per_dir));
+
+  /* continue constructing RS and RA */
+  rs->size = rep->size;
+  rs->window_cache = ffd->txdelta_window_cache;
+  rs->combined_cache = ffd->combined_window_cache;
+  rs->ver = -1;
+
+  if (reuse_shared_file)
     {
       /* ... we can re-use the same, already open file object
        */
@@ -463,32 +495,31 @@ create_rep_state_body(rep_state_t **rep_state,
       SVN_ERR(svn_fs_fs__get_packed_offset(&offset, fs, rep->revision, pool));
 
       offset += rep->offset;
-      SVN_ERR(svn_io_file_seek(*file_hint, APR_SET, &offset, pool));
-
-      rs->file = *file_hint;
+      SVN_ERR(svn_io_file_seek((*shared_file)->file, APR_SET, &offset, pool));
+      rs->file = *shared_file;
     }
   else
     {
+      shared_file_t *file = apr_pcalloc(pool, sizeof(*file));
+      file->revision = rep->revision;
+      file->pool = pool;
+      file->fs = fs;
+
       /* otherwise, create a new file object
        */
-      SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
+      SVN_ERR(open_and_seek_representation(&file->file, fs, rep, pool));
+      file->stream = svn_stream_from_aprfile2(file->file, TRUE,
+                                              file->pool);
+      rs->file = file;
+
+      /* remember the current file, if suggested by the caller */
+      if (shared_file)
+        *shared_file = file;
     }
 
-  /* remember the current file, if suggested by the caller */
-  if (file_hint)
-    *file_hint = rs->file;
-  if (rev_hint)
-    *rev_hint = rep->revision;
+  SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->file->stream, pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&rs->start, rs->file->file, pool));
 
-  /* continue constructing RS and RA */
-  rs->window_cache = ffd->txdelta_window_cache;
-  rs->combined_cache = ffd->combined_window_cache;
-
-  SVN_ERR(svn_fs_fs__read_rep_header(&rh,
-                           svn_stream_from_aprfile2(rs->file, FALSE, pool),
-                           pool));
-  SVN_ERR(svn_fs_fs__get_file_offset(&rs->start, rs->file, pool));
-  rs->size = rep->size;
   *rep_state = rs;
   *rep_header = rh;
 
@@ -496,16 +527,6 @@ create_rep_state_body(rep_state_t **rep_state,
     /* This is a plaintext, so just return the current rep_state. */
     return SVN_NO_ERROR;
 
-  /* We are dealing with a delta, find out what version. */
-  SVN_ERR(svn_io_file_read_full2(rs->file, buf, sizeof(buf),
-                                 NULL, NULL, pool));
-  /* ### Layering violation */
-  if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
-    return svn_error_create
-      (SVN_ERR_FS_CORRUPT, NULL,
-       _("Malformed svndiff data in representation"));
-  rs->ver = buf[3];
-  rs->chunk_index = 0;
   rs->current = 4;
 
   return SVN_NO_ERROR;
@@ -516,23 +537,22 @@ create_rep_state_body(rep_state_t **rep_state,
    and the rep header in *REP_HEADER, both allocated in POOL.
 
    When reading multiple reps, i.e. a skip delta chain, you may provide
-   non-NULL FILE_HINT and REV_HINT.  (If FILE_HINT is not NULL, in the first
-   call it should be a pointer to NULL.)  The function will use these variables
-   to store the previous call results and tries to re-use them.  This may
-   result in significant savings in I/O for packed files.
+   non-NULL SHARED_FILE.  (If SHARED_FILE is not NULL, in the first
+   call it should be a pointer to NULL.)  The function will use this
+   variable to store the previous call results and tries to re-use it.
+   This may result in significant savings in I/O for packed files and
+   number of open file handles.
  */
 static svn_error_t *
 create_rep_state(rep_state_t **rep_state,
                  svn_fs_fs__rep_header_t **rep_header,
-                 apr_file_t **file_hint,
-                 svn_revnum_t *rev_hint,
+                 shared_file_t **shared_file,
                  representation_t *rep,
                  svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   svn_error_t *err = create_rep_state_body(rep_state, rep_header,
-                                           file_hint, rev_hint,
-                                           rep, fs, pool);
+                                           shared_file, rep, fs, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
@@ -558,15 +578,14 @@ create_rep_state(rep_state_t **rep_state,
 svn_error_t *
 svn_fs_fs__check_rep(representation_t *rep,
                      svn_fs_t *fs,
-                     apr_file_t **file_hint,
-                     svn_revnum_t *rev_hint,
+                     void **hint,
                      apr_pool_t *pool)
 {
   rep_state_t *rs;
   svn_fs_fs__rep_header_t *rep_header;
 
   /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_header, file_hint, rev_hint, rep,
+  SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint, rep,
                            fs, pool));
 
   return SVN_NO_ERROR;
@@ -588,8 +607,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   representation_t base_rep = *rep;
 
   /* re-use open files between iterations */
-  apr_file_t *file_hint = NULL;
-  svn_revnum_t rev_hint = SVN_INVALID_REVNUM;
+  shared_file_t *file_hint = NULL;
 
   svn_fs_fs__rep_header_t *header;
 
@@ -601,7 +619,6 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       SVN_ERR(create_rep_state_body(&rep_state,
                                     &header,
                                     &file_hint,
-                                    &rev_hint,
                                     &base_rep,
                                     fs,
                                     sub_pool));
@@ -694,7 +711,7 @@ get_window_key(rep_state_t *rs, apr_off_t offset, apr_pool_t *pool)
    * And if nobody else detects the problems, the file content checksum
    * comparison _will_ find them.
    */
-  if (apr_file_name_get(&name, rs->file))
+  if (apr_file_name_get(&name, rs->file->file))
     return NULL;
 
   /* Handle packed files as well by scanning backwards until we find the
@@ -756,18 +773,11 @@ get_cached_window(svn_txdelta_window_t **window_p,
 
       if (*is_cached)
         {
-          apr_off_t offset;
-
           /* found it. Pass it back to the caller. */
           *window_p = cached_window->window;
 
           /* manipulate the RS as if we just read the data */
-          rs->chunk_index++;
           rs->current = cached_window->end_offset;
-
-          /* manipulate the rev file as if we just read from it */
-          offset = rs->start + rs->current;
-          SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &offset, pool));
         }
     }
 
@@ -879,8 +889,7 @@ build_rep_list(apr_array_header_t **list,
   rep_state_t *rs = NULL;
   svn_fs_fs__rep_header_t *rep_header;
   svn_boolean_t is_cached = FALSE;
-  apr_file_t *last_file = NULL;
-  svn_revnum_t last_revision;
+  shared_file_t *shared_file = NULL;
 
   *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
@@ -890,8 +899,7 @@ build_rep_list(apr_array_header_t **list,
   *expanded_size = first_rep->expanded_size;
 
   /* for the top-level rep, we need the rep_args */
-  SVN_ERR(create_rep_state(&rs, &rep_header, &last_file,
-                           &last_revision, &rep, fs, pool));
+  SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs, pool));
 
   /* Unknown size or empty representation?
      That implies the this being the first iteration.
@@ -907,14 +915,15 @@ build_rep_list(apr_array_header_t **list,
     {
       /* fetch state, if that has not been done already */
       if (!rs)
-        SVN_ERR(create_rep_state(&rs, &rep_header, &last_file,
-                                 &last_revision, &rep, fs, pool));
+        SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file,
+                                 &rep, fs, pool));
 
       SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
       if (is_cached)
         {
           /* We already have a reconstructed window in our cache.
              Write a pseudo rep_state with the full length. */
+          rs->start = 0;
           rs->current = 0;
           rs->size = (*window_p)->len;
           *src_state = rs;
@@ -991,29 +1000,60 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   return SVN_NO_ERROR;
 }
 
+/* Set RS->VER depending on what is found in the already open RS->FILE->FILE
+   if the diff version is still unknown.  Use POOL for temporary allocations.
+ */
+static svn_error_t*
+auto_read_diff_version(rep_state_t *rs, apr_pool_t *pool)
+{
+  if (rs->ver == -1)
+    {
+      char buf[4];
+      SVN_ERR(svn_io_file_seek(rs->file->file, APR_SET, &rs->start, pool));
+      SVN_ERR(svn_io_file_read_full2(rs->file->file, buf, sizeof(buf),
+                                     NULL, NULL, pool));
+
+      /* ### Layering violation */
+      if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
+        return svn_error_create
+          (SVN_ERR_FS_CORRUPT, NULL,
+           _("Malformed svndiff data in representation"));
+      rs->ver = buf[3];
+
+      rs->chunk_index = 0;
+      rs->current = 4;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
 read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
                   rep_state_t *rs, apr_pool_t *pool)
 {
-  svn_stream_t *stream;
   svn_boolean_t is_cached;
   apr_off_t start_offset;
   apr_off_t end_offset;
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
+  /* someone has to actually read the data from file */
+  SVN_ERR(auto_read_diff_version(rs, pool));
+
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   start_offset = rs->start + rs->current;
-  SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &start_offset, pool));
+  SVN_ERR(svn_io_file_seek(rs->file->file, APR_SET, &start_offset, pool));
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
     {
-      SVN_ERR(svn_txdelta_skip_svndiff_window(rs->file, rs->ver, pool));
+      SVN_ERR(svn_txdelta_skip_svndiff_window(rs->file->file, rs->ver,
+                                              pool));
       rs->chunk_index++;
-      SVN_ERR(svn_fs_fs__get_file_offset(&start_offset, rs->file, pool));
+      SVN_ERR(svn_fs_fs__get_file_offset(&start_offset, rs->file->file,
+                                         pool));
       rs->current = start_offset - rs->start;
       if (rs->current >= rs->size)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1028,11 +1068,10 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
     return SVN_NO_ERROR;
 
   /* Actually read the next window. */
-  stream = svn_stream_from_aprfile2(rs->file, TRUE, pool);
-  SVN_ERR(svn_txdelta_read_svndiff_window(nwin, stream, rs->ver, pool));
+  SVN_ERR(svn_txdelta_read_svndiff_window(nwin, rs->file->stream, rs->ver,
+                                          pool));
   rs->chunk_index++;
-  SVN_ERR(svn_fs_fs__get_file_offset(&end_offset, rs->file, pool));
-
+  SVN_ERR(svn_fs_fs__get_file_offset(&end_offset, rs->file->file, pool));
   rs->current = end_offset - rs->start;
   if (rs->current > rs->size)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1051,16 +1090,13 @@ read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
 {
   apr_off_t offset;
   
-  /* RS->FILE may be shared between RS instances -> make sure we point
-   * to the right data. */
-
   offset = rs->start + rs->current;
-  SVN_ERR(svn_io_file_seek(rs->file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(rs->file->file, SEEK_SET, &offset, pool));
 
   /* Read the plain data. */
   *nwin = svn_stringbuf_create_ensure(size, pool);
-  SVN_ERR(svn_io_file_read_full2(rs->file, (*nwin)->data, size, NULL, NULL,
-                                 pool));
+  SVN_ERR(svn_io_file_read_full2(rs->file->file, (*nwin)->data, size,
+                                 NULL, NULL, pool));
   (*nwin)->data[size] = 0;
 
   /* Update RS. */
@@ -1205,10 +1241,15 @@ get_contents(struct rep_read_baton *rb,
         }
       else
         {
+          apr_off_t offset;
           if (((apr_off_t) copy_len) > rs->size - rs->current)
             copy_len = (apr_size_t) (rs->size - rs->current);
-          SVN_ERR(svn_io_file_read_full2(rs->file, cur, copy_len, NULL,
-                                         NULL, rb->pool));
+
+          offset = rs->start + rs->current;
+          SVN_ERR(svn_io_file_seek(rs->file->file, SEEK_SET, &offset,
+                                   rb->pool));
+          SVN_ERR(svn_io_file_read_full2(rs->file->file, cur, copy_len,
+                                         NULL, NULL, rb->pool));
         }
 
       rs->current += copy_len;
@@ -1482,7 +1523,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
       svn_fs_fs__rep_header_t *rep_header;
 
       /* Read target's base rep if any. */
-      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL, NULL,
+      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
                                target->data_rep, fs, pool));
       /* If that matches source, then use this delta as is. */
       if (rep_header->type == svn_fs_fs__rep_self_delta
@@ -1500,7 +1541,8 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
           return SVN_NO_ERROR;
         }
       else
-        SVN_ERR(svn_io_file_close(rep_state->file, pool));
+        if (rep_state->file->file)
+          SVN_ERR(svn_io_file_close(rep_state->file->file, pool));
     }
 
   /* Read both fulltexts and construct a delta. */

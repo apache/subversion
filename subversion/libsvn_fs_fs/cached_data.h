@@ -53,8 +53,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
 svn_error_t *
 svn_fs_fs__check_rep(representation_t *rep,
                      svn_fs_t *fs,
-                     apr_file_t **file_hint,
-                     svn_revnum_t *rev_hint,
+                     void **hint,
                      apr_pool_t *pool);
 
 /* Follow the representation delta chain in FS starting with REP.  The
