@@ -52,7 +52,6 @@ svn_error_t *
 svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
-                         apr_hash_t *copyfrom_cache,
                          apr_pool_t *pool);
 
 /* Create a new transaction in filesystem FS, based on revision REV,
