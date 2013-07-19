@@ -894,10 +894,10 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
    repository by resetting "current" without deleting rev files, etc), it
    ought to be completely ignored.  This function provides the check
    by which callers can make that decision. */
-static svn_error_t *
-ensure_revision_exists(svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
+                                  svn_fs_t *fs,
+                                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -919,16 +919,6 @@ ensure_revision_exists(svn_fs_t *fs,
 
   return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                            _("No such revision %ld"), rev);
-}
-
-svn_error_t *
-svn_fs_fs__revision_exists(svn_revnum_t rev,
-                           svn_fs_t *fs,
-                           apr_pool_t *pool)
-{
-  /* Different order of parameters. */
-  SVN_ERR(ensure_revision_exists(fs, rev, pool));
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
