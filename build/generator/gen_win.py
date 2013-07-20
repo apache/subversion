@@ -767,11 +767,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                      self.apath("subversion") ]
                      
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
-      if dep.external_lib and \
-         dep.external_lib.startswith('$(SVN_') and \
-         dep.external_lib.endswith('_LIBS)'):
-
-        external_lib = dep.external_lib[6:-6].lower()
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
 
         if external_lib in self._libraries:
           lib = self._libraries[external_lib]
@@ -811,11 +809,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakeincludes.append(self.apath(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if self.sqlite_inline:
-      fakeincludes.append(self.apath(self.sqlite_path))
-    else:
-      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
-
     if target.name == "libsvnjavahl" and self.jdk_path:
       fakeincludes.append(os.path.join(self.jdk_path, 'include'))
       fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
@@ -833,13 +826,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     fakelibdirs = []
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
-      if dep.external_lib and \
-         dep.external_lib.startswith('$(SVN_') and \
-         dep.external_lib.endswith('_LIBS)'):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
 
-        external_lib = dep.external_lib[6:-6].lower()
+          if external_lib not in self._libraries:
+            continue
 
-        if external_lib in self._libraries:
           lib = self._libraries[external_lib]
           
           if debug:
@@ -883,43 +876,23 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
 
-      if dep.external_lib and \
-         dep.external_lib.startswith('$(SVN_') and \
-         dep.external_lib.endswith('_LIBS)'):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
 
-        external_lib = dep.external_lib[6:-6].lower()
+          external_lib = elib.lower()
 
-        if external_lib in self._libraries:
+          if external_lib not in self._libraries:
+            if external_lib not in self._optional_libraries:
+              print('Warning: Using undeclared dependency \'$(SVN_%s_LIBS)\'.'
+                    % (elib,))
+            continue
+
           lib = self._libraries[external_lib]
 
           if debug:
             nondeplibs.append(lib.debug_lib_name)
           else:
             nondeplibs.append(lib.lib_name)
-
-        elif external_lib == 'sqlite':
-
-          if not self.sqlite_inline:
-            nondeplibs.append('sqlite3.lib')
-          # else: # Is not a linkable library
-
-        elif external_lib == 'apr_memcache' or \
-             external_lib == 'magic':
-          # Currently unhandled
-          lib = None
-          
-        elif external_lib in ['db',
-                              'intl',
-                              'serf',
-                              'sasl',
-                              'perl',
-                              'python',
-                              'ruby']:
-          lib = None # Suppress warnings for optional library
-
-        else:
-          print('Warning: Using undeclared dependency \'%s\'' % \
-                (dep.external_lib,))
 
     return gen_base.unique(nondeplibs)
 
