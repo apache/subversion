@@ -2313,48 +2313,32 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
   svn_error_t *err;
   svn_stringbuf_t *res = NULL;
   apr_size_t res_initial_len = SVN__STREAM_CHUNK_SIZE;
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  char *buf;
 
   /* If our caller wants us to check the size of the file for
      efficient memory handling, we'll try to do so. */
   if (check_size)
     {
-      apr_status_t status;
+      apr_finfo_t finfo;
 
-      /* If our caller didn't tell us the file's name, we'll ask APR
-         if it knows the name.  No problem if we can't figure it out.  */
-      if (! filename)
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file))
         {
-          const char *filename_apr;
-          if (! (status = apr_file_name_get(&filename_apr, file)))
-            filename = filename_apr;
-        }
-
-      /* If we now know the filename, try to stat().  If we succeed,
-         we know how to allocate our stringbuf.  */
-      if (filename)
-        {
-          apr_finfo_t finfo;
-          if (! (status = apr_stat(&finfo, filename, APR_FINFO_MIN, pool)))
-            {
-              /* we've got the file length. Now, read it in one go. */
-              svn_boolean_t eof;
-              res_initial_len = (apr_size_t)finfo.size;
-              res = svn_stringbuf_create_ensure(res_initial_len, pool);
-              SVN_ERR(svn_io_file_read_full2(file, res->data,
-                                             res_initial_len, &res->len,
-                                             &eof, pool));
-              res->data[res->len] = 0;
-              
-              *result = res;
-              return SVN_NO_ERROR;
-            }
+          /* we've got the file length. Now, read it in one go. */
+          svn_boolean_t eof;
+          res_initial_len = (apr_size_t)finfo.size;
+          res = svn_stringbuf_create_ensure(res_initial_len, pool);
+          SVN_ERR(svn_io_file_read_full2(file, res->data,
+                                         res_initial_len, &res->len,
+                                         &eof, pool));
+          res->data[res->len] = 0;
+          
+          *result = res;
+          return SVN_NO_ERROR;
         }
     }
 
-
   /* XXX: We should check the incoming data for being of type binary. */
-
+  buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   res = svn_stringbuf_create_ensure(res_initial_len, pool);
 
   /* apr_file_read will not return data and eof in the same call. So this loop
