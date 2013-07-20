@@ -31,11 +31,7 @@ import sys
 import fnmatch
 import re
 import subprocess
-import glob
 import string
-import generator.swig.header_wrappers
-import generator.swig.checkout_swig_header
-import generator.swig.external_runtime
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -844,7 +840,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                '-version'], stdout=subprocess.PIPE).stdout
       line = outfp.read()
       if line:
-        print(line)
         vermatch = re.compile(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', re.M) \
                    .search(line)
       else:
@@ -853,7 +848,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if vermatch:
         version = tuple(map(int, vermatch.groups()[1].split('.')))
         versionstr = vermatch.groups()[0]
-        print(version)
       else:
         if show_warnings:
           print('Could not find installed JDK,')
