@@ -106,6 +106,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'intl',
         'serf',
         'sasl',
+        'swig',
         'perl',
         'python',
         'ruby',
@@ -279,16 +280,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_sasl(show_warnings)
     self._find_libintl(show_warnings)
 
-    # Swig (optional) dependencies
-    self._find_perl(show_warnings)
-    self._find_python(show_warnings)
-    self._find_ruby(show_warnings)
     self._find_jdk(show_warnings)
 
-    if show_warnings:
-      # Find the installed SWIG version to adjust swig options
-      self._find_swig()
-
+    # Swig (optional) dependencies
+    if self._find_swig(show_warnings):
+      self._find_perl(show_warnings)
+      self._find_python(show_warnings)
+      self._find_ruby(show_warnings)
 
   def _find_apr(self):
     "Find the APR library and version"
@@ -735,14 +733,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the right Ruby library name to link swig bindings with"
 
     lib_dir = None
+    inc_dirs = []
 
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
     fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
                   "puts Config::CONFIG['ruby_version'];"
                   "puts Config::CONFIG['LIBRUBY'];"
-                  "puts Config::CONFIG['archdir'];"
-                  "puts Config::CONFIG['libdir'];"), 'r')
+                  "puts Config::CONFIG['libdir'];"
+                  "puts Config::CONFIG['rubyhdrdir'];"
+                  "puts Config::CONFIG['arch'];"), 'r')
     try:
       line = fp.readline()
       if line:
@@ -754,11 +754,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
       line = fp.readline()
       if line:
-        inc_dir = line.strip()
+        lib_dir = line.strip()
 
       line = fp.readline()
       if line:
-        lib_dir = line.strip()
+        inc_base = line.strip()
+        inc_dirs = [inc_base]
+
+      line = fp.readline()
+      if line:
+        inc_dirs.append(os.path.join(inc_base, line.strip()))
+
     finally:
       fp.close()
 
@@ -774,7 +780,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if ver > (1, 8, 0):
       defines.extend(["HAVE_RB_ERRINFO"])
 
-    self._libraries['ruby'] = SVNCommonLibrary('ruby', inc_dir, lib_dir,
+    self._libraries['ruby'] = SVNCommonLibrary('ruby', inc_dirs, lib_dir,
                                                ruby_lib, ruby_version,
                                                defines=defines)
 
@@ -840,8 +846,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                '-version'], stdout=subprocess.PIPE).stdout
       line = outfp.read()
       if line:
-        vermatch = re.compile(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', re.M) \
-                   .search(line)
+        vermatch = re.search(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', line, re.M)
       else:
         vermatch = None
 
@@ -874,67 +879,84 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     lib_dir = os.path.join(jdk_path, 'lib')
 
     # The JDK provides .lib files, but we currently don't use these.
-    self._libraries['java_sdk'] = SVNCommonLibrary('java-skd', inc_dirs,
+    self._libraries['java_sdk'] = SVNCommonLibrary('java-sdk', inc_dirs,
                                                    lib_dir, None,
                                                    versionstr)
 
-  def _find_swig(self):
-    # Require 1.3.24. If not found, assume 1.3.25.
-    default_version = '1.3.25'
-    minimum_version = '1.3.24'
-    vernum = 103025
-    minimum_vernum = 103024
-    libdir = ''
+  def _find_swig(self, show_warnings):
+    "Find details about an installed swig"
+
+    minimal_swig_version = (1, 3, 25)
+
+    if not self.swig_path:
+      swig_exe = 'swig.exe'
+    else:
+      swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
 
     if self.swig_path is not None:
       self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
     else:
       self.swig_exe = 'swig'
 
+    swig_version = None
     try:
-      outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
-      txt = outfp.read()
+      fp = subprocess.Popen([self.swig_exe, '-version'],
+                            stdout=subprocess.PIPE).stdout
+      txt = fp.read()
       if txt:
-        vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
-                   .search(txt)
+        vermatch = re.search(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)', txt, re.M)
       else:
         vermatch = None
 
       if vermatch:
-        version = tuple(map(int, vermatch.groups()))
-        # build/ac-macros/swig.m4 explains the next incantation
-        vernum = int('%d%02d%03d' % version)
-        print('Found installed SWIG version %d.%d.%d\n' % version)
-        if vernum < minimum_vernum:
-          print('WARNING: Subversion requires version %s\n'
-                 % minimum_version)
-
-        libdir = self._find_swig_libdir()
-      else:
-        print('Could not find installed SWIG,'
-               ' assuming version %s\n' % default_version)
-        self.swig_libdir = ''
-      outfp.close()
-    except OSError:
-      print('Could not find installed SWIG,'
-             ' assuming version %s\n' % default_version)
-      self.swig_libdir = ''
-
-    self.swig_vernum = vernum
-    self.swig_libdir = libdir
-
-  def _find_swig_libdir(self):
-    fp = os.popen(self.swig_exe + ' -swiglib', 'r')
-    try:
-      libdir = fp.readline().rstrip()
-      if libdir:
-        print('Using SWIG library directory %s\n' % libdir)
-        return libdir
-      else:
-        print('WARNING: could not find SWIG library directory\n')
-    finally:
+        swig_version = tuple(map(int, vermatch.groups()))
       fp.close()
-    return ''
+    except OSError:
+      swig_version = None
+
+    if not swig_version:
+      if show_warnings:
+        print('Could not find installed SWIG')
+      return False
+
+    swig_ver = '%d.%d.%d' % (swig_version)
+    if swig_version < minimal_swig_version:
+      if show_warning:
+        print('Found swig %s, but >= %s is required. '
+              'the swig bindings will not be built.\n' %
+              (swig_version, '.'.join(str(v) for v in minimal_swig_version)))
+      return
+
+    try:
+      fp = subprocess.Popen([self.swig_exe, '-swiglib'],
+                            stdout=subprocess.PIPE).stdout
+      lib_dir = fp.readline().strip()
+      fp.close()
+    except OSError:
+      lib_dir = None
+      fp.close()
+
+    if not lib_dir:
+      if show_warnings:
+        print('Could not find libdir of installed SWIG')
+      return False
+
+    if (not self.swig_path and
+        os.path.isfile(os.path.join(lib_dir, '../swig.exe'))):
+      self.swig_path = os.path.dirname(lib_dir)
+
+    inc_dirs = [
+        'subversion/bindings/swig',
+        'subversion/bindings/swig/proxy',
+        'subversion/bindings/swig/include',
+      ]
+
+    self.swig_libdir = lib_dir
+    self.swig_version = swig_version
+
+    self._libraries['swig'] = SVNCommonLibrary('swig', inc_dirs, lib_dir, None,
+                                               swig_ver)
+    return True
 
   def _find_ml(self):
     "Check if the ML assembler is in the path"
@@ -1145,9 +1167,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_dir, 'libintl.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+LIBINTL_VERSION\s+((0x)?[0-9A-Fa-f]+)', txt, re.M)
+    match = re.search(r'^\s*#define\s+LIBINTL_VERSION\s+((0x)?[0-9A-Fa-f]+)',
+                      txt, re.M)
 
-    ver = int(vermatch.group(1), 0)
+    ver = int(match.group(1), 0)
     version = (ver >> 16, (ver >> 8) & 0xFF, ver & 0xFF)
 
     libintl_version = '.'.join(str(v) for v in version)
@@ -1217,9 +1240,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
+    match = re.search(r'^\s*#define\s+SQLITE_VERSION\s+'
+                      r'"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
-    version = vermatch.groups()
+    version = match.groups()
 
     # Sqlite doesn't add patch numbers for their ordinary releases
     if not version[3]:
