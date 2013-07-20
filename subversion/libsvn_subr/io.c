@@ -2342,7 +2342,10 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
     {
       apr_finfo_t finfo;
 
-      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file))
+      /* In some cases we get size 0 and no error for non files,
+          so we also check for the name. (= cached in apr_file_t) */
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_NAME, file)
+          && finfo.name != NULL)
         {
           /* we've got the file length. Now, read it in one go. */
           svn_boolean_t eof;
@@ -2375,7 +2378,7 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
 
   /* Having read all the data we *expect* EOF */
   if (err && !APR_STATUS_IS_EOF(err->apr_err))
-    return err;
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   *result = res;
