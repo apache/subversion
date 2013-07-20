@@ -82,6 +82,14 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     self.find_libraries(True)
 
+    # Print list of identified libraries
+    printed = []
+    for lib in sorted(self._libraries.values(), key = lambda s: s.name):
+      if lib.name in printed:
+        continue 
+      printed.append(lib.name)
+      print('Found %s %s' % (lib.name, lib.version))
+
     if 'db' not in self._libraries:
       print('BDB not found, BDB fs will not be built')
 
