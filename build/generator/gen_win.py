@@ -68,6 +68,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     gen_win_dependencies.GenDependenciesBase.__init__(self, fname, verfname,
                                                       options, find_libs=False)
 
+    # On Windows we create svn_private_config.h in the output directory since
+    # r1370526.
+    # 
+    # Without this replacement all projects include a not-existing file,
+    # which makes the MSBuild calculation to see whether a project is changed
+    # far more expensive than necessary.
+    self.private_built_includes.append('$(Configuration)/svn_private_config.h')
+    self.private_built_includes.remove('subversion/svn_private_config.h')
+
     if subdir == 'vcnet-vcproj':
       print('Generating for Visual Studio %s\n' % self.vs_version)
 
