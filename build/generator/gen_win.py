@@ -115,16 +115,16 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       self.write_with_template(bat, 'templates/build_zlib.ezt', data)
 
     # Generate the build_locale.bat file
-    pofiles = []
     if self.enable_nls:
+      pofiles = []
       for po in os.listdir(os.path.join('subversion', 'po')):
         if fnmatch.fnmatch(po, '*.po'):
           pofiles.append(POFile(po[:-3]))
 
-    data = {'pofiles': pofiles}
-    self.write_with_template(os.path.join(self.projfilesdir,
-                                          'build_locale.bat'),
-                             'templates/build_locale.ezt', data)
+      data = {'pofiles': pofiles}
+      self.write_with_template(os.path.join(self.projfilesdir,
+                                            'build_locale.bat'),
+                               'templates/build_locale.ezt', data)
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
@@ -192,6 +192,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     # Don't create projects for scripts
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
+
+    if not self.enable_nls:
+      install_targets = [x for x in install_targets if x.name != 'locale']
 
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if 'db' not in self._libraries:
