@@ -145,7 +145,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
 
-    if self.swig_libdir:
+    if 'swig' in self._libraries:
       # Generate SWIG header wrappers and external runtime
       for swig in (generator.swig.header_wrappers,
                    generator.swig.checkout_swig_header,
@@ -223,8 +223,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                 or isinstance(x, gen_base.TargetSWIGLib)
                                 or isinstance(x, gen_base.TargetSWIGProject))
                            or (x.lang in self._libraries
-                               and self.swig_path
-                               and self.swig_libdir))]
+                               and 'swig' in self._libraries))]
 
     # Drop the Java targets if we don't have a JDK
     if 'java_sdk' not in self._libraries:
@@ -773,11 +772,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes.extend([ "subversion/bindings/swig",
-                            "subversion/bindings/swig/proxy",
-                            "subversion/bindings/swig/include",
-                            util_includes
-                          ])
+      fakeincludes.append(util_includes)
 
     if (isinstance(target, gen_base.TargetSWIG)
         or isinstance(target, gen_base.TargetSWIGLib)):
@@ -785,7 +780,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       # Projects aren't generated unless we have swig
       assert self.swig_libdir
 
-      if target.lang == "perl" and self.swig_vernum >= 103028:
+      if target.lang == "perl" and self.swig_version >= (1, 3, 28):
         # At least swigwin 1.3.38+ uses perl5 as directory name.
         lang_subdir = 'perl5'
       else:
