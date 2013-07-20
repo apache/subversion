@@ -1166,10 +1166,11 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_io_file_create_binary(const char *file,
-                                       const char *contents,
-                                       apr_size_t length,
-                                       apr_pool_t *pool)
+svn_error_t *
+svn_io_file_create_binary(const char *file,
+                          const char *contents,
+                          apr_size_t length,
+                          apr_pool_t *pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1182,34 +1183,54 @@ svn_error_t *svn_io_file_create_binary(const char *file,
   if (length)
     err = svn_io_file_write_full(f, contents, length, &written, pool);
 
-  return svn_error_trace(
-                        svn_error_compose_create(err,
-                                                 svn_io_file_close(f, pool)));
+  err = svn_error_compose_create(
+                    err,
+                    svn_io_file_close(f, pool));
+
+  if (err)
+    {
+      /* Our caller doesn't know if we left a file or not if we return
+         an error. Better to cleanup after ourselves if we created the
+         file. */
+      return svn_error_trace(
+                svn_error_compose_create(
+                    err,
+                    svn_io_remove_file2(file, TRUE, pool)));
+    }
+
+  return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_io_file_create(const char *file,
-                                const char *contents,
-                                apr_pool_t *pool)
+svn_error_t *
+svn_io_file_create(const char *file,
+                   const char *contents,
+                   apr_pool_t *pool)
 {
   return svn_error_trace(svn_io_file_create_binary(file, contents,
-                                                   strlen(contents), pool));
+                                                   contents
+                                                        ? strlen(contents)
+                                                        : 0,
+                                                   pool));
 }
 
-svn_error_t *svn_io_file_create_empty(const char *file,
-                                      apr_pool_t *pool)
+svn_error_t *
+svn_io_file_create_empty(const char *file,
+                         apr_pool_t *pool)
 {
   return svn_error_trace(svn_io_file_create_binary(file, "", 0, pool));
 }
 
-svn_error_t *svn_io_dir_file_copy(const char *src_path,
-                                  const char *dest_path,
-                                  const char *file,
-                                  apr_pool_t *pool)
+svn_error_t *
+svn_io_dir_file_copy(const char *src_path,
+                     const char *dest_path,
+                     const char *file,
+                     apr_pool_t *pool)
 {
   const char *file_dest_path = svn_dirent_join(dest_path, file, pool);
   const char *file_src_path = svn_dirent_join(src_path, file, pool);
 
-  return svn_io_copy_file(file_src_path, file_dest_path, TRUE, pool);
+  return svn_error_trace(
+            svn_io_copy_file(file_src_path, file_dest_path, TRUE, pool));
 }
 
 
