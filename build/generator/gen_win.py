@@ -923,22 +923,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     return list(sources.values())
 
-  def write_file_if_changed(self, fname, new_contents):
-    """Rewrite the file if new_contents are different than its current content.
-
-    If you have your windows projects open and generate the projects
-    it's not a small thing for windows to re-read all projects so
-    only update those that have changed.
-    """
-
-    try:
-      old_contents = open(fname, 'rb').read()
-    except IOError:
-      old_contents = None
-    if old_contents != new_contents:
-      open(fname, 'wb').write(new_contents)
-      print("Wrote: %s" % fname)
-
   def write_with_template(self, fname, tname, data):
     fout = StringIO()
 
