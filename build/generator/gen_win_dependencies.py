@@ -52,12 +52,17 @@ import ezt
 
 class SVNCommonLibrary:
 
-  def __init__(self, name, include_dir, lib_dir, lib_name, version=None,
+  def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               is_src=False):
+               is_src=False, defines=[]):
     self.name = name
-    self.include_dir = include_dir
+    if include_dirs:
+      self.include_dirs = include_dirs if isinstance(include_dirs, list) \
+                                       else [include_dirs]
+    else:
+      self.include_dirs = []
+    self.defines = defines if not defines or isinstance(defines, list) else [defines]
     self.lib_dir = lib_dir
     self.lib_name = lib_name
     self.version = version
@@ -336,12 +341,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if major > 0:
         suffix = '-%d' % major
 
+    defines = []
     if self.static_apr:
       lib_name = 'apr%s.lib' % suffix
       lib_dir = os.path.join(self.apr_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
-      
+      defines.extend(["APR_DECLARE_STATIC"])
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
         # Installed APR instead of APR-Source
@@ -374,7 +381,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               debug_lib_dir=debug_lib_dir,
                                               dll_dir=dll_dir,
                                               dll_name=dll_name,
-                                              debug_dll_dir=debug_dll_dir)
+                                              debug_dll_dir=debug_dll_dir,
+                                              defines=defines)
 
   def _find_apr_util_and_expat(self):
     "Find the APR-util library and version"
@@ -424,11 +432,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if major > 0:
         suffix = '-%d' % major
 
+    defines = []
     if self.static_apr:
       lib_name = 'aprutil%s.lib' % suffix
       lib_dir = os.path.join(self.apr_util_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
+      defines.extend(["APR_DECLARE_STATIC"])
       
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
@@ -463,7 +473,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                    debug_lib_dir=debug_lib_dir,
                                                    dll_dir=dll_dir,
                                                    dll_name=dll_name,
-                                                   debug_dll_dir=debug_dll_dir)
+                                                   debug_dll_dir=debug_dll_dir,
+                                                   defines=defines)
 
     # And now find expat
     # If we have apr-util as a source location, it is in a subdir.
@@ -500,7 +511,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     self._libraries['xml'] = SVNCommonLibrary('expat', inc_path, lib_dir,
                                                'xml.lib', xml_version,
-                                               debug_lib_dir = debug_lib_dir)
+                                               debug_lib_dir = debug_lib_dir,
+                                               defines=['XML_STATIC'])
 
   def _find_zlib(self):
     "Find the ZLib library and version"
@@ -626,12 +638,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       debug_dll_name = None
 
+    # Usually apr-util doesn't find BDB on Windows, so we help apr-util
+    # by defining the value ourselves (Legacy behavior)
+    defines = ['APU_HAVE_DB=1', 'SVN_LIBSVN_FS_LINKS_FS_BASE']
+
     self._libraries['db'] = SVNCommonLibrary('db', inc_path, lib_dir, lib_name,
                                               version,
                                               debug_lib_name=debug_lib_name,
                                               dll_dir=dll_dir,
                                               dll_name=dll_name,
-                                              debug_dll_name=debug_dll_name)
+                                              debug_dll_name=debug_dll_name,
+                                              defines=defines)
 
     # For compatibility with old code
     self.bdb_lib = self._libraries['db'].lib_name
@@ -752,8 +769,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not lib_dir:
       return
 
+    # Visual C++ doesn't have a standard compliant snprintf yet
+    # (Will probably be added in VS2013 + 1)
+    defines = ['snprintf=_snprintf']
+
+    ver = ruby_version.split('.')
+    ver = tuple(map(int, ver))
+    if ver > (1, 8, 0):
+      defines.extend(["HAVE_RB_ERRINFO"])
+
     self._libraries['ruby'] = SVNCommonLibrary('ruby', inc_dir, lib_dir,
-                                               ruby_lib, ruby_version)
+                                               ruby_lib, ruby_version,
+                                               defines=defines)
 
   def _find_python(self, show_warnings):
     "Find the appropriate options for creating SWIG-based Python modules"
@@ -969,10 +996,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'serf.lib'
 
+    defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_CLIENT_LINKS_RA_SERF']
+
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
                                                 lib_name, serf_version,
                                                 debug_lib_dir=debug_lib_dir,
-                                                is_src=is_src)
+                                                is_src=is_src,
+                                                defines=defines)
 
   def _find_sasl(self, show_warning):
     "Check if sals is available"
@@ -1027,7 +1057,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._libraries['sasl'] = SVNCommonLibrary('sasl', inc_dir, lib_dir,
                                                'libsasl.lib', sasl_version,
                                                dll_dir=dll_dir,
-                                               dll_name=dll_name)
+                                               dll_name=dll_name,
+                                               defines=['SVN_HAVE_SASL'])
 
   def _find_libintl(self, show_warning):
     "Find gettext support"
@@ -1097,7 +1128,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     lib_dir = None
     dll_dir = None
     dll_name = None
-    amalgamation = False
+    defines = []
+
     lib_name = 'sqlite3.lib'
 
     if os.path.isfile(os.path.join(sqlite_base, 'include/sqlite3.h')):
@@ -1124,7 +1156,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_dir = sqlite_base
       lib_dir = None
       lib_name = None 
-      amalgamation = True
+      defines.append('SVN_SQLITE_INLINE')
     else:
       sys.stderr.write("ERROR: SQLite not found\n" % self.sqlite_path)
       sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
@@ -1153,11 +1185,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                           sqlite_version))
       sys.exit(1)
 
-    self.sqlite_inline = amalgamation
     self._libraries['sqlite'] = SVNCommonLibrary('sqlite', inc_dir, lib_dir,
                                                  lib_name, sqlite_version,
                                                  dll_dir=dll_dir,
-                                                 dll_name=dll_name)
+                                                 dll_name=dll_name,
+                                                 defines=defines)
 
 # ============================================================================
 # This is a cut-down and modified version of code from:
