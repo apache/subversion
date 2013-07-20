@@ -227,7 +227,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                and self.swig_libdir))]
 
     # Drop the Java targets if we don't have a JDK
-    if not self.jdk_path:
+    if 'java_sdk' not in self._libraries:
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
                                              or isinstance(x, gen_base.TargetJavaHeaders)
@@ -778,8 +778,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                             "subversion/bindings/swig/include",
                             util_includes
                           ])
-    else:
-      fakeincludes.extend(["subversion/bindings/swig/proxy"])
 
     if (isinstance(target, gen_base.TargetSWIG)
         or isinstance(target, gen_base.TargetSWIGLib)):
@@ -798,10 +796,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if target.name == "libsvnjavahl" and self.jdk_path:
-      fakeincludes.append(os.path.join(self.jdk_path, 'include'))
-      fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
-
     if target.name.find('cxxhl') != -1:
       fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
@@ -811,6 +805,12 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     "Return the list of library directories for target"
 
     debug = (cfg == 'Debug')
+
+    if not isinstance(target, gen_base.TargetLinked):
+      return []
+
+    if isinstance(target, gen_base.TargetLib) and target.msvc_static:
+      return []
 
     fakelibdirs = []
 
@@ -823,12 +823,14 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             continue
 
           lib = self._libraries[external_lib]
-          
-          if debug:
+
+          if debug and lib.debug_lib_dir:
             lib_dir = self.apath(lib.debug_lib_dir)
-          else:
+          elif lib.lib_dir:
             lib_dir = self.apath(lib.lib_dir)
-      
+          else:
+            continue # Dependency without library (E.g. JDK)
+
           fakelibdirs.append(lib_dir)
 
     if isinstance(target, gen_base.TargetApacheMod):
@@ -843,10 +845,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     "Return the list of external libraries needed for target"
 
     debug = (cfg == 'Debug')
-
-    dblib = None
-    if self.bdb_lib:
-      dblib = self.bdb_lib+(debug and 'd.lib' or '.lib')
 
     if not isinstance(target, gen_base.TargetLinked):
       return []

@@ -113,6 +113,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'perl',
         'python',
         'ruby',
+        'java_sdk',
 
         # So optional, we don't even have any code to detect them on Windows
         'apr_memcache',
@@ -286,13 +287,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_perl(show_warnings)
     self._find_python(show_warnings)
     self._find_ruby(show_warnings)
+    self._find_jdk(show_warnings)
 
     if show_warnings:
       # Find the installed SWIG version to adjust swig options
       self._find_swig()
 
-      # Find the installed Java Development Kit
-      self._find_jdk()
 
   def _find_apr(self):
     "Find the APR library and version"
@@ -796,8 +796,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._libraries['python'] = SVNCommonLibrary('python', inc_dir, lib_dir, None,
                                                  sys.version.split(' ')[0])
 
-  def _find_jdk(self):
-    if not self.jdk_path:
+  def _find_jdk(self, show_warnings):
+    "Find details about an installed jdk"
+
+    jdk_path = self.jdk_path
+    self.jdk_path = None # No jdk on errors
+
+    minimal_jdk_version = (1, 0, 0) # ### Provide sane default
+
+    if not jdk_path:
       jdk_ver = None
       try:
         try:
@@ -823,15 +830,59 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           for i in range(num_values):
             (name, value, key_type) = winreg.EnumValue(key, i)
             if name == "JavaHome":
-              self.jdk_path = value
+              jdk_path = value
               break
         winreg.CloseKey(key)
       except (ImportError, EnvironmentError):
         pass
-      if self.jdk_path:
-        print("Found JDK version %s in %s\n" % (jdk_ver, self.jdk_path))
-    else:
-      print("Using JDK in %s\n" % (self.jdk_path))
+
+    if not jdk_path or not os.path.isdir(jdk_path):
+      return
+
+    try:
+      outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javah.exe'),
+                               '-version'], stdout=subprocess.PIPE).stdout
+      line = outfp.read()
+      if line:
+        print(line)
+        vermatch = re.compile(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', re.M) \
+                   .search(line)
+      else:
+        vermatch = None
+
+      if vermatch:
+        version = tuple(map(int, vermatch.groups()[1].split('.')))
+        versionstr = vermatch.groups()[0]
+        print(version)
+      else:
+        if show_warnings:
+          print('Could not find installed JDK,')
+        return
+      outfp.close()
+    except OSError:
+      if show_warnings:
+        print('Could not find installed JDK,')
+      return
+
+    if version < minimal_jdk_version:
+      if show_warning:
+        print('Found java jdk %s, but >= %s is required. '
+              'javahl will not be built.\n' % \
+              (versionstr, '.'.join(str(v) for v in minimal_jdk_version)))
+      return
+
+    self.jdk_path = jdk_path
+    inc_dirs = [
+        os.path.join(jdk_path, 'include'),
+        os.path.join(jdk_path, 'include', 'win32'),
+      ]
+
+    lib_dir = os.path.join(jdk_path, 'lib')
+
+    # The JDK provides .lib files, but we currently don't use these.
+    self._libraries['java_sdk'] = SVNCommonLibrary('java-skd', inc_dirs,
+                                                   lib_dir, None,
+                                                   versionstr)
 
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.
@@ -985,8 +1036,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     serf_version = '.'.join(str(v) for v in version)
 
     if version < minimal_serf_version:
-      msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
-            (serf_version, '.'.join(str(v) for v in minimal_serf_version))
+      if show_warning:
+        print('Found serf %s, but >= %s is required. '
+              'ra_serf will not be built.\n' %
+              (serf_version, '.'.join(str(v) for v in minimal_serf_version)))
       return
 
     serf_ver_maj = version[0]
@@ -1037,8 +1090,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     sasl_version = '.'.join(str(v) for v in version)
 
     if version < minimal_sasl_version:
-      msg = 'Found sasl %s, but >= %s is required. sals support will not be built.\n' % \
-            (sasl_version, '.'.join(str(v) for v in minimal_serf_version))
+      if show_warning:
+        print('Found sasl %s, but >= %s is required. '
+              'sals support will not be built.\n' %
+              (sasl_version, '.'.join(str(v) for v in minimal_serf_version)))
       return
 
     lib_dir = os.path.join(self.sasl_path, 'lib')
@@ -1104,8 +1159,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     libintl_version = '.'.join(str(v) for v in version)
 
     if version < minimal_libintl_version:
-      msg = 'Found libintl %s, but >= %s is required.\n' % \
-            (libintl_version, '.'.join(str(v) for v in minimal_libintl_version))
+      if show_warning:
+        print('Found libintl %s, but >= %s is required.\n' % \
+              (libintl_version,
+               '.'.join(str(v) for v in minimal_libintl_version)))
       return
 
     self._libraries['intl'] = SVNCommonLibrary('libintl', inc_dir, lib_dir,
