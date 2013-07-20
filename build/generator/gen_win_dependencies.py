@@ -289,17 +289,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Find the installed Java Development Kit
       self._find_jdk()
 
-      # Find Sqlite
-
-    
-    if show_warnings:
-      printed = []
-      for lib in self._libraries.values():
-        if lib.name in printed:
-          continue 
-        printed.append(lib.name)
-        print('Found %s %s' % (lib.name, lib.version))
-    
   def _find_apr(self):
     "Find the APR library and version"
 
