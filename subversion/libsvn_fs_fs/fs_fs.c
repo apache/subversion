@@ -472,9 +472,14 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 {
   const char *path;
   apr_off_t offset = 0;
+  svn_error_t *err;
 
-  if (apr_file_name_get(&path, file) != APR_SUCCESS)
-    path = "(unknown)";
+  err = svn_io_file_name_get(&path, file, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      path = "(unknown)";
+    }
 
   if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
     offset = -1;
@@ -4655,14 +4660,19 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   const char *name;
   const char *last_part;
   const char *name_last;
+  svn_error_t *err;
 
   /* the rev file name containing the txdelta window.
    * If this fails we are in serious trouble anyways.
    * And if nobody else detects the problems, the file content checksum
    * comparison _will_ find them.
    */
-  if (apr_file_name_get(&name, rs->file))
-    return NULL;
+  err = svn_io_file_name_get(&name, rs->file, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
 
   /* Handle packed files as well by scanning backwards until we find the
    * revision or pack number. */
