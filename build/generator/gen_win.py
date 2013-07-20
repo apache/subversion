@@ -720,62 +720,39 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
 
-    if self.sqlite_inline:
-      fakedefines.append("SVN_SQLITE_INLINE")
-
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
 
-    if target.name.find('ruby') == -1:
-      fakedefines.append("snprintf=_snprintf")
-
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
-    # Expect rb_errinfo() to be available in Ruby 1.9+,
-    # rather than ruby_errinfo.
-    if isinstance(target, gen_base.TargetSWIGLib) and target.lang == 'ruby':
-      ver = self._libraries['ruby'].version.split('.')
-      ver = tuple(map(int, ver))
-      if ver > (1, 8, 0):
-        fakedefines.extend(["HAVE_RB_ERRINFO"])
+    for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
 
-    if self.static_apr:
-      fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
 
-    # XXX: Check if db is present, and if so, let apr-util know
-    # XXX: This is a hack until the apr build system is improved to
-    # XXX: know these things for itself.
-    if 'db' in self._libraries:
-      fakedefines.append("APU_HAVE_DB=1")
-      fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
+          if lib.defines:
+            fakedefines.extend(lib.defines)
 
     # check if they wanted nls
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
 
-    if 'serf' in self._libraries:
-      fakedefines.append("SVN_HAVE_SERF")
-      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
-
     # check we have sasl
-    if 'sasl' in self._libraries:
-      fakedefines.append("SVN_HAVE_SASL")
-
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
-
-    # use static linking to Expat
-    fakedefines.append("XML_STATIC")
 
     return fakedefines
 
   def get_win_includes(self, target):
     "Return the list of include directories for target"
 
-    fakeincludes = [ self.apath("subversion/include"),
-                     self.apath("subversion") ]
+    fakeincludes = [ "subversion/include",
+                     "subversion" ]
                      
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
@@ -785,23 +762,24 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         if external_lib in self._libraries:
           lib = self._libraries[external_lib]
 
-          fakeincludes.append(self.apath(lib.include_dir))
+          fakeincludes.extend(lib.include_dirs)
 
     if target.name == 'mod_authz_svn':
-      fakeincludes.extend([ self.apath(self.httpd_path, "modules/aaa") ])
+      fakeincludes.extend([ os.path.join(self.httpd_path, "modules/aaa") ])
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ self.apath(self.httpd_path, "include") ])
+      fakeincludes.extend([ os.path.join(self.httpd_path, "include") ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes.extend([ self.path("subversion/bindings/swig"),
-                            self.path("subversion/bindings/swig/proxy"),
-                            self.path("subversion/bindings/swig/include"),
-                            self.path(util_includes) ])
+      fakeincludes.extend([ "subversion/bindings/swig",
+                            "subversion/bindings/swig/proxy",
+                            "subversion/bindings/swig/include",
+                            util_includes
+                          ])
     else:
-      fakeincludes.extend([ self.path("subversion/bindings/swig/proxy") ])
+      fakeincludes.extend(["subversion/bindings/swig/proxy"])
 
     if (isinstance(target, gen_base.TargetSWIG)
         or isinstance(target, gen_base.TargetSWIGLib)):
@@ -817,7 +795,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
       # After the language specific includes include the generic libdir,
       # to allow overriding a generic with a per language include
-      fakeincludes.append(self.apath(self.swig_libdir, lang_subdir))
+      fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
     if target.name == "libsvnjavahl" and self.jdk_path:
@@ -827,7 +805,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if target.name.find('cxxhl') != -1:
       fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
-    return gen_base.unique(fakeincludes)
+    return gen_base.unique(map(self.apath, fakeincludes))
 
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
@@ -852,9 +830,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             lib_dir = self.apath(lib.lib_dir)
       
           fakelibdirs.append(lib_dir)
-
-    if not self.sqlite_inline:
-      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
