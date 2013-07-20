@@ -100,6 +100,20 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
   _libraries = {}     # Dict of SVNCommonLibrary instances of found libraries
 
+  _optional_libraries = [  # List of optional libraries to suppress warnings
+        'db',
+        'intl',
+        'serf',
+        'sasl',
+        'perl',
+        'python',
+        'ruby',
+
+        # So optional, we don't even have any code to detect them on Windows
+        'apr_memcache',
+        'magic',
+  ]
+
   def parse_options(self, options):
     self.apr_path = 'apr'
     self.apr_util_path = 'apr-util'
@@ -254,6 +268,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_apr()
     self._find_apr_util_and_expat()
     self._find_zlib()
+    self._find_sqlite(show_warnings)
 
     # Optional dependencies
     self._find_bdb(show_warnings)
@@ -275,7 +290,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       self._find_jdk()
 
       # Find Sqlite
-      self._find_sqlite()
 
     
     if show_warnings:
@@ -1079,35 +1093,58 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                dll_dir=dll_dir,
                                                dll_name=dll_name)
 
-  def _find_sqlite(self):
+  def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
 
     minimal_sqlite_version = (3, 7, 12)
 
-    header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
+    # For SQLite we support 3 scenarios:
+    # - Installed in standard directory layout
+    # - Installed in legacy directory layout
+    # - Amalgamation compiled directly into our libraries
 
-    # First check for compiled version of SQLite.
-    if os.path.exists(header_file):
-      # Compiled SQLite seems found, check for sqlite3.lib file.
-      lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
-      if not os.path.exists(lib_file):
-        sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
-        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-        sys.exit(1)
-      self.sqlite_inline = False
+    sqlite_base = self.sqlite_path
+
+    lib_dir = None
+    dll_dir = None
+    dll_name = None
+    amalgamation = False
+    lib_name = 'sqlite3.lib'
+
+    if os.path.isfile(os.path.join(sqlite_base, 'include/sqlite3.h')):
+      # Standard layout
+      inc_dir = os.path.join(sqlite_base, 'include')
+      lib_dir = os.path.join(sqlite_base, 'lib')
+
+      # We assume a static library, but let's support shared in this case
+      if os.path.isfile(os.path.join(sqlite_base, 'bin/sqlite3.dll')):
+        dll_dir = os.path.join(sqlite_base, 'bin')
+        dll_name = 'sqlite3.dll'
+    elif os.path.isfile(os.path.join(sqlite_base, 'inc/sqlite3.h')):
+      # Standard layout
+      inc_dir = os.path.join(sqlite_base, 'inc')
+      lib_dir = os.path.join(sqlite_base, 'lib')
+
+      # We assume a static library, but let's support shared in this case
+      if os.path.isfile(os.path.join(sqlite_base, 'bin/sqlite3.dll')):
+        dll_dir = os.path.join(sqlite_base, 'bin')
+        dll_name = 'sqlite3.dll'
+    elif (os.path.isfile(os.path.join(sqlite_base, 'sqlite3.h'))
+          and os.path.isfile(os.path.join(sqlite_base, 'sqlite3.c'))):
+      # Amalgamation
+      inc_dir = sqlite_base
+      lib_dir = None
+      lib_name = None 
+      amalgamation = True
     else:
-      # Compiled SQLite not found. Try amalgamation version.
-      amalg_file = os.path.join(self.sqlite_path, 'sqlite3.c')
-      if not os.path.exists(amalg_file):
-        sys.stderr.write("ERROR: SQLite not found in '%s' directory.\n" % self.sqlite_path)
-        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-        sys.exit(1)
-      header_file = os.path.join(self.sqlite_path, 'sqlite3.h')
-      self.sqlite_inline = True
+      sys.stderr.write("ERROR: SQLite not found\n" % self.sqlite_path)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
 
-    fp = open(header_file)
-    txt = fp.read()
-    fp.close()
+    version_file_path = os.path.join(inc_dir, 'sqlite3.h')
+
+    txt = open(version_file_path).read()
+
     vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
     version = vermatch.groups()
@@ -1118,16 +1155,20 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = tuple(map(int, version))
 
-    self.sqlite_version = '.'.join(str(v) for v in version)
+    sqlite_version = '.'.join(str(v) for v in version)
 
     if version < minimal_sqlite_version:
       sys.stderr.write("ERROR: sqlite %s or higher is required "
                        "(%s found)\n" % (
                           '.'.join(str(v) for v in minimal_sqlite_version),
-                          self.sqlite_version))
+                          sqlite_version))
       sys.exit(1)
-    else:
-      print('Found SQLite %s' % self.sqlite_version)
+
+    self.sqlite_inline = amalgamation
+    self._libraries['sqlite'] = SVNCommonLibrary('sqlite', inc_dir, lib_dir,
+                                                 lib_name, sqlite_version,
+                                                 dll_dir=dll_dir,
+                                                 dll_name=dll_name)
 
 # ============================================================================
 # This is a cut-down and modified version of code from:
