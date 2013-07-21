@@ -68,6 +68,11 @@ typedef long ssize_t;
    are available. */
 #undef HAVE_UNISTD_H
 
+/* Visual C++ >= 2010 has <stdint.h> */
+#if _MSC_VER < 1600
+#undef HAVE_STDINT_H
+#endif
+
 /* Visual C++ >= 2013 has <inttypes.h> */
 #if _MSC_VER < 1800
 #undef HAVE_INTTYPES_H
