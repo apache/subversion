@@ -771,7 +771,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakeincludes.extend([ os.path.join(self.httpd_path, "include") ])
-    elif isinstance(target, gen_base.TargetSWIG):
+    elif (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
