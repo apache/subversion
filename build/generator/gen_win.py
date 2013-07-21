@@ -323,6 +323,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                     defines=self.get_win_defines(target, cfg),
                     libdirs=self.get_win_lib_dirs(target, cfg),
                     libs=self.get_win_libs(target, cfg),
+                    includes=self.get_win_includes(target, cfg),
+                    forced_include_files
+                            =self.get_win_forced_includes(target, cfg),
                     ))
     return configs
 
@@ -747,7 +750,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     return fakedefines
 
-  def get_win_includes(self, target):
+  def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
 
     fakeincludes = [ "subversion/include",
@@ -898,6 +901,24 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         sources[src] = src, obj, reldir
 
     return list(sources.values())
+
+  def get_win_forced_includes(self, target, cfg):
+    """Return a list of include files that need to be included before any
+       other header in every c/c++ file"""
+
+    fakeincludes = []
+
+    for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+
+          fakeincludes.extend(lib.forced_includes)
+
+    return gen_base.unique(fakeincludes)
 
   def write_with_template(self, fname, tname, data):
     fout = StringIO()
