@@ -51,7 +51,7 @@ class SVNCommonLibrary:
   def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               is_src=False, defines=[]):
+               is_src=False, defines=[], forced_includes=[]):
     self.name = name
     if include_dirs:
       self.include_dirs = include_dirs if isinstance(include_dirs, list) \
@@ -65,6 +65,10 @@ class SVNCommonLibrary:
     self.dll_dir = dll_dir
     self.dll_name = dll_name
     self.is_src = is_src
+
+    self.forced_includes = forced_includes if not forced_includes \
+                                           or isinstance(forced_includes, list) \
+                                           else [forced_includes]
 
     if debug_lib_dir:
       self.debug_lib_dir = debug_lib_dir
@@ -777,12 +781,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     ver = ruby_version.split('.')
     ver = tuple(map(int, ver))
-    if ver > (1, 8, 0):
+    if ver >= (1, 8, 0):
       defines.extend(["HAVE_RB_ERRINFO"])
+
+    forced_includes = []
+    if ver >= (1, 9, 0):
+      forced_includes.append('swigutil_rb__pre_ruby.h')
+      defines.extend(["SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG"])
 
     self._libraries['ruby'] = SVNCommonLibrary('ruby', inc_dirs, lib_dir,
                                                ruby_lib, ruby_version,
-                                               defines=defines)
+                                               defines=defines,
+                                               forced_includes=forced_includes)
 
   def _find_python(self, show_warnings):
     "Find the appropriate options for creating SWIG-based Python modules"
