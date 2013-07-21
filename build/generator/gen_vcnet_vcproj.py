@@ -38,6 +38,23 @@ class Generator(gen_win.WinGeneratorBase):
   def quote(self, str):
     return '"%s"' % str
 
+  def gen_proj_names(self, install_targets):
+    "Generate project file names for the targets"
+
+    if self.vcproj_version < 11.0:
+      gen_win.gen_proj_names(install_targets)
+      return
+
+    # With VS2012 we can assume that even the light versions
+    # support proper project nesting in the UI
+
+    for target in install_targets:
+      if target.msvc_name:
+        target.proj_name = target.msvc_name
+        continue
+
+      target.proj_name = target.name
+
   def get_external_project(self, target, proj_ext):
     "Link project files: prefer vcproj's, but if don't exist, try dsp's."
     vcproj = gen_win.WinGeneratorBase.get_external_project(self, target,
