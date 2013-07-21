@@ -42,7 +42,7 @@ class Generator(gen_win.WinGeneratorBase):
     "Generate project file names for the targets"
 
     if float(self.vcproj_version) < 11.0:
-      gen_win.gen_proj_names(install_targets)
+      gen_win.WinGeneratorBase.gen_proj_names(self, install_targets)
       return
 
     # With VS2012 we can assume that even the light versions
