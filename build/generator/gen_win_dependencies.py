@@ -101,7 +101,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     ('lib', 'object'): '.obj',
     ('pyd', 'target'): '.pyd',
     ('pyd', 'object'): '.obj',
-    ('so', 'target'): '.pyd',
+    ('so', 'target'): '.so',
     ('so', 'object'): '.obj',
     }
 
