@@ -679,7 +679,7 @@ class TargetSWIG(TargetLib):
       lib_filename = '_' + module_name + lib_extension
     elif self.lang == "ruby":
       lib_extension = self.gen_obj._extension_map['so', 'target']
-      lib_filename = module_name + '.so'
+      lib_filename = module_name + lib_extension
     elif self.lang == "perl":
       lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
