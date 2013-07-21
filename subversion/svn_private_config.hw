@@ -113,8 +113,8 @@
 # define SVN__PREVENT_INLINE
 #endif
 
-#define SVN__PREDICT_TRUE
-#define SVN__PREDICT_FALSE
+#define SVN__PREDICT_TRUE(x)  (x)
+#define SVN__PREDICT_FALSE(x)  (x)
 
 #endif /* SVN_PRIVATE_CONFIG_HW */
 
