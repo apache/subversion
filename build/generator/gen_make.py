@@ -62,6 +62,8 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     ('pyd', 'target'): '.la',
     ('pyd', 'object'): '.lo',
+    ('so', 'target'): '.la',
+    ('so', 'object'): '.lo',
     }
 
   def __init__(self, fname, verfname, options=None):

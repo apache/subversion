@@ -101,6 +101,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     ('lib', 'object'): '.obj',
     ('pyd', 'target'): '.pyd',
     ('pyd', 'object'): '.obj',
+    ('so', 'target'): '.pyd',
+    ('so', 'object'): '.obj',
     }
 
   _libraries = {}     # Dict of SVNCommonLibrary instances of found libraries
@@ -901,10 +903,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not self.swig_path:
       swig_exe = 'swig.exe'
     else:
-      swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
+      swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig.exe'))
 
     if self.swig_path is not None:
-      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
+      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig.exe'))
     else:
       self.swig_exe = 'swig'
 

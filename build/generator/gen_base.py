@@ -674,13 +674,16 @@ class TargetSWIG(TargetLib):
     module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
     lib_extension = self.gen_obj._extension_map['lib', 'target']
-    if self.lang == "ruby":
-      lib_filename = module_name + lib_extension
+    if self.lang == "python":
+      lib_extension = self.gen_obj._extension_map['pyd', 'target']
+      lib_filename = '_' + module_name + lib_extension
+    elif self.lang == "ruby":
+      lib_extension = self.gen_obj._extension_map['so', 'target']
+      lib_filename = module_name + '.so'
     elif self.lang == "perl":
       lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
-      lib_extension = self.gen_obj._extension_map['pyd', 'target']
-      lib_filename = '_' + module_name + lib_extension
+      lib_filename = module_name + lib_extension
 
     self.name = self.lang + '_' + module_name
     self.path = build_path_join(self.path, self.lang)
