@@ -23,8 +23,7 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
-svnversion . /1.6.x | find "S" > nul:
-IF ERRORLEVEL 1 (
+IF "%SVN_BRANCH% LEQ "1.6.x" (
   ECHO --- Building 1.6.x: Skipping bindings ---
   EXIT /B 0
 )
@@ -32,5 +31,9 @@ IF ERRORLEVEL 1 (
 msbuild subversion_vcnet.sln /p:Configuration=Debug /p:Platform=win32 /t:__JAVAHL__ /t:__JAVAHL_TESTS__
 IF ERRORLEVEL 1 EXIT /B 1
 
-msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__
+IF "%SVN_BRANCH%" GTR "1.9." (
+  msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__ /t:__SWIG_RUBY__
+) ELSE (
+  msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__
+)
 IF ERRORLEVEL 1 EXIT /B 1
