@@ -64,7 +64,7 @@
 				ProgramDataBaseFileName="$(IntDir)\[target.output_pdb]"
 				[if-any configs.forced_include_files]ForcedIncludeFiles="[for configs.forced_include_files][configs.forced_include_files][if-index configs.forced_include_files last][else];[end][end]"
 				[end]CompileAsManaged="0"
-				CompileAs="0"[if-any configs.forced_include_file]qq"[if-any is_exe][is configs.name "Release"]
+				CompileAs="0"[if-any is_exe][is configs.name "Release"]
 				OptimizeForWindowsApplication="TRUE"[end][end]/>
 			<Tool
 				Name="VCCustomBuildTool"/>
