@@ -41,7 +41,7 @@ class Generator(gen_win.WinGeneratorBase):
   def gen_proj_names(self, install_targets):
     "Generate project file names for the targets"
 
-    if self.vcproj_version < 11.0:
+    if float(self.vcproj_version) < 11.0:
       gen_win.gen_proj_names(install_targets)
       return
 
