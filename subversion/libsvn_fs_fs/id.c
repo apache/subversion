@@ -84,6 +84,13 @@ svn_fs_fs__id_offset(const svn_fs_id_t *id)
   return pvt->offset;
 }
 
+svn_boolean_t
+svn_fs_fs__id_is_txn(const svn_fs_id_t *id)
+{
+  id_private_t *pvt = id->fsap_data;
+
+  return pvt->txn_id != NULL;
+}
 
 svn_string_t *
 svn_fs_fs__id_unparse(const svn_fs_id_t *id,

@@ -324,7 +324,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   if (is_cached)
     return SVN_NO_ERROR;
 
-  if (svn_fs_fs__id_txn_id(id))
+  if (svn_fs_fs__id_is_txn(id))
     {
       /* This is a transaction node-rev. */
       err = svn_io_file_open(&revision_file,
@@ -1822,7 +1822,7 @@ locate_dir_cache(svn_fs_t *fs,
                  node_revision_t *noderev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_fs_fs__id_txn_id(noderev->id)
+  return svn_fs_fs__id_is_txn(noderev->id)
       ? ffd->txn_dir_cache
       : ffd->dir_cache;
 }
