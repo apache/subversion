@@ -853,7 +853,7 @@ read_pack_revprop(packed_revprops_t **revprops,
   /* try to read the packed revprops. This may require retries if we have
    * concurrent writers. */
   for (i = 0;
-       i < SVN_FS_FS__RECOVERABLE_RETRY_COUNT  && !result->packed_revprops;
+       i < SVN_FS_FS__RECOVERABLE_RETRY_COUNT && !result->packed_revprops;
        ++i)
     {
       const char *file_path;
@@ -1440,7 +1440,8 @@ svn_fs_fs__packed_revprop_available(svn_boolean_t *missing,
   svn_stringbuf_t *content = NULL;
 
   /* try to read the manifest file */
-  const char *folder = svn_fs_fs__path_revprops_pack_shard(fs, revision, pool);
+  const char *folder
+    = svn_fs_fs__path_revprops_pack_shard(fs, revision, pool);
   const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST, pool);
 
   svn_error_t *err = svn_fs_fs__try_stringbuf_from_file(&content,
