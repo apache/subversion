@@ -143,13 +143,14 @@ Candidate changes:
      +1: ivan, rhuijben
      +0: danielsh
 
- * r1504192
+ * r1504192, r1504505
    Make 'svn diff' continue on missing and obstructing files.
    This resolves issue 4396
    Justification:
      Regression since 1.7.
    Votes:
-     +1: rhuijben
+     +1: rhuijben (r1504192 only)
+     +1: philip
 
 Veto-blocked changes:
 =====================
