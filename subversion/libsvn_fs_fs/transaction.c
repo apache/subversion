@@ -724,16 +724,10 @@ fold_change(apr_hash_t *changes,
 
 /* Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data.  Store a hash of paths to copyfrom "REV PATH" strings in
-   COPYFROM_HASH if it is non-NULL.  If PREFOLDED is true, assume that
-   the changed-path entries have already been folded (by
-   write_final_changed_path_info) and may be out of order, so we shouldn't
-   remove children of replaced or deleted directories.  Do all
-   allocations in POOL. */
+   *data. Do all allocations in POOL. */
 static svn_error_t *
 process_changes(apr_hash_t *changed_paths,
                 apr_array_header_t *changes,
-                svn_boolean_t prefolded,
                 apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -756,9 +750,8 @@ process_changes(apr_hash_t *changed_paths,
          is already a temporary subpool.
       */
 
-      if (((change->info.change_kind == svn_fs_path_change_delete)
+      if ((change->info.change_kind == svn_fs_path_change_delete)
            || (change->info.change_kind == svn_fs_path_change_replace))
-          && ! prefolded)
         {
           apr_hash_index_t *hi;
 
@@ -825,7 +818,7 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                                   svn_stream_from_aprfile2(file, TRUE,
                                                            scratch_pool),
                                   scratch_pool));
-  SVN_ERR(process_changes(changed_paths, changes, FALSE, pool));
+  SVN_ERR(process_changes(changed_paths, changes, pool));
   svn_pool_destroy(scratch_pool);
 
   SVN_ERR(svn_io_file_close(file, pool));
@@ -844,14 +837,17 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 {
   apr_hash_t *changed_paths;
   apr_array_header_t *changes;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  int i;
 
-  SVN_ERR(svn_fs_fs__get_changes(&changes, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_fs__get_changes(&changes, fs, rev, pool));
 
   changed_paths = svn_hash__make(pool);
-
-  SVN_ERR(process_changes(changed_paths, changes, TRUE, pool));
-  svn_pool_destroy(scratch_pool);
+  for (i = 0; i < changes->nelts; ++i)
+    {
+      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+      apr_hash_set(changed_paths, change->path.data, change->path.len,
+                   &change->info);
+    }
 
   *changed_paths_p = changed_paths;
 
