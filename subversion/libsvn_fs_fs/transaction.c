@@ -2819,9 +2819,7 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_hash_t *txnprops;
   apr_array_header_t *txnprop_list;
   svn_prop_t prop;
-  svn_string_t date;
   svn_stringbuf_t *trailer;
-  svn_string_t date;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
