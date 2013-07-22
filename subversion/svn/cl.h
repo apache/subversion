@@ -242,6 +242,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t mergeinfo_log;     /* show log message in mergeinfo command */
   svn_boolean_t remove_unversioned;/* remove unversioned items */
   svn_boolean_t remove_ignored;    /* remove ignored items */
+  svn_boolean_t no_newline;        /* do not output the trailing newline */
 } svn_cl__opt_state_t;
 
 
@@ -289,7 +290,8 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__upgrade;
+  svn_cl__upgrade,
+  svn_cl__youngest;
 
 
 /* See definition in svn.c for documentation. */
