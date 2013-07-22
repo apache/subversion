@@ -846,7 +846,7 @@ get_window_key(rep_state_t *rs, apr_off_t offset, apr_pool_t *pool)
    * And if nobody else detects the problems, the file content checksum
    * comparison _will_ find them.
    */
-  err = svn_io_file_name_get(&name, rs->file, pool);
+  err = svn_io_file_name_get(&name, rs->file->file, pool);
   if (err)
     {
       svn_error_clear(err);
