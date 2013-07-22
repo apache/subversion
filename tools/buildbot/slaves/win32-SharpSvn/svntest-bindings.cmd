@@ -23,9 +23,8 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
-svnversion . /1.6.x | find "S" > nul:
-IF ERRORLEVEL 1 (
-  ECHO --- Building 1.6.x: Skipping bindings ---
+IF "%SVN_BRANCH% LEQ "1.6.x" (
+  ECHO --- Building 1.6.x or older: Skipping bindings ---
   EXIT /B 0
 )
 
@@ -67,9 +66,8 @@ for %%i in (*.dll) do (
 )
 popd
 
-svnversion . /1.7.x | find "S" > nul:
-IF ERRORLEVEL 1 (
-  ECHO --- Building 1.7.x: Skipping perl tests ---
+IF "%SVN_BRANCH% LSS "1.8." (
+  ECHO --- Building 1.7.x: Skipping perl and ruby tests ---
   EXIT /B %result%
 )
 
@@ -81,5 +79,13 @@ IF ERRORLEVEL 1 (
   SET result=1
 )
 popd
+
+IF "%SVN_BRANCH% LSS "1.9." (
+  ECHO --- Building 1.8.x: Skipping ruby tests ---
+  EXIT /B %result%
+)
+
+echo Not running ruby tests yet
+
 
 exit /b %result%

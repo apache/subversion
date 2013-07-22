@@ -912,7 +912,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                              pool));
 
   /* Create lock file and UUID. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_lock(dst_fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(dst_fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
@@ -925,9 +925,9 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
     {
       SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(dst_fs, pool),
                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current_lock(dst_fs,
-                                                                  pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create_empty(
+                          svn_fs_fs__path_txn_current_lock(dst_fs, pool),
+                          pool));
     }
 
   dst_ffd->youngest_rev_cache = 0;

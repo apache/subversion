@@ -82,7 +82,7 @@ typedef enum report_state_e {
     NEED_PROP_NAME,
     TXDELTA
 
-#ifdef USE_TRANSITION_PARSER
+#ifdef NOT_USED_YET
     ,
 
     CHECKED_IN,
@@ -390,6 +390,9 @@ struct report_context_t {
   /* The path to the REPORT request */
   const char *path;
 
+  /* Are we done parsing the REPORT response? */
+  svn_boolean_t done;
+
   /* Did we receive all data from the network? */
   svn_boolean_t report_received;
 
@@ -411,7 +414,7 @@ struct report_context_t {
 #define V_ SVN_DAV_PROP_NS_DAV
 static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { INITIAL, S_, "update-report", UPDATE_REPORT,
-    FALSE, { NULL }, TRUE },
+    FALSE, { NULL }, FALSE },
 
   { UPDATE_REPORT, S_, "target-revision", TARGET_REVISION,
     FALSE, { "rev", NULL }, TRUE },
@@ -2565,6 +2568,7 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
   if (leaving_state == UPDATE_REPORT)
     {
       ctx->report_completed = TRUE;
+      ctx->done = TRUE;
     }
   else if (leaving_state == TARGET_REVISION)
     {
@@ -2816,10 +2820,9 @@ finish_report(void *report_baton,
   report_context_t *report = report_baton;
   svn_ra_serf__session_t *sess = report->sess;
   svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_parser_t *parser_ctx;
 #ifdef USE_TRANSITION_PARSER
   svn_ra_serf__xml_context_t *xmlctx;
-#else
-  svn_ra_serf__xml_parser_t *parser_ctx;
 #endif
   const char *report_target;
   svn_stringbuf_t *buf = NULL;
@@ -2882,7 +2885,7 @@ finish_report(void *report_baton,
   parser_ctx->start = start_report;
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
-  parser_ctx->done = &handler->done;
+  parser_ctx->done = &report->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -2902,7 +2905,7 @@ finish_report(void *report_baton,
      network or because we've spooled the entire response into our "pending"
      content of the XML parser. The DONE flag will get set when all the
      XML content has been received *and* parsed.  */
-  while (!handler->done
+  while (!report->done
          || report->num_active_fetches
          || report->num_active_propfinds)
     {
@@ -3144,7 +3147,6 @@ finish_report(void *report_baton,
         }
       report->done_dir_propfinds = NULL;
 
-#ifndef USE_TRANSITION_PARSER
       /* If the parser is paused, and the number of active requests has
          dropped far enough, then resume parsing.  */
       if (parser_ctx->paused
@@ -3159,7 +3161,6 @@ finish_report(void *report_baton,
         SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
                                              &report->report_received,
                                              iterpool_inner));
-#endif
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
@@ -3280,6 +3281,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   report->update_editor = update_editor;
   report->update_baton = update_baton;
+  report->done = FALSE;
 
   *reporter = &ra_serf_reporter;
   *report_baton = report;

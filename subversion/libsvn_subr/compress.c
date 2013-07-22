@@ -78,7 +78,7 @@ svn__decode_uint(apr_uint64_t *val,
     end = p + SVN__MAX_ENCODED_UINT_LEN;
 
   /* Decode bytes until we're done. */
-  while SVN__PREDICT_TRUE(p < end)
+  while (SVN__PREDICT_TRUE(p < end))
     {
       unsigned int c = *p++;
 

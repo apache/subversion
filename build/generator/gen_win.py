@@ -68,15 +68,29 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     gen_win_dependencies.GenDependenciesBase.__init__(self, fname, verfname,
                                                       options, find_libs=False)
 
+    # On Windows we create svn_private_config.h in the output directory since
+    # r1370526.
+    # 
+    # Without this replacement all projects include a not-existing file,
+    # which makes the MSBuild calculation to see whether a project is changed
+    # far more expensive than necessary.
+    self.private_built_includes.append('$(Configuration)/svn_private_config.h')
+    self.private_built_includes.remove('subversion/svn_private_config.h')
+
     if subdir == 'vcnet-vcproj':
       print('Generating for Visual Studio %s\n' % self.vs_version)
 
     self.find_libraries(True)
 
-    if self._libraries['db']:
-      db = self._libraries['db']
-      print('Found BDB %s in %s' % (db.version, self.bdb_path))
-    else:
+    # Print list of identified libraries
+    printed = []
+    for lib in sorted(self._libraries.values(), key = lambda s: s.name):
+      if lib.name in printed:
+        continue 
+      printed.append(lib.name)
+      print('Found %s %s' % (lib.name, lib.version))
+
+    if 'db' not in self._libraries:
       print('BDB not found, BDB fs will not be built')
 
     #Make some files for the installer so that we don't need to
@@ -101,7 +115,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       os.makedirs(self.projfilesdir)
 
     # Generate the build_zlib.bat file
-    if self.zlib_path:
+    if self._libraries['zlib'].is_src:
       data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
               'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
@@ -109,16 +123,16 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       self.write_with_template(bat, 'templates/build_zlib.ezt', data)
 
     # Generate the build_locale.bat file
-    pofiles = []
     if self.enable_nls:
+      pofiles = []
       for po in os.listdir(os.path.join('subversion', 'po')):
         if fnmatch.fnmatch(po, '*.po'):
           pofiles.append(POFile(po[:-3]))
 
-    data = {'pofiles': pofiles}
-    self.write_with_template(os.path.join(self.projfilesdir,
-                                          'build_locale.bat'),
-                             'templates/build_locale.ezt', data)
+      data = {'pofiles': pofiles}
+      self.write_with_template(os.path.join(self.projfilesdir,
+                                            'build_locale.bat'),
+                               'templates/build_locale.ezt', data)
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
@@ -131,7 +145,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
 
-    if self.swig_libdir:
+    if 'swig' in self._libraries:
       # Generate SWIG header wrappers and external runtime
       for swig in (generator.swig.header_wrappers,
                    generator.swig.checkout_swig_header,
@@ -187,6 +201,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # Don't create projects for scripts
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
+    if not self.enable_nls:
+      install_targets = [x for x in install_targets if x.name != 'locale']
+
     # Drop the libsvn_fs_base target and tests if we don't have BDB
     if 'db' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_fs_base']
@@ -200,15 +217,16 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if 'serf' not in self._libraries or not self._libraries['serf'].is_src:
       install_targets = [x for x in install_targets if x.name != 'serf']
 
-    # Drop the swig targets if we don't have swig
-    if not self.swig_path and not self.swig_libdir:
-      install_targets = [x for x in install_targets
-                                     if not (isinstance(x, gen_base.TargetSWIG)
-                                             or isinstance(x, gen_base.TargetSWIGLib)
-                                             or isinstance(x, gen_base.TargetSWIGProject))]
+    # Drop the swig targets if we don't have swig or language support
+    install_targets = [x for x in install_targets
+                       if (not (isinstance(x, gen_base.TargetSWIG)
+                                or isinstance(x, gen_base.TargetSWIGLib)
+                                or isinstance(x, gen_base.TargetSWIGProject))
+                           or (x.lang in self._libraries
+                               and 'swig' in self._libraries))]
 
     # Drop the Java targets if we don't have a JDK
-    if not self.jdk_path:
+    if 'java_sdk' not in self._libraries:
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
                                              or isinstance(x, gen_base.TargetJavaHeaders)
@@ -305,6 +323,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                     defines=self.get_win_defines(target, cfg),
                     libdirs=self.get_win_lib_dirs(target, cfg),
                     libs=self.get_win_libs(target, cfg),
+                    includes=self.get_win_includes(target, cfg),
+                    forced_include_files
+                            =self.get_win_forced_includes(target, cfg),
                     ))
     return configs
 
@@ -673,16 +694,21 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       elif is_static:
         self.get_linked_win_depends(dep, deps, 1)
 
+      # and recurse over the external library dependencies for swig libraries,
+      # to include the language runtime
+      elif isinstance(dep, gen_base.TargetSWIGLib):
+        self.get_externallib_depends(dep, deps)
+
   def get_externallib_depends(self, target, deps):
     """Find externallib dependencies for a project"""
-    
+
     direct_deps = self.get_direct_depends(target)
     for dep, dep_kind in direct_deps:
       self.get_externallib_depends(dep, deps)
-      
+
       if isinstance(target, gen_base.TargetLinked) and dep.external_lib:
         deps[dep] = dep_kind
-        
+
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
 
@@ -691,195 +717,133 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                    "_CRT_NONSTDC_NO_DEPRECATE=",
                    "_CRT_SECURE_NO_WARNINGS="]
 
-    if self.sqlite_inline:
-      fakedefines.append("SVN_SQLITE_INLINE")
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      if target.name == 'mod_dav_svn':
-        fakedefines.extend(["AP_DECLARE_EXPORT"])
-
-    if target.name.find('ruby') == -1:
-      fakedefines.append("snprintf=_snprintf")
-
-    if isinstance(target, gen_base.TargetSWIG):
-      fakedefines.append("SWIG_GLOBAL")
-
-    # Expect rb_errinfo() to be avilable in Ruby 1.9+,
-    # rather than ruby_errinfo.
-    if (self.ruby_major_version > 1 or self.ruby_minor_version > 8):
-      fakedefines.extend(["HAVE_RB_ERRINFO"])
-
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
 
-    if self.static_apr:
-      fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
+    if isinstance(target, gen_base.TargetApacheMod):
+      if target.name == 'mod_dav_svn':
+        fakedefines.extend(["AP_DECLARE_EXPORT"])
 
-    # XXX: Check if db is present, and if so, let apr-util know
-    # XXX: This is a hack until the apr build system is improved to
-    # XXX: know these things for itself.
-    if 'db' in self._libraries:
-      fakedefines.append("APU_HAVE_DB=1")
-      fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
+    if isinstance(target, gen_base.TargetSWIG):
+      fakedefines.append("SWIG_GLOBAL")
+
+    for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+
+          if lib.defines:
+            fakedefines.extend(lib.defines)
 
     # check if they wanted nls
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
 
-    if 'serf' in self._libraries:
-      fakedefines.append("SVN_HAVE_SERF")
-      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
-
     # check we have sasl
-    if self.sasl_path:
-      fakedefines.append("SVN_HAVE_SASL")
-
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
 
-    # use static linking to Expat
-    fakedefines.append("XML_STATIC")
-
     return fakedefines
 
-  def get_win_includes(self, target):
+  def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
 
-    fakeincludes = [ self.apath("subversion/include"),
-                     self.apath("subversion") ]
+    fakeincludes = [ "subversion/include",
+                     "subversion" ]
                      
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
-      if dep.external_lib and \
-         dep.external_lib.startswith('$(SVN_') and \
-         dep.external_lib.endswith('_LIBS)'):
-
-        external_lib = dep.external_lib[6:-6].lower()
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
 
         if external_lib in self._libraries:
           lib = self._libraries[external_lib]
-          inc_dir = self.apath(lib.include_dir)
-      
-          # Avoid duplicate items
-          if inc_dir and inc_dir not in fakeincludes:
-            fakeincludes.extend([inc_dir])
+
+          fakeincludes.extend(lib.include_dirs)
 
     if target.name == 'mod_authz_svn':
-      fakeincludes.extend([ self.apath(self.httpd_path, "modules/aaa") ])
+      fakeincludes.extend([ os.path.join(self.httpd_path, "modules/aaa") ])
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ self.apath(self.httpd_path, "include") ])
-    elif isinstance(target, gen_base.TargetSWIG):
+      fakeincludes.extend([ os.path.join(self.httpd_path, "include") ])
+    elif (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes.extend([ self.path("subversion/bindings/swig"),
-                            self.path("subversion/bindings/swig/proxy"),
-                            self.path("subversion/bindings/swig/include"),
-                            self.path(util_includes) ])
-    else:
-      fakeincludes.extend([ self.path("subversion/bindings/swig/proxy") ])
+      fakeincludes.append(util_includes)
 
-    if self.libintl_path:
-      fakeincludes.append(self.apath(self.libintl_path, 'inc'))
+    if (isinstance(target, gen_base.TargetSWIG)
+        or isinstance(target, gen_base.TargetSWIGLib)):
 
-    if self.swig_libdir \
-       and (isinstance(target, gen_base.TargetSWIG)
-            or isinstance(target, gen_base.TargetSWIGLib)):
-      if self.swig_vernum >= 103028:
-        fakeincludes.append(self.apath(self.swig_libdir, target.lang))
-        if target.lang == 'perl':
-          # At least swigwin 1.3.38+ uses perl5 as directory name. Just add it
-          # to the list to make sure we don't break old versions
-          fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
+      # Projects aren't generated unless we have swig
+      assert self.swig_libdir
+
+      if target.lang == "perl" and self.swig_version >= (1, 3, 28):
+        # At least swigwin 1.3.38+ uses perl5 as directory name.
+        lang_subdir = 'perl5'
       else:
-        fakeincludes.append(self.swig_libdir)
-      if target.lang == "perl":
-        fakeincludes.extend(self.perl_includes)
-      if target.lang == "python":
-        fakeincludes.extend(self.python_includes)
-      if target.lang == "ruby":
-        fakeincludes.extend(self.ruby_includes)
+        lang_subdir = target.lang
 
-    if self.sqlite_inline:
-      fakeincludes.append(self.apath(self.sqlite_path))
-    else:
-      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
-
-    if self.sasl_path:
-      fakeincludes.append(self.apath(self.sasl_path, 'include'))
-
-    if target.name == "libsvnjavahl" and self.jdk_path:
-      fakeincludes.append(os.path.join(self.jdk_path, 'include'))
-      fakeincludes.append(os.path.join(self.jdk_path, 'include', 'win32'))
+      # After the language specific includes include the generic libdir,
+      # to allow overriding a generic with a per language include
+      fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
+      fakeincludes.append(self.swig_libdir)
 
     if target.name.find('cxxhl') != -1:
       fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
 
-    return fakeincludes
+    return gen_base.unique(map(self.apath, fakeincludes))
 
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
     debug = (cfg == 'Debug')
 
+    if not isinstance(target, gen_base.TargetLinked):
+      return []
+
+    if isinstance(target, gen_base.TargetLib) and target.msvc_static:
+      return []
+
     fakelibdirs = []
-                    
+
     for dep in self.get_win_depends(target, FILTER_LIBS):
-      if dep.external_lib and \
-         dep.external_lib.startswith('$(SVN_') and \
-         dep.external_lib.endswith('_LIBS)'):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
 
-        external_lib = dep.external_lib[6:-6].lower()
+          if external_lib not in self._libraries:
+            continue
 
-        if external_lib in self._libraries:
           lib = self._libraries[external_lib]
-          
-          if debug:
+
+          if debug and lib.debug_lib_dir:
             lib_dir = self.apath(lib.debug_lib_dir)
-          else:
+          elif lib.lib_dir:
             lib_dir = self.apath(lib.lib_dir)
-      
-          # Avoid duplicate items
-          if lib_dir and lib_dir not in fakelibdirs:
-            fakelibdirs.extend([lib_dir])
+          else:
+            continue # Dependency without library (E.g. JDK)
 
-    if not self.sqlite_inline:
-      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
-
-    if self.sasl_path:
-      fakelibdirs.append(self.apath(self.sasl_path, "lib"))
+          fakelibdirs.append(lib_dir)
 
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
         fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main",
                                       cfg))
-    if self.swig_libdir \
-       and (isinstance(target, gen_base.TargetSWIG)
-            or isinstance(target, gen_base.TargetSWIGLib)):
-      if target.lang == "perl" and self.perl_libdir:
-        fakelibdirs.append(self.perl_libdir)
-      if target.lang == "python" and self.python_libdir:
-        fakelibdirs.append(self.python_libdir)
-      if target.lang == "ruby" and self.ruby_libdir:
-        fakelibdirs.append(self.ruby_libdir)
 
-    return fakelibdirs
+    return gen_base.unique(fakelibdirs)
 
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
     debug = (cfg == 'Debug')
-
-    dblib = None
-    if self.bdb_lib:
-      dblib = self.bdb_lib+(debug and 'd.lib' or '.lib')
-
-    sasllib = None
-    if self.sasl_path:
-      sasllib = 'libsasl.lib'
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -888,62 +852,30 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       return []
 
     nondeplibs = target.msvc_libs[:]
-    if self.enable_nls:
-      if self.libintl_path:
-        nondeplibs.append(self.apath(self.libintl_path,
-                                     'lib', 'intl3_svn.lib'))
-      else:
-        nondeplibs.append('intl3_svn.lib')
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
 
-    if ((isinstance(target, gen_base.TargetSWIG)
-         or isinstance(target, gen_base.TargetSWIGLib))
-        and target.lang == 'perl'):
-      nondeplibs.append(self.perl_lib)
-
-    if ((isinstance(target, gen_base.TargetSWIG)
-         or isinstance(target, gen_base.TargetSWIGLib))
-        and target.lang == 'ruby'):
-      nondeplibs.append(self.ruby_lib)
-
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
 
-      if dep.external_lib and \
-         dep.external_lib.startswith('$(SVN_') and \
-         dep.external_lib.endswith('_LIBS)'):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
 
-        external_lib = dep.external_lib[6:-6].lower()
+          external_lib = elib.lower()
 
-        if external_lib in self._libraries:
+          if external_lib not in self._libraries:
+            if external_lib not in self._optional_libraries:
+              print('Warning: Using undeclared dependency \'$(SVN_%s_LIBS)\'.'
+                    % (elib,))
+            continue
+
           lib = self._libraries[external_lib]
 
           if debug:
             nondeplibs.append(lib.debug_lib_name)
           else:
             nondeplibs.append(lib.lib_name)
-
-        elif external_lib == 'sqlite':
-
-          if not self.sqlite_inline:
-            nondeplibs.append('sqlite3.lib')
-          # else: # Is not a linkable library
-
-        elif external_lib == 'sasl':
-
-          if sasllib:
-            nondeplibs.append(sasllib)
-
-        elif external_lib == 'apr_memcache' or \
-             external_lib == 'magic':
-          # Currently unhandled
-          lib = None
-
-        else:
-          print('Warning: Using underclared dependency \'%s\'' % \
-                (dep.external_lib,))
 
     return gen_base.unique(nondeplibs)
 
@@ -971,21 +903,23 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     return list(sources.values())
 
-  def write_file_if_changed(self, fname, new_contents):
-    """Rewrite the file if new_contents are different than its current content.
+  def get_win_forced_includes(self, target, cfg):
+    """Return a list of include files that need to be included before any
+       other header in every c/c++ file"""
 
-    If you have your windows projects open and generate the projects
-    it's not a small thing for windows to re-read all projects so
-    only update those that have changed.
-    """
+    fakeincludes = []
 
-    try:
-      old_contents = open(fname, 'rb').read()
-    except IOError:
-      old_contents = None
-    if old_contents != new_contents:
-      open(fname, 'wb').write(new_contents)
-      print("Wrote: %s" % fname)
+    for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
+      if dep.external_lib:
+        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+          external_lib = elib.lower()
+
+        if external_lib in self._libraries:
+          lib = self._libraries[external_lib]
+
+          fakeincludes.extend(lib.forced_includes)
+
+    return gen_base.unique(fakeincludes)
 
   def write_with_template(self, fname, tname, data):
     fout = StringIO()
@@ -996,7 +930,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     self.write_file_if_changed(fname, fout.getvalue())
 
   def write_zlib_project_file(self, name):
-    if not self.zlib_path:
+    if not self._libraries['zlib'].is_src:
       return
     zlib_path = os.path.abspath(self.zlib_path)
     zlib_sources = map(lambda x : os.path.relpath(x, self.projfilesdir),

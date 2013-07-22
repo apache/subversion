@@ -101,9 +101,14 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 {
   const char *path;
   apr_off_t offset = 0;
+  svn_error_t *err;
 
-  if (apr_file_name_get(&path, file) != APR_SUCCESS)
-    path = "(unknown)";
+  err = svn_io_file_name_get(&path, file, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      path = "(unknown)";
+    }
 
   if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
     offset = -1;
@@ -1051,16 +1056,17 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
 
   /* Create an empty rev file. */
-  SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_proto_rev(fs, txn->id, pool),
-                             "", pool));
+  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_txn_proto_rev(fs, txn->id,
+                                                                 pool),
+                                   pool));
 
   /* Create an empty rev-lock file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev_lock(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_proto_rev_lock(fs, txn->id, pool),
+                                   pool));
 
   /* Create an empty changes file. */
-  SVN_ERR(svn_io_file_create(path_txn_changes(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_changes(fs, txn->id, pool), 
+                                   pool));
 
   /* Create the next-ids file. */
   return svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
@@ -2788,6 +2794,7 @@ struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  svn_boolean_t set_timestamp;
   apr_array_header_t *reps_to_cache;
   apr_hash_t *reps_hash;
   apr_pool_t *reps_pool;
@@ -2814,6 +2821,7 @@ commit_body(void *baton, apr_pool_t *pool)
   svn_prop_t prop;
   svn_string_t date;
   svn_stringbuf_t *trailer;
+  svn_string_t date;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -2939,12 +2947,18 @@ commit_body(void *baton, apr_pool_t *pool)
      remove the transaction directory later. */
   SVN_ERR(unlock_proto_rev(cb->fs, cb->txn->id, proto_file_lockcookie, pool));
 
-  /* Update commit time to ensure that svn:date revprops remain ordered. */
-  date.data = svn_time_to_cstring(apr_time_now(), pool);
-  date.len = strlen(date.data);
+  /* Update commit time to ensure that svn:date revprops remain ordered if
+     requested. */
+  if (cb->set_timestamp)
+    {
+      svn_string_t date;
 
-  SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
-                                     &date, pool));
+      date.data = svn_time_to_cstring(apr_time_now(), pool);
+      date.len = strlen(date.data);
+
+      SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
+                                         &date, pool));
+    }
 
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! svn_fs_fs__is_packed_revprop(cb->fs, new_rev));
@@ -2998,6 +3012,7 @@ svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
                   svn_fs_txn_t *txn,
+                  svn_boolean_t set_timestamp,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
@@ -3006,6 +3021,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
+  cb.set_timestamp = set_timestamp;
 
   if (ffd->rep_sharing_allowed)
     {

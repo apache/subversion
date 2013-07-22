@@ -854,6 +854,19 @@ svn_client_commit6(const apr_array_header_t *targets,
                               svn_dirent_local_style(item->path, iterpool),
                               svn_dirent_local_style(delete_op_root_abspath,
                                                      iterpool));
+
+                  if (ctx->notify_func2)
+                    {
+                      svn_wc_notify_t *notify;
+                      notify = svn_wc_create_notify(
+                                    delete_op_root_abspath,
+                                    svn_wc_notify_failed_requires_target,
+                                    iterpool);
+                      notify->err = cmt_err;
+
+                      ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                    }
+
                   goto cleanup;
                 }
             }
@@ -885,6 +898,19 @@ svn_client_commit6(const apr_array_header_t *targets,
                          svn_dirent_local_style(item->path, iterpool),
                          svn_dirent_local_style(copy_op_root_abspath,
                                                 iterpool));
+
+              if (ctx->notify_func2)
+                {
+                    svn_wc_notify_t *notify;
+                    notify = svn_wc_create_notify(
+                                copy_op_root_abspath,
+                                svn_wc_notify_failed_requires_target,
+                                iterpool);
+                    notify->err = cmt_err;
+
+                    ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                }
+
               goto cleanup;
             }
         }
