@@ -58,12 +58,12 @@
  * For pre-format7 repos, the display will be restricted.
  */
 static svn_error_t *
-dgb__log_access(svn_fs_t *fs,
-                svn_revnum_t revision,
-                apr_off_t offset,
-                void *item,
-                int item_type,
-                apr_pool_t *scratch_pool)
+dbg_log_access(svn_fs_t *fs,
+               svn_revnum_t revision,
+               apr_off_t offset,
+               void *item,
+               int item_type,
+               apr_pool_t *scratch_pool)
 {
   /* no-op if this macro is not defined */
 #ifdef SVN_FS_FS__LOG_ACCESS
@@ -375,12 +375,12 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                                id_string->data);
     }
 
-  SVN_ERR(dgb__log_access(fs,
-                          svn_fs_fs__id_rev(id),
-                          svn_fs_fs__id_offset(id),
-                          *noderev_p,
-                          SVN_FS_FS__ITEM_TYPE_NODEREV,
-                          pool));
+  SVN_ERR(dbg_log_access(fs,
+                         svn_fs_fs__id_rev(id),
+                         svn_fs_fs__id_offset(id),
+                         *noderev_p,
+                         SVN_FS_FS__ITEM_TYPE_NODEREV,
+                         pool));
 
   return svn_error_trace(err);
 }
@@ -648,8 +648,8 @@ create_rep_state_body(rep_state_t **rep_state,
         *shared_file = file;
     }
 
-  SVN_ERR(dgb__log_access(fs, rep->revision, rep->offset, rh,
-                          SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
+  SVN_ERR(dbg_log_access(fs, rep->revision, rep->offset, rh,
+                         SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
 
   SVN_ERR(svn_fs_fs__read_rep_header(&rh, rs->file->stream, pool));
   SVN_ERR(svn_fs_fs__get_file_offset(&rs->start, rs->file->file, pool));
@@ -1177,8 +1177,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   apr_off_t end_offset;
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
-  SVN_ERR(dgb__log_access(rs->file->fs, rs->revision, rs->offset,
-                          NULL, SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
+  SVN_ERR(dbg_log_access(rs->file->fs, rs->revision, rs->offset,
+                         NULL, SVN_FS_FS__ITEM_TYPE_ANY_REP, pool));
 
   /* someone has to actually read the data from file */
   SVN_ERR(auto_read_diff_version(rs, pool));
@@ -2017,8 +2017,8 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
   if (ffd->changes_cache)
     SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes, pool));
 
-  SVN_ERR(dgb__log_access(fs, rev, changes_offset, *changes,
-                          SVN_FS_FS__ITEM_TYPE_CHANGES, pool));
+  SVN_ERR(dbg_log_access(fs, rev, changes_offset, *changes,
+                         SVN_FS_FS__ITEM_TYPE_CHANGES, pool));
 
   return SVN_NO_ERROR;
 }
