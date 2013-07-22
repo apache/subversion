@@ -418,8 +418,8 @@ pack_body(void *baton,
                          pb->fs, i, ffd->max_files_per_dir,
                          ffd->revprop_pack_size,
                          ffd->compress_packed_revprops
-                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
-                           : SVN_DELTA_COMPRESSION_LEVEL_NONE,
+                           ? SVN__COMPRESSION_ZLIB_DEFAULT
+                           : SVN__COMPRESSION_NONE,
                          pb->notify_func, pb->notify_baton,
                          pb->cancel_func, pb->cancel_baton, iterpool));
     }
