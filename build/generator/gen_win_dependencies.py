@@ -27,21 +27,11 @@
 #
 
 import os
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
 import sys
 import fnmatch
 import re
 import subprocess
-import glob
 import string
-import generator.swig.header_wrappers
-import generator.swig.checkout_swig_header
-import generator.swig.external_runtime
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -58,18 +48,27 @@ import ezt
 
 class SVNCommonLibrary:
 
-  def __init__(self, name, include_dir, lib_dir, lib_name, version=None,
+  def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               is_src=False):
+               is_src=False, defines=[], forced_includes=[]):
     self.name = name
-    self.include_dir = include_dir
+    if include_dirs:
+      self.include_dirs = include_dirs if isinstance(include_dirs, list) \
+                                       else [include_dirs]
+    else:
+      self.include_dirs = []
+    self.defines = defines if not defines or isinstance(defines, list) else [defines]
     self.lib_dir = lib_dir
     self.lib_name = lib_name
     self.version = version
     self.dll_dir = dll_dir
     self.dll_name = dll_name
     self.is_src = is_src
+
+    self.forced_includes = forced_includes if not forced_includes \
+                                           or isinstance(forced_includes, list) \
+                                           else [forced_includes]
 
     if debug_lib_dir:
       self.debug_lib_dir = debug_lib_dir
@@ -102,9 +101,27 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     ('lib', 'object'): '.obj',
     ('pyd', 'target'): '.pyd',
     ('pyd', 'object'): '.obj',
+    ('so', 'target'): '.so',
+    ('so', 'object'): '.obj',
     }
 
   _libraries = {}     # Dict of SVNCommonLibrary instances of found libraries
+
+  _optional_libraries = [  # List of optional libraries to suppress warnings
+        'db',
+        'intl',
+        'serf',
+        'sasl',
+        'swig',
+        'perl',
+        'python',
+        'ruby',
+        'java_sdk',
+
+        # So optional, we don't even have any code to detect them on Windows
+        'apr_memcache',
+        'magic',
+  ]
 
   def parse_options(self, options):
     self.apr_path = 'apr'
@@ -260,42 +277,23 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_apr()
     self._find_apr_util_and_expat()
     self._find_zlib()
+    self._find_sqlite(show_warnings)
 
     # Optional dependencies
     self._find_bdb(show_warnings)
     self._find_openssl(show_warnings)
     self._find_serf(show_warnings)
-    
-    
-    if show_warnings:
-      # Find the right Ruby include and libraries dirs and
-      # library name to link SWIG bindings with
-      self._find_ruby()
+    self._find_sasl(show_warnings)
+    self._find_libintl(show_warnings)
 
-      # Find the right Perl library name to link SWIG bindings with
-      self._find_perl()
+    self._find_jdk(show_warnings)
 
-      # Find the right Python include and libraries dirs for SWIG bindings
-      self._find_python()
+    # Swig (optional) dependencies
+    if self._find_swig(show_warnings):
+      self._find_perl(show_warnings)
+      self._find_python(show_warnings)
+      self._find_ruby(show_warnings)
 
-      # Find the installed SWIG version to adjust swig options
-      self._find_swig()
-
-      # Find the installed Java Development Kit
-      self._find_jdk()
-
-      # Find Sqlite
-      self._find_sqlite()
-
-    
-    if show_warnings:
-      printed = []
-      for lib in self._libraries.values():
-        if lib.name in printed:
-          continue 
-        printed.append(lib.name)
-        print('Found %s %s' % (lib.name, lib.version))
-    
   def _find_apr(self):
     "Find the APR library and version"
 
@@ -306,14 +304,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                        "location.\n")
       sys.exit(1)                       
 
-    inc_path = os.path.join(self.apr_path, 'include')
-    version_file_path = os.path.join(inc_path, 'apr_version.h')
+    inc_base = os.path.join(self.apr_path, 'include')
 
-    if not os.path.exists(version_file_path):
+    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apr_version.h')):
+      inc_path = os.path.join(inc_base, 'apr-1')
+    elif os.path.isfile(os.path.join(inc_base, 'apr_version.h')):
+      inc_path = inc_base
+    else:
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path)
       sys.stderr.write("Use '--with-apr' option to configure APR location.\n")
       sys.exit(1)
 
+    version_file_path = os.path.join(inc_path, 'apr_version.h')
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
@@ -339,12 +341,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if major > 0:
         suffix = '-%d' % major
 
+    defines = []
     if self.static_apr:
       lib_name = 'apr%s.lib' % suffix
       lib_dir = os.path.join(self.apr_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
-      
+      defines.extend(["APR_DECLARE_STATIC"])
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
         # Installed APR instead of APR-Source
@@ -369,22 +373,33 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         dll_dir = lib_dir
         debug_dll_dir = debug_lib_dir
       else:
-        dll_dir = lib_dir
-        debug_dll_dir = debug_lib_dir
+        dll_dir = os.path.join(self.apr_path, 'bin')
+        debug_dll_dir = None
       
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
                                               debug_lib_dir=debug_lib_dir,
                                               dll_dir=dll_dir,
                                               dll_name=dll_name,
-                                              debug_dll_dir=debug_dll_dir)
+                                              debug_dll_dir=debug_dll_dir,
+                                              defines=defines)
 
   def _find_apr_util_and_expat(self):
     "Find the APR-util library and version"
 
     minimal_aprutil_version = (0, 9, 0)
-    
-    inc_path = os.path.join(self.apr_util_path, 'include')
+
+    inc_base = os.path.join(self.apr_util_path, 'include')
+
+    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apu_version.h')):
+      inc_path = os.path.join(inc_base, 'apr-1')
+    elif os.path.isfile(os.path.join(inc_base, 'apu_version.h')):
+      inc_path = inc_base
+    else:
+      sys.stderr.write("ERROR: 'apu_version' not found.\n")
+      sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n")
+      sys.exit(1)
+
     version_file_path = os.path.join(inc_path, 'apu_version.h')
 
     if not os.path.exists(version_file_path):
@@ -417,11 +432,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if major > 0:
         suffix = '-%d' % major
 
+    defines = []
     if self.static_apr:
       lib_name = 'aprutil%s.lib' % suffix
-      lib_dir = os.path.join(self.aprutil_path, 'LibR')
+      lib_dir = os.path.join(self.apr_util_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
+      defines.extend(["APR_DECLARE_STATIC"])
       
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
@@ -437,7 +454,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
-        lib_dir = os.path.join(apr_util_path, 'lib')
+        lib_dir = os.path.join(self.apr_util_path, 'lib')
         debug_lib_dir = lib_dir
       else:
         debug_lib_dir = os.path.join(self.apr_util_path, 'Debug')
@@ -447,16 +464,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         dll_dir = lib_dir
         debug_dll_dir = debug_lib_dir
       else:
-        dll_dir = lib_dir
-        debug_dll_dir = debug_lib_dir
-      
+        dll_dir = os.path.join(self.apr_util_path, 'bin')
+        debug_dll_dir = None
+
     self._libraries['aprutil'] = SVNCommonLibrary('apr-util', inc_path, lib_dir,
                                                    lib_name,
                                                    aprutil_version,
                                                    debug_lib_dir=debug_lib_dir,
                                                    dll_dir=dll_dir,
                                                    dll_name=dll_name,
-                                                   debug_dll_dir=debug_dll_dir)
+                                                   debug_dll_dir=debug_dll_dir,
+                                                   defines=defines)
 
     # And now find expat
     # If we have apr-util as a source location, it is in a subdir.
@@ -493,7 +511,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     self._libraries['xml'] = SVNCommonLibrary('expat', inc_path, lib_dir,
                                                'xml.lib', xml_version,
-                                               debug_lib_dir = debug_lib_dir)
+                                               debug_lib_dir = debug_lib_dir,
+                                               defines=['XML_STATIC'])
 
   def _find_zlib(self):
     "Find the ZLib library and version"
@@ -619,12 +638,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       debug_dll_name = None
 
+    # Usually apr-util doesn't find BDB on Windows, so we help apr-util
+    # by defining the value ourselves (Legacy behavior)
+    defines = ['APU_HAVE_DB=1', 'SVN_LIBSVN_FS_LINKS_FS_BASE']
+
     self._libraries['db'] = SVNCommonLibrary('db', inc_path, lib_dir, lib_name,
                                               version,
                                               debug_lib_name=debug_lib_name,
                                               dll_dir=dll_dir,
                                               dll_name=dll_name,
-                                              debug_dll_name=debug_dll_name)
+                                              debug_dll_name=debug_dll_name,
+                                              defines=defines)
 
     # For compatibility with old code
     self.bdb_lib = self._libraries['db'].lib_name
@@ -642,19 +666,20 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_dir = os.path.join(self.openssl_path, 'inc32')
       if self.static_openssl:
         lib_dir = os.path.join(self.openssl_path, 'out32')
+        bin_dir = None
       else:
         lib_dir = os.path.join(self.openssl_path, 'out32dll')
-        bin_dir = os.path.join(self.openssl_path, 'out32dll')
+        bin_dir = lib_dir
     elif os.path.isfile(os.path.join(self.openssl_path,
                         'include/openssl/opensslv.h')):
       version_path = os.path.join(self.openssl_path,
                                   'include/openssl/opensslv.h')
       inc_dir = os.path.join(self.openssl_path, 'include')
       lib_dir = os.path.join(self.openssl_path, 'lib')
-      if self.static_openss:
-        self.bin_dir = None
+      if self.static_openssl:
+        bin_dir = None
       else:
-        self.bin_dir = os.path.join(self.openssl_path, 'bin')
+        bin_dir = os.path.join(self.openssl_path, 'bin')
     else:
       if show_warning:
         print('WARNING: \'opensslv.h\' not found')
@@ -664,7 +689,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     txt = open(version_path).read()
 
     vermatch = re.search(
-      r'#define OPENSSL_VERSION_TEXT	"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
+      r'#define OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
       txt)
   
     version = (int(vermatch.group(2)), 
@@ -672,101 +697,128 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                int(vermatch.group(4)))
     openssl_version = vermatch.group(1)
   
-    self._libraries['ssleay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
-                                                    'ssleay32.lib',
-                                                    openssl_version,
-                                                    dll_name='ssleay32.dll',
-                                                    dll_dir=bin_dir)
+    self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
+                                                  'ssleay32.lib',
+                                                  openssl_version,
+                                                  dll_name='ssleay32.dll',
+                                                  dll_dir=bin_dir)
 
     self._libraries['libeay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                     'libeay32.lib',
                                                     openssl_version,
                                                     dll_name='libeay32.dll',
-                                                    dll_dir=bin_dir)                                                    
+                                                    dll_dir=bin_dir)
 
-  def _find_perl(self):
+  def _find_perl(self, show_warnings):
     "Find the right perl library name to link swig bindings with"
-    self.perl_includes = []
-    self.perl_libdir = None
+
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print "$Config{PERL_REVISION}$Config{PERL_VERSION}"'), 'r')
+                  'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}.'
+                          '$Config{PERL_SUBVERSION}\\n"; '
+                  'print "$Config{archlib}\\n"'), 'r')
     try:
       line = fp.readline()
       if line:
-        msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + line.rstrip() + '.lib'
+        perl_version = line.strip()
+        perlv = perl_version.split('.')
+        perl_lib = 'perl%s%s.lib' % (perlv[0], perlv[1])
       else:
-        msg = 'Could not detect perl version.'
-        self.perl_lib = 'perl56.lib'
-      print('%s\n  Perl bindings will be linked with %s\n'
-             % (msg, self.perl_lib))
-    finally:
-      fp.close()
+        return
 
-    fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
-                  'print $Config{archlib}'), 'r')
-    try:
       line = fp.readline()
       if line:
-        self.perl_libdir = os.path.join(line, 'CORE')
-        self.perl_includes = [os.path.join(line, 'CORE')]
+        lib_dir = os.path.join(line.strip(), 'CORE')
+        inc_dir = lib_dir
     finally:
       fp.close()
 
-  def _find_ruby(self):
+    self._libraries['perl'] = SVNCommonLibrary('perl', inc_dir, lib_dir,
+                                               perl_lib, perl_version)
+
+  def _find_ruby(self, show_warnings):
     "Find the right Ruby library name to link swig bindings with"
-    self.ruby_includes = []
-    self.ruby_libdir = None
-    self.ruby_version = None
-    self.ruby_major_version = None
-    self.ruby_minor_version = None
+
+    lib_dir = None
+    inc_dirs = []
+
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
-    proc = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                    "puts Config::CONFIG['ruby_version'];"
-                    "puts Config::CONFIG['LIBRUBY'];"
-                    "puts Config::CONFIG['archdir'];"
-                    "puts Config::CONFIG['libdir'];"), 'r')
+    fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
+                  "puts Config::CONFIG['ruby_version'];"
+                  "puts Config::CONFIG['LIBRUBY'];"
+                  "puts Config::CONFIG['libdir'];"
+                  "puts Config::CONFIG['rubyhdrdir'];"
+                  "puts Config::CONFIG['arch'];"), 'r')
     try:
-      rubyver = proc.readline()[:-1]
-      if rubyver:
-        self.ruby_version = rubyver
-        self.ruby_major_version = string.atoi(self.ruby_version[0])
-        self.ruby_minor_version = string.atoi(self.ruby_version[2])
-        libruby = proc.readline()[:-1]
-        if libruby:
-          msg = 'Found installed ruby %s' % rubyver
-          self.ruby_lib = libruby
-          self.ruby_includes.append(proc.readline()[:-1])
-          self.ruby_libdir = proc.readline()[:-1]
-      else:
-        msg = 'Could not detect Ruby version, assuming 1.8.'
-        self.ruby_version = "1.8"
-        self.ruby_major_version = 1
-        self.ruby_minor_version = 8
-        self.ruby_lib = 'msvcrt-ruby18.lib'
-      print('%s\n  Ruby bindings will be linked with %s\n'
-             % (msg, self.ruby_lib))
-    finally:
-      proc.close()
+      line = fp.readline()
+      if line:
+        ruby_version = line.strip()
 
-  def _find_python(self):
+      line = fp.readline()
+      if line:
+        ruby_lib = line.strip()
+
+      line = fp.readline()
+      if line:
+        lib_dir = line.strip()
+
+      line = fp.readline()
+      if line:
+        inc_base = line.strip()
+        inc_dirs = [inc_base]
+
+      line = fp.readline()
+      if line:
+        inc_dirs.append(os.path.join(inc_base, line.strip()))
+
+    finally:
+      fp.close()
+
+    if not lib_dir:
+      return
+
+    # Visual C++ doesn't have a standard compliant snprintf yet
+    # (Will probably be added in VS2013 + 1)
+    defines = ['snprintf=_snprintf']
+
+    ver = ruby_version.split('.')
+    ver = tuple(map(int, ver))
+    if ver >= (1, 8, 0):
+      defines.extend(["HAVE_RB_ERRINFO"])
+
+    forced_includes = []
+    if ver >= (1, 9, 0):
+      forced_includes.append('swigutil_rb__pre_ruby.h')
+      defines.extend(["SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG"])
+
+    self._libraries['ruby'] = SVNCommonLibrary('ruby', inc_dirs, lib_dir,
+                                               ruby_lib, ruby_version,
+                                               defines=defines,
+                                               forced_includes=forced_includes)
+
+  def _find_python(self, show_warnings):
     "Find the appropriate options for creating SWIG-based Python modules"
-    self.python_includes = []
-    self.python_libdir = ""
+
     try:
       from distutils import sysconfig
-      inc = sysconfig.get_python_inc()
-      plat = sysconfig.get_python_inc(plat_specific=1)
-      self.python_includes.append(inc)
-      if inc != plat:
-        self.python_includes.append(plat)
-      self.python_libdir = self.apath(sysconfig.PREFIX, "libs")
-    except ImportError:
-      pass
 
-  def _find_jdk(self):
-    if not self.jdk_path:
+      inc_dir = sysconfig.get_python_inc()
+      lib_dir = os.path.join(sysconfig.PREFIX, "libs")
+    except ImportError:
+      return
+
+    self._libraries['python'] = SVNCommonLibrary('python', inc_dir, lib_dir, None,
+                                                 sys.version.split(' ')[0])
+
+  def _find_jdk(self, show_warnings):
+    "Find details about an installed jdk"
+
+    jdk_path = self.jdk_path
+    self.jdk_path = None # No jdk on errors
+
+    minimal_jdk_version = (1, 0, 0) # ### Provide sane default
+
+    if not jdk_path:
       jdk_ver = None
       try:
         try:
@@ -792,73 +844,131 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           for i in range(num_values):
             (name, value, key_type) = winreg.EnumValue(key, i)
             if name == "JavaHome":
-              self.jdk_path = value
+              jdk_path = value
               break
         winreg.CloseKey(key)
       except (ImportError, EnvironmentError):
         pass
-      if self.jdk_path:
-        print("Found JDK version %s in %s\n" % (jdk_ver, self.jdk_path))
-    else:
-      print("Using JDK in %s\n" % (self.jdk_path))
 
-  def _find_swig(self):
-    # Require 1.3.24. If not found, assume 1.3.25.
-    default_version = '1.3.25'
-    minimum_version = '1.3.24'
-    vernum = 103025
-    minimum_vernum = 103024
-    libdir = ''
-
-    if self.swig_path is not None:
-      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
-    else:
-      self.swig_exe = 'swig'
+    if not jdk_path or not os.path.isdir(jdk_path):
+      return
 
     try:
-      outfp = subprocess.Popen([self.swig_exe, '-version'], stdout=subprocess.PIPE, universal_newlines=True).stdout
-      txt = outfp.read()
-      if txt:
-        vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
-                   .search(txt)
+      outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javah.exe'),
+                               '-version'], stdout=subprocess.PIPE).stdout
+      line = outfp.read()
+      if line:
+        vermatch = re.search(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', line, re.M)
       else:
         vermatch = None
 
       if vermatch:
-        version = tuple(map(int, vermatch.groups()))
-        # build/ac-macros/swig.m4 explains the next incantation
-        vernum = int('%d%02d%03d' % version)
-        print('Found installed SWIG version %d.%d.%d\n' % version)
-        if vernum < minimum_vernum:
-          print('WARNING: Subversion requires version %s\n'
-                 % minimum_version)
-
-        libdir = self._find_swig_libdir()
+        version = tuple(map(int, vermatch.groups()[1].split('.')))
+        versionstr = vermatch.groups()[0]
       else:
-        print('Could not find installed SWIG,'
-               ' assuming version %s\n' % default_version)
-        self.swig_libdir = ''
+        if show_warnings:
+          print('Could not find installed JDK,')
+        return
       outfp.close()
     except OSError:
-      print('Could not find installed SWIG,'
-             ' assuming version %s\n' % default_version)
-      self.swig_libdir = ''
+      if show_warnings:
+        print('Could not find installed JDK,')
+      return
 
-    self.swig_vernum = vernum
-    self.swig_libdir = libdir
+    if version < minimal_jdk_version:
+      if show_warning:
+        print('Found java jdk %s, but >= %s is required. '
+              'javahl will not be built.\n' % \
+              (versionstr, '.'.join(str(v) for v in minimal_jdk_version)))
+      return
 
-  def _find_swig_libdir(self):
-    fp = os.popen(self.swig_exe + ' -swiglib', 'r')
+    self.jdk_path = jdk_path
+    inc_dirs = [
+        os.path.join(jdk_path, 'include'),
+        os.path.join(jdk_path, 'include', 'win32'),
+      ]
+
+    lib_dir = os.path.join(jdk_path, 'lib')
+
+    # The JDK provides .lib files, but we currently don't use these.
+    self._libraries['java_sdk'] = SVNCommonLibrary('java-sdk', inc_dirs,
+                                                   lib_dir, None,
+                                                   versionstr)
+
+  def _find_swig(self, show_warnings):
+    "Find details about an installed swig"
+
+    minimal_swig_version = (1, 3, 25)
+
+    if not self.swig_path:
+      swig_exe = 'swig.exe'
+    else:
+      swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig.exe'))
+
+    if self.swig_path is not None:
+      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig.exe'))
+    else:
+      self.swig_exe = 'swig'
+
+    swig_version = None
     try:
-      libdir = fp.readline().rstrip()
-      if libdir:
-        print('Using SWIG library directory %s\n' % libdir)
-        return libdir
+      fp = subprocess.Popen([self.swig_exe, '-version'],
+                            stdout=subprocess.PIPE).stdout
+      txt = fp.read()
+      if txt:
+        vermatch = re.search(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)', txt, re.M)
       else:
-        print('WARNING: could not find SWIG library directory\n')
-    finally:
+        vermatch = None
+
+      if vermatch:
+        swig_version = tuple(map(int, vermatch.groups()))
       fp.close()
-    return ''
+    except OSError:
+      swig_version = None
+
+    if not swig_version:
+      if show_warnings:
+        print('Could not find installed SWIG')
+      return False
+
+    swig_ver = '%d.%d.%d' % (swig_version)
+    if swig_version < minimal_swig_version:
+      if show_warning:
+        print('Found swig %s, but >= %s is required. '
+              'the swig bindings will not be built.\n' %
+              (swig_version, '.'.join(str(v) for v in minimal_swig_version)))
+      return
+
+    try:
+      fp = subprocess.Popen([self.swig_exe, '-swiglib'],
+                            stdout=subprocess.PIPE).stdout
+      lib_dir = fp.readline().strip()
+      fp.close()
+    except OSError:
+      lib_dir = None
+      fp.close()
+
+    if not lib_dir:
+      if show_warnings:
+        print('Could not find libdir of installed SWIG')
+      return False
+
+    if (not self.swig_path and
+        os.path.isfile(os.path.join(lib_dir, '../swig.exe'))):
+      self.swig_path = os.path.dirname(lib_dir)
+
+    inc_dirs = [
+        'subversion/bindings/swig',
+        'subversion/bindings/swig/proxy',
+        'subversion/bindings/swig/include',
+      ]
+
+    self.swig_libdir = lib_dir
+    self.swig_version = swig_version
+
+    self._libraries['swig'] = SVNCommonLibrary('swig', inc_dirs, lib_dir, None,
+                                               swig_ver)
+    return True
 
   def _find_ml(self):
     "Check if the ML assembler is in the path"
@@ -884,9 +994,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # shouldn't be called unless serf is there
     assert inc_dir and os.path.exists(inc_dir)
 
-    self.serf_ver_maj = None
-    self.serf_ver_min = None
-    self.serf_ver_patch = None
+    serf_ver_maj = None
+    serf_ver_min = None
+    serf_ver_patch = None
 
     # serf.h should be present
     if not os.path.exists(os.path.join(inc_dir, 'serf.h')):
@@ -898,28 +1008,28 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     min_match = re.search(r'SERF_MINOR_VERSION\s+(\d+)', txt)
     patch_match = re.search(r'SERF_PATCH_VERSION\s+(\d+)', txt)
     if maj_match:
-      self.serf_ver_maj = int(maj_match.group(1))
+      serf_ver_maj = int(maj_match.group(1))
     if min_match:
-      self.serf_ver_min = int(min_match.group(1))
+      serf_ver_min = int(min_match.group(1))
     if patch_match:
-      self.serf_ver_patch = int(patch_match.group(1))
+      serf_ver_patch = int(patch_match.group(1))
 
-    return self.serf_ver_maj, self.serf_ver_min, self.serf_ver_patch
+    return serf_ver_maj, serf_ver_min, serf_ver_patch
 
   def _find_serf(self, show_warning):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 2, 1)
-    
+
     if not self.serf_path:
       return
-    
+
     inc_dir = self.serf_path
-    
+
     if os.path.isfile(os.path.join(inc_dir, 'serf.h')):
       # Source layout
       version = self._get_serf_version(inc_dir)
-      
+
       if version < (1, 3, 0):
         lib_dir = os.path.join(self.serf_path, 'Release')
         debug_lib_dir = os.path.join(self.serf_path, 'Debug')
@@ -931,7 +1041,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-1')
       version = self._get_serf_version(inc_dir)
-      lib_dir = os.path.join(inc_dir, 'lib')
+      lib_dir = os.path.join(self.serf_path, 'lib')
+      debug_lib_dir = None
+      is_src = False
+    elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-2/serf.h')):
+      # Install layout
+      inc_dir = os.path.join(self.serf_path, 'include/serf-2')
+      version = self._get_serf_version(inc_dir)
+      lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
       is_src = False
     else:
@@ -939,60 +1056,206 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         print('WARNING: \'serf.h\' not found')
         print("Use '--with-serf' to configure serf location.");
       return
-    
-    if is_src and 'ssleay32' not in self._libraries:
+
+    if is_src and 'openssl' not in self._libraries:
       if show_warning:
         print('openssl not found, serf and ra_serf will not be built')
       return
-    
+    serf_version = '.'.join(str(v) for v in version)
+
     if version < minimal_serf_version:
-      msg = 'Found serf %s, but >= %s is required. ra_serf will not be built.\n' % \
-            (self.serf_ver, '.'.join(str(v) for v in minimal_serf_version))
+      if show_warning:
+        print('Found serf %s, but >= %s is required. '
+              'ra_serf will not be built.\n' %
+              (serf_version, '.'.join(str(v) for v in minimal_serf_version)))
       return
-      
-    if self.serf_ver_maj > 0:
-      lib_name = 'serf-%d.lib' % (self.serf_ver_maj,)
+
+    serf_ver_maj = version[0]
+
+    if serf_ver_maj > 0:
+      lib_name = 'serf-%d.lib' % (serf_ver_maj,)
     else:
       lib_name = 'serf.lib'
-      
-    serf_version = '.'.join(str(v) for v in version)
+
+    defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_CLIENT_LINKS_RA_SERF']
+
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
                                                 lib_name, serf_version,
                                                 debug_lib_dir=debug_lib_dir,
-                                                is_src=is_src)
+                                                is_src=is_src,
+                                                defines=defines)
 
-  def _find_sqlite(self):
+  def _find_sasl(self, show_warning):
+    "Check if sals is available"
+
+    minimal_sasl_version = (2, 0, 0)
+
+    if not self.sasl_path:
+      return
+
+    inc_dir = os.path.join(self.sasl_path, 'include')
+
+    version_file_path = os.path.join(inc_dir, 'sasl.h')
+
+    if not os.path.isfile(version_file_path):
+      if show_warning:
+        print('WARNING: \'%s\' not found' % (version_file_path,))
+        print("Use '--with-sasl' to configure sasl location.");
+      return
+
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MAJOR\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MINOR\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_STEP\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    sasl_version = '.'.join(str(v) for v in version)
+
+    if version < minimal_sasl_version:
+      if show_warning:
+        print('Found sasl %s, but >= %s is required. '
+              'sals support will not be built.\n' %
+              (sasl_version, '.'.join(str(v) for v in minimal_serf_version)))
+      return
+
+    lib_dir = os.path.join(self.sasl_path, 'lib')
+
+    if os.path.isfile(os.path.join(lib_dir, 'libsasl.dll')):
+      dll_dir = lib_dir
+      dll_name = 'libsasl.dll'
+    elif os.path.isfile(os.path.join(self.sasl_path, 'bin', 'libsasl.dll')):
+      dll_dir = os.path.join(self.sasl_path, 'bin')
+      dll_name = 'libsasl.dll'
+    else:
+      # Probably a static compilation
+      dll_dir = None
+      dll_name = None
+
+    self._libraries['sasl'] = SVNCommonLibrary('sasl', inc_dir, lib_dir,
+                                               'libsasl.lib', sasl_version,
+                                               dll_dir=dll_dir,
+                                               dll_name=dll_name,
+                                               defines=['SVN_HAVE_SASL'])
+
+  def _find_libintl(self, show_warning):
+    "Find gettext support"
+    minimal_libintl_version = (0, 14, 1)
+
+    if not self.enable_nls or not self.libintl_path:
+      return;
+
+    # We support 2 scenarios.
+    if os.path.isfile(os.path.join(self.libintl_path, 'inc', 'libintl.h')) and\
+       os.path.isfile(os.path.join(self.libintl_path, 'lib', 'intl3_svn.lib')):
+
+      # 1. Subversion's custom libintl based on gettext 0.14.1
+      inc_dir = os.path.join(self.libintl_path, 'inc')
+      lib_dir = os.path.join(self.libintl_path, 'lib')
+      dll_dir = os.path.join(self.libintl_path, 'bin')
+
+      lib_name = 'intl3_svn.lib'
+      dll_name = 'intl3_svn.dll'
+    elif os.path.isfile(os.path.join(self.libintl_path, \
+                                     'include', 'libintl.h')):
+      # 2. A gettext install
+      inc_dir = os.path.join(self.libintl_path, 'include')
+      lib_dir = os.path.join(self.libintl_path, 'lib')
+      dll_dir = os.path.join(self.libintl_path, 'bin')
+
+      lib_name = 'intl.lib'
+      dll_name = 'intl.dll'
+    else:
+      if (show_warning):
+        print('WARNING: \'libintl.h\' not found')
+        print("Use '--with-libintl' to configure libintl location.")
+      return
+
+    version_file_path = os.path.join(inc_dir, 'libintl.h')
+    txt = open(version_file_path).read()
+
+    match = re.search(r'^\s*#define\s+LIBINTL_VERSION\s+((0x)?[0-9A-Fa-f]+)',
+                      txt, re.M)
+
+    ver = int(match.group(1), 0)
+    version = (ver >> 16, (ver >> 8) & 0xFF, ver & 0xFF)
+
+    libintl_version = '.'.join(str(v) for v in version)
+
+    if version < minimal_libintl_version:
+      if show_warning:
+        print('Found libintl %s, but >= %s is required.\n' % \
+              (libintl_version,
+               '.'.join(str(v) for v in minimal_libintl_version)))
+      return
+
+    self._libraries['intl'] = SVNCommonLibrary('libintl', inc_dir, lib_dir,
+                                               lib_name, libintl_version,
+                                               dll_dir=dll_dir,
+                                               dll_name=dll_name)
+
+  def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
 
     minimal_sqlite_version = (3, 7, 12)
 
-    header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
+    # For SQLite we support 3 scenarios:
+    # - Installed in standard directory layout
+    # - Installed in legacy directory layout
+    # - Amalgamation compiled directly into our libraries
 
-    # First check for compiled version of SQLite.
-    if os.path.exists(header_file):
-      # Compiled SQLite seems found, check for sqlite3.lib file.
-      lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
-      if not os.path.exists(lib_file):
-        sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
-        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-        sys.exit(1)
-      self.sqlite_inline = False
+    sqlite_base = self.sqlite_path
+
+    lib_dir = None
+    dll_dir = None
+    dll_name = None
+    defines = []
+
+    lib_name = 'sqlite3.lib'
+
+    if os.path.isfile(os.path.join(sqlite_base, 'include/sqlite3.h')):
+      # Standard layout
+      inc_dir = os.path.join(sqlite_base, 'include')
+      lib_dir = os.path.join(sqlite_base, 'lib')
+
+      # We assume a static library, but let's support shared in this case
+      if os.path.isfile(os.path.join(sqlite_base, 'bin/sqlite3.dll')):
+        dll_dir = os.path.join(sqlite_base, 'bin')
+        dll_name = 'sqlite3.dll'
+    elif os.path.isfile(os.path.join(sqlite_base, 'inc/sqlite3.h')):
+      # Standard layout
+      inc_dir = os.path.join(sqlite_base, 'inc')
+      lib_dir = os.path.join(sqlite_base, 'lib')
+
+      # We assume a static library, but let's support shared in this case
+      if os.path.isfile(os.path.join(sqlite_base, 'bin/sqlite3.dll')):
+        dll_dir = os.path.join(sqlite_base, 'bin')
+        dll_name = 'sqlite3.dll'
+    elif (os.path.isfile(os.path.join(sqlite_base, 'sqlite3.h'))
+          and os.path.isfile(os.path.join(sqlite_base, 'sqlite3.c'))):
+      # Amalgamation
+      inc_dir = sqlite_base
+      lib_dir = None
+      lib_name = None 
+      defines.append('SVN_SQLITE_INLINE')
     else:
-      # Compiled SQLite not found. Try amalgamation version.
-      amalg_file = os.path.join(self.sqlite_path, 'sqlite3.c')
-      if not os.path.exists(amalg_file):
-        sys.stderr.write("ERROR: SQLite not found in '%s' directory.\n" % self.sqlite_path)
-        sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
-        sys.exit(1)
-      header_file = os.path.join(self.sqlite_path, 'sqlite3.h')
-      self.sqlite_inline = True
+      sys.stderr.write("ERROR: SQLite not found\n" % self.sqlite_path)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
 
-    fp = open(header_file)
-    txt = fp.read()
-    fp.close()
-    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
+    version_file_path = os.path.join(inc_dir, 'sqlite3.h')
 
-    version = vermatch.groups()
+    txt = open(version_file_path).read()
+
+    match = re.search(r'^\s*#define\s+SQLITE_VERSION\s+'
+                      r'"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
+
+    version = match.groups()
 
     # Sqlite doesn't add patch numbers for their ordinary releases
     if not version[3]:
@@ -1000,16 +1263,20 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = tuple(map(int, version))
 
-    self.sqlite_version = '.'.join(str(v) for v in version)
+    sqlite_version = '.'.join(str(v) for v in version)
 
     if version < minimal_sqlite_version:
       sys.stderr.write("ERROR: sqlite %s or higher is required "
                        "(%s found)\n" % (
                           '.'.join(str(v) for v in minimal_sqlite_version),
-                          self.sqlite_version))
+                          sqlite_version))
       sys.exit(1)
-    else:
-      print('Found SQLite %s' % self.sqlite_version)
+
+    self._libraries['sqlite'] = SVNCommonLibrary('sqlite', inc_dir, lib_dir,
+                                                 lib_name, sqlite_version,
+                                                 dll_dir=dll_dir,
+                                                 dll_name=dll_name,
+                                                 defines=defines)
 
 # ============================================================================
 # This is a cut-down and modified version of code from:

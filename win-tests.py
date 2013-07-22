@@ -84,6 +84,8 @@ def _usage_exit():
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
+  print("  --swig=language        : Run the swig perl/python/ruby tests instead of")
+  print("                           the normal tests")
   print("  --list                 : print test doc strings only")
   print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
   print("                           used with --list) limits the tests listed to")
@@ -130,7 +132,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'httpd-dir=', 'httpd-port=', 'httpd-daemon',
                         'httpd-server', 'http-short-circuit', 'httpd-no-log',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
-                        'fsfs-packing', 'fsfs-sharding=', 'javahl',
+                        'fsfs-packing', 'fsfs-sharding=', 'javahl', 'swig=',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
@@ -156,6 +158,7 @@ http_bulk_updates = True
 list_tests = None
 milestone_filter = None
 test_javahl = None
+test_swig = None
 enable_sasl = None
 svn_bin = None
 parallel = None
@@ -216,6 +219,11 @@ for opt, val in opts:
     fsfs_packing = 1
   elif opt == '--javahl':
     test_javahl = 1
+  elif opt == '--swig':
+    if val not in ['ruby']:
+      sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n' 
+                        % (val,))
+    test_swig = val
   elif opt == '--list':
     list_tests = 1
   elif opt == '--milestone-filter':
@@ -336,19 +344,13 @@ def locate_libs():
     if name and dir:
       dlls.append(os.path.join(dir, name))
 
-  if gen_obj.libintl_path:
-    dlls.append(os.path.join(gen_obj.libintl_path, 'bin', 'intl3_svn.dll'))
-
-  if gen_obj.sasl_path is not None:
-    dlls.append(os.path.join(gen_obj.sasl_path, 'lib', 'libsasl.dll'))
-
   for dll in dlls:
-    copy_changed_file(dll, abs_objdir)
+    copy_changed_file(dll, abs_builddir)
 
   # Copy the Subversion library DLLs
   if not cp.has_option('options', '--disable-shared'):
     for svn_dll in svn_dlls:
-      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_objdir)
+      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_builddir)
 
   # Copy the Apache modules
   if run_httpd and cp.has_option('options', '--with-httpd'):
@@ -359,11 +361,11 @@ def locate_libs():
     mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
                                         'mod_dontdothat', 'mod_dontdothat.so')
 
-    copy_changed_file(mod_dav_svn_path, abs_objdir)
-    copy_changed_file(mod_authz_svn_path, abs_objdir)
-    copy_changed_file(mod_dontdothat_path, abs_objdir)
+    copy_changed_file(mod_dav_svn_path, abs_builddir)
+    copy_changed_file(mod_authz_svn_path, abs_builddir)
+    copy_changed_file(mod_dontdothat_path, abs_builddir)
 
-  os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+  os.environ['PATH'] = abs_builddir + os.pathsep + os.environ['PATH']
 
 def fix_case(path):
     path = os.path.normpath(path)
@@ -752,7 +754,7 @@ else:
   print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 
-if not test_javahl:
+if not test_javahl and not test_swig:
   import run_tests
   if log_to_stdout:
     log_file = None
@@ -780,7 +782,7 @@ if not test_javahl:
     raise
   else:
     os.chdir(old_cwd)
-else:
+elif test_javahl:
   failed = False
   args = (
           'java.exe',
@@ -818,6 +820,88 @@ else:
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
+elif test_swig == 'perl':
+  print('Running Swig Perl tests not supported yet')
+
+  # TODO: Implement something like
+  
+  # mkdir "%TESTDIR%\swig\pl-release\SVN"
+  # mkdir "%TESTDIR%\swig\pl-release\auto\SVN"
+  # xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-release\SVN" > nul:
+  # pushd release\subversion\bindings\swig\perl\native
+  # for %%i in (*.dll) do (
+  #   set name=%%i
+  #   mkdir "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
+  #   xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
+  #   xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
+  # )
+  # popd
+  # 
+  # SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-release;
+  # pushd subversion\bindings\swig\perl\native
+  # perl -MExtUtils::Command::MM -e test_harness() t\*.t
+  # IF ERRORLEVEL 1 (
+  #   echo [Perl reported error %ERRORLEVEL%]
+  #   SET result=1
+  # )
+  # popd
+
+  failed = False
+elif test_swig == 'python':
+  print('Running Swig Python tests not supported yet')
+  
+  # TODO: Implement something like
+  
+  # IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
+  # mkdir "%TESTDIR%\swig\py-release\libsvn"
+  # mkdir "%TESTDIR%\swig\py-release\svn"
+  # 
+  # xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd" > nul:
+  # xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll" > nul:
+  # xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py" > nul:
+  # xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py" > nul:
+  # 
+  # SET PYTHONPATH=%TESTDIR%\swig\py-release
+  # 
+  # python subversion\bindings\swig\python\tests\run_all.py
+  # IF ERRORLEVEL 1 (
+  #   echo [Python reported error %ERRORLEVEL%]
+  #   SET result=1
+  # )
+  
+  failed = False
+elif test_swig == 'ruby':
+  failed = False
+
+  if 'ruby' not in gen_obj._libraries:
+    print('Ruby not found. Skipping Ruby tests')
+  else:
+    print('Running Swig Ruby Tests')
+    ruby_lib = gen_obj._libraries['ruby']
+
+    ruby_exe = 'ruby.exe'
+    ruby_subdir = os.path.join('subversion', 'bindings', 'swig', 'ruby')
+    ruby_args = [
+        '-I', os.path.join(abs_srcdir, ruby_subdir),
+        os.path.join(abs_srcdir, ruby_subdir, 'test', 'run-test.rb'),
+        '--verbose'
+      ]
+
+    old_cwd = os.getcwd()
+    try:
+      os.chdir(ruby_subdir)
+
+      os.environ["BUILD_TYPE"] = objdir
+      r = subprocess.call([ruby_exe] + ruby_args)
+    finally:
+      os.chdir(old_cwd)
+
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if (r != 0):
+      print()
+      print('[Test runner reported failure]')
+      failed = True
 
 # Stop service daemon, if any
 if daemon:

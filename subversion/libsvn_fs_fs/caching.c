@@ -305,7 +305,8 @@ init_callbacks(svn_cache__t *cache,
  * Creates memcache if MEMCACHE is not NULL. Creates membuffer cache if
  * MEMBUFFER is not NULL. Fallbacks to inprocess cache if MEMCACHE and
  * MEMBUFFER are NULL and pages is non-zero.  Sets *CACHE_P to NULL
- * otherwise.
+ * otherwise.  Use the given PRIORITY class for the new cache.  If it
+ * is 0, then use the default priority class.
  *
  * Unless NO_HANDLER is true, register an error handler that reports errors
  * as warnings to the FS warning callback.
@@ -322,6 +323,7 @@ create_cache(svn_cache__t **cache_p,
              svn_cache__deserialize_func_t deserializer,
              apr_ssize_t klen,
              const char *prefix,
+             apr_uint32_t priority,
              svn_fs_t *fs,
              svn_boolean_t no_handler,
              apr_pool_t *pool)
@@ -329,6 +331,8 @@ create_cache(svn_cache__t **cache_p,
   svn_cache__error_handler_t error_handler = no_handler
                                            ? NULL
                                            : warn_and_fail_on_cache_errors;
+  if (priority == 0)
+    priority = SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY;
 
   if (memcache)
     {
@@ -343,7 +347,7 @@ create_cache(svn_cache__t **cache_p,
     {
       SVN_ERR(svn_cache__create_membuffer_cache(
                 cache_p, membuffer, serializer, deserializer,
-                klen, prefix, FALSE, pool));
+                klen, prefix, priority, FALSE, pool));
     }
   else if (pages)
     {
@@ -421,6 +425,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_id,
                        sizeof(svn_revnum_t),
                        apr_pstrcat(pool, prefix, "RRI", (char *)NULL),
+                       0,
                        fs,
                        no_handler,
                        fs->pool));
@@ -435,6 +440,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__dag_deserialize,
                        APR_HASH_KEY_STRING,
                        apr_pstrcat(pool, prefix, "DAG", (char *)NULL),
+                       0,
                        fs,
                        no_handler,
                        fs->pool));
@@ -451,6 +457,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_dir_entries,
                        APR_HASH_KEY_STRING,
                        apr_pstrcat(pool, prefix, "DIR", (char *)NULL),
+                       0,
                        fs,
                        no_handler,
                        fs->pool));
@@ -466,6 +473,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        sizeof(svn_revnum_t),
                        apr_pstrcat(pool, prefix, "PACK-MANIFEST",
                                    (char *)NULL),
+                       0,
                        fs,
                        no_handler,
                        fs->pool));
@@ -479,6 +487,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_node_revision,
                        sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "NODEREVS", (char *)NULL),
+                       0,
                        fs,
                        no_handler,
                        fs->pool));
@@ -492,6 +501,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_changes,
                        sizeof(svn_revnum_t),
                        apr_pstrcat(pool, prefix, "CHANGES", (char *)NULL),
+                       0,
                        fs,
                        no_handler,
                        fs->pool));
@@ -507,6 +517,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            NULL, NULL,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "TEXT", (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                            fs,
                            no_handler,
                            fs->pool));
@@ -520,6 +531,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "PROP",
                                        (char *)NULL),
+                           0,
                            fs,
                            no_handler,
                            fs->pool));
@@ -533,6 +545,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            APR_HASH_KEY_STRING,
                            apr_pstrcat(pool, prefix, "MERGEINFO",
                                        (char *)NULL),
+                           0,
                            fs,
                            no_handler,
                            fs->pool));
@@ -546,6 +559,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            APR_HASH_KEY_STRING,
                            apr_pstrcat(pool, prefix, "HAS_MERGEINFO",
                                        (char *)NULL),
+                           0,
                            fs,
                            no_handler,
                            fs->pool));
@@ -570,6 +584,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "REVPROP",
                                        (char *)NULL),
+                           0,
                            fs,
                            no_handler,
                            fs->pool));
@@ -591,6 +606,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            APR_HASH_KEY_STRING,
                            apr_pstrcat(pool, prefix, "TXDELTA_WINDOW",
                                        (char *)NULL),
+                           0,
                            fs,
                            no_handler,
                            fs->pool));
@@ -604,6 +620,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            APR_HASH_KEY_STRING,
                            apr_pstrcat(pool, prefix, "COMBINED_WINDOW",
                                        (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                            fs,
                            no_handler,
                            fs->pool));
@@ -707,6 +724,7 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                        APR_HASH_KEY_STRING,
                        apr_pstrcat(pool, prefix, "TXNDIR",
                                    (char *)NULL),
+                       0,
                        fs,
                        TRUE,
                        pool));

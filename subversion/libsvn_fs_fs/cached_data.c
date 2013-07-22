@@ -839,14 +839,19 @@ get_window_key(rep_state_t *rs, apr_off_t offset, apr_pool_t *pool)
   const char *name;
   const char *last_part;
   const char *name_last;
+  svn_error_t *err;
 
   /* the rev file name containing the txdelta window.
    * If this fails we are in serious trouble anyways.
    * And if nobody else detects the problems, the file content checksum
    * comparison _will_ find them.
    */
-  if (apr_file_name_get(&name, rs->file->file))
-    return NULL;
+  err = svn_io_file_name_get(&name, rs->file, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
 
   /* Handle packed files as well by scanning backwards until we find the
    * revision or pack number. */

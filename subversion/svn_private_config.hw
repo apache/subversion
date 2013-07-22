@@ -105,7 +105,7 @@
 #if defined(SVN_DEBUG)
 # define SVN__FORCE_INLINE
 # define SVN__PREVENT_INLINE
-#elif define(_MSC_VER)
+#elif defined(_MSC_VER)
 # define SVN__FORCE_INLINE __forceinline
 # define SVN__PREVENT_INLINE __declspec(noinline)
 #else
@@ -113,8 +113,8 @@
 # define SVN__PREVENT_INLINE
 #endif
 
-#define SVN__PREDICT_TRUE
-#define SVN__PREDICT_FALSE
+#define SVN__PREDICT_TRUE(x)  (x)
+#define SVN__PREDICT_FALSE(x)  (x)
 
 #endif /* SVN_PRIVATE_CONFIG_HW */
 

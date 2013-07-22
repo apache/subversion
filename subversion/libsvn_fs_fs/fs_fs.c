@@ -168,7 +168,7 @@ get_lock_on_filesystem(const char *lock_filename,
       svn_error_clear(err);
       err = NULL;
 
-      SVN_ERR(svn_io_file_create(lock_filename, "", pool));
+      SVN_ERR(svn_io_file_create_empty(lock_filename, pool));
       SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
     }
 
@@ -1099,7 +1099,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                               ? "0\n" : "0 1 1\n"),
                              pool));
-  SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create_empty(path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
@@ -1119,8 +1119,8 @@ svn_fs_fs__create(svn_fs_t *fs,
     {
       SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(fs, pool),
                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current_lock(fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create_empty
+                  (svn_fs_fs__path_txn_current_lock(fs, pool), pool));
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */

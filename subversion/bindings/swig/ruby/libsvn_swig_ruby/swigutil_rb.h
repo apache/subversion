@@ -22,8 +22,14 @@
 #ifndef SVN_SWIG_SWIGUTIL_RB_H
 #define SVN_SWIG_SWIGUTIL_RB_H
 
+/* Windows hack: Allow overriding some <ruby.h> defaults */
+#include "swigutil_rb__pre_ruby.h"
 #include <ruby.h>
+#ifdef HAVE_RUBY_REGEX_H
+#include <ruby/regex.h>
+#else
 #include <regex.h>
+#endif
 
 #if SIZEOF_VOIDP == SIZEOF_LONG
 #  define PTR2NUM(x) (ULONG2NUM((unsigned long)(x)))

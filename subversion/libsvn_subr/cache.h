@@ -38,6 +38,12 @@ typedef struct svn_cache__vtable_t {
                       const void *key,
                       apr_pool_t *result_pool);
 
+  /* See svn_cache__has_key(). */
+  svn_error_t *(*has_key)(svn_boolean_t *found,
+                          void *cache_implementation,
+                          const void *key,
+                          apr_pool_t *scratch_pool);
+
   /* See svn_cache__set(). */
   svn_error_t *(*set)(void *cache_implementation,
                       const void *key,

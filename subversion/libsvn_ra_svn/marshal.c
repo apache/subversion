@@ -411,7 +411,7 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static APR_INLINE svn_error_t *
+static SVN__FORCE_INLINE svn_error_t *
 readbuf_getchar(svn_ra_svn_conn_t *conn, apr_pool_t *pool, char *result)
 {
   if (conn->read_ptr == conn->read_end)

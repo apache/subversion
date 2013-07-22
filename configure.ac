@@ -739,8 +739,8 @@ AH_BOTTOM([
 # define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
 # define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #else
-# define SVN__PREDICT_FALSE(x)
-# define SVN__PREDICT_TRUE(x)
+# define SVN__PREDICT_FALSE(x) (x)
+# define SVN__PREDICT_TRUE(x) (x)
 #endif
 
 #if defined(SVN_DEBUG)
