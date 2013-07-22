@@ -799,7 +799,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   parent_copy_id = svn_fs_fs__id_copy_id(parent_id);
 
   /* If this child is already mutable, we have nothing to do. */
-  if (svn_fs_fs__id_txn_id(child_id))
+  if (svn_fs_fs__id_is_txn(child_id))
     {
       *inherit_p = copy_id_inherit_self;
       *copy_src_path = NULL;

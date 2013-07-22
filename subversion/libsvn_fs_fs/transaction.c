@@ -469,11 +469,10 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *noderev_file;
-  const char *txn_id = svn_fs_fs__id_txn_id(id);
 
   noderev->is_fresh_txn_root = fresh_txn_root;
 
-  if (! txn_id)
+  if (! svn_fs_fs__id_is_txn(id))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Attempted to write to non-transaction '%s'"),
                              svn_fs_fs__id_unparse(id, pool)->data);
@@ -868,7 +867,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, src, pool));
 
-  if (svn_fs_fs__id_txn_id(noderev->id))
+  if (svn_fs_fs__id_is_txn(noderev->id))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Copying from transactions not allowed"));
 
@@ -1354,6 +1353,21 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE if the TXN_ID member of REP is in use.
+ */
+static svn_boolean_t
+is_txn_rep(const representation_t *rep)
+{
+  return rep->txn_id != NULL;
+}
+
+/* Mark the TXN_ID member of REP as "unused".
+ */
+static void
+reset_txn_in_rep(representation_t *rep)
+{
+  rep->txn_id = NULL;
+}
 
 svn_error_t *
 svn_fs_fs__set_entry(svn_fs_t *fs,
@@ -1372,7 +1386,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  if (!rep || !rep->txn_id)
+  if (!rep || !is_txn_rep(rep))
     {
       const char *unique_suffix;
       apr_hash_t *entries;
@@ -1845,7 +1859,7 @@ get_shared_rep(representation_t **old_rep,
   /* look for intra-revision matches (usually data reps but not limited
      to them in case props happen to look like some data rep)
    */
-  if (*old_rep == NULL && rep->txn_id)
+  if (*old_rep == NULL && is_txn_rep(rep))
     {
       svn_node_kind_t kind;
       const char *file_name
@@ -1961,7 +1975,7 @@ set_representation(svn_stream_t **contents_p,
 {
   struct rep_write_baton *wb;
 
-  if (! svn_fs_fs__id_txn_id(noderev->id))
+  if (! svn_fs_fs__id_is_txn(noderev->id))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Attempted to write to non-transaction '%s'"),
                              svn_fs_fs__id_unparse(noderev->id, pool)->data);
@@ -2041,7 +2055,7 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
   SVN_ERR(svn_io_file_close(file, pool));
 
   /* Mark the node-rev's prop rep as mutable, if not already done. */
-  if (!noderev->prop_rep || !noderev->prop_rep->txn_id)
+  if (!noderev->prop_rep || !is_txn_rep(noderev->prop_rep))
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
       noderev->prop_rep->txn_id = svn_fs_fs__id_txn_id(noderev->id);
@@ -2407,7 +2421,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   *new_id_p = NULL;
 
   /* Check to see if this is a transaction node. */
-  if (! svn_fs_fs__id_txn_id(id))
+  if (! svn_fs_fs__id_is_txn(id))
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool));
@@ -2444,7 +2458,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         }
       svn_pool_destroy(subpool);
 
-      if (noderev->data_rep && noderev->data_rep->txn_id)
+      if (noderev->data_rep && is_txn_rep(noderev->data_rep))
         {
           /* Write out the contents of this directory as a text rep. */
           SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
@@ -2467,9 +2481,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
          exists in a "this" state, gets rewritten to our new revision
          num. */
 
-      if (noderev->data_rep && noderev->data_rep->txn_id)
+      if (noderev->data_rep && is_txn_rep(noderev->data_rep))
         {
-          noderev->data_rep->txn_id = NULL;
+          reset_txn_in_rep(noderev->data_rep);
           noderev->data_rep->revision = rev;
 
           /* See issue 3845.  Some unknown mechanism caused the
@@ -2483,12 +2497,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     }
 
   /* Fix up the property reps. */
-  if (noderev->prop_rep && noderev->prop_rep->txn_id)
+  if (noderev->prop_rep && is_txn_rep(noderev->prop_rep))
     {
       apr_hash_t *proplist;
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
 
-      noderev->prop_rep->txn_id = NULL;
+      reset_txn_in_rep(noderev->prop_rep);
       noderev->prop_rep->revision = rev;
 
       if (ffd->deltify_properties)
@@ -3139,12 +3153,12 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, pool));
 
   /* Delete any mutable property representation. */
-  if (noderev->prop_rep && noderev->prop_rep->txn_id)
+  if (noderev->prop_rep && is_txn_rep(noderev->prop_rep))
     SVN_ERR(svn_io_remove_file2(svn_fs_fs__path_txn_node_props(fs, id, pool),
                                 FALSE, pool));
 
   /* Delete any mutable data representation. */
-  if (noderev->data_rep && noderev->data_rep->txn_id
+  if (noderev->data_rep && is_txn_rep(noderev->data_rep)
       && noderev->kind == svn_node_dir)
     {
       fs_fs_data_t *ffd = fs->fsap_data;
