@@ -192,6 +192,14 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const char *txn_id,
                               apr_pool_t *pool);
 
+/* Return the path of the proto-revision lock file for transaction TXN_ID
+ * in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
+                                   const char *txn_id,
+                                   apr_pool_t *pool);
+
 /* Return the path of the file containing the in-transaction node revision
  * identified by ID in FS.  The result will be allocated in POOL.
  */
@@ -216,6 +224,14 @@ const char *
 svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
                                   const svn_fs_id_t *id,
                                   apr_pool_t *pool);
+
+/* Return the path of the file containing the node origins cachs for
+ * the given NODE_ID in FS.  The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_node_origin(svn_fs_t *fs,
+                            const char *node_id,
+                            apr_pool_t *pool);
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
  * by #svn_fs_fs__path_min_unpacked_rev() for FS.
