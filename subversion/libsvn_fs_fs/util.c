@@ -218,6 +218,22 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
+                                   const char *txn_id,
+                                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
+    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
+                                apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
+                                            (char *)NULL),
+                                NULL);
+  else
+    return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                           PATH_REV_LOCK, pool);
+}
+
+const char *
 svn_fs_fs__path_txn_node_rev(svn_fs_t *fs,
                              const svn_fs_id_t *id,
                              apr_pool_t *pool)
@@ -248,6 +264,15 @@ svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
 {
   return apr_pstrcat(pool, svn_fs_fs__path_txn_node_rev(fs, id, pool),
                      PATH_EXT_CHILDREN, (char *)NULL);
+}
+
+const char *
+svn_fs_fs__path_node_origin(svn_fs_t *fs,
+                            const char *node_id,
+                            apr_pool_t *pool)
+{
+  return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
+                              node_id, NULL);
 }
 
 const char *

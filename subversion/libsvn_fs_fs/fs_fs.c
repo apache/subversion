@@ -142,16 +142,6 @@ path_lock(svn_fs_t *fs, apr_pool_t *pool)
   return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
 }
 
-static APR_INLINE const char *
-path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
-{
-  size_t len = strlen(node_id);
-  const char *node_id_minus_last_char =
-    (len == 1) ? "0" : apr_pstrmemdup(pool, node_id, len - 1);
-  return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                              node_id_minus_last_char, NULL);
-}
-
 
 
 /* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
@@ -1219,7 +1209,8 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 
   *origin_id = NULL;
   SVN_ERR(get_node_origins_from_file(fs, &node_origins,
-                                     path_node_origin(fs, node_id, pool),
+                                     svn_fs_fs__path_node_origin(fs, node_id,
+                                                                 pool),
                                      pool));
   if (node_origins)
     {
@@ -1296,7 +1287,7 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char *filename = path_node_origin(fs, node_id, pool);
+  const char *filename = svn_fs_fs__path_node_origin(fs, node_id, pool);
 
   err = set_node_origins_for_file(fs, filename,
                                   node_id,

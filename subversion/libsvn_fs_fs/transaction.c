@@ -76,20 +76,6 @@ path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static APR_INLINE const char *
-path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
-    return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
-                                            (char *)NULL),
-                                NULL);
-  else
-    return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
-                           PATH_REV_LOCK, pool);
-}
-
-static APR_INLINE const char *
 path_txn_next_ids(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
@@ -345,7 +331,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
     apr_file_t *lockfile;
     apr_status_t apr_err;
     const char *lockfile_path
-      = path_txn_proto_rev_lock(fs, b->txn_id, pool);
+      = svn_fs_fs__path_txn_proto_rev_lock(fs, b->txn_id, pool);
 
     /* Open the proto-rev lockfile, creating it if necessary, as it may
        not exist if the transaction dates from before the lockfiles were
@@ -1039,8 +1025,9 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
                                    pool));
 
   /* Create an empty rev-lock file. */
-  SVN_ERR(svn_io_file_create_empty(path_txn_proto_rev_lock(fs, txn->id, pool),
-                                   pool));
+  SVN_ERR(svn_io_file_create_empty(
+                    svn_fs_fs__path_txn_proto_rev_lock(fs, txn->id, pool),
+                    pool));
 
   /* Create an empty changes file. */
   SVN_ERR(svn_io_file_create_empty(path_txn_changes(fs, txn->id, pool), 
@@ -1332,8 +1319,9 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
       SVN_ERR(svn_io_remove_file2(
                   svn_fs_fs__path_txn_proto_rev(fs, txn_id, pool),
                   TRUE, pool));
-      SVN_ERR(svn_io_remove_file2(path_txn_proto_rev_lock(fs, txn_id, pool),
-                                  TRUE, pool));
+      SVN_ERR(svn_io_remove_file2(
+                  svn_fs_fs__path_txn_proto_rev_lock(fs, txn_id, pool),
+                  TRUE, pool));
     }
   return SVN_NO_ERROR;
 }
