@@ -46,7 +46,7 @@ public:
   /**
    * Create a pool as a child of the applications' root pool.
    */
-  Pool() throw(cxxhl::InternalError)
+  Pool()
     : m_pool(svn_pool_create(get_root_pool()))
     {}
 
@@ -93,7 +93,7 @@ public:
     }
 
 private:
-  static apr_pool_t* get_root_pool() throw(cxxhl::InternalError);
+  static apr_pool_t* get_root_pool();
   apr_pool_t* const m_pool;
 };
 
