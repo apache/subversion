@@ -845,7 +845,6 @@ elif test_swig == 'perl':
     for name in files:
       if name.endswith('.pm'):
         fn = os.path.join(root, name)
-        print(fn)
         copy_changed_file(fn, to_dir=swig_pl_svn)
       elif name.endswith('.t'):
         tests.append(os.path.relpath(os.path.join(root, name), pm_src))
@@ -862,6 +861,7 @@ elif test_swig == 'perl':
     os.chdir(pm_src)
 
     os.environ['PERL5LIB'] = perl5lib
+    os.environ["SVN_DBG_NO_ABORT_ON_ERROR_LEAK"] = 'YES'
 
     r = subprocess.call([
               perl_exe,
@@ -872,7 +872,6 @@ elif test_swig == 'perl':
     os.chdir(old_cwd)
 
   if (r != 0):
-    print()
     print('[Test runner reported failure]')
     failed = True
 
@@ -925,7 +924,6 @@ elif test_swig == 'python':
     os.chdir(old_cwd)
 
     if (r != 0):
-      print()
       print('[Test runner reported failure]')
       failed = True
 
@@ -959,7 +957,6 @@ elif test_swig == 'ruby':
     sys.stdout.flush()
     sys.stderr.flush()
     if (r != 0):
-      print()
       print('[Test runner reported failure]')
       failed = True
 
