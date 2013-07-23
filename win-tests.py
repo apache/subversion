@@ -892,6 +892,7 @@ elif test_swig == 'ruby':
       os.chdir(ruby_subdir)
 
       os.environ["BUILD_TYPE"] = objdir
+      os.environ["SVN_DBG_NO_ABORT_ON_ERROR_LEAK"] = 'YES'
       r = subprocess.call([ruby_exe] + ruby_args)
     finally:
       os.chdir(old_cwd)
