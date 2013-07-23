@@ -36,6 +36,8 @@
 #include "private/svn_mutex.h"
 #include "private/svn_named_atomic.h"
 
+#include "id.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

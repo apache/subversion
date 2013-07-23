@@ -154,7 +154,7 @@ get_shared_txn(svn_fs_t *fs,
   fs_fs_shared_txn_data_t *txn;
 
   for (txn = ffsd->txns; txn; txn = txn->next)
-    if (strcmp(txn->txn_id, txn_id) == 0)
+    if (svn_fs_fs__id_part_eq(txn->txn_id, txn_id))
       break;
 
   if (txn || !create_new)
@@ -200,7 +200,7 @@ free_shared_txn(svn_fs_t *fs, const char *txn_id)
   fs_fs_shared_txn_data_t *txn, *prev = NULL;
 
   for (txn = ffsd->txns; txn; prev = txn, txn = txn->next)
-    if (strcmp(txn->txn_id, txn_id) == 0)
+    if (svn_fs_fs__id_part_eq(txn->txn_id, txn_id))
       break;
 
   if (!txn)
@@ -1092,7 +1092,7 @@ get_txn_proplist(apr_hash_t *proplist,
 
   /* Check for issue #3696. (When we find and fix the cause, we can change
    * this to an assertion.) */
-  if (txn_id == NULL)
+  if (!txn_id || !svn_fs_fs__id_txn_used(&txn_id))
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Internal error: a null transaction id was "
                               "passed to get_txn_proplist()"));
@@ -1389,7 +1389,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
 static svn_boolean_t
 is_txn_rep(const representation_t *rep)
 {
-  return rep->txn_id != NULL;
+  return svn_fs_fs__id_txn_used(&rep->txn_id);
 }
 
 /* Mark the TXN_ID member of REP as "unused".
@@ -1397,7 +1397,7 @@ is_txn_rep(const representation_t *rep)
 static void
 reset_txn_in_rep(representation_t *rep)
 {
-  rep->txn_id = NULL;
+  svn_fs_fs__id_txn_reset(&rep->txn_id);
 }
 
 svn_error_t *

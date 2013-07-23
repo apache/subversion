@@ -38,6 +38,34 @@ typedef struct id_private_t {
 } id_private_t;
 
 
+
+/* Operations on ID parts */
+
+svn_boolean_t
+svn_fs_fs__id_part_is_root(const char * const* part)
+{
+  return strcmp(*part, "0") == 0;
+}
+
+svn_boolean_t
+svn_fs_fs__id_part_eq(const char *lhs,
+                      const char *rhs)
+{
+  return strcmp(lhs, rhs) == 0;
+}
+
+svn_boolean_t
+svn_fs_fs__id_txn_used(const char * const *txn_id)
+{
+  return *txn_id != NULL;
+}
+
+void
+svn_fs_fs__id_txn_reset(const char **txn_id)
+{
+  *txn_id = NULL;
+}
+
 const char *
 svn_fs_fs__id_txn_unparse(const char * const *txn_id,
                           apr_pool_t *pool)

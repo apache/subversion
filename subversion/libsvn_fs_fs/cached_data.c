@@ -222,7 +222,7 @@ open_and_seek_representation(apr_file_t **file_p,
                              representation_t *rep,
                              apr_pool_t *pool)
 {
-  if (! rep->txn_id)
+  if (! svn_fs_fs__id_txn_used(&rep->txn_id))
     return open_and_seek_revision(file_p, fs, rep->revision, rep->offset,
                                   pool);
   else
@@ -758,7 +758,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
       base_rep.revision = header->base_revision;
       base_rep.offset = header->base_offset;
       base_rep.size = header->base_length;
-      base_rep.txn_id = NULL;
+      svn_fs_fs__id_txn_reset(&base_rep.txn_id);
       is_delta = header->type == svn_fs_fs__rep_delta;
 
       ++count;
@@ -1085,7 +1085,7 @@ build_rep_list(apr_array_header_t **list,
       rep.revision = rep_header->base_revision;
       rep.offset = rep_header->base_offset;
       rep.size = rep_header->base_length;
-      rep.txn_id = NULL;
+      svn_fs_fs__id_txn_reset(&rep.txn_id);
 
       rs = NULL;
     }
@@ -1711,7 +1711,7 @@ get_dir_contents(apr_hash_t *entries,
 {
   svn_stream_t *contents;
 
-  if (noderev->data_rep && noderev->data_rep->txn_id)
+  if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
       const char *filename
         = svn_fs_fs__path_txn_node_children(fs, noderev->id, pool);
@@ -1925,7 +1925,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
   apr_hash_t *proplist;
   svn_stream_t *stream;
 
-  if (noderev->prop_rep && noderev->prop_rep->txn_id)
+  if (noderev->prop_rep && svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
     {
       const char *filename
         = svn_fs_fs__path_txn_node_props(fs, noderev->id, pool);
