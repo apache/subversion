@@ -146,9 +146,12 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
 
    Perform temporary allocation in POOL. */
 static svn_error_t *
-recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
-                     apr_file_t *rev_file, apr_off_t offset,
-                     char *max_node_id, char *max_copy_id,
+recover_find_max_ids(svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_file_t *rev_file,
+                     apr_off_t offset,
+                     char *max_node_id,
+                     char *max_copy_id,
                      apr_pool_t *pool)
 {
   svn_fs_fs__rep_header_t *header;
@@ -275,8 +278,10 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
-svn_fs_fs__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
-                        char *max_node_id, char *max_copy_id,
+svn_fs_fs__find_max_ids(svn_fs_t *fs,
+                        svn_revnum_t youngest,
+                        char *max_node_id,
+                        char *max_copy_id,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
