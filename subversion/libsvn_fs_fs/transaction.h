@@ -25,6 +25,11 @@
 
 #include "fs.h"
 
+/* Return the transaction ID of TXN.
+ */
+const char *
+svn_fs_fs__txn_get_id(svn_fs_txn_t *txn);
+
 /* Store NODEREV as the node-revision for the node whose id is ID in
    FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
    necessary temporary allocation in POOL. */
