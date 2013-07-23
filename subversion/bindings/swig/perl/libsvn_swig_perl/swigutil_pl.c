@@ -1389,7 +1389,7 @@ svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
     SV *tmp_file_sv;
     SV *commit_items_sv;
 
-    if (!SvOK((SV *)baton) || SvTYPE(SvRV(prompt_func)) != SVt_PVCV) {
+    if (!SvOK((SV *)baton)) {
       *log_msg = apr_pstrdup(pool, "");
         *tmp_file = NULL;
         return SVN_NO_ERROR;
