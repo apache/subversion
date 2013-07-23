@@ -244,32 +244,31 @@ static svn_error_t *
 unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const struct unlock_proto_rev_baton *b = baton;
-  const char *txn_id = b->txn_id;
   apr_file_t *lockfile = b->lockcookie;
-  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, txn_id, FALSE);
+  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, FALSE);
   apr_status_t apr_err;
 
   if (!txn)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Can't unlock unknown transaction '%s'"),
-                             txn_id);
+                             svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
   if (!txn->being_written)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Can't unlock nonlocked transaction '%s'"),
-                             txn_id);
+                             svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
 
   apr_err = apr_file_unlock(lockfile);
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err,
        _("Can't unlock prototype revision lockfile for transaction '%s'"),
-       txn_id);
+       svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
   apr_err = apr_file_close(lockfile);
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err,
        _("Can't close prototype revision lockfile for transaction '%s'"),
-       txn_id);
+       svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
 
   txn->being_written = FALSE;
 
@@ -322,9 +321,8 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   const struct get_writable_proto_rev_baton *b = baton;
   apr_file_t **file = b->file;
   void **lockcookie = b->lockcookie;
-  const char *txn_id = b->txn_id;
   svn_error_t *err;
-  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, txn_id, TRUE);
+  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, TRUE);
 
   /* First, ensure that no thread in this process (including this one)
      is currently writing to this transaction's proto-rev file. */
@@ -334,7 +332,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
                                "of transaction '%s' because a previous "
                                "representation is currently being written by "
                                "this process"),
-                             txn_id);
+                             svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
 
 
   /* We know that no thread in this process is writing to the proto-rev
@@ -346,7 +344,8 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   {
     apr_file_t *lockfile;
     apr_status_t apr_err;
-    const char *lockfile_path = path_txn_proto_rev_lock(fs, txn_id, pool);
+    const char *lockfile_path
+      = path_txn_proto_rev_lock(fs, b->txn_id, pool);
 
     /* Open the proto-rev lockfile, creating it if necessary, as it may
        not exist if the transaction dates from before the lockfiles were
@@ -370,7 +369,8 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
                                      "file of transaction '%s' because a "
                                      "previous representation is currently "
                                      "being written by another process"),
-                                   txn_id);
+                                   svn_fs_fs__id_txn_unparse(&b->txn_id,
+                                                             pool));
 
         return svn_error_wrap_apr(apr_err,
                                   _("Can't get exclusive lock on file '%s'"),
@@ -386,7 +386,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 
   /* Now open the prototype revision file and seek to the end. */
   err = svn_io_file_open(file,
-                         svn_fs_fs__path_txn_proto_rev(fs, txn_id, pool),
+                         svn_fs_fs__path_txn_proto_rev(fs, b->txn_id, pool),
                          APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
   /* You might expect that we could dispense with the following seek
@@ -406,7 +406,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
     {
       err = svn_error_compose_create(
               err,
-              unlock_proto_rev_list_locked(fs, txn_id, *lockcookie, pool));
+              unlock_proto_rev_list_locked(fs, b->txn_id, *lockcookie, pool));
 
       *lockcookie = NULL;
     }
@@ -2463,7 +2463,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           /* Write out the contents of this directory as a text rep. */
           SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
 
-          noderev->data_rep->txn_id = NULL;
+          reset_txn_in_rep(noderev->data_rep);
           noderev->data_rep->revision = rev;
 
           if (ffd->deltify_directories)
