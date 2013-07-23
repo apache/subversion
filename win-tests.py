@@ -679,6 +679,7 @@ class Httpd:
     print('Httpd.stop_daemon not implemented')
 
 # Move the binaries to the test directory
+create_target_dir(abs_builddir)
 locate_libs()
 if create_dirs:
   for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
