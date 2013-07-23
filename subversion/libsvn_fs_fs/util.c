@@ -189,6 +189,18 @@ svn_fs_fs__path_revprops(svn_fs_t *fs,
                               apr_psprintf(pool, "%ld", rev), NULL);
 }
 
+/* Return TO_ADD appended to the C string representation of TXN_ID.
+ * Allocate the result in POOL.
+ */
+static const char *
+combine_txn_id_string(const char *txn_id,
+                      const char *to_add,
+                      apr_pool_t *pool)
+{
+  return apr_pstrcat(pool, txn_id,
+                     to_add, (char *)NULL);
+}
+
 const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                         const char *txn_id,
@@ -196,8 +208,8 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
 {
   SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
   return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                              apr_pstrcat(pool, txn_id, PATH_EXT_TXN,
-                                          (char *)NULL),
+                              combine_txn_id_string(txn_id, PATH_EXT_TXN,
+                                                    pool),
                               NULL);
 }
 
@@ -209,8 +221,8 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                apr_pstrcat(pool, txn_id, PATH_EXT_REV,
-                                            (char *)NULL),
+                                combine_txn_id_string(txn_id, PATH_EXT_REV,
+                                                      pool),
                                 NULL);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
@@ -225,8 +237,9 @@ svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                                apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
-                                            (char *)NULL),
+                                combine_txn_id_string(txn_id,
+                                                      PATH_EXT_REV_LOCK,
+                                                      pool),
                                 NULL);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
