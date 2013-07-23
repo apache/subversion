@@ -144,8 +144,7 @@ generate_status_desc(enum svn_wc_status_kind status)
    from TARGET_PATH is returned, but there is no error checking involved.
 
    The returned path is allocated from RESULT_POOL, all other
-   allocations are made in SCRATCH_POOL.  When the returned path is ""
-   the non-canonical value "." will be returned. */
+   allocations are made in SCRATCH_POOL.  */
 static const char *
 make_relpath(const char *target_abspath,
              const char *target_path,
@@ -168,8 +167,7 @@ make_relpath(const char *target_abspath,
   relative = svn_dirent_skip_ancestor(target_abspath, abspath);
   if (relative)
     {
-      path = svn_dirent_join(target_path, relative, result_pool);
-      return *path ? path : ".";
+      return svn_dirent_join(target_path, relative, result_pool);
     }
 
   /* An example:
@@ -207,8 +205,7 @@ make_relpath(const char *target_abspath,
       parent_dir_els = svn_dirent_join(parent_dir_els, "..", scratch_pool);
     }
 
-  path = svn_dirent_join(parent_dir_els, path, result_pool);
-  return *path ? path : ".";
+  return svn_dirent_join(parent_dir_els, path, result_pool);
 }
 
 
@@ -351,6 +348,8 @@ print_status(const char *target_abspath,
                                       (char *)NULL);
         }
     }
+
+  path = svn_dirent_local_style(path, pool);
 
   if (detailed)
     {
@@ -626,8 +625,7 @@ svn_cl__print_status(const char *target_abspath,
         return SVN_NO_ERROR;
     }
 
-  return print_status(target_abspath, target_path,
-                      svn_dirent_local_style(path, pool),
+  return print_status(target_abspath, target_path, path,
                       detailed, show_last_committed, repos_locks, status,
                       text_conflicts, prop_conflicts, tree_conflicts,
                       ctx, pool);
