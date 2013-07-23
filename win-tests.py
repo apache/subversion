@@ -814,6 +814,7 @@ elif test_javahl:
     print('[Test runner reported failure]')
     failed = True
 elif test_swig == 'perl':
+  failed = False
   swig_dir = os.path.join(abs_builddir, 'swig')
   swig_pl_dir = os.path.join(swig_dir, 'p5lib')
   swig_pl_svn = os.path.join(swig_pl_dir, 'SVN')
@@ -876,28 +877,58 @@ elif test_swig == 'perl':
     failed = True
 
 elif test_swig == 'python':
-  print('Running Swig Python tests not supported yet')
-  
-  # TODO: Implement something like
-  
-  # IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
-  # mkdir "%TESTDIR%\swig\py-release\libsvn"
-  # mkdir "%TESTDIR%\swig\py-release\svn"
-  # 
-  # xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd" > nul:
-  # xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll" > nul:
-  # xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py" > nul:
-  # xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py" > nul:
-  # 
-  # SET PYTHONPATH=%TESTDIR%\swig\py-release
-  # 
-  # python subversion\bindings\swig\python\tests\run_all.py
-  # IF ERRORLEVEL 1 (
-  #   echo [Python reported error %ERRORLEVEL%]
-  #   SET result=1
-  # )
-  
   failed = False
+  swig_dir = os.path.join(abs_builddir, 'swig')
+  swig_py_dir = os.path.join(swig_dir, 'pylib')
+  swig_py_libsvn = os.path.join(swig_py_dir, 'libsvn')
+  swig_py_svn = os.path.join(swig_py_dir, 'svn')
+
+  create_target_dir(swig_py_libsvn)
+  create_target_dir(swig_py_svn)
+
+  for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
+    if (isinstance(i, gen_base.TargetSWIG)
+        or isinstance(i, gen_base.TargetSWIGLib)) and i.lang == 'python':
+
+      src = os.path.join(abs_objdir, i.filename)
+      copy_changed_file(src, to_dir=swig_py_libsvn)
+
+  py_src = os.path.join(abs_srcdir, 'subversion', 'bindings', 'swig', 'python')
+
+  for py_file in os.listdir(py_src):
+    if py_file.endswith('.py'):
+      copy_changed_file(os.path.join(py_src, py_file),
+                        to_dir=swig_py_libsvn)
+
+  py_src_svn = os.path.join(py_src, 'svn')
+  for py_file in os.listdir(py_src_svn):
+    if py_file.endswith('.py'):
+      copy_changed_file(os.path.join(py_src_svn, py_file),
+                        to_dir=swig_py_svn)
+
+  print('-- Running Swig Python tests --')
+
+  pythonpath = swig_py_dir
+  if 'PYTHONPATH' in os.environ:
+    pythonpath += os.pathsep + os.environ['PYTHONPATH']
+
+  python_exe = 'python.exe'
+  old_cwd = os.getcwd()
+  try:
+    os.environ['PYTHONPATH'] = pythonpath
+
+    r = subprocess.call([
+              python_exe,
+              os.path.join(py_src, 'tests', 'run_all.py')
+              ])
+  finally:
+    os.chdir(old_cwd)
+
+    if (r != 0):
+      print()
+      print('[Test runner reported failure]')
+      failed = True
+
 elif test_swig == 'ruby':
   failed = False
 
