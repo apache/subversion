@@ -54,7 +54,7 @@ static HV *type_cache = NULL;
 #define _SWIG_TYPE(name) _swig_perl_type_query(name, 0)
 #define POOLINFO         _SWIG_TYPE("apr_pool_t *")
 
-static swig_type_info *_swig_perl_type_query(const char *typename, U32 klen)
+static swig_type_info *_swig_perl_type_query(const char *type_name, U32 klen)
 {
     SV **type_info;
     swig_type_info *tinfo;
@@ -63,13 +63,13 @@ static swig_type_info *_swig_perl_type_query(const char *typename, U32 klen)
       type_cache = newHV();
 
     if (klen == 0)
-      klen = strlen(typename);
+      klen = strlen(type_name);
 
-    if ((type_info = hv_fetch(type_cache, typename, klen, 0)))
+    if ((type_info = hv_fetch(type_cache, type_name, klen, 0)))
       return (swig_type_info *) (SvIV(*type_info));
 
-    tinfo = SWIG_TypeQuery(typename);
-    hv_store(type_cache, typename, klen, newSViv((IV)tinfo), 0);
+    tinfo = SWIG_TypeQuery(type_name);
+    hv_store(type_cache, type_name, klen, newSViv((IV)tinfo), 0);
 
     return tinfo;
 }
