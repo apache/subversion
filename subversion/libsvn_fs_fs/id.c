@@ -38,6 +38,15 @@ typedef struct id_private_t {
 } id_private_t;
 
 
+const char *
+svn_fs_fs__id_txn_unparse(const char * const *txn_id,
+                          apr_pool_t *pool)
+{
+  return apr_pstrdup(pool, *txn_id);
+}
+
+
+
 /* Accessing ID Pieces.  */
 
 const char *

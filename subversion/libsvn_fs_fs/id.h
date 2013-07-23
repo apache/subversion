@@ -29,6 +29,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Convert the transaction id in *TXN_ID into a textual representation
+ * allocated in POOL. */
+const char *svn_fs_fs__id_txn_unparse(const char * const *txn_id,
+                                      apr_pool_t *pool);
+
 
 /*** ID accessor functions. ***/
 
