@@ -149,8 +149,15 @@ Candidate changes:
    Justification:
      Regression since 1.7.
    Votes:
-     +1: rhuijben (r1504192 only)
-     +1: philip
+     +1: philip, rhuijben
+
+ * r1506047
+   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
+   build.conf
+   Justification:
+     These targets should build all swig modules for the language.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
