@@ -1230,21 +1230,16 @@ read_next_ids(const char **node_id,
               const char *txn_id,
               apr_pool_t *pool)
 {
-  apr_file_t *file;
-  char buf[MAX_KEY_SIZE*2+3];
-  apr_size_t limit;
-  char *str, *last_str = buf;
-
-  SVN_ERR(svn_io_file_open(&file, path_txn_next_ids(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof(buf);
-  SVN_ERR(svn_io_read_length_line(file, buf, &limit, pool));
-
-  SVN_ERR(svn_io_file_close(file, pool));
+  svn_stringbuf_t *buf;
+  const char *str;
+  char *last_str;
+  SVN_ERR(svn_fs_fs__read_content(&buf,
+                                  path_txn_next_ids(fs, txn_id, pool),
+                                  pool));
 
   /* Parse this into two separate strings. */
 
+  last_str = buf->data;
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1252,7 +1247,7 @@ read_next_ids(const char **node_id,
 
   *node_id = apr_pstrdup(pool, str);
 
-  str = svn_cstring_tokenize(" ", &last_str);
+  str = svn_cstring_tokenize(" \n", &last_str);
   if (! str)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("next-id file corrupt"));
@@ -1392,10 +1387,13 @@ set_uniquifier(svn_fs_t *fs,
                representation_t *rep,
                apr_pool_t *pool)
 {
-  const char *unique_suffix;
+  const char *buffer;
 
-  SVN_ERR(get_new_txn_node_id(&unique_suffix, fs, rep->txn_id, pool));
-  rep->uniquifier = apr_psprintf(pool, "%s/%s", rep->txn_id, unique_suffix);
+  SVN_ERR(get_new_txn_node_id(&buffer, fs, rep->txn_id, pool));
+  rep->uniquifier
+    = apr_psprintf(pool, "%s/%s",
+                   svn_fs_fs__id_txn_unparse(&rep->txn_id, pool),
+                   buffer);
 
   return SVN_NO_ERROR;
 }
@@ -1729,7 +1727,6 @@ static apr_status_t
 rep_write_cleanup(void *data)
 {
   struct rep_write_baton *b = data;
-  const char *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
   svn_error_t *err;
 
   /* Truncate and close the protorevfile. */
@@ -1740,8 +1737,10 @@ rep_write_cleanup(void *data)
      being_written flag is always removed and stays consistent with the
      file lock which will be removed no matter what since the pool is
      going away. */
-  err = svn_error_compose_create(err, unlock_proto_rev(b->fs, txn_id,
-                                                       b->lockcookie, b->pool));
+  err = svn_error_compose_create(err,
+                                 unlock_proto_rev(b->fs,
+                                     svn_fs_fs__id_txn_id(b->noderev->id),
+                                     b->lockcookie, b->pool));
   if (err)
     {
       apr_status_t rc = err->apr_err;
@@ -2751,7 +2750,7 @@ write_final_current(svn_fs_t *fs,
    The FS write lock is assumed to be held by the caller. */
 static svn_error_t *
 verify_locks(svn_fs_t *fs,
-             const char *txn_name,
+             const char *txn_id,
              apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -2762,7 +2761,7 @@ verify_locks(svn_fs_t *fs,
   int i;
 
   /* Fetch the changes for this transaction. */
-  SVN_ERR(svn_fs_fs__txn_changes_fetch(&changes, fs, txn_name, pool));
+  SVN_ERR(svn_fs_fs__txn_changes_fetch(&changes, fs, txn_id, pool));
 
   /* Make an array of the changed paths, and sort them depth-first-ily.  */
   changed_paths = apr_array_make(pool, apr_hash_count(changes) + 1,

@@ -1214,8 +1214,11 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                                      pool));
   if (node_origins)
     {
-      svn_string_t *origin_id_str =
-        svn_hash_gets(node_origins, node_id);
+      const char *node_id_ptr = node_id;
+      apr_size_t len = strlen(node_id_ptr);
+      svn_string_t *origin_id_str
+        = apr_hash_get(node_origins, node_id_ptr, len);
+
       if (origin_id_str)
         *origin_id = svn_fs_fs__id_parse(origin_id_str->data,
                                          origin_id_str->len, pool);
@@ -1238,6 +1241,9 @@ set_node_origins_for_file(svn_fs_t *fs,
   apr_hash_t *origins_hash;
   svn_string_t *old_node_rev_id;
 
+  const char *node_id_ptr = node_id;
+  apr_size_t len = strlen(node_id_ptr);
+
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path,
                                                        PATH_NODE_ORIGINS_DIR,
                                                        pool),
@@ -1250,16 +1256,17 @@ set_node_origins_for_file(svn_fs_t *fs,
   if (! origins_hash)
     origins_hash = apr_hash_make(pool);
 
-  old_node_rev_id = svn_hash_gets(origins_hash, node_id);
+  old_node_rev_id = apr_hash_get(origins_hash, node_id_ptr, len);
 
   if (old_node_rev_id && !svn_string_compare(node_rev_id, old_node_rev_id))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Node origin for '%s' exists with a different "
                                "value (%s) than what we were about to store "
                                "(%s)"),
-                             node_id, old_node_rev_id->data, node_rev_id->data);
+                             node_id_ptr, old_node_rev_id->data,
+                             node_rev_id->data);
 
-  svn_hash_sets(origins_hash, node_id, node_rev_id);
+  apr_hash_set(origins_hash, node_id_ptr, len, node_rev_id);
 
   /* Sure, there's a race condition here.  Two processes could be
      trying to add different cache elements to the same file at the
