@@ -2093,7 +2093,6 @@ def move_update_timestamps(sbox):
   no_text_timestamp(sbox.ospath('A/B/E2/beta'))
 
 @Issue(4398)
-@XFail()
 def status_path_handling(sbox):
   "relative/absolute path handling"
 
