@@ -42,9 +42,9 @@ typedef struct id_private_t {
 /* Operations on ID parts */
 
 svn_boolean_t
-svn_fs_fs__id_part_is_root(const char * const* part)
+svn_fs_fs__id_part_is_root(const char * part)
 {
-  return strcmp(*part, "0") == 0;
+  return strcmp(part, "0") == 0;
 }
 
 svn_boolean_t
@@ -219,6 +219,13 @@ static id_vtable_t id_vtable = {
   svn_fs_fs__id_unparse,
   svn_fs_fs__id_compare
 };
+
+svn_fs_id_t *
+svn_fs_fs__id_txn_create_root(const char *txn_id,
+                              apr_pool_t *pool)
+{
+  return svn_fs_fs__id_txn_create("0", "0", txn_id, pool);
+}
 
 
 svn_fs_id_t *
