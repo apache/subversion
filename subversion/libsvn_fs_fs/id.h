@@ -29,6 +29,22 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/*** Operations on ID parts. ***/
+
+/* Return TRUE, if both elements of the PART is 0, i.e. this is the default
+ * value if e.g. no copies were made of this node. */
+svn_boolean_t svn_fs_fs__id_part_is_root(const char * const *part);
+
+/* Return TRUE, if all element values of *LHS and *RHS match. */
+svn_boolean_t svn_fs_fs__id_part_eq(const char * lhs,
+                                    const char * rhs);
+
+/* Return TRUE, if TXN_ID is used, i.e. doesn't contain just the defaults. */
+svn_boolean_t svn_fs_fs__id_txn_used(const char * const *txn_id);
+
+/* Reset TXN_ID to the defaults. */
+void svn_fs_fs__id_txn_reset(const char **txn_id);
+
 /* Convert the transaction id in *TXN_ID into a textual representation
  * allocated in POOL. */
 const char *svn_fs_fs__id_txn_unparse(const char * const *txn_id,

@@ -125,8 +125,10 @@ static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
                                          apr_pool_t *pool);
 
 static svn_error_t *make_txn_root(svn_fs_root_t **root_p,
-                                  svn_fs_t *fs, const char *txn,
-                                  svn_revnum_t base_rev, apr_uint32_t flags,
+                                  svn_fs_t *fs,
+                                  const char *txn,
+                                  svn_revnum_t base_rev,
+                                  apr_uint32_t flags,
                                   apr_pool_t *pool);
 
 
@@ -833,7 +835,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
      the same, then the child is already on the same branch as the
      parent, and should use the same mutability copy ID that the
      parent will use. */
-  if (svn_fs_fs__key_compare(child_copy_id, parent_copy_id) == 0)
+  if (svn_fs_fs__id_part_eq(child_copy_id, parent_copy_id))
     return SVN_NO_ERROR;
 
   /* If the child is on the same branch that the parent is on, the
@@ -1175,8 +1177,8 @@ make_path_mutable(svn_fs_root_t *root,
 
       child_id = svn_fs_fs__dag_get_id(parent_path->node);
       copyroot_id = svn_fs_fs__dag_get_id(copyroot_node);
-      if (strcmp(svn_fs_fs__id_node_id(child_id),
-                 svn_fs_fs__id_node_id(copyroot_id)) != 0)
+      if (!svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(child_id),
+                                 svn_fs_fs__id_node_id(copyroot_id)))
         is_parent_copyroot = TRUE;
 
       /* Now make this node mutable.  */
@@ -1863,14 +1865,14 @@ merge(svn_stringbuf_t *conflict_p,
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
-          if (strcmp(svn_fs_fs__id_node_id(s_entry->id),
-                     svn_fs_fs__id_node_id(a_entry->id)) != 0
-              || strcmp(svn_fs_fs__id_copy_id(s_entry->id),
-                        svn_fs_fs__id_copy_id(a_entry->id)) != 0
-              || strcmp(svn_fs_fs__id_node_id(t_entry->id),
-                        svn_fs_fs__id_node_id(a_entry->id)) != 0
-              || strcmp(svn_fs_fs__id_copy_id(t_entry->id),
-                        svn_fs_fs__id_copy_id(a_entry->id)) != 0)
+          if (!svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(s_entry->id),
+                                     svn_fs_fs__id_node_id(a_entry->id))
+              || !svn_fs_fs__id_part_eq(svn_fs_fs__id_copy_id(s_entry->id),
+                                        svn_fs_fs__id_copy_id(a_entry->id))
+              || !svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(t_entry->id),
+                                        svn_fs_fs__id_node_id(a_entry->id))
+              || !svn_fs_fs__id_part_eq(svn_fs_fs__id_copy_id(t_entry->id),
+                                        svn_fs_fs__id_copy_id(a_entry->id)))
             return conflict_err(conflict_p,
                                 svn_fspath__join(target_path,
                                                  a_entry->name,

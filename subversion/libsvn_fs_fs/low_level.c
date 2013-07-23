@@ -537,6 +537,9 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
 
   rep->revision = SVN_STR_TO_REV(str);
 
+  /* initialize transaction info (never stored) */
+  svn_fs_fs__id_txn_reset(&rep->txn_id);
+  
   /* while in transactions, it is legal to simply write "-1" */
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -791,7 +794,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   svn_boolean_t may_be_corrupt,
                                   apr_pool_t *pool)
 {
-  if (rep->txn_id && mutable_rep_truncated)
+  if (svn_fs_fs__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, pool);
 
 #define DISPLAY_MAYBE_NULL_CHECKSUM(checksum)          \
