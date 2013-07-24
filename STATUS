@@ -160,11 +160,11 @@ Candidate changes:
      +1: rhuijben
 
  * r1506040, r1506041, r1506058
-   Fix issue 4398, status paths relative to current working directory
+   Fix issue 4398, 'svn status' paths relative to current working directory
    Justification:
      Regression from 1.7.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
