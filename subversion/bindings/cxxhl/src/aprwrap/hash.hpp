@@ -250,7 +250,7 @@ public:
     /**
      * Conversion constructor used by the derived iteration class.
      */
-    explicit Key(const inherited::Key& that) throw()
+    explicit Key(const inherited& that) throw()
       : inherited(that)
       {}
   };
