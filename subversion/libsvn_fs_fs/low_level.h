@@ -115,7 +115,6 @@ svn_stringbuf_t *
 svn_fs_fs__unparse_representation(representation_t *rep,
                                   int format,
                                   svn_boolean_t mutable_rep_truncated,
-                                  svn_boolean_t may_be_corrupt,
                                   apr_pool_t *pool);
 
 /* This type enumerates all forms of representations that we support. */
