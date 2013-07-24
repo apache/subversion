@@ -121,12 +121,6 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
 client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
 
-svn_dlls = []
-for section in gen_obj.sections.values():
-  if section.options.get("msvc-export"):
-    dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
-    svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
-
 opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
@@ -344,10 +338,12 @@ def locate_libs():
 
 
   # Copy the Subversion library DLLs
-  if not cp.has_option('options', '--disable-shared'):
-    for svn_dll in svn_dlls:
-      copy_changed_file(os.path.join(abs_objdir, svn_dll), to_dir=abs_builddir,
-                        cleanup=False)
+  for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
+    if isinstance(i, gen_base.TargetLib) and i.msvc_export:
+      src = os.path.join(abs_objdir, i.filename)
+      if os.path.isfile(src):
+        copy_changed_file(src, to_dir=abs_builddir,
+                          cleanup=False)
 
   # Copy the Apache modules
   if run_httpd and cp.has_option('options', '--with-httpd'):
