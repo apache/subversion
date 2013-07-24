@@ -486,10 +486,6 @@ VALUE svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
                                                        svn_txdelta_window_handler_t handler,
                                                        void *handler_baton);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-svn_error_t *svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
-                                                       svn_txdelta_window_t *window,
-                                                       apr_pool_t *pool);
-SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
                                                                svn_txdelta_window_t *window,
                                                                apr_pool_t *pool);
@@ -523,7 +519,7 @@ svn_error_t *svn_swig_rb_changelist_receiver(void *baton,
                                              apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
-extern svn_ra_reporter3_t *svn_swig_rb_ra_reporter3;
+svn_ra_reporter3_t *svn_swig_rb_get_ra_reporter3();
 
 #ifdef __cplusplus
 }

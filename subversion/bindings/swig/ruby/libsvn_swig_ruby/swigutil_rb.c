@@ -4033,4 +4033,7 @@ static svn_ra_reporter3_t rb_ra_reporter3 = {
   svn_swig_rb_ra_reporter_abort_report
 };
 
-svn_ra_reporter3_t *svn_swig_rb_ra_reporter3 = &rb_ra_reporter3;
+svn_ra_reporter3_t *svn_swig_rb_get_ra_reporter3()
+{
+  return &rb_ra_reporter3;
+}
