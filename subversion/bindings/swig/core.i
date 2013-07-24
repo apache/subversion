@@ -645,28 +645,20 @@ typedef int apr_status_t;
 #ifdef SWIGPERL
 apr_pool_t *current_pool;
 
-#if SWIG_VERSION <= 0x010324
-%{
-#define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
-%}
-#else
-%{
-#define SVN_SWIGEXPORT(t) SWIGEXPORT t
-%}
-#endif
-
 %{
 
+/* ### Eventually this should go away. This is not thread safe and a very
+   ### good example on HOW NOT TO USE pools */
 static apr_pool_t *current_pool = 0;
 
-SVN_SWIGEXPORT(apr_pool_t *)
-svn_swig_pl_get_current_pool (void)
+static apr_pool_t *
+core_get_current_pool (void)
 {
   return current_pool;
 }
 
-SVN_SWIGEXPORT(void)
-svn_swig_pl_set_current_pool (apr_pool_t *pool)
+static void
+core_set_current_pool (apr_pool_t *pool)
 {
   current_pool = pool;
 }
@@ -870,8 +862,8 @@ static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
 #include "svn_private_config.h"
 %}
 %init %{
-  svn_swig_pl_bind_current_pool_fns (&svn_swig_pl_get_current_pool,
-                                     &svn_swig_pl_set_current_pool);
+  svn_swig_pl__bind_current_pool_fns(&core_get_current_pool,
+                                     &core_set_current_pool);
 %}
 #endif
 
