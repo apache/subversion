@@ -39,7 +39,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
                 void *cancel_baton,
                 apr_pool_t *pool);
 
-/*
+/**
  * For the packed revision @a rev in @a fs,  determine the offset within
  * the revision pack file and return it in @a rev_offset.  Use @a pool for
  * allocations.

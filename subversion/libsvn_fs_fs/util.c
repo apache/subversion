@@ -379,7 +379,7 @@ svn_fs_fs__write_current(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
   char *buf;
-  const char *tmp_name, *name;
+  const char *name;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
