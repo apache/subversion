@@ -806,6 +806,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
+             SVN_ERR_FS_CATEGORY_START + 53,
+             "Malformed transaction ID string.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

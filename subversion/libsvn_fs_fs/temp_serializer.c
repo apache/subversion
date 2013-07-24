@@ -183,7 +183,6 @@ serialize_representation(svn_temp_serializer__context_t *context,
   serialize_checksum(context, &rep->md5_checksum);
   serialize_checksum(context, &rep->sha1_checksum);
 
-  svn_temp_serializer__add_string(context, &rep->txn_id);
   svn_temp_serializer__add_string(context, &rep->uniquifier);
 
   /* return to the caller's nesting level */
@@ -208,7 +207,6 @@ deserialize_representation(void *buffer,
   deserialize_checksum(rep, &rep->md5_checksum);
   deserialize_checksum(rep, &rep->sha1_checksum);
 
-  svn_temp_deserializer__resolve(rep, (void **)&rep->txn_id);
   svn_temp_deserializer__resolve(rep, (void **)&rep->uniquifier);
 }
 

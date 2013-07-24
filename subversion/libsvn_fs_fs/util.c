@@ -193,17 +193,17 @@ svn_fs_fs__path_revprops(svn_fs_t *fs,
  * Allocate the result in POOL.
  */
 static const char *
-combine_txn_id_string(const char *txn_id,
+combine_txn_id_string(const svn_fs_fs__id_part_t *txn_id,
                       const char *to_add,
                       apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, txn_id,
+  return apr_pstrcat(pool, svn_fs_fs__id_txn_unparse(txn_id, pool),
                      to_add, (char *)NULL);
 }
 
 const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
-                        const char *txn_id,
+                        const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool)
 {
   SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
@@ -215,7 +215,7 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
 
 const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
-                              const char *txn_id,
+                              const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -231,7 +231,7 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
 
 const char *
 svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
-                                   const char *txn_id,
+                                   const svn_fs_fs__id_part_t *txn_id,
                                    apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -251,13 +251,13 @@ svn_fs_fs__path_txn_node_rev(svn_fs_t *fs,
                              const svn_fs_id_t *id,
                              apr_pool_t *pool)
 {
-  const char *txn_id = svn_fs_fs__id_txn_id(id);
-  const char *node_id = svn_fs_fs__id_node_id(id);
-  const char *copy_id = svn_fs_fs__id_copy_id(id);
-  const char *name = apr_psprintf(pool, PATH_PREFIX_NODE "%s.%s",
-                                  node_id, copy_id);
+  char *filename = (char *)svn_fs_fs__id_unparse(id, pool)->data;
+  *strrchr(filename, '.') = '\0';
 
-  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool), name,
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, svn_fs_fs__id_txn_id(id),
+                                                 pool),
+                         apr_psprintf(pool, PATH_PREFIX_NODE "%s",
+                                      filename),
                          pool);
 }
 
@@ -281,11 +281,17 @@ svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
 
 const char *
 svn_fs_fs__path_node_origin(svn_fs_t *fs,
-                            const char *node_id,
+                            const svn_fs_fs__id_part_t *node_id,
                             apr_pool_t *pool)
 {
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__ui64tobase36(buffer, node_id->number);
+
+  if (len > 1)
+    buffer[len - 1] = '\0';
+
   return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                              node_id, NULL);
+                              buffer, NULL);
 }
 
 const char *
@@ -367,19 +373,28 @@ svn_fs_fs__write_revnum_file(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__write_current(svn_fs_t *fs,
                          svn_revnum_t rev,
-                         const char *next_node_id,
-                         const char *next_copy_id,
+                         apr_uint64_t next_node_id,
+                         apr_uint64_t next_copy_id,
                          apr_pool_t *pool)
 {
   char *buf;
-  const char *name;
+  const char *tmp_name, *name;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
   if (ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    buf = apr_psprintf(pool, "%ld\n", rev);
+    {
+      buf = apr_psprintf(pool, "%ld\n", rev);
+    }
   else
-    buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
+    {
+      char node_id_str[SVN_INT64_BUFFER_SIZE];
+      char copy_id_str[SVN_INT64_BUFFER_SIZE];
+      svn__ui64tobase36(node_id_str, next_node_id);
+      svn__ui64tobase36(copy_id_str, next_copy_id);
+
+      buf = apr_psprintf(pool, "%ld %s %s\n", rev, node_id_str, copy_id_str);
+    }
 
   name = svn_fs_fs__path_current(fs, pool);
   SVN_ERR(svn_io_write_atomic(name, buf, strlen(buf),

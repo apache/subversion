@@ -181,7 +181,7 @@ svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs,
  */
 const char *
 svn_fs_fs__path_txn_dir(svn_fs_t *fs,
-                        const char *txn_id,
+                        const svn_fs_fs__id_part_t *txn_id,
                         apr_pool_t *pool);
 
 /* Return the path of the proto-revision file for transaction TXN_ID in FS.
@@ -189,7 +189,7 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
  */
 const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
-                              const char *txn_id,
+                              const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool);
 
 /* Return the path of the proto-revision lock file for transaction TXN_ID
@@ -197,7 +197,7 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
  */
 const char *
 svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
-                                   const char *txn_id,
+                                   const svn_fs_fs__id_part_t *txn_id,
                                    apr_pool_t *pool);
 
 /* Return the path of the file containing the in-transaction node revision
@@ -230,7 +230,7 @@ svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
  */
 const char *
 svn_fs_fs__path_node_origin(svn_fs_t *fs,
-                            const char *node_id,
+                            const svn_fs_fs__id_part_t *node_id,
                             apr_pool_t *pool);
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
@@ -279,8 +279,8 @@ svn_fs_fs__write_revnum_file(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__write_current(svn_fs_t *fs,
                          svn_revnum_t rev,
-                         const char *next_node_id,
-                         const char *next_copy_id,
+                         apr_uint64_t next_node_id,
+                         apr_uint64_t next_copy_id,
                          apr_pool_t *pool);
 
 /* Read the file at PATH and return its content in *CONTENT. *CONTENT will

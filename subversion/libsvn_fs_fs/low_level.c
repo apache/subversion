@@ -629,7 +629,7 @@ read_rep_offsets(representation_t **rep_p,
 
   if ((*rep_p)->revision == SVN_INVALID_REVNUM)
     if (noderev_id)
-      (*rep_p)->txn_id = svn_fs_fs__id_txn_id(noderev_id);
+      (*rep_p)->txn_id = *svn_fs_fs__id_txn_id(noderev_id);
 
   return SVN_NO_ERROR;
 }

@@ -55,7 +55,6 @@
 #include "fs.h"
 #include "tree.h"
 #include "lock.h"
-#include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
 #include "low_level.h"
@@ -1202,7 +1201,7 @@ get_node_origins_from_file(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            svn_fs_t *fs,
-                           const char *node_id,
+                           const svn_fs_fs__id_part_t *node_id,
                            apr_pool_t *pool)
 {
   apr_hash_t *node_origins;
@@ -1214,8 +1213,8 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                                      pool));
   if (node_origins)
     {
-      const char *node_id_ptr = node_id;
-      apr_size_t len = strlen(node_id_ptr);
+      char node_id_ptr[SVN_INT64_BUFFER_SIZE];
+      apr_size_t len = svn__ui64tobase36(node_id_ptr, node_id->number);
       svn_string_t *origin_id_str
         = apr_hash_get(node_origins, node_id_ptr, len);
 
@@ -1232,7 +1231,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
 static svn_error_t *
 set_node_origins_for_file(svn_fs_t *fs,
                           const char *node_origins_path,
-                          const char *node_id,
+                          const svn_fs_fs__id_part_t *node_id,
                           svn_string_t *node_rev_id,
                           apr_pool_t *pool)
 {
@@ -1241,8 +1240,9 @@ set_node_origins_for_file(svn_fs_t *fs,
   apr_hash_t *origins_hash;
   svn_string_t *old_node_rev_id;
 
-  const char *node_id_ptr = node_id;
-  apr_size_t len = strlen(node_id_ptr);
+  /* the hash serialization functions require strings as keys */
+  char node_id_ptr[SVN_INT64_BUFFER_SIZE];
+  apr_size_t len = svn__ui64tobase36(node_id_ptr, node_id->number);
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path,
                                                        PATH_NODE_ORIGINS_DIR,
@@ -1289,7 +1289,7 @@ set_node_origins_for_file(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_fs__set_node_origin(svn_fs_t *fs,
-                           const char *node_id,
+                           const svn_fs_fs__id_part_t *node_id,
                            const svn_fs_id_t *node_rev_id,
                            apr_pool_t *pool)
 {
