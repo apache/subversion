@@ -75,13 +75,8 @@ dbg_log_access(svn_fs_t *fs,
   apr_off_t offset_in_rev = offset;
 
   /* determine rev / pack file offset */
-  if (svn_fs_fs__is_packed_rev(fs, revision))
-    {
-      apr_off_t rev_offset;
-      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, revision,
-                                           scratch_pool));
-      offset += rev_offset;
-    }
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision, offset,
+                                 scratch_pool));
 
   /* constructing the pack file description */
   if (revision < ffd->min_unpacked_rev)
@@ -174,15 +169,7 @@ open_and_seek_revision(apr_file_t **file,
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
-
-  if (svn_fs_fs__is_packed_rev(fs, rev))
-    {
-      apr_off_t rev_offset;
-
-      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
-      offset += rev_offset;
-    }
-
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, offset, pool));
   SVN_ERR(aligned_seek(rev_file, offset, pool));
 
   *file = rev_file;
