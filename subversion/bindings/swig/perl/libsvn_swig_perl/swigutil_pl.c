@@ -962,10 +962,10 @@ static svn_error_t * thunk_abort_edit(void *edit_baton,
 
 
 void
-svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
-                              void **h_baton,
-                              SV *callback,
-                              apr_pool_t *pool)
+svn_swig_pl_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                                void **h_baton,
+                                SV *callback,
+                                apr_pool_t *pool)
 {
     *handler = thunk_window_handler;
     *h_baton = callback;
@@ -973,10 +973,10 @@ svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
     svn_swig_pl_hold_ref_in_pool(pool, callback);
 }
 
-void svn_delta_make_editor(svn_delta_editor_t **editor,
-                           void **edit_baton,
-                           SV *perl_editor,
-                           apr_pool_t *pool)
+void svn_swig_pl_make_editor(svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             SV *perl_editor,
+                             apr_pool_t *pool)
 {
   svn_delta_editor_t *thunk_editor = svn_delta_default_editor(pool);
 
@@ -1184,10 +1184,10 @@ svn_error_t *thunk_get_wc_prop(void *baton,
 }
 
 
-svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
-                                   void **c_baton,
-                                   SV *perl_callbacks,
-                                   apr_pool_t *pool)
+svn_error_t *svn_swig_pl_make_callbacks(svn_ra_callbacks_t **cb,
+                                        void **c_baton,
+                                        SV *perl_callbacks,
+                                        apr_pool_t *pool)
 {
     SV *auth_baton;
 
