@@ -62,6 +62,16 @@
    thunk editors for the various language bindings.
 */
 
+#ifdef SWIGPYTHON
+/* Make swig wrap this function for us, to allow making an editor in python
+   ### There must be a cleaner way to implement this? 
+   ### Maybe follow Ruby by wrapping it where passing an editor? */
+void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             PyObject *py_editor,
+                             apr_pool_t *pool);
+#endif
+
 #ifdef SWIGPERL
 %typemap(in) (const svn_delta_editor_t *EDITOR, void *BATON) {
     svn_swig_pl_make_editor(&$1, &$2, $input, _global_pool);
