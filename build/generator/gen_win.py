@@ -795,7 +795,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if target.name.contains('cxxhl'):
+    if 'cxxhl' in target.name:
       fakeincludes.append("subversion/bindings/cxxhl/include")
 
     return gen_base.unique(map(self.apath, fakeincludes))
