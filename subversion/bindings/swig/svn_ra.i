@@ -77,7 +77,7 @@
 
 #ifdef SWIGPYTHON
 %callback_typemap(const svn_ra_reporter2_t *reporter, void *report_baton,
-                  (svn_ra_reporter2_t *)&swig_py_ra_reporter2,
+                  svn_swig_py_get_ra_reporter2(),
                   ,
                   )
 %callback_typemap(svn_location_segment_receiver_t receiver, void *receiver_baton,

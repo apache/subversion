@@ -514,7 +514,8 @@
     else if ($input == Py_None) {
         $1 = NULL;
     }
-    else if (svn_swig_ConvertPtr($input, (void **)&$1, $descriptor(svn_auth_ssl_server_cert_info_t *)) == 0) {
+    else if (svn_swig_py_convert_ptr($input, (void **)&$1,
+                                     $descriptor(svn_auth_ssl_server_cert_info_t *)) == 0) {
     }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
@@ -869,10 +870,8 @@ static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
 #include "svn_private_config.h"
 %}
 %init %{
-#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
   svn_swig_pl_bind_current_pool_fns (&svn_swig_pl_get_current_pool,
                                      &svn_swig_pl_set_current_pool);
-#endif
 %}
 #endif
 

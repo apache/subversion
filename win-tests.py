@@ -824,17 +824,13 @@ elif test_swig == 'perl':
 
   for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
     if isinstance(i, gen_base.TargetSWIG) and i.lang == 'perl':
-
-      src = os.path.join(abs_objdir, i.filename)
-
-      # Copy _Core.dll to a location in $PATH
-      if i.name == 'perl_core':
-        copy_changed_file(src, to_dir=abs_builddir)
-
       mod_dir = os.path.join(swig_pl_auto_svn, '_' + i.name[5:].capitalize())
       create_target_dir(mod_dir)
+      copy_changed_file(os.path.join(abs_objdir, i.filename), to_dir=mod_dir)
 
-      copy_changed_file(src, to_dir=mod_dir)
+    elif isinstance(i, gen_base.TargetSWIGLib) and i.lang == 'perl':
+      copy_changed_file(os.path.join(abs_objdir, i.filename),
+                        to_dir=abs_builddir)
 
   pm_src = os.path.join(abs_srcdir, 'subversion', 'bindings', 'swig', 'perl',
                         'native')
