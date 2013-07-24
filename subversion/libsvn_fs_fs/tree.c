@@ -51,7 +51,6 @@
 #include "svn_props.h"
 
 #include "fs.h"
-#include "key-gen.h"
 #include "cached_data.h"
 #include "dag.h"
 #include "lock.h"
@@ -106,8 +105,9 @@ typedef dag_node_t fs_rev_root_data_t;
 
 typedef struct fs_txn_root_data_t
 {
-  const char *txn_id;
-
+  /* TXN_ID value from the main struct but as a struct instead of a string */
+  svn_fs_fs__id_part_t txn_id;
+  
   /* Cache of txn DAG nodes (without their nested noderevs, because
    * it's mutable). Same keys/values as ffd->rev_node_cache. */
   svn_cache__t *txn_node_cache;
@@ -126,7 +126,7 @@ static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
 
 static svn_error_t *make_txn_root(svn_fs_root_t **root_p,
                                   svn_fs_t *fs,
-                                  const char *txn,
+                                  const svn_fs_fs__id_part_t *txn,
                                   svn_revnum_t base_rev,
                                   apr_uint32_t flags,
                                   apr_pool_t *pool);
@@ -654,13 +654,13 @@ svn_fs_fs__revision_root(svn_fs_root_t **root_p,
 /* Getting dag nodes for roots.  */
 
 /* Return the transaction ID to a given transaction ROOT. */
-static const char *
+static const svn_fs_fs__id_part_t *
 root_txn_id(svn_fs_root_t *root)
 {
   fs_txn_root_data_t *frd = root->fsap_data;
   assert(root->is_txn_root);
   
-  return frd->txn_id;
+  return &frd->txn_id;
 }
 
 /* Set *NODE_P to a freshly opened dag node referring to the root
@@ -798,7 +798,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
                      apr_pool_t *pool)
 {
   const svn_fs_id_t *child_id, *parent_id, *copyroot_id;
-  const char *child_copy_id, *parent_copy_id;
+  const svn_fs_fs__id_part_t *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
   svn_fs_root_t *copyroot_root;
   dag_node_t *copyroot_node;
@@ -1122,7 +1122,7 @@ make_path_mutable(svn_fs_root_t *root,
                   apr_pool_t *pool)
 {
   dag_node_t *clone;
-  const char *txn_id = root_txn_id(root);
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(root);
 
   /* Is the node mutable already?  */
   if (svn_fs_fs__dag_check_mutable(parent_path->node))
@@ -1132,7 +1132,8 @@ make_path_mutable(svn_fs_root_t *root,
   if (parent_path->parent)
     {
       const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
-      const char *copy_id = NULL;
+      svn_fs_fs__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
+      svn_fs_fs__id_part_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
       const char *clone_path, *copyroot_path;
       svn_revnum_t copyroot_rev;
@@ -1149,7 +1150,7 @@ make_path_mutable(svn_fs_root_t *root,
         {
         case copy_id_inherit_parent:
           parent_id = svn_fs_fs__dag_get_id(parent_path->parent->node);
-          copy_id = svn_fs_fs__id_copy_id(parent_id);
+          copy_id = *svn_fs_fs__id_copy_id(parent_id);
           break;
 
         case copy_id_inherit_new:
@@ -1158,7 +1159,7 @@ make_path_mutable(svn_fs_root_t *root,
           break;
 
         case copy_id_inherit_self:
-          copy_id = NULL;
+          copy_id_ptr = NULL;
           break;
 
         case copy_id_inherit_unknown:
@@ -1187,7 +1188,7 @@ make_path_mutable(svn_fs_root_t *root,
                                          parent_path->parent->node,
                                          clone_path,
                                          parent_path->entry,
-                                         copy_id, txn_id,
+                                         copy_id_ptr, txn_id,
                                          is_parent_copyroot,
                                          pool));
 
@@ -1273,7 +1274,7 @@ get_dag(dag_node_t **dag_node_p,
    be SVN_INVALID_REVNUM.  Do all this as part of POOL.  */
 static svn_error_t *
 add_change(svn_fs_t *fs,
-           const char *txn_id,
+           const svn_fs_fs__id_part_t *txn_id,
            const char *path,
            const svn_fs_id_t *noderev_id,
            svn_fs_path_change_kind_t change_kind,
@@ -1469,7 +1470,7 @@ fs_change_node_prop(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   apr_hash_t *proplist;
-  const char *txn_id;
+  const svn_fs_fs__id_part_t *txn_id;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
@@ -1611,7 +1612,7 @@ merge(svn_stringbuf_t *conflict_p,
       dag_node_t *target,
       dag_node_t *source,
       dag_node_t *ancestor,
-      const char *txn_id,
+      const svn_fs_fs__id_part_t *txn_id,
       apr_int64_t *mergeinfo_increment_out,
       apr_pool_t *pool)
 {
@@ -1975,7 +1976,7 @@ merge_changes(dag_node_t *ancestor_node,
 {
   dag_node_t *txn_root_node;
   svn_fs_t *fs = txn->fs;
-  const char *txn_id = svn_fs_fs__txn_get_id(txn);
+  const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__txn_get_id(txn);
   
   SVN_ERR(svn_fs_fs__dag_txn_root(&txn_root_node, fs, txn_id, pool));
 
@@ -2260,7 +2261,7 @@ fs_make_dir(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   dag_node_t *sub_dir;
-  const char *txn_id = root_txn_id(root);
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(root);
 
   SVN_ERR(check_newline(path, pool));
 
@@ -2309,7 +2310,7 @@ fs_delete_node(svn_fs_root_t *root,
                apr_pool_t *pool)
 {
   parent_path_t *parent_path;
-  const char *txn_id;
+  const svn_fs_fs__id_part_t *txn_id;
   apr_int64_t mergeinfo_count = 0;
   svn_node_kind_t kind;
 
@@ -2385,7 +2386,7 @@ copy_helper(svn_fs_root_t *from_root,
 {
   dag_node_t *from_node;
   parent_path_t *to_parent_path;
-  const char *txn_id = root_txn_id(to_root);
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(to_root);
   svn_boolean_t same_p;
 
   /* Use an error check, not an assert, because even the caller cannot
@@ -2581,7 +2582,7 @@ fs_make_file(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   dag_node_t *child;
-  const char *txn_id = root_txn_id(root);
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(root);
 
   SVN_ERR(check_newline(path, pool));
 
@@ -2817,7 +2818,7 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
   parent_path_t *parent_path;
-  const char *txn_id = root_txn_id(tb->root);
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(tb->root);
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
@@ -2982,7 +2983,7 @@ apply_text(void *baton, apr_pool_t *pool)
 {
   struct text_baton_t *tb = baton;
   parent_path_t *parent_path;
-  const char *txn_id = root_txn_id(tb->root);
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(tb->root);
 
   /* Call open_path with no flags, as we want this to return an error
      if the node for which we are searching doesn't exist. */
@@ -3360,7 +3361,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
 {
   svn_fs_t *fs = root->fs;
   const svn_fs_id_t *given_noderev_id, *cached_origin_id;
-  const char *node_id, *dash;
+  const svn_fs_fs__id_part_t *node_id;
 
   path = svn_fs__canonicalize_abspath(path, pool);
 
@@ -3368,27 +3369,13 @@ fs_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(svn_fs_fs__node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
-  /* Is it a brand new uncommitted node? */
-  if (node_id[0] == '_')
+  /* Is it a brand new uncommitted node or a new-style node ID?
+   * (committed old-style nodes will have a 0 revision value;
+   * rev 0, number 0 is rev 0 root node). Note that != 0 includes
+   * SVN_INVALID_REVNUM for uncommitted nodes. */
+  if (node_id->revision != 0 || node_id->number == 0)
     {
-      *revision = SVN_INVALID_REVNUM;
-      return SVN_NO_ERROR;
-    }
-
-  /* Maybe this is a new-style node ID that just has the revision
-     sitting right in it. */
-  dash = strchr(node_id, '-');
-  if (dash && *(dash+1))
-    {
-      *revision = SVN_STR_TO_REV(dash + 1);
-      return SVN_NO_ERROR;
-    }
-
-  /* The root node always has ID 0, created in revision 0 and will never
-     use the new-style ID format. */
-  if (strcmp(node_id, "0") == 0)
-    {
-      *revision = 0;
+      *revision = node_id->revision;
       return SVN_NO_ERROR;
     }
 
@@ -3468,7 +3455,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
 
     /* Wow, I don't want to have to do all that again.  Let's cache
        the result. */
-    if (node_id[0] != '_')
+    if (node_id->revision != SVN_INVALID_REVNUM)
       SVN_ERR(svn_fs_fs__set_node_origin(fs, node_id,
                                          svn_fs_fs__dag_get_id(node), pool));
 
@@ -4194,17 +4181,17 @@ make_revision_root(svn_fs_t *fs,
 static svn_error_t *
 make_txn_root(svn_fs_root_t **root_p,
               svn_fs_t *fs,
-              const char *txn,
+              const svn_fs_fs__id_part_t *txn,
               svn_revnum_t base_rev,
               apr_uint32_t flags,
               apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root(fs, pool);
   fs_txn_root_data_t *frd = apr_pcalloc(root->pool, sizeof(*frd));
-  frd->txn_id = apr_pstrdup(root->pool, txn);
+  frd->txn_id = *txn;
 
   root->is_txn_root = TRUE;
-  root->txn = apr_pstrdup(root->pool, txn);
+  root->txn = svn_fs_fs__id_txn_unparse(txn, root->pool);
   root->txn_flags = flags;
   root->rev = base_rev;
 
@@ -4375,7 +4362,7 @@ svn_fs_fs__verify_root(svn_fs_root_t *root,
   if (root->is_txn_root)
     {
       fs_txn_root_data_t *frd = root->fsap_data;
-      SVN_ERR(svn_fs_fs__dag_txn_root(&root_dir, fs, frd->txn_id, pool));
+      SVN_ERR(svn_fs_fs__dag_txn_root(&root_dir, fs, &frd->txn_id, pool));
     }
   else
     {

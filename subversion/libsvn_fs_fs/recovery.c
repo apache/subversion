@@ -26,7 +26,6 @@
 #include "svn_pools.h"
 #include "private/svn_string_private.h"
 
-#include "key-gen.h"
 #include "low_level.h"
 #include "rep-cache.h"
 #include "revprops.h"
@@ -150,8 +149,8 @@ recover_find_max_ids(svn_fs_t *fs,
                      svn_revnum_t rev,
                      apr_file_t *rev_file,
                      apr_off_t offset,
-                     char *max_node_id,
-                     char *max_copy_id,
+                     apr_uint64_t *max_node_id,
+                     apr_uint64_t *max_copy_id,
                      apr_pool_t *pool)
 {
   svn_fs_fs__rep_header_t *header;
@@ -214,7 +213,8 @@ recover_find_max_ids(svn_fs_t *fs,
       char *str;
       svn_node_kind_t kind;
       svn_fs_id_t *id;
-      const char *node_id, *copy_id;
+      const svn_fs_fs__id_part_t *rev_offset;
+      apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
       const svn_string_t *path = svn__apr_hash_index_val(hi);
 
@@ -244,31 +244,26 @@ recover_find_max_ids(svn_fs_t *fs,
 
       id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
 
-      if (svn_fs_fs__id_rev(id) != rev)
+      rev_offset = svn_fs_fs__id_rev_offset(id);
+      if (rev_offset->revision != rev)
         {
           /* If the node wasn't modified in this revision, we've already
              checked the node and copy id. */
           continue;
         }
 
-      node_id = svn_fs_fs__id_node_id(id);
-      copy_id = svn_fs_fs__id_copy_id(id);
+      node_id = svn_fs_fs__id_node_id(id)->number;
+      copy_id = svn_fs_fs__id_copy_id(id)->number;
 
-      if (svn_fs_fs__key_compare(node_id, max_node_id) > 0)
-        {
-          SVN_ERR_ASSERT(strlen(node_id) < MAX_KEY_SIZE);
-          apr_cpystrn(max_node_id, node_id, MAX_KEY_SIZE);
-        }
-      if (svn_fs_fs__key_compare(copy_id, max_copy_id) > 0)
-        {
-          SVN_ERR_ASSERT(strlen(copy_id) < MAX_KEY_SIZE);
-          apr_cpystrn(max_copy_id, copy_id, MAX_KEY_SIZE);
-        }
+      if (node_id > *max_node_id)
+        *max_node_id = node_id;
+      if (copy_id > *max_copy_id)
+        *max_copy_id = copy_id;
 
       if (kind == svn_node_file)
         continue;
 
-      child_dir_offset = svn_fs_fs__id_offset(id);
+      child_dir_offset = rev_offset->number;
       SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
                                    max_node_id, max_copy_id, iterpool));
     }
@@ -280,8 +275,8 @@ recover_find_max_ids(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__find_max_ids(svn_fs_t *fs,
                         svn_revnum_t youngest,
-                        char *max_node_id,
-                        char *max_copy_id,
+                        apr_uint64_t *max_node_id,
+                        apr_uint64_t *max_copy_id,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -320,8 +315,8 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = b->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
-  char next_node_id_buf[MAX_KEY_SIZE], next_copy_id_buf[MAX_KEY_SIZE];
-  char *next_node_id = NULL, *next_copy_id = NULL;
+  apr_uint64_t next_node_id = 0;
+  apr_uint64_t next_copy_id = 0;
   svn_revnum_t youngest_rev;
   svn_node_kind_t youngest_revprops_kind;
 
@@ -381,39 +376,23 @@ recover_body(void *baton, apr_pool_t *pool)
          we go along. */
       svn_revnum_t rev;
       apr_pool_t *iterpool = svn_pool_create(pool);
-      char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
-      apr_size_t len;
 
       for (rev = 0; rev <= max_rev; rev++)
         {
-          apr_file_t *rev_file;
-          apr_off_t root_offset;
-          svn_fs_id_t *root_id;
-
           svn_pool_clear(iterpool);
 
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev,
-                                                   iterpool));
-          SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, rev, iterpool));
-
-          root_offset = svn_fs_fs__id_offset(root_id);
-          SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
-                                       max_node_id, max_copy_id, iterpool));
-          SVN_ERR(svn_io_file_close(rev_file, iterpool));
+          SVN_ERR(svn_fs_fs__find_max_ids(fs, rev, &next_node_id,
+                                          &next_copy_id, iterpool));
         }
       svn_pool_destroy(iterpool);
 
       /* Now that we finally have the maximum revision, node-id and copy-id, we
          can bump the two ids to get the next of each. */
-      len = strlen(max_node_id);
-      svn_fs_fs__next_key(max_node_id, &len, next_node_id_buf);
-      next_node_id = next_node_id_buf;
-      len = strlen(max_copy_id);
-      svn_fs_fs__next_key(max_copy_id, &len, next_copy_id_buf);
-      next_copy_id = next_copy_id_buf;
+      next_node_id++;
+      next_copy_id++;
     }
 
   /* Before setting current, verify that there is a revprops file

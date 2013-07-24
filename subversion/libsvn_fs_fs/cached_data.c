@@ -202,7 +202,7 @@ open_and_seek_transaction(apr_file_t **file,
   apr_file_t *rev_file;
 
   SVN_ERR(svn_io_file_open(&rev_file,
-                           svn_fs_fs__path_txn_proto_rev(fs, rep->txn_id,
+                           svn_fs_fs__path_txn_proto_rev(fs, &rep->txn_id,
                                                          pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
