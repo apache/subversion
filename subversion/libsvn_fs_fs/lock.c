@@ -864,6 +864,7 @@ lock_body(void *baton, apr_pool_t *pool)
   lock->is_dav_comment = lb->is_dav_comment;
   lock->creation_date = apr_time_now();
   lock->expiration_date = lb->expiration_date;
+
   rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
   SVN_ERR(set_lock(lb->fs->path, lock, rev_0_path, pool));
   *lb->lock_p = lock;
