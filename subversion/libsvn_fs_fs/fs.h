@@ -447,7 +447,7 @@ typedef struct representation_t
   svn_revnum_t revision;
 
   /* Offset into the revision file where it is located. */
-  apr_off_t offset;
+  svn_filesize_t offset;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
