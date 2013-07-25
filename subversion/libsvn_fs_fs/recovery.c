@@ -105,7 +105,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
    recover_find_max_ids() below. */
 struct recover_read_from_file_baton
 {
-  apr_file_t *file;
+  svn_stream_t *stream;
   apr_pool_t *pool;
   apr_off_t remaining;
 };
@@ -117,7 +117,7 @@ static svn_error_t *
 read_handler_recover(void *baton, char *buffer, apr_size_t *len)
 {
   struct recover_read_from_file_baton *b = baton;
-  svn_filesize_t bytes_to_read = *len;
+  apr_size_t bytes_to_read = *len;
 
   if (b->remaining == 0)
     {
@@ -126,12 +126,11 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
       return SVN_NO_ERROR;
     }
 
-  if (bytes_to_read > b->remaining)
-    bytes_to_read = b->remaining;
+  if ((apr_int64_t)bytes_to_read > (apr_int64_t)b->remaining)
+    bytes_to_read = (apr_size_t)b->remaining;
   b->remaining -= bytes_to_read;
 
-  return svn_io_file_read_full2(b->file, buffer, (apr_size_t) bytes_to_read,
-                                len, NULL, b->pool);
+  return svn_stream_read(b->stream, buffer, &bytes_to_read);
 }
 
 /* Part of the recovery procedure.  Read the directory noderev at offset
@@ -161,9 +160,9 @@ recover_find_max_ids(svn_fs_t *fs,
   apr_pool_t *iterpool;
   node_revision_t *noderev;
 
-  stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
+  baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool));
 
   /* Check that this is a directory.  It should be. */
   if (noderev->kind != svn_node_dir)
@@ -185,7 +184,7 @@ recover_find_max_ids(svn_fs_t *fs,
      rely on directory entries being stored as PLAIN reps, though. */
   offset = noderev->data_rep->offset;
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_rep_header(&header, stream, pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
   if (header->type != svn_fs_fs__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Recovery encountered a deltified directory "
@@ -193,9 +192,8 @@ recover_find_max_ids(svn_fs_t *fs,
 
   /* Now create a stream that's allowed to read only as much data as is
      stored in the representation. */
-  baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = (apr_size_t) noderev->data_rep->expanded_size;
+  baton.remaining = noderev->data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
