@@ -2199,8 +2199,9 @@ write_hash_rep(representation_t *rep,
   svn_stream_t *stream;
   struct write_hash_baton *whb;
   representation_t *old_rep;
+  apr_off_t offset = 0;
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&rep->offset, file, pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
 
   whb = apr_pcalloc(pool, sizeof(*whb));
 
@@ -2226,7 +2227,7 @@ write_hash_rep(representation_t *rep,
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, rep->offset, pool));
+      SVN_ERR(svn_io_file_trunc(file, offset, pool));
 
       /* Use the old rep for this content. */
       memcpy(rep, old_rep, sizeof (*rep));
@@ -2235,6 +2236,8 @@ write_hash_rep(representation_t *rep,
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
+
+      rep->offset = offset;
 
       /* update the representation */
       rep->size = whb->size;
@@ -2274,6 +2277,7 @@ write_hash_delta_rep(representation_t *rep,
 
   apr_off_t rep_end = 0;
   apr_off_t delta_start = 0;
+  apr_off_t offset = 0;
 
   struct write_hash_baton *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2283,7 +2287,7 @@ write_hash_delta_rep(representation_t *rep,
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, props, pool));
   SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, pool));
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&rep->offset, file, pool));
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2333,7 +2337,7 @@ write_hash_delta_rep(representation_t *rep,
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, rep->offset, pool));
+      SVN_ERR(svn_io_file_trunc(file, offset, pool));
 
       /* Use the old rep for this content. */
       memcpy(rep, old_rep, sizeof (*rep));
@@ -2343,6 +2347,8 @@ write_hash_delta_rep(representation_t *rep,
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
+
+      rep->offset = offset;
 
       /* update the representation */
       rep->expanded_size = whb->size;
