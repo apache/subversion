@@ -228,68 +228,6 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev
- * caching has been enabled and the data can be found, IS_CACHED will
- * be set to TRUE. The noderev will be allocated from POOL.
- *
- * Non-permanent ids (e.g. ids within a TXN) will not be cached.
- */
-static svn_error_t *
-get_cached_node_revision_body(node_revision_t **noderev_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              svn_boolean_t *is_cached,
-                              apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  if (! ffd->node_revision_cache || svn_fs_fs__id_txn_id(id))
-    {
-      *is_cached = FALSE;
-    }
-  else
-    {
-      pair_cache_key_t key = { 0 };
-
-      key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_offset(id);
-      SVN_ERR(svn_cache__get((void **) noderev_p,
-                            is_cached,
-                            ffd->node_revision_cache,
-                            &key,
-                            pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* If noderev caching has been enabled, store the NODEREV_P for the given ID
- * in FS' node revsion cache. SCRATCH_POOL is used for temporary allcations.
- *
- * Non-permanent ids (e.g. ids within a TXN) will not be cached.
- */
-static svn_error_t *
-set_cached_node_revision_body(node_revision_t *noderev_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              apr_pool_t *scratch_pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
-    {
-      pair_cache_key_t key = { 0 };
-
-      key.revision = svn_fs_fs__id_rev(id);
-      key.second = svn_fs_fs__id_offset(id);
-      return svn_cache__set(ffd->node_revision_cache,
-                            &key,
-                            noderev_p,
-                            scratch_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -303,46 +241,76 @@ get_node_revision_body(node_revision_t **noderev_p,
   apr_file_t *revision_file;
   svn_error_t *err;
   svn_boolean_t is_cached = FALSE;
-
-  /* First, try a cache lookup. If that succeeds, we are done here. */
-  SVN_ERR(get_cached_node_revision_body(noderev_p, fs, id, &is_cached, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   if (svn_fs_fs__id_is_txn(id))
     {
-      /* This is a transaction node-rev. */
+      /* This is a transaction node-rev.  Its storage logic is very
+         different from that of rev / pack files. */
       err = svn_io_file_open(&revision_file,
                              svn_fs_fs__path_txn_node_rev(fs, id, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      if (err)
+        {
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_trace(err_dangling_id(fs, id));
+            }
+
+          return svn_error_trace(err);
+        }
+
+      SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
+                                      svn_stream_from_aprfile2(revision_file,
+                                                               FALSE,
+                                                               pool),
+                                      pool));
     }
   else
     {
-      /* This is a revision node-rev. */
-      err = open_and_seek_revision(&revision_file, fs,
-                                   svn_fs_fs__id_rev(id),
-                                   svn_fs_fs__id_offset(id),
-                                   pool);
-    }
+      /* noderevs in rev / pack files can be cached */
+      const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_offset(id);
+      pair_cache_key_t key;
+      key.revision = rev_item->revision;
+      key.second = rev_item->number;
 
-  if (err)
-    {
-      if (APR_STATUS_IS_ENOENT(err->apr_err))
+      /* Not found or not applicable. Try a noderev cache lookup.
+       * If that succeeds, we are done here. */
+      if (ffd->node_revision_cache)
         {
-          svn_error_clear(err);
-          return svn_error_trace(err_dangling_id(fs, id));
+          SVN_ERR(svn_cache__get((void **) noderev_p,
+                                 &is_cached,
+                                 ffd->node_revision_cache,
+                                 &key,
+                                 pool));
+          if (is_cached)
+            return SVN_NO_ERROR;
         }
 
-      return svn_error_trace(err);
+      /* read the data from disk */
+      SVN_ERR(open_and_seek_revision(&revision_file, fs,
+                                     rev_item->revision,
+                                     rev_item->number,
+                                     pool));
+      SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
+                                      svn_stream_from_aprfile2(revision_file,
+                                                                FALSE,
+                                                                pool),
+                                      pool));
+
+      /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+      (*noderev_p)->is_fresh_txn_root = FALSE;
+
+      /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
+      if (ffd->node_revision_cache)
+        SVN_ERR(svn_cache__set(ffd->node_revision_cache,
+                                &key,
+                                *noderev_p,
+                                pool));
     }
 
-  SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
-                                  svn_stream_from_aprfile2(revision_file, FALSE,
-                                                           pool),
-                                  pool));
-
-  /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
-  return set_cached_node_revision_body(*noderev_p, fs, id, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
