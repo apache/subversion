@@ -41,6 +41,51 @@
 #include "svn_private_config.h"
 #include "temp_serializer.h"
 
+/* Directories entries sorted by revision (decreasing - to max cache hits)
+ * and offset (increasing - to max benefit from APR file buffering).
+ */
+static int
+compare_dir_entries_format6(const svn_sort__item_t *a,
+                            const svn_sort__item_t *b)
+{
+  const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
+  const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
+
+  const svn_fs_fs__id_part_t *lhs_rev_item
+    = svn_fs_fs__id_rev_offset(lhs->id);
+  const svn_fs_fs__id_part_t *rhs_rev_item
+    = svn_fs_fs__id_rev_offset(rhs->id);
+
+  /* decreasing ("reverse") order on revs */
+  if (lhs_rev_item->revision != rhs_rev_item->revision)
+    return lhs_rev_item->revision > rhs_rev_item->revision ? -1 : 1;
+
+  /* increasing order on offsets */
+  if (lhs_rev_item->number != rhs_rev_item->number)
+    return lhs_rev_item->number > rhs_rev_item->number ? 1 : -1;
+
+  return 0;
+}
+
+apr_array_header_t *
+svn_fs_fs__order_dir_entries(svn_fs_t *fs,
+                             apr_hash_t *directory,
+                             apr_pool_t *pool)
+{
+  apr_array_header_t *ordered
+    = svn_sort__hash(directory, compare_dir_entries_format6, pool);
+
+  apr_array_header_t *result
+    = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
+
+  int i;
+  for (i = 0; i < ordered->nelts; ++i)
+    APR_ARRAY_PUSH(result, svn_fs_dirent_t *)
+      = APR_ARRAY_IDX(ordered, i, svn_sort__item_t).value;
+
+  return result;
+}
+
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
    Use POOL for temporary allocations. */
 svn_error_t *
