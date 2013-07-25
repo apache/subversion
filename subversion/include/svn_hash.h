@@ -251,8 +251,11 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  *
  * @since New in 1.8.
  */
-#define svn_hash_sets(ht, key, val) \
-            apr_hash_set(ht, key, strlen(key), val)
+#define svn_hash_sets(ht, key, val)                 \
+  do {                                              \
+    const void *keystr = (key);                     \
+    apr_hash_set(ht, keystr, strlen(keystr), val);  \
+  } while (0)
 
 /** @} */
 
