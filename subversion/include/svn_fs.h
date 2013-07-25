@@ -45,8 +45,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-
+
 /**
  * Get libsvn_fs version information.
  *
@@ -176,8 +175,7 @@ typedef struct svn_fs_t svn_fs_t;
  */
 svn_error_t *
 svn_fs_initialize(apr_pool_t *pool);
-
-
+
 
 /** The type of a warning callback function.  @a baton is the value specified
  * in the call to svn_fs_set_warning_func(); the filesystem passes it through
@@ -203,8 +201,7 @@ svn_fs_set_warning_func(svn_fs_t *fs,
                         svn_fs_warning_callback_t warning,
                         void *warning_baton);
 
-
-
+
 
 /**
  * Create a new, empty Subversion filesystem, stored in the directory
@@ -638,8 +635,7 @@ svn_fs_berkeley_recover(const char *path,
 
 /** @} */
 
-
-
+
 /** Filesystem Access Contexts.
  *
  * @since New in 1.2.
@@ -726,8 +722,7 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
 
 /** @} */
 
-
-
+
 /** Filesystem Nodes and Node-Revisions.
  *
  * In a Subversion filesystem, a `node' corresponds roughly to an
@@ -818,8 +813,7 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
 
 /** @} */
 
-
-
+
 /** Filesystem Transactions.
  *
  * To make a change to a Subversion filesystem:
@@ -995,9 +989,6 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * the conflict in @a txn, allocated within @a pool;
  * otherwise, set @a *conflict_p to NULL.
  *
- * If @ set_timestamp is non-zero 'svn:date' revision property will be updated
- * to current time to ensure that svn:date revprops remain ordered.
- *
  * If the commit succeeds, @a txn is invalid.
  *
  * If the commit fails for any reason, @a *new_rev is an invalid
@@ -1168,8 +1159,7 @@ svn_fs_change_txn_props(svn_fs_txn_t *txn,
 
 /** @} */
 
-
-
+
 /** Roots.
  *
  * An #svn_fs_root_t object represents the root directory of some
@@ -1253,8 +1243,7 @@ svn_fs_revision_root_revision(svn_fs_root_t *root);
 
 /** @} */
 
-
-
+
 /** Directory entry names and directory paths.
  *
  * Here are the rules for directory entry names, and directory paths:
@@ -1282,8 +1271,7 @@ svn_fs_revision_root_revision(svn_fs_root_t *root);
  */
 
 
-
-
+
 /** The kind of change that occurred on the path. */
 typedef enum svn_fs_path_change_kind_t
 {
@@ -1412,8 +1400,7 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p,
 
 /** @} */
 
-
-
+
 /* Operations appropriate to all kinds of nodes.  */
 
 /** Set @a *kind_p to the type of node present at @a path under @a
@@ -1790,8 +1777,7 @@ svn_fs_merge(const char **conflict_p,
              apr_pool_t *pool);
 
 
-
-
+
 /* Directories.  */
 
 
@@ -1909,8 +1895,7 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
                      svn_fs_root_t *to_root,
                      const char *path,
                      apr_pool_t *pool);
-
-
+
 /* Files.  */
 
 /** Set @a *length_p to the length of the file @a path in @a root, in bytes.
@@ -2144,8 +2129,7 @@ svn_fs_contents_changed(svn_boolean_t *changed_p,
                         apr_pool_t *pool);
 
 
-
-
+
 /* Filesystem revisions.  */
 
 
@@ -2278,8 +2262,7 @@ svn_fs_change_rev_prop(svn_fs_t *fs,
                        apr_pool_t *pool);
 
 
-
-
+
 /* Computing deltas.  */
 
 
@@ -2301,8 +2284,7 @@ svn_fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                              apr_pool_t *pool);
 
 
-
-
+
 /* UUID manipulation. */
 
 /** Populate @a *uuid with the UUID associated with @a fs.  Allocate
@@ -2322,15 +2304,13 @@ svn_fs_set_uuid(svn_fs_t *fs,
                 const char *uuid,
                 apr_pool_t *pool);
 
-
-
+
 /* Non-historical properties.  */
 
 /* [[Yes, do tell.]] */
 
 
-
-
+
 /** @defgroup svn_fs_locks Filesystem locks
  * @{
  * @since New in 1.2. */

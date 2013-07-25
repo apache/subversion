@@ -67,7 +67,7 @@ public:
   /**
    * Create a new proxy for the APR array @a array.
    */
-  explicit Array(apr_array_header_t* array) throw(std::invalid_argument)
+  explicit Array(apr_array_header_t* array)
     : m_array(array)
     {
       if (m_array->elt_size != sizeof(value_type))
@@ -103,7 +103,7 @@ public:
    * @return An immutable reference to the array element at @a index.
    * Like operator[] but perfoms a range check on the index.
    */
-  const value_type& at(size_type index) const throw(std::out_of_range)
+  const value_type& at(size_type index) const
     {
       if (index < 0 || index >= size())
         throw std::out_of_range(_("APR array index is out of range"));
@@ -122,7 +122,7 @@ public:
    * @return A mutable reference to the array element at @a index.
    * Like operator[] but perfoms a range check on the index.
    */
-  value_type& at(size_type index) throw(std::out_of_range)
+  value_type& at(size_type index)
     {
       if (index < 0 || index >= size())
         throw std::out_of_range(_("APR array index is out of range"));
@@ -228,7 +228,6 @@ public:
    * Create a new proxy for the APR array @a array.
    */
   explicit ConstArray(const apr_array_header_t* array)
-    throw(std::invalid_argument)
     : inherited(const_cast<apr_array_header_t*>(array))
     {}
 
@@ -260,7 +259,7 @@ public:
    * @return An immutable reference to the array element at @a index.
    * Like operator[] but perfoms a range check on the index.
    */
-  const value_type& at(size_type index) const throw(std::out_of_range)
+  const value_type& at(size_type index) const
     {
       return inherited::at(index);
     }

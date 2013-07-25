@@ -125,7 +125,7 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory, jobject jconfigHandler,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter* prompter, jobject jprogress)
+                    Prompter*& prompter, jobject jprogress)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -168,7 +168,7 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
                              const char* configDirectory,
                              jobject jconfigHandler,
                              const char*  username, const char*  password,
-                             Prompter* prompter, jobject jprogress)
+                             Prompter*& prompter, jobject jprogress)
   : m_session(NULL), m_context(NULL)
 {
   // Create java session object
@@ -197,6 +197,14 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
       username, password, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;
+
+  // Avoid double-free in RemoteSession::open and
+  // SVNClient::openRemoteSession if the svn_ra_open call fails. The
+  // prompter object is now owned by m_context.
+  //
+  // FIXME: Should be using smart pointers, really -- but JavaHL
+  // currently doesn't. Future enhancements FTW.
+  prompter = NULL;
 
   const char* corrected_url = NULL;
   bool cycle_detected = false;

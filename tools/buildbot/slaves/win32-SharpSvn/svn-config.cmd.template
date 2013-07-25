@@ -36,7 +36,7 @@ IF NOT EXIST "%TEMP%\" MKDIR "%TEMP%"
 
 SET SVN_URL=
 SET SVN_RELURL=
-for /F "usebackq tokens=1,* delims=:" %%i IN (`svn info build`) do (
+for /F "usebackq tokens=1,* delims=:" %%i IN (`svn info .`) do (
 
   IF "%%i" == "URL" (
     SET SVN_URL=%%j

@@ -247,7 +247,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           install_targets.append(self.create_fake_target(target))
         if target.msvc_export:
           if self.disable_shared:
-            target.msvc_static = True
+            target.disable_shared()
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
@@ -513,8 +513,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       return self.get_output_dir(target)
 
   def get_def_file(self, target):
-    if isinstance(target, gen_base.TargetLib) and target.msvc_export \
-       and not self.disable_shared:
+    if isinstance(target, gen_base.TargetLib) and target.msvc_export:
       return target.name + ".def"
     return None
 
@@ -676,7 +675,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         # every dll dependency we first check to see if its corresponding
         # static library is already in the list of dependencies. If it is,
         # we don't add the dll to the list.
-        if is_lib and dep.msvc_export and not self.disable_shared:
+        if is_lib and dep.msvc_export:
           static_dep = self.graph.get_sources(gen_base.DT_LINK, dep.name)[0]
           if static_dep in deps:
             continue
@@ -795,8 +794,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if target.name.find('cxxhl') != -1:
-      fakeincludes.append(self.path("subversion/bindings/cxxhl/include"))
+    if 'cxxhl' in target.name:
+      fakeincludes.append("subversion/bindings/cxxhl/include")
 
     return gen_base.unique(map(self.apath, fakeincludes))
 
