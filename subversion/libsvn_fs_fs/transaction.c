@@ -1995,8 +1995,8 @@ rep_write_contents_close(void *baton)
   apr_pool_cleanup_kill(b->pool, b, rep_write_cleanup);
 
   /* Write out the new node-rev information. */
-  SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
-                                       b->pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
+                                       FALSE, b->pool));
   if (!old_rep)
     SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
 
@@ -2253,7 +2253,7 @@ write_hash_rep(representation_t *rep,
    is not NULL, it will be used in addition to the on-disk cache to find
    earlier reps with the same content.  When such existing reps can be found,
    we will truncate the one just written from the file and return the existing
-   rep.  If PROPS is set, assume that we want to a props representation as
+   rep.  If IS_PROPS is set, assume that we want to a props representation as
    the base for our delta.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
@@ -2262,7 +2262,7 @@ write_hash_delta_rep(representation_t *rep,
                      svn_fs_t *fs,
                      node_revision_t *noderev,
                      apr_hash_t *reps_hash,
-                     svn_boolean_t props,
+                     svn_boolean_t is_props,
                      apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t diff_wh;
@@ -2284,7 +2284,7 @@ write_hash_delta_rep(representation_t *rep,
   int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
 
   /* Get the base for this delta. */
-  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, props, pool));
+  SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, pool));
   SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, pool));
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));

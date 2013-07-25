@@ -50,8 +50,7 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                              apr_pool_t *pool);
 
 /* Find the paths which were changed in revision REV of filesystem FS
-   and store them in *CHANGED_PATHS_P.  Cached copyfrom information
-   will be stored in *COPYFROM_CACHE.  Get any temporary allocations
+   and store them in *CHANGED_PATHS_P.  Get any temporary allocations
    from POOL. */
 svn_error_t *
 svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
