@@ -22,8 +22,9 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
+ECHO ON
 
-IF "%SVN_BRANCH% LEQ "1.6.x" (
+IF "%SVN_BRANCH%" LEQ "1.6.x" (
   ECHO --- Building 1.6.x or older: Skipping bindings ---
   EXIT /B 0
 )
@@ -33,59 +34,79 @@ SET result=0
 
 python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
 IF ERRORLEVEL 1 (
-  echo [python reported error %ERRORLEVEL%]
+  echo [python reported error !ERRORLEVEL!]
   SET result=1
 )
 
-IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
-mkdir "%TESTDIR%\swig\py-release\libsvn"
-mkdir "%TESTDIR%\swig\py-release\svn"
+if "%SVN_BRANCH%" GTR "1.9." (
 
-xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd" > nul:
-xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll" > nul:
-xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py" > nul:
-xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py" > nul:
+    python win-tests.py -r -f fsfs --swig=python "%TESTDIR%\tests"
 
-SET PYTHONPATH=%TESTDIR%\swig\py-release
+    IF ERRORLEVEL 1 (
+        echo [Python tests exited with error !ERRORLEVEL!]
+        SET result=1
+    )
 
-python subversion\bindings\swig\python\tests\run_all.py
-IF ERRORLEVEL 1 (
-  echo [Python reported error %ERRORLEVEL%]
-  SET result=1
+) ELSE (
+    IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
+    mkdir "%TESTDIR%\swig\py-release\libsvn"
+    mkdir "%TESTDIR%\swig\py-release\svn"
+
+    xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd" > nul:
+    xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll" > nul:
+    xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py" > nul:
+    xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py" > nul:
+
+    SET PYTHONPATH=%TESTDIR%\swig\py-release
+
+    python subversion\bindings\swig\python\tests\run_all.py
+    IF ERRORLEVEL 1 (
+        echo [Python tests exited with error !ERRORLEVEL!]
+        SET result=1
+    )
 )
 
-mkdir "%TESTDIR%\swig\pl-release\SVN"
-mkdir "%TESTDIR%\swig\pl-release\auto\SVN"
-xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-release\SVN" > nul:
-pushd release\subversion\bindings\swig\perl\native
-for %%i in (*.dll) do (
-  set name=%%i
-  mkdir "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
-  xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
-  xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
+if "%SVN_BRANCH%" GTR "1.9." (
+
+    python win-tests.py -d -f fsfs --swig=perl "%TESTDIR%\tests"
+
+    IF ERRORLEVEL 1 (
+        echo [Perl tests exited with error !ERRORLEVEL!]
+        SET result=1
+    )
+
+) ELSE IF "%SVN_BRANCH%" GTR "1.8." (
+
+    mkdir "%TESTDIR%\swig\pl-debug\SVN"
+    mkdir "%TESTDIR%\swig\pl-debug\auto\SVN"
+    xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-debug\SVN" > nul:
+    pushd debug\subversion\bindings\swig\perl\native
+    for %%i in (*.dll) do (
+        set name=%%i
+        mkdir "%TESTDIR%\swig\pl-debug\auto\SVN\!name:~0,-4!"
+        xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-debug\auto\SVN\!name:~0,-4!" > nul:
+        xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-debug\auto\SVN\!name:~0,-4!" > nul:
+    )
+    popd
+
+
+    SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-debug;
+    pushd subversion\bindings\swig\perl\native
+    perl -MExtUtils::Command::MM -e "test_harness()" t\*.t
+    IF ERRORLEVEL 1 (
+        echo [Perl reported error !ERRORLEVEL!]
+        SET result=1
+    )
+    popd
 )
-popd
 
-IF "%SVN_BRANCH% LSS "1.8." (
-  ECHO --- Building 1.7.x: Skipping perl and ruby tests ---
-  EXIT /B %result%
+if "%SVN_BRANCH%" GTR "1.9." (
+  python win-tests.py -d -f fsfs --swig=ruby "%TESTDIR%\tests"
+
+  IF ERRORLEVEL 1 (
+    echo [Ruby tests reported error !ERRORLEVEL!] (not fatal)
+    REM SET result=1
+  )
 )
-
-SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-release;
-pushd subversion\bindings\swig\perl\native
-perl -MExtUtils::Command::MM -e test_harness() t\*.t
-IF ERRORLEVEL 1 (
-  echo [Perl reported error %ERRORLEVEL%]
-  SET result=1
-)
-popd
-
-IF "%SVN_BRANCH% LSS "1.9." (
-  ECHO --- Building 1.8.x: Skipping ruby tests ---
-  EXIT /B %result%
-)
-
-echo Not running ruby tests yet
-
 
 exit /b %result%

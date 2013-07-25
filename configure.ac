@@ -632,8 +632,8 @@ dnl Googlemock -----------------
 AC_ARG_ENABLE([gmock],
   AS_HELP_STRING([--disable-gmock],
                  [Do not use the Googlemock testing framework]),
-  [enable_gmock=yes],
-  [enable_gmock="$withval"])
+  [],
+  [enable_gmock=yes])
 
 AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
 AC_MSG_CHECKING([whether use Googlemock])

@@ -589,6 +589,12 @@ class TargetLib(TargetLinked):
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
     self.msvc_export = options.get('msvc-export', '').split()
 
+  def disable_shared(self):
+    "tries to disable building as a shared library,"
+
+    self.msvc_static = True
+    self.msvc_export = []
+
 class TargetApacheMod(TargetLib):
 
   def __init__(self, name, options, gen_obj):
@@ -650,7 +656,6 @@ class TargetSWIG(TargetLib):
     TargetLib.__init__(self, name, options, gen_obj)
     self.lang = lang
     self.desc = self.desc + ' for ' + lang_full_name[lang]
-    self.include_runtime = options.get('include-runtime') == 'yes'
 
     ### hmm. this is Makefile-specific
     self.link_cmd = '$(LINK_%s_WRAPPER)' % lang_abbrev[lang].upper()
@@ -732,6 +737,12 @@ class TargetSWIGLib(TargetLib):
       if target.lang == self.target.lang:
         return [ self.target ]
       return [ ]
+
+  def disable_shared(self):
+    "disables building shared libraries"
+
+    return # Explicit NO-OP
+
 
 class TargetProject(Target):
   def __init__(self, name, options, gen_obj):

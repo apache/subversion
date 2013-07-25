@@ -111,6 +111,7 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
 import gen_win_dependencies
+import gen_base
 version_header = os.path.join('subversion', 'include', 'svn_version.h')
 cp = configparser.ConfigParser()
 cp.read('gen-make.opts')
@@ -119,12 +120,6 @@ gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
 all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
           + gen_obj.scripts + gen_obj.bdb_scripts
 client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
-
-svn_dlls = []
-for section in gen_obj.sections.values():
-  if section.options.get("msvc-export"):
-    dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
-    svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
 
 opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
@@ -220,7 +215,7 @@ for opt, val in opts:
   elif opt == '--javahl':
     test_javahl = 1
   elif opt == '--swig':
-    if val not in ['ruby']:
+    if val not in ['perl', 'python', 'ruby']:
       sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n' 
                         % (val,))
     test_swig = val
@@ -297,12 +292,18 @@ def create_target_dir(dirname):
       print("mkdir: %s" % tgt_dir)
     os.makedirs(tgt_dir)
 
-def copy_changed_file(src, tgt):
+def copy_changed_file(src, tgt=None, to_dir=None, cleanup=True):
   if not os.path.isfile(src):
     print('Could not find ' + src)
     sys.exit(1)
-  if os.path.isdir(tgt):
-    tgt = os.path.join(tgt, os.path.basename(src))
+
+  if to_dir and not tgt:
+    tgt = os.path.join(to_dir, os.path.basename(src))
+  elif not tgt or (tgt and to_dir):
+    raise RuntimeError("Using 'tgt' *or* 'to_dir' is required" % (tgt,))
+  elif tgt and os.path.isdir(tgt):
+    raise RuntimeError("'%s' is a directory. Use to_dir=" % (tgt,))
+
   if os.path.exists(tgt):
     assert os.path.isfile(tgt)
     if filecmp.cmp(src, tgt):
@@ -314,23 +315,12 @@ def copy_changed_file(src, tgt):
     print("copy: %s" % src)
     print("  to: %s" % tgt)
   shutil.copy(src, tgt)
-  return 1
 
-def copy_execs(baton, dirname, names):
-  copied_execs = baton
-  for name in names:
-    if not name.endswith('.exe'):
-      continue
-    src = os.path.join(dirname, name)
-    tgt = os.path.join(abs_builddir, dirname, name)
-    create_target_dir(dirname)
-    if copy_changed_file(src, tgt):
-      copied_execs.append(tgt)
+  if cleanup:
+    copied_execs.append(tgt)
 
 def locate_libs():
   "Move DLLs to a known location and set env vars"
-
-  dlls = []
 
   debug = (objdir == 'Debug')
   
@@ -342,15 +332,18 @@ def locate_libs():
       name, dir = lib.dll_name, lib.dll_dir
       
     if name and dir:
-      dlls.append(os.path.join(dir, name))
+      src = os.path.join(dir, name)
+      if os.path.exists(src):
+        copy_changed_file(src, to_dir=abs_builddir, cleanup=False)
 
-  for dll in dlls:
-    copy_changed_file(dll, abs_builddir)
 
   # Copy the Subversion library DLLs
-  if not cp.has_option('options', '--disable-shared'):
-    for svn_dll in svn_dlls:
-      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_builddir)
+  for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
+    if isinstance(i, gen_base.TargetLib) and i.msvc_export:
+      src = os.path.join(abs_objdir, i.filename)
+      if os.path.isfile(src):
+        copy_changed_file(src, to_dir=abs_builddir,
+                          cleanup=False)
 
   # Copy the Apache modules
   if run_httpd and cp.has_option('options', '--with-httpd'):
@@ -361,9 +354,9 @@ def locate_libs():
     mod_dontdothat_path = os.path.join(abs_objdir, 'tools', 'server-side',
                                         'mod_dontdothat', 'mod_dontdothat.so')
 
-    copy_changed_file(mod_dav_svn_path, abs_builddir)
-    copy_changed_file(mod_authz_svn_path, abs_builddir)
-    copy_changed_file(mod_dontdothat_path, abs_builddir)
+    copy_changed_file(mod_dav_svn_path, to_dir=abs_builddir, cleanup=False)
+    copy_changed_file(mod_authz_svn_path, to_dir=abs_builddir, cleanup=False)
+    copy_changed_file(mod_dontdothat_path, to_dir=abs_builddir, cleanup=False)
 
   os.environ['PATH'] = abs_builddir + os.pathsep + os.environ['PATH']
 
@@ -682,21 +675,17 @@ class Httpd:
     print('Httpd.stop_daemon not implemented')
 
 # Move the binaries to the test directory
+create_target_dir(abs_builddir)
 locate_libs()
 if create_dirs:
-  old_cwd = os.getcwd()
-  try:
-    os.chdir(abs_objdir)
-    baton = copied_execs
-    for dirpath, dirs, files in os.walk('subversion'):
-      copy_execs(baton, dirpath, files)
-    for dirpath, dirs, files in os.walk('tools/server-side'):
-      copy_execs(baton, dirpath, files)
-  except:
-    os.chdir(old_cwd)
-    raise
-  else:
-    os.chdir(old_cwd)
+  for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
+    if isinstance(i, gen_base.TargetExe):
+      src = os.path.join(abs_objdir, i.filename)
+
+      if os.path.isfile(src):
+        dst = os.path.join(abs_builddir, i.filename)
+        create_target_dir(os.path.dirname(dst))
+        copy_changed_file(src, dst)
 
 # Create the base directory for Python tests
 create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
@@ -821,62 +810,121 @@ elif test_javahl:
     print('[Test runner reported failure]')
     failed = True
 elif test_swig == 'perl':
-  print('Running Swig Perl tests not supported yet')
-
-  # TODO: Implement something like
-  
-  # mkdir "%TESTDIR%\swig\pl-release\SVN"
-  # mkdir "%TESTDIR%\swig\pl-release\auto\SVN"
-  # xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-release\SVN" > nul:
-  # pushd release\subversion\bindings\swig\perl\native
-  # for %%i in (*.dll) do (
-  #   set name=%%i
-  #   mkdir "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!"
-  #   xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
-  #   xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-release\auto\SVN\!name:~0,-4!" > nul:
-  # )
-  # popd
-  # 
-  # SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-release;
-  # pushd subversion\bindings\swig\perl\native
-  # perl -MExtUtils::Command::MM -e test_harness() t\*.t
-  # IF ERRORLEVEL 1 (
-  #   echo [Perl reported error %ERRORLEVEL%]
-  #   SET result=1
-  # )
-  # popd
-
   failed = False
+  swig_dir = os.path.join(abs_builddir, 'swig')
+  swig_pl_dir = os.path.join(swig_dir, 'p5lib')
+  swig_pl_svn = os.path.join(swig_pl_dir, 'SVN')
+  swig_pl_auto_svn = os.path.join(swig_pl_dir, 'auto', 'SVN')
+
+  create_target_dir(swig_pl_svn)
+
+  for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
+    if isinstance(i, gen_base.TargetSWIG) and i.lang == 'perl':
+      mod_dir = os.path.join(swig_pl_auto_svn, '_' + i.name[5:].capitalize())
+      create_target_dir(mod_dir)
+      copy_changed_file(os.path.join(abs_objdir, i.filename), to_dir=mod_dir)
+
+    elif isinstance(i, gen_base.TargetSWIGLib) and i.lang == 'perl':
+      copy_changed_file(os.path.join(abs_objdir, i.filename),
+                        to_dir=abs_builddir)
+
+  pm_src = os.path.join(abs_srcdir, 'subversion', 'bindings', 'swig', 'perl',
+                        'native')
+
+  tests = []
+
+  for root, dirs, files in os.walk(pm_src):
+    for name in files:
+      if name.endswith('.pm'):
+        fn = os.path.join(root, name)
+        copy_changed_file(fn, to_dir=swig_pl_svn)
+      elif name.endswith('.t'):
+        tests.append(os.path.relpath(os.path.join(root, name), pm_src))
+
+  perl5lib = swig_pl_dir
+  if 'PERL5LIB' in os.environ:
+    perl5lib += os.pathsep + os.environ['PERL5LIB']
+
+  perl_exe = 'perl.exe'
+
+  print('-- Running Swig Perl tests --')
+  old_cwd = os.getcwd()
+  try:
+    os.chdir(pm_src)
+
+    os.environ['PERL5LIB'] = perl5lib
+    os.environ["SVN_DBG_NO_ABORT_ON_ERROR_LEAK"] = 'YES'
+
+    r = subprocess.call([
+              perl_exe,
+              '-MExtUtils::Command::MM',
+              '-e', 'test_harness()'
+              ] + tests)
+  finally:
+    os.chdir(old_cwd)
+
+  if (r != 0):
+    print('[Test runner reported failure]')
+    failed = True
+
 elif test_swig == 'python':
-  print('Running Swig Python tests not supported yet')
-  
-  # TODO: Implement something like
-  
-  # IF EXIST "%TESTDIR%\swig" rmdir /s /q "%TESTDIR%\swig"
-  # mkdir "%TESTDIR%\swig\py-release\libsvn"
-  # mkdir "%TESTDIR%\swig\py-release\svn"
-  # 
-  # xcopy "release\subversion\bindings\swig\python\*.pyd" "%TESTDIR%\swig\py-release\libsvn\*.pyd" > nul:
-  # xcopy "release\subversion\bindings\swig\python\libsvn_swig_py\*.dll" "%TESTDIR%\swig\py-release\libsvn\*.dll" > nul:
-  # xcopy "subversion\bindings\swig\python\*.py" "%TESTDIR%\swig\py-release\libsvn\*.py" > nul:
-  # xcopy "subversion\bindings\swig\python\svn\*.py" "%TESTDIR%\swig\py-release\svn\*.py" > nul:
-  # 
-  # SET PYTHONPATH=%TESTDIR%\swig\py-release
-  # 
-  # python subversion\bindings\swig\python\tests\run_all.py
-  # IF ERRORLEVEL 1 (
-  #   echo [Python reported error %ERRORLEVEL%]
-  #   SET result=1
-  # )
-  
   failed = False
+  swig_dir = os.path.join(abs_builddir, 'swig')
+  swig_py_dir = os.path.join(swig_dir, 'pylib')
+  swig_py_libsvn = os.path.join(swig_py_dir, 'libsvn')
+  swig_py_svn = os.path.join(swig_py_dir, 'svn')
+
+  create_target_dir(swig_py_libsvn)
+  create_target_dir(swig_py_svn)
+
+  for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
+    if (isinstance(i, gen_base.TargetSWIG)
+        or isinstance(i, gen_base.TargetSWIGLib)) and i.lang == 'python':
+
+      src = os.path.join(abs_objdir, i.filename)
+      copy_changed_file(src, to_dir=swig_py_libsvn)
+
+  py_src = os.path.join(abs_srcdir, 'subversion', 'bindings', 'swig', 'python')
+
+  for py_file in os.listdir(py_src):
+    if py_file.endswith('.py'):
+      copy_changed_file(os.path.join(py_src, py_file),
+                        to_dir=swig_py_libsvn)
+
+  py_src_svn = os.path.join(py_src, 'svn')
+  for py_file in os.listdir(py_src_svn):
+    if py_file.endswith('.py'):
+      copy_changed_file(os.path.join(py_src_svn, py_file),
+                        to_dir=swig_py_svn)
+
+  print('-- Running Swig Python tests --')
+
+  pythonpath = swig_py_dir
+  if 'PYTHONPATH' in os.environ:
+    pythonpath += os.pathsep + os.environ['PYTHONPATH']
+
+  python_exe = 'python.exe'
+  old_cwd = os.getcwd()
+  try:
+    os.environ['PYTHONPATH'] = pythonpath
+
+    r = subprocess.call([
+              python_exe,
+              os.path.join(py_src, 'tests', 'run_all.py')
+              ])
+  finally:
+    os.chdir(old_cwd)
+
+    if (r != 0):
+      print('[Test runner reported failure]')
+      failed = True
+
 elif test_swig == 'ruby':
   failed = False
 
   if 'ruby' not in gen_obj._libraries:
     print('Ruby not found. Skipping Ruby tests')
   else:
-    print('Running Swig Ruby Tests')
     ruby_lib = gen_obj._libraries['ruby']
 
     ruby_exe = 'ruby.exe'
@@ -887,11 +935,13 @@ elif test_swig == 'ruby':
         '--verbose'
       ]
 
+    print('-- Running Swig Ruby tests --')
     old_cwd = os.getcwd()
     try:
       os.chdir(ruby_subdir)
 
       os.environ["BUILD_TYPE"] = objdir
+      os.environ["SVN_DBG_NO_ABORT_ON_ERROR_LEAK"] = 'YES'
       r = subprocess.call([ruby_exe] + ruby_args)
     finally:
       os.chdir(old_cwd)
@@ -899,7 +949,6 @@ elif test_swig == 'ruby':
     sys.stdout.flush()
     sys.stderr.flush()
     if (r != 0):
-      print()
       print('[Test runner reported failure]')
       failed = True
 

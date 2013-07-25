@@ -40,7 +40,7 @@ namespace apr {
 // Pool implementation
 //
 
-apr_pool_t* Pool::get_root_pool() throw(cxxhl::InternalError)
+apr_pool_t* Pool::get_root_pool()
 {
   static const svn_atomic_t NONE = 0;
   static const svn_atomic_t START = 1;

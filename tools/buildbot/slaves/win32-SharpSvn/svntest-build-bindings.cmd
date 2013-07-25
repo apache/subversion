@@ -23,17 +23,26 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
-IF "%SVN_BRANCH% LEQ "1.6.x" (
+IF "%SVN_BRANCH%" LEQ "1.6.x" (
   ECHO --- Building 1.6.x: Skipping bindings ---
   EXIT /B 0
 )
 
-msbuild subversion_vcnet.sln /p:Configuration=Debug /p:Platform=win32 /t:__JAVAHL__ /t:__JAVAHL_TESTS__
+SET DEBUG_TARGETS=/t:__JAVAHL__ /t:__JAVAHL_TESTS__
+SET RELEASE_TARGETS=/t:__SWIG_PYTHON__
+
+if "%SVN_BRANCH%" GTR "1.8." (
+  SET DEBUG_TARGETS=%DEBUG_TARGETS% /t:__SWIG_PERL__
+)
+
+if "%SVN_BRANCH%" GTR "1.9." (
+  SET DEBUG_TARGETS=%DEBUG_TARGETS% /t:__SWIG_RUBY__
+)
+
+msbuild subversion_vcnet.sln /m /p:Configuration=Debug /p:Platform=win32 %DEBUG_TARGETS%
 IF ERRORLEVEL 1 EXIT /B 1
 
-IF "%SVN_BRANCH%" GTR "1.9." (
-  msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__ /t:__SWIG_RUBY__
-) ELSE (
-  msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 /t:__SWIG_PYTHON__ /t:__SWIG_PERL__
-)
+msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 %RELEASE_TARGETS%
 IF ERRORLEVEL 1 EXIT /B 1
+
+EXIT /B 0
