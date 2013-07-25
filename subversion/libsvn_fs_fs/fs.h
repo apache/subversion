@@ -245,6 +245,19 @@ typedef struct representation_cache_key_t
   apr_uint64_t offset;
 } representation_cache_key_t;
 
+/* Key type that identifies a txdelta window. */
+typedef struct window_cache_key_t
+{
+  /* Revision that contains the representation */
+  apr_uint32_t revision;
+
+  /* Window number within that representation */
+  apr_int32_t chunk_index;
+
+  /* Offset of the representation within REVISION */
+  apr_uint64_t offset;
+} window_cache_key_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
