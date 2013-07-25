@@ -166,6 +166,16 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1506966
+   Don't do double UTF8-to-native conversion in svnadmin notifications.
+   Justification:
+     Double conversion can produce garbled output in non-UTF8 environments.
+   Notes:
+     Reverts r1485650 on trunk, which was merged to 1.8.x in r1486284.
+     Merge with --accept mc to resolve conflict.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
