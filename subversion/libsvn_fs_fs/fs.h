@@ -232,6 +232,19 @@ typedef struct pair_cache_key_t
   apr_int64_t second;
 } pair_cache_key_t;
 
+/* Key type that identifies a representation / rep header. */
+typedef struct representation_cache_key_t
+{
+  /* Revision that contains the representation */
+  apr_uint32_t revision;
+
+  /* Packed or non-packed representation? */
+  svn_boolean_t is_packed;
+
+  /* Item offset of the representation */
+  apr_uint64_t offset;
+} representation_cache_key_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
@@ -309,6 +322,10 @@ typedef struct fs_fs_data_t
   /* Cache for change lists as APR arrays of change_t * objects; the key
      is the revision */
   svn_cache__t *changes_cache;
+
+  /* Cache for svn_fs_fs__rep_header_t objects; the key is a
+     (revision, is_packed, offset) set */
+  svn_cache__t *rep_header_cache;
 
   /* Cache for svn_mergeinfo_t objects; the key is a combination of
      revision, inheritance flags and path. */
