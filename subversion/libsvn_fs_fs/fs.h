@@ -322,11 +322,11 @@ typedef struct fs_fs_data_t
      respective pack file. */
   svn_cache__t *packed_offset_cache;
 
-  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  /* Cache for txdelta_window_t objects; the key is window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
 
   /* Cache for combined windows as svn_stringbuf_t objects;
-     the key is (revFilePath, offset) */
+     the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
   /* Cache for node_revision_t objects; the key is (revision, id offset) */

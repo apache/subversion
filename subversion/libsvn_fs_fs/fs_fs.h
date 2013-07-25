@@ -51,7 +51,9 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
-/* Return an error iff REV does not exist in FS. */
+/* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
+   than the current youngest revision in FS or is simply not a valid
+   revision number, else return success. */
 svn_error_t *
 svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
                                   svn_fs_t *fs,

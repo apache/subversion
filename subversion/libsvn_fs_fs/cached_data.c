@@ -462,13 +462,13 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+
   apr_file_t *revision_file;
   apr_off_t root_offset;
   svn_fs_id_t *root_id = NULL;
   svn_boolean_t is_cached;
 
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
-
   SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
                          ffd->rev_root_id_cache, &rev, pool));
   if (is_cached)

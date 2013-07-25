@@ -20,60 +20,30 @@
  * ====================================================================
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <assert.h>
-#include <errno.h>
+#include "fs_fs.h"
 
-#include <apr_general.h>
-#include <apr_pools.h>
-#include <apr_file_io.h>
 #include <apr_uuid.h>
-#include <apr_lib.h>
-#include <apr_md5.h>
-#include <apr_sha1.h>
-#include <apr_strings.h>
-#include <apr_thread_mutex.h>
 
-#include "svn_pools.h"
-#include "svn_fs.h"
-#include "svn_dirent_uri.h"
-#include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_props.h"
-#include "svn_sorts.h"
-#include "svn_string.h"
 #include "svn_time.h"
-#include "svn_mergeinfo.h"
-#include "svn_config.h"
-#include "svn_ctype.h"
+#include "svn_dirent_uri.h"
 #include "svn_version.h"
 
 #include "cached_data.h"
-#include "fs.h"
-#include "tree.h"
-#include "lock.h"
-#include "fs_fs.h"
 #include "id.h"
-#include "low_level.h"
-#include "pack.h"
-#include "recovery.h"
 #include "rep-cache.h"
 #include "revprops.h"
-#include "temp_serializer.h"
 #include "transaction.h"
+#include "tree.h"
 #include "util.h"
 
-#include "private/svn_string_private.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
-#include "private/svn_delta_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
-#include "temp_serializer.h"
 
 /* The default maximum number of files per directory to store in the
    rev and revprops directory.  The number below is somewhat arbitrary,
@@ -871,18 +841,6 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
-/* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision is newer
-   than the current youngest revision or is simply not a valid
-   revision number, else return success.
-
-   FSFS is based around the concept that commits only take effect when
-   the number in "current" is bumped.  Thus if there happens to be a rev
-   or revprops file installed for a revision higher than the one recorded
-   in "current" (because a commit failed between installing the rev file
-   and bumping "current", or because an administrator rolled back the
-   repository by resetting "current" without deleting rev files, etc), it
-   ought to be completely ignored.  This function provides the check
-   by which callers can make that decision. */
 svn_error_t *
 svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
                                   svn_fs_t *fs,
@@ -1101,12 +1059,13 @@ svn_fs_fs__create(svn_fs_t *fs,
     {
       SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(fs, pool),
                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create_empty
-                  (svn_fs_fs__path_txn_current_lock(fs, pool), pool));
+      SVN_ERR(svn_io_file_create_empty(
+                                 svn_fs_fs__path_txn_current_lock(fs, pool),
+                                 pool));
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR(svn_fs_fs__write_format(fs,FALSE, pool));
+  SVN_ERR(svn_fs_fs__write_format(fs, FALSE, pool));
 
   ffd->youngest_rev_cache = 0;
   return SVN_NO_ERROR;
