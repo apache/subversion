@@ -224,7 +224,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "revisions.\n"
         "                             "
-        "Default is no.\n"
+        "Default is yes.\n"
         "                             "
         "[used for FSFS repositories only]")},
     {"cache-fulltexts", SVNSERVE_OPT_CACHE_FULLTEXTS, 1,
@@ -547,7 +547,7 @@ int main(int argc, const char *argv[])
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
   params.cache_fulltexts = TRUE;
-  params.cache_txdeltas = FALSE;
+  params.cache_txdeltas = TRUE;
   params.cache_revprops = FALSE;
   params.zero_copy_limit = 0;
   params.error_check_interval = 4096;
