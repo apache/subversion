@@ -37,7 +37,7 @@
 #include "lock.h"
 #include "tree.h"
 #include "fs_fs.h"
-#include "transaction.h"
+#include "util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "private/svn_fs_util.h"
@@ -457,8 +457,7 @@ delete_lock(svn_fs_t *fs,
         }
       else
         {
-          const char *rev_0_path
-            = svn_fs_fs__path_rev_absolute(fs, 0, pool);
+          const char *rev_0_path = svn_fs_fs__path_rev_absolute(fs, 0, pool);
           SVN_ERR(write_digest_file(this_children, this_lock, fs->path,
                                     digest_path, rev_0_path, subpool));
         }

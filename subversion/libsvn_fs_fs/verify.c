@@ -26,7 +26,6 @@
 #include "cached_data.h"
 #include "rep-cache.h"
 #include "util.h"
-#include "index.h"
 
 #include "../libsvn_fs/fs-loader.h"
 

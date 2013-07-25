@@ -29,10 +29,8 @@
 #include "low_level.h"
 #include "rep-cache.h"
 #include "revprops.h"
-#include "transaction.h"
 #include "util.h"
 #include "cached_data.h"
-#include "index.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -109,7 +107,7 @@ struct recover_read_from_file_baton
 {
   svn_stream_t *stream;
   apr_pool_t *pool;
-  apr_size_t remaining;
+  apr_off_t remaining;
 };
 
 /* A stream read handler used by recover_find_max_ids() below.
@@ -128,8 +126,8 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
       return SVN_NO_ERROR;
     }
 
-  if (bytes_to_read > b->remaining)
-    bytes_to_read = b->remaining;
+  if ((apr_int64_t)bytes_to_read > (apr_int64_t)b->remaining)
+    bytes_to_read = (apr_size_t)b->remaining;
   b->remaining -= bytes_to_read;
 
   return svn_stream_read(b->stream, buffer, &bytes_to_read);
@@ -146,8 +144,10 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
 
    Perform temporary allocation in POOL. */
 static svn_error_t *
-recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
-                     apr_file_t *rev_file, apr_off_t offset,
+recover_find_max_ids(svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_file_t *rev_file,
+                     apr_off_t offset,
                      apr_uint64_t *max_node_id,
                      apr_uint64_t *max_copy_id,
                      apr_pool_t *pool)
@@ -159,13 +159,10 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
   node_revision_t *noderev;
-  apr_uint32_t sub_item;
 
+  baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev,
-                                  svn_stream_from_aprfile2(rev_file, TRUE,
-                                                           pool),
-                                  pool));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool));
 
   /* Check that this is a directory.  It should be. */
   if (noderev->kind != svn_node_dir)
@@ -185,12 +182,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, &sub_item, fs, rev, NULL,
-                                 noderev->data_rep->offset, pool));
-  SVN_ERR_ASSERT(sub_item == 0);
+  offset = noderev->data_rep->offset;
   SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
-
-  baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
   SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
   if (header->type != svn_fs_fs__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -200,7 +193,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   /* Now create a stream that's allowed to read only as much data as is
      stored in the representation. */
   baton.pool = pool;
-  baton.remaining = (apr_size_t) noderev->data_rep->expanded_size;
+  baton.remaining = noderev->data_rep->expanded_size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
@@ -218,7 +211,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       char *str;
       svn_node_kind_t kind;
       svn_fs_id_t *id;
-      const svn_fs_fs__id_part_t *rev_item;
+      const svn_fs_fs__id_part_t *rev_offset;
       apr_uint64_t node_id, copy_id;
       apr_off_t child_dir_offset;
       const svn_string_t *path = svn__apr_hash_index_val(hi);
@@ -249,8 +242,8 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 
       id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
 
-      rev_item = svn_fs_fs__id_rev_item(id);
-      if (rev_item->revision != rev)
+      rev_offset = svn_fs_fs__id_rev_offset(id);
+      if (rev_offset->revision != rev)
         {
           /* If the node wasn't modified in this revision, we've already
              checked the node and copy id. */
@@ -268,14 +261,7 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
       if (kind == svn_node_file)
         continue;
 
-      SVN_ERR(svn_fs_fs__item_offset(&child_dir_offset,
-                                     &sub_item,
-                                     fs,
-                                     rev_item->revision,
-                                     NULL,
-                                     rev_item->number,
-                                     iterpool));
-      SVN_ERR_ASSERT(sub_item == 0);
+      child_dir_offset = rev_offset->number;
       SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
                                    max_node_id, max_copy_id, iterpool));
     }
@@ -285,14 +271,14 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
-svn_fs_fs__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
+svn_fs_fs__find_max_ids(svn_fs_t *fs,
+                        svn_revnum_t youngest,
                         apr_uint64_t *max_node_id,
                         apr_uint64_t *max_copy_id,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t root_offset;
-  apr_uint32_t sub_item;
   apr_file_t *rev_file;
   svn_fs_id_t *root_id;
 
@@ -300,12 +286,7 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs, svn_revnum_t youngest,
   SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
 
   SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, youngest, pool));
-  SVN_ERR(svn_fs_fs__item_offset(&root_offset, &sub_item, fs,
-                                 svn_fs_fs__id_rev(root_id),
-                                 NULL,
-                                 svn_fs_fs__id_item(root_id),
-                                 pool));
-  SVN_ERR_ASSERT(sub_item == 0);
+  root_offset = svn_fs_fs__id_offset(root_id);
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
@@ -338,7 +319,7 @@ recover_body(void *baton, apr_pool_t *pool)
   svn_node_kind_t youngest_revprops_kind;
 
   /* Lose potentially corrupted data in temp files */
-  SVN_ERR(cleanup_revprop_namespace(fs));
+  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(fs));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
@@ -419,7 +400,7 @@ recover_body(void *baton, apr_pool_t *pool)
   if (youngest_revprops_kind == svn_node_none)
     {
       svn_boolean_t missing = TRUE;
-      if (!packed_revprop_available(&missing, fs, max_rev, pool))
+      if (!svn_fs_fs__packed_revprop_available(&missing, fs, max_rev, pool))
         {
           if (missing)
             {

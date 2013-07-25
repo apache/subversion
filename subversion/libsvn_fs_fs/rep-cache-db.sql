@@ -22,8 +22,6 @@
  */
 
 -- STMT_CREATE_SCHEMA
-PRAGMA PAGE_SIZE = 4096;
-
 /* A table mapping representation hashes to locations in a rev file. */
 CREATE TABLE rep_cache (
   hash TEXT NOT NULL PRIMARY KEY,

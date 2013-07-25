@@ -27,7 +27,6 @@
 #include "svn_fs.h"
 
 #include "fs.h"
-#include "index.h"
 
 
 

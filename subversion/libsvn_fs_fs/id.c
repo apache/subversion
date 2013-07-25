@@ -24,7 +24,6 @@
 #include <stdlib.h>
 
 #include "id.h"
-#include "index.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_temp_serializer.h"
@@ -37,10 +36,13 @@ typedef struct fs_fs__id_t
   svn_fs_id_t generic_id;
 
   /* private members */
-  svn_fs_fs__id_part_t node_id;
-  svn_fs_fs__id_part_t copy_id;
-  svn_fs_fs__id_part_t txn_id;
-  svn_fs_fs__id_part_t rev_item;
+  struct
+    {
+      svn_fs_fs__id_part_t node_id;
+      svn_fs_fs__id_part_t copy_id;
+      svn_fs_fs__id_part_t txn_id;
+      svn_fs_fs__id_part_t rev_offset;
+    } private_id;
 } fs_fs__id_t;
 
 
@@ -189,7 +191,7 @@ svn_fs_fs__id_node_id(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return &id->node_id;
+  return &id->private_id.node_id;
 }
 
 
@@ -198,7 +200,7 @@ svn_fs_fs__id_copy_id(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return &id->copy_id;
+  return &id->private_id.copy_id;
 }
 
 
@@ -207,16 +209,16 @@ svn_fs_fs__id_txn_id(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return &id->txn_id;
+  return &id->private_id.txn_id;
 }
 
 
 const svn_fs_fs__id_part_t *
-svn_fs_fs__id_rev_item(const svn_fs_id_t *fs_id)
+svn_fs_fs__id_rev_offset(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return &id->rev_item;
+  return &id->private_id.rev_offset;
 }
 
 svn_revnum_t
@@ -224,16 +226,15 @@ svn_fs_fs__id_rev(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return id->rev_item.revision;
+  return id->private_id.rev_offset.revision;
 }
 
-
 apr_uint64_t
-svn_fs_fs__id_item(const svn_fs_id_t *fs_id)
+svn_fs_fs__id_offset(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return id->rev_item.number;
+  return id->private_id.rev_offset.number;
 }
 
 svn_boolean_t
@@ -241,7 +242,7 @@ svn_fs_fs__id_is_txn(const svn_fs_id_t *fs_id)
 {
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  return svn_fs_fs__id_txn_used(&id->txn_id);
+  return svn_fs_fs__id_txn_used(&id->private_id.txn_id);
 }
 
 svn_string_t *
@@ -251,22 +252,22 @@ svn_fs_fs__id_unparse(const svn_fs_id_t *fs_id,
   char string[6 * SVN_INT64_BUFFER_SIZE + 10];
   fs_fs__id_t *id = (fs_fs__id_t *)fs_id;
 
-  char *p = unparse_id_part(string, &id->node_id);
-  p = unparse_id_part(p, &id->copy_id);
+  char *p = unparse_id_part(string, &id->private_id.node_id);
+  p = unparse_id_part(p, &id->private_id.copy_id);
 
-  if (svn_fs_fs__id_txn_used(&id->txn_id))
+  if (svn_fs_fs__id_txn_used(&id->private_id.txn_id))
     {
       *(p++) = 't';
-      p += svn__i64toa(p, id->txn_id.revision);
+      p += svn__i64toa(p, id->private_id.txn_id.revision);
       *(p++) = '-';
-      p += svn__ui64tobase36(p, id->txn_id.number);
+      p += svn__ui64tobase36(p, id->private_id.txn_id.number);
     }
   else
     {
       *(p++) = 'r';
-      p += svn__i64toa(p, id->rev_item.revision);
+      p += svn__i64toa(p, id->private_id.rev_offset.revision);
       *(p++) = '/';
-      p += svn__i64toa(p, id->rev_item.number);
+      p += svn__i64toa(p, id->private_id.rev_offset.number);
     }
 
   return svn_string_ncreate(string, p - string, pool);
@@ -285,8 +286,8 @@ svn_fs_fs__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->node_id, &id_b->node_id,
-                sizeof(*id_a) - sizeof(id_a->generic_id)) == 0;
+  return memcmp(&id_a->private_id, &id_b->private_id,
+                sizeof(id_a->private_id)) == 0;
 }
 
 
@@ -302,14 +303,16 @@ svn_fs_fs__id_check_related(const svn_fs_id_t *a,
 
   /* If both node_ids start with _ and they have differing transaction
      IDs, then it is impossible for them to be related. */
-  if (id_a->node_id.revision == SVN_INVALID_REVNUM)
+  if (id_a->private_id.node_id.revision == SVN_INVALID_REVNUM)
     {
-      if (   !svn_fs_fs__id_part_eq(&id_a->txn_id, &id_b->txn_id)
-          || !svn_fs_fs__id_txn_used(&id_a->txn_id))
+      if (   !svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                                    &id_b->private_id.txn_id)
+          || !svn_fs_fs__id_txn_used(&id_a->private_id.txn_id))
         return FALSE;
     }
 
-  return svn_fs_fs__id_part_eq(&id_a->node_id, &id_b->node_id);
+  return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
+                               &id_b->private_id.node_id);
 }
 
 
@@ -351,8 +354,8 @@ svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
 
   /* node ID and copy ID are "0" */
   
-  id->txn_id = *txn_id;
-  id->rev_item.revision = SVN_INVALID_REVNUM;
+  id->private_id.txn_id = *txn_id;
+  id->private_id.rev_offset.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -368,10 +371,10 @@ svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
 {
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  id->node_id = *node_id;
-  id->copy_id = *copy_id;
-  id->txn_id = *txn_id;
-  id->rev_item.revision = SVN_INVALID_REVNUM;
+  id->private_id.node_id = *node_id;
+  id->private_id.copy_id = *copy_id;
+  id->private_id.txn_id = *txn_id;
+  id->private_id.rev_offset.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -383,15 +386,15 @@ svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
 svn_fs_id_t *
 svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
                          const svn_fs_fs__id_part_t *copy_id,
-                         const svn_fs_fs__id_part_t *rev_item,
+                         const svn_fs_fs__id_part_t *rev_offset,
                          apr_pool_t *pool)
 {
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  id->node_id = *node_id;
-  id->copy_id = *copy_id;
-  id->txn_id.revision = SVN_INVALID_REVNUM;
-  id->rev_item = *rev_item;
+  id->private_id.node_id = *node_id;
+  id->private_id.copy_id = *copy_id;
+  id->private_id.txn_id.revision = SVN_INVALID_REVNUM;
+  id->private_id.rev_offset = *rev_offset;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
@@ -440,14 +443,14 @@ svn_fs_fs__id_parse(const char *data,
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
-  if (! part_parse(&id->node_id, str))
+  if (! part_parse(&id->private_id.node_id, str))
     return NULL;
 
   /* Copy Id */
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
-  if (! part_parse(&id->copy_id, str))
+  if (! part_parse(&id->private_id.copy_id, str))
     return NULL;
 
   /* Txn/Rev Id */
@@ -461,14 +464,14 @@ svn_fs_fs__id_parse(const char *data,
       svn_error_t *err;
 
       /* This is a revision type ID */
-      id->txn_id.revision = SVN_INVALID_REVNUM;
-      id->txn_id.number = 0;
+      id->private_id.txn_id.revision = SVN_INVALID_REVNUM;
+      id->private_id.txn_id.number = 0;
 
       data_copy = str + 1;
       str = svn_cstring_tokenize("/", &data_copy);
       if (str == NULL)
         return NULL;
-      id->rev_item.revision = SVN_STR_TO_REV(str);
+      id->private_id.rev_offset.revision = SVN_STR_TO_REV(str);
 
       err = svn_cstring_atoi64(&val, data_copy);
       if (err)
@@ -476,15 +479,15 @@ svn_fs_fs__id_parse(const char *data,
           svn_error_clear(err);
           return NULL;
         }
-      id->rev_item.number = (apr_uint64_t)val;
+      id->private_id.rev_offset.number = (apr_uint64_t)val;
     }
   else if (str[0] == 't')
     {
       /* This is a transaction type ID */
-      id->rev_item.revision = SVN_INVALID_REVNUM;
-      id->rev_item.number = 0;
+      id->private_id.rev_offset.revision = SVN_INVALID_REVNUM;
+      id->private_id.rev_offset.number = 0;
 
-      if (! txn_id_parse(&id->txn_id, str + 1))
+      if (! txn_id_parse(&id->private_id.txn_id, str + 1))
         return NULL;
     }
   else

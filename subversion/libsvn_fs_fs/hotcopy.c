@@ -26,10 +26,9 @@
 #include "fs_fs.h"
 #include "hotcopy.h"
 #include "util.h"
+#include "recovery.h"
 #include "revprops.h"
 #include "rep-cache.h"
-#include "transaction.h"
-#include "recovery.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -341,8 +340,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   if (*dst_min_unpacked_rev < rev + max_files_per_dir)
     {
       *dst_min_unpacked_rev = rev + max_files_per_dir;
-      SVN_ERR(svn_fs_fs__write_revnum_file(dst_fs,
-                                           *dst_min_unpacked_rev,
+      SVN_ERR(svn_fs_fs__write_revnum_file(dst_fs, *dst_min_unpacked_rev,
                                            scratch_pool));
     }
 
@@ -829,9 +827,9 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_check_path(svn_fs_fs__path_revprop_generation(src_fs, pool),
                             &kind, pool));
   if (kind == svn_node_file)
-    SVN_ERR(write_revprop_generation_file(dst_fs, 0, pool));
+    SVN_ERR(svn_fs_fs__write_revprop_generation_file(dst_fs, 0, pool));
 
-  SVN_ERR(cleanup_revprop_namespace(dst_fs));
+  SVN_ERR(svn_fs_fs__cleanup_revprop_namespace(dst_fs));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
   dst_ffd->max_files_per_dir = max_files_per_dir;
@@ -875,19 +873,19 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create the revision data directories. */
   if (dst_ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(
-                               svn_fs_fs__path_rev_shard(dst_fs, 0, pool),
-                               pool));
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(dst_fs,
+                                                                  0, pool),
+                                        pool));
   else
-    SVN_ERR(svn_io_make_dir_recursively(
-                           svn_dirent_join(dst_path, PATH_REVS_DIR, pool),
-                           pool));
+    SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
+                                                        PATH_REVS_DIR, pool),
+                                        pool));
 
   /* Create the revprops directory. */
   if (src_ffd->max_files_per_dir)
     SVN_ERR(svn_io_make_dir_recursively(
-                           svn_fs_fs__path_revprops_shard(dst_fs, 0, pool),
-                           pool));
+                          svn_fs_fs__path_revprops_shard(dst_fs, 0, pool),
+                          pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(dst_path,
                                                         PATH_REVPROPS_DIR,
@@ -908,10 +906,10 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create the 'current' file. */
   SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(dst_fs, pool),
-                              (dst_ffd->format >=
-                                 SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                                 ? "0\n" : "0 1 1\n"), 
-                               pool));
+                             (dst_ffd->format >=
+                                SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
+                                ? "0\n" : "0 1 1\n"),
+                             pool));
 
   /* Create lock file and UUID. */
   SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(dst_fs, pool), pool));
@@ -919,9 +917,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
 
   /* Create the min unpacked rev file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-    SVN_ERR(svn_io_file_create(
-                           svn_fs_fs__path_min_unpacked_rev(dst_fs, pool),
-                           "0\n", pool));
+    SVN_ERR(svn_io_file_create(svn_fs_fs__path_min_unpacked_rev(dst_fs, pool),
+                                                                "0\n", pool));
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
   if (dst_ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
@@ -929,8 +926,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
       SVN_ERR(svn_io_file_create(svn_fs_fs__path_txn_current(dst_fs, pool),
                                  "0\n", pool));
       SVN_ERR(svn_io_file_create_empty(
-                           svn_fs_fs__path_txn_current_lock(dst_fs, pool),
-                           pool));
+                          svn_fs_fs__path_txn_current_lock(dst_fs, pool),
+                          pool));
     }
 
   dst_ffd->youngest_rev_cache = 0;

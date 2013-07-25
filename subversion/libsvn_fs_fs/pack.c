@@ -31,11 +31,10 @@
 #include "fs_fs.h"
 #include "pack.h"
 #include "util.h"
+#include "id.h"
+#include "low_level.h"
 #include "revprops.h"
 #include "transaction.h"
-#include "index.h"
-#include "low_level.h"
-#include "cached_data.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -52,8 +51,10 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
   const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
 
-  const svn_fs_fs__id_part_t *lhs_rev_item = svn_fs_fs__id_rev_item(lhs->id);
-  const svn_fs_fs__id_part_t *rhs_rev_item = svn_fs_fs__id_rev_item(rhs->id);
+  const svn_fs_fs__id_part_t *lhs_rev_item
+    = svn_fs_fs__id_rev_offset(lhs->id);
+  const svn_fs_fs__id_part_t *rhs_rev_item
+    = svn_fs_fs__id_rev_offset(rhs->id);
 
   /* decreasing ("reverse") order on revs */
   if (lhs_rev_item->revision != rhs_rev_item->revision)
@@ -118,8 +119,10 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
-                 svn_fs_fs__path_rev_packed(fs, rev, PATH_MANIFEST, pool),
-                 pool, pool));
+                                   svn_fs_fs__path_rev_packed(fs, rev,
+                                                              PATH_MANIFEST,
+                                                              pool),
+                                   pool, pool));
 
   /* While we're here, let's just read the entire manifest file into an array,
      so we can cache the entire thing. */
@@ -331,17 +334,19 @@ pack_shard(const char *revs_dir,
                            apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
                            pool);
 
-      SVN_ERR(pack_revprops_shard(revprops_pack_file_dir, revprops_shard_path,
-                                  shard, max_files_per_dir,
-                                  (int)(0.9 * max_pack_size),
-                                  compression_level,
-                                  cancel_func, cancel_baton, pool));
+      SVN_ERR(svn_fs_fs__pack_revprops_shard(revprops_pack_file_dir,
+                                             revprops_shard_path,
+                                             shard, max_files_per_dir,
+                                             (int)(0.9 * max_pack_size),
+                                             compression_level,
+                                             cancel_func, cancel_baton,
+                                             pool));
     }
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard. */
   SVN_ERR(svn_fs_fs__write_revnum_file(fs,
-                            (svn_revnum_t)((shard + 1) * max_files_per_dir),
-                            pool));
+                          (svn_revnum_t)((shard + 1) * max_files_per_dir),
+                          pool));
   ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
 
   /* Finally, remove the existing shard directories.
@@ -355,9 +360,12 @@ pack_shard(const char *revs_dir,
       apr_int64_t to_cleanup = shard;
       do
         {
-          SVN_ERR(delete_revprops_shard(revprops_shard_path,
-                                        to_cleanup, max_files_per_dir,
-                                        cancel_func, cancel_baton, pool));
+          SVN_ERR(svn_fs_fs__delete_revprops_shard(revprops_shard_path,
+                                                   to_cleanup,
+                                                   max_files_per_dir,
+                                                   cancel_func,
+                                                   cancel_baton,
+                                                   pool));
 
           /* If the previous shard exists, clean it up as well.
              Don't try to clean up shard 0 as it we can't tell quickly
@@ -399,7 +407,7 @@ struct pack_baton
      extension, on not having to use a retry when calling
      svn_fs_fs__path_rev_absolute() and friends).  If you add a call
      to this function, consider whether you have to call
-     update_min_unpacked_rev().
+     svn_fs_fs__update_min_unpacked_rev().
      See this thread: http://thread.gmane.org/1291206765.3782.3309.camel@edith
  */
 static svn_error_t *

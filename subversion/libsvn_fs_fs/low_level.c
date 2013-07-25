@@ -156,6 +156,303 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
                                changes_offset);
 }
 
+
+/* Read the next entry in the changes record from file FILE and store
+   the resulting change in *CHANGE_P.  If there is no next record,
+   store NULL there.  Perform all allocations from POOL. */
+static svn_error_t *
+read_change(change_t **change_p,
+            svn_stream_t *stream,
+            apr_pool_t *pool)
+{
+  svn_stringbuf_t *line;
+  svn_boolean_t eof = TRUE;
+  change_t *change;
+  char *str, *last_str, *kind_str;
+  svn_fs_path_change2_t *info;
+
+  /* Default return value. */
+  *change_p = NULL;
+
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+
+  /* Check for a blank line. */
+  if (eof || (line->len == 0))
+    return SVN_NO_ERROR;
+
+  change = apr_pcalloc(pool, sizeof(*change));
+  info = &change->info;
+  last_str = line->data;
+
+  /* Get the node-id of the change. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
+
+  info->node_rev_id = svn_fs_fs__id_parse(str, strlen(str), pool);
+  if (info->node_rev_id == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
+
+  /* Get the change type. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
+
+  /* Don't bother to check the format number before looking for
+   * node-kinds: just read them if you find them. */
+  info->node_kind = svn_node_unknown;
+  kind_str = strchr(str, '-');
+  if (kind_str)
+    {
+      /* Cap off the end of "str" (the action). */
+      *kind_str = '\0';
+      kind_str++;
+      if (strcmp(kind_str, SVN_FS_FS__KIND_FILE) == 0)
+        info->node_kind = svn_node_file;
+      else if (strcmp(kind_str, SVN_FS_FS__KIND_DIR) == 0)
+        info->node_kind = svn_node_dir;
+      else
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Invalid changes line in rev-file"));
+    }
+
+  if (strcmp(str, ACTION_MODIFY) == 0)
+    {
+      info->change_kind = svn_fs_path_change_modify;
+    }
+  else if (strcmp(str, ACTION_ADD) == 0)
+    {
+      info->change_kind = svn_fs_path_change_add;
+    }
+  else if (strcmp(str, ACTION_DELETE) == 0)
+    {
+      info->change_kind = svn_fs_path_change_delete;
+    }
+  else if (strcmp(str, ACTION_REPLACE) == 0)
+    {
+      info->change_kind = svn_fs_path_change_replace;
+    }
+  else if (strcmp(str, ACTION_RESET) == 0)
+    {
+      info->change_kind = svn_fs_path_change_reset;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Invalid change kind in rev file"));
+    }
+
+  /* Get the text-mod flag. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
+
+  if (strcmp(str, FLAG_TRUE) == 0)
+    {
+      info->text_mod = TRUE;
+    }
+  else if (strcmp(str, FLAG_FALSE) == 0)
+    {
+      info->text_mod = FALSE;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Invalid text-mod flag in rev-file"));
+    }
+
+  /* Get the prop-mod flag. */
+  str = svn_cstring_tokenize(" ", &last_str);
+  if (str == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
+
+  if (strcmp(str, FLAG_TRUE) == 0)
+    {
+      info->prop_mod = TRUE;
+    }
+  else if (strcmp(str, FLAG_FALSE) == 0)
+    {
+      info->prop_mod = FALSE;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Invalid prop-mod flag in rev-file"));
+    }
+
+  /* Get the changed path. */
+  change->path.len = strlen(last_str);
+  change->path.data = apr_pstrmemdup(pool, last_str, change->path.len);
+
+  /* Read the next line, the copyfrom line. */
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+  info->copyfrom_known = TRUE;
+  if (eof || line->len == 0)
+    {
+      info->copyfrom_rev = SVN_INVALID_REVNUM;
+      info->copyfrom_path = NULL;
+    }
+  else
+    {
+      last_str = line->data;
+      str = svn_cstring_tokenize(" ", &last_str);
+      if (! str)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Invalid changes line in rev-file"));
+      info->copyfrom_rev = SVN_STR_TO_REV(str);
+
+      if (! last_str)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Invalid changes line in rev-file"));
+
+      info->copyfrom_path = apr_pstrdup(pool, last_str);
+    }
+
+  *change_p = change;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__read_changes(apr_array_header_t **changes,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool)
+{
+  change_t *change;
+
+  /* pre-allocate enough room for most change lists
+     (will be auto-expanded as necessary) */
+  *changes = apr_array_make(pool, 30, sizeof(change_t *));
+
+  SVN_ERR(read_change(&change, stream, pool));
+  while (change)
+    {
+      APR_ARRAY_PUSH(*changes, change_t*) = change;
+      SVN_ERR(read_change(&change, stream, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Write a single change entry, path PATH, change CHANGE, and copyfrom
+   string COPYFROM, into the file specified by FILE.  Only include the
+   node kind field if INCLUDE_NODE_KIND is true.  All temporary
+   allocations are in POOL. */
+static svn_error_t *
+write_change_entry(svn_stream_t *stream,
+                   const char *path,
+                   svn_fs_path_change2_t *change,
+                   svn_boolean_t include_node_kind,
+                   apr_pool_t *pool)
+{
+  const char *idstr, *buf;
+  const char *change_string = NULL;
+  const char *kind_string = "";
+
+  switch (change->change_kind)
+    {
+    case svn_fs_path_change_modify:
+      change_string = ACTION_MODIFY;
+      break;
+    case svn_fs_path_change_add:
+      change_string = ACTION_ADD;
+      break;
+    case svn_fs_path_change_delete:
+      change_string = ACTION_DELETE;
+      break;
+    case svn_fs_path_change_replace:
+      change_string = ACTION_REPLACE;
+      break;
+    case svn_fs_path_change_reset:
+      change_string = ACTION_RESET;
+      break;
+    default:
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Invalid change type %d"),
+                               change->change_kind);
+    }
+
+  if (change->node_rev_id)
+    idstr = svn_fs_fs__id_unparse(change->node_rev_id, pool)->data;
+  else
+    idstr = ACTION_RESET;
+
+  if (include_node_kind)
+    {
+      SVN_ERR_ASSERT(change->node_kind == svn_node_dir
+                     || change->node_kind == svn_node_file);
+      kind_string = apr_psprintf(pool, "-%s",
+                                 change->node_kind == svn_node_dir
+                                 ? SVN_FS_FS__KIND_DIR
+                                  : SVN_FS_FS__KIND_FILE);
+    }
+  buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
+                     idstr, change_string, kind_string,
+                     change->text_mod ? FLAG_TRUE : FLAG_FALSE,
+                     change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
+                     path);
+
+  SVN_ERR(svn_stream_puts(stream, buf));
+
+  if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
+    {
+      buf = apr_psprintf(pool, "%ld %s", change->copyfrom_rev,
+                         change->copyfrom_path);
+      SVN_ERR(svn_stream_puts(stream, buf));
+    }
+
+  return svn_error_trace(svn_stream_puts(stream, "\n"));
+}
+
+svn_error_t *
+svn_fs_fs__write_changes(svn_stream_t *stream,
+                         svn_fs_t *fs,
+                         apr_hash_t *changes,
+                         svn_boolean_t terminate_list,
+                         apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t include_node_kinds =
+      ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
+  apr_array_header_t *sorted_changed_paths;
+  int i;
+
+  /* For the sake of the repository administrator sort the changes so
+     that the final file is deterministic and repeatable, however the
+     rest of the FSFS code doesn't require any particular order here. */
+  sorted_changed_paths = svn_sort__hash(changes,
+                                        svn_sort_compare_items_lexically, pool);
+
+  /* Write all items to disk in the new order. */
+  for (i = 0; i < sorted_changed_paths->nelts; ++i)
+    {
+      svn_fs_path_change2_t *change;
+      const char *path;
+
+      svn_pool_clear(iterpool);
+
+      change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;
+      path = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).key;
+
+      /* Write out the new entry into the final rev-file. */
+      SVN_ERR(write_change_entry(stream, path, change, include_node_kinds,
+                                 iterpool));
+    }
+
+  if (terminate_list)
+    svn_stream_puts(stream, "\n");
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
@@ -236,7 +533,6 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-
   rep->revision = SVN_STR_TO_REV(str);
 
   /* initialize transaction info (never stored) */
@@ -248,7 +544,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     {
       if (rep->revision == SVN_INVALID_REVNUM)
         return SVN_NO_ERROR;
-    
+
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                               _("Malformed text representation offset line in node-rev"));
     }
@@ -313,8 +609,8 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
-/* Wrap read_rep_offsets_body(), extracting its TXN_ID from our NODEREV_ID,
-   and adding an error message. */
+/* Wrap svn_fs_fs__parse_representation(), extracting its TXN_ID from our
+   NODEREV_ID, and adding an error message. */
 static svn_error_t *
 read_rep_offsets(representation_t **rep_p,
                  char *string,
@@ -538,7 +834,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
   svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
           (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-           " %" SVN_FILESIZE_T_FMT " %s %s %s/%s",
+           " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
            rep->revision, rep->offset, rep->size,
            rep->expanded_size,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
@@ -707,300 +1003,3 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
 
   return svn_error_trace(svn_stream_puts(stream, text));
 }
-
-/* Read the next entry in the changes record from file FILE and store
-   the resulting change in *CHANGE_P.  If there is no next record,
-   store NULL there.  Perform all allocations from POOL. */
-static svn_error_t *
-read_change(change_t **change_p,
-            svn_stream_t *stream,
-            apr_pool_t *pool)
-{
-  svn_stringbuf_t *line;
-  svn_boolean_t eof = TRUE;
-  change_t *change;
-  char *str, *last_str, *kind_str;
-  svn_fs_path_change2_t *info;
-
-  /* Default return value. */
-  *change_p = NULL;
-
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
-
-  /* Check for a blank line. */
-  if (eof || (line->len == 0))
-    return SVN_NO_ERROR;
-
-  change = apr_pcalloc(pool, sizeof(*change));
-  info = &change->info;
-  last_str = line->data;
-
-  /* Get the node-id of the change. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  info->node_rev_id = svn_fs_fs__id_parse(str, strlen(str), pool);
-  if (info->node_rev_id == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  /* Get the change type. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  /* Don't bother to check the format number before looking for
-   * node-kinds: just read them if you find them. */
-  info->node_kind = svn_node_unknown;
-  kind_str = strchr(str, '-');
-  if (kind_str)
-    {
-      /* Cap off the end of "str" (the action). */
-      *kind_str = '\0';
-      kind_str++;
-      if (strcmp(kind_str, SVN_FS_FS__KIND_FILE) == 0)
-        info->node_kind = svn_node_file;
-      else if (strcmp(kind_str, SVN_FS_FS__KIND_DIR) == 0)
-        info->node_kind = svn_node_dir;
-      else
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
-    }
-
-  if (strcmp(str, ACTION_MODIFY) == 0)
-    {
-      info->change_kind = svn_fs_path_change_modify;
-    }
-  else if (strcmp(str, ACTION_ADD) == 0)
-    {
-      info->change_kind = svn_fs_path_change_add;
-    }
-  else if (strcmp(str, ACTION_DELETE) == 0)
-    {
-      info->change_kind = svn_fs_path_change_delete;
-    }
-  else if (strcmp(str, ACTION_REPLACE) == 0)
-    {
-      info->change_kind = svn_fs_path_change_replace;
-    }
-  else if (strcmp(str, ACTION_RESET) == 0)
-    {
-      info->change_kind = svn_fs_path_change_reset;
-    }
-  else
-    {
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                              _("Invalid change kind in rev file"));
-    }
-
-  /* Get the text-mod flag. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  if (strcmp(str, FLAG_TRUE) == 0)
-    {
-      info->text_mod = TRUE;
-    }
-  else if (strcmp(str, FLAG_FALSE) == 0)
-    {
-      info->text_mod = FALSE;
-    }
-  else
-    {
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                              _("Invalid text-mod flag in rev-file"));
-    }
-
-  /* Get the prop-mod flag. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  if (strcmp(str, FLAG_TRUE) == 0)
-    {
-      info->prop_mod = TRUE;
-    }
-  else if (strcmp(str, FLAG_FALSE) == 0)
-    {
-      info->prop_mod = FALSE;
-    }
-  else
-    {
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                              _("Invalid prop-mod flag in rev-file"));
-    }
-
-  /* Get the changed path. */
-  change->path.len = strlen(last_str);
-  change->path.data = apr_pstrmemdup(pool, last_str, change->path.len);
-
-  /* Read the next line, the copyfrom line. */
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
-  info->copyfrom_known = TRUE;
-  if (eof || line->len == 0)
-    {
-      info->copyfrom_rev = SVN_INVALID_REVNUM;
-      info->copyfrom_path = NULL;
-    }
-  else
-    {
-      last_str = line->data;
-      str = svn_cstring_tokenize(" ", &last_str);
-      if (! str)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
-      info->copyfrom_rev = SVN_STR_TO_REV(str);
-
-      if (! last_str)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Invalid changes line in rev-file"));
-
-      info->copyfrom_path = apr_pstrdup(pool, last_str);
-    }
-
-  *change_p = change;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__read_changes(apr_array_header_t **changes,
-                        svn_stream_t *stream,
-                        apr_pool_t *pool)
-{
-  change_t *change;
-
-  /* pre-allocate enough room for most change lists
-     (will be auto-expanded as necessary) */
-  *changes = apr_array_make(pool, 30, sizeof(change_t *));
-  
-  SVN_ERR(read_change(&change, stream, pool));
-  while (change)
-    {
-      APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Write a single change entry, path PATH, change CHANGE, and copyfrom
-   string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  All temporary
-   allocations are in POOL. */
-static svn_error_t *
-write_change_entry(svn_stream_t *stream,
-                   const char *path,
-                   svn_fs_path_change2_t *change,
-                   svn_boolean_t include_node_kind,
-                   apr_pool_t *pool)
-{
-  const char *idstr, *buf;
-  const char *change_string = NULL;
-  const char *kind_string = "";
-
-  switch (change->change_kind)
-    {
-    case svn_fs_path_change_modify:
-      change_string = ACTION_MODIFY;
-      break;
-    case svn_fs_path_change_add:
-      change_string = ACTION_ADD;
-      break;
-    case svn_fs_path_change_delete:
-      change_string = ACTION_DELETE;
-      break;
-    case svn_fs_path_change_replace:
-      change_string = ACTION_REPLACE;
-      break;
-    case svn_fs_path_change_reset:
-      change_string = ACTION_RESET;
-      break;
-    default:
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Invalid change type %d"),
-                               change->change_kind);
-    }
-
-  if (change->node_rev_id)
-    idstr = svn_fs_fs__id_unparse(change->node_rev_id, pool)->data;
-  else
-    idstr = ACTION_RESET;
-
-  if (include_node_kind)
-    {
-      SVN_ERR_ASSERT(change->node_kind == svn_node_dir
-                     || change->node_kind == svn_node_file);
-      kind_string = apr_psprintf(pool, "-%s",
-                                 change->node_kind == svn_node_dir
-                                 ? SVN_FS_FS__KIND_DIR
-                                  : SVN_FS_FS__KIND_FILE);
-    }
-  buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
-                     idstr, change_string, kind_string,
-                     change->text_mod ? FLAG_TRUE : FLAG_FALSE,
-                     change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
-                     path);
-
-  SVN_ERR(svn_stream_puts(stream, buf));
-
-  if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
-    {
-      buf = apr_psprintf(pool, "%ld %s", change->copyfrom_rev,
-                         change->copyfrom_path);
-      SVN_ERR(svn_stream_puts(stream, buf));
-    }
-
-  return svn_error_trace(svn_stream_puts(stream, "\n"));
-}
-
-svn_error_t *
-svn_fs_fs__write_changes(svn_stream_t *stream,
-                         svn_fs_t *fs,
-                         apr_hash_t *changes,
-                         svn_boolean_t terminate_list,
-                         apr_pool_t *pool)
-{
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t include_node_kinds =
-      ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
-  apr_array_header_t *sorted_changed_paths;
-  int i;
-
-  /* For the sake of the repository administrator sort the changes so
-     that the final file is deterministic and repeatable, however the
-     rest of the FSFS code doesn't require any particular order here. */
-  sorted_changed_paths = svn_sort__hash(changes,
-                                        svn_sort_compare_items_lexically, pool);
-
-  /* Write all items to disk in the new order. */
-  for (i = 0; i < sorted_changed_paths->nelts; ++i)
-    {
-      svn_fs_path_change2_t *change;
-      const char *path;
-
-      svn_pool_clear(iterpool);
-
-      change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;
-      path = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).key;
-
-      /* Write out the new entry into the final rev-file. */
-      SVN_ERR(write_change_entry(stream, path, change, include_node_kinds,
-                                 iterpool));
-    }
-
-  if (terminate_list)
-    svn_stream_puts(stream, "\n");
-  
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-

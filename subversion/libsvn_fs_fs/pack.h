@@ -27,6 +27,7 @@
 
 /* Possibly pack the repository at PATH.  This just take full shards, and
    combines all the revision files into a single one, with a manifest header.
+   If given, NOTIFY_FUNC will be called with NOTIFY_BATON to report progress.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
 
    Existing filesystem references need not change.  */

@@ -807,24 +807,24 @@ SVN_ERROR_START
              "Could not initialize the revprop caching infrastructure.")
 
   /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
              SVN_ERR_FS_CATEGORY_START + 53,
+             "Malformed transaction ID string.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+             SVN_ERR_FS_CATEGORY_START + 54,
              "Corrupt index file.")
 
   /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_REVISION,
-             SVN_ERR_FS_CATEGORY_START + 54,
+             SVN_ERR_FS_CATEGORY_START + 55,
              "Revision not covered by index.")
 
   /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_OVERFLOW,
-             SVN_ERR_FS_CATEGORY_START + 55,
-             "Item index too large for this revision.")
-
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
              SVN_ERR_FS_CATEGORY_START + 56,
-             "Malformed transaction ID string.")
+             "Item index too large for this revision.")
 
   /** @since New in 1.9. */
   SVN_ERRDEF(SVN_ERR_FS_CONTAINER_INDEX,
@@ -1552,7 +1552,10 @@ SVN_ERROR_START
              SVN_ERR_RA_SERF_CATEGORY_START + 2,
              "Initialization of the GSSAPI context failed")
 
-  /** @since New in 1.7. */
+  /** @since New in 1.7.
+   * @note When @c svn_error_t.apr_err is set to this,
+   * @c svn_error_t.child->apr_err is a serf error code, not a Subversion
+   * one! */
   SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
              SVN_ERR_RA_SERF_CATEGORY_START + 3,
              "While handling serf response:")

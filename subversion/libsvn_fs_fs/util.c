@@ -27,6 +27,7 @@
 #include "private/svn_string_private.h"
 
 #include "fs_fs.h"
+#include "pack.h"
 #include "util.h"
 
 #include "../libsvn_fs/fs-loader.h"
@@ -52,24 +53,6 @@ svn_fs_fs__is_packed_revprop(svn_fs_t *fs,
   return (rev < ffd->min_unpacked_rev)
       && (rev != 0)
       && (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT);
-}
-
-const char *
-svn_fs_fs__path_format(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_FORMAT, pool);
-}
-
-const char *
-svn_fs_fs__path_uuid(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_UUID, pool);
-}
-
-const char *
-svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_CURRENT, pool);
 }
 
 const char *
@@ -232,54 +215,6 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_fs__path_txn_sha1(svn_fs_t *fs,
-                         const svn_fs_fs__id_part_t *txn_id,
-                         const unsigned char *sha1,
-                         apr_pool_t *pool)
-{
-  svn_checksum_t checksum;
-  checksum.digest = sha1;
-  checksum.kind = svn_checksum_sha1;
-  
-  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
-                         svn_checksum_to_cstring(&checksum, pool),
-                         pool);
-}
-
-const char *
-svn_fs_fs__path_txn_changes(svn_fs_t *fs,
-                            const svn_fs_fs__id_part_t *txn_id,
-                            apr_pool_t *pool)
-{
-  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
-                         PATH_CHANGES, pool);
-}
-
-const char *
-svn_fs_fs__path_txn_props(svn_fs_t *fs,
-                          const svn_fs_fs__id_part_t *txn_id,
-                          apr_pool_t *pool)
-{
-  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
-                         PATH_TXN_PROPS, pool);
-}
-
-const char *
-svn_fs_fs__path_txn_next_ids(svn_fs_t *fs,
-                             const svn_fs_fs__id_part_t *txn_id,
-                             apr_pool_t *pool)
-{
-  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
-                         PATH_NEXT_IDS, pool);
-}
-
-const char *
-svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
-}
-
-const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool)
@@ -360,6 +295,13 @@ svn_fs_fs__path_node_origin(svn_fs_t *fs,
                               buffer, NULL);
 }
 
+const char *
+svn_fs_fs__path_min_unpacked_rev(svn_fs_t *fs,
+                                 apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REV, pool);
+}
+
 svn_error_t *
 svn_fs_fs__check_file_buffer_numeric(const char *buf,
                                      apr_off_t offset,
@@ -437,7 +379,7 @@ svn_fs_fs__write_current(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
   char *buf;
-  const char *tmp_name, *name;
+  const char *name;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
@@ -456,12 +398,10 @@ svn_fs_fs__write_current(svn_fs_t *fs,
     }
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_write_unique(&tmp_name,
-                              svn_dirent_dirname(name, pool),
-                              buf, strlen(buf),
-                              svn_io_file_del_none, pool));
+  SVN_ERR(svn_io_write_atomic(name, buf, strlen(buf),
+                              name /* copy_perms_path */, pool));
 
-  return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -623,6 +563,79 @@ svn_fs_fs__move_into_place(const char *old_filename,
     SVN_ERR(svn_io_file_close(file, pool));
   }
 #endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
+                                 svn_fs_t *fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_error_t *err;
+  svn_boolean_t retry = FALSE;
+
+  do
+    {
+      const char *path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
+
+      /* open the revision file in buffered r/o mode */
+      err = svn_io_file_open(file, path,
+                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+            {
+              /* Could not open the file. This may happen if the
+               * file once existed but got packed later. */
+              svn_error_clear(err);
+
+              /* if that was our 2nd attempt, leave it at that. */
+              if (retry)
+                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                         _("No such revision %ld"), rev);
+
+              /* We failed for the first time. Refresh cache & retry. */
+              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+
+              retry = TRUE;
+            }
+          else
+            {
+              svn_error_clear(err);
+              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                       _("No such revision %ld"), rev);
+            }
+        }
+      else
+        {
+          retry = FALSE;
+        }
+    }
+  while (retry);
+
+  return svn_error_trace(err);
+}
+
+svn_error_t *
+svn_fs_fs__item_offset(apr_off_t *absolute_position,
+                       svn_fs_t *fs,
+                       svn_revnum_t rev,
+                       apr_off_t offset,
+                       apr_pool_t *pool)
+{
+  if (svn_fs_fs__is_packed_rev(fs, rev))
+    {
+      apr_off_t rev_offset;
+      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
+      *absolute_position = rev_offset + offset;
+    }
+  else
+    {
+      *absolute_position = offset;
+    }
 
   return SVN_NO_ERROR;
 }

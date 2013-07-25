@@ -30,16 +30,6 @@
 const svn_fs_fs__id_part_t *
 svn_fs_fs__txn_get_id(svn_fs_txn_t *txn);
 
-/* Obtain a write lock on the filesystem FS in a subpool of POOL, call
-   BODY with BATON and that subpool, destroy the subpool (releasing the write
-   lock) and return what BODY returned. */
-svn_error_t *
-svn_fs_fs__with_write_lock(svn_fs_t *fs,
-                           svn_error_t *(*body)(void *baton,
-                                                apr_pool_t *pool),
-                           void *baton,
-                           apr_pool_t *pool);
-
 /* Store NODEREV as the node-revision for the node whose id is ID in
    FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
    necessary temporary allocation in POOL. */
@@ -209,12 +199,14 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
 
 /* Commit the transaction TXN in filesystem FS and return its new
    revision number in *REV.  If the transaction is out of date, return
-   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
-   allocations. */
+   the error SVN_ERR_FS_TXN_OUT_OF_DATE. Update commit time to ensure that
+   svn:date revprops remain ordered if SET_TIMESTAMP is non-zero. Use POOL for
+   temporary allocations. */
 svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
                   svn_fs_txn_t *txn,
+                  svn_boolean_t set_timestamp,
                   apr_pool_t *pool);
 
 /* Set *NAMES_P to an array of names which are all the active

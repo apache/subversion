@@ -28,11 +28,11 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
+#include "cached_data.h"
 #include "dag.h"
 #include "fs.h"
 #include "fs_fs.h"
 #include "id.h"
-#include "cached_data.h"
 #include "transaction.h"
 
 #include "../libsvn_fs/fs-loader.h"

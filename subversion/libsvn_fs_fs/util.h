@@ -139,13 +139,18 @@ svn_fs_fs__path_revprops_pack_shard(svn_fs_t *fs,
                                     svn_revnum_t rev,
                                     apr_pool_t *pool);
 
-const char *
-svn_fs_fs__path_uuid(svn_fs_t *fs,
-                     apr_pool_t *pool);
+/* Set *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate *PATH in POOL.
 
+   Note: If the caller does not have the write lock on FS, then the path is
+   not guaranteed to be correct or to remain correct after the function
+   returns, because the revision might become packed before or after this
+   call.  If a file exists at that path, then it is correct; if not, then
+   the caller should call update_min_unpacked_rev() and re-try once. */
 const char *
-svn_fs_fs__path_format(svn_fs_t *fs,
-                       apr_pool_t *pool);
+svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
 
 /* Return the full path of the revision properties shard directory that
  * will contain the properties of revision REV in FS.
@@ -187,28 +192,9 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool);
 
-const char *
-svn_fs_fs__path_txn_sha1(svn_fs_t *fs,
-                         const svn_fs_fs__id_part_t *txn_id,
-                         const unsigned char *sha1,
-                         apr_pool_t *pool);
-
-const char *
-svn_fs_fs__path_txn_changes(svn_fs_t *fs,
-                            const svn_fs_fs__id_part_t *txn_id,
-                            apr_pool_t *pool);
-
-const char *
-svn_fs_fs__path_txn_props(svn_fs_t *fs,
-                          const svn_fs_fs__id_part_t *txn_id,
-                          apr_pool_t *pool);
-
-const char *
-svn_fs_fs__path_txn_next_ids(svn_fs_t *fs,
-                             const svn_fs_fs__id_part_t *txn_id,
-                             apr_pool_t *pool);
-
-
+/* Return the path of the proto-revision lock file for transaction TXN_ID
+ * in FS.  The result will be allocated in POOL.
+ */
 const char *
 svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
                                    const svn_fs_fs__id_part_t *txn_id,
@@ -239,6 +225,9 @@ svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
                                   const svn_fs_id_t *id,
                                   apr_pool_t *pool);
 
+/* Return the path of the file containing the node origins cachs for
+ * the given NODE_ID in FS.  The result will be allocated in POOL.
+ */
 const char *
 svn_fs_fs__path_node_origin(svn_fs_t *fs,
                             const svn_fs_fs__id_part_t *node_id,
@@ -347,5 +336,31 @@ svn_fs_fs__move_into_place(const char *old_filename,
                            const char *new_filename,
                            const char *perms_reference,
                            apr_pool_t *pool);
+
+/* Open the correct revision file for REV.  If the filesystem FS has
+   been packed, *FILE will be set to the packed file; otherwise, set *FILE
+   to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
+   file doesn't exist.
+
+   TODO: Consider returning an indication of whether this is a packed rev
+         file, so the caller need not rely on is_packed_rev() which in turn
+         relies on the cached FFD->min_unpacked_rev value not having changed
+         since the rev file was opened.
+
+   Use POOL for allocations. */
+svn_error_t *
+svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
+                                 svn_fs_t *fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *pool);
+
+/* For OFFSET within REV in FS, return the position in the respective rev
+   or pack file in *ABSOLUTE_POSITION.  Use POOL for allocations. */
+svn_error_t *
+svn_fs_fs__item_offset(apr_off_t *absolute_position,
+                       svn_fs_t *fs,
+                       svn_revnum_t rev,
+                       apr_off_t offset,
+                       apr_pool_t *pool);
 
 #endif

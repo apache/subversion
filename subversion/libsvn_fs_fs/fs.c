@@ -35,16 +35,16 @@
 #include "svn_pools.h"
 #include "fs.h"
 #include "fs_fs.h"
-#include "pack.h"
-#include "recovery.h"
-#include "hotcopy.h"
-#include "verify.h"
 #include "tree.h"
 #include "lock.h"
+#include "hotcopy.h"
 #include "id.h"
-#include "revprops.h"
+#include "pack.h"
+#include "recovery.h"
 #include "rep-cache.h"
+#include "revprops.h"
 #include "transaction.h"
+#include "verify.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
@@ -191,7 +191,7 @@ fs_info(const void **fsfs_info,
 static fs_vtable_t fs_vtable = {
   svn_fs_fs__youngest_rev,
   svn_fs_fs__revision_prop,
-  svn_fs_fs__revision_proplist,
+  svn_fs_fs__get_revision_proplist,
   svn_fs_fs__change_rev_prop,
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,

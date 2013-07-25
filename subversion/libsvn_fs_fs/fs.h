@@ -71,10 +71,6 @@ extern "C" {
 #define PATH_PACKED           "pack"             /* Packed revision data file */
 #define PATH_EXT_PACKED_SHARD ".pack"            /* Extension for packed
                                                     shards */
-#define PATH_EXT_L2P_INDEX    ".l2p"             /* extension of the log-
-                                                    to-phys index */
-#define PATH_EXT_P2L_INDEX    ".p2l"             /* extension of the phys-
-                                                    to-log index */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -88,10 +84,6 @@ extern "C" {
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
 #define PATH_EXT_REV       ".rev"          /* Extension of protorev file */
 #define PATH_EXT_REV_LOCK  ".rev-lock"     /* Extension of protorev lock file */
-#define PATH_TXN_ITEM_INDEX "itemidx"      /* File containing the current item
-                                             index number */
-#define PATH_INDEX          "index"        /* name of index files w/o ext */
-
 /* Names of files in legacy FS formats */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
@@ -237,7 +229,7 @@ typedef struct pair_cache_key_t
 {
   svn_revnum_t revision;
 
-  apr_uint64_t second;
+  apr_int64_t second;
 } pair_cache_key_t;
 
 /* Key type that identifies a representation / rep header. */
@@ -260,7 +252,7 @@ typedef struct window_cache_key_t
   apr_uint32_t revision;
 
   /* Window number within that representation */
-  int chunk_index;
+  apr_int32_t chunk_index;
 
   /* Offset of the representation within REVISION */
   apr_uint64_t offset;
@@ -337,8 +329,7 @@ typedef struct fs_fs_data_t
      the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
-  /* Cache for svn_fs_fs__rep_header_t objects;
-   * the key is (revision, item index) */
+  /* Cache for node_revision_t objects; the key is (revision, id offset) */
   svn_cache__t *node_revision_cache;
 
   /* Cache for change lists as APR arrays of change_t * objects; the key
@@ -346,7 +337,7 @@ typedef struct fs_fs_data_t
   svn_cache__t *changes_cache;
 
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
-     (revision, item index) pair */
+     (revision, is_packed, offset) set */
   svn_cache__t *rep_header_cache;
 
   /* Cache for svn_mergeinfo_t objects; the key is a combination of
@@ -455,8 +446,8 @@ typedef struct representation_t
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
-  /* Item offset within the revision. */
-  apr_uint64_t offset;
+  /* Offset into the revision file where it is located. */
+  svn_filesize_t offset;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -474,10 +465,10 @@ typedef struct representation_t
      store the original txn of the node rev (not the rep!), along with some
      intra-node uniqification content. */
   struct
-  {
-    svn_fs_fs__id_part_t txn_id;
-    apr_uint64_t number;
-  } uniquifier;
+    {
+      svn_fs_fs__id_part_t txn_id;
+      apr_uint64_t number;
+    } uniquifier;
 } representation_t;
 
 

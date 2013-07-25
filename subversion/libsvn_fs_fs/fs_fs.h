@@ -51,15 +51,6 @@ svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
                                      svn_fs_t *fs,
                                      apr_pool_t *pool);
 
-/* For revision REV in fileysystem FS, open the revision (or packed rev)
-   file and seek to the start of the revision.  Return it in *FILE, and
-   use POOL for allocations. */
-svn_error_t *
-svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
-                                 svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *pool);
-
 /* Return SVN_ERR_FS_NO_SUCH_REVISION if the given revision REV is newer
    than the current youngest revision in FS or is simply not a valid
    revision number, else return success. */
@@ -67,20 +58,6 @@ svn_error_t *
 svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
                                   svn_fs_t *fs,
                                   apr_pool_t *pool);
-
-/* Return an error iff REV does not exist in FS. */
-svn_error_t *
-svn_fs_fs__revision_exists(svn_revnum_t rev,
-                           svn_fs_t *fs,
-                           apr_pool_t *pool);
-
-/* Set *PROPLIST to be an apr_hash_t containing the property list of
-   revision REV as seen in filesystem FS.  Use POOL for temporary
-   allocations. */
-svn_error_t *svn_fs_fs__revision_proplist(apr_hash_t **proplist,
-                                          svn_fs_t *fs,
-                                          svn_revnum_t rev,
-                                          apr_pool_t *pool);
 
 /* Set *LENGTH to the be fulltext length of the node revision
    specified by NODEREV.  Use POOL for temporary allocations. */
@@ -126,36 +103,38 @@ svn_error_t *svn_fs_fs__set_uuid(svn_fs_t *fs,
                                  const char *uuid,
                                  apr_pool_t *pool);
 
-/* Set *PATH to the path of REV in FS, whether in a pack file or not.
-   Allocate *PATH in POOL.
-
-   Note: If the caller does not have the write lock on FS, then the path is
-   not guaranteed to be correct or to remain correct after the function
-   returns, because the revision might become packed before or after this
-   call.  If a file exists at that path, then it is correct; if not, then
-   the caller should call update_min_unpacked_rev() and re-try once. */
-const char *
-svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
-                             svn_revnum_t rev,
-                             apr_pool_t *pool);
-
 /* Return the path to the 'current' file in FS.
    Perform allocation in POOL. */
 const char *
 svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool);
 
-/* Read the format number and maximum number of files per directory
-   from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
-   respectively.
-
-   *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
-   will be set to zero if a linear scheme should be used.
+/* Write the format number and maximum number of files per directory
+   for FS, possibly expecting to overwrite a previously existing file.
 
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_fs_fs__write_format(svn_fs_t *fs,
                         svn_boolean_t overwrite,
                         apr_pool_t *pool);
+
+/* Obtain a write lock on the filesystem FS in a subpool of POOL, call
+   BODY with BATON and that subpool, destroy the subpool (releasing the write
+   lock) and return what BODY returned. */
+svn_error_t *
+svn_fs_fs__with_write_lock(svn_fs_t *fs,
+                           svn_error_t *(*body)(void *baton,
+                                                apr_pool_t *pool),
+                           void *baton,
+                           apr_pool_t *pool);
+
+/* Run BODY (with BATON and POOL) while the txn-current file
+   of FS is locked. */
+svn_error_t *
+svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
+                                 svn_error_t *(*body)(void *baton,
+                                                      apr_pool_t *pool),
+                                 void *baton,
+                                 apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated

@@ -29,6 +29,15 @@
 #define SVN_FS_FS__KIND_FILE          "file"
 #define SVN_FS_FS__KIND_DIR           "dir"
 
+/* The functions are grouped as follows:
+ *
+ * - revision trailer
+ * - changed path list
+ * - node revision
+ * - representation (as in "text:" and "props:" lines)
+ * - representation header ("PLAIN" and "DELTA" lines)
+ */
+
 /* Given the last "few" bytes (should be at least 40) of revision REV in
  * TRAILER,  parse the last line and return the offset of the root noderev
  * in *ROOT_OFFSET and the offset of the changed paths list in
@@ -52,6 +61,43 @@ svn_fs_fs__unparse_revision_trailer(apr_off_t root_offset,
                                     apr_off_t changes_offset,
                                     apr_pool_t *pool);
 
+/* Read all the changes from STREAM and store them in *CHANGES.  Do all
+   allocations in POOL. */
+svn_error_t *
+svn_fs_fs__read_changes(apr_array_header_t **changes,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool);
+
+/* Write the changed path info from CHANGES in filesystem FS to the
+   output stream STREAM.  You may call this function multiple time on
+   the same stream but the last call should set TERMINATE_LIST to write
+   an extra empty line that marks the end of the changed paths list.
+   Perform temporary allocations in POOL.
+ */
+svn_error_t *
+svn_fs_fs__write_changes(svn_stream_t *stream,
+                         svn_fs_t *fs,
+                         apr_hash_t *changes,
+                         svn_boolean_t terminate_list,
+                         apr_pool_t *pool);
+
+/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
+   allocated in POOL. */
+svn_error_t *
+svn_fs_fs__read_noderev(node_revision_t **noderev,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool);
+
+/* Write the node-revision NODEREV into the stream OUTFILE, compatible with
+   filesystem format FORMAT.  Only write mergeinfo-related metadata if
+   INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
+svn_error_t *
+svn_fs_fs__write_noderev(svn_stream_t *outfile,
+                         node_revision_t *noderev,
+                         int format,
+                         svn_boolean_t include_mergeinfo,
+                         apr_pool_t *pool);
+
 /* Parse the description of a representation from TEXT and store it
    into *REP_P.  Allocate *REP_P in POOL. */
 svn_error_t *
@@ -71,23 +117,6 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   svn_boolean_t mutable_rep_truncated,
                                   apr_pool_t *pool);
 
-/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
-   allocated in POOL. */
-svn_error_t *
-svn_fs_fs__read_noderev(node_revision_t **noderev,
-                        svn_stream_t *stream,
-                        apr_pool_t *pool);
-
-/* Write the node-revision NODEREV into the stream OUTFILE, compatible with
-   filesystem format FORMAT.  Only write mergeinfo-related metadata if
-   INCLUDE_MERGEINFO is true.  Temporary allocations are from POOL. */
-svn_error_t *
-svn_fs_fs__write_noderev(svn_stream_t *outfile,
-                         node_revision_t *noderev,
-                         int format,
-                         svn_boolean_t include_mergeinfo,
-                         apr_pool_t *pool);
-
 /* This type enumerates all forms of representations that we support. */
 typedef enum svn_fs_fs__rep_type_t
 {
@@ -98,10 +127,7 @@ typedef enum svn_fs_fs__rep_type_t
   svn_fs_fs__rep_self_delta,
 
   /* this is a DELTA representation against some base representation */
-  svn_fs_fs__rep_delta,
-
-  /* this is a representation in a star-delta container */
-  svn_fs_fs__rep_container
+  svn_fs_fs__rep_delta
 } svn_fs_fs__rep_type_t;
 
 /* This structure is used to hold the information stored in a representation
@@ -143,24 +169,3 @@ svn_error_t *
 svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
                             svn_stream_t *stream,
                             apr_pool_t *pool);
-
-/* Read all the changes from STREAM and store them in *CHANGES.  Do all
-   allocations in POOL. */
-svn_error_t *
-svn_fs_fs__read_changes(apr_array_header_t **changes,
-                        svn_stream_t *stream,
-                        apr_pool_t *pool);
-
-/* Write the changed path info from CHANGES in filesystem FS to the
-   output stream STREAM.  You may call this function multiple time on
-   the same stream but the last call should set TERMINATE_LIST to write
-   an extra empty line that marks the end of the changed paths list.
-   Perform temporary allocations in POOL.
- */
-svn_error_t *
-svn_fs_fs__write_changes(svn_stream_t *stream,
-                         svn_fs_t *fs,
-                         apr_hash_t *changes,
-                         svn_boolean_t terminate_list,
-                         apr_pool_t *pool);
-

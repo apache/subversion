@@ -51,15 +51,15 @@
 #include "svn_props.h"
 
 #include "fs.h"
+#include "cached_data.h"
 #include "dag.h"
 #include "lock.h"
 #include "tree.h"
 #include "fs_fs.h"
 #include "id.h"
-#include "temp_serializer.h"
-#include "cached_data.h"
-#include "transaction.h"
 #include "pack.h"
+#include "temp_serializer.h"
+#include "transaction.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
@@ -350,7 +350,28 @@ cache_lookup( fs_fs_dag_cache_t *cache
     }
 
   /* need to do a full lookup.  Calculate the hash value
-     (HASH_VALUE has been initialized to REVISION). */
+     (HASH_VALUE has been initialized to REVISION).
+
+     Note that the actual hash function is arbitrary as long as its result
+     in HASH_VALUE only depends on REVISION and *PATH.  However, we try to
+     make as much of *PATH influence the result as possible to get an "even"
+     spread across the hash buckets (maximizes our cache retention rate and
+     thus the hit rates).
+
+     When chunked access is possible (independent of the PATH pointer's
+     value!), we read 4 bytes at once and multiply the hash value with a
+     FACTOR that mirror / pattern / shift all 4 input bytes to various bits
+     of the result.  The final result will be taken from the MSBs.
+
+     When chunked access is not possible (not supported by CPU or odd bytes
+     at the end of *PATH), we use the simple traditional "* 33" hash
+     function that works very well with texts / paths and that e.g. APR uses.
+
+     Please note that the bytewise and the chunked calculation are *NOT*
+     interchangeable as they will yield different results for the same input.
+     For any given machine and *PATH, we must use a fixed combination of the
+     two functions.
+   */
   i = 0;
 #if SVN_UNALIGNED_ACCESS_IS_OK
   /* We relax the dependency chain between iterations by processing
@@ -1986,6 +2007,7 @@ svn_error_t *
 svn_fs_fs__commit_txn(const char **conflict_p,
                       svn_revnum_t *new_rev,
                       svn_fs_txn_t *txn,
+                      svn_boolean_t set_timestamp,
                       apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
@@ -2082,7 +2104,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
       txn->base_rev = youngish_rev;
 
       /* Try to commit. */
-      err = svn_fs_fs__commit(new_rev, fs, txn, iterpool);
+      err = svn_fs_fs__commit(new_rev, fs, txn, set_timestamp, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we
@@ -3359,20 +3381,13 @@ fs_node_origin_rev(svn_revnum_t *revision,
   SVN_ERR(svn_fs_fs__node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_fs__id_node_id(given_noderev_id);
 
-  /* Is it a brand new uncommitted node or a new-style one?
+  /* Is it a brand new uncommitted node or a new-style node ID?
    * (committed old-style nodes will have a 0 revision value;
-   * rev 0, number 0 is rev 0 root node) */
+   * rev 0, number 0 is rev 0 root node). Note that != 0 includes
+   * SVN_INVALID_REVNUM for uncommitted nodes. */
   if (node_id->revision != 0 || node_id->number == 0)
     {
       *revision = node_id->revision;
-      return SVN_NO_ERROR;
-    }
-
-  /* The root node always has ID 0, created in revision 0 and will never
-     use the new-style ID format. */
-  if (node_id->number == 0)
-    {
-      *revision = 0;
       return SVN_NO_ERROR;
     }
 

@@ -37,7 +37,6 @@
 #include "transaction.h"
 #include "tree.h"
 #include "util.h"
-#include "index.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
@@ -69,6 +68,168 @@
    Values < 1 disable deltification. */
 #define SVN_FS_FS_MAX_DELTIFICATION_WALK 1023
 
+/* Notes:
+
+To avoid opening and closing the rev-files all the time, it would
+probably be advantageous to keep each rev-file open for the
+lifetime of the transaction object.  I'll leave that as a later
+optimization for now.
+
+I didn't keep track of pool lifetimes at all in this code.  There
+are likely some errors because of that.
+
+*/
+
+/* Declarations. */
+
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p, const char *fs_path, apr_pool_t *pool);
+
+/* Pathname helper functions */
+
+static const char *
+path_format(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_FORMAT, pool);
+}
+
+static APR_INLINE const char *
+path_uuid(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_UUID, pool);
+}
+
+const char *
+svn_fs_fs__path_current(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_CURRENT, pool);
+}
+
+static APR_INLINE const char *
+path_lock(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
+}
+
+
+
+/* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
+static svn_error_t *
+get_lock_on_filesystem(const char *lock_filename,
+                       apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_file_lock2(lock_filename, TRUE, FALSE, pool);
+
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* No lock file?  No big deal; these are just empty files
+         anyway.  Create it and try again. */
+      svn_error_clear(err);
+      err = NULL;
+
+      SVN_ERR(svn_io_file_create_empty(lock_filename, pool));
+      SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
+    }
+
+  return svn_error_trace(err);
+}
+
+/* Reset the HAS_WRITE_LOCK member in the FFD given as BATON_VOID.
+   When registered with the pool holding the lock on the lock file,
+   this makes sure the flag gets reset just before we release the lock. */
+static apr_status_t
+reset_lock_flag(void *baton_void)
+{
+  fs_fs_data_t *ffd = baton_void;
+  ffd->has_write_lock = FALSE;
+  return APR_SUCCESS;
+}
+
+/* Obtain a write lock on the file LOCK_FILENAME (protecting with
+   LOCK_MUTEX if APR is threaded) in a subpool of POOL, call BODY with
+   BATON and that subpool, destroy the subpool (releasing the write
+   lock) and return what BODY returned.  If IS_GLOBAL_LOCK is set,
+   set the HAS_WRITE_LOCK flag while we keep the write lock. */
+static svn_error_t *
+with_some_lock_file(svn_fs_t *fs,
+                    svn_error_t *(*body)(void *baton,
+                                         apr_pool_t *pool),
+                    void *baton,
+                    const char *lock_filename,
+                    svn_boolean_t is_global_lock,
+                    apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err = get_lock_on_filesystem(lock_filename, subpool);
+
+  if (!err)
+    {
+      fs_fs_data_t *ffd = fs->fsap_data;
+
+      if (is_global_lock)
+        {
+          /* set the "got the lock" flag and register reset function */
+          apr_pool_cleanup_register(subpool,
+                                    ffd,
+                                    reset_lock_flag,
+                                    apr_pool_cleanup_null);
+          ffd->has_write_lock = TRUE;
+        }
+
+      /* nobody else will modify the repo state
+         => read HEAD & pack info once */
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+        SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+      SVN_ERR(get_youngest(&ffd->youngest_rev_cache, fs->path,
+                           pool));
+      err = body(baton, subpool);
+    }
+
+  svn_pool_destroy(subpool);
+
+  return svn_error_trace(err);
+}
+
+svn_error_t *
+svn_fs_fs__with_write_lock(svn_fs_t *fs,
+                           svn_error_t *(*body)(void *baton,
+                                                apr_pool_t *pool),
+                           void *baton,
+                           apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+
+  SVN_MUTEX__WITH_LOCK(ffsd->fs_write_lock,
+                       with_some_lock_file(fs, body, baton,
+                                           path_lock(fs, pool),
+                                           TRUE,
+                                           pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Run BODY (with BATON and POOL) while the txn-current file
+   of FS is locked. */
+svn_error_t *
+svn_fs_fs__with_txn_current_lock(svn_fs_t *fs,
+                                 svn_error_t *(*body)(void *baton,
+                                                      apr_pool_t *pool),
+                                 void *baton,
+                                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+
+  SVN_MUTEX__WITH_LOCK(ffsd->txn_current_lock,
+                       with_some_lock_file(fs, body, baton,
+                               svn_fs_fs__path_txn_current_lock(fs, pool),
+                               FALSE,
+                               pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 
@@ -84,6 +245,14 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
                                               pool);
 }
 
+/* Read the format number and maximum number of files per directory
+   from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
+   respectively.
+
+   *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
+   will be set to zero if a linear scheme should be used.
+
+   Use POOL for temporary allocation. */
 static svn_error_t *
 read_format(int *pformat, int *max_files_per_dir,
             const char *path, apr_pool_t *pool)
@@ -173,10 +342,11 @@ svn_fs_fs__write_format(svn_fs_t *fs,
                         apr_pool_t *pool)
 {
   svn_stringbuf_t *sb;
-  const char *path = svn_fs_fs__path_format(fs, pool);
   fs_fs_data_t *ffd = fs->fsap_data;
+  const char *path = path_format(fs, pool);
 
-  SVN_ERR_ASSERT(1 <= ffd->format && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
+  SVN_ERR_ASSERT(1 <= ffd->format
+                 && ffd->format <= SVN_FS_FS__FORMAT_NUMBER);
 
   sb = svn_stringbuf_createf(pool, "%d\n", ffd->format);
 
@@ -239,25 +409,6 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
   return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
-/* Find the youngest revision in a repository at path FS_PATH and
-   return it in *YOUNGEST_P.  Perform temporary allocations in
-   POOL. */
-static svn_error_t *
-get_youngest(svn_revnum_t *youngest_p,
-             const char *fs_path,
-             apr_pool_t *pool)
-{
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_fs__read_content(&buf,
-                                  svn_dirent_join(fs_path, PATH_CURRENT, pool),
-                                  pool));
-
-  *youngest_p = SVN_STR_TO_REV(buf->data);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Read the configuration information of the file system at FS_PATH
  * and set the respective values in FFD.  Use POOL for allocations.
  */
@@ -284,11 +435,11 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
-                                  TRUE));
+                                  FALSE));
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
-                                  TRUE));
+                                  FALSE));
       SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_DELTIFICATION_WALK,
@@ -312,7 +463,7 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  TRUE));
+                                  FALSE));
       SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
@@ -396,16 +547,16 @@ write_config(svn_fs_t *fs,
 "### Repositories containing large directories will benefit greatly."        NL
 "### In rarely read repositories, the I/O overhead may be significant as"    NL
 "### cache hit rates will most likely be low"                                NL
-"### directory deltification is enabled by default."                         NL
-"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
+"### directory deltification is disabled by default."                        NL
+"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = false"                       NL
 "###"                                                                        NL
 "### The following parameter enables deltification for properties on files"  NL
 "### and directories.  Overall, this is a minor tuning option but can save"  NL
 "### some disk space if you merge frequently or frequently change node"      NL
 "### properties.  You should not activate this if rep-sharing has been"      NL
 "### disabled because this may result in a net increase in repository size." NL
-"### property deltification is enabled by default."                          NL
-"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
+"### property deltification is disabled by default."                         NL
+"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = false"                     NL
 "###"                                                                        NL
 "### During commit, the server may need to walk the whole change history of" NL
 "### of a given node to find a suitable deltification base.  This linear"    NL
@@ -460,8 +611,8 @@ write_config(svn_fs_t *fs,
 "### even more so writing, become significantly more CPU intensive.  With"   NL
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
-"### Compressing packed revprops is enabled by default."                     NL
-"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
+"### Compressing packed revprops is disabled by default."                    NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -481,7 +632,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_fs_fs__path_format(fs, pool), pool));
+                      path_format(fs, pool), pool));
   SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
@@ -489,7 +640,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->max_files_per_dir = max_files_per_dir;
 
   /* Read in and cache the repository uuid. */
-  SVN_ERR(svn_io_file_open(&uuid_file, svn_fs_fs__path_uuid(fs, pool),
+  SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),
                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   limit = sizeof(buf);
@@ -541,7 +692,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = upgrade_baton->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
-  const char *format_path = svn_fs_fs__path_format(fs, pool);
+  const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
@@ -576,11 +727,11 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
       SVN_ERR(create_file_ignore_eexist(
-                                    svn_fs_fs__path_txn_current(fs, pool),
-                                    "0\n", pool));
+                           svn_fs_fs__path_txn_current(fs, pool), "0\n",
+                           pool));
       SVN_ERR(create_file_ignore_eexist(
-                               svn_fs_fs__path_txn_current_lock(fs, pool),
-                               "", pool));
+                           svn_fs_fs__path_txn_current_lock(fs, pool), "",
+                           pool));
     }
 
   /* If our filesystem predates the existance of the 'txn-protorevs'
@@ -607,16 +758,15 @@ upgrade_body(void *baton, apr_pool_t *pool)
       && max_files_per_dir > 0)
     {
       needs_revprop_shard_cleanup = TRUE;
-      SVN_ERR(upgrade_pack_revprops(fs,
-                                    upgrade_baton->notify_func,
-                                    upgrade_baton->notify_baton,
-                                    upgrade_baton->cancel_func,
-                                    upgrade_baton->cancel_baton,
-                                    pool));
+      SVN_ERR(svn_fs_fs__upgrade_pack_revprops(fs,
+                                               upgrade_baton->notify_func,
+                                               upgrade_baton->notify_baton,
+                                               upgrade_baton->cancel_func,
+                                               upgrade_baton->cancel_baton,
+                                               pool));
     }
 
   /* Bump the format file. */
-
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
   SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
@@ -628,12 +778,12 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Now, it is safe to remove the redundant revprop files. */
   if (needs_revprop_shard_cleanup)
-    SVN_ERR(upgrade_cleanup_pack_revprops(fs,
-                                          upgrade_baton->notify_func,
-                                          upgrade_baton->notify_baton,
-                                          upgrade_baton->cancel_func,
-                                          upgrade_baton->cancel_baton,
-                                          pool));
+    SVN_ERR(svn_fs_fs__upgrade_cleanup_pack_revprops(fs,
+                                               upgrade_baton->notify_func,
+                                               upgrade_baton->notify_baton,
+                                               upgrade_baton->cancel_func,
+                                               upgrade_baton->cancel_baton,
+                                               pool));
 
   /* Done */
   return SVN_NO_ERROR;
@@ -656,6 +806,25 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
   baton.cancel_baton = cancel_baton;
   
   return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)&baton, pool);
+}
+
+/* Find the youngest revision in a repository at path FS_PATH and
+   return it in *YOUNGEST_P.  Perform temporary allocations in
+   POOL. */
+static svn_error_t *
+get_youngest(svn_revnum_t *youngest_p,
+             const char *fs_path,
+             apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf;
+  SVN_ERR(svn_fs_fs__read_content(&buf,
+                                  svn_dirent_join(fs_path, PATH_CURRENT,
+                                                  pool),
+                                  pool));
+
+  *youngest_p = SVN_STR_TO_REV(buf->data);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -697,84 +866,7 @@ svn_fs_fs__ensure_revision_exists(svn_revnum_t rev,
 
   return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                            _("No such revision %ld"), rev);
-  return SVN_NO_ERROR;
 }
-
-/* Open the correct revision file for REV.  If the filesystem FS has
-   been packed, *FILE will be set to the packed file; otherwise, set *FILE
-   to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
-   file doesn't exist.
-
-   TODO: Consider returning an indication of whether this is a packed rev
-         file, so the caller need not rely on is_packed_rev() which in turn
-         relies on the cached FFD->min_unpacked_rev value not having changed
-         since the rev file was opened.
-
-   Use POOL for allocations. */
-svn_error_t *
-svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
-                                 svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_error_t *err;
-  svn_boolean_t retry = FALSE;
-
-  do
-    {
-      const char *path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
-
-      /* open the revision file in buffered r/o mode */
-      err = svn_io_file_open(file, path,
-                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-            {
-              /* Could not open the file. This may happen if the
-               * file once existed but got packed later. */
-              svn_error_clear(err);
-
-              /* if that was our 2nd attempt, leave it at that. */
-              if (retry)
-                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                         _("No such revision %ld"), rev);
-
-              /* We failed for the first time. Refresh cache & retry. */
-              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
-
-              retry = TRUE;
-            }
-          else
-            {
-              svn_error_clear(err);
-              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                       _("No such revision %ld"), rev);
-            }
-        }
-      else
-        {
-          retry = FALSE;
-        }
-    }
-  while (retry);
-
-  return svn_error_trace(err);
-}
-
-
-svn_error_t *
-svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
-                             svn_fs_t *fs,
-                             svn_revnum_t rev,
-                             apr_pool_t *pool)
-{
-  SVN_ERR(get_revision_proplist(proplist_p, fs, rev, pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_fs_fs__file_length(svn_filesize_t *length,
@@ -848,16 +940,10 @@ representation_t *
 svn_fs_fs__rep_copy(representation_t *rep,
                     apr_pool_t *pool)
 {
-  representation_t *rep_new;
-
   if (rep == NULL)
     return NULL;
 
-  rep_new = apr_palloc(pool, sizeof(*rep_new));
-
-  memcpy(rep_new, rep, sizeof(*rep_new));
-
-  return rep_new;
+  return apr_pmemdup(pool, rep, sizeof(*rep));
 }
 
 
@@ -871,15 +957,14 @@ write_revision_zero(svn_fs_t *fs)
 
   /* Write out a rev file for revision 0. */
   SVN_ERR(svn_io_file_create(path_revision_zero,
-                              "PLAIN\nEND\nENDREP\n"
-                              "id: 0.0.r0/17\n"
-                              "type: dir\n"
-                              "count: 0\n"
-                              "text: 0 0 4 4 "
-                              "2d2977d1c96f487abe4a1e202dd03b4e\n"
-                              "cpath: /\n"
-                              "\n\n17 107\n", fs->pool));
-
+                             "PLAIN\nEND\nENDREP\n"
+                             "id: 0.0.r0/17\n"
+                             "type: dir\n"
+                             "count: 0\n"
+                             "text: 0 0 4 4 "
+                             "2d2977d1c96f487abe4a1e202dd03b4e\n"
+                             "cpath: /\n"
+                             "\n\n17 107\n", fs->pool));
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
   /* Set a date on revision 0. */
@@ -887,7 +972,7 @@ write_revision_zero(svn_fs_t *fs)
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
-  return set_revision_proplist(fs, 0, proplist, fs->pool);
+  return svn_fs_fs__set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
 svn_error_t *
@@ -902,15 +987,6 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      const char *compatible;
-      svn_version_t *compatible_version;
-
-      compatible = svn_hash_gets(fs->config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
-      if (compatible)
-        SVN_ERR(svn_version__parse_version_string(&compatible_version,
-                                                  compatible,
-                                                  pool));
-      
       if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
         format = 1;
       else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
@@ -919,9 +995,6 @@ svn_fs_fs__create(svn_fs_t *fs,
         format = 3;
       else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
         format = 4;
-      else if (compatible && compatible_version->major == SVN_VER_MAJOR
-               && compatible_version->minor <= 8)
-        format = 6;
     }
   ffd->format = format;
 
@@ -931,7 +1004,8 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the revision data directories. */
   if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(fs, 0, pool),
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_rev_shard(fs, 0,
+                                                                  pool),
                                         pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path, PATH_REVS_DIR,
@@ -940,9 +1014,9 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the revprops directory. */
   if (ffd->max_files_per_dir)
-    SVN_ERR(svn_io_make_dir_recursively(
-                              svn_fs_fs__path_revprops_shard(fs, 0, pool),
-                              pool));
+    SVN_ERR(svn_io_make_dir_recursively(svn_fs_fs__path_revprops_shard(fs, 0,
+                                                                       pool),
+                                        pool));
   else
     SVN_ERR(svn_io_make_dir_recursively(svn_dirent_join(path,
                                                         PATH_REVPROPS_DIR,
@@ -962,10 +1036,10 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   /* Create the 'current' file. */
   SVN_ERR(svn_io_file_create(svn_fs_fs__path_current(fs, pool),
-                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
-                               ? "0\n" : "0 1 1\n"),
+                             (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
+                              ? "0\n" : "0 1 1\n"),
                              pool));
-  SVN_ERR(svn_io_file_create_empty(svn_fs_fs__path_lock(fs, pool), pool));
+  SVN_ERR(svn_io_file_create_empty(path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
@@ -1004,7 +1078,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 {
   char *my_uuid;
   apr_size_t my_uuid_len;
-  const char *uuid_path = svn_fs_fs__path_uuid(fs, pool);
+  const char *uuid_path = path_uuid(fs, pool);
 
   if (! uuid)
     uuid = svn_uuid_generate(pool);
@@ -1187,6 +1261,7 @@ svn_fs_fs__set_node_origin(svn_fs_t *fs,
   return svn_error_trace(err);
 }
 
+
 
 /*** Revisions ***/
 
@@ -1200,7 +1275,7 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
   apr_hash_t *table;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, pool));
 
   *value_p = svn_hash_gets(table, propname);
 
@@ -1226,7 +1301,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   struct change_rev_prop_baton *cb = baton;
   apr_hash_t *table;
 
-  SVN_ERR(svn_fs_fs__revision_proplist(&table, cb->fs, cb->rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, pool));
 
   if (cb->old_value_p)
     {
@@ -1246,7 +1321,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
     }
   svn_hash_sets(table, cb->name, cb->value);
 
-  return set_revision_proplist(cb->fs, cb->rev, table, pool);
+  return svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool);
 }
 
 svn_error_t *
@@ -1270,7 +1345,7 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
   return svn_fs_fs__with_write_lock(fs, change_rev_prop_body, &cb, pool);
 }
 
-
+
 svn_error_t *
 svn_fs_fs__info_format(int *fs_format,
                        svn_version_t **supports_version,

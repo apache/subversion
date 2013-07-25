@@ -25,7 +25,6 @@
 #include "id.h"
 #include "dag.h"
 #include "tree.h"
-#include "index.h"
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -404,7 +403,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * - Data that can be reconstructed from other elements has low prio
    *   (e.g. fulltexts, directories etc.)
    * - Index data required to find any of the other data has high prio
-   *   (e.g. noderevs, L2P and P2L index pages)
+   *   (e.g. noderevs)
    * - everthing else should use default prio
    */
 
