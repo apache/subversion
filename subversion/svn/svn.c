@@ -136,7 +136,8 @@ typedef enum svn_cl__longopt_t {
   opt_search_and,
   opt_mergeinfo_log,
   opt_remove_unversioned,
-  opt_remove_ignored
+  opt_remove_ignored,
+  opt_no_newline
 } svn_cl__longopt_t;
 
 
@@ -385,6 +386,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove-unversioned", opt_remove_unversioned, 0,
                        N_("remove unversioned items")},
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
+  {"no-newline", opt_no_newline, 0, N_("do not output trailing newline")},
 
   /* Long-opt Aliases
    *
@@ -1638,6 +1640,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Local modifications are preserved.\n"),
     { 'q' } },
 
+  { "youngest", svn_cl__youngest, {0}, N_
+    ("Print the youngest revision number of a target's repository.\n"
+     "usage: youngest [TARGET]\n"
+     "\n"
+     "  Print the revision number of the youngest revision in the repository\n"
+     "  with which TARGET is associated.\n"),
+    { opt_no_newline } },
+
   { NULL, NULL, {0}, NULL, {0} }
 };
 
@@ -1658,7 +1668,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 
@@ -2313,6 +2323,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_remove_ignored:
         opt_state.remove_ignored = TRUE;
+        break;
+      case opt_no_newline:
+        opt_state.no_newline = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -2989,6 +3002,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                          "because authentication is performed by SSH, not "
                          "Subversion"));
         }
+
+      /* Ensure that stdout is flushed, so the user will see any write errors.
+         This makes sure that output is not silently lost. */
+      SVN_INT_ERR(svn_cmdline_fflush(stdout));
 
       return EXIT_ERROR(err);
     }

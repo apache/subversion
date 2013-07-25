@@ -70,7 +70,7 @@ APR_VER		= 1.4.6
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.4.1
-HTTPD_VER	= 2.2.22
+HTTPD_VER	= 2.2.25
 NEON_VER	= 0.29.6
 SERF_VER	= 1.2.1
 SERF_OLD_VER	= 0.3.1
@@ -548,15 +548,35 @@ httpd-reset:
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && make clean)
+	rm -f $(HTTPD_OBJDIR)/no_ssl_v2.diff
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(HTTPD_URL)
 
+$(HTTPD_OBJDIR)/no_ssl_v2.diff:
+	mkdir -p $(dir $@)
+	echo > $@.tmp '--- modules/ssl/ssl_engine_io.c.orig	Sat Jul 13 16:49:52 2013'
+	echo >> $@.tmp '+++ modules/ssl/ssl_engine_io.c	Sat Jul 13 16:50:10 2013'
+	echo >> $@.tmp '@@ -1079,7 +1079,9 @@'
+	echo >> $@.tmp '          * IPv4 and IPv6 addresses are not permitted".)'
+	echo >> $@.tmp '          */'
+	echo >> $@.tmp '         if (hostname_note &&'
+	echo >> $@.tmp '+#ifndef OPENSSL_NO_SSL2'
+	echo >> $@.tmp '             sc->proxy->protocol != SSL_PROTOCOL_SSLV2 &&'
+	echo >> $@.tmp '+#endif'
+	echo >> $@.tmp '             sc->proxy->protocol != SSL_PROTOCOL_SSLV3 &&'
+	echo >> $@.tmp '             apr_ipsubnet_create(&ip, hostname_note, NULL,'
+	echo >> $@.tmp '                                 c->pool) != APR_SUCCESS) {'
+	mv -f $@.tmp $@
+
 # retrieve httpd
-$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
+$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
+				$(HTTPD_OBJDIR)/no_ssl_v2.diff
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
+	cd $(SRCDIR)/httpd-$(HTTPD_VER) && \
+		patch -p0 < $(HTTPD_OBJDIR)/no_ssl_v2.diff
 	touch $@
 
 # configure httpd

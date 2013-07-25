@@ -1441,6 +1441,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (lock_tokens && lock_tokens->nelts)
     SVN_CMD_ERR(add_lock_tokens(conn, lock_tokens, b, pool));
 
+  /* Ignore LOG_MSG, per the protocol.  See ra_svn_commit(). */
   if (revprop_list)
     SVN_ERR(svn_ra_svn__parse_proplist(revprop_list, pool, &revprop_table));
   else
@@ -2091,7 +2092,7 @@ static svn_error_t *log_receiver(void *baton,
   apr_hash_index_t *h;
   svn_boolean_t invalid_revnum = FALSE;
   const svn_string_t *author, *date, *message;
-  apr_uint64_t revprop_count;
+  unsigned revprop_count;
 
   if (log_entry->revision == SVN_INVALID_REVNUM)
     {

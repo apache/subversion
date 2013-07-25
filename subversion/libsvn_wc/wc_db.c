@@ -1529,7 +1529,6 @@ svn_wc__db_init(svn_wc__db_t *db,
                         apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
-                        FALSE /* enforce_empty_wq */,
                         db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -12300,7 +12299,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                                    dir_abspath),
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
-                                       FALSE /* enforce_empty_wq */,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -13505,6 +13503,7 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  int levels_to_lock,
                  svn_boolean_t steal_lock,
+                 svn_boolean_t enforce_empty_wq,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -13533,6 +13532,9 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
                                                         local_relpath,
                                                         scratch_pool));
     }
+
+  if (enforce_empty_wq)
+    SVN_ERR(svn_wc__db_verify_no_work(wcroot->sdb));
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
@@ -13708,7 +13710,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(
     wclock_obtain_cb(wcroot, local_relpath, levels_to_lock, steal_lock,
-                     scratch_pool),
+                     db->enforce_empty_wq, scratch_pool),
     wcroot);
   return SVN_NO_ERROR;
 }

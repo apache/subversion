@@ -28,6 +28,7 @@
 #include <sstream>
 
 #include "svncxxhl/exception.hpp"
+#include "aprwrap.hpp"
 
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -113,23 +114,64 @@ private:
 
 } // namespace detail
 
+//
+// Class InternalError
+//
+
+InternalError::InternalError(const char* description)
+  : m_description(detail::ErrorDescription::create(description)->reference())
+{}
+
+InternalError::InternalError(const InternalError& that) throw()
+  : m_description(that.m_description->reference())
+{}
+
+InternalError& InternalError::operator=(const InternalError& that) throw()
+{
+  if (this == &that)
+    return *this;
+
+  // This in-place destroy+copy implementation of the assignment
+  // operator is safe because both the destructor and the copy
+  // constructor do not throw exceptions.
+  this->~InternalError();
+  return *new(this) InternalError(that);
+}
+
+InternalError::~InternalError() throw()
+{
+  m_description->dereference();
+}
+
+const char* InternalError::what() const throw()
+{
+  return m_description->what();
+}
+
+InternalError::InternalError(detail::ErrorDescription* description) throw()
+  : m_description(description)
+{}
+
+//
+// Class Error
+//
 
 Error::Error(const char* description, int error_code)
-  : m_errno(error_code),
-    m_description(detail::ErrorDescription::create(description)->reference())
+  : InternalError(description),
+    m_errno(error_code)
 {}
 
 Error::Error(const char* description, int error_code,
              Error::shared_ptr nested_error)
-  : m_errno(error_code),
-    m_nested(nested_error),
-    m_description(detail::ErrorDescription::create(description)->reference())
+  : InternalError(description),
+    m_errno(error_code),
+    m_nested(nested_error)
 {}
 
 Error::Error(const Error& that) throw()
-  : m_errno(that.m_errno),
-    m_nested(that.m_nested),
-    m_description(that.m_description->reference())
+  : InternalError(that.m_description->reference()),
+    m_errno(that.m_errno),
+    m_nested(that.m_nested)
 {}
 
 Error& Error::operator=(const Error& that) throw()
@@ -144,19 +186,11 @@ Error& Error::operator=(const Error& that) throw()
   return *new(this) Error(that);
 }
 
-Error::~Error() throw()
-{
-  m_description->dereference();
-}
-
-const char* Error::what() const throw()
-{
-  return m_description->what();
-}
+Error::~Error() throw() {}
 
 Error::Error(int error_code, detail::ErrorDescription* description) throw()
-  : m_errno(error_code),
-    m_description(description)
+  : InternalError(description),
+    m_errno(error_code)
 {}
 
 void Error::throw_svn_error(svn_error_t* err)
@@ -218,13 +252,13 @@ void Error::throw_svn_error(svn_error_t* err)
 namespace {
 void handle_one_error(Error::MessageList& ml, bool show_traces,
                       int error_code, detail::ErrorDescription* descr,
-                      apr_pool_t* pool)
+                      const APR::Pool& pool)
 {
   if (show_traces && descr->file())
     {
       const char* file_utf8 = NULL;
       svn_error_t* err =
-        svn_utf_cstring_to_utf8(&file_utf8, descr->file(), pool);
+        svn_utf_cstring_to_utf8(&file_utf8, descr->file(), pool.get());
       if (err)
         {
           svn_error_clear(err);
@@ -269,7 +303,7 @@ void handle_one_error(Error::MessageList& ml, bool show_traces,
           svn_error_t* err = svn_utf_cstring_to_utf8(
               &description,
               apr_strerror(error_code, errorbuf, sizeof(errorbuf)),
-              pool);
+              pool.get());
           if (err)
             {
               svn_error_clear(err);
@@ -300,33 +334,23 @@ Error::MessageList Error::compile_messages(bool show_traces) const
   std::vector<int> empties;
   empties.reserve(max_length);
 
-  apr_pool_t* pool = NULL;
-  apr_pool_create(&pool, NULL);
-  try
+  APR::Pool iterpool;
+  for (const Error* err = this; err; err = err->m_nested.get())
     {
-      for (const Error* err = this; err; err = err->m_nested.get())
+      if (!err->m_description->what())
         {
-          if (!err->m_description->what())
-            {
-              // Non-specific messages are printed only once.
-              std::vector<int>::iterator it = std::find(
-                  empties.begin(), empties.end(), err->m_errno);
-              if (it != empties.end())
-                continue;
-              empties.push_back(err->m_errno);
-            }
-          handle_one_error(ml, show_traces,
-                           err->m_errno, err->m_description,
-                           pool);
+          // Non-specific messages are printed only once.
+          std::vector<int>::iterator it = std::find(
+              empties.begin(), empties.end(), err->m_errno);
+          if (it != empties.end())
+            continue;
+          empties.push_back(err->m_errno);
         }
+      handle_one_error(ml, show_traces,
+                       err->m_errno, err->m_description,
+                       iterpool);
+      iterpool.clear();
     }
-  catch (...)
-    {
-      apr_pool_destroy(pool);
-      throw;
-    }
-
-  apr_pool_destroy(pool);
   return ml;
 }
 

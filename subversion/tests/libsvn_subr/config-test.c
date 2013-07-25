@@ -340,7 +340,7 @@ static svn_error_t *
 test_ignore_bom(apr_pool_t *pool)
 {
   svn_config_t *cfg;
-  svn_string_t *cfg_string = svn_string_create("\xEE\xBB\xBF[s1]\nfoo=bar\n",
+  svn_string_t *cfg_string = svn_string_create("\xEF\xBB\xBF[s1]\nfoo=bar\n",
                                                pool);
   svn_stream_t *stream = svn_stream_from_string(cfg_string, pool);
 
@@ -375,6 +375,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test case-sensitive option name lookup"),
     SVN_TEST_PASS2(test_stream_interface,
                    "test svn_config_parse"),
-    SVN_TEST_XFAIL2(test_ignore_bom, "test parsing config file with BOM"),
+    SVN_TEST_PASS2(test_ignore_bom, "test parsing config file with BOM"),
     SVN_TEST_NULL
   };

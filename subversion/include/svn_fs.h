@@ -1035,6 +1035,19 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * ###     conflict string
  * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
  * ###     to a valid, committed revision number
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_commit_txn2(const char **conflict_p,
+                   svn_revnum_t *new_rev,
+                   svn_fs_txn_t *txn,
+                   svn_boolean_t set_timestamp,
+                   apr_pool_t *pool);
+
+/*
+ * Same as svn_fs_commit_txn2(), but with @a set_timestamp
+ * always set to @c TRUE.
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,

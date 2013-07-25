@@ -34,6 +34,7 @@
 #include "private/svn_delta_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_dep_compat.h"
 
 /* ----- Text delta to svndiff ----- */
 

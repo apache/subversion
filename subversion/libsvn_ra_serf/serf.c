@@ -149,6 +149,7 @@ load_config(svn_ra_serf__session_t *session,
   const char *timeout_str = NULL;
   const char *exceptions;
   apr_port_t proxy_port;
+  svn_tristate_t chunked_requests;
 
   if (config_hash)
     {
@@ -225,11 +226,11 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Is this proxy potentially busted? Do we need to take special care?  */
-  SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_BUSTED_PROXY,
-                              FALSE));
+  /* Should we use chunked transfer encoding. */ 
+  SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                  "auto", svn_tristate_unknown));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -288,12 +289,11 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
-      /* Do we need to take care with this proxy?  */
-      SVN_ERR(svn_config_get_bool(
-               config, &session->busted_proxy,
-               server_group,
-               SVN_CONFIG_OPTION_BUSTED_PROXY,
-               session->busted_proxy));
+      /* Should we use chunked transfer encoding. */ 
+      SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
+                                      server_group,
+                                      SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                      "auto", chunked_requests));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -366,6 +366,24 @@ load_config(svn_ra_serf__session_t *session,
   else
     {
       session->using_proxy = FALSE;
+    }
+
+  /* Setup detect_chunking and using_chunked_requests based on
+   * the chunked_requests tristate */
+  if (chunked_requests == svn_tristate_unknown)
+    {
+      session->detect_chunking = TRUE;
+      session->using_chunked_requests = TRUE;
+    }
+  else if (chunked_requests == svn_tristate_true)
+    {
+      session->detect_chunking = FALSE;
+      session->using_chunked_requests = TRUE;
+    }
+  else /* chunked_requests == svn_tristate_false */
+    {
+      session->detect_chunking = FALSE;
+      session->using_chunked_requests = FALSE;
     }
 
   /* Setup authentication. */
@@ -505,10 +523,12 @@ svn_ra_serf__open(svn_ra_session_t *session,
                             _("Connection to '%s' failed"), session_URL);
   SVN_ERR(err);
 
-  /* We have set up a useful connection. If we've been told there is possibly a
-     busted proxy in our path to the server AND we switched to HTTP/1.1 (chunked
-     requests), then probe for problems in any proxy.  */
-  if (serf_sess->busted_proxy && !serf_sess->http10)
+  /* We have set up a useful connection (that doesn't indication a redirect).
+     If we've been told there is possibly a worrisome proxy in our path to the
+     server AND we switched to HTTP/1.1 (chunked requests), then probe for
+     problems in any proxy.  */
+  if ((corrected_url == NULL || *corrected_url == NULL)
+      && serf_sess->detect_chunking && !serf_sess->http10)
     SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
 
   return SVN_NO_ERROR;
@@ -1236,7 +1256,7 @@ svn_ra_serf__init(const svn_version_t *loader_version,
   int serf_minor;
   int serf_patch;
 
-  SVN_ERR(svn_ver_check_list(ra_serf_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_serf_version(), checklist, svn_ver_equal));
 
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The RA loader does a more exhaustive check. */

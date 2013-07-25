@@ -145,9 +145,8 @@ get_path_kind(svn_node_kind_t *kind,
 }
 
 
-/* Return an error if the work queue in SDB is non-empty. */
-static svn_error_t *
-verify_no_work(svn_sqlite__db_t *sdb)
+svn_error_t *
+svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -258,7 +257,6 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -293,11 +291,11 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Verify that no work items exists. If they do, then our integrity is
-     suspect and, thus, we cannot use this database.  */
-  if (format >= SVN_WC__HAS_WORK_QUEUE
-      && (enforce_empty_wq || (format < SVN_WC__VERSION && verify_format)))
+     suspect and, thus, we cannot upgrade this database.  */
+  if (format >= SVN_WC__HAS_WORK_QUEUE &&
+      format < SVN_WC__VERSION && verify_format)
     {
-      svn_error_t *err = verify_no_work(sdb);
+      svn_error_t *err = svn_wc__db_verify_no_work(sdb);
       if (err)
         {
           /* Special message for attempts to upgrade a 1.7-dev wc with
@@ -678,7 +676,7 @@ try_symlink_as_dir:
                                           ? symlink_wcroot_abspath
                                           : local_abspath),
                             sdb, wc_id, FORMAT_FROM_SDB,
-                            db->verify_format, db->enforce_empty_wq,
+                            db->verify_format,
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
@@ -749,7 +747,7 @@ try_symlink_as_dir:
                                           ? symlink_wcroot_abspath
                                           : local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
-                            db->verify_format, db->enforce_empty_wq,
+                            db->verify_format,
                             db->state_pool, scratch_pool));
     }
 

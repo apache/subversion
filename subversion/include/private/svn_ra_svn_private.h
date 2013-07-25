@@ -875,7 +875,7 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
                                  const svn_string_t *message,
                                  svn_boolean_t has_children,
                                  svn_boolean_t invalid_revnum,
-                                 int revprop_count);
+                                 unsigned revprop_count);
 
 /**
  * @}

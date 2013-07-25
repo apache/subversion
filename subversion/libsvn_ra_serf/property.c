@@ -136,10 +136,14 @@ static const svn_ra_serf__xml_transition_t propfind_ttable[] = {
   { 0 }
 };
 
+static const int propfind_expected_status[] = {
+  207,
+  0
+};
 
 /* Return the HTTP status code contained in STATUS_LINE, or 0 if
    there's a problem parsing it. */
-static int parse_status_code(const char *status_line)
+static apr_int64_t parse_status_code(const char *status_line)
 {
   /* STATUS_LINE should be of form: "HTTP/1.1 200 OK" */
   if (status_line[0] == 'H' &&
@@ -257,7 +261,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
          that we wish to ignore.  (Typically, if it's not a 200, the
          status will be 404 to indicate that a property we
          specifically requested from the server doesn't exist.)  */
-      int status = parse_status_code(cdata->data);
+      apr_int64_t status = parse_status_code(cdata->data);
       if (status != 200)
         svn_ra_serf__xml_note(xes, PROPSTAT, "ignore-prop", "*");
     }
@@ -598,10 +602,12 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
   xmlctx = svn_ra_serf__xml_context_create(propfind_ttable,
                                            propfind_opened,
                                            propfind_closed,
-                                           NULL,
+                                           NULL, NULL,
                                            new_prop_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx,
+                                              propfind_expected_status,
+                                              pool);
 
   handler->method = "PROPFIND";
   handler->path = path;

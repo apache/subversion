@@ -460,6 +460,7 @@ powerpc-apple-darwin*)
     SVN_FS_WANT_DB_PATCH=14
     ;;
 esac
+db_alt_version="5.x"
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
@@ -627,6 +628,28 @@ fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl Googlemock -----------------
+AC_ARG_ENABLE([gmock],
+  AS_HELP_STRING([--disable-gmock],
+                 [Do not use the Googlemock testing framework]),
+  [],
+  [enable_gmock=yes])
+
+AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_MSG_CHECKING([whether use Googlemock])
+if test "$enable_gmock" != "no"; then
+  if test -d "$GMOCK_SRCDIR"; then
+    AC_MSG_RESULT([yes])
+    SVN_USE_GMOCK=true
+  else
+    AC_MSG_RESULT([no])
+    SVN_USE_GMOCK=false
+  fi
+else
+  AC_MSG_RESULT([no])
+  SVN_USE_GMOCK_SOURCES=false
+fi
+AC_SUBST([SVN_USE_GMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -716,8 +739,8 @@ AH_BOTTOM([
 # define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
 # define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #else
-# define SVN__PREDICT_FALSE(x)
-# define SVN__PREDICT_TRUE(x)
+# define SVN__PREDICT_FALSE(x) (x)
+# define SVN__PREDICT_TRUE(x) (x)
 #endif
 
 #if defined(SVN_DEBUG)
@@ -1022,6 +1045,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
 
         CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
         CFLAGS="$CFLAGS_KEEP"
@@ -1537,18 +1561,28 @@ dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
 
-if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
-  db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
-  AC_MSG_WARN([we have configured without BDB filesystem support
+if test "$svn_have_berkeley_db" = "no6" && test "$enable_bdb6" != "no"; then
+  AC_MSG_WARN([We have configured without BDB filesystem support
 
 
-You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created a Makefile which will build
-Subversion without support for the Berkeley DB back-end.  You can find the
-latest version of Berkeley DB here:
+Berkeley DB 6 was found, but not used.  Please re-run configure (see
+./config.nice) with the '--enable-bdb6' flag to use it,
+or explicitly specify '--disable-bdb6' or '--without-berkeley-db'
+to silence this warning.
 
-  http://www.oracle.com/technetwork/products/berkeleydb/downloads/index.html
+Please note that some versions of Berkeley DB 6+ are under the GNU Affero
+General Public License, version 3:
+https://oss.oracle.com/pipermail/bdb/2013-June/000056.html
 
-or explicitly specify --without-berkeley-db to silence this warning.
+The AGPL-3.0 licence may impose special requirements for making available
+source code of server-side software.  The text of the licence is:
+https://www.gnu.org/licenses/agpl-3.0.html
+http://opensource.org/licenses/AGPL-3.0
+
+The Berkeley DB backend to Subversion is deprecated; see
+http://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
+
+The Subversion developers have not tested Subversion with Berkeley DB 6 for
+technical problems or bugs.
 ])
 fi

@@ -1576,10 +1576,10 @@ svn_error_t *
 svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                             svn_fs_txn_t *txn,
                             trail_t *trail,
+                            svn_boolean_t set_timestamp,
                             apr_pool_t *pool)
 {
   revision_t revision;
-  svn_string_t date;
   apr_hash_t *txnprops;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
@@ -1605,12 +1605,18 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));
 
-  /* Set a date on the commit.  We wait until now to fetch the date,
-     so it's definitely newer than any previous revision's date. */
-  date.data = svn_time_to_cstring(apr_time_now(), pool);
-  date.len = strlen(date.data);
-  return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
-                                   NULL, &date, trail, pool);
+  if (set_timestamp)
+    {
+      /* Set a date on the commit if requested.  We wait until now to fetch the
+         date, so it's definitely newer than any previous revision's date. */
+      svn_string_t date;
+      date.data = svn_time_to_cstring(apr_time_now(), pool);
+      date.len = strlen(date.data);
+      SVN_ERR(svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
+                                        NULL, &date, trail, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

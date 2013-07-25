@@ -110,8 +110,8 @@ RemoteSession::open(jint jretryAttempts,
 
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
-      configDirectory.c_str(), jconfigHandler,
-      usernameStr, passwordStr, prompter, jprogress);
+      (jconfigDirectory ? configDirectory.c_str() : NULL),
+      jconfigHandler, usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
@@ -125,7 +125,7 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory, jobject jconfigHandler,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter* prompter, jobject jprogress)
+                    Prompter*& prompter, jobject jprogress)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -168,7 +168,7 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
                              const char* configDirectory,
                              jobject jconfigHandler,
                              const char*  username, const char*  password,
-                             Prompter* prompter, jobject jprogress)
+                             Prompter*& prompter, jobject jprogress)
   : m_session(NULL), m_context(NULL)
 {
   // Create java session object
@@ -197,6 +197,14 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
       username, password, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;
+
+  // Avoid double-free in RemoteSession::open and
+  // SVNClient::openRemoteSession if the svn_ra_open call fails. The
+  // prompter object is now owned by m_context.
+  //
+  // FIXME: Should be using smart pointers, really -- but JavaHL
+  // currently doesn't. Future enhancements FTW.
+  prompter = NULL;
 
   const char* corrected_url = NULL;
   bool cycle_detected = false;
@@ -410,14 +418,13 @@ RemoteSession::getRevisionByTimestamp(jlong timestamp)
 }
 
 namespace {
-bool byte_array_to_svn_string(JNIByteArray& ary, svn_string_t& str)
+svn_string_t*
+byte_array_to_svn_string(JNIByteArray& ary, SVN::Pool& scratch_pool)
 {
   if (ary.isNull())
-    return false;
-
-  str.data = reinterpret_cast<const char*>(ary.getBytes());
-  str.len = ary.getLength();
-  return true;
+    return NULL;
+  return svn_string_ncreate(reinterpret_cast<const char*>(ary.getBytes()),
+                            ary.getLength(), scratch_pool.getPool());
 }
 } // anonymous namespace
 
@@ -438,21 +445,17 @@ RemoteSession::changeRevisionProperty(
   if (JNIUtil::isExceptionThrown())
     return;
 
-  svn_string_t str_old_value;
-  svn_string_t* const p_old_value = &str_old_value;
-  svn_string_t* const* pp_old_value = NULL;
-  if (byte_array_to_svn_string(old_value, str_old_value))
-      pp_old_value = &p_old_value;
-
-  svn_string_t str_value;
-  svn_string_t* p_value = NULL;
-  if (byte_array_to_svn_string(value, str_value))
-      p_value = &str_value;
-
   SVN::Pool subPool(pool);
+  svn_string_t* const* p_old_value = NULL;
+  svn_string_t* const str_old_value =
+    byte_array_to_svn_string(old_value, subPool);
+  if (str_old_value)
+    p_old_value = &str_old_value;
+
   SVN_JNI_ERR(svn_ra_change_rev_prop2(m_session,
                                       svn_revnum_t(jrevision),
-                                      name, pp_old_value, p_value,
+                                      name, p_old_value,
+                                      byte_array_to_svn_string(value, subPool),
                                       subPool.getPool()), );
 }
 
@@ -465,7 +468,7 @@ RemoteSession::getRevisionProperties(jlong jrevision)
                                   &props, subPool.getPool()),
               NULL);
 
-  return CreateJ::PropertyMap(props);
+  return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
 jbyteArray
@@ -511,7 +514,7 @@ RemoteSession::getFile(jlong jrevision, jstring jpath,
 
   if (jproperties)
     {
-      CreateJ::FillPropertyMap(jproperties, props);
+      CreateJ::FillPropertyMap(jproperties, props, subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
@@ -524,6 +527,9 @@ void fill_dirents(const char* base_url, const char* base_relpath,
                   jobject jdirents, apr_hash_t* dirents,
                   apr_pool_t* scratch_pool)
 {
+  if (!dirents)
+    return;
+
   base_url = apr_pstrcat(scratch_pool, base_url, "/", base_relpath, NULL);
   base_url = svn_uri_canonicalize(base_url, scratch_pool);
   svn_stringbuf_t* abs_path = svn_stringbuf_create(base_url, scratch_pool);
@@ -630,7 +636,7 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
 
   if (jproperties)
     {
-      CreateJ::FillPropertyMap(jproperties, props);
+      CreateJ::FillPropertyMap(jproperties, props, subPool.getPool());
       if (JNIUtil::isExceptionThrown())
         return SVN_INVALID_REVNUM;
     }
@@ -638,7 +644,118 @@ RemoteSession::getDirectory(jlong jrevision, jstring jpath,
   return fetched_rev;
 }
 
-// TODO: getMergeinfo
+namespace {
+const apr_array_header_t*
+build_string_array(const Iterator& iter,
+                   bool contains_relpaths, SVN::Pool& pool)
+{
+  apr_pool_t* result_pool = pool.getPool();
+  apr_array_header_t* array = apr_array_make(
+      result_pool, 0, sizeof(const char*));
+  while (iter.hasNext())
+    {
+      const char* element;
+      jstring jitem = (jstring)iter.next();
+      if (contains_relpaths)
+        {
+          Relpath item(jitem, pool);
+          if (JNIUtil::isExceptionThrown())
+            return NULL;
+          SVN_JNI_ERR(item.error_occurred(), NULL);
+          element = apr_pstrdup(result_pool, item.c_str());
+        }
+      else
+        {
+          JNIStringHolder item(jitem);
+          if (JNIUtil::isJavaExceptionThrown())
+            return NULL;
+          element = item.pstrdup(result_pool);
+        }
+      APR_ARRAY_PUSH(array, const char*) = element;
+    }
+  return array;
+}
+}
+
+jobject
+RemoteSession::getMergeinfo(jobject jpaths, jlong jrevision, jobject jinherit,
+                            jboolean jinclude_descendants)
+{
+  Iterator paths_iter(jpaths);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  SVN::Pool subPool(pool);
+  const apr_array_header_t* paths =
+    build_string_array(paths_iter, true, subPool);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  svn_mergeinfo_catalog_t catalog;
+  SVN_JNI_ERR(svn_ra_get_mergeinfo(
+                  m_session, &catalog, paths, svn_revnum_t(jrevision),
+                  EnumMapper::toMergeinfoInheritance(jinherit),
+                  bool(jinclude_descendants),
+                  subPool.getPool()),
+              NULL);
+  if (catalog == NULL)
+    return NULL;
+
+  JNIEnv* env = JNIUtil::getEnv();
+  jclass cls = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID ctor_mid = 0;
+  if (0 == ctor_mid)
+    {
+      ctor_mid = env->GetMethodID(cls, "<init>", "()V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID put_mid = 0;
+  if (0 == put_mid)
+    {
+      put_mid = env->GetMethodID(cls, "put",
+                                 "(Ljava/lang/Object;"
+                                 "Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  jobject jcatalog = env->NewObject(cls, ctor_mid);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  for (apr_hash_index_t* hi = apr_hash_first(subPool.getPool(), catalog);
+       hi; hi = apr_hash_next(hi))
+    {
+      const void *v_key;
+      void *v_val;
+      apr_hash_this(hi, &v_key, NULL, &v_val);
+      const char* key = static_cast<const char*>(v_key);
+      svn_mergeinfo_t val = static_cast<svn_mergeinfo_t>(v_val);
+
+      jstring jpath = JNIUtil::makeJString(key);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      jobject jmergeinfo = CreateJ::Mergeinfo(val, subPool.getPool());
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->CallObjectMethod(jcatalog, put_mid, jpath, jmergeinfo);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jpath);
+      env->DeleteLocalRef(jmergeinfo);
+    }
+
+  return jcatalog;
+}
+
 // TODO: update
 // TODO: switch
 
@@ -657,7 +774,7 @@ status_fetch_props_func(apr_hash_t **props, void *baton,
 {
   //DEBUG:fprintf(stderr, "  (n) status_fetch_props_func('%s', r%lld)\n",
   //DEBUG:        path, static_cast<long long>(base_revision));
-  *props = apr_hash_make(scratch_pool);
+  *props = apr_hash_make(result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -751,39 +868,6 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
 }
 
 // TODO: diff
-
-namespace {
-const apr_array_header_t*
-build_string_array(const Iterator& iter,
-                   bool contains_relpaths, SVN::Pool& pool)
-{
-  apr_pool_t* result_pool = pool.getPool();
-  apr_array_header_t* array = apr_array_make(
-      result_pool, 0, sizeof(const char*));
-  while (iter.hasNext())
-    {
-      const char* element;
-      jstring jitem = (jstring)iter.next();
-      if (contains_relpaths)
-        {
-          Relpath item(jitem, pool);
-          if (JNIUtil::isExceptionThrown())
-            return NULL;
-          SVN_JNI_ERR(item.error_occurred(), NULL);
-          element = apr_pstrdup(result_pool, item.c_str());
-        }
-      else
-        {
-          JNIStringHolder item(jitem);
-          if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-          element = item.pstrdup(result_pool);
-        }
-      APR_ARRAY_PUSH(array, const char*) = element;
-    }
-  return array;
-}
-}
 
 void
 RemoteSession::getLog(jobject jpaths,

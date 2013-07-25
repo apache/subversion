@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,33 +17,30 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
- *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+#include <cstdlib>
+#include <iostream>
 
-#include <jni.h>
-#include "Pool.h"
+#include <apr_errno.h>
+#include <apr_general.h>
 
-struct apr_hash_t;
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+int main(int argc, char** argv)
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable, bool bytearray_values=false);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
-};
+  apr_status_t status = apr_initialize();
+  if (status)
+    {
+      char errbuf[512];
+      std::cerr << "APR initialization failed: "
+                << apr_strerror(status, errbuf, sizeof(errbuf) - 1)
+                << std::endl;
+      return 7;
+    }
+  std::atexit(apr_terminate);
 
-#endif // REVPROPTABLE_H
+  testing::InitGoogleMock(&argc, argv);
+  return RUN_ALL_TESTS();
+}

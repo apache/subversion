@@ -142,6 +142,10 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
   { 0 }
 };
 
+static const int locks_expected_status[] = {
+  207,
+  0
+};
 
 /* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
@@ -378,10 +382,10 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->lock->path = apr_pstrdup(pool, path); /* be sure  */
 
   xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                           NULL, locks_closed, NULL,
+                                           NULL, locks_closed, NULL, NULL,
                                            lock_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, locks_expected_status, pool);
 
   handler->method = "PROPFIND";
   handler->path = req_url;
@@ -469,10 +473,10 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                                             lock_ctx->path, iterpool);
 
       xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                               NULL, locks_closed, NULL,
+                                               NULL, locks_closed, NULL, NULL,
                                                lock_ctx,
                                                iterpool);
-      handler = svn_ra_serf__create_expat_handler(xmlctx, iterpool);
+      handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, iterpool);
 
       handler->method = "LOCK";
       handler->path = req_url;

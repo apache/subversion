@@ -111,7 +111,6 @@ static const svn_ra_serf__xml_transition_t blame_ttable[] = {
   { 0 }
 };
 
-
 /* Conforms to svn_ra_serf__xml_opened_t  */
 static svn_error_t *
 blame_opened(svn_ra_serf__xml_estate_t *xes,
@@ -359,9 +358,10 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                            blame_opened,
                                            blame_closed,
                                            blame_cdata,
+                                           NULL,
                                            blame_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;

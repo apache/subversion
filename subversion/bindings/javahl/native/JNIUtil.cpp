@@ -908,11 +908,9 @@ JNIUtil::getDate(jobject jdate)
  */
 jbyteArray JNIUtil::makeJByteArray(const void *data, int length)
 {
-  if (data == NULL)
-    {
-      // a NULL will create no Java array
-      return NULL;
-    }
+  // a NULL will create no Java array
+  if (!data)
+    return NULL;
 
   JNIEnv *env = getEnv();
 
@@ -943,6 +941,10 @@ jbyteArray JNIUtil::makeJByteArray(const void *data, int length)
  */
 jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
 {
+  // a NULL will create no Java array
+  if (!str)
+    return NULL;
+
   return JNIUtil::makeJByteArray(str->data, static_cast<int>(str->len));
 }
 

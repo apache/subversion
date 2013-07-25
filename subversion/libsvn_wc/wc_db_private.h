@@ -42,7 +42,8 @@ struct svn_wc__db_t {
      opened, and found to be not-current?  */
   svn_boolean_t verify_format;
 
-  /* Should we ensure the WORK_QUEUE is empty when a WCROOT is opened?  */
+  /* Should we ensure the WORK_QUEUE is empty when a DB is locked
+   * for writing?  */
   svn_boolean_t enforce_empty_wq;
 
   /* Should we open Sqlite databases EXCLUSIVE */
@@ -122,7 +123,6 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -145,6 +145,9 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+/* Return an error if the work queue in SDB is non-empty. */
+svn_error_t *
+svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb);
 
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
