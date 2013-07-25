@@ -828,8 +828,10 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
   apr_array_header_t *changes;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_open(&file,
+                           path_txn_changes(fs, txn_id, scratch_pool),
+                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                           scratch_pool));
 
   SVN_ERR(svn_fs_fs__read_changes(&changes,
                                   svn_stream_from_aprfile2(file, TRUE,
@@ -837,8 +839,6 @@ svn_fs_fs__txn_changes_fetch(apr_hash_t **changed_paths_p,
                                   scratch_pool));
   SVN_ERR(process_changes(changed_paths, changes, pool));
   svn_pool_destroy(scratch_pool);
-
-  SVN_ERR(svn_io_file_close(file, pool));
 
   *changed_paths_p = changed_paths;
 
@@ -1654,6 +1654,7 @@ choose_delta_base(representation_t **rep,
   base = noderev;
   while ((count++) < noderev->predecessor_count)
     {
+      svn_revnum_t base_revision;
       SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
                                            base->predecessor_id, pool));
 
@@ -1666,16 +1667,15 @@ choose_delta_base(representation_t **rep,
        *
        * Message-ID: <CA+t0gk1wzitkih3GRCLDvK-bTEm=hgppGb_7xXMtvuXDYPfL+Q@mail.gmail.com>
        */
+      base_revision = svn_fs_fs__id_rev(base->id);
       if (props)
         {
-          if (   base->prop_rep
-              && svn_fs_fs__id_rev(base->id) > base->prop_rep->revision)
+          if (base->prop_rep && base_revision > base->prop_rep->revision)
             maybe_shared_rep = TRUE;
         }
       else
         {
-          if (   base->data_rep
-              && svn_fs_fs__id_rev(base->id) > base->data_rep->revision)
+          if (base->data_rep && base_revision > base->data_rep->revision)
             maybe_shared_rep = TRUE;
         }
     }

@@ -319,6 +319,8 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                              const svn_fs_id_t *id,
                              apr_pool_t *pool)
 {
+  const svn_fs_fs__id_part_t *rev_offset = svn_fs_fs__id_rev_offset(id);
+
   svn_error_t *err = get_node_revision_body(noderev_p, fs, id, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
     {
@@ -329,8 +331,8 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
     }
 
   SVN_ERR(dbg_log_access(fs,
-                         svn_fs_fs__id_rev(id),
-                         svn_fs_fs__id_offset(id),
+                         rev_offset->revision,
+                         rev_offset->number,
                          *noderev_p,
                          SVN_FS_FS__ITEM_TYPE_NODEREV,
                          pool));
