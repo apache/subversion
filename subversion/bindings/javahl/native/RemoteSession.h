@@ -55,7 +55,7 @@ class RemoteSession : public SVNBase
                         const char* configDirectory,
                         jobject jconfigHandler,
                         const char* username, const char* password,
-                        Prompter* prompter, jobject jprogress);
+                        Prompter*& prompter, jobject jprogress);
     ~RemoteSession();
 
     void cancelOperation() const { m_context->cancelOperation(); }
@@ -113,7 +113,7 @@ class RemoteSession : public SVNBase
                   const char* configDirectory,
                   jobject jconfigHandler,
                   const char* username, const char* password,
-                  Prompter* prompter, jobject jprogress);
+                  Prompter*& prompter, jobject jprogress);
 
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;
