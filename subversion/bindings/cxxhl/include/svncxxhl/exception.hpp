@@ -35,9 +35,6 @@
 
 #include "svncxxhl/_compat.hpp"
 
-// Forward declaration of implementation-specific structure
-struct svn_error_t;
-
 namespace apache {
 namespace subversion {
 namespace cxxhl {
@@ -55,7 +52,7 @@ class ErrorDescription;
 class InternalError : public std::exception
 {
 public:
-  InternalError(const char* description);
+  explicit InternalError(const char* description);
 
   InternalError(const InternalError& that) throw();
   InternalError& operator= (const InternalError& that) throw();
@@ -67,10 +64,9 @@ public:
   virtual const char* what() const throw();
 
 protected:
-  InternalError(detail::ErrorDescription* description) throw();
-
-  /** Error description and trace location information. */
-  detail::ErrorDescription* m_description;
+  typedef compat::shared_ptr<detail::ErrorDescription> description_ptr;
+  explicit InternalError(description_ptr description) throw();
+  description_ptr m_description;
 };
 
 /**
@@ -79,34 +75,66 @@ protected:
 class Error : public InternalError
 {
 public:
-  typedef compat::shared_ptr<Error> shared_ptr;
-
-  Error(const char* description, int error_code);
-  Error(const char* description, int error_code, shared_ptr nested_error);
-
   Error(const Error& that) throw();
   Error& operator=(const Error& that) throw();
   virtual ~Error() throw();
 
   /**
-   * Returns the error code associated with the exception.
+   * Returns the error code associated with the top-level error that
+   * caused the exception.
    */
-  virtual int code() const throw() { return m_errno; }
-
-  /**
-   * Returns a shared pointer to the nested exception object, if any.
-   */
-  virtual shared_ptr nested() const throw() { return m_nested; }
+  virtual int code() const throw();
 
   /**
    * Error message description.
-   *
-   * The first element of this pair is the error code, the second the
-   * associated error message. If the error code is 0, the message
-   * describes the location in the source code where the error was
-   * generated from.
    */
-  typedef std::pair<int, std::string> Message;
+  class Message
+  {
+  public:
+    /**
+     * Create a message object given an error code and error message.
+     */
+    Message(int errno, const std::string& message)
+      : m_errno(errno),
+        m_message(message),
+        m_trace(false)
+      {}
+
+    /**
+     * Create a message object given an error code and error message,
+     * and set the flag that tells if this is a debugging traceback entry.
+     */
+    Message(int errno, const std::string& message, bool trace)
+      : m_errno(errno),
+        m_message(message),
+        m_trace(trace)
+      {}
+
+    /**
+     * Return the error code.
+     */
+    int code() const throw() { return m_errno; }
+
+    /**
+     * Return the error message.
+     */
+    const std::string& message() const throw() { return m_message; }
+
+    /**
+     * Return the generic error message associated with the error code.
+     */
+    const char* generic_message() const;
+
+    /**
+     * Check if this message is in fact a debugging traceback entry.
+     */
+    bool trace() const throw() { return m_trace; }
+
+  private:
+    int m_errno;
+    std::string m_message;
+    bool m_trace;
+  };
 
   /**
    * The list of messages associated with an error.
@@ -115,7 +143,7 @@ public:
 
   /**
    * Returns the complete list of error messages, including those from
-   * nested exceptions.
+   * nested errors.
    */
   virtual MessageList messages() const
     {
@@ -134,18 +162,11 @@ public:
       return compile_messages(true);
     }
 
-public:
-  /** Used internally by the implementation. */
-  static void throw_svn_error(svn_error_t*);
-
 protected:
-  Error(int error_code, detail::ErrorDescription* description) throw();
-
-private:
+  explicit Error(description_ptr description) throw()
+    : InternalError(description)
+    {}
   MessageList compile_messages(bool show_traces) const;
-
-  int m_errno;                /**< The (SVN or APR) error code. */
-  shared_ptr m_nested;        /**< Optional pointer to nessted error. */
 };
 
 /**
@@ -155,9 +176,8 @@ private:
 class Cancelled : public Error
 {
 protected:
-  friend void Error::throw_svn_error(svn_error_t*);
-  Cancelled(int error_code, detail::ErrorDescription* description) throw()
-    : Error(error_code, description)
+  explicit Cancelled(description_ptr description) throw()
+    : Error(description)
     {}
 };
 
