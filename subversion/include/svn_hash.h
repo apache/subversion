@@ -245,7 +245,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  * @since New in 1.8.
  */
 #define svn_hash_gets(ht, key) \
-            apr_hash_get(ht, key, strlen(key))
+            apr_hash_get(ht, key, APR_HASH_KEY_STRING)
 
 /** Shortcut for apr_hash_set() with a const char * key.
  *
