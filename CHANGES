@@ -1,3 +1,22 @@
+Version 1.7.11
+(23 Jul 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.11
+
+ User-visible changes:
+  - General
+    * translation updates for Simplified Chinese
+
+  - Server-side bugfixes:
+    * mod_dav_svn: fix incorrect path canonicalization (r1503528)
+
+  - Other tool improvements and bugfixes:
+    * fix argument processing in contrib hook scripts (r1485350)
+
+ Developer-visible changes:
+  - Bindings:
+    * javahl: fix bug in error constructing code (r1405922)
+
+
 Version 1.7.10
 (30 May 2013, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.10
@@ -76,7 +95,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.8
     * fix svn patch ignoring hunks after no trailing newline (r1399174)
     * fix hang with ra_serf during error processing (r1403583)
     * ignore file externals with mergeinfo when merging (r1401915)
-    * fix SEGV with "svnmucc cp rev arg" during argv processing (issue #4079)
+    * fix "svnmucc cp" segfault with a missing last argument (issue #4079)
     * fix conflict handling on symlinks (issue #4091)
     
   - Server-side bugfixes:
