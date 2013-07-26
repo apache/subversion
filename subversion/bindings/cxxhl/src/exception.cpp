@@ -334,9 +334,11 @@ Error::MessageList Error::compile_messages(bool show_traces) const
   std::vector<int> empties;
   empties.reserve(max_length);
 
-  APR::Pool iterpool;
+  APR::IterationPool iterbase;
   for (const Error* err = this; err; err = err->m_nested.get())
     {
+      APR::Pool::Iteration iterpool(iterbase);
+
       if (!err->m_description->what())
         {
           // Non-specific messages are printed only once.
@@ -348,8 +350,7 @@ Error::MessageList Error::compile_messages(bool show_traces) const
         }
       handle_one_error(ml, show_traces,
                        err->m_errno, err->m_description,
-                       iterpool);
-      iterpool.clear();
+                       iterpool.pool());
     }
   return ml;
 }
