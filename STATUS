@@ -181,6 +181,7 @@ Candidate changes:
    Justification: The bug makes scripts using SVN::Client look like
      as if they didn't honor config settings from ~/.subversion/servers,
      though they should by default.
+   Branch: ^/subversion/branches/1.8.x-r1507044
    Votes:
      +1: rschupp
 
