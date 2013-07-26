@@ -24,6 +24,6 @@
 #ifndef SVN_CXXHL_PRIVATE_PRIVATE_H
 #define SVN_CXXHL_PRIVATE_PRIVATE_H
 
-#include "private/exception.hpp"
+#include "private/exception-private.hpp"
 
 #endif // SVN_CXXHL_PRIVATE_PRIVATE_H
