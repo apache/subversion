@@ -198,7 +198,12 @@ public class RemoteSession extends JNIObject implements ISVNRemote
             throws ClientException;
 
     // TODO: stat
-    // TODO: getLocations
+
+    public native Map<Long, String>
+        getLocations(String path, long pegRevision,
+                     Iterable<Long> locationRevisions)
+            throws ClientException;
+
     // TODO: getLocationSegments
     // TODO: getFileRevisions
     // TODO: lock
