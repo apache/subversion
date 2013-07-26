@@ -28,6 +28,7 @@
 #include <iostream>
 
 #include "svncxxhl.hpp"
+#include "../src/cxxhl-private.hpp"
 
 #include <apr.h>
 #include "svn_error.h"
@@ -36,11 +37,11 @@ namespace {
 void trace(const SVN::Error::Message& msg)
 {
   std::cout << "    ";
-  if (msg.first)
+  if (!msg.trace())
     std::cout << "test_exception: E"
               << std::setw(6) << std::setfill('0') << std::right
-              << msg.first << ':' << ' ';
-  std::cout << msg.second << std::endl;
+              << msg.code() << ':' << ' ';
+  std::cout << msg.message() << std::endl;
 }
 
 void traceall(const char *message, const SVN::Error& err)
@@ -92,7 +93,7 @@ bool test_cancel()
 {
   try
     {
-      SVN::Error::throw_svn_error(make_cancel_test_error());
+      SVN::detail::checked_call(make_cancel_test_error());
     }
   catch (const SVN::Cancelled& err)
     {
@@ -117,7 +118,7 @@ int test_error()
 {
   try
     {
-      SVN::Error::throw_svn_error(make_error_test_error());
+      SVN::detail::checked_call(make_error_test_error());
     }
   catch (const SVN::Cancelled& err)
     {
