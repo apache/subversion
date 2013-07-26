@@ -164,7 +164,7 @@ Candidate changes:
    Justification:
      Regression from 1.7.
    Votes:
-     +1: philip, rhuijben
+     +1: philip, rhuijben, steveking
 
  * r1506966
    Don't do double UTF8-to-native conversion in svnadmin notifications.
@@ -184,6 +184,14 @@ Candidate changes:
    Branch: ^/subversion/branches/1.8.x-r1507044
    Votes:
      +1: rschupp
+
+ * r1507382
+   Allow passing NULL for the config dir to use the default config dir path.
+   Justification: all other APIs that take a config dir param allow NULL as
+     meaning the default config path. Clients should not try to figure out
+     that path themselves.
+   Votes:
+     +1: steveking
 
 Veto-blocked changes:
 =====================
