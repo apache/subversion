@@ -1083,4 +1083,20 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(1, ranges.size());
         assertEquals("1-3", ranges.get(0).toString());
     }
+
+    public void testGetLocations() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        Long expected = new Long(1L);
+        ArrayList<Long> revs = new ArrayList<Long>(3);
+        revs.add(new Long(0L));
+        revs.add(expected);
+
+        Map<Long, String> locs = session.getLocations("A", 1, revs);
+
+        assertEquals(1, locs.size());
+        assertTrue(locs.containsKey(expected));
+        assertEquals("/A", locs.get(expected));
+    }
 }

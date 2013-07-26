@@ -441,7 +441,23 @@ public interface ISVNRemote
             throws ClientException;
 
     // TODO: stat
-    // TODO: getLocations
+
+    /**
+     * Find the locations of the object identified by
+     * <code>path</code> and <code>pegRevision</code> in the
+     * repository at the given revisions. If the object does not exist
+     * in a given revision, that revision will be ignored.
+     * <p>
+     * <b>Note:</b> None of the parameters may be NULL.
+     * @param path A path relative to the session URL
+     * @param pegRevision The peg revision to use for locating the object
+     * @param locationRevisions The set of revisions to find locations for
+     * @throws ClientException
+     */
+    Map<Long, String> getLocations(String path, long pegRevision,
+                                   Iterable<Long> locationRevisions)
+            throws ClientException;
+
     // TODO: getLocationSegments
     // TODO: getFileRevisions
     // TODO: lock
