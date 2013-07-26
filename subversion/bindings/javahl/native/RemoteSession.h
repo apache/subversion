@@ -55,7 +55,7 @@ class RemoteSession : public SVNBase
                         const char* configDirectory,
                         jobject jconfigHandler,
                         const char* username, const char* password,
-                        Prompter* prompter, jobject jprogress);
+                        Prompter*& prompter, jobject jprogress);
     ~RemoteSession();
 
     void cancelOperation() const { m_context->cancelOperation(); }
@@ -93,7 +93,8 @@ class RemoteSession : public SVNBase
                 jobject jrevprops, jobject jlog_callback);
     jobject checkPath(jstring jpath, jlong jrevision);
     // TODO: stat
-    // TODO: getLocations
+    jobject getLocations(jstring jpath, jlong jpeg_revision,
+                         jobject jlocation_revisions);
     // TODO: getLocationSegments
     // TODO: getFileRevisions
     // TODO: lock
@@ -113,7 +114,7 @@ class RemoteSession : public SVNBase
                   const char* configDirectory,
                   jobject jconfigHandler,
                   const char* username, const char* password,
-                  Prompter* prompter, jobject jprogress);
+                  Prompter*& prompter, jobject jprogress);
 
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;

@@ -273,7 +273,19 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(
 }
 
 // TODO: stat
-// TODO: getLocations
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getLocations(
+    JNIEnv *env, jobject jthis, jstring jpath, jlong jpeg_revision,
+    jobject jlocation_revisions)
+{
+  JNIEntry(SVNReposAccess, checkPath);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getLocations(jpath, jpeg_revision, jlocation_revisions);
+}
+
 // TODO: getLocationSegments
 // TODO: getFileRevisions
 // TODO: lock
