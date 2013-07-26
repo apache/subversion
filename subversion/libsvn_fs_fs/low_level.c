@@ -524,6 +524,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   apr_int64_t val;
   char *string = text->data;
   svn_checksum_t *checksum;
+  const char *end;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -600,11 +601,16 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.txn_id, str));
 
   str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL)
+  if (str == NULL || *str != '_')
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  rep->uniquifier.number = svn__base36toui64(NULL, str);
+  ++str;
+  rep->uniquifier.number = svn__base36toui64(&end, str);
+
+  if (*end)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Malformed text representation offset line in node-rev"));
 
   return SVN_NO_ERROR;
 }
