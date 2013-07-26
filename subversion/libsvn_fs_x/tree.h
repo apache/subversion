@@ -48,10 +48,12 @@ svn_error_t *svn_fs_x__deltify(svn_fs_t *fs, svn_revnum_t rev,
 /* Commit the transaction TXN as a new revision.  Return the new
    revision in *NEW_REV.  If the transaction conflicts with other
    changes return SVN_ERR_FS_CONFLICT and set *CONFLICT_P to a string
-   that details the cause of the conflict.  Perform temporary
-   allocations in POOL. */
+   that details the cause of the conflict.
+   Update commit time to ensure that svn:date revprops remain ordered if
+   SET_TIMESTAMP is non-zero. Perform temporary allocations in POOL. */
 svn_error_t *svn_fs_x__commit_txn(const char **conflict_p,
                                   svn_revnum_t *new_rev, svn_fs_txn_t *txn,
+                                  svn_boolean_t set_timestamp,
                                   apr_pool_t *pool);
 
 /* Set ROOT_P to the root directory of transaction TXN.  Allocate the
