@@ -346,6 +346,58 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
+static const char *
+auto_escape_path(const char *path,
+                 apr_pool_t *pool)
+{
+  apr_size_t len = strlen(path);
+  apr_size_t i;
+  const char esc = '\x1b';
+
+  for (i = 0; i < len; ++i)
+    if (path[i] < ' ')
+      {
+        svn_stringbuf_t *escaped = svn_stringbuf_create_ensure(2 * len, pool);
+        for (i = 0; i < len; ++i)
+          if (path[i] < ' ')
+            {
+              svn_stringbuf_appendbyte(escaped, esc);
+              svn_stringbuf_appendbyte(escaped, path[i] + 'A' - 1);
+            }
+          else
+            {
+              svn_stringbuf_appendbyte(escaped, path[i]);
+            }
+
+        return escaped->data;
+      }
+      
+   return path;
+}
+
+static const char *
+auto_unescape_path(const char *path,
+                   apr_pool_t *pool)
+{
+  const char esc = '\x1b';
+  if (strchr(path, esc))
+    {
+      apr_size_t len = strlen(path);
+      apr_size_t i;
+
+      svn_stringbuf_t *unescaped = svn_stringbuf_create_ensure(len, pool);
+      for (i = 0; i < len; ++i)
+        if (path[i] == esc)
+          svn_stringbuf_appendbyte(unescaped, path[++i] + 1 - 'A');
+        else
+          svn_stringbuf_appendbyte(unescaped, path[i]);
+
+      return unescaped->data;
+    }
+
+   return path;
+}
+
 svn_error_t *
 svn_fs_x__read_noderev(node_revision_t **noderev_p,
                        svn_stream_t *stream,
@@ -420,7 +472,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
     }
   else
     {
-      noderev->created_path = apr_pstrdup(pool, value);
+      noderev->created_path = auto_unescape_path(value, pool);
     }
 
   /* Get the predecessor ID. */
@@ -432,7 +484,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
   value = svn_hash_gets(headers, HEADER_COPYROOT);
   if (value == NULL)
     {
-      noderev->copyroot_path = apr_pstrdup(pool, noderev->created_path);
+      noderev->copyroot_path = noderev->created_path;
       noderev->copyroot_rev = svn_fs_x__id_rev(noderev->id);
     }
   else
@@ -451,7 +503,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyroot line in node-rev '%s'"),
                                  noderev_id);
-      noderev->copyroot_path = apr_pstrdup(pool, value);
+      noderev->copyroot_path = auto_unescape_path(value, pool);
     }
 
   /* Get the copyfrom. */
@@ -475,7 +527,7 @@ svn_fs_x__read_noderev(node_revision_t **noderev_p,
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("Malformed copyfrom line in node-rev '%s'"),
                                  noderev_id);
-      noderev->copyfrom_path = apr_pstrdup(pool, value);
+      noderev->copyfrom_path = auto_unescape_path(value, pool);
     }
 
   /* Get whether this is a fresh txn root. */
@@ -589,20 +641,20 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                                  TRUE, pool)->data));
 
   SVN_ERR(svn_stream_printf(outfile, pool, HEADER_CPATH ": %s\n",
-                            noderev->created_path));
+                            auto_escape_path(noderev->created_path, pool)));
 
   if (noderev->copyfrom_path)
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COPYFROM ": %ld"
                               " %s\n",
                               noderev->copyfrom_rev,
-                              noderev->copyfrom_path));
+                              auto_escape_path(noderev->copyfrom_path, pool)));
 
   if ((noderev->copyroot_rev != svn_fs_x__id_rev(noderev->id)) ||
       (strcmp(noderev->copyroot_path, noderev->created_path) != 0))
     SVN_ERR(svn_stream_printf(outfile, pool, HEADER_COPYROOT ": %ld"
                               " %s\n",
                               noderev->copyroot_rev,
-                              noderev->copyroot_path));
+                              auto_escape_path(noderev->copyroot_path, pool)));
 
   if (noderev->is_fresh_txn_root)
     SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
@@ -823,8 +875,10 @@ read_change(change_t **change_p,
     }
 
   /* Get the changed path. */
-  change->path.len = strlen(last_str);
-  change->path.data = apr_pstrmemdup(pool, last_str, change->path.len);
+  change->path.data = auto_unescape_path(apr_pstrmemdup(pool, last_str,
+                                                        strlen(last_str)),
+                                         pool);
+  change->path.len = strlen(change->path.data);
 
   /* Read the next line, the copyfrom line. */
   SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
@@ -847,7 +901,7 @@ read_change(change_t **change_p,
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                 _("Invalid changes line in rev-file"));
 
-      info->copyfrom_path = apr_pstrdup(pool, last_str);
+      info->copyfrom_path = auto_unescape_path(last_str, pool);
     }
 
   *change_p = change;
@@ -928,14 +982,14 @@ write_change_entry(svn_stream_t *stream,
                      idstr, change_string, kind_string,
                      change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                      change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
-                     path);
+                     auto_escape_path(path, pool));
 
   SVN_ERR(svn_stream_puts(stream, buf));
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
     {
       buf = apr_psprintf(pool, "%ld %s", change->copyfrom_rev,
-                         change->copyfrom_path);
+                         auto_escape_path(change->copyfrom_path, pool));
       SVN_ERR(svn_stream_puts(stream, buf));
     }
 

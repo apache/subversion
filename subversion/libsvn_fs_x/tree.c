@@ -2210,21 +2210,6 @@ x_dir_optimal_order(apr_array_header_t **ordered_p,
   return SVN_NO_ERROR;
 }
 
-/* Raise an error if PATH contains a newline because FSX cannot handle
- * such paths. See issue #4340. */
-static svn_error_t *
-check_newline(const char *path, apr_pool_t *pool)
-{
-  char *c = strchr(path, '\n');
-
-  if (c)
-    return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
-       _("Invalid control character '0x%02x' in path '%s'"),
-       (unsigned char)*c, svn_path_illegal_path_escape(path, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Create a new directory named PATH in ROOT.  The new directory has
    no entries, and no properties.  ROOT must be the root of a
    transaction, not a revision.  Do any necessary temporary allocation
@@ -2237,8 +2222,6 @@ x_make_dir(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *sub_dir;
   const svn_fs_x__id_part_t *txn_id = root_txn_id(root);
-
-  SVN_ERR(check_newline(path, pool));
 
   path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
@@ -2488,8 +2471,6 @@ x_copy(svn_fs_root_t *from_root,
        const char *to_path,
        apr_pool_t *pool)
 {
-  SVN_ERR(check_newline(to_path, pool));
-
   return svn_error_trace(copy_helper(from_root,
                                      svn_fs__canonicalize_abspath(from_path,
                                                                   pool),
@@ -2553,8 +2534,6 @@ x_make_file(svn_fs_root_t *root,
   parent_path_t *parent_path;
   dag_node_t *child;
   const svn_fs_x__id_part_t *txn_id = root_txn_id(root);
-
-  SVN_ERR(check_newline(path, pool));
 
   path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, open_path_last_optional,
