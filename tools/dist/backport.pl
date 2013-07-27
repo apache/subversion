@@ -30,6 +30,7 @@ use POSIX qw/ctermid/;
 ############### Start of reading values from environment ###############
 
 # Programs we use.
+my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
@@ -49,9 +50,13 @@ my $VERBOSE = 0;
 my $DEBUG = (exists $ENV{DEBUG}) ? 'true' : 'false'; # 'set -x', etc
 
 # Username for entering votes.
+my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
 my ($AVAILID) = $ENV{AVAILID} // do {
-  my $SVN_A_O_REALM = 'd3c8a345b14f6a1b42251aef8027ab57';
-  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$SVN_A_O_REALM";
+  local $_ = `$SVNAUTH list 2>/dev/null`;
+  ($? == 0) ? (/Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/, $1) : undef
+} // do {
+  my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
+  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$filename";
   1 until <USERNAME> eq "username\n";
   <USERNAME>;
   local $_ = <USERNAME>;
