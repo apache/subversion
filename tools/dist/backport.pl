@@ -552,11 +552,11 @@ sub handle_entry {
         if (@conflicts and !$entry{depends}) {
           $ERRORS{$entry{id}} //= [\%entry,
                                    sprintf "Conflicts on %s%s%s",
-                                     '[' x !!@conflicts,
+                                     '[' x !!$#conflicts,
                                      (join ', ',
                                       map { basename $_ }
                                       @conflicts),
-                                     ']' x !!@conflicts,
+                                     ']' x !!$#conflicts,
                                   ];
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
