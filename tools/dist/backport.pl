@@ -40,7 +40,7 @@ my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 #    svn-role:      YES=1 MAY_COMMIT=1
 #    conflicts-bot: YES=1 MAY_COMMIT=0
 #    interactive:   YES=0 MAY_COMMIT=0      (default)
-my $YES = ($ENV{YES} // 0) ? 1 : 0; # batch mode: eliminate prompts, add sleeps
+my $YES = exists $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = 'false';
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
@@ -120,7 +120,7 @@ There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
 the environment, this script will iterate the "Approved:" section, and merge
 and commit each entry therein.  If only \$YES is defined, the script will
 merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.  These mode are normally used by the
+to stderr if it notices any conflicts.  These modes are normally used by the
 'svn-role' cron job and/or buildbot, not by human users.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
@@ -564,7 +564,7 @@ sub handle_entry {
           system "$SVN diff -- @conflicts";
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
-          # also committing the dependent in hte same pass.
+          # also committing the dependent in the same pass.
           print "No conflicts merging $entry{id}, but conflicts were "
               ."expected ('Depends:' header set)\n";
         } elsif (@conflicts) {
