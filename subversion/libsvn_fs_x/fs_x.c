@@ -1136,8 +1136,8 @@ svn_fs_x__info_format(int *fs_format,
   *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
 
   (*supports_version)->major = SVN_VER_MAJOR;
-  (*supports_version)->minor = 1;
-  (*supports_version)->patch = 9;
+  (*supports_version)->minor = 9;
+  (*supports_version)->patch = 0;
   (*supports_version)->tag = "";
 
   switch (ffd->format)
