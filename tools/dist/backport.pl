@@ -219,7 +219,7 @@ fi
 if $MAY_COMMIT; then
   $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
-elif test 1 -ne $YES; then
+elif test -z "\$YES"; then
   echo "Would have committed:"
   echo '[[['
   $SVN status -q
@@ -236,7 +236,7 @@ if $MAY_COMMIT; then
   if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
   if [ -n "\$YES" ]; then sleep 1; fi
-elif test 1 -ne $YES; then
+elif test -z "\$YES"; then
   echo "Would remove $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
