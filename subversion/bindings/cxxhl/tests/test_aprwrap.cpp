@@ -40,7 +40,7 @@ TEST(Pools, InitializeGlobalPool)
 TEST(Pools, CreateSubpool)
 {
   APR::Pool pool;
-  APR::Pool subpool(pool);
+  APR::Pool subpool(&pool);
   EXPECT_EQ(pool.get(), apr_pool_parent_get(subpool.get()));
 }
 
