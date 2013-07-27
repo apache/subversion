@@ -2963,8 +2963,6 @@ def commit_unversioned(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, None, None, expected_err,
                                          sbox.ospath('not-existing'))
 
-@XFail(lambda: svntest.main.is_ra_type_dav_serf() and
-               svntest.main.options.server_minor_version <= 6)
 @Issue(4400)
 def commit_cp_with_deep_delete(sbox):
   "verify behavior of a copy with a deep (>=3) delete"
