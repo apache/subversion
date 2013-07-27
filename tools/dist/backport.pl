@@ -550,11 +550,12 @@ sub handle_entry {
         my $output = `$SVN status`;
         my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
-          @conflicts = qw/foo bar/;
           $ERRORS{$entry{id}} //= [\%entry,
                                    sprintf "Conflicts on %s%s%s",
                                      '[' x !!@conflicts,
-                                     (join ', ', map m#.*/(.*)#, @conflicts),
+                                     (join ', ',
+                                      map m#(?:.*/)?(.*)#,
+                                      @conflicts),
                                      ']' x !!@conflicts,
                                   ];
           say STDERR "Conflicts merging the $entry{header}!";
