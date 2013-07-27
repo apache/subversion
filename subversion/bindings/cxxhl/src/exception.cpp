@@ -28,8 +28,8 @@
 #include <sstream>
 
 #include "svncxxhl/exception.hpp"
+#include "private.hpp"
 #include "aprwrap.hpp"
-#include "cxxhl-private.hpp"
 
 #include "svn_error.h"
 #include "svn_utf.h"
