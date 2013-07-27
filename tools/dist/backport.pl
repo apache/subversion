@@ -55,13 +55,11 @@ my ($AVAILID) = $ENV{AVAILID} // do {
   local $_ = `$SVNAUTH list 2>/dev/null`;
   ($? == 0) ? (/Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/, $1) : undef
 } // do {
+  local $/; # slurp mode
   my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
-  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$filename";
-  1 until <USERNAME> eq "username\n";
-  <USERNAME>;
-  local $_ = <USERNAME>;
-  chomp;
-  $_
+  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$filename"
+  and
+  (<USERNAME> =~ /K 8\nusername\nV \d+\n(.*)/, $1)
 }
 // warn "Username for commits (of votes/merges) not found";
 
