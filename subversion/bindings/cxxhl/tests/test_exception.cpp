@@ -28,7 +28,7 @@
 #include <iostream>
 
 #include "svncxxhl.hpp"
-#include "../src/cxxhl-private.hpp"
+#include "../src/private.hpp"
 
 #include <apr.h>
 #include "svn_error.h"
