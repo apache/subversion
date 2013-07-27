@@ -539,7 +539,7 @@ svn_fs_x__unparse_representation(representation_t *rep,
   svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
           (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-           " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
+           " %" SVN_FILESIZE_T_FMT " %s %s %s/%s",
            rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
