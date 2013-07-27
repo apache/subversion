@@ -229,12 +229,14 @@ hotcopy_io_copy_dir_recursively(const char *src,
 
 /* Copy an un-packed revision or revprop file for revision REV from SRC_SUBDIR
  * to DST_SUBDIR. Assume a sharding layout based on MAX_FILES_PER_DIR.
+ * If INCLUDE_INDEXES is set, copy rev index files as well.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 hotcopy_copy_shard_file(const char *src_subdir,
                         const char *dst_subdir,
                         svn_revnum_t rev,
                         int max_files_per_dir,
+                        svn_boolean_t include_indexes,
                         apr_pool_t *scratch_pool)
 {
   const char *src_subdir_shard = src_subdir,
@@ -255,6 +257,18 @@ hotcopy_copy_shard_file(const char *src_subdir,
   SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
                                    apr_psprintf(scratch_pool, "%ld", rev),
                                    scratch_pool));
+  if (include_indexes)
+    {
+      SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
+                                       apr_psprintf(scratch_pool, "%ld.l2p",
+                                                    rev),
+                                       scratch_pool));
+      SVN_ERR(hotcopy_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
+                                       apr_psprintf(scratch_pool, "%ld.p2l",
+                                                    rev),
+                                       scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -309,7 +323,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
 
           SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
                                           revprop_rev, max_files_per_dir,
-                                          iterpool));
+                                          FALSE, iterpool));
         }
       svn_pool_destroy(iterpool);
     }
@@ -318,7 +332,7 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
       /* revprop for revision 0 will never be packed */
       if (rev == 0)
         SVN_ERR(hotcopy_copy_shard_file(src_subdir, dst_subdir,
-                                        0, max_files_per_dir,
+                                        0, max_files_per_dir, FALSE,
                                         scratch_pool));
 
       /* packed revprops folder */
@@ -365,6 +379,21 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
   return SVN_NO_ERROR;
 }
 
+/* Remove FILE in SHARD folder.  Use POOL for temporary allocations. */
+static svn_error_t *
+hotcopy_remove_file(const char *shard,
+                    const char *file,
+                    apr_pool_t *pool)
+{
+  const char *rev_path = svn_dirent_join(shard, file, pool);
+
+  /* Make the rev file writable and remove it. */
+  SVN_ERR(svn_io_set_file_read_write(rev_path, TRUE, pool));
+  SVN_ERR(svn_io_remove_file2(rev_path, TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Remove revisions between START_REV (inclusive) and END_REV (non-inclusive)
  * from DST_FS. Assume sharding as per MAX_FILES_PER_DIR.
@@ -393,8 +422,6 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
   iterpool = svn_pool_create(scratch_pool);
   for (rev = start_rev; rev < end_rev; rev++)
     {
-      const char *rev_path;
-
       svn_pool_clear(iterpool);
 
       /* If necessary, update paths for shard. */
@@ -404,13 +431,16 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
           dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
         }
 
-      rev_path = svn_dirent_join(dst_subdir_shard,
-                                 apr_psprintf(iterpool, "%ld", rev),
-                                 iterpool);
-
-      /* Make the rev file writable and remove it. */
-      SVN_ERR(svn_io_set_file_read_write(rev_path, TRUE, iterpool));
-      SVN_ERR(svn_io_remove_file2(rev_path, TRUE, iterpool));
+      /* remove files for REV */
+      SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
+                                  apr_psprintf(iterpool, "%ld", rev),
+                                  iterpool));
+      SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
+                                  apr_psprintf(iterpool, "%ld.p2l", rev),
+                                  iterpool));
+      SVN_ERR(hotcopy_remove_file(dst_subdir_shard,
+                                  apr_psprintf(iterpool, "%ld.l2p", rev),
+                                  iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -675,7 +705,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
       /* Copy the rev file. */
       err = hotcopy_copy_shard_file(src_subdir, dst_subdir,
-                                    rev, max_files_per_dir,
+                                    rev, max_files_per_dir, TRUE,
                                     iterpool);
       if (err)
         {
@@ -725,7 +755,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
       /* Copy the revprop file. */
       SVN_ERR(hotcopy_copy_shard_file(revprop_src_subdir,
                                       revprop_dst_subdir,
-                                      rev, max_files_per_dir,
+                                      rev, max_files_per_dir, FALSE,
                                       iterpool));
 
       /* After completing a full shard, update 'current'. */
