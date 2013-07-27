@@ -244,7 +244,7 @@ EOF
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{id}} = "sh($?): $!" if $?;
+  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
 
   if (-z $backupfile) {
     unlink $backupfile;
@@ -261,6 +261,12 @@ sub sanitize_branch {
   s/^\s*//;
   s/\s*$//;
   return $_;
+}
+
+sub logsummarysummary {
+  my $entry = shift;
+  join "",
+    $entry->{logsummary}->[0], ('[...]' x (0 < $#{$entry->{logsummary}}))
 }
 
 # TODO: may need to parse other headers too?
@@ -485,7 +491,8 @@ sub warning_summary {
   warn "===============\n";
   warn "\n";
   for my $header (keys %ERRORS) {
-    warn "$header: $ERRORS{$header}\n";
+    my $title = logsummarysummary $ERRORS{$header}->[0];
+    warn "$header ($title): $ERRORS{$header}->[1]\n";
   }
 }
 
@@ -543,8 +550,13 @@ sub handle_entry {
         my $output = `$SVN status`;
         my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
-          $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}: "
-                                  . (join ', ', map m#.*/(.*)#, @conflicts);
+          @conflicts = qw/foo bar/;
+          $ERRORS{$entry{id}} //= [\%entry,
+                                   sprintf "Conflicts on %s%s%s",
+                                     '[' x !!@conflicts,
+                                     (join ', ', map m#.*/(.*)#, @conflicts),
+                                     ']' x !!@conflicts,
+                                  ];
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
           say STDERR $output;
@@ -563,7 +575,7 @@ sub handle_entry {
   } elsif ($state->{$entry{digest}}) {
     print "\n\n";
     say "Skipping the $entry{header} (remove $STATEFILE to reset):";
-    say $entry{logsummary}->[0], ('[...]' x (0 < $#{$entry{logsummary}}));
+    say logsummarysummary \%entry;
   } else {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
