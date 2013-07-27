@@ -120,13 +120,6 @@ public:
     {}
 
   /**
-   * Create a new proxy for the APR hash table wrapped by @a that.
-   */
-  explicit Hash(const Hash& that) throw()
-    : m_hash(that.m_hash)
-    {}
-
-  /**
    * Create a proxy for the APR hash table @a hash.
    */
   explicit Hash(apr_hash_t* hash)
@@ -272,13 +265,6 @@ public:
    */
   explicit Hash(const Pool& pool, apr_hashfunc_t hash_func) throw()
     : inherited(pool, hash_func)
-    {}
-
-  /**
-   * Create a new proxy for the APR hash table wrapped by @a that.
-   */
-  explicit Hash(const Hash& that) throw()
-    : inherited(that)
     {}
 
   /**

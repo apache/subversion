@@ -58,13 +58,6 @@ public:
     {}
 
   /**
-   * Create a new proxy for the APR array wrapped by @a that.
-   */
-  Array(const Array& that) throw()
-    : m_array(that.m_array)
-    {}
-
-  /**
    * Create a new proxy for the APR array @a array.
    */
   explicit Array(apr_array_header_t* array)
