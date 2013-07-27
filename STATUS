@@ -187,6 +187,15 @@ Candidate changes:
      +1: steveking
      danielsh: update the docstring accordingly?
 
+ * r1507567, r1507589
+   Fix issue #4400: crash when committing cp with deep deletion.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4400
+   Justification:
+     SEGV and Regression from 1.7.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
