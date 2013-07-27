@@ -807,6 +807,11 @@ test_info(const svn_test_opts_t *opts,
   const svn_fs_fsfs_info_t *fsfs_info;
   const svn_fs_info_placeholder_t *info;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsx") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+    return SVN_NO_ERROR;
+
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
@@ -931,19 +936,19 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(pack_filesystem,
-                       "pack a FSFS filesystem"),
+                       "pack a FSX filesystem"),
     SVN_TEST_OPTS_PASS(pack_even_filesystem,
-                       "pack FSFS where revs % shard = 0"),
+                       "pack FSX where revs % shard = 0"),
     SVN_TEST_OPTS_PASS(read_packed_fs,
-                       "read from a packed FSFS filesystem"),
+                       "read from a packed FSX filesystem"),
     SVN_TEST_OPTS_PASS(commit_packed_fs,
-                       "commit to a packed FSFS filesystem"),
+                       "commit to a packed FSX filesystem"),
     SVN_TEST_OPTS_PASS(get_set_revprop_packed_fs,
-                       "get/set revprop while packing FSFS filesystem"),
+                       "get/set revprop while packing FSX filesystem"),
     SVN_TEST_OPTS_PASS(get_set_large_revprop_packed_fs,
-                       "get/set large packed revprops in FSFS"),
+                       "get/set large packed revprops in FSX"),
     SVN_TEST_OPTS_PASS(get_set_huge_revprop_packed_fs,
-                       "get/set huge packed revprops in FSFS"),
+                       "get/set huge packed revprops in FSX"),
     SVN_TEST_OPTS_PASS(recover_fully_packed,
                        "recover a fully packed filesystem"),
     SVN_TEST_OPTS_PASS(file_hint_at_shard_boundary,
