@@ -159,13 +159,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1506040, r1506041, r1506058
-   Fix issue 4398, 'svn status' paths relative to current working directory
-   Justification:
-     Regression from 1.7.
-   Votes:
-     +1: philip, rhuijben, steveking
-
  * r1506966
    Don't do double UTF8-to-native conversion in svnadmin notifications.
    Justification:
@@ -192,6 +185,7 @@ Candidate changes:
      that path themselves.
    Votes:
      +1: steveking
+     danielsh: update the docstring accordingly?
 
 Veto-blocked changes:
 =====================
@@ -224,4 +218,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1506040, r1506041, r1506058
+   Fix issue 4398, 'svn status' paths relative to current working directory
+   Justification:
+     Regression from 1.7.
+   Votes:
+     +1: philip, rhuijben, steveking
 
