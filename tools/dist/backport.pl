@@ -166,8 +166,12 @@ sub merge {
   my $backupfile = "backport_pl.$$.tmp";
 
   if ($entry{branch}) {
-    # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    my $vim_escaped_branch = 
+      join "",
+      map { sprintf '\[%s%s]', $_, ($_ x ($_ eq '\\')) }
+      split //,
+      $entry{branch};
+    $pattern = sprintf '\VBranch: \*\n\? \*\(\.\*\/branches\/\)\?%s', $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Merge the $entry{header}:";
@@ -311,7 +315,7 @@ sub parse_entry {
 
   # branch
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch(es)?:\s*//;
+    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
     $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
