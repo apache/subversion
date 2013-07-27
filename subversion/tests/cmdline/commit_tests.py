@@ -2962,7 +2962,62 @@ def commit_unversioned(sbox):
   # Unversioned, not existing
   svntest.actions.run_and_verify_commit(wc_dir, None, None, expected_err,
                                          sbox.ospath('not-existing'))
-                                         
+
+@XFail(lambda: svntest.main.is_ra_type_dav_serf() and
+               svntest.main.options.server_minor_version <= 6)
+@Issue(4400)
+def commit_cp_with_deep_delete(sbox):
+  "verify behavior of a copy with a deep (>=3) delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Prep by adding a tree deep enough to exercise the issue.
+  sbox.simple_mkdir('A/B/E/I')
+  sbox.simple_commit(message='prep')
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # copy the deep tree and then delete a dir 3 deep.
+  sbox.simple_copy('A','A2')
+  sbox.simple_rm('A2/B/E/I')
+
+  # come up with the expected output and status
+  expected_output = svntest.wc.State(wc_dir, {
+    'A2'       : Item(verb='Adding'),
+    'A2/B/E/I' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/B/E/I'           : Item(status='  ', wc_rev='2'),
+    'A2'                : Item(status='  ', wc_rev='3'),
+    'A2/B'              : Item(status='  ', wc_rev='3'),
+    'A2/B/lambda'       : Item(status='  ', wc_rev='3'),
+    'A2/B/F'            : Item(status='  ', wc_rev='3'),
+    'A2/B/E'            : Item(status='  ', wc_rev='3'),
+    'A2/B/E/alpha'      : Item(status='  ', wc_rev='3'),
+    'A2/B/E/beta'       : Item(status='  ', wc_rev='3'),
+    'A2/D'              : Item(status='  ', wc_rev='3'),
+    'A2/D/gamma'        : Item(status='  ', wc_rev='3'),
+    'A2/D/H'            : Item(status='  ', wc_rev='3'),
+    'A2/D/H/psi'        : Item(status='  ', wc_rev='3'),
+    'A2/D/H/omega'      : Item(status='  ', wc_rev='3'),
+    'A2/D/H/chi'        : Item(status='  ', wc_rev='3'),
+    'A2/D/G'            : Item(status='  ', wc_rev='3'),
+    'A2/D/G/tau'        : Item(status='  ', wc_rev='3'),
+    'A2/D/G/rho'        : Item(status='  ', wc_rev='3'),
+    'A2/D/G/pi'         : Item(status='  ', wc_rev='3'),
+    'A2/C'              : Item(status='  ', wc_rev='3'),
+    'A2/mu'             : Item(status='  ', wc_rev='3'),
+    })
+
+  # Commit the copy without the one dir.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+
+  
 
 ########################################################################
 # Run the tests
@@ -3036,6 +3091,7 @@ test_list = [ None,
               commit_danglers,
               last_changed_of_copied_subdir,
               commit_unversioned,
+              commit_cp_with_deep_delete,
              ]
 
 if __name__ == '__main__':
