@@ -22,6 +22,7 @@ use feature qw/switch say/;
 
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
+use File::Basename qw/basename/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid/;
@@ -82,8 +83,7 @@ $SVNq =~ s/-q// if $DEBUG eq 'true';
 
 
 sub usage {
-  my $basename = $0;
-  $basename =~ s#.*/##;
+  my $basename = basename $0;
   print <<EOF;
 backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
 CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
@@ -554,7 +554,7 @@ sub handle_entry {
                                    sprintf "Conflicts on %s%s%s",
                                      '[' x !!@conflicts,
                                      (join ', ',
-                                      map m#(?:.*/)?(.*)#,
+                                      map { basename $_ }
                                       @conflicts),
                                      ']' x !!@conflicts,
                                   ];
