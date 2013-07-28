@@ -1,0 +1,6 @@
+This is an integration branch to prepare FSX for merger into /trunk
+and it should be short-lived.  The main tasks here are
+
+* extract FSX and necessary new APIs from /branches/fsfs-format7
+* add tests for new libsvn_subr APIs
+
