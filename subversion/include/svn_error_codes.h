@@ -1355,6 +1355,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 40,
              "Bad arguments to SQL operators GLOB or LIKE")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
+             SVN_ERR_MISC_CATEGORY_START + 41,
+             "Packed data stream is corrupt")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
