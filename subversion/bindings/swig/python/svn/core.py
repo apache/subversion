@@ -27,44 +27,8 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 import sys
-__all__ = [
-  # Symbols that 'import *' used to pull (in 1.7)
-  'Pool',
-  'SVNSYNC_PROP_CURRENTLY_COPYING',
-  'SVNSYNC_PROP_FROM_URL',
-  'SVNSYNC_PROP_FROM_UUID',
-  'SVNSYNC_PROP_LAST_MERGED_REV',
-  'SVNSYNC_PROP_LOCK',
-  'SVNSYNC_PROP_PREFIX',
-  'SubversionException',
-  # 'apr_array_header_t',
-  # 'apr_file_open_stderr',
-  # 'apr_file_open_stdout',
-  # 'apr_file_t',
-  # 'apr_hash_t',
-  # 'apr_initialize',
-  # 'apr_pool_clear',
-  # 'apr_pool_destroy',
-  # 'apr_pool_t',
-  # 'apr_terminate',
-  # 'apr_time_ansi_put',
-  # 'run_app',
+# __all__ is defined later, since some svn_* functions are implemented below.
 
-  # Symbols defined explicitly below.
-  'SVN_IGNORED_REVNUM',
-  'SVN_INVALID_REVNUM',
-  'svn_path_compare_paths',
-  'svn_mergeinfo_merge',
-  'svn_mergeinfo_sort',
-  'svn_rangelist_merge',
-  'svn_rangelist_reverse',
-  # 'Stream',
-  # 'apr_initialize',
-  # 'apr_terminate',
-  'svn_pool_create',
-  'svn_pool_destroy',
-  'svn_pool_clear',
-]
 
 class SubversionException(Exception):
 
@@ -343,3 +307,22 @@ def run_app(func, *args, **kw):
   performed as the function exits (normally or via an exception).
   '''
   return func(application_pool, *args, **kw)
+
+# Currently, this excludes:
+# 'FALSE' 'TRUE'
+# 'apr_array_header_t' 'apr_file_t' 'apr_hash_t'
+# 'apr_file_open_stderr' 'apr_file_open_stdout'
+# 'apr_initialize' 'apr_terminate'
+# 'apr_pool_clear' 'apr_pool_destroy' 'apr_pool_t'
+# 'apr_time_ansi_put'
+# 'run_app'
+# 'svn__apr_hash_index_key' 'svn__apr_hash_index_klen' 'svn__apr_hash_index_val'
+# 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
+# 'svn_tristate__from_word' 'svn_tristate__to_word'
+__all__ = filter(lambda s: (s.startswith('svn_')
+                            or s.startswith('SVN_')
+                            or s.startswith('SVNSYNC_')
+                            or s in ('Pool', 'SubversionException'))
+                           and '__' not in s,
+                 locals())
+
