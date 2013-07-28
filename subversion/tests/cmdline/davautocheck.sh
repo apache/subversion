@@ -113,13 +113,17 @@ query() {
     read -n 1 -t 32
   else
     # 
-    prog=$(cat) <<'EOF'
+    prog="
 import select as s
 import sys
+import tty, termios
+tty.setcbreak(sys.stdin.fileno(), termios.TCSANOW)
 if s.select([sys.stdin.fileno()], [], [], 32)[0]:
   sys.stdout.write(sys.stdin.read(1))
-EOF
-    REPLY=`stty cbreak; $PYTHON -c "$prog" "$@"; stty -cbreak`
+"
+    stty_state=`stty -g`
+    REPLY=`$PYTHON -u -c "$prog" "$@"`
+    stty $stty_state
   fi
   echo
   [ "${REPLY:-$2}" = 'y' ]
