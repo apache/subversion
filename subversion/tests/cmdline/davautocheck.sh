@@ -315,6 +315,9 @@ if [ ${USE_SSL:+set} ]; then
       || fail "SSL module not found"
 fi
 
+# Stop any previous instances, os we can re-use the port.
+if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; sleep 1; fi
+
 HTTPD_PORT=3691
 while netstat -an | grep $HTTPD_PORT | grep 'LISTEN' >/dev/null; do
   HTTPD_PORT=$(( HTTPD_PORT + 1 ))
@@ -503,7 +506,6 @@ RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-t
 __EOF__
 
 START="$HTTPD -f $HTTPD_CFG"
-if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; fi
 printf \
 '#!/bin/sh
 if [ -d "%s" ]; then
