@@ -85,6 +85,7 @@ PYTHON=${PYTHON:-python}
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
+STOPSCRIPT=$SCRIPTDIR/.$SCRIPT.stop
 
 trap stop_httpd_and_die HUP TERM INT
 
@@ -313,17 +314,13 @@ if [ ${USE_SSL:+set} ]; then
       || fail "SSL module not found"
 fi
 
-random_port() {
-  if [ -n "$BASH_VERSION" ]; then
-    echo $(($RANDOM+1024))
-  else
-    $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
+HTTPD_PORT=3691
+while netstat -an | grep $HTTPD_PORT | grep 'LISTEN' >/dev/null; do
+  HTTPD_PORT=$(( HTTPD_PORT + 1 ))
+  if [ $HTTPD_PORT -eq 65536 ]; then
+    # Most likely the loop condition is true regardless of $HTTPD_PORT
+    fail "netstat claims you have no free ports for httpd to listen on."
   fi
-}
-
-HTTPD_PORT=$(random_port)
-while netstat -an | grep $HTTPD_PORT | grep 'LISTEN'; do
-  HTTPD_PORT=$(random_port)
 done
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
@@ -505,6 +502,15 @@ RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-t
 __EOF__
 
 START="$HTTPD -f $HTTPD_CFG"
+if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; fi
+printf \
+'#!/bin/sh
+if [ -d "%s" ]; then
+  %s -k stop || kill -9 `cat %s`
+fi
+' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID"
+chmod +x $STOPSCRIPT
+sed -e 's/^/DEBUG: /' < $STOPSCRIPT
 
 $START -t \
   || fail "Configuration file didn't pass the check, most likely modules couldn't be loaded"
