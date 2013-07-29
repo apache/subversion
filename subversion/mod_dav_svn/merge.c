@@ -29,7 +29,6 @@
 #include <httpd.h>
 #include <util_filter.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
