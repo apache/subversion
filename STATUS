@@ -196,7 +196,7 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1507889
+ * r1507889, r1507891
    davautocheck: use the correct apxs binary by default.
    Justification:
      Convenience aside, without this patch, davautocheck would use the wrong
