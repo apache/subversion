@@ -195,8 +195,7 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
    but implements the same basic sematics of a spillbuf for the underlying
    storage. */
 svn_stream_t *
-svn_stream__from_spillbuf(apr_size_t blocksize,
-                          apr_size_t maxsize,
+svn_stream__from_spillbuf(svn_spillbuf_t *buf,
                           apr_pool_t *result_pool);
 
 /** @} */
