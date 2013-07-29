@@ -30,6 +30,7 @@
 #include <apr_file_io.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_delta.h"
@@ -42,8 +43,6 @@
 #include "svn_time.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
-
-#include "svn_private_config.h"
 
 #include "wc.h"
 #include "props.h"

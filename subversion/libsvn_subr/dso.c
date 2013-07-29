@@ -22,10 +22,10 @@
 #include <apr_thread_mutex.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_dso.h"
 #include "svn_pools.h"
-#include "svn_private_config.h"
 
 #include "private/svn_mutex.h"
 

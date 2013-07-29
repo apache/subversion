@@ -25,6 +25,7 @@
 #include <apr_tables.h>
 #include <apr_xml.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_ra.h"
@@ -35,7 +36,6 @@
 
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
-#include "svn_private_config.h"
 #include "ra_serf.h"
 
 

@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
@@ -35,7 +36,6 @@
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
 
 /* Prototypes for referencing before declaration */
 static svn_error_t *

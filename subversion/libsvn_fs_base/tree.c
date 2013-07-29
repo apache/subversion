@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"

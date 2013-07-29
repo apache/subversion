@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_private_config.h"
 #include "svn_config.h"
 #include "svn_hash.h"
 #include "svn_error.h"
@@ -36,7 +37,7 @@
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "repos.h"
-#include "svn_private_config.h"
+
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_string_private.h"
