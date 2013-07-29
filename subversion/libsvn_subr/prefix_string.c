@@ -44,7 +44,7 @@ typedef struct node_t node_t;
 
 /* String type and tree leaf.
  */
-struct svn__prefix_string_t
+struct svn_prefix_string__t
 {
   /* mandatory prefix */
   node_t *prefix;
@@ -63,7 +63,7 @@ struct node_t
 {
   /* pointer to the parent prefix plus the 1 .. 8 extra chars.
    * Only the root will provide 0 extra chars. */
-  svn__prefix_string_t key;
+  svn_prefix_string__t key;
 
   /* Length of the prefix from the root down to and including this one.
    * 0 for the root node.  Only then will key.prefix be NULL. */
@@ -72,7 +72,7 @@ struct node_t
   /* Number of entries used in SUB_NODES. */ 
   apr_uint32_t sub_node_count;
 
-  /* The sub-nodes, ordered by first char.  node_t and svn__prefix_string_t
+  /* The sub-nodes, ordered by first char.  node_t and svn_prefix_string__t
    * may be mixed here.  May be NULL.
    * The number of allocated entries is always a power-of-two and only
    * given implicitly by SUB_NODE_COUNT. */
@@ -159,11 +159,11 @@ svn__prefix_tree_create(apr_pool_t *pool)
   return tree;
 }
 
-svn__prefix_string_t *
-svn__prefix_string_create(svn__prefix_tree_t *tree,
+svn_prefix_string__t *
+svn_prefix_string__create(svn__prefix_tree_t *tree,
                           const char *s)
 {
-  svn__prefix_string_t *new_string;
+  svn_prefix_string__t *new_string;
   apr_size_t len = strlen(s);
   node_t *node = tree->root;
   node_t *new_node;
@@ -260,7 +260,7 @@ svn__prefix_string_create(svn__prefix_tree_t *tree,
 }
 
 svn_string_t *
-svn__prefix_string_expand(const svn__prefix_string_t *s,
+svn_prefix_string__expand(const svn_prefix_string__t *s,
                           apr_pool_t *pool)
 {
   apr_size_t s_len = strlen(s->data);
@@ -283,8 +283,8 @@ svn__prefix_string_expand(const svn__prefix_string_t *s,
 }
 
 int
-svn__prefix_string_compare(const svn__prefix_string_t *lhs,
-                           const svn__prefix_string_t *rhs)
+svn_prefix_string__compare(const svn_prefix_string__t *lhs,
+                           const svn_prefix_string__t *rhs)
 {
   const node_t *lhs_parent = lhs->prefix;
   const node_t *rhs_parent = rhs->prefix;

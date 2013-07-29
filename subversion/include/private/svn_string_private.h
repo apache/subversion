@@ -269,7 +269,7 @@ svn_cstring__reverse_match_length(const char *a,
  * Prefix trees allow for a space-efficient representation of a set of path-
  * like strings, i.e. those that share common prefixes.  Any given string
  * value will be stored only once, i.e. two strings stored in the same tree
- * are equal if and only if the point to the same #svn__prefix_string_t.
+ * are equal if and only if the point to the same #svn_prefix_string__t.
  *
  * @defgroup svn_prefix_string Strings in prefix trees.
 * @{
@@ -278,7 +278,7 @@ svn_cstring__reverse_match_length(const char *a,
 /**
  * Opaque data type for prefix-tree-based strings.
  */
-typedef struct svn__prefix_string_t svn__prefix_string_t;
+typedef struct svn_prefix_string__t svn_prefix_string__t;
 
 /**
  * Opaque data type representing a prefix tree
@@ -295,15 +295,15 @@ svn__prefix_tree_create(apr_pool_t *pool);
  * Return a string with the value @a s stored in @a tree.  If no such string
  * exists yet, add it automatically.
  */
-svn__prefix_string_t *
-svn__prefix_string_create(svn__prefix_tree_t *tree,
+svn_prefix_string__t *
+svn_prefix_string__create(svn__prefix_tree_t *tree,
                           const char *s);
 
 /**
  * Return the contents of @a s as a new string object allocated in @a pool.
  */
 svn_string_t *
-svn__prefix_string_expand(const svn__prefix_string_t *s,
+svn_prefix_string__expand(const svn_prefix_string__t *s,
                           apr_pool_t *pool);
 
 /**
@@ -311,8 +311,8 @@ svn__prefix_string_expand(const svn__prefix_string_t *s,
  * tree.
  */
 int
-svn__prefix_string_compare(const svn__prefix_string_t *lhs,
-                           const svn__prefix_string_t *rhs);
+svn_prefix_string__compare(const svn_prefix_string__t *lhs,
+                           const svn_prefix_string__t *rhs);
 
 /** @} */
 

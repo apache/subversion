@@ -84,7 +84,7 @@
 typedef struct path_order_t
 {
   /* changed path */
-  svn__prefix_string_t *path;
+  svn_prefix_string__t *path;
 
   /* node ID for this PATH in REVISION */
   svn_fs_x__id_part_t node_id;
@@ -669,7 +669,7 @@ copy_node_to_temp(pack_context_t *context,
       path_order->expanded_size = noderev->data_rep->expanded_size;
     }
 
-  path_order->path = svn__prefix_string_create(context->paths,
+  path_order->path = svn_prefix_string__create(context->paths,
                                                noderev->created_path);
   path_order->node_id = *svn_fs_x__id_node_id(noderev->id);
   path_order->revision = svn_fs_x__id_rev(noderev->id);
@@ -769,7 +769,7 @@ compare_path_order(const path_order_t * const * lhs_p,
   const path_order_t * rhs = *rhs_p;
 
   /* reverse lexicographic order on path and node (i.e. latest first) */
-  int diff = svn__prefix_string_compare(rhs->path, lhs->path);
+  int diff = svn_prefix_string__compare(rhs->path, lhs->path);
   if (diff)
     return diff;
 
