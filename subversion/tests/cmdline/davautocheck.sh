@@ -161,6 +161,7 @@ get_prog_name() {
 }
 
 # Don't assume sbin is in the PATH.
+# ### Presumably this is used to locate /usr/sbin/apxs or /usr/sbin/apache2    
 PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
 # Remove any proxy environmental variables that affect wget or curl.
