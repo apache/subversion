@@ -1330,6 +1330,9 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_fsx():
+  return options.fs_type == 'fsx'
+
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
 
