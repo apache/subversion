@@ -196,6 +196,14 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1507889
+   davautocheck: use the correct apxs binary by default.
+   Justification:
+     Convenience aside, without this patch, davautocheck would use the wrong
+     apxs binary when invoked "by hand" (not via make).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
