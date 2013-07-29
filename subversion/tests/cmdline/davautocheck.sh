@@ -79,7 +79,8 @@
 # environment.
 #
 # Passing --no-tests as argv[1] will have the script start a server
-# but not run any tests.
+# but not run any tests.  Passing --gdb will do the same, and in addition
+# spawn gdb in the foreground attached to the running server.
 
 PYTHON=${PYTHON:-python}
 
@@ -506,6 +507,7 @@ if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; fi
 printf \
 '#!/bin/sh
 if [ -d "%s" ]; then
+  printf "Stopping previous HTTPD instance..."
   %s -k stop || kill -9 `cat %s`
 fi
 ' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID"
@@ -549,6 +551,13 @@ if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   echo "http://localhost:$HTTPD_PORT/svn-test-work/repositories"
   exit
 fi
+
+if [ $# -eq 1 ] && [ "x$1" = 'x--gdb' ]; then
+  echo "http://localhost:$HTTPD_PORT/svn-test-work/repositories"
+  $STOPSCRIPT && gdb -silent -ex r -args $START -X
+  exit
+fi
+
 
 if type time > /dev/null; then
   TIME_CMD=time
