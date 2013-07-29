@@ -185,12 +185,18 @@ unset http_proxy
 unset HTTPS_PROXY
 
 # Pick up value from environment or PATH (also try apxs2 - for Debian)
-[ ${APXS:+set} ] \
- || (APXS=$(grep '^APXS' $ABS_BUILDDIR/Makefile | sed 's/^APXS *= *//') && \
-     [ -n "$APXS" ]) \
- || APXS=$(which apxs) \
- || APXS=$(which apxs2) \
- || fail "neither apxs or apxs2 found - required to run davautocheck"
+if [ ${APXS:+set} ]; then
+  :
+elif APXS=$(grep '^APXS' $ABS_BUILDDIR/Makefile | sed 's/^APXS *= *//') && \
+     [ -n "$APXS" ]; then
+  :
+elif APXS=$(which apxs); then
+  :
+elif APXS=$(which apxs2); then
+  :
+else
+  fail "neither apxs or apxs2 found - required to run davautocheck"
+fi
 
 [ -x $APXS ] || fail "Can't execute apxs executable $APXS"
 
