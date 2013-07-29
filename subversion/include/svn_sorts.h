@@ -218,7 +218,7 @@ svn_sort__array_reverse(apr_array_header_t *array,
 
 /** Priority queues.
  *
- * @defgroup svn__priority_queue_t Priority Queues
+ * @defgroup svn_priority_queue__t Priority Queues
  * @{
  */
 
@@ -235,7 +235,7 @@ svn_sort__array_reverse(apr_array_header_t *array,
 /**
  * Opaque data type for priority queues.
  */
-typedef struct svn__priority_queue_t svn__priority_queue_t;
+typedef struct svn_priority_queue__t svn_priority_queue__t;
 
 /**
  * Return a priority queue containing all provided @a elements and prioritize
@@ -245,15 +245,15 @@ typedef struct svn__priority_queue_t svn__priority_queue_t;
  * storage.  So, you must not manipulate that array while using the queue.
  * Also, the lifetime of the queue is bound to that of the array.
  */
-svn__priority_queue_t *
-svn__priority_queue_create(apr_array_header_t *elements,
+svn_priority_queue__t *
+svn_priority_queue__create(apr_array_header_t *elements,
                            int (*compare_func)(const void *, const void *));
 
 /**
  * Returns the number of elements in the @a queue.
  */
 apr_size_t
-svn__priority_queue_size(svn__priority_queue_t *queue);
+svn_priority_queue__size(svn_priority_queue__t *queue);
 
 /**
  * Returns a reference to the first element in the @a queue.  The queue
@@ -261,28 +261,28 @@ svn__priority_queue_size(svn__priority_queue_t *queue);
  * returned.
  */
 void *
-svn__priority_queue_peek(svn__priority_queue_t *queue);
+svn_priority_queue__peek(svn_priority_queue__t *queue);
 
 /**
  * Notify the @a queue after modifying the first item as returned by
- * #svn__priority_queue_peek.
+ * #svn_priority_queue__peek.
  */
 void
-svn__priority_queue_update(svn__priority_queue_t *queue);
+svn_priority_queue__update(svn_priority_queue__t *queue);
 
 /**
  * Remove the first element from the @a queue.  This is a no-op for empty
  * queues.
  */
 void
-svn__priority_queue_pop(svn__priority_queue_t *queue);
+svn_priority_queue__pop(svn_priority_queue__t *queue);
 
 /**
  * Append the new @a element to the @a queue.  @a element must neither be
- * #NULL nor the first element as returned by #svn__priority_queue_peek.
+ * #NULL nor the first element as returned by #svn_priority_queue__peek.
  */
 void
-svn__priority_queue_push(svn__priority_queue_t *queue,
+svn_priority_queue__push(svn_priority_queue__t *queue,
                          void *element);
 
 /** @} */

@@ -1648,7 +1648,7 @@ write_l2p_index(pack_context_t *context,
   svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
   int i;
   apr_uint32_t k;
-  svn__priority_queue_t *queue;
+  svn_priority_queue__t *queue;
   apr_size_t count = 0;
   apr_array_header_t *sub_item_orders;
 
@@ -1692,7 +1692,7 @@ write_l2p_index(pack_context_t *context,
     }
 
   /* we need to write the index in ascending revision order */
-  queue = svn__priority_queue_create
+  queue = svn_priority_queue__create
             (sub_item_orders,
              (int (*)(const void *, const void *))compare_p2l_info_rev);
 
@@ -1700,7 +1700,7 @@ write_l2p_index(pack_context_t *context,
   for (i = 0; i < count; ++i)
     {
       svn_fs_x__id_part_t *sub_item;
-      sub_item_ordered_t *ordered = svn__priority_queue_peek(queue);
+      sub_item_ordered_t *ordered = svn_priority_queue__peek(queue);
 
       if (ordered->entry->item_count > 0)
         {
@@ -1730,9 +1730,9 @@ write_l2p_index(pack_context_t *context,
 
       /* process remaining sub-items (if any) of that container later */
       if (ordered->entry->item_count)
-        svn__priority_queue_update(queue);
+        svn_priority_queue__update(queue);
       else
-        svn__priority_queue_pop(queue);
+        svn_priority_queue__pop(queue);
 
       /* keep memory usage in check */
       if (i % 256 == 0)

@@ -311,7 +311,7 @@ svn_sort__array_reverse(apr_array_header_t *array,
 /* Our priority queue data structure:
  * Simply remember the constructor parameters.
  */
-struct svn__priority_queue_t
+struct svn_priority_queue__t
 {
   /* the queue elements, ordered as a heap according to COMPARE_FUNC */
   apr_array_header_t *elements;
@@ -324,7 +324,7 @@ struct svn__priority_queue_t
  * number RHS according to QUEUE->COMPARE_FUNC
  */
 static int
-heap_is_less(svn__priority_queue_t *queue,
+heap_is_less(svn_priority_queue__t *queue,
              apr_size_t lhs,
              apr_size_t rhs)
 {
@@ -339,7 +339,7 @@ heap_is_less(svn__priority_queue_t *queue,
 /* Exchange elements number LHS and RHS in QUEUE.
  */
 static void
-heap_swap(svn__priority_queue_t *queue,
+heap_swap(svn_priority_queue__t *queue,
           apr_size_t lhs,
           apr_size_t rhs)
 {
@@ -359,7 +359,7 @@ heap_swap(svn__priority_queue_t *queue,
  * fulfilled again.
  */
 static void
-heap_bubble_down(svn__priority_queue_t *queue,
+heap_bubble_down(svn_priority_queue__t *queue,
                  int idx)
 {
   while (idx > 0 && heap_is_less(queue, idx, (idx - 1) / 2))
@@ -373,7 +373,7 @@ heap_bubble_down(svn__priority_queue_t *queue,
  * fulfilled again.
  */
 static void
-heap_bubble_up(svn__priority_queue_t *queue,
+heap_bubble_up(svn_priority_queue__t *queue,
                int idx)
 {
   while (2 * idx + 2 < queue->elements->nelts)
@@ -394,13 +394,13 @@ heap_bubble_up(svn__priority_queue_t *queue,
     heap_swap(queue, 2 * idx + 1, idx);
 }
 
-svn__priority_queue_t *
-svn__priority_queue_create(apr_array_header_t *elements,
+svn_priority_queue__t *
+svn_priority_queue__create(apr_array_header_t *elements,
                            int (*compare_func)(const void *, const void *))
 {
   int i;
 
-  svn__priority_queue_t *queue = apr_pcalloc(elements->pool, sizeof(*queue));
+  svn_priority_queue__t *queue = apr_pcalloc(elements->pool, sizeof(*queue));
   queue->elements = elements;
   queue->compare_func = compare_func;
 
@@ -411,25 +411,25 @@ svn__priority_queue_create(apr_array_header_t *elements,
 }
 
 apr_size_t
-svn__priority_queue_size(svn__priority_queue_t *queue)
+svn_priority_queue__size(svn_priority_queue__t *queue)
 {
   return queue->elements->nelts;
 }
 
 void *
-svn__priority_queue_peek(svn__priority_queue_t *queue)
+svn_priority_queue__peek(svn_priority_queue__t *queue)
 {
   return queue->elements->nelts ? queue->elements->elts : NULL;
 }
 
 void
-svn__priority_queue_update(svn__priority_queue_t *queue)
+svn_priority_queue__update(svn_priority_queue__t *queue)
 {
   heap_bubble_up(queue, 0);
 }
 
 void
-svn__priority_queue_pop(svn__priority_queue_t *queue)
+svn_priority_queue__pop(svn_priority_queue__t *queue)
 {
   if (queue->elements->nelts)
     {
@@ -443,7 +443,7 @@ svn__priority_queue_pop(svn__priority_queue_t *queue)
 }
 
 void
-svn__priority_queue_push(svn__priority_queue_t *queue,
+svn_priority_queue__push(svn_priority_queue__t *queue,
                          void *element)
 {
   /* we cannot duplicate elements due to potential array re-allocs */
