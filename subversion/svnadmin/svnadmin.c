@@ -699,7 +699,7 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
-      /* In 1.8, we figured out that we didn't have to keep extending this
+      /* In 1.9, we figured out that we didn't have to keep extending this
          madness indefinitely. */
       svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION,
                     apr_psprintf(pool, "%d.%d.%d%s%s",
