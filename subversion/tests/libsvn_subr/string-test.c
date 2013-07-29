@@ -812,7 +812,7 @@ test_string_matching(apr_pool_t *pool)
     {
       apr_size_t a_len = strlen(test->a);
       apr_size_t b_len = strlen(test->b);
-      apr_size_t max_match = MAX(a_len, b_len);
+      apr_size_t max_match = MIN(a_len, b_len);
       apr_size_t match_len
         = svn_cstring__match_length(test->a, test->b, max_match);
       apr_size_t rmatch_len
