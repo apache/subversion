@@ -244,8 +244,25 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  *
  * @since New in 1.8.
  */
-#define svn_hash_gets(ht, key) \
+#if SVN_HAS_DUNDER_BUILTINS
+/* We have two use-cases:
+   1. (common) KEY is a string literal.
+   2. (rare) KEY is the result of an expensive function call.
+   For the former, we want to evaluate the string length at compile time.  (We
+   use strlen(), which gets optimized to a constant.)  For the latter, however,
+   we want to avoid having the macro multiply-evaluate KEY.  So, if our
+   compiler is smart enough (that includes at least gcc and clang), we use
+   __builtin_constant_p() to have our cake and eat it too: */
+#  define svn_hash_gets(ht, key) \
+            apr_hash_get(ht, key, \
+                         __builtin_constant_p(strlen(key)) \
+                         ? strlen(key) : APR_HASH_KEY_STRING)
+#else
+/* ... and when our compiler is anything else, we take the hit and compute the
+   length of string literals at run-time. */
+#  define svn_hash_gets(ht, key) \
             apr_hash_get(ht, key, APR_HASH_KEY_STRING)
+#endif
 
 /** Shortcut for apr_hash_set() with a const char * key.
  *
