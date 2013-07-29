@@ -1753,7 +1753,7 @@ def _create_parser():
   parser.add_option('--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('--fs-type', action='store',
-                    help='Subversion file system type (fsfs or bdb)')
+                    help='Subversion file system type (fsfs, bdb or fsx)')
   parser.add_option('--cleanup', action='store_true',
                     help='Whether to clean up')
   parser.add_option('--enable-sasl', action='store_true',
