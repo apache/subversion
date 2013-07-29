@@ -171,8 +171,7 @@ AC_DEFUN([SVN_CHECK_FOR_DUNDER_BUILTINS],
     AC_RUN_IFELSE([AC_LANG_SOURCE([[
       int main(int argc)
       {
-        return (!__builtin_choose_expr(__builtin_constant_p(argc), 1, 0)
-                && __builtin_choose_expr(__builtin_constant_p("foobar"), 1, 0))
+        return (!__builtin_constant_p(argc) && __builtin_constant_p("foobar"))
                ? 0 /* EXIT_SUCCESS */ : 1 /* EXIT_FAILURE */;
       }]])],
       svn_cv_dunder_builtins="yes",
