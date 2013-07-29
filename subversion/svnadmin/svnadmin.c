@@ -420,7 +420,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin pack REPOS_PATH\n\n"
     "Possibly compact the repository into a more efficient storage model.\n"
     "This may not apply to all repositories, in which case, exit.\n"),
-   {'q'} },
+   {'q', 'M'} },
 
   {"recover", subcommand_recover, {0}, N_
    ("usage: svnadmin recover REPOS_PATH\n\n"
@@ -699,18 +699,39 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
       if (! svn_version__at_least(opt_state->compatible_version, 1, 8, 0))
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
+      /* In 1.8, we figured out that we didn't have to keep extending this
+         madness indefinitely. */
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION,
+                    apr_psprintf(pool, "%d.%d.%d%s%s",
+                                 opt_state->compatible_version->major,
+                                 opt_state->compatible_version->minor,
+                                 opt_state->compatible_version->patch,
+                                 opt_state->compatible_version->tag
+                                 ? "-" : "",
+                                 opt_state->compatible_version->tag));
     }
 
-  if (opt_state->compatible_version
-      && ! svn_version__at_least(opt_state->compatible_version, 1, 1, 0)
-      /* ### TODO: this NULL check hard-codes knowledge of the library's
-                   default fs-type value */
-      && (opt_state->fs_type == NULL
-          || !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSFS)))
+  if (opt_state->compatible_version)
     {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("Repositories compatible with 1.0.x must use "
-                                "--fs-type=bdb"));
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 1, 0)
+          /* ### TODO: this NULL check hard-codes knowledge of the library's
+                       default fs-type value */
+          && (opt_state->fs_type == NULL
+              || !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSFS)))
+        {
+          return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("Repositories compatible with 1.0.x must "
+                                    "use --fs-type=bdb"));
+        }
+
+      if (! svn_version__at_least(opt_state->compatible_version, 1, 9, 0)
+          && opt_state->fs_type && !strcmp(opt_state->fs_type, SVN_FS_TYPE_FSX))
+        {
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Repositories compatible with 1.8.x or "
+                                     "earlier cannot use --fs-type=%s"),
+                                   SVN_FS_TYPE_FSX);
+        }
     }
 
   SVN_ERR(svn_repos_create(&repos, opt_state->repository_path,
