@@ -290,14 +290,18 @@ void checked_call(svn_error_t* err)
   if (!err)
     return;
 
-  struct ErrorBuilder : public Cancelled
+  struct ErrorBuilder : public Error
   {
     explicit ErrorBuilder (ErrorDescription::shared_ptr description)
+      : Error(description)
+      {}
+  };
+
+  struct CancelledBuilder : public Cancelled
+  {
+    explicit CancelledBuilder (ErrorDescription::shared_ptr description)
       : Cancelled(description)
       {}
-
-    Error error() { return static_cast<Error>(*this); }
-    Error cancelled() { return static_cast<Cancelled>(*this); }
   };
 
   ErrorDescription::shared_ptr description;
@@ -316,9 +320,9 @@ void checked_call(svn_error_t* err)
   svn_error_clear(err);
 
   if (cancelled)
-    throw ErrorBuilder(description).cancelled();
+    throw CancelledBuilder(description);
   else
-    throw ErrorBuilder(description).error();
+    throw ErrorBuilder(description);
 }
 } // namespace detail
 
