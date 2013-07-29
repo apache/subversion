@@ -37,7 +37,6 @@
 #include "svn_types.h"
 #include "svn_io.h"       /* for svn_stream_t */
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -240,19 +239,32 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
+/* Used by the svn_hash_gets macro.
+ * Make sure you either defined it before including this header or not
+ * at all.
+ */
+#if !defined(SVN_HAS_DUNDER_BUILTINS)
+/* If you define it elsewhere to generate better code, the definition
+ * below will usually generate a compiler warning if your definition is
+ * being encountered _after_ #including this header. 
+ */
+#define SVN_HAS_DUNDER_BUILTINS 0
+#endif
+
 /** Shortcut for apr_hash_get() with a const char * key.
  *
  * @since New in 1.8.
  */
 #if SVN_HAS_DUNDER_BUILTINS
-/* We have two use-cases:
+/* We have three use-cases:
    1. (common) KEY is a string literal.
-   2. (rare) KEY is the result of an expensive function call.
-   For the former, we want to evaluate the string length at compile time.  (We
-   use strlen(), which gets optimized to a constant.)  For the latter, however,
-   we want to avoid having the macro multiply-evaluate KEY.  So, if our
-   compiler is smart enough (that includes at least gcc and clang), we use
-   __builtin_constant_p() to have our cake and eat it too: */
+   2. (less common) KEY is a const char*.
+   3. (rare) KEY is the result of an expensive function call.
+   For the first, we want to evaluate the string length at compile time.
+   (We use strlen(), which gets optimized to a constant.)  For the other
+   two, however, we want to avoid having the macro multiply-evaluate KEY.
+   So, if our compiler is smart enough (that includes at least gcc and
+   clang), we use __builtin_constant_p() to have our cake and eat it too: */
 #  define svn_hash_gets(ht, key) \
             apr_hash_get(ht, key, \
                          __builtin_constant_p(strlen(key)) \
