@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -46,7 +47,6 @@
 #include "private/svn_client_private.h"
 #include "client.h"
 #include "mergeinfo.h"
-#include "svn_private_config.h"
 
 
 

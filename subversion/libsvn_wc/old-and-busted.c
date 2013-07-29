@@ -23,6 +23,7 @@
 
 
 
+#include "svn_private_config.h"
 #include "svn_time.h"
 #include "svn_xml.h"
 #include "svn_dirent_uri.h"
@@ -37,7 +38,6 @@
 #include "lock.h"
 
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
 
 
 /* Within the (old) entries file, boolean values have a specific string

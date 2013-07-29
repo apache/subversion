@@ -37,6 +37,7 @@
 #define CORE_PRIVATE      /* To make ap_show_mpm public in 2.2 */
 #include <http_config.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -53,6 +54,7 @@
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
+
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"

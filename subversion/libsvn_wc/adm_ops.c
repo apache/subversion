@@ -36,6 +36,7 @@
 #include <apr_time.h>
 #include <apr_errno.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_string.h"
@@ -53,7 +54,6 @@
 #include "conflicts.h"
 #include "workqueue.h"
 
-#include "svn_private_config.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
 

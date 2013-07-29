@@ -28,6 +28,7 @@
 #include <http_log.h>
 #include <mod_dav.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_xml.h"
@@ -39,6 +40,7 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_version.h"
+
 #include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dav_protocol.h"
