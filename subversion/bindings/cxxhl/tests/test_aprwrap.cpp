@@ -358,58 +358,78 @@ TEST(ConstArrays, Iteration)
 // Hash tables
 //
 
-// TODO: Convert to gmock
-
-#include "../src/aprwrap.hpp"
-static void hashtest()
+TEST(Hashes, StringHash)
 {
-  typedef APR::Hash<char, const char, 2> H;
-  typedef APR::Array<H::key_type> A;
-  typedef APR::ConstArray<A::value_type> CA;
+  typedef APR::Hash<char, const char> H;
 
   APR::Pool pool;
-  struct CB : public H::Iteration
-  {
-    A m_keys;
-
-    CB(const APR::Pool& array_pool)
-      : m_keys(array_pool)
-      {}
-
-    bool operator() (const H::Key& key, H::value_type value)
-      {
-        m_keys.push(key.get());
-        return true;
-      }
-  } hash_callback(pool);
-
   H hash(pool);
+  hash.set("aa", "a");
+  hash.set("bbb", "b");
+  hash.set("cccc", "c");
 
-  hash.set("a", "aaa");
-  hash.set("c", "ccc");
-  hash.set("x", "bbb");
+  EXPECT_EQ(3, hash.size());
+  EXPECT_EQ("a", hash.get("aa"));
+  EXPECT_EQ("b", hash.get("bbb"));
+  EXPECT_EQ("c", hash.get("cccc"));
+}
 
-  hash.iterate(hash_callback, pool);
+TEST(Hashes, FixedStringHash)
+{
+  // The point of this test is to verify that the key-length parameter
+  // of the template actually limits the lenght of the keys.
+  typedef APR::Hash<char, const char, 2> H;
 
-  struct AB : public A::ConstIteration
+  APR::Pool pool;
+  H hash(pool);
+  hash.set("aa&qux", "a");
+  hash.set("bb#foo", "b");
+  hash.set("cc@bar", "c");
+
+  EXPECT_EQ(3, hash.size());
+  EXPECT_EQ("a", hash.get("aa%foo"));
+  EXPECT_EQ("b", hash.get("bb*bar"));
+  EXPECT_EQ("c", hash.get("cc$qux"));
+}
+
+TEST(Hashes, Delete)
+{
+  typedef APR::Hash<char, const char> H;
+
+  APR::Pool pool;
+  H hash(pool);
+  hash.set("aa", "a");
+  hash.set("bbb", "b");
+  hash.set("cccc", "c");
+
+  hash.del("bbb");
+
+  EXPECT_EQ(2, hash.size());
+  EXPECT_EQ("a", hash.get("aa"));
+  EXPECT_EQ("c", hash.get("cccc"));
+}
+
+TEST(Hashes, Iterate)
+{
+  typedef APR::Hash<char, const char> H;
+
+  APR::Pool pool;
+  H hash(pool);
+  hash.set("aa", "a");
+  hash.set("bbb", "b");
+  hash.set("cccc", "c");
+
+  struct C : public H::Iteration
   {
-    const H& m_hash;
+    H& m_hash;
+    explicit C(H& hashref) : m_hash(hashref) {}
 
-    AB(const H& hash_reference)
-      : m_hash(hash_reference)
-      {}
-
-    bool operator() (const A::value_type& value)
+    bool operator()(const H::Key& key, H::value_type value)
       {
-        std::cerr << value << " = " << m_hash.get(value) <<  std::endl;
+        EXPECT_EQ(value, m_hash.get(key));
         return true;
       }
-  } array_callback(hash);
+  } callback(hash);
 
-  CA keys(hash_callback.m_keys);
-  keys.iterate(array_callback);
-
-  std::cerr << keys[0] << " maps to " << hash_callback.m_keys[0] << std::endl;
-  std::cerr << keys.at(1) << " maps to " << hash_callback.m_keys.at(1) << std::endl;
-  std::cerr << keys[2] << " maps to " << hash_callback.m_keys[2] << std::endl;
+  hash.iterate(callback, pool);
 }
