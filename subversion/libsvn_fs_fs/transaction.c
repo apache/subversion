@@ -919,19 +919,25 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   struct get_and_increment_txn_key_baton *cb = baton;
   const char *txn_current_filename
     = svn_fs_fs__path_txn_current(cb->fs, pool);
-  char new_id_str[SVN_INT64_BUFFER_SIZE];
+  char new_id_str[SVN_INT64_BUFFER_SIZE + 1]; /* add space for a newline */
+  apr_size_t line_length;
 
   svn_stringbuf_t *buf;
   SVN_ERR(svn_fs_fs__read_content(&buf, txn_current_filename, cb->pool));
 
-  /* remove trailing newlines */
+  /* assign the current txn counter value to our result */
   cb->txn_number = svn__base36toui64(NULL, buf->data);
 
+  /* remove trailing newlines */
+  line_length = svn__ui64tobase36(new_id_str, cb->txn_number+1);
+  new_id_str[line_length] = '\n';
+  
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
   SVN_ERR(svn_io_write_atomic(txn_current_filename, new_id_str,
-                              svn__ui64tobase36(new_id_str, cb->txn_number+1),
-                              txn_current_filename /* copy_perms path */, pool));
+                              line_length + 1,
+                              txn_current_filename /* copy_perms path */,
+                              pool));
 
   return SVN_NO_ERROR;
 }
