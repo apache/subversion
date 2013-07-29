@@ -510,7 +510,6 @@ if [ -d "%s" ]; then
 fi
 ' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID"
 chmod +x $STOPSCRIPT
-sed -e 's/^/DEBUG: /' < $STOPSCRIPT
 
 $START -t \
   || fail "Configuration file didn't pass the check, most likely modules couldn't be loaded"
