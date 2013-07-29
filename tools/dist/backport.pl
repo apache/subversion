@@ -139,9 +139,11 @@ sub prompt {
   print $_[0]; shift;
   my %args = @_;
   my $getchar = sub {
+    my $answer;
     ReadMode 'cbreak';
-    my $answer = (ReadKey 0);
+    eval { $answer = (ReadKey 0) };
     ReadMode 'normal';
+    die $@ if $@;
     print $answer;
     return $answer;
   };
@@ -492,6 +494,17 @@ sub maybe_revert {
   (@_ ? exit : return);
 }
 
+sub signal_handler {
+  my $sig = shift;
+
+  # Clean up after prompt()
+  ReadMode 'normal';
+
+  # Fall back to default action
+  delete $SIG{$sig};
+  kill $sig, $$;
+}
+
 sub warning_summary {
   return unless %ERRORS;
 
@@ -715,6 +728,7 @@ sub main {
   }
 
   $SIG{INT} = \&maybe_revert unless $YES;
+  $SIG{TERM} = \&signal_handler unless $YES;
 
   my $in_approved = 0;
   while (<STATUS>) {
