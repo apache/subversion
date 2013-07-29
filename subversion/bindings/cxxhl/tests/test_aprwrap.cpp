@@ -144,10 +144,10 @@ TEST(Arrays, Indexing)
   APR::Pool pool;
   Array array(fill_array(pool));
 
-  EXPECT_EQ(array[0], APR_ARRAY_IDX(array.array(), 0, Array::value_type));
-  EXPECT_EQ(array[array.size() - 1], APR_ARRAY_IDX(array.array(),
-                                                   array.array()->nelts - 1,
-                                                   Array::value_type));
+  EXPECT_STREQ(array[0], APR_ARRAY_IDX(array.array(), 0, Array::value_type));
+  EXPECT_STREQ(array[array.size() - 1], APR_ARRAY_IDX(array.array(),
+                                                      array.array()->nelts - 1,
+                                                      Array::value_type));
 }
 
 TEST(Arrays, CheckedIndexing)
@@ -157,10 +157,10 @@ TEST(Arrays, CheckedIndexing)
   APR::Pool pool;
   Array array(fill_array(pool));
 
-  EXPECT_EQ(array.at(0), APR_ARRAY_IDX(array.array(), 0, Array::value_type));
-  EXPECT_EQ(array.at(array.size() - 1), APR_ARRAY_IDX(array.array(),
-                                                      array.array()->nelts - 1,
-                                                      Array::value_type));
+  EXPECT_STREQ(array.at(0), APR_ARRAY_IDX(array.array(), 0, Array::value_type));
+  EXPECT_STREQ(array.at(array.size() - 1),
+               APR_ARRAY_IDX(array.array(), array.array()->nelts - 1,
+                             Array::value_type));
 }
 
 TEST(Arrays, Iteration)
@@ -178,8 +178,8 @@ TEST(Arrays, Iteration)
 
     bool operator()(Array::value_type& value)
       {
-        EXPECT_EQ(value, APR_ARRAY_IDX(m_raw_array, m_index,
-                                       Array::value_type));
+        EXPECT_STREQ(value, APR_ARRAY_IDX(m_raw_array, m_index,
+                                          Array::value_type));
         ++m_index;
         return true;
       }
@@ -207,8 +207,8 @@ TEST(Arrays, ConstIteration)
 
     bool operator()(const Array::value_type& value)
       {
-        EXPECT_EQ(value, APR_ARRAY_IDX(m_raw_array, m_index,
-                                       Array::value_type));
+        EXPECT_STREQ(value, APR_ARRAY_IDX(m_raw_array, m_index,
+                                          Array::value_type));
         ++m_index;
         return true;
       }
@@ -237,10 +237,10 @@ TEST(Arrays, Push)
   array.push("decimus");
 
   EXPECT_EQ(point + 3, array.size());
-  EXPECT_EQ(first, array[0]);
-  EXPECT_EQ(last, array[point - 1]);
-  EXPECT_EQ("octavius", array[point]);
-  EXPECT_EQ("decimus", array[array.size() - 1]);
+  EXPECT_STREQ(first, array[0]);
+  EXPECT_STREQ(last, array[point - 1]);
+  EXPECT_STREQ("octavius", array[point]);
+  EXPECT_STREQ("decimus", array[array.size() - 1]);
 }
 
 TEST(Arrays, Pop)
@@ -306,10 +306,10 @@ TEST(ConstArrays, Indexing)
   APR::Pool pool;
   Array array(fill_array(pool));
 
-  EXPECT_EQ(array[0], APR_ARRAY_IDX(array.array(), 0, Array::value_type));
-  EXPECT_EQ(array[array.size() - 1], APR_ARRAY_IDX(array.array(),
-                                                   array.array()->nelts - 1,
-                                                   Array::value_type));
+  EXPECT_STREQ(array[0], APR_ARRAY_IDX(array.array(), 0, Array::value_type));
+  EXPECT_STREQ(array[array.size() - 1], APR_ARRAY_IDX(array.array(),
+                                                      array.array()->nelts - 1,
+                                                      Array::value_type));
 }
 
 TEST(ConstArrays, CheckedIndexing)
@@ -319,10 +319,10 @@ TEST(ConstArrays, CheckedIndexing)
   APR::Pool pool;
   Array array(fill_array(pool));
 
-  EXPECT_EQ(array.at(0), APR_ARRAY_IDX(array.array(), 0, Array::value_type));
-  EXPECT_EQ(array.at(array.size() - 1), APR_ARRAY_IDX(array.array(),
-                                                      array.array()->nelts - 1,
-                                                      Array::value_type));
+  EXPECT_STREQ(array.at(0), APR_ARRAY_IDX(array.array(), 0, Array::value_type));
+  EXPECT_STREQ(array.at(array.size() - 1),
+               APR_ARRAY_IDX(array.array(), array.array()->nelts - 1,
+                             Array::value_type));
 }
 
 TEST(ConstArrays, Iteration)
@@ -340,8 +340,8 @@ TEST(ConstArrays, Iteration)
 
     bool operator()(const Array::value_type& value)
       {
-        EXPECT_EQ(value, APR_ARRAY_IDX(m_raw_array, m_index,
-                                       Array::value_type));
+        EXPECT_STREQ(value, APR_ARRAY_IDX(m_raw_array, m_index,
+                                          Array::value_type));
         ++m_index;
         return true;
       }
@@ -369,9 +369,9 @@ TEST(Hashes, StringHash)
   hash.set("cccc", "c");
 
   EXPECT_EQ(3, hash.size());
-  EXPECT_EQ("a", hash.get("aa"));
-  EXPECT_EQ("b", hash.get("bbb"));
-  EXPECT_EQ("c", hash.get("cccc"));
+  EXPECT_STREQ("a", hash.get("aa"));
+  EXPECT_STREQ("b", hash.get("bbb"));
+  EXPECT_STREQ("c", hash.get("cccc"));
 }
 
 TEST(Hashes, FixedStringHash)
@@ -387,9 +387,9 @@ TEST(Hashes, FixedStringHash)
   hash.set("cc@bar", "c");
 
   EXPECT_EQ(3, hash.size());
-  EXPECT_EQ("a", hash.get("aa%foo"));
-  EXPECT_EQ("b", hash.get("bb*bar"));
-  EXPECT_EQ("c", hash.get("cc$qux"));
+  EXPECT_STREQ("a", hash.get("aa%foo"));
+  EXPECT_STREQ("b", hash.get("bb*bar"));
+  EXPECT_STREQ("c", hash.get("cc$qux"));
 }
 
 TEST(Hashes, Delete)
@@ -405,8 +405,8 @@ TEST(Hashes, Delete)
   hash.del("bbb");
 
   EXPECT_EQ(2, hash.size());
-  EXPECT_EQ("a", hash.get("aa"));
-  EXPECT_EQ("c", hash.get("cccc"));
+  EXPECT_STREQ("a", hash.get("aa"));
+  EXPECT_STREQ("c", hash.get("cccc"));
 }
 
 TEST(Hashes, Iterate)
@@ -426,7 +426,7 @@ TEST(Hashes, Iterate)
 
     bool operator()(const H::Key& key, H::value_type value)
       {
-        EXPECT_EQ(value, m_hash.get(key));
+        EXPECT_STREQ(value, m_hash.get(key));
         return true;
       }
   } callback(hash);
