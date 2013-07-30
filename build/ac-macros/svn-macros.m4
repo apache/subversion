@@ -178,7 +178,7 @@ AC_DEFUN([SVN_CHECK_FOR_DUNDER_BUILTINS],
       svn_cv_dunder_builtins="no",
       [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
         int main(void){
-      	  return __builtin_choose_expr(__builtin_constant_p("foobar"), 0, 1);
+      	  return __builtin_constant_p("foobar") ? 0 : 1;
         }]])],
         svn_cv_dunder_builtins="yes",
         svn_cv_dunder_builtins="no")
