@@ -274,7 +274,7 @@ svn_prefix_string__expand(const svn_prefix_string__t *s,
 
   while (s->prefix)
     {
-      memcpy(result + s->prefix->length, s->data, len - s->prefix->length);
+      memcpy(buffer + s->prefix->length, s->data, len - s->prefix->length);
       len = s->prefix->length;
       s = &s->prefix->key;
     }
