@@ -282,8 +282,7 @@ svn_priority_queue__pop(svn_priority_queue__t *queue);
  * #NULL nor the first element as returned by #svn_priority_queue__peek.
  */
 void
-svn_priority_queue__push(svn_priority_queue__t *queue,
-                         void *element);
+svn_priority_queue__push(svn_priority_queue__t* queue, const void* element);
 
 /** @} */
 

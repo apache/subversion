@@ -444,7 +444,7 @@ svn_priority_queue__pop(svn_priority_queue__t *queue)
 
 void
 svn_priority_queue__push(svn_priority_queue__t *queue,
-                         void *element)
+                         const void *element)
 {
   /* we cannot duplicate elements due to potential array re-allocs */
   assert(element && element != queue->elements->elts);
