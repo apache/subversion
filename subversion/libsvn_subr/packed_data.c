@@ -300,31 +300,6 @@ svn_packed__create_bytes_substream(svn_packed__byte_stream_t *parent)
   return stream;
 }
 
-void
-svn_packed__add_uint(svn_packed__int_stream_t *stream,
-                     apr_uint64_t value)
-{
-  stream->buffer[stream->buffer_used] = value;
-  if (++stream->buffer_used == SVN__PACKED_DATA_BUFFER_SIZE)
-    svn_packed__data_flush_buffer(stream);
-}
-
-void
-svn_packed__add_int(svn_packed__int_stream_t *stream,
-                    apr_int64_t value)
-{
-  svn_packed__add_uint(stream, (apr_uint64_t)value);
-}
-
-void
-svn_packed__add_bytes(svn_packed__byte_stream_t *stream,
-                      const char *data,
-                      apr_size_t len)
-{
-  svn_packed__add_uint(stream->lengths_stream, len);
-  svn_stringbuf_appendbytes(stream->packed, data, len);
-}
-
 /* Write the 7b/8b representation of VALUE into BUFFER.  BUFFER must
  * provide at least 10 bytes space.
  * Returns the first position behind the written data.
@@ -342,7 +317,11 @@ write_packed_uint_body(unsigned char *buffer, apr_uint64_t value)
   return buffer;
 }
 
-void
+/* Empty the unprocessed integer buffer in STREAM by either pushing the
+ * data to the sub-streams or writing to the packed data (in case there
+ * are no sub-streams).
+ */
+static void
 svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
@@ -412,6 +391,31 @@ svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
   /* maintain counters */
   private_data->item_count += stream->buffer_used;
   stream->buffer_used = 0;
+}
+
+void
+svn_packed__add_uint(svn_packed__int_stream_t *stream,
+                     apr_uint64_t value)
+{
+  stream->buffer[stream->buffer_used] = value;
+  if (++stream->buffer_used == SVN__PACKED_DATA_BUFFER_SIZE)
+    svn_packed__data_flush_buffer(stream);
+}
+
+void
+svn_packed__add_int(svn_packed__int_stream_t *stream,
+                    apr_int64_t value)
+{
+  svn_packed__add_uint(stream, (apr_uint64_t)value);
+}
+
+void
+svn_packed__add_bytes(svn_packed__byte_stream_t *stream,
+                      const char *data,
+                      apr_size_t len)
+{
+  svn_packed__add_uint(stream->lengths_stream, len);
+  svn_stringbuf_appendbytes(stream->packed, data, len);
 }
 
 /* Append the 7b/8b encoded representation of VALUE to PACKED.
@@ -695,43 +699,9 @@ svn_packed__byte_count(svn_packed__byte_stream_t *stream)
   return stream->packed->len;
 }
 
-apr_uint64_t 
-svn_packed__get_uint(svn_packed__int_stream_t *stream)
-{
-  if (stream->buffer_used == 0)
-    svn_packed__data_fill_buffer(stream);
-
-  return stream->buffer_used ? stream->buffer[--stream->buffer_used] : 0;
-}
-
-apr_int64_t
-svn_packed__get_int(svn_packed__int_stream_t *stream)
-{
-  return (apr_int64_t)svn_packed__get_uint(stream);
-}
-
-const char *
-svn_packed__get_bytes(svn_packed__byte_stream_t *stream,
-                      apr_size_t *len)
-{
-  const char *result = stream->packed->data;
-  apr_size_t count = svn_packed__get_uint(stream->lengths_stream);
-
-  if (count > stream->packed->len)
-    count = stream->packed->len;
-
-  /* advance packed buffer */
-  stream->packed->data += count;
-  stream->packed->len -= count; 
-  stream->packed->blocksize -= count;
-
-  *len = count;
-  return result;
-}
-
 /* Read one 7b/8b encoded value from *P and return it in *RESULT.  Returns
  * the first position after the parsed data.
- * 
+ *
  * Overflows will be detected in the sense that it will end parsing the
  * input but the result is undefined.
  */
@@ -750,7 +720,7 @@ read_packed_uint_body(unsigned char *p, apr_uint64_t *result)
         {
           value += (apr_uint64_t)(*p & 0x7f) << shift;
           ++p;
-          
+
           shift += 7;
           if (shift > 64)
             {
@@ -769,7 +739,7 @@ read_packed_uint_body(unsigned char *p, apr_uint64_t *result)
 }
 
 /* Read one 7b/8b encoded value from STREAM and return it in *RESULT.
- * 
+ *
  * Overflows will be detected in the sense that it will end parsing the
  * input but the result is undefined.
  */
@@ -800,7 +770,29 @@ read_stream_uint(svn_stream_t *stream, apr_uint64_t *result)
   return SVN_NO_ERROR;
 }
 
-void
+/* Extract and return the next integer from PACKED and make PACKED point
+ * to the next integer.
+ */
+static apr_uint64_t
+read_packed_uint(svn_stringbuf_t *packed)
+{
+  apr_uint64_t result = 0;
+  unsigned char *p = (unsigned char *)packed->data;
+  apr_size_t read = read_packed_uint_body(p, &result) - p;
+
+  if (read > packed->len)
+    read = packed->len;
+
+  packed->data += read;
+  packed->blocksize -= read;
+  packed->len -= read;
+
+  return result;
+}
+
+/* Ensure that STREAM contains at least one item in its buffer.
+ */
+static void
 svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
@@ -884,23 +876,37 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
   private_data->item_count -= end;
 }
 
-/* Extract and return the next integer from PACKED and make PACKED point
- * to the next integer.
- */
-static apr_uint64_t
-read_packed_uint(svn_stringbuf_t *packed)
+apr_uint64_t 
+svn_packed__get_uint(svn_packed__int_stream_t *stream)
 {
-  apr_uint64_t result = 0;
-  unsigned char *p = (unsigned char *)packed->data;
-  apr_size_t read = read_packed_uint_body(p, &result) - p;
+  if (stream->buffer_used == 0)
+    svn_packed__data_fill_buffer(stream);
 
-  if (read > packed->len)
-    read = packed->len;
+  return stream->buffer_used ? stream->buffer[--stream->buffer_used] : 0;
+}
 
-  packed->data += read;
-  packed->blocksize -= read;
-  packed->len -= read;
-  
+apr_int64_t
+svn_packed__get_int(svn_packed__int_stream_t *stream)
+{
+  return (apr_int64_t)svn_packed__get_uint(stream);
+}
+
+const char *
+svn_packed__get_bytes(svn_packed__byte_stream_t *stream,
+                      apr_size_t *len)
+{
+  const char *result = stream->packed->data;
+  apr_size_t count = svn_packed__get_uint(stream->lengths_stream);
+
+  if (count > stream->packed->len)
+    count = stream->packed->len;
+
+  /* advance packed buffer */
+  stream->packed->data += count;
+  stream->packed->len -= count; 
+  stream->packed->blocksize -= count;
+
+  *len = count;
   return result;
 }
 
