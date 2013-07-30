@@ -38,13 +38,6 @@
 #include "svn_string.h"   /* This includes <apr_*.h> */
 #include "private/svn_string_private.h"
 
-/* Some of our own global variables, for simplicity.  Yes,
-   simplicity. */
-svn_stringbuf_t *a = NULL, *b = NULL, *c = NULL;
-const char *phrase_1 = "hello, ";
-const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
-
-
 static svn_error_t *
 test_empty_string(apr_pool_t *pool)
 {
