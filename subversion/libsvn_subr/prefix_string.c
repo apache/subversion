@@ -80,7 +80,7 @@ struct node_t
 };
 
 /* The actual tree structure. */
-struct svn__prefix_tree_t
+struct svn_prefix_tree__t
 {
   /* the common tree root (represents the empty prefix). */
   node_t *root;
@@ -101,7 +101,7 @@ is_leaf(node_t *node)
  * unused entry.  Re-allocate as necessary.
  */
 static void
-auto_realloc_sub_nodes(svn__prefix_tree_t *tree,
+auto_realloc_sub_nodes(svn_prefix_tree__t *tree,
                        node_t *node)
 {
   if (node->sub_node_count & (node->sub_node_count - 1))
@@ -147,10 +147,10 @@ search_lower_bound(node_t **sub_nodes,
   return lower;
 }
 
-svn__prefix_tree_t *
-svn__prefix_tree_create(apr_pool_t *pool)
+svn_prefix_tree__t *
+svn_prefix_tree__create(apr_pool_t *pool)
 {
-  svn__prefix_tree_t *tree = apr_pcalloc(pool, sizeof(*tree));
+  svn_prefix_tree__t *tree = apr_pcalloc(pool, sizeof(*tree));
   tree->pool = pool;
 
   tree->root = apr_pcalloc(pool, sizeof(*tree->root));
@@ -160,7 +160,7 @@ svn__prefix_tree_create(apr_pool_t *pool)
 }
 
 svn_prefix_string__t *
-svn_prefix_string__create(svn__prefix_tree_t *tree,
+svn_prefix_string__create(svn_prefix_tree__t *tree,
                           const char *s)
 {
   svn_prefix_string__t *new_string;

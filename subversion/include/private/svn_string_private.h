@@ -283,20 +283,20 @@ typedef struct svn_prefix_string__t svn_prefix_string__t;
 /**
  * Opaque data type representing a prefix tree
  */
-typedef struct svn__prefix_tree_t svn__prefix_tree_t;
+typedef struct svn_prefix_tree__t svn_prefix_tree__t;
 
 /**
  * Return a new prefix tree allocated in @a pool.
  */
-svn__prefix_tree_t *
-svn__prefix_tree_create(apr_pool_t *pool);
+svn_prefix_tree__t *
+svn_prefix_tree__create(apr_pool_t *pool);
 
 /**
  * Return a string with the value @a s stored in @a tree.  If no such string
  * exists yet, add it automatically.
  */
 svn_prefix_string__t *
-svn_prefix_string__create(svn__prefix_tree_t *tree,
+svn_prefix_string__create(svn_prefix_tree__t *tree,
                           const char *s);
 
 /**

@@ -186,7 +186,7 @@ typedef struct pack_context_t
   apr_file_t *dir_props_file;
 
   /* container for all PATH members in PATH_ORDER. */
-  svn__prefix_tree_t *paths;
+  svn_prefix_tree__t *paths;
 
   /* array of path_order_t *.  Will be filled in phase 2 and be cleared
    * after each revision range.  Sorted by PATH, NODE_ID. */
@@ -300,7 +300,7 @@ initialize_pack_context(pack_context_t *context,
 
   /* the pool used for temp structures */
   context->info_pool = svn_pool_create(pool);
-  context->paths = svn__prefix_tree_create(context->info_pool);
+  context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
 };
