@@ -147,15 +147,6 @@ svn_packed__create_bytes_stream(svn_packed__data_root_t *root);
 svn_packed__byte_stream_t *
 svn_packed__create_bytes_substream(svn_packed__byte_stream_t *parent);
 
-/* Empty the unprocessed integer buffer in STREAM by either pushing the
- * data to the sub-streams or writing to the packed data (in case there
- * are no sub-streams).  Users don't need to call this explicitly as it
- * will be called by svn_packed__add_uint, svn_packed__add_int and
- * svn_packed__data_write as necessary.
- */
-void
-svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream);
-
 /* Write the unsigned integer VALUE to STEAM.
  */
 void
@@ -231,11 +222,6 @@ svn_packed__int_count(svn_packed__int_stream_t *stream);
  */
 apr_size_t
 svn_packed__byte_count(svn_packed__byte_stream_t *stream);
-
-/* Return the number of bytes left to read from STREAM.
- */
-void
-svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream);
 
 /* Return the next number from STREAM as unsigned integer.  Returns 0 when
  * reading beyond the end of the stream.
