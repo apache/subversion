@@ -173,7 +173,7 @@ fi
 
 SVN_CHECK_FOR_DUNDER_BUILTINS
 if test "$svn_cv_dunder_builtins" = "yes"; then
-    AC_DEFINE(SVN_HAS_DUNDER_BUILTINS, 1, [Define if compiler provides __builtin_constant_p and __builtin_choose_expr])
+    AC_DEFINE(SVN_HAS_DUNDER_BUILTINS, 1, [Define if compiler provides __builtin_constant_p])
 fi
 
 dnl Set up a number of directories ---------------------
