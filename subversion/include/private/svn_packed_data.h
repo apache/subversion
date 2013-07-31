@@ -141,12 +141,6 @@ svn_packed__create_int_substream(svn_packed__int_stream_t *parent,
 svn_packed__byte_stream_t *
 svn_packed__create_bytes_stream(svn_packed__data_root_t *root);
 
-/* Create and return a new sub-stream to the existing byte sequence stream
- * PARENT.
- */
-svn_packed__byte_stream_t *
-svn_packed__create_bytes_substream(svn_packed__byte_stream_t *parent);
-
 /* Write the unsigned integer VALUE to STEAM.
  */
 void
@@ -206,12 +200,6 @@ svn_packed__next_byte_stream(svn_packed__byte_stream_t *stream);
  */
 svn_packed__int_stream_t *
 svn_packed__first_int_substream(svn_packed__int_stream_t *stream);
-
-/* Return the first sub-stream of STREAM.  Returns NULL in case there
- * isn't any.
- */
-svn_packed__byte_stream_t *
-svn_packed__first_byte_substream(svn_packed__byte_stream_t *stream);
 
 /* Return the number of integers left to read from STREAM.
  */
