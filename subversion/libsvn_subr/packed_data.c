@@ -262,44 +262,6 @@ svn_packed__create_bytes_stream(svn_packed__data_root_t *root)
   return stream;
 }
 
-/* Returns a new sub-stream for PARENT but does not initialize the
- * LENGTH_STREAM member.
- */
-static svn_packed__byte_stream_t *
-packed_data_create_bytes_substream_body(svn_packed__byte_stream_t *parent)
-{
-  svn_packed__byte_stream_t *stream
-    = apr_pcalloc(parent->pool, sizeof(*stream));
-
-  stream->packed = svn_stringbuf_create_empty(parent->pool);
-
-  if (parent->last_substream)
-    parent->last_substream->next = stream;
-  else
-    parent->first_substream = stream;
-
-  parent->last_substream = stream;
-  parent->substream_count++;
-
-  return stream;
-}
-
-svn_packed__byte_stream_t *
-svn_packed__create_bytes_substream(svn_packed__byte_stream_t *parent)
-{
-  packed_int_private_t *parent_length_private
-    = parent->lengths_stream->private_data;
-  svn_packed__byte_stream_t *stream
-    = packed_data_create_bytes_substream_body(parent);
-
-  stream->lengths_stream_index = parent_length_private->substream_count;
-  stream->lengths_stream
-    = svn_packed__create_int_substream(parent->lengths_stream,
-                                            FALSE, FALSE);
-
-  return stream;
-}
-
 /* Write the 7b/8b representation of VALUE into BUFFER.  BUFFER must
  * provide at least 10 bytes space.
  * Returns the first position behind the written data.
@@ -680,12 +642,6 @@ svn_packed__first_int_substream(svn_packed__int_stream_t *stream)
   return private_data->first_substream;
 }
 
-svn_packed__byte_stream_t *
-svn_packed__first_byte_substream(svn_packed__byte_stream_t *stream)
-{
-  return stream->first_substream;
-}
-
 apr_size_t
 svn_packed__int_count(svn_packed__int_stream_t *stream)
 {
@@ -972,18 +928,6 @@ read_byte_stream_structure(svn_stringbuf_t *tree_struct,
       packed_int_private_t *length_private
         = stream->lengths_stream->private_data;
       stream->lengths_stream = length_private->next;
-    }
-
-  /* reconstruct sub-streams */
-  for (i = 0; i < substream_count; ++i)
-    {
-      svn_packed__byte_stream_t *substream
-        = packed_data_create_bytes_substream_body(stream);
-      packed_int_private_t *length_private
-        = stream->lengths_stream->private_data;
-      read_byte_stream_structure(tree_struct,
-                                 substream,
-                                 length_private->first_substream);
     }
 }
 
