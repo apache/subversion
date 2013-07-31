@@ -510,7 +510,13 @@ printf \
 '#!/bin/sh
 if [ -d "%s" ]; then
   printf "Stopping previous HTTPD instance..."
-  %s -k stop || kill -9 `cat %s`
+  if %s -k stop; then
+    # httpd had no output; echo a newline.
+    echo ""
+  else
+    # httpd would have printed an error terminated by a newline.
+    kill -9 `cat %s`
+  fi
 fi
 ' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID"
 chmod +x $STOPSCRIPT
