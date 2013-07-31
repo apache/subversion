@@ -24,6 +24,7 @@
  * @brief Implementat of the class RevisionRangeList
  */
 
+#include "JNIUtil.h"
 #include "Iterator.h"
 #include "RevisionRange.h"
 #include "RevisionRangeList.h"
@@ -46,6 +47,33 @@ RevisionRangeList::RevisionRangeList(jobject jrangelist, SVN::Pool &pool)
         return;
       APR_ARRAY_PUSH(m_rangelist, svn_merge_range_t*) = range;
     }
+}
+
+RevisionRangeList RevisionRangeList::create(jobject jthis, SVN::Pool &pool)
+{
+  jobject jrangelist = NULL;
+
+  if (jthis)
+    {
+      JNIEnv *env = JNIUtil::getEnv();
+
+      jmethodID mid = 0;
+      if (mid == 0)
+        {
+          jclass cls = env->FindClass(JAVA_PACKAGE"/types/RevisionRangeList");
+          if (JNIUtil::isJavaExceptionThrown())
+            return RevisionRangeList(NULL, pool);
+
+          mid = env->GetMethodID(cls, "getRanges", "()Ljava/util/List;");
+          if (JNIUtil::isJavaExceptionThrown())
+            return RevisionRangeList(NULL, pool);
+        }
+
+      jrangelist = env->CallObjectMethod(jthis, mid);
+      if (JNIUtil::isJavaExceptionThrown())
+        return RevisionRangeList(NULL, pool);
+    }
+  return RevisionRangeList(jrangelist, pool);
 }
 
 jobject RevisionRangeList::toList() const

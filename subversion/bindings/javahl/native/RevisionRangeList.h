@@ -44,9 +44,14 @@ class RevisionRangeList
   RevisionRangeList(jobject jrangelist, SVN::Pool &pool);
 
   /**
+   * Create a RevisionRangeList object from a Java RevisionRangeList.
+   */
+  static RevisionRangeList create(jobject jthis, SVN::Pool &pool);
+
+  /**
    * Wrap an svn_rangelist_t.
    */
-  RevisionRangeList(svn_rangelist_t* ranges)
+  explicit RevisionRangeList(svn_rangelist_t* ranges)
     : m_rangelist(ranges)
   {}
 

@@ -65,12 +65,9 @@ public class RevisionRangeList implements java.io.Serializable
      *   {@link RevisionRange#isInherited} property when comparing
      *   revision ranges for equality.
      */
-    public /*native*/ RevisionRangeList remove(List<RevisionRange> eraser,
-                                               boolean considerInheritance)
-        throws ClientException
-    {
-        throw new RuntimeException("Not implemented: RevisionRangeListl.remove");
-    }
+    public native List<RevisionRange> remove(List<RevisionRange> eraser,
+                                             boolean considerInheritance)
+        throws ClientException;
 
     /**
      * Remove revisions in <code>eraser</code> from the current object
@@ -84,7 +81,8 @@ public class RevisionRangeList implements java.io.Serializable
                                     boolean considerInheritance)
         throws ClientException
     {
-        return remove(eraser.ranges, considerInheritance);
+        return new RevisionRangeList
+            (remove(eraser.ranges, considerInheritance));
     }
 
     // TODO: More svn_rangelist_t operations
