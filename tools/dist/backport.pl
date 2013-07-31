@@ -639,7 +639,7 @@ sub handle_entry {
       }
       when (/^l/i) {
         if ($entry{branch}) {
-            system "$SVN log --stop-on-copy -v -r 0:HEAD -- "
+            system "$SVN log --stop-on-copy -v -g -r 0:HEAD -- "
                    ."$BRANCHES/$entry{branch} "
                    ."| $PAGER";
         } elsif (@{$entry{revisions}}) {
