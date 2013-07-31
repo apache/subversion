@@ -176,7 +176,7 @@ Candidate changes:
      though they should by default.
    Branch: ^/subversion/branches/1.8.x-r1507044
    Votes:
-     +1: rschupp
+     +1: rschupp, danielsh
 
  * r1507382
    Allow passing NULL for the config dir to use the default config dir path.
