@@ -484,6 +484,7 @@ sub revert {
   system "$SVN revert -R ./" . ($YES && $MAY_COMMIT ne 'true'
                              ? " -q" : "");
   move "$STATUS.$$.tmp", $STATUS;
+  $MERGED_SOMETHING = 0;
 }
 
 sub maybe_revert {
