@@ -513,12 +513,12 @@ if [ -d "%s" ]; then
   if %s -k stop; then
     # httpd had no output; echo a newline.
     echo ""
-  else
+  elif [ -s "%s" ]; then
     # httpd would have printed an error terminated by a newline.
-    kill -9 `cat %s`
+    kill -9 "`cat %s`"
   fi
 fi
-' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID"
+' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID" "$HTTPD_PID"
 chmod +x $STOPSCRIPT
 
 $START -t \
