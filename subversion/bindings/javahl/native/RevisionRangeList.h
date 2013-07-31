@@ -20,57 +20,48 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevisionRange.h
- * @brief Interface of the class RevisionRange
+ * @file RevisionRangeList.h
+ * @brief Interface of the class RevisionRangeList
  */
 
-#ifndef REVISION_RANGE_H
-#define REVISION_RANGE_H
+#ifndef REVISION_RANGE_LIST_H
+#define REVISION_RANGE_LIST_H
 
 #include <jni.h>
-#include "svn_types.h"
-#include "svn_opt.h"
+#include "svn_mergeinfo.h"
 
 #include "Pool.h"
 
 /**
- * A container for our copy sources, which can convert them into an
- * array of svn_client_copy_item_t's.
+ * A wrapper for svn_rangelist_t
  */
-class RevisionRange
+class RevisionRangeList
 {
  public:
+  /**
+   * Create a RevisionRangeList object from a Java list of revision ranges.
+   */
+  RevisionRangeList(jobject jrangelist, SVN::Pool &pool);
 
   /**
-   * Create a RevisionRange object from a Java object.
+   * Wrap an svn_rangelist_t.
    */
-  RevisionRange(jobject jthis);
+  RevisionRangeList(svn_rangelist_t* ranges)
+    : m_rangelist(ranges)
+  {}
 
   /**
-   * Destroy a RevisionRange object
+   * Return an svn_rangelist_t.
    */
-  ~RevisionRange();
+  const svn_rangelist_t* get() const { return m_rangelist; }
 
   /**
-   * Return an svn_opt_revision_range_t.
+   * Make a Java list of reivison ranges.
    */
-  svn_opt_revision_range_t *toRange(SVN::Pool &pool) const;
-
-  /**
-   * Return an svn_merge_range_t.
-   */
-  svn_merge_range_t* toMergeRange(SVN::Pool &pool) const;
-
-  /**
-   * Make a (single) RevisionRange Java object.
-   */
-  static jobject makeJRevisionRange(svn_merge_range_t *range);
+  jobject toList() const;
 
  private:
-  /**
-   * A local reference to the Java RevisionRange peer.
-   */
-  jobject m_range;
+  svn_rangelist_t* m_rangelist;
 };
 
-#endif  // REVISION_RANGE_H
+#endif  // REVISION_RANGE_LIST_H
