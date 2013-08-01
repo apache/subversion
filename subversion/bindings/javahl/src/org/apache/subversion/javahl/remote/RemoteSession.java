@@ -35,6 +35,7 @@ import org.apache.subversion.javahl.ClientException;
 
 import java.lang.ref.WeakReference;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.io.OutputStream;
@@ -197,14 +198,21 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native NodeKind checkPath(String path, long revision)
             throws ClientException;
 
-    // TODO: stat
+    public native DirEntry stat(String path, long revision)
+            throws ClientException;
 
     public native Map<Long, String>
         getLocations(String path, long pegRevision,
                      Iterable<Long> locationRevisions)
             throws ClientException;
 
-    // TODO: getLocationSegments
+    public native
+        List<LocationSegment> getLocationSegments(String path,
+                                                  long pegRevision,
+                                                  long startRevision,
+                                                  long endRevision)
+            throws ClientException;
+
     // TODO: getFileRevisions
     // TODO: lock
     // TODO: unlock
