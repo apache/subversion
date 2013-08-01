@@ -92,9 +92,6 @@ struct svn_packed__byte_stream_t
   /* Last sub-stream, if any.  NULL otherwise. */
   svn_packed__byte_stream_t *last_substream;
 
-  /* Number of sub-streams. */
-  apr_size_t substream_count;
-  
   /* Next (sibling) byte sequence stream, if any.  NULL otherwise. */
   svn_packed__byte_stream_t *next;
 
@@ -440,7 +437,7 @@ write_byte_stream_structure(svn_stringbuf_t* tree_struct,
   for (; stream; stream = stream->next)
     {
       /* this stream's structure and size */
-      write_packed_uint(tree_struct, stream->substream_count);
+      write_packed_uint(tree_struct, 0);
       write_packed_uint(tree_struct, stream->lengths_stream_index);
       write_packed_uint(tree_struct, stream->packed->len);
 
@@ -812,7 +809,7 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
           for (i = end; i > 0; --i)
             {
               apr_uint64_t temp = stream->buffer[i-1];
-              temp = (temp % 2) ? 0 - (temp + 1) / 2 : temp / 2;
+              temp = (temp % 2) ? -1 - temp / 2 : temp / 2;
               last_value += temp;
               stream->buffer[i-1] = last_value;
             }
@@ -824,7 +821,7 @@ svn_packed__data_fill_buffer(svn_packed__int_stream_t *stream)
       if (!private_data->diff && private_data->is_signed)
         for (i = 0; i < end; ++i)
           stream->buffer[i] = (stream->buffer[i] % 2)
-                            ? 0 - (stream->buffer[i] + 1) / 2
+                            ? -1 - stream->buffer[i] / 2
                             : stream->buffer[i] / 2;
     }
 
@@ -911,7 +908,7 @@ read_byte_stream_structure(svn_stringbuf_t *tree_struct,
                            svn_packed__int_stream_t *first_int_stream)
 {
   /* read parameters from the TREE_STRUCT buffer */
-  apr_size_t substream_count = (apr_size_t)read_packed_uint(tree_struct);
+  apr_size_t dummy = (apr_size_t)read_packed_uint(tree_struct);
   apr_size_t lengths_stream_index = (apr_size_t)read_packed_uint(tree_struct);
   apr_size_t packed_size = (apr_size_t)read_packed_uint(tree_struct);
   apr_size_t i;
