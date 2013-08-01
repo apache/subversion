@@ -108,6 +108,11 @@ public class Mergeinfo implements java.io.Serializable
             addRevisionRange(mergeSrc, range);
     }
 
+    public void addRevisions(String mergeSrc, RevisionRangeList ranges)
+    {
+        addRevisions(mergeSrc, ranges.getRanges());
+    }
+
     /**
      * Add a revision range to the merged revisions for a path.  If
      * the merge source already has associated revision ranges, add
@@ -153,6 +158,14 @@ public class Mergeinfo implements java.io.Serializable
     public List<RevisionRange> getRevisionRange(String mergeSrc)
     {
         return this.getRevisions(mergeSrc);
+    }
+
+    /**
+     * Like {@link #getReivsionRange}, but returns a {@link RevisionRangeList}.
+     */
+    public RevisionRangeList getRevisionRangeList(String mergeSrc)
+    {
+        return new RevisionRangeList(getRevisionRange(mergeSrc));
     }
 
     /**

@@ -40,6 +40,7 @@
 
 #include <apr_lib.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
@@ -57,8 +58,6 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
-
-#include "svn_private_config.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {

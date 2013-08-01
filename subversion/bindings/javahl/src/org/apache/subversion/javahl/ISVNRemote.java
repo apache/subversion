@@ -27,6 +27,7 @@ import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.io.OutputStream;
@@ -433,16 +434,104 @@ public interface ISVNRemote
             throws ClientException;
 
     /**
-     * Return the kind of the node in path at revision.
+     * Return the kind of the node in <code>path</code> at
+     * <code>revision</code>.
      * @param path A path relative to the sessionn URL
      * @throws ClientException
      */
     NodeKind checkPath(String path, long revision)
             throws ClientException;
 
-    // TODO: stat
-    // TODO: getLocations
-    // TODO: getLocationSegments
+    /**
+     * Return the directory entry object for <code>path</code> at
+     * <code>revision</code>.
+     * @param path A path relative to the sessionn URL
+     * @return A directory entry obeject, or <code>null</code> if
+     * <code>path</code> at <code>revision</code> does not exist.
+     * @throws ClientException
+     */
+    DirEntry stat(String path, long revision)
+            throws ClientException;
+
+    /**
+     * Find the locations of the object identified by
+     * <code>path</code> and <code>pegRevision</code> in the
+     * repository at the given revisions. If the object does not exist
+     * in a given revision, that revision will be ignored.
+     * <p>
+     * <b>Note:</b> None of the parameters may be NULL.
+     * @param path A path relative to the session URL
+     * @param pegRevision The peg revision to use for locating the object
+     * @param locationRevisions The set of revisions to find locations for
+     * @throws ClientException
+     */
+    Map<Long, String> getLocations(String path, long pegRevision,
+                                   Iterable<Long> locationRevisions)
+            throws ClientException;
+
+    /**
+     * The object returned from {@link getLocationSegments}.
+     */
+    public static class LocationSegment implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change
+        // made to this class.
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Private constructor called by the native implementation.
+         */
+        private LocationSegment(String path,
+                                long startRevision,
+                                long endRevision)
+        {
+            this.path = path;
+            this.startRevision = startRevision;
+            this.endRevision = endRevision;
+        }
+
+        /**
+         * @return The repository-relative path of the obejct in this
+         * history segment.
+         */
+        public String getPath() { return path; }
+
+        /**
+         * @return The start revision of the history segment.
+         */
+        public long getStartRevision() { return startRevision; }
+
+        /**
+         * @return The end revision of the history segment.
+         */
+        public long getEndRevision() { return endRevision; }
+
+        private String path;
+        private long startRevision;
+        private long endRevision;
+    }
+
+    /**
+     * Return a lost of segments in the location history of <code>path</code>
+     * at <code>pegRevision</code>, working backwards in time from
+     * <code>startRevision</code> to <code>endRevision</code>.
+     *
+     * @param path A session-relative path.
+     * @param pegRevision The peg revision to find <code>path</code> in.
+     * @param startRevision The upper bound of the revision range. Use
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}
+     *        to indicate HEAD.
+     * @param endRevision The lower bound of the revision range. Use
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}
+     *        to trace the history of the object to its origin.
+     * @throws ClientException
+     */
+    List<LocationSegment> getLocationSegments(String path,
+                                              long pegRevision,
+                                              long startRevision,
+                                              long endRevision)
+            throws ClientException;
+
     // TODO: getFileRevisions
     // TODO: lock
     // TODO: unlock

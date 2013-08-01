@@ -27,6 +27,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_client.h"
@@ -40,8 +41,6 @@
 #include "cl-conflicts.h"
 
 #include "private/svn_cmdline_private.h"
-
-#include "svn_private_config.h"
 
 #define ARRAY_LEN(ary) ((sizeof (ary)) / (sizeof ((ary)[0])))
 

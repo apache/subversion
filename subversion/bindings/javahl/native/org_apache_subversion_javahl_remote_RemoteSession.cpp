@@ -272,9 +272,42 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_checkPath(
   return ras->checkPath(jpath, jrevision);
 }
 
-// TODO: stat
-// TODO: getLocations
-// TODO: getLocationSegments
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_stat(
+    JNIEnv *env, jobject jthis, jstring jpath, jlong jrevision)
+{
+  JNIEntry(SVNReposAccess, stat);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->stat(jpath, jrevision);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getLocations(
+    JNIEnv *env, jobject jthis, jstring jpath, jlong jpeg_revision,
+    jobject jlocation_revisions)
+{
+  JNIEntry(SVNReposAccess, getLocations);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getLocations(jpath, jpeg_revision, jlocation_revisions);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getLocationSegments(
+    JNIEnv *env, jobject jthis, jstring jpath, jlong jpeg_revision,
+    jlong jstart_revision, jlong jend_revision)
+{
+  JNIEntry(SVNReposAccess, getLocationSegments);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getLocationSegments(jpath, jpeg_revision,
+                                  jstart_revision, jend_revision);
+}
+
 // TODO: getFileRevisions
 // TODO: lock
 // TODO: unlock

@@ -924,9 +924,265 @@ RemoteSession::checkPath(jstring jpath, jlong jrevision)
   return EnumMapper::mapNodeKind(kind);
 }
 
-// TODO: stat
-// TODO: getLocations
-// TODO: getLocationSegments
+jobject
+RemoteSession::stat(jstring jpath, jlong jrevision)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  svn_dirent_t* dirent;
+  SVN_JNI_ERR(svn_ra_stat(m_session, path.c_str(),
+                          svn_revnum_t(jrevision),
+                          &dirent, subPool.getPool()),
+              NULL);
+
+  if (dirent)
+    return CreateJ::DirEntry(path.c_str(), path.c_str(), dirent);
+  return NULL;
+}
+
+namespace {
+apr_array_header_t*
+long_iterable_to_revnum_array(jobject jlong_iterable, apr_pool_t* pool)
+{
+
+  JNIEnv* env = JNIUtil::getEnv();
+
+  jclass cls = env->FindClass("java/lang/Long");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      mid = env->GetMethodID(cls, "longValue", "()J");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  apr_array_header_t* array = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+  Iterator iter(jlong_iterable);
+  while (iter.hasNext())
+    {
+      const jlong entry = env->CallLongMethod(iter.next(), mid);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      APR_ARRAY_PUSH(array, svn_revnum_t) = svn_revnum_t(entry);
+    }
+  return array;
+}
+
+jobject
+location_hash_to_map(apr_hash_t* locations, apr_pool_t* scratch_pool)
+{
+  JNIEnv* env = JNIUtil::getEnv();
+
+  jclass long_cls = env->FindClass("java/lang/Long");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID long_ctor = 0;
+  if (0 == long_ctor)
+    {
+      long_ctor = env->GetMethodID(long_cls, "<init>", "(J)V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  jclass hash_cls = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID hash_ctor = 0;
+  if (0 == hash_ctor)
+    {
+      hash_ctor = env->GetMethodID(hash_cls, "<init>", "()V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID hash_put = 0;
+  if (0 == hash_put)
+    {
+      hash_put = env->GetMethodID(hash_cls, "put",
+                                  "(Ljava/lang/Object;Ljava/lang/Object;"
+                                  ")Ljava/lang/Object;");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  jobject result = env->NewObject(hash_cls, hash_ctor);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  if (!locations)
+    return result;
+
+  for (apr_hash_index_t* hi = apr_hash_first(scratch_pool, locations);
+       hi; hi = apr_hash_next(hi))
+    {
+      const void* key;
+      void* val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+
+      jobject jkey = env->NewObject(
+          long_cls, long_ctor, jlong(*static_cast<const svn_revnum_t*>(key)));
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      jstring jval = JNIUtil::makeJString(static_cast<const char*>(val));
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->CallObjectMethod(result, hash_put, jkey, jval);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jkey);
+      env->DeleteLocalRef(jval);
+    }
+
+  return result;
+}
+} // anonymous namespace
+
+jobject
+RemoteSession::getLocations(jstring jpath, jlong jpeg_revision,
+                            jobject jlocation_revisions)
+{
+  if (!jpath || !jlocation_revisions)
+    return NULL;
+
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  apr_array_header_t* location_revisions =
+    long_iterable_to_revnum_array(jlocation_revisions, subPool.getPool());
+  if (!location_revisions)
+    return NULL;
+
+  apr_hash_t* locations;
+  SVN_JNI_ERR(svn_ra_get_locations(m_session, &locations,
+                                   path.c_str(), svn_revnum_t(jpeg_revision),
+                                   location_revisions, subPool.getPool()),
+              NULL);
+  return location_hash_to_map(locations, subPool.getPool());
+}
+
+namespace {
+class LocationSegmentHandler
+{
+public:
+  static svn_error_t* callback(svn_location_segment_t* segment,
+                               void* baton, apr_pool_t*)
+    {
+      LocationSegmentHandler* const self =
+        static_cast<LocationSegmentHandler*>(baton);
+      SVN_ERR_ASSERT(self->m_jresult_list != NULL);
+      self->add(segment);
+      SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
+      return SVN_NO_ERROR;
+    }
+
+  LocationSegmentHandler()
+    : m_jresult_list(NULL)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass("java/util/ArrayList");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>", "()V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jobject jresult_list = env->NewObject(cls, mid);
+      if (!JNIUtil::isJavaExceptionThrown() && jresult_list)
+        m_jresult_list = jresult_list;
+    }
+
+  jobject get() const { return m_jresult_list; }
+
+private:
+  void add(svn_location_segment_t* segment)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$LocationSegment");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>",
+                                 "(Ljava/lang/String;JJ)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      static jmethodID mid_add = 0;
+      if (mid_add == 0)
+        {
+          jclass list_cls = env->FindClass("java/util/ArrayList");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+          mid_add = env->GetMethodID(list_cls, "add",
+                                     "(Ljava/lang/Object;)Z");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jstring jpath = JNIUtil::makeJString(segment->path);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      env->CallBooleanMethod(m_jresult_list, mid_add,
+                             env->NewObject(cls, mid, jpath,
+                                            jlong(segment->range_start),
+                                            jlong(segment->range_end)));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      env->DeleteLocalRef(jpath);
+    }
+
+  jobject m_jresult_list;
+};
+} // anonymous namespace
+
+jobject
+RemoteSession::getLocationSegments(jstring jpath, jlong jpeg_revision,
+                                   jlong jstart_revision, jlong jend_revision)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  LocationSegmentHandler handler;
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  SVN_JNI_ERR(svn_ra_get_location_segments(m_session, path.c_str(),
+                                           svn_revnum_t(jpeg_revision),
+                                           svn_revnum_t(jstart_revision),
+                                           svn_revnum_t(jend_revision),
+                                           handler.callback, &handler,
+                                           subPool.getPool()),
+              NULL);
+  return handler.get();
+}
+
 // TODO: getFileRevisions
 // TODO: lock
 // TODO: unlock

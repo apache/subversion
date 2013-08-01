@@ -25,6 +25,7 @@
 
 #include <assert.h>
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -34,8 +35,6 @@
 #include "adm_files.h"
 #include "wc_db_private.h"
 #include "wc-queries.h"
-
-#include "svn_private_config.h"
 
 /* ### Same values as wc_db.c */
 #define SDB_FILE  "wc.db"

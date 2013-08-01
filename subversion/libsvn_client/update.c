@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -39,7 +40,6 @@
 #include "svn_io.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 /* Implements svn_wc_dirents_func_t for update and switch handling. Assumes
@@ -701,7 +701,23 @@ svn_client_update4(apr_array_header_t **result_revs,
 
  cleanup:
   if (sleep)
-    svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
+    {
+      const char *wcroot_abspath;
+
+      if (paths->nelts == 1)
+        {
+          const char *abspath;
+
+          /* PATH iteslf may have been removed by the update. */
+          SVN_ERR(svn_dirent_get_absolute(&abspath, path, pool));
+          SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx, abspath,
+                                     pool, pool));
+        }
+      else
+        wcroot_abspath = NULL;
+
+      svn_io_sleep_for_timestamps(wcroot_abspath, pool);
+    }
 
   return svn_error_trace(err);
 }

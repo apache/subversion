@@ -33,6 +33,7 @@
 #include <serf.h>
 #endif
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_opt.h"

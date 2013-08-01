@@ -92,9 +92,11 @@ class RemoteSession : public SVNBase
                 jboolean jinclude_merged_revisions,
                 jobject jrevprops, jobject jlog_callback);
     jobject checkPath(jstring jpath, jlong jrevision);
-    // TODO: stat
-    // TODO: getLocations
-    // TODO: getLocationSegments
+    jobject stat(jstring jpath, jlong jrevision);
+    jobject getLocations(jstring jpath, jlong jpeg_revision,
+                         jobject jlocation_revisions);
+    jobject getLocationSegments(jstring jpath, jlong jpeg_revision,
+                                jlong jstart_revision, jlong jend_revision);
     // TODO: getFileRevisions
     // TODO: lock
     // TODO: unlock

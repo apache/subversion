@@ -38,11 +38,11 @@
 #include <io.h>
 #endif
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_opt.h"
 #include "svn_time.h"
-#include "svn_private_config.h"
 
 #include "swig_perl_external_runtime.swg"
 
@@ -187,7 +187,7 @@ static apr_hash_t *svn_swig_pl_to_hash(SV *source,
     while (cnt--) {
         SV* item = hv_iternextsv(h, &key, &retlen);
         void *val = cv(item, ctx, pool);
-        svn_hash_sets(hash, key, val);
+        svn_hash_sets(hash, apr_pstrmemdup(pool, key, retlen), val);
     }
 
     return hash;

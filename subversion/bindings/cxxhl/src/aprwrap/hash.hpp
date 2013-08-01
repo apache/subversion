@@ -103,6 +103,7 @@ public:
 public:
   typedef Key::key_type key_type;
   typedef void* value_type;
+  typedef unsigned int size_type;
 
   /**
    * Create and proxy a new APR hash table in @a pool.
@@ -120,13 +121,6 @@ public:
     {}
 
   /**
-   * Create a new proxy for the APR hash table wrapped by @a that.
-   */
-  explicit Hash(const Hash& that) throw()
-    : m_hash(that.m_hash)
-    {}
-
-  /**
    * Create a proxy for the APR hash table @a hash.
    */
   explicit Hash(apr_hash_t* hash)
@@ -136,7 +130,18 @@ public:
   /**
    * Return the wrapped APR hash table.
    */
-  apr_hash_t* hash() const throw() { return m_hash; }
+  apr_hash_t* hash() const throw()
+    {
+      return m_hash;
+    }
+
+  /**
+   * Return the number of key-value pairs in the wrapped hash table.
+   */
+  size_type size() const throw()
+    {
+      return apr_hash_count(m_hash);
+    }
 
   /**
    * Set @a key = @a value in the wrapped hash table.
@@ -275,13 +280,6 @@ public:
     {}
 
   /**
-   * Create a new proxy for the APR hash table wrapped by @a that.
-   */
-  explicit Hash(const Hash& that) throw()
-    : inherited(that)
-    {}
-
-  /**
    * Create a proxy for the APR hash table @a hash.
    */
   explicit Hash(apr_hash_t* hash)
@@ -291,7 +289,18 @@ public:
   /**
    * @return The wrapped APR hash table.
    */
-  apr_hash_t* hash() const throw() { return inherited::hash(); }
+  apr_hash_t* hash() const throw()
+    {
+      return inherited::hash();
+    }
+
+  /**
+   * Return the number of key-value pairs in the wrapped hash table.
+   */
+  size_type size() const throw()
+    {
+      return inherited::size();
+    }
 
   /**
    * Set @a key = @a value in the wrapped hash table.

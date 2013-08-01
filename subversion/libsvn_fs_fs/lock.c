@@ -20,7 +20,7 @@
  * ====================================================================
  */
 
-
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -42,7 +42,6 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
-#include "svn_private_config.h"
 
 /* Names of hash keys used to store a lock for writing to disk. */
 #define PATH_KEY "path"

@@ -26,12 +26,11 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_private_config.h"
 #include "svn_repos.h"
 #include "svn_compat.h"
 #include "svn_hash.h"
 #include "svn_props.h"
-
-#include "svn_private_config.h"
 
 #include "repos.h"
 

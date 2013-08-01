@@ -29,6 +29,7 @@
 
 #include <stdlib.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -40,8 +41,6 @@
 #include "svn_sorts.h"
 #include "client.h"
 #include "private/svn_wc_private.h"
-
-#include "svn_private_config.h"
 
 /*** Code. ***/
 

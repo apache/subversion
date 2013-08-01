@@ -28,10 +28,10 @@
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
+#include "svn_private_config.h"
 #include "svn_config.h"
 #include "svn_cache_config.h"
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 
