@@ -139,9 +139,11 @@ sub prompt {
   print $_[0]; shift;
   my %args = @_;
   my $getchar = sub {
+    my $answer;
     ReadMode 'cbreak';
-    my $answer = (ReadKey 0);
+    eval { $answer = (ReadKey 0) };
     ReadMode 'normal';
+    die $@ if $@;
     print $answer;
     return $answer;
   };
@@ -482,6 +484,7 @@ sub revert {
   system "$SVN revert -R ./" . ($YES && $MAY_COMMIT ne 'true'
                              ? " -q" : "");
   move "$STATUS.$$.tmp", $STATUS;
+  $MERGED_SOMETHING = 0;
 }
 
 sub maybe_revert {
@@ -490,6 +493,17 @@ sub maybe_revert {
   delete $SIG{INT} unless @_;
   revert if !$YES and $MERGED_SOMETHING and prompt 'Revert? ';
   (@_ ? exit : return);
+}
+
+sub signal_handler {
+  my $sig = shift;
+
+  # Clean up after prompt()
+  ReadMode 'normal';
+
+  # Fall back to default action
+  delete $SIG{$sig};
+  kill $sig, $$;
 }
 
 sub warning_summary {
@@ -626,7 +640,7 @@ sub handle_entry {
       }
       when (/^l/i) {
         if ($entry{branch}) {
-            system "$SVN log --stop-on-copy -v -r 0:HEAD -- "
+            system "$SVN log --stop-on-copy -v -g -r 0:HEAD -- "
                    ."$BRANCHES/$entry{branch} "
                    ."| $PAGER";
         } elsif (@{$entry{revisions}}) {
@@ -715,6 +729,7 @@ sub main {
   }
 
   $SIG{INT} = \&maybe_revert unless $YES;
+  $SIG{TERM} = \&signal_handler unless $YES;
 
   my $in_approved = 0;
   while (<STATUS>) {

@@ -23,6 +23,7 @@
 
 
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_io.h"
@@ -31,14 +32,8 @@
 
 #include "auth.h"
 
-#include "svn_private_config.h"
-
 #include "private/svn_auth_private.h"
 
-/* Helper for svn_config_{read|write}_auth_data.  Return a path to a
-   file within ~/.subversion/auth/ that holds CRED_KIND credentials
-   within REALMSTRING.  If no path is available *PATH will be set to
-   NULL. */
 svn_error_t *
 svn_auth__file_path(const char **path,
                     const char *cred_kind,

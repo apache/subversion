@@ -32,6 +32,7 @@
 #include <apr_network_io.h>
 #include <apr_uri.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
@@ -46,8 +47,6 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "svn_version.h"
-
-#include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"

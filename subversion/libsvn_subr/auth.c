@@ -26,13 +26,13 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_auth.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_dso.h"
 #include "svn_version.h"
 #include "private/svn_dep_compat.h"

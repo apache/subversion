@@ -37,7 +37,6 @@
 #include "svn_types.h"
 #include "svn_io.h"       /* for svn_stream_t */
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -251,11 +250,8 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
  *
  * @since New in 1.8.
  */
-#define svn_hash_sets(ht, key, val)                               \
-  do {                                                            \
-    const void *svn_key__temp = (key);                            \
-    apr_hash_set(ht, svn_key__temp, strlen(svn_key__temp), val);  \
-  } while (0)
+#define svn_hash_sets(ht, key, val) \
+            apr_hash_set(ht, key, APR_HASH_KEY_STRING, val)
 
 /** @} */
 

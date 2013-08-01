@@ -21,6 +21,7 @@
  * @endcopyright
  */
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -29,7 +30,6 @@
 
 #include "wc.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 

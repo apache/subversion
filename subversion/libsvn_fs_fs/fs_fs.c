@@ -37,6 +37,7 @@
 #include <apr_strings.h>
 #include <apr_thread_mutex.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
@@ -66,7 +67,6 @@
 #include "private/svn_delta_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
-#include "svn_private_config.h"
 #include "temp_serializer.h"
 
 /* An arbitrary maximum path length, so clients can't run us out of memory

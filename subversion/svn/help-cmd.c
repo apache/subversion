@@ -27,14 +27,13 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_config.h"
 #include "svn_error.h"
 #include "svn_version.h"
 #include "cl.h"
-
-#include "svn_private_config.h"
 
 
 /*** Code. ***/

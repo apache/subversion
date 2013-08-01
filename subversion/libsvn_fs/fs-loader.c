@@ -30,6 +30,7 @@
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_ctype.h"
 #include "svn_types.h"
@@ -40,7 +41,6 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
-#include "svn_private_config.h"
 
 #include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"

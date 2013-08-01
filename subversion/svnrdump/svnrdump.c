@@ -25,6 +25,7 @@
 #include <apr_signal.h>
 #include <apr_uri.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_client.h"
@@ -33,7 +34,6 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_utf.h"
-#include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_props.h"
 
@@ -41,7 +41,6 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
-
 
 
 /*** Cancellation ***/

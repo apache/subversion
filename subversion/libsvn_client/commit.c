@@ -30,6 +30,8 @@
 #include <string.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
@@ -45,8 +47,6 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
-
-#include "svn_private_config.h"
 
 struct capture_baton_t {
   svn_commit_callback2_t original_callback;
@@ -1025,9 +1025,22 @@ svn_client_commit6(const apr_array_header_t *targets,
     }
 
  cleanup:
-  /* Sleep to ensure timestamp integrity. */
+  /* Sleep to ensure timestamp integrity.  BASE_ABSPATH may have been
+     removed by the commit or it may the common ancestor of multiple
+     working copies. */
   if (timestamp_sleep)
-    svn_io_sleep_for_timestamps(base_abspath, pool);
+    {
+      const char *wcroot_abspath;
+      svn_error_t *err = svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                                            base_abspath, pool, pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          wcroot_abspath = NULL;
+        }
+
+      svn_io_sleep_for_timestamps(wcroot_abspath, pool);
+    }
 
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */

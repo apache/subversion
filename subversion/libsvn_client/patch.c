@@ -29,6 +29,8 @@
 
 #include <apr_hash.h>
 #include <apr_fnmatch.h>
+
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
@@ -42,7 +44,6 @@
 #include "svn_wc.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"

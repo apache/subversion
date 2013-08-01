@@ -33,6 +33,8 @@
 #define SVN_DEPRECATED
 
 #include <string.h>
+
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_compat.h"
@@ -47,8 +49,6 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
-
 
 
 
