@@ -246,16 +246,21 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
 }
 
 /* Read the format number and maximum number of files per directory
-   from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
-   respectively.
+   from PATH and return them in *PFORMAT, *MAX_FILES_PER_DIR and
+   MIN_LOG_ADDRESSING_REV respectively.
 
    *MAX_FILES_PER_DIR is obtained from the 'layout' format option, and
    will be set to zero if a linear scheme should be used.
+   *MIN_LOG_ADDRESSING_REV is obtained from the 'addressing' format option,
+   and will be set to SVN_INVALID_REVNUM for physical addressing.
 
    Use POOL for temporary allocation. */
 static svn_error_t *
-read_format(int *pformat, int *max_files_per_dir,
-            const char *path, apr_pool_t *pool)
+read_format(int *pformat,
+            int *max_files_per_dir,
+            svn_revnum_t *min_log_addressing_rev,
+            const char *path,
+            apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_stream_t *stream;
@@ -297,6 +302,7 @@ read_format(int *pformat, int *max_files_per_dir,
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
+  *min_log_addressing_rev = SVN_INVALID_REVNUM;
 
   /* Read any options. */
   while (!eos)
@@ -323,17 +329,42 @@ read_format(int *pformat, int *max_files_per_dir,
             }
         }
 
+      if (*pformat >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT &&
+          strncmp(buf->data, "addressing ", 11) == 0)
+        {
+          if (strcmp(buf->data + 11, "physical") == 0)
+            {
+              *min_log_addressing_rev = SVN_INVALID_REVNUM;
+              continue;
+            }
+
+          if (strncmp(buf->data + 11, "logical ", 8) == 0)
+            {
+              int value;
+
+              /* Check that the argument is numeric. */
+              SVN_ERR(check_format_file_buffer_numeric(buf->data, 19, path, pool));
+              SVN_ERR(svn_cstring_atoi(&value, buf->data + 19));
+              *min_log_addressing_rev = value;
+              continue;
+            }
+        }
+
       return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
          _("'%s' contains invalid filesystem format option '%s'"),
          svn_dirent_local_style(path, pool), buf->data);
     }
 
+  /* non-shared repositories never use logical addressing */
+  if (!*max_files_per_dir)
+    *min_log_addressing_rev = SVN_INVALID_REVNUM;
+
   return SVN_NO_ERROR;
 }
 
-/* Write the format number and maximum number of files per directory
-   to a new format file in PATH, possibly expecting to overwrite a
-   previously existing file.
+/* Write the format number, maximum number of files per directory and
+   the addressing scheme to a new format file in PATH, possibly expecting
+   to overwrite a previously existing file.
 
    Use POOL for temporary allocation. */
 svn_error_t *
@@ -357,6 +388,17 @@ svn_fs_fs__write_format(svn_fs_t *fs,
                                                   ffd->max_files_per_dir));
       else
         svn_stringbuf_appendcstr(sb, "layout linear\n");
+    }
+
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      if (ffd->min_log_addressing_rev == SVN_INVALID_REVNUM)
+        svn_stringbuf_appendcstr(sb, "addressing physical\n");
+      else
+        svn_stringbuf_appendcstr(sb,
+                                 apr_psprintf(pool,
+                                              "addressing logical %ld\n",
+                                              ffd->min_log_addressing_rev));
     }
 
   /* svn_io_write_version_file() does a load of magic to allow it to
@@ -625,13 +667,14 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *uuid_file;
   int format, max_files_per_dir;
+  svn_revnum_t min_log_addressing_rev;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
   /* Read the FS format number. */
-  SVN_ERR(read_format(&format, &max_files_per_dir,
+  SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
                       path_format(fs, pool), pool));
   SVN_ERR(check_format(format));
 
@@ -692,12 +735,14 @@ upgrade_body(void *baton, apr_pool_t *pool)
   svn_fs_t *fs = upgrade_baton->fs;
   fs_fs_data_t *ffd = fs->fsap_data;
   int format, max_files_per_dir;
+  svn_revnum_t min_log_addressing_rev;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
   svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
-  SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
+  SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
+                      format_path, pool));
   SVN_ERR(check_format(format));
 
   /* If the config file does not exist, create one. */
@@ -766,9 +811,19 @@ upgrade_body(void *baton, apr_pool_t *pool)
                                                pool));
     }
 
+  if (   format < SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT
+      && max_files_per_dir > 0)
+    {
+      min_log_addressing_rev
+        = (ffd->youngest_rev_cache % max_files_per_dir + 1)
+        * max_files_per_dir;
+    }
+
   /* Bump the format file. */
   ffd->format = SVN_FS_FS__FORMAT_NUMBER;
   ffd->max_files_per_dir = max_files_per_dir;
+  ffd->min_log_addressing_rev = min_log_addressing_rev;
+
   SVN_ERR(svn_fs_fs__write_format(fs, TRUE, pool));
   if (upgrade_baton->notify_func)
     SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
@@ -987,20 +1042,71 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
+      svn_version_t *compatible_version;
+      const char *compatible;
+
+      /* This will cause a compiler warning as soon as we merge with
+         the FSX branch.  Remove this when it happens. */
+#define SVN_FS_CONFIG_COMPATIBLE_VERSION ""
+      /* TODO: move this code to fs_utils */
+      
+      /* set compatible version according to generic option */
+      compatible = svn_hash_gets(fs->config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
+      if (compatible)
+        SVN_ERR(svn_version__parse_version_string(&compatible_version,
+                                                  compatible, pool));
+      else
+        compatible_version = apr_pmemdup(pool, svn_subr_version(),
+                                         sizeof(*compatible_version));
+
+      /* we handle SVN 1.x only */
+      SVN_ERR_ASSERT(compatible_version->major == 1);
+
+      /* specific options take precedence */
       if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-        format = 1;
+        compatible_version->minor = 3;
       else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-        format = 2;
+        compatible_version->minor = 4;
       else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-        format = 3;
+        compatible_version->minor = 5;
       else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
-        format = 4;
+        compatible_version->minor = 7;
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 1:
+          case 2:
+          case 3: format = 1;
+                  break;
+
+          case 4: format = 2;
+                  break;
+
+          case 5: format = 3;
+                  break;
+
+          case 6:
+          case 7: format = 4;
+                  break;
+
+          case 8: format = 5;
+                  break;
+
+          default:format = SVN_FS_FS__FORMAT_NUMBER;
+        }
     }
   ffd->format = format;
 
   /* Override the default linear layout if this is a new-enough format. */
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     ffd->max_files_per_dir = SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR;
+
+  /* Select the addressing mode depending on the format. */
+  if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    ffd->min_log_addressing_rev = 0;
+  else
+    ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
 
   /* Create the revision data directories. */
   if (ffd->max_files_per_dir)
@@ -1378,8 +1484,11 @@ svn_fs_fs__info_format(int *fs_format,
     case 6:
       (*supports_version)->minor = 8;
       break;
+    case 7:
+      (*supports_version)->minor = 9;
+      break;
 #ifdef SVN_DEBUG
-# if SVN_FS_FS__FORMAT_NUMBER != 6
+# if SVN_FS_FS__FORMAT_NUMBER != 7
 #  error "Need to add a 'case' statement here"
 # endif
 #endif
