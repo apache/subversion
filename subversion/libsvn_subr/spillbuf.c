@@ -121,7 +121,6 @@ init_spillbuf_extended(svn_spillbuf_t *buf,
                        svn_boolean_t delete_on_close,
                        svn_boolean_t spill_all_contents,
                        const char* dirpath,
-                       const char* temp_path,
                        apr_pool_t *result_pool)
 {
   buf->pool = result_pool;
@@ -130,7 +129,6 @@ init_spillbuf_extended(svn_spillbuf_t *buf,
   buf->delete_on_close = delete_on_close;
   buf->spill_all_contents = spill_all_contents;
   buf->dirpath = dirpath;
-  buf->temp_path = temp_path;
 }
 
 /* Common constructor for initializing spillbufs.
@@ -142,7 +140,7 @@ init_spillbuf(svn_spillbuf_t *buf,
               apr_pool_t *result_pool)
 {
   init_spillbuf_extended(buf, blocksize, maxsize,
-                         TRUE, FALSE, NULL, NULL,
+                         TRUE, FALSE, NULL,
                          result_pool);
 }
 
@@ -156,6 +154,21 @@ svn_spillbuf__create(apr_size_t blocksize,
   return buf;
 }
 
+
+svn_spillbuf_t *
+svn_spillbuf__create_extended(apr_size_t blocksize,
+                              apr_size_t maxsize,
+                              svn_boolean_t delete_on_close,
+                              svn_boolean_t spill_all_contents,
+                              const char* dirpath,
+                              apr_pool_t *result_pool)
+{
+  svn_spillbuf_t *buf = apr_pcalloc(result_pool, sizeof(*buf));
+  init_spillbuf_extended(buf, blocksize, maxsize,
+                         delete_on_close, spill_all_contents, dirpath,
+                         result_pool);
+  return buf;
+}
 
 svn_filesize_t
 svn_spillbuf__get_size(const svn_spillbuf_t *buf)
@@ -221,6 +234,19 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
                                         ? svn_io_file_del_on_close
                                         : svn_io_file_del_none),
                                        buf->pool, scratch_pool));
+
+      /* Optionally write the memory contents into the file. */
+      if (buf->spill_all_contents && buf->head != NULL)
+        {
+          mem = buf->head;
+          while (mem != NULL)
+            {
+              SVN_ERR(svn_io_file_write_full(buf->spill, mem->data, mem->size,
+                                             NULL, scratch_pool));
+              mem = mem->next;
+            }
+          buf->spill_start = buf->memory_size;
+        }
     }
 
   /* Once a spill file has been constructed, then we need to put all
