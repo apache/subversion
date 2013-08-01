@@ -546,7 +546,7 @@ test_spillbuf_eof_spill_all(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_spillbuf__file_attrs(apr_pool_t* pool, svn_boolean_t spill_all,
+test_spillbuf__file_attrs(apr_pool_t *pool, svn_boolean_t spill_all,
                           svn_spillbuf_t *buf)
 {
   apr_finfo_t finfo;
@@ -574,7 +574,7 @@ test_spillbuf__file_attrs(apr_pool_t* pool, svn_boolean_t spill_all,
 }
 
 static svn_error_t *
-test_spillbuf_file_attrs(apr_pool_t* pool)
+test_spillbuf_file_attrs(apr_pool_t *pool)
 {
   svn_spillbuf_t *buf = svn_spillbuf__create(4 /* blocksize */,
                                              10 /* maxsize */,
@@ -583,7 +583,7 @@ test_spillbuf_file_attrs(apr_pool_t* pool)
 }
 
 static svn_error_t *
-test_spillbuf_file_attrs_spill_all(apr_pool_t* pool)
+test_spillbuf_file_attrs_spill_all(apr_pool_t *pool)
 {
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           4 /* blocksize */,

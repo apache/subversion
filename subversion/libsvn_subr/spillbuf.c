@@ -120,7 +120,7 @@ init_spillbuf_extended(svn_spillbuf_t *buf,
                        apr_size_t maxsize,
                        svn_boolean_t delete_on_close,
                        svn_boolean_t spill_all_contents,
-                       const char* dirpath,
+                       const char *dirpath,
                        apr_pool_t *result_pool)
 {
   buf->pool = result_pool;
@@ -160,7 +160,7 @@ svn_spillbuf__create_extended(apr_size_t blocksize,
                               apr_size_t maxsize,
                               svn_boolean_t delete_on_close,
                               svn_boolean_t spill_all_contents,
-                              const char* dirpath,
+                              const char *dirpath,
                               apr_pool_t *result_pool)
 {
   svn_spillbuf_t *buf = apr_pcalloc(result_pool, sizeof(*buf));
@@ -536,7 +536,7 @@ svn_spillbuf__reader_create_extended(apr_size_t blocksize,
                                      apr_size_t maxsize,
                                      svn_boolean_t delete_on_close,
                                      svn_boolean_t spill_all_contents,
-                                     const char* dirpath,
+                                     const char *dirpath,
                                      apr_pool_t *result_pool)
 {
   svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
@@ -725,7 +725,7 @@ svn_stream__from_spillbuf_extended(apr_size_t blocksize,
                                    apr_size_t maxsize,
                                    svn_boolean_t delete_on_close,
                                    svn_boolean_t spill_all_contents,
-                                   const char* dirpath,
+                                   const char *dirpath,
                                    apr_pool_t *result_pool)
 {
   return stream_from_reader(
