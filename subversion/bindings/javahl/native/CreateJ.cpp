@@ -30,6 +30,7 @@
 #include "JNIStringHolder.h"
 #include "EnumMapper.h"
 #include "RevisionRange.h"
+#include "RevisionRangeList.h"
 #include "CreateJ.h"
 #include "../include/org_apache_subversion_javahl_types_Revision.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
@@ -1034,58 +1035,6 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 }
 
 jobject
-CreateJ::RevisionRangeList(apr_array_header_t *ranges)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  jclass clazz = env->FindClass("java/util/ArrayList");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  static jmethodID init_mid = 0;
-  if (init_mid == 0)
-    {
-      init_mid = env->GetMethodID(clazz, "<init>", "()V");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  static jmethodID add_mid = 0;
-  if (add_mid == 0)
-    {
-      add_mid = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  jobject jranges = env->NewObject(clazz, init_mid);
-
-  for (int i = 0; i < ranges->nelts; ++i)
-    {
-      // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-      svn_merge_range_t *range =
-          APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-
-      jobject jrange = RevisionRange::makeJRevisionRange(range);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->CallBooleanMethod(jranges, add_mid, jrange);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->DeleteLocalRef(jrange);
-    }
-
-  return env->PopLocalFrame(jranges);
-}
-
-jobject
 CreateJ::StringSet(const apr_array_header_t *strings)
 {
   std::vector<jobject> jstrs;
@@ -1253,7 +1202,7 @@ jobject CreateJ::Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool)
       jstring jpath =
         JNIUtil::makeJString(static_cast<const char*>(path));
       jobject jranges =
-        RevisionRangeList(static_cast<apr_array_header_t*>(val));
+        RevisionRangeList(static_cast<apr_array_header_t*>(val)).toList();
 
       env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
 

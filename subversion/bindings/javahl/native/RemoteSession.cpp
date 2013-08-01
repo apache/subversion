@@ -820,7 +820,25 @@ RemoteSession::checkPath(jstring jpath, jlong jrevision)
   return EnumMapper::mapNodeKind(kind);
 }
 
-// TODO: stat
+jobject
+RemoteSession::stat(jstring jpath, jlong jrevision)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  svn_dirent_t* dirent;
+  SVN_JNI_ERR(svn_ra_stat(m_session, path.c_str(),
+                          svn_revnum_t(jrevision),
+                          &dirent, subPool.getPool()),
+              NULL);
+
+  if (dirent)
+    return CreateJ::DirEntry(path.c_str(), path.c_str(), dirent);
+  return NULL;
+}
 
 namespace {
 apr_array_header_t*
@@ -953,7 +971,114 @@ RemoteSession::getLocations(jstring jpath, jlong jpeg_revision,
   return location_hash_to_map(locations, subPool.getPool());
 }
 
-// TODO: getLocationSegments
+namespace {
+class LocationSegmentHandler
+{
+public:
+  static svn_error_t* callback(svn_location_segment_t* segment,
+                               void* baton, apr_pool_t*)
+    {
+      LocationSegmentHandler* const self =
+        static_cast<LocationSegmentHandler*>(baton);
+      SVN_ERR_ASSERT(self->m_jresult_list != NULL);
+      self->add(segment);
+      SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
+      return SVN_NO_ERROR;
+    }
+
+  LocationSegmentHandler()
+    : m_jresult_list(NULL)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass("java/util/ArrayList");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>", "()V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jobject jresult_list = env->NewObject(cls, mid);
+      if (!JNIUtil::isJavaExceptionThrown() && jresult_list)
+        m_jresult_list = jresult_list;
+    }
+
+  jobject get() const { return m_jresult_list; }
+
+private:
+  void add(svn_location_segment_t* segment)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$LocationSegment");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>",
+                                 "(Ljava/lang/String;JJ)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      static jmethodID mid_add = 0;
+      if (mid_add == 0)
+        {
+          jclass list_cls = env->FindClass("java/util/ArrayList");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+          mid_add = env->GetMethodID(list_cls, "add",
+                                     "(Ljava/lang/Object;)Z");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jstring jpath = JNIUtil::makeJString(segment->path);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      env->CallBooleanMethod(m_jresult_list, mid_add,
+                             env->NewObject(cls, mid, jpath,
+                                            jlong(segment->range_start),
+                                            jlong(segment->range_end)));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      env->DeleteLocalRef(jpath);
+    }
+
+  jobject m_jresult_list;
+};
+} // anonymous namespace
+
+jobject
+RemoteSession::getLocationSegments(jstring jpath, jlong jpeg_revision,
+                                   jlong jstart_revision, jlong jend_revision)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  LocationSegmentHandler handler;
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  SVN_JNI_ERR(svn_ra_get_location_segments(m_session, path.c_str(),
+                                           svn_revnum_t(jpeg_revision),
+                                           svn_revnum_t(jstart_revision),
+                                           svn_revnum_t(jend_revision),
+                                           handler.callback, &handler,
+                                           subPool.getPool()),
+              NULL);
+  return handler.get();
+}
+
 // TODO: getFileRevisions
 // TODO: lock
 // TODO: unlock
