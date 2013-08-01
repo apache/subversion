@@ -178,7 +178,7 @@ Candidate changes:
    Votes:
      +1: rschupp, danielsh
 
- * r1507382, 1509186
+ * r1507382, r1509186
    Allow passing NULL for the config dir to use the default config dir path.
    r1509186 is to update the docstring accordingly.
    Justification: all other APIs that take a config dir param allow NULL as
