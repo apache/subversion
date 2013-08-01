@@ -354,6 +354,11 @@ svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
                                  svn_revnum_t rev,
                                  apr_pool_t *pool);
 
+/* Return TRUE, iff revision REV in FS requires logical addressing. */
+svn_boolean_t
+svn_fs_fs__use_log_addressing(svn_fs_t *fs,
+                              svn_revnum_t rev);
+
 /* For OFFSET within REV in FS, return the position in the respective rev
    or pack file in *ABSOLUTE_POSITION.  Use POOL for allocations. */
 svn_error_t *

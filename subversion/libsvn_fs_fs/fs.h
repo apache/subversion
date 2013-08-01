@@ -105,7 +105,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   6
+#define SVN_FS_FS__FORMAT_NUMBER   7
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -147,6 +147,9 @@ extern "C" {
 
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
+
+/* The minimum format number that supports packed revprops. */
+#define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
@@ -264,9 +267,16 @@ typedef struct fs_fs_data_t
 {
   /* The format number of this FS. */
   int format;
+
   /* The maximum number of files to store per directory (for sharded
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
+
+  /* The first revision that uses logical addressing.  SVN_INVALID_REVNUM
+     if there is no such revision (pre-f7 or non-sharded).  May be a
+     future revision if the current shard started with physical addressing
+     and is not complete, yet. */
+  svn_revnum_t min_log_addressing_rev;
 
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
