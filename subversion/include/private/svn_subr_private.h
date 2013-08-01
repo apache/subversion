@@ -185,7 +185,7 @@ svn_spillbuf__reader_create_extended(apr_size_t blocksize,
                                      apr_size_t maxsize,
                                      svn_boolean_t delete_on_close,
                                      svn_boolean_t spill_all_contents,
-                                     const char* dirpath,
+                                     const char *dirpath,
                                      apr_pool_t *result_pool);
 
 /* Read @a len bytes from @a reader into @a data. The number of bytes
@@ -234,7 +234,7 @@ svn_stream__from_spillbuf_extended(apr_size_t blocksize,
                                    apr_size_t maxsize,
                                    svn_boolean_t delete_on_close,
                                    svn_boolean_t spill_all_contents,
-                                   const char* dirpath,
+                                   const char *dirpath,
                                    apr_pool_t *result_pool);
 
 
