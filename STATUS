@@ -194,7 +194,7 @@ Candidate changes:
    Justification:
      SEGV and Regression from 1.7.
    Votes:
-     +1: breser
+     +1: breser, ivan
 
  * r1507889, r1507891
    davautocheck: use the correct apxs binary by default.
