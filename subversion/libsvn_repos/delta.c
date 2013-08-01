@@ -24,6 +24,7 @@
 
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_delta.h"
@@ -33,7 +34,6 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_props.h"
-#include "svn_private_config.h"
 #include "repos.h"
 
 

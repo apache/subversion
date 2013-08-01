@@ -22,6 +22,7 @@
 
 #include <string.h>
 
+#include "svn_private_config.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_error.h"
@@ -56,8 +57,6 @@
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
-
-#include "svn_private_config.h"
 
 
 /* Initializing a filesystem.  */

@@ -22,7 +22,7 @@
  * ====================================================================
  */
 
-
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_props.h"

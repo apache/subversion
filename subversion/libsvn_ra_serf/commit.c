@@ -24,6 +24,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -36,7 +37,6 @@
 #include "svn_path.h"
 #include "svn_props.h"
 
-#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_skel.h"
@@ -397,10 +397,21 @@ checkout_dir(dir_context_t *dir,
     {
       if (p_dir->added)
         {
+          /* Calculate how much of the relpath to skip to compose the
+           * working_url.  If the relpath is an empty string then the parent
+           * is the root of the commit and we need to just add the entire
+           * relpath to the parent's working_url.  Otherwise we need to skip
+           * the strlen(parent->relpath) + 1 to account for the slash.
+           * It is safe to assume that every added directory has a parent. */
+          dir_context_t *parent = p_dir->parent_dir;
+          size_t skip = strlen(parent->relpath);
+          if (skip)
+            skip++;
+
           /* Implicitly checkout this dir now. */
           dir->working_url = svn_path_url_add_component2(
-                                   dir->parent_dir->working_url,
-                                   dir->name, dir->pool);
+                                   parent->working_url,
+                                   dir->relpath + skip, dir->pool);
           return SVN_NO_ERROR;
         }
       p_dir = p_dir->parent_dir;

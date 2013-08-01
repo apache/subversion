@@ -26,6 +26,7 @@
 
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_types.h"
 #include "svn_time.h"
@@ -45,7 +46,6 @@
 #include "wc_db.h"
 #include "wc-queries.h"  /* for STMT_*  */
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 

@@ -22,6 +22,7 @@ use feature qw/switch say/;
 
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
+use File::Basename qw/basename/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid/;
@@ -29,6 +30,7 @@ use POSIX qw/ctermid/;
 ############### Start of reading values from environment ###############
 
 # Programs we use.
+my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
@@ -39,7 +41,7 @@ my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 #    svn-role:      YES=1 MAY_COMMIT=1
 #    conflicts-bot: YES=1 MAY_COMMIT=0
 #    interactive:   YES=0 MAY_COMMIT=0      (default)
-my $YES = ($ENV{YES} // 0) ? 1 : 0; # batch mode: eliminate prompts, add sleeps
+my $YES = exists $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = 'false';
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
@@ -48,14 +50,16 @@ my $VERBOSE = 0;
 my $DEBUG = (exists $ENV{DEBUG}) ? 'true' : 'false'; # 'set -x', etc
 
 # Username for entering votes.
+my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
 my ($AVAILID) = $ENV{AVAILID} // do {
-  my $SVN_A_O_REALM = 'd3c8a345b14f6a1b42251aef8027ab57';
-  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$SVN_A_O_REALM";
-  1 until <USERNAME> eq "username\n";
-  <USERNAME>;
-  local $_ = <USERNAME>;
-  chomp;
-  $_
+  local $_ = `$SVNAUTH list 2>/dev/null`;
+  ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
+} // do {
+  local $/; # slurp mode
+  my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
+  open(USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$filename")
+  and
+  <USERNAME> =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
 }
 // warn "Username for commits (of votes/merges) not found";
 
@@ -82,8 +86,7 @@ $SVNq =~ s/-q// if $DEBUG eq 'true';
 
 
 sub usage {
-  my $basename = $0;
-  $basename =~ s#.*/##;
+  my $basename = basename $0;
   print <<EOF;
 backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
 CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
@@ -120,7 +123,7 @@ There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
 the environment, this script will iterate the "Approved:" section, and merge
 and commit each entry therein.  If only \$YES is defined, the script will
 merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.  These mode are normally used by the
+to stderr if it notices any conflicts.  These modes are normally used by the
 'svn-role' cron job and/or buildbot, not by human users.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
@@ -136,9 +139,11 @@ sub prompt {
   print $_[0]; shift;
   my %args = @_;
   my $getchar = sub {
+    my $answer;
     ReadMode 'cbreak';
-    my $answer = (ReadKey 0);
+    eval { $answer = (ReadKey 0) };
     ReadMode 'normal';
+    die $@ if $@;
     print $answer;
     return $answer;
   };
@@ -163,8 +168,13 @@ sub merge {
   my $backupfile = "backport_pl.$$.tmp";
 
   if ($entry{branch}) {
-    # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    my $vim_escaped_branch = 
+      join "",
+      map { sprintf '\[%s%s]', $_, ($_ x ($_ eq '\\')) }
+      split //,
+      $entry{branch};
+    $pattern = sprintf '\VBranch: \*\n\? \*\(\.\*\/branches\/\)\?%s',
+                 $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Merge the $entry{header}:";
@@ -219,7 +229,7 @@ fi
 if $MAY_COMMIT; then
   $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
-elif test 1 -ne $YES; then
+elif test -z "\$YES"; then
   echo "Would have committed:"
   echo '[[['
   $SVN status -q
@@ -236,7 +246,7 @@ if $MAY_COMMIT; then
   if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
   if [ -n "\$YES" ]; then sleep 1; fi
-elif test 1 -ne $YES; then
+elif test -z "\$YES"; then
   echo "Would remove $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
@@ -244,7 +254,7 @@ EOF
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{id}} = "sh($?): $!" if $?;
+  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
 
   if (-z $backupfile) {
     unlink $backupfile;
@@ -261,6 +271,12 @@ sub sanitize_branch {
   s/^\s*//;
   s/\s*$//;
   return $_;
+}
+
+sub logsummarysummary {
+  my $entry = shift;
+  join "",
+    $entry->{logsummary}->[0], ('[...]' x (0 < $#{$entry->{logsummary}}))
 }
 
 # TODO: may need to parse other headers too?
@@ -302,7 +318,7 @@ sub parse_entry {
 
   # branch
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch(es)?:\s*//;
+    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
     $branch = sanitize_branch (shift || shift || die "Branch header found without value");
   }
 
@@ -468,6 +484,7 @@ sub revert {
   system "$SVN revert -R ./" . ($YES && $MAY_COMMIT ne 'true'
                              ? " -q" : "");
   move "$STATUS.$$.tmp", $STATUS;
+  $MERGED_SOMETHING = 0;
 }
 
 sub maybe_revert {
@@ -478,6 +495,17 @@ sub maybe_revert {
   (@_ ? exit : return);
 }
 
+sub signal_handler {
+  my $sig = shift;
+
+  # Clean up after prompt()
+  ReadMode 'normal';
+
+  # Fall back to default action
+  delete $SIG{$sig};
+  kill $sig, $$;
+}
+
 sub warning_summary {
   return unless %ERRORS;
 
@@ -485,7 +513,8 @@ sub warning_summary {
   warn "===============\n";
   warn "\n";
   for my $header (keys %ERRORS) {
-    warn "$header: $ERRORS{$header}\n";
+    my $title = logsummarysummary $ERRORS{$header}->[0];
+    warn "$header ($title): $ERRORS{$header}->[1]\n";
   }
 }
 
@@ -543,15 +572,21 @@ sub handle_entry {
         my $output = `$SVN status`;
         my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
-          $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}: "
-                                  . (join ', ', map m#.*/(.*)#, @conflicts);
+          $ERRORS{$entry{id}} //= [\%entry,
+                                   sprintf "Conflicts on %s%s%s",
+                                     '[' x !!$#conflicts,
+                                     (join ', ',
+                                      map { basename $_ }
+                                      @conflicts),
+                                     ']' x !!$#conflicts,
+                                  ];
           say STDERR "Conflicts merging the $entry{header}!";
           say STDERR "";
           say STDERR $output;
           system "$SVN diff -- @conflicts";
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
-          # also committing the dependent in hte same pass.
+          # also committing the dependent in the same pass.
           print "No conflicts merging $entry{id}, but conflicts were "
               ."expected ('Depends:' header set)\n";
         } elsif (@conflicts) {
@@ -563,7 +598,7 @@ sub handle_entry {
   } elsif ($state->{$entry{digest}}) {
     print "\n\n";
     say "Skipping the $entry{header} (remove $STATEFILE to reset):";
-    say $entry{logsummary}->[0], ('[...]' x (0 < $#{$entry{logsummary}}));
+    say logsummarysummary \%entry;
   } else {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
@@ -605,7 +640,7 @@ sub handle_entry {
       }
       when (/^l/i) {
         if ($entry{branch}) {
-            system "$SVN log --stop-on-copy -v -r 0:HEAD -- "
+            system "$SVN log --stop-on-copy -v -g -r 0:HEAD -- "
                    ."$BRANCHES/$entry{branch} "
                    ."| $PAGER";
         } elsif (@{$entry{revisions}}) {
@@ -694,6 +729,7 @@ sub main {
   }
 
   $SIG{INT} = \&maybe_revert unless $YES;
+  $SIG{TERM} = \&signal_handler unless $YES;
 
   my $in_approved = 0;
   while (<STATUS>) {

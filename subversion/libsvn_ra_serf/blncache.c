@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
 #include "svn_types.h"

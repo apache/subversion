@@ -53,6 +53,7 @@
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
+
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"

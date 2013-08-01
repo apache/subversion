@@ -24,6 +24,8 @@
 
 #include <apr_uuid.h>
 
+#include "svn_private_config.h"
+
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_time.h"
@@ -42,8 +44,6 @@
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
-
-#include "svn_private_config.h"
 
 /* The default maximum number of files per directory to store in the
    rev and revprops directory.  The number below is somewhat arbitrary,

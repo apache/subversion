@@ -32,13 +32,13 @@
 #include <apr_xlate.h>
 #include <apr_atomic.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
-#include "svn_private_config.h"
 #include "win32_xlate.h"
 
 #include "private/svn_utf_private.h"

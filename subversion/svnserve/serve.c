@@ -33,8 +33,8 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_compat.h"
-#include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"

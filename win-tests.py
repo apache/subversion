@@ -595,7 +595,7 @@ class Httpd:
     return 'LoadModule ' + name + " " + self._quote(full_path) + '\n'
 
   def _svn_module(self, name, path):
-    full_path = os.path.join(self.abs_objdir, path)
+    full_path = os.path.join(self.abs_builddir, path)
     return 'LoadModule ' + name + ' ' + self._quote(full_path) + '\n'
 
   def _svn_repo(self, name):
@@ -866,7 +866,7 @@ elif test_swig == 'perl':
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-
+  sys.exit(1)
 elif test_swig == 'python':
   failed = False
   swig_dir = os.path.join(abs_builddir, 'swig')

@@ -35,6 +35,7 @@
 #include <apr_general.h>
 #include <apr_signal.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -56,8 +57,6 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
-
-#include "svn_private_config.h"
 
 
 /*** Option Processing ***/

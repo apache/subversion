@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include "svn_private_config.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_ctype.h"
@@ -36,7 +37,6 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_dep_compat.h"
 

@@ -3744,6 +3744,39 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test RevisionRangeList.remove
+     */
+    public void testRevisionRangeListRemove() throws Throwable
+    {
+        RevisionRangeList ranges =
+            new RevisionRangeList(new ArrayList<RevisionRange>());
+        ranges.getRanges()
+            .add(new RevisionRange(Revision.getInstance(1),
+                                   Revision.getInstance(5),
+                                   true));
+        ranges.getRanges()
+            .add(new RevisionRange(Revision.getInstance(7),
+                                   Revision.getInstance(9),
+                                   false));
+        RevisionRangeList eraser =
+            new RevisionRangeList(new ArrayList<RevisionRange>());
+        eraser.getRanges()
+            .add(new RevisionRange(Revision.getInstance(7),
+                                   Revision.getInstance(9),
+                                   true));
+
+        List<RevisionRange> result = ranges.remove(eraser, true).getRanges();
+        assertEquals(2, ranges.getRanges().size());
+        assertEquals(1, eraser.getRanges().size());
+        assertEquals(2, result.size());
+
+        result = ranges.remove(eraser.getRanges(), false);
+        assertEquals(2, ranges.getRanges().size());
+        assertEquals(1, eraser.getRanges().size());
+        assertEquals(1, result.size());
+    }
+
+    /**
      * @return <code>file</code> converted into a -- possibly
      * <code>canonical</code>-ized -- Subversion-internal path
      * representation.

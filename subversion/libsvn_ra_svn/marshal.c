@@ -32,13 +32,13 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
-#include "svn_private_config.h"
 #include "svn_ctype.h"
 #include "svn_time.h"
 

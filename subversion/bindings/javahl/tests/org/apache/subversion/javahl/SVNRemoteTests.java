@@ -170,6 +170,20 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(NodeKind.dir, kind);
     }
 
+    public void testStat() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        DirEntry dirent = session.stat("iota", 1);
+        assertEquals(NodeKind.file, dirent.getNodeKind());
+
+        dirent = session.stat("iota", 0);
+        assertNull(dirent);
+
+        dirent = session.stat("A", 1);
+        assertEquals(NodeKind.dir, dirent.getNodeKind());
+    }
+
     private String getTestRepoUrl()
     {
         return thisTest.getUrl().toASCIIString();
@@ -1082,5 +1096,36 @@ public class SVNRemoteTests extends SVNTests
             catalog.get("Abranch/mu").getRevisions("/A/mu");
         assertEquals(1, ranges.size());
         assertEquals("1-3", ranges.get(0).toString());
+    }
+
+    public void testGetLocations() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        Long expected = new Long(1L);
+        ArrayList<Long> revs = new ArrayList<Long>(3);
+        revs.add(new Long(0L));
+        revs.add(expected);
+
+        Map<Long, String> locs = session.getLocations("A", 1, revs);
+
+        assertEquals(1, locs.size());
+        assertTrue(locs.containsKey(expected));
+        assertEquals("/A", locs.get(expected));
+    }
+
+    public void testGetLocationSegments() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        List<ISVNRemote.LocationSegment> result =
+            session.getLocationSegments("A", 1,
+                                        Revision.SVN_INVALID_REVNUM,
+                                        Revision.SVN_INVALID_REVNUM);
+        assertEquals(1, result.size());
+        ISVNRemote.LocationSegment seg = result.get(0);
+        assertEquals("A", seg.getPath());
+        assertEquals(1, seg.getStartRevision());
+        assertEquals(1, seg.getEndRevision());
     }
 }
