@@ -305,15 +305,10 @@ test_spillbuf_interleaving_spill_all(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_spillbuf_reader(apr_pool_t *pool)
+test_spillbuf__reader(apr_pool_t *pool, svn_spillbuf_reader_t *sbr)
 {
-  svn_spillbuf_reader_t *sbr;
   apr_size_t amt;
   char buf[10];
-
-  sbr = svn_spillbuf__reader_create(4 /* blocksize */,
-                                    100 /* maxsize */,
-                                    pool);
 
   SVN_ERR(svn_spillbuf__reader_write(sbr, "abcdef", 6, pool));
 
@@ -335,13 +330,30 @@ test_spillbuf_reader(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_spillbuf_reader(apr_pool_t *pool)
+{
+  svn_spillbuf_reader_t *sbr = svn_spillbuf__reader_create(4 /* blocksize */,
+                                                           100 /* maxsize */,
+                                                           pool);
+  return test_spillbuf__reader(pool, sbr);
+}
 
 static svn_error_t *
-test_spillbuf_stream(apr_pool_t *pool)
+test_spillbuf_reader_spill_all(apr_pool_t *pool)
 {
-  svn_stream_t *stream = svn_stream__from_spillbuf(8 /* blocksize */,
-                                                   15 /* maxsize */,
-                                                   pool);
+  svn_spillbuf_reader_t *sbr = svn_spillbuf__reader_create_extended(
+                          4 /* blocksize */,
+                          100 /* maxsize */,
+                          TRUE /* delte on close */,
+                          TRUE /* spill all data */,
+                          NULL, pool);
+  return test_spillbuf__reader(pool, sbr);
+}
+
+static svn_error_t *
+test_spillbuf__stream(apr_pool_t *pool, svn_stream_t *stream)
+{
   char readbuf[256];
   apr_size_t readlen;
   apr_size_t writelen;
@@ -382,6 +394,27 @@ test_spillbuf_stream(apr_pool_t *pool)
                   && memcmp(readbuf, "GHIJKL", 6) == 0);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_spillbuf_stream(apr_pool_t *pool)
+{
+  svn_stream_t *stream = svn_stream__from_spillbuf(8 /* blocksize */,
+                                                   15 /* maxsize */,
+                                                   pool);
+  return test_spillbuf__stream(pool, stream);
+}
+
+static svn_error_t *
+test_spillbuf_stream_spill_all(apr_pool_t *pool)
+{
+  svn_stream_t *stream = svn_stream__from_spillbuf_extended(
+                          8 /* blocksize */,
+                          15 /* maxsize */,
+                          TRUE /* delte on close */,
+                          TRUE /* spill all data */,
+                          NULL, pool);
+  return test_spillbuf__stream(pool, stream);
 }
 
 static svn_error_t *
@@ -512,6 +545,55 @@ test_spillbuf_eof_spill_all(apr_pool_t *pool)
   return test_spillbuf__eof(pool, buf);
 }
 
+static svn_error_t *
+test_spillbuf__file_attrs(apr_pool_t* pool, svn_boolean_t spill_all,
+                          svn_spillbuf_t *buf)
+{
+  apr_finfo_t finfo;
+
+  SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
+  SVN_ERR(svn_spillbuf__write(buf, "ghijkl", 6, pool));
+  SVN_ERR(svn_spillbuf__write(buf, "mnopqr", 6, pool));
+
+  /* Check that the spillbuf size is what we expect it to be */
+  SVN_TEST_ASSERT(svn_spillbuf__get_size(buf) == 18);
+
+  /* Check file existence */
+  SVN_TEST_ASSERT(svn_spillbuf__get_filename(buf) != NULL);
+  SVN_TEST_ASSERT(svn_spillbuf__get_file(buf) != NULL);
+
+  /* The size of the file must match expectations */
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
+                               svn_spillbuf__get_file(buf), pool));
+  if (spill_all)
+    SVN_TEST_ASSERT(finfo.size == svn_spillbuf__get_size(buf));
+  else
+    SVN_TEST_ASSERT(finfo.size == (svn_spillbuf__get_size(buf)
+                                   - svn_spillbuf__get_memory_size(buf)));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_spillbuf_file_attrs(apr_pool_t* pool)
+{
+  svn_spillbuf_t *buf = svn_spillbuf__create(4 /* blocksize */,
+                                             10 /* maxsize */,
+                                             pool);
+  return test_spillbuf__file_attrs(pool, FALSE, buf);
+}
+
+static svn_error_t *
+test_spillbuf_file_attrs_spill_all(apr_pool_t* pool)
+{
+  svn_spillbuf_t *buf = svn_spillbuf__create_extended(
+                          4 /* blocksize */,
+                          10 /* maxsize */,
+                          TRUE /* delte on close */,
+                          TRUE /* spill all data */,
+                          NULL, pool);
+  return test_spillbuf__file_attrs(pool, TRUE, buf);
+}
+
 /* The test table.  */
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -530,12 +612,19 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_spillbuf_interleaving_spill_all,
                    "interleaving reads and writes (spill-all-data)"),
     SVN_TEST_PASS2(test_spillbuf_reader, "spill buffer reader test"),
+    SVN_TEST_PASS2(test_spillbuf_reader_spill_all,
+                   "spill buffer reader test (spill-all-data)"),
     SVN_TEST_PASS2(test_spillbuf_stream, "spill buffer stream test"),
+    SVN_TEST_PASS2(test_spillbuf_stream_spill_all,
+                   "spill buffer stream test (spill-all-data)"),
     SVN_TEST_PASS2(test_spillbuf_rwfile, "read/write spill file"),
     SVN_TEST_PASS2(test_spillbuf_rwfile_spill_all,
                    "read/write spill file (spill-all-data)"),
     SVN_TEST_PASS2(test_spillbuf_eof, "validate reaching EOF of spill file"),
     SVN_TEST_PASS2(test_spillbuf_eof_spill_all,
                    "validate reaching EOF (spill-all-data)"),
+    SVN_TEST_PASS2(test_spillbuf_file_attrs, "check spill file properties"),
+    SVN_TEST_PASS2(test_spillbuf_file_attrs_spill_all,
+                   "check spill file properties (spill-all-data)"),
     SVN_TEST_NULL
   };
