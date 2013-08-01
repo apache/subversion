@@ -35,6 +35,7 @@
 #include <apr_portable.h>
 #include <apr_thread_proc.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -45,8 +46,6 @@
 #include "svn_pools.h"
 #include "svn_mergeinfo.h"
 #include "svn_types.h"
-
-#include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"

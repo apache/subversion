@@ -41,6 +41,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
@@ -58,7 +59,6 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_props.h"
-#include "svn_private_config.h"
 #include "cl.h"
 
 #include "private/svn_token.h"

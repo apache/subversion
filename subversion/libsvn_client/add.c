@@ -30,6 +30,8 @@
 #include <string.h>
 #include <apr_lib.h>
 #include <apr_fnmatch.h>
+
+#include "svn_private_config.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -49,8 +51,6 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
-
-#include "svn_private_config.h"
 
 
 

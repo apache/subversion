@@ -60,6 +60,7 @@
 #include <locale.h>
 #include <math.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_nls.h"
 #include "svn_pools.h"

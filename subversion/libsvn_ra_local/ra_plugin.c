@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "ra_local.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
@@ -35,7 +36,6 @@
 #include "svn_version.h"
 #include "svn_cache_config.h"
 
-#include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"

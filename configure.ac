@@ -167,7 +167,6 @@ if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
 fi
 
 SVN_CHECK_FOR_ATOMIC_BUILTINS
-
 if test "$svn_cv_atomic_builtins" = "yes"; then
     AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi

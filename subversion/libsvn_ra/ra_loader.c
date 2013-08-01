@@ -33,6 +33,7 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_types.h"
@@ -52,7 +53,6 @@
 #include "deprecated.h"
 
 #include "private/svn_ra_private.h"
-#include "svn_private_config.h"
 
 
 
