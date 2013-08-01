@@ -163,25 +163,3 @@ AC_DEFUN([SVN_CHECK_FOR_ATOMIC_BUILTINS],
       return 0;
   }], [svn_cv_atomic_builtins=yes], [svn_cv_atomic_builtins=no], [svn_cv_atomic_builtins=no])])
 ])
-
-AC_DEFUN([SVN_CHECK_FOR_DUNDER_BUILTINS],
-[
-  AC_CACHE_CHECK([whether the compiler provides dunder builtins], [svn_cv_dunder_builtins],
-  [
-    AC_RUN_IFELSE([AC_LANG_SOURCE([[
-      int main(int argc)
-      {
-        return (!__builtin_constant_p(argc) && __builtin_constant_p("foobar"))
-               ? 0 /* EXIT_SUCCESS */ : 1 /* EXIT_FAILURE */;
-      }]])],
-      svn_cv_dunder_builtins="yes",
-      svn_cv_dunder_builtins="no",
-      [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-        int main(void){
-      	  return __builtin_constant_p("foobar") ? 0 : 1;
-        }]])],
-        svn_cv_dunder_builtins="yes",
-        svn_cv_dunder_builtins="no")
-      ])
-  ])
-])

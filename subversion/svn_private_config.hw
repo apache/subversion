@@ -48,9 +48,6 @@
 #define SVN_FS_WANT_DB_MINOR    0
 #define SVN_FS_WANT_DB_PATCH    14
 
-/* No support for __builtin_constant_p */
-#define SVN_HAS_DUNDER_BUILTINS 0
-
 /* Path separator for local filesystem */
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
 

@@ -171,11 +171,6 @@ if test "$svn_cv_atomic_builtins" = "yes"; then
     AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi
 
-SVN_CHECK_FOR_DUNDER_BUILTINS
-if test "$svn_cv_dunder_builtins" = "yes"; then
-    AC_DEFINE(SVN_HAS_DUNDER_BUILTINS, 1, [Define if compiler provides __builtin_constant_p])
-fi
-
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution
