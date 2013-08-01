@@ -239,52 +239,19 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
                            const apr_array_header_t *keys,
                            apr_pool_t *pool);
 
-/* Used by the svn_hash_gets macro.
- * Make sure you either defined it before including this header or not
- * at all.
- */
-#if !defined(SVN_HAS_DUNDER_BUILTINS)
-/* If you define it elsewhere to generate better code, the definition
- * below will usually generate a compiler warning if your definition is
- * being encountered _after_ #including this header. 
- */
-#define SVN_HAS_DUNDER_BUILTINS 0
-#endif
-
 /** Shortcut for apr_hash_get() with a const char * key.
  *
  * @since New in 1.8.
  */
-#if SVN_HAS_DUNDER_BUILTINS
-/* We have three use-cases:
-   1. (common) KEY is a string literal.
-   2. (less common) KEY is a const char*.
-   3. (rare) KEY is the result of an expensive function call.
-   For the first, we want to evaluate the string length at compile time.
-   (We use strlen(), which gets optimized to a constant.)  For the other
-   two, however, we want to avoid having the macro multiply-evaluate KEY.
-   So, if our compiler is smart enough (that includes at least gcc and
-   clang), we use __builtin_constant_p() to have our cake and eat it too: */
-#  define svn_hash_gets(ht, key) \
-            apr_hash_get(ht, key, \
-                         __builtin_constant_p(strlen(key)) \
-                         ? strlen(key) : APR_HASH_KEY_STRING)
-#else
-/* ... and when our compiler is anything else, we take the hit and compute the
-   length of string literals at run-time. */
-#  define svn_hash_gets(ht, key) \
+#define svn_hash_gets(ht, key) \
             apr_hash_get(ht, key, APR_HASH_KEY_STRING)
-#endif
 
 /** Shortcut for apr_hash_set() with a const char * key.
  *
  * @since New in 1.8.
  */
-#define svn_hash_sets(ht, key, val)                               \
-  do {                                                            \
-    const void *svn_key__temp = (key);                            \
-    apr_hash_set(ht, svn_key__temp, strlen(svn_key__temp), val);  \
-  } while (0)
+#define svn_hash_sets(ht, key, val) \
+            apr_hash_set(ht, key, APR_HASH_KEY_STRING, val)
 
 /** @} */
 
