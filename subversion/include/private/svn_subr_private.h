@@ -94,6 +94,14 @@ svn_spillbuf__create(apr_size_t blocksize,
                      apr_size_t maxsize,
                      apr_pool_t *result_pool);
 
+/* Create a spill buffer, with extra parameters.  */
+svn_spillbuf_t *
+svn_spillbuf__create_extended(apr_size_t blocksize,
+                              apr_size_t maxsize,
+                              svn_boolean_t delete_on_close,
+                              svn_boolean_t spill_all_contents,
+                              const char* dirpath,
+                              apr_pool_t *result_pool);
 
 /* Determine how much content is stored in the spill buffer.  */
 svn_filesize_t
