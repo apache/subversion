@@ -179,15 +179,6 @@ svn_spillbuf__reader_create(apr_size_t blocksize,
                             apr_size_t maxsize,
                             apr_pool_t *result_pool);
 
-/* Create a spill-buffer with extra parameters, and a reader for it. */
-svn_spillbuf_reader_t *
-svn_spillbuf__reader_create_extended(apr_size_t blocksize,
-                                     apr_size_t maxsize,
-                                     svn_boolean_t delete_on_close,
-                                     svn_boolean_t spill_all_contents,
-                                     const char *dirpath,
-                                     apr_pool_t *result_pool);
-
 /* Read @a len bytes from @a reader into @a data. The number of bytes
    actually read is stored in @a amt. If the content is exhausted, then
    @a amt is set to zero. It will always be non-zero if the spill-buffer
@@ -227,16 +218,6 @@ svn_stream_t *
 svn_stream__from_spillbuf(apr_size_t blocksize,
                           apr_size_t maxsize,
                           apr_pool_t *result_pool);
-/* Return a stream built on top of a spillbuf, using the same arguments as
-   svn_spillbuf__create_extended(). */
-svn_stream_t *
-svn_stream__from_spillbuf_extended(apr_size_t blocksize,
-                                   apr_size_t maxsize,
-                                   svn_boolean_t delete_on_close,
-                                   svn_boolean_t spill_all_contents,
-                                   const char *dirpath,
-                                   apr_pool_t *result_pool);
-
 
 /** @} */
 
