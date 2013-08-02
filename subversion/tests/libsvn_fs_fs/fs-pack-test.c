@@ -58,14 +58,12 @@ write_format(const char *path,
       if (max_files_per_dir)
         contents = apr_psprintf(pool,
                                 "%d\n"
-                                "layout sharded %d\n",
                                 "layout sharded %d\n"
                                 "addressing logical 0\n",
                                 format, max_files_per_dir);
       else
         contents = apr_psprintf(pool,
                                 "%d\n"
-                                "layout linear",
                                 "layout linear\n"
                                 "addressing physical\n",
                                 format);
