@@ -261,7 +261,8 @@ class GeneratorBase:
     # ###
     # ### Currently it's only used by maintainer-mode builds.  If this
     # ### functionality ever moves to release builds, it will have to move
-    # ### to configure-time.
+    # ### to configure-time (but remember that Python cannot be assumed to
+    # ### be available from 'configure').
     import errno
 
     lines = [
