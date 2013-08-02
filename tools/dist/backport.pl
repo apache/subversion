@@ -329,7 +329,16 @@ sub parse_entry {
       if (s/^Notes:\s*//) {
         my $notes = $_;
         $notes .= shift while @_ and $_[0] !~ /^\w/;
-        $accept = $1 if $notes =~ /--accept[ =]([a-z-]+)/;
+        my %accepts = map { $_ => 1 } ($notes =~ /--accept[ =]([a-z-]+)/g);
+        given (scalar keys %accepts) {
+          when (0) { } 
+          when (1) { $accept = [keys %accepts]->[0]; } 
+          default  {
+            warn "Too many --accept values at '",
+                 logsummarysummary({ logsummary => [@logsummary] }),
+                 "'";
+          }
+        }
       }
     }
   }
