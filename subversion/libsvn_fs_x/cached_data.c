@@ -1039,7 +1039,7 @@ build_rep_list(apr_array_header_t **list,
   svn_boolean_t is_cached = FALSE;
   shared_file_t *shared_file = NULL;
 
-  *list = apr_array_make(pool, 1, sizeof(struct rep_state *));
+  *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
 
   /* for the top-level rep, we need the rep_args */
