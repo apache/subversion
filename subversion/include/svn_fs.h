@@ -120,7 +120,15 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_TYPE_BDB                         "bdb"
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
-/** @since New in 1.9. */
+
+/**
+ * EXPERIMENTAL filesystem backend.
+ *
+ * It is not ready for general production use.  Please consult the
+ * respective release notes on suggested usage scenarios.
+ * 
+ * @since New in 1.9.
+ */
 #define SVN_FS_TYPE_FSX                         "fsx"
 
 /** Create repository format compatible with Subversion versions
