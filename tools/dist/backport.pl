@@ -636,6 +636,12 @@ sub handle_entry {
                 or warn "diff failed ($?): $!";
               next;
             }
+            when (/^N/i) {
+              # fall through.
+            }
+            default {
+              next;
+            }
           }
           revert;
           next PROMPT;
