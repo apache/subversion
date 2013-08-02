@@ -535,9 +535,9 @@ sub warning_summary {
   warn "Warning summary\n";
   warn "===============\n";
   warn "\n";
-  for my $header (keys %ERRORS) {
-    my $title = logsummarysummary $ERRORS{$header}->[0];
-    warn "$header ($title): $ERRORS{$header}->[1]\n";
+  for my $id (keys %ERRORS) {
+    my $title = logsummarysummary $ERRORS{$id}->[0];
+    warn "$id ($title): $ERRORS{$id}->[1]\n";
   }
 }
 
@@ -610,10 +610,10 @@ sub handle_entry {
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
           # also committing the dependent in the same pass.
-          print "No conflicts merging $entry{id}, but conflicts were "
+          print "No conflicts merging $entry{header}, but conflicts were "
               ."expected ('Depends:' header set)\n";
         } elsif (@conflicts) {
-          say "Conflicts found merging $entry{id}, as expected.";
+          say "Conflicts found merging $entry{header}, as expected.";
         }
         revert;
       }
