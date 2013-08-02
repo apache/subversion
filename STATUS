@@ -60,10 +60,13 @@ Candidate changes:
      Regression from 1.6. User complained. See issue for details.
    Branch:
      ^/subversion/branches/1.8.x-issue4390
+   Depends:
+     Nomination conflicts with the branch and merges cleanly without it.
+     Branch should probably be removed from the nomination (it was only needed
+     before r1503552).
    Votes:
      +1: stsp, rhuijben
      -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
-     danielsh: merges cleanly without the branch, conflicts with it
 
  * r1501656, r1501702
    Fix the ability to build Debug Build with BDB FS on Windows.
