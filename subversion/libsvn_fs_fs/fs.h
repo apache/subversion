@@ -101,6 +101,8 @@ extern "C" {
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
+#define CONFIG_SECTION_IO                "io"
+#define CONFIG_OPTION_BLOCK_SIZE         "block-size"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -281,6 +283,9 @@ typedef struct fs_fs_data_t
      future revision if the current shard started with physical addressing
      and is not complete, yet. */
   svn_revnum_t min_log_addressing_rev;
+
+  /* Rev / pack file read granularity. */
+  apr_int64_t block_size;
 
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
