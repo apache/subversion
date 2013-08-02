@@ -185,8 +185,15 @@ sub merge {
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
-    $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
-    say $logmsg_fh "Merge $entry{header} from trunk:";
+    $mergeargs = join " ",
+      ($entry{accept} ? "--accept=$entry{accept}" : ()),
+      (map { "-c$_" } @{$entry{revisions}}),
+      '--',
+      '^/subversion/trunk';
+    say $logmsg_fh
+      "Merge $entry{header} from trunk",
+      $entry{accept} ? ", with --accept=$entry{accept}" : "",
+      ":";
     say $logmsg_fh "";
   } else {
     die "Don't know how to call $entry{header}";
@@ -279,6 +286,7 @@ sub parse_entry {
   my $raw = shift;
   my @lines = @_;
   my $depends;
+  my $accept;
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
@@ -307,14 +315,21 @@ sub parse_entry {
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
-  # depends
-  # TODO: parse the value of this.
-  $depends = grep /^Depends:/, @_;
-
-  # branch
+  # depends, branch, notes
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
-    $branch = sanitize_branch (shift || shift || die "Branch header found without value");
+    given (shift) {
+      when (/^Depends:/) {
+        $depends++;
+      }
+      if (s/^Branch:\s*//) {
+        $branch = sanitize_branch ($_ || shift || die "Branch header found without value");
+      }
+      if (s/^Notes:\s*//) {
+        my $notes = $_;
+        $notes .= shift while @_ and $_[0] !~ /^\w/;
+        $accept = $1 if $notes =~ /--accept[ =]([a-z-]+)/;
+      }
+    }
   }
 
   # Compute a header.
@@ -333,6 +348,9 @@ sub parse_entry {
   }
   my $header_start = ($header =~ /^the/ ? ucfirst($header) : $header);
 
+  warn "Entry has both branch '$branch' and --accept=$accept specified\n"
+    if $branch and $accept;
+
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
@@ -343,6 +361,7 @@ sub parse_entry {
     id => $id,
     votes => [@votes],
     entry => [@lines],
+    accept => $accept,
     raw => $raw,
     digest => digest_string($raw),
   );
@@ -611,6 +630,7 @@ sub handle_entry {
     say "\n>>> $entry{header_start}:";
     say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
     say "$BRANCHES/$entry{branch}" if $entry{branch};
+    say "--accept=$entry{accept}" if $entry{accept};
     say "";
     say for @{$entry{logsummary}};
     say "";
