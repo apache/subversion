@@ -211,7 +211,7 @@ static svn_error_t *record(apr_hash_t *records,
    */
   key = apr_pcalloc(result_pool, sizeof(*key));
   key->revision = rep->revision;
-  key->offset = rep->offset;
+  key->offset = rep->item_index;
 
   /* Update or create the value. */
   if ((value = apr_hash_get(records, key, sizeof(*key))))

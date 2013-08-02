@@ -1790,7 +1790,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   if (base_rep)
     {
       header.base_revision = base_rep->revision;
-      header.base_offset = base_rep->offset;
+      header.base_item_index = base_rep->item_index;
       header.base_length = base_rep->size;
       header.type = svn_fs_fs__rep_delta;
     }
@@ -1956,7 +1956,7 @@ rep_write_contents_close(void *baton)
   apr_off_t offset;
 
   rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
-  rep->offset = b->rep_offset;
+  rep->item_index = b->rep_offset;
 
   /* Close our delta stream so the last bits of svndiff are written
      out. */
@@ -2243,7 +2243,7 @@ write_hash_rep(representation_t *rep,
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
-      rep->offset = offset;
+      rep->item_index = offset;
 
       /* update the representation */
       rep->size = whb->size;
@@ -2299,7 +2299,7 @@ write_hash_delta_rep(representation_t *rep,
   if (base_rep)
     {
       header.base_revision = base_rep->revision;
-      header.base_offset = base_rep->offset;
+      header.base_item_index = base_rep->item_index;
       header.base_length = base_rep->size;
       header.type = svn_fs_fs__rep_delta;
     }
@@ -2354,7 +2354,7 @@ write_hash_delta_rep(representation_t *rep,
       SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
-      rep->offset = offset;
+      rep->item_index = offset;
 
       /* update the representation */
       rep->expanded_size = whb->size;
@@ -2493,7 +2493,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   node_revision_t *noderev;
   apr_off_t my_offset;
   const svn_fs_id_t *new_id;
-  svn_fs_fs__id_part_t node_id, copy_id, rev_offset;
+  svn_fs_fs__id_part_t node_id, copy_id, rev_item;
   fs_fs_data_t *ffd = fs->fsap_data;
   *new_id_p = NULL;
 
@@ -2566,7 +2566,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           /* See issue 3845.  Some unknown mechanism caused the
              protorev file to get truncated, so check for that
              here.  */
-          if (noderev->data_rep->offset + noderev->data_rep->size
+          if (noderev->data_rep->item_index + noderev->data_rep->size
               > initial_offset)
             return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                                     _("Truncated protorev file detected"));
@@ -2601,10 +2601,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     noderev->copyroot_rev = rev;
 
   SVN_ERR(svn_fs_fs__get_file_offset(&my_offset, file, pool));
-  rev_offset.number = my_offset;
+  rev_item.number = my_offset;
 
-  rev_offset.revision = rev;
-  new_id = svn_fs_fs__id_rev_create(&node_id, &copy_id, &rev_offset, pool);
+  rev_item.revision = rev;
+  new_id = svn_fs_fs__id_rev_create(&node_id, &copy_id, &rev_item, pool);
 
   noderev->id = new_id;
 
@@ -2911,7 +2911,7 @@ commit_body(void *baton, apr_pool_t *pool)
 
   /* Write the final line. */
   trailer = svn_fs_fs__unparse_revision_trailer
-               (svn_fs_fs__id_offset(new_root_id),
+               (svn_fs_fs__id_item(new_root_id),
                 changed_path_offset,
                 pool);
   SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,

@@ -248,8 +248,8 @@ typedef struct representation_cache_key_t
   /* Packed or non-packed representation? */
   svn_boolean_t is_packed;
 
-  /* Item offset of the representation */
-  apr_uint64_t offset;
+  /* Item index of the representation */
+  apr_uint64_t item_index;
 } representation_cache_key_t;
 
 /* Key type that identifies a txdelta window. */
@@ -261,8 +261,8 @@ typedef struct window_cache_key_t
   /* Window number within that representation */
   apr_int32_t chunk_index;
 
-  /* Offset of the representation within REVISION */
-  apr_uint64_t offset;
+  /* Item index of the representation */
+  apr_uint64_t item_index;
 } window_cache_key_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
@@ -343,7 +343,7 @@ typedef struct fs_fs_data_t
      the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
-  /* Cache for node_revision_t objects; the key is (revision, id offset) */
+  /* Cache for node_revision_t objects; the key is (revision, item_index) */
   svn_cache__t *node_revision_cache;
 
   /* Cache for change lists as APR arrays of change_t * objects; the key
@@ -351,7 +351,7 @@ typedef struct fs_fs_data_t
   svn_cache__t *changes_cache;
 
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
-     (revision, is_packed, offset) set */
+     (revision, item index) pair */
   svn_cache__t *rep_header_cache;
 
   /* Cache for svn_mergeinfo_t objects; the key is a combination of
@@ -460,8 +460,8 @@ typedef struct representation_t
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
-  /* Offset into the revision file where it is located. */
-  svn_filesize_t offset;
+  /* Item index with the the revision. */
+  apr_uint64_t item_index;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
