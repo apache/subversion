@@ -25,7 +25,7 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
-use POSIX qw/ctermid/;
+use POSIX qw/ctermid strftime/;
 
 ############### Start of reading values from environment ###############
 
@@ -165,7 +165,9 @@ sub merge {
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my ($mergeargs, $pattern);
 
-  my $backupfile = "backport_pl.$$.tmp";
+  # Include the time so it's easier to find the interesting backups.
+  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
+  die if -s $backupfile;
 
   if ($entry{branch}) {
     my $vim_escaped_branch = 
@@ -177,22 +179,24 @@ sub merge {
                  $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
-      say $logmsg_fh "Merge the $entry{header}:";
+      say $logmsg_fh "Merge $entry{header}:";
     } else {
       $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-      say $logmsg_fh "Reintegrate the $entry{header}:";
+      say $logmsg_fh "Reintegrate $entry{header}:";
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
-    $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
-    if (@{$entry{revisions}} > 1) {
-      say $logmsg_fh "Merge the $entry{header} from trunk:";
-      say $logmsg_fh "";
-    } else {
-      say $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
-      say $logmsg_fh "";
-    }
+    $mergeargs = join " ",
+      ($entry{accept} ? "--accept=$entry{accept}" : ()),
+      (map { "-c$_" } @{$entry{revisions}}),
+      '--',
+      '^/subversion/trunk';
+    say $logmsg_fh
+      "Merge $entry{header} from trunk",
+      $entry{accept} ? ", with --accept=$entry{accept}" : "",
+      ":";
+    say $logmsg_fh "";
   } else {
     die "Don't know how to call $entry{header}";
   }
@@ -284,6 +288,7 @@ sub parse_entry {
   my $raw = shift;
   my @lines = @_;
   my $depends;
+  my $accept;
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
@@ -312,33 +317,62 @@ sub parse_entry {
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
-  # depends
-  # TODO: parse the value of this.
-  $depends = grep /^Depends:/, @_;
-
-  # branch
+  # depends, branch, notes
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch:\s*//;
-    $branch = sanitize_branch (shift || shift || die "Branch header found without value");
+    given (shift) {
+      when (/^Depends:/) {
+        $depends++;
+      }
+      if (s/^Branch:\s*//) {
+        $branch = sanitize_branch ($_ || shift || die "Branch header found without value");
+      }
+      if (s/^Notes:\s*//) {
+        my $notes = $_;
+        $notes .= shift while @_ and $_[0] !~ /^\w/;
+        my %accepts = map { $_ => 1 } ($notes =~ /--accept[ =]([a-z-]+)/g);
+        given (scalar keys %accepts) {
+          when (0) { } 
+          when (1) { $accept = [keys %accepts]->[0]; } 
+          default  {
+            warn "Too many --accept values at '",
+                 logsummarysummary({ logsummary => [@logsummary] }),
+                 "'";
+          }
+        }
+      }
+    }
   }
 
   # Compute a header.
   my ($header, $id);
-  $header = "r$revisions[0] group" if @revisions;
-  $id = "r$revisions[0]"           if @revisions;
-  $header = "$branch branch"       if $branch;
-  $id = $branch                    if $branch;
-  warn "No header for [@lines]" unless $header;
+  if ($branch) {
+    $header = "the $branch branch";
+    $id = $branch;
+  } elsif (@revisions == 1) {
+    $header = "r$revisions[0]";
+    $id = "r$revisions[0]";
+  } elsif (@revisions) {
+    $header = "the r$revisions[0] group";
+    $id = "r$revisions[0]";
+  } else {
+    die "Entry '$raw' has neither revisions nor branch";
+  }
+  my $header_start = ($header =~ /^the/ ? ucfirst($header) : $header);
+
+  warn "Entry has both branch '$branch' and --accept=$accept specified\n"
+    if $branch and $accept;
 
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
     branch => $branch,
     header => $header,
+    header_start => $header_start,
     depends => $depends,
     id => $id,
     votes => [@votes],
     entry => [@lines],
+    accept => $accept,
     raw => $raw,
     digest => digest_string($raw),
   );
@@ -449,12 +483,12 @@ sub vote {
        ? (
          ( $_->{vote} eq 'edit'
            ? "Edit$words_edit the $_->{entry}->{id} entry"
-           : "Vote $_->{vote} on the $_->{entry}->{header}$words_vote"
+           : "Vote $_->{vote} on $_->{entry}->{header}$words_vote"
          )
          . "."
          )
       : # exists only in $approved
-        "Approve the $_->{entry}->{header}."
+        "Approve $_->{entry}->{header}."
       } @votesarray;
     (@sentences == 1)
     ? $sentences[0]
@@ -512,9 +546,9 @@ sub warning_summary {
   warn "Warning summary\n";
   warn "===============\n";
   warn "\n";
-  for my $header (keys %ERRORS) {
-    my $title = logsummarysummary $ERRORS{$header}->[0];
-    warn "$header ($title): $ERRORS{$header}->[1]\n";
+  for my $id (keys %ERRORS) {
+    my $title = logsummarysummary $ERRORS{$id}->[0];
+    warn "$id ($title): $ERRORS{$id}->[1]\n";
   }
 }
 
@@ -580,33 +614,34 @@ sub handle_entry {
                                       @conflicts),
                                      ']' x !!$#conflicts,
                                   ];
-          say STDERR "Conflicts merging the $entry{header}!";
+          say STDERR "Conflicts merging $entry{header}!";
           say STDERR "";
           say STDERR $output;
           system "$SVN diff -- @conflicts";
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
           # also committing the dependent in the same pass.
-          print "No conflicts merging $entry{id}, but conflicts were "
+          print "No conflicts merging $entry{header}, but conflicts were "
               ."expected ('Depends:' header set)\n";
         } elsif (@conflicts) {
-          say "Conflicts found merging $entry{id}, as expected.";
+          say "Conflicts found merging $entry{header}, as expected.";
         }
         revert;
       }
     }
   } elsif ($state->{$entry{digest}}) {
     print "\n\n";
-    say "Skipping the $entry{header} (remove $STATEFILE to reset):";
+    say "Skipping $entry{header} (remove $STATEFILE to reset):";
     say logsummarysummary \%entry;
   } else {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
     PROMPT: while (1) {
     say "";
-    say "\n>>> The $entry{header}:";
+    say "\n>>> $entry{header_start}:";
     say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
     say "$BRANCHES/$entry{branch}" if $entry{branch};
+    say "--accept=$entry{accept}" if $entry{accept};
     say "";
     say for @{$entry{logsummary}};
     say "";
@@ -630,6 +665,12 @@ sub handle_entry {
             when (/^d/) {
               system("$SVN diff | $PAGER") == 0
                 or warn "diff failed ($?): $!";
+              next;
+            }
+            when (/^N/i) {
+              # fall through.
+            }
+            default {
               next;
             }
           }
