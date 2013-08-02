@@ -25,7 +25,7 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
-use POSIX qw/ctermid/;
+use POSIX qw/ctermid strftime/;
 
 ############### Start of reading values from environment ###############
 
@@ -165,7 +165,9 @@ sub merge {
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my ($mergeargs, $pattern);
 
-  my $backupfile = "backport_pl.$$.tmp";
+  # Include the time so it's easier to find the interesting backups.
+  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
+  die if -s $backupfile;
 
   if ($entry{branch}) {
     my $vim_escaped_branch = 
