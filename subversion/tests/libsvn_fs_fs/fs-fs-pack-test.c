@@ -795,6 +795,11 @@ test_info(const svn_test_opts_t *opts,
   const svn_fs_fsfs_info_t *fsfs_info;
   const svn_fs_info_placeholder_t *info;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+    return SVN_NO_ERROR;
+
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
