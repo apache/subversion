@@ -686,6 +686,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Now we've got a format number no matter what. */
   ffd->format = format;
   ffd->max_files_per_dir = max_files_per_dir;
+  ffd->min_log_addressing_rev = min_log_addressing_rev;
 
   /* Read in and cache the repository uuid. */
   SVN_ERR(svn_io_file_open(&uuid_file, path_uuid(fs, pool),

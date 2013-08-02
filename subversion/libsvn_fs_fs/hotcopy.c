@@ -868,6 +868,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
   dst_fs->path = apr_pstrdup(pool, dst_path);
 
   dst_ffd->max_files_per_dir = src_ffd->max_files_per_dir;
+  dst_ffd->min_log_addressing_rev = src_ffd->min_log_addressing_rev;
   dst_ffd->config = src_ffd->config;
   dst_ffd->format = src_ffd->format;
 
