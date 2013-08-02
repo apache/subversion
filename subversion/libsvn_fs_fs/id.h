@@ -41,7 +41,7 @@ typedef struct svn_fs_fs__id_part_t
   svn_revnum_t revision;
 
   /* sub-id value relative to REVISION.  Its interpretation depends on
-     the part itself.  In rev_offset, it is the offset value, in others
+     the part itself.  In rev_item, it is the index_index value, in others
      it represents a unique counter value. */
   apr_uint64_t number;
 } svn_fs_fs__id_part_t;
@@ -84,16 +84,16 @@ const svn_fs_fs__id_part_t *svn_fs_fs__id_copy_id(const svn_fs_id_t *id);
 /* Get the "txn id" portion of ID, or NULL if it is a permanent ID. */
 const svn_fs_fs__id_part_t *svn_fs_fs__id_txn_id(const svn_fs_id_t *id);
 
-/* Get the "rev,offset" portion of ID. */
-const svn_fs_fs__id_part_t *svn_fs_fs__id_rev_offset(const svn_fs_id_t *id);
+/* Get the "rev,item" portion of ID. */
+const svn_fs_fs__id_part_t *svn_fs_fs__id_rev_item(const svn_fs_id_t *id);
 
 /* Get the "rev" portion of ID, or SVN_INVALID_REVNUM if it is a
    transaction ID. */
 svn_revnum_t svn_fs_fs__id_rev(const svn_fs_id_t *id);
 
-/* Access the "offset" portion of the ID, or 0 if it is a transaction
+/* Access the "item" portion of the ID, or 0 if it is a transaction
    ID. */
-apr_uint64_t svn_fs_fs__id_offset(const svn_fs_id_t *id);
+apr_uint64_t svn_fs_fs__id_item(const svn_fs_id_t *id);
 
 /* Return TRUE, if this is a transaction ID. */
 svn_boolean_t svn_fs_fs__id_is_txn(const svn_fs_id_t *id);
@@ -129,11 +129,11 @@ svn_fs_id_t *svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
                                       const svn_fs_fs__id_part_t *txn_id,
                                       apr_pool_t *pool);
 
-/* Create a permanent ID based on NODE_ID, COPY_ID and REV_OFFSET,
+/* Create a permanent ID based on NODE_ID, COPY_ID and REV_ITEM,
    allocated in POOL. */
 svn_fs_id_t *svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
                                       const svn_fs_fs__id_part_t *copy_id,
-                                      const svn_fs_fs__id_part_t *rev_offset,
+                                      const svn_fs_fs__id_part_t *rev_item,
                                       apr_pool_t *pool);
 
 /* Return a copy of ID, allocated from POOL. */

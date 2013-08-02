@@ -632,18 +632,22 @@ svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_fs_t *fs,
                        svn_revnum_t rev,
-                       apr_off_t offset,
+                       const svn_fs_fs__id_part_t *txn_id,
+                       apr_uint64_t item_index,
                        apr_pool_t *pool)
 {
-  if (svn_fs_fs__is_packed_rev(fs, rev))
+  /* for now, we only implement physical addressing */
+
+  if (txn_id == NULL && svn_fs_fs__is_packed_rev(fs, rev))
     {
       apr_off_t rev_offset;
       SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
-      *absolute_position = rev_offset + offset;
+      *absolute_position = rev_offset + item_index;
     }
   else
     {
-      *absolute_position = offset;
+      /* for TXNs and non-packed revs, item_index *is* the offset */
+      *absolute_position = item_index;
     }
 
   return SVN_NO_ERROR;

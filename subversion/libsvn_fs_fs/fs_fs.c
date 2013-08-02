@@ -952,7 +952,7 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a == NULL || b == NULL)
     return FALSE;
 
-  if (a->offset != b->offset)
+  if (a->item_index != b->item_index)
     return FALSE;
 
   if (a->revision != b->revision)

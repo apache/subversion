@@ -52,9 +52,9 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
 
   const svn_fs_fs__id_part_t *lhs_rev_item
-    = svn_fs_fs__id_rev_offset(lhs->id);
+    = svn_fs_fs__id_rev_item(lhs->id);
   const svn_fs_fs__id_part_t *rhs_rev_item
-    = svn_fs_fs__id_rev_offset(rhs->id);
+    = svn_fs_fs__id_rev_item(rhs->id);
 
   /* decreasing ("reverse") order on revs */
   if (lhs_rev_item->revision != rhs_rev_item->revision)

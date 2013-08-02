@@ -551,7 +551,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     }
 
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep->offset = (apr_off_t)val;
+  rep->item_index = (apr_uint64_t)val;
 
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -831,17 +831,17 @@ svn_fs_fs__unparse_representation(representation_t *rep,
 
   if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || !rep->has_sha1)
     return svn_stringbuf_createf
-            (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+            (pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
-             rep->revision, rep->offset, rep->size,
+             rep->revision, rep->item_index, rep->size,
              rep->expanded_size,
              format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
 
   svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
-          (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+          (pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
            " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
-           rep->revision, rep->offset, rep->size,
+           rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
@@ -968,7 +968,7 @@ svn_fs_fs__read_rep_header(svn_fs_fs__rep_header_t **header,
   if (! str)
     goto error;
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  (*header)->base_offset = (apr_off_t)val;
+  (*header)->base_item_index = (apr_off_t)val;
 
   str = svn_cstring_tokenize(" ", &last_str);
   if (! str)
@@ -1003,7 +1003,7 @@ svn_fs_fs__write_rep_header(svn_fs_fs__rep_header_t *header,
       default:
         text = apr_psprintf(pool, REP_DELTA " %ld %" APR_OFF_T_FMT " %"
                             SVN_FILESIZE_T_FMT "\n",
-                            header->base_revision, header->base_offset,
+                            header->base_revision, header->base_item_index,
                             header->base_length);
     }
 
