@@ -104,7 +104,11 @@ extern "C" {
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
-   independent of any other FS back ends. */
+   independent of any other FS back ends.
+
+   Note: If you bump this, please update the switch statement in
+         svn_fs_fs__create() as well.
+ */
 #define SVN_FS_FS__FORMAT_NUMBER   7
 
 /* The minimum format number that supports svndiff version 1.  */

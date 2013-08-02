@@ -1080,6 +1080,9 @@ svn_fs_fs__create(svn_fs_t *fs,
       /* select format number */
       switch(compatible_version->minor)
         {
+          case 0: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                 _("FSFS is not compatible with Subversion prior to 1.1"));
+
           case 1:
           case 2:
           case 3: format = 1;
@@ -1095,7 +1098,7 @@ svn_fs_fs__create(svn_fs_t *fs,
           case 7: format = 4;
                   break;
 
-          case 8: format = 5;
+          case 8: format = 6;
                   break;
 
           default:format = SVN_FS_FS__FORMAT_NUMBER;
