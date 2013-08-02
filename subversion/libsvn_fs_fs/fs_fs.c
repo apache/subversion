@@ -355,14 +355,14 @@ read_format(int *pformat,
          svn_dirent_local_style(path, pool), buf->data);
     }
 
-  /* Non-shared repositories never use logical addressing.
+  /* Non-sharded repositories never use logical addressing.
    * If the format file is inconsistent in that respect, something
    * probably went wrong.
    */
-  if (min_log_addressing_rev != SVN_INVALID_REVNUM && !*max_files_per_dir)
+  if (*min_log_addressing_rev != SVN_INVALID_REVNUM && !*max_files_per_dir)
     return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-       _("'%s' specifies logical addressing for a non-shared repository"),
-       svn_dirent_local_style(path, pool), buf->data);
+       _("'%s' specifies logical addressing for a non-sharded repository"),
+       svn_dirent_local_style(path, pool));
 
   return SVN_NO_ERROR;
 }
