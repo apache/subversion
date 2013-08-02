@@ -526,6 +526,21 @@ read_config(fs_fs_data_t *ffd,
       ffd->compress_packed_revprops = FALSE;
     }
 
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->block_size,
+                                   CONFIG_SECTION_IO,
+                                   CONFIG_OPTION_BLOCK_SIZE,
+                                   64));
+
+      ffd->block_size *= 0x400;
+    }
+  else
+    {
+      /* should be irrelevant but we initialize it anyway */
+      ffd->block_size = 0x1000;
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -660,6 +675,24 @@ write_config(svn_fs_t *fs,
 "### unless you often modify revprops after packing."                        NL
 "### Compressing packed revprops is disabled by default."                    NL
 "# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
+""                                                                           NL
+"[" CONFIG_SECTION_IO "]"                                                    NL
+"### Parameters in this section control the data access granularity in"      NL
+"### format 7 repositories and later.  The defaults should translate into"   NL
+"### decent performance over a wide range of setups."                        NL
+"###"                                                                        NL
+"### When a specific piece of information needs to be read from disk,  a"    NL
+"### data block is being read at once and its contents are being cached."    NL
+"### If the repository is being stored on a RAID,  the block size should"    NL
+"### be either 50% or 100% of RAID block size / granularity.  Also,  your"   NL
+"### file system (clusters) should be properly aligned and sized.  In that"  NL
+"### setup, each access will hit only one disk (minimizes I/O load) but"     NL
+"### uses all the data provided by the disk in a single access."             NL
+"### For SSD-based storage systems,  slightly lower values around 16 kB"     NL
+"### may improve latency while still maximizing throughput."                 NL
+"### Can be changed at any time but must be a power of 2."                   NL
+"### block-size is 64 kBytes by default."                                    NL
+"# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
