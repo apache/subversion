@@ -20,7 +20,14 @@
  * ====================================================================
  */
 
+#ifndef SVN_LIBSVN_FS__REVPROPS_H
+#define SVN_LIBSVN_FS__REVPROPS_H
+
 #include "svn_fs.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* Write the CURRENT revprop generation to disk for repository FS.
  */
@@ -166,3 +173,9 @@ svn_fs_x__delete_revprops_shard(const char *shard_path,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS__REVPROPS_H */
