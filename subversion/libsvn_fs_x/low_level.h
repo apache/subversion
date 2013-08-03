@@ -20,10 +20,17 @@
  * ====================================================================
  */
 
+#ifndef SVN_LIBSVN_FS__LOW_LEVEL_H
+#define SVN_LIBSVN_FS__LOW_LEVEL_H
+
 #include "svn_fs.h"
 
 #include "fs_x.h"
 #include "id.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* Kinds that a node-rev can be. */
 #define SVN_FS_X__KIND_FILE          "file"
@@ -159,3 +166,8 @@ svn_fs_x__write_changes(svn_stream_t *stream,
                         svn_boolean_t terminate_list,
                         apr_pool_t *pool);
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS__LOW_LEVEL_H */
