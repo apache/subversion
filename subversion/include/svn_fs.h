@@ -121,6 +121,16 @@ typedef struct svn_fs_t svn_fs_t;
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
+/**
+ * EXPERIMENTAL filesystem backend.
+ *
+ * It is not ready for general production use.  Please consult the
+ * respective release notes on suggested usage scenarios.
+ * 
+ * @since New in 1.9.
+ */
+#define SVN_FS_TYPE_FSX                         "fsx"
+
 /** Create repository format compatible with Subversion versions
  * earlier than 1.4.
  *
@@ -148,6 +158,18 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.8.
  */
 #define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.9.  The value must be a version in the same format
+ * as #SVN_VER_NUMBER.
+ *
+ * @note The @c patch component would often be ignored, due to our forward
+ * compatibility promises within minor release lines.  It should therefore
+ * usually be set to @c 0.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
 /** @} */
 
 
@@ -222,6 +244,7 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  *
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
+ *   SVN_FS_TYPE_FSX   Experimental filesystem implementation
  *
  * If @a fs_config is @c NULL or does not contain a value for
  * #SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
@@ -2674,6 +2697,32 @@ typedef struct svn_fs_fsfs_info_t {
   /* If you add fields here, check whether you need to extend svn_fs_info()
      or svn_fs_info_dup(). */
 } svn_fs_fsfs_info_t;
+
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSX filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_fs_fsx_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSX. */
+  const char *fs_type;
+
+  /** Shard size, always > 0. */
+  int shard_size;
+
+  /** The smallest revision which is not in a pack file. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+
+} svn_fs_fsx_info_t;
 
 /** @see svn_fs_info()
  * @since New in 1.9. */
