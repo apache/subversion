@@ -20,8 +20,15 @@
  * ====================================================================
  */
 
+#ifndef SVN_PACKED_DATA_H
+#define SVN_PACKED_DATA_H
+
 #include "svn_string.h"
 #include "svn_io.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* This API provides Yet Another Serialization Framework.
  *
@@ -240,3 +247,9 @@ svn_packed__data_read(svn_packed__data_root_t **root_p,
                       svn_stream_t *stream,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_PACKED_DATA_H */
