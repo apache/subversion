@@ -344,7 +344,7 @@ pack_shard(const char *revs_dir,
     }
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard. */
-  SVN_ERR(svn_fs_fs__write_revnum_file(fs,
+  SVN_ERR(svn_fs_fs__write_min_unpacked_rev(fs,
                           (svn_revnum_t)((shard + 1) * max_files_per_dir),
                           pool));
   ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
