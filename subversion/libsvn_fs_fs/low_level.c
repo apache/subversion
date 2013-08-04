@@ -598,7 +598,7 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.txn_id, str));
+  SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.noderev_txn_id, str));
 
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL || *str != '_')
@@ -846,7 +846,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
                          !rep->has_sha1, pool),
-           svn_fs_fs__id_txn_unparse(&rep->uniquifier.txn_id, pool),
+           svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id, pool),
            buffer);
 
 #undef DISPLAY_MAYBE_NULL_CHECKSUM

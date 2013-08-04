@@ -457,7 +457,7 @@ typedef struct representation_t
    * the fulltext size is equal to representation size in the rev file, */
   svn_filesize_t expanded_size;
 
-  /* Is this representation a transaction? */
+  /* Is this a representation (still) within a transaction? */
   svn_fs_fs__id_part_t txn_id;
 
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
@@ -466,7 +466,10 @@ typedef struct representation_t
      intra-node uniqification content. */
   struct
     {
-      svn_fs_fs__id_part_t txn_id;
+      /* unique context, i.e. txn ID, in which the noderev (!) got created */
+      svn_fs_fs__id_part_t noderev_txn_id;
+
+      /* unique value within that txn */
       apr_uint64_t number;
     } uniquifier;
 } representation_t;
