@@ -29,9 +29,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* A rev node ID in FSFS consists of a 3 of sub-IDs ("parts") that consist
- * of a creation REVISION number and some revision-local counter value
- * (NUMBER).  Old-style ID parts use global counter values.
+/* Node-revision IDs in FSFS consist of 3 of sub-IDs ("parts") that consist
+ * of a creation REVISION number and some revision- / transaction-local
+ * counter value (NUMBER).  Old-style ID parts use global counter values.
+ *
+ * The parts are: node_id, copy_id and txn_id for in-txn IDs as well as
+ * node_id, copy_id and rev_offset for in-revision IDs.  This struct the
+ * data structure used for each of those parts.
  */
 typedef struct svn_fs_fs__id_part_t
 {
