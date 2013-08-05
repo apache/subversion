@@ -470,7 +470,7 @@ public interface ISVNRemote
             throws ClientException;
 
     /**
-     * The object returned from {@link getLocationSegments}.
+     * The object returned from {@link #getLocationSegments}.
      */
     public static class LocationSegment implements java.io.Serializable
     {
@@ -532,18 +532,119 @@ public interface ISVNRemote
                                               long endRevision)
             throws ClientException;
 
-    // TODO: getFileRevisions
+    /**
+     * The object returned by {@link #getFileRevisions}.
+     */
+    public final class FileRevision  implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is a incompatible change
+        // made to this class.
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Private constructor called by the native implementation.
+         */
+        private FileRevision(String path, long revision,
+                             boolean resultOfMerge,
+                             Map<String, byte[]> revisionProperties,
+                             Map<String, byte[]> propertiesDelta)
+        {
+            this.path = path;
+            this.revision = revision;
+            this.resultOfMerge = resultOfMerge;
+            this.revisionProperties = revisionProperties;
+            this.propertiesDelta = propertiesDelta;
+        }
+
+        /**
+         * @return The path of the file in this revision.
+         */
+        public String getPath() { return path; }
+
+        /**
+         * @return The revision associated with the path.
+         */
+        public long getRevision() { return revision; }
+
+        /**
+         * @return A flag indicating that this revision was the result
+         * of a merge.
+         */
+        public boolean isResultOfMerge() { return resultOfMerge; }
+
+        /**
+         * @return The list of revision properties.
+         */
+        public Map<String, byte[]> getRevisionProperties()
+        {
+            return revisionProperties;
+        }
+
+        /**
+         * @return The changes that were made to the node's properties
+         * in this revision. This map will contain only added,
+         * modified and deleted properties. Deleted properties will
+         * have <code>null</code> values.
+         */
+        public Map<String, byte[]> getPropertiesDelta()
+        {
+            return propertiesDelta;
+        }
+
+        private String path;
+        private long revision;
+        private boolean resultOfMerge;
+        private Map<String, byte[]> revisionProperties;
+        private Map<String, byte[]> propertiesDelta;
+    }
+
+    /**
+     * Retrieve a subset of the interesting revisions of a file
+     * <code>path</code> as seen in revision <code>endRevision</code>.
+     * <p>
+     * If there is an interesting revision of the file that is less
+     * than or equal to <code>startRevision</code>, the iteration will
+     * begin at that revision.  Otherwise the iteration will begin at
+     * the first revision of the file in the repository, which has to
+     * be less than or equal to <code>endRevision</code>.  Note that
+     * if the function succeeds, the returned list will contain at
+     * least one element.
+     * <p>
+     * <b>Note:</b> This functionality is not available in pre-1.1
+     * servers.  If the server doesn't implement it, an alternative
+     * (but much slower) implementation based on {@link #getLog} is
+     * used.
+     * <p>
+     * <b>Note:</b> With Subversion 1.8 and newer servers this
+     * function supports reversion of the revision range for when
+     * <code>includeMergedRevisions</code> is <code>false</code>.
+     *
+     * @param path A path relative to the session URL.
+     * @param startRevision The lower bound of the revision interval.
+     * @param endRevision the upper bound of the revision interval.
+     * @param includeMergedRevisions When <code>true</code>, revisions that
+     *    contributed to a merge are included in the result.
+     * @throws ClientException
+     */
+    List<FileRevision> getFileRevisions(String path,
+                                        long startRevision, long endRevision,
+                                        boolean includeMergedRevisions)
+            throws ClientException;
+
+
     // TODO: lock
     // TODO: unlock
     // TODO: getLock
 
     /**
      * Return a dictionary containing all locks on or below the given path.
+     * <p>
+     * <b>Note:</b> It is not considered an error if <code>path</code> does
+     * not exist in HEAD. Such a search will simply return no locks.
+     * <p>
+     * <b>Note:</b>This functionality is not available in pre-1.2 servers.
      * @param path A path relative to the sessionn URL
      * @param depth The recursion depth
-     * @note It is not considered an error for the path to not exist in HEAD.
-     *       Such a search will simply return no locks.
-     * @note This functionality is not available in pre-1.2 servers.
      * @throws ClientException
      */
     Map<String, Lock> getLocks(String path, Depth depth)

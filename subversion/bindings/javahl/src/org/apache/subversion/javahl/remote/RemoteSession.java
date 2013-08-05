@@ -213,7 +213,13 @@ public class RemoteSession extends JNIObject implements ISVNRemote
                                                   long endRevision)
             throws ClientException;
 
-    // TODO: getFileRevisions
+    public native
+        List<FileRevision> getFileRevisions(String path,
+                                            long startRevision,
+                                            long endRevision,
+                                            boolean includeMergedRevisions)
+            throws ClientException;
+
     // TODO: lock
     // TODO: unlock
     // TODO: getLock
