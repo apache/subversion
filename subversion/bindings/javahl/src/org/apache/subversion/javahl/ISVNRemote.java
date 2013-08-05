@@ -581,7 +581,7 @@ public interface ISVNRemote
         }
 
         /**
-         * @return The changes that were made to the node's properties
+         * @return The changes that were made to the file's properties
          * in this revision. This map will contain only added,
          * modified and deleted properties. Deleted properties will
          * have <code>null</code> values.
