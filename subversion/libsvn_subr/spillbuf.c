@@ -77,16 +77,16 @@ struct svn_spillbuf_t {
   /* When false, do not delete the spill file when it is closed. */
   svn_boolean_t delete_on_close;
 
-  /* When true, the spill file will contain all the data written to
-     the spillbuf, including those that would normally be held only in
-     memory. */
+  /* When true, and the amount of data written to the spillbuf is
+     larger than MAXSIZE, all spillbuf contents will be written to the
+     spill file. */
   svn_boolean_t spill_all_contents;
 
   /* The directory in which the spill file is created. */
   const char *dirpath;
 
   /* The name of the temporary spill file. */
-  const char *temp_path;
+  const char *filename;
 };
 
 
@@ -185,7 +185,7 @@ svn_spillbuf__get_memory_size(const svn_spillbuf_t *buf)
 const char *
 svn_spillbuf__get_filename(const svn_spillbuf_t *buf)
 {
-  return buf->temp_path;
+  return buf->filename;
 }
 
 apr_file_t *
@@ -245,7 +245,7 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
       && (buf->memory_size + len) > buf->maxsize)
     {
       SVN_ERR(svn_io_open_unique_file3(&buf->spill,
-                                       &buf->temp_path,
+                                       &buf->filename,
                                        buf->dirpath,
                                        (buf->delete_on_close
                                         ? svn_io_file_del_on_close
@@ -253,7 +253,7 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
                                        buf->pool, scratch_pool));
 
       /* Optionally write the memory contents into the file. */
-      if (buf->spill_all_contents && buf->head != NULL)
+      if (buf->spill_all_contents)
         {
           mem = buf->head;
           while (mem != NULL)
@@ -262,6 +262,13 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
                                              NULL, scratch_pool));
               mem = mem->next;
             }
+
+          /* Adjust the start offset for reading from the spill file.
+
+             ### FIXME: Instead, we should simply discard the memory
+             buffers; but currently some tests expect to read data in
+             the same chunk sizes as were written, so we'll leave this
+             change for later.*/
           buf->spill_start = buf->memory_size;
         }
     }
