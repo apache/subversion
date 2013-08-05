@@ -308,7 +308,20 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getLocationSegments(
                                   jstart_revision, jend_revision);
 }
 
-// TODO: getFileRevisions
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_remote_RemoteSession_getFileRevisions(
+    JNIEnv *env, jobject jthis, jstring jpath,
+    jlong jstart_revision, jlong jend_revision,
+    jboolean jinclude_merged_revisions)
+{
+  JNIEntry(SVNReposAccess, getFileRevisions);
+  RemoteSession *ras = RemoteSession::getCppObject(jthis);
+  CPPADDR_NULL_PTR(ras, NULL);
+
+  return ras->getFileRevisions(jpath, jstart_revision, jend_revision,
+                               jinclude_merged_revisions);
+}
+
 // TODO: lock
 // TODO: unlock
 // TODO: getLock
