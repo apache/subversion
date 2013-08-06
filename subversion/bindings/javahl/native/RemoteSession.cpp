@@ -1099,11 +1099,10 @@ public:
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
-      m_call_mid = env->GetMethodID(cls, "doSegment",
-                                    "(L"JAVA_PACKAGE"/callback/"
-                                    "RemoteLocationSegmentCallback;)V");
-        if (JNIUtil::isJavaExceptionThrown())
-          return;
+      m_call_mid = env->GetMethodID(
+          cls, "doSegment", "(L"JAVA_PACKAGE"/ISVNRemote$LocationSegment;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
     }
 
 private:
@@ -1196,11 +1195,10 @@ public:
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
-      m_call_mid = env->GetMethodID(cls, "doRevision",
-                                    "(L"JAVA_PACKAGE"/callback/"
-                                    "RemoteFileRevisionsCallback;)V");
-        if (JNIUtil::isJavaExceptionThrown())
-          return;
+      m_call_mid = env->GetMethodID(
+          cls, "doRevision", "(L"JAVA_PACKAGE"/ISVNRemote$FileRevision;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
     }
 
 private:
