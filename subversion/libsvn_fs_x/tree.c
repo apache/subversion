@@ -4068,7 +4068,7 @@ static root_vtable_t root_vtable = {
   x_change_node_prop,
   x_props_changed,
   x_dir_entries,
-/*  x_dir_optimal_order,*/
+  x_dir_optimal_order,
   x_make_dir,
   x_copy,
   x_revision_link,
