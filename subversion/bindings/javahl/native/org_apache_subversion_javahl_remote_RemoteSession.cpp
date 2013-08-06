@@ -295,31 +295,36 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getLocations(
   return ras->getLocations(jpath, jpeg_revision, jlocation_revisions);
 }
 
-JNIEXPORT jobject JNICALL
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getLocationSegments(
     JNIEnv *env, jobject jthis, jstring jpath, jlong jpeg_revision,
-    jlong jstart_revision, jlong jend_revision)
+    jlong jstart_revision, jlong jend_revision, jobject jcallback)
 {
   JNIEntry(SVNReposAccess, getLocationSegments);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
-  CPPADDR_NULL_PTR(ras, NULL);
+  CPPADDR_NULL_PTR(ras, );
 
-  return ras->getLocationSegments(jpath, jpeg_revision,
-                                  jstart_revision, jend_revision);
+  if (jcallback == NULL)
+    JNIUtil::throwNullPointerException("handler");
+  ras->getLocationSegments(jpath, jpeg_revision,
+                           jstart_revision, jend_revision,
+                           jcallback);
 }
 
-JNIEXPORT jobject JNICALL
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_getFileRevisions(
     JNIEnv *env, jobject jthis, jstring jpath,
     jlong jstart_revision, jlong jend_revision,
-    jboolean jinclude_merged_revisions)
+    jboolean jinclude_merged_revisions, jobject jcallback)
 {
   JNIEntry(SVNReposAccess, getFileRevisions);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
-  CPPADDR_NULL_PTR(ras, NULL);
+  CPPADDR_NULL_PTR(ras, );
 
-  return ras->getFileRevisions(jpath, jstart_revision, jend_revision,
-                               jinclude_merged_revisions);
+  if (jcallback == NULL)
+    JNIUtil::throwNullPointerException("handler");
+  ras->getFileRevisions(jpath, jstart_revision, jend_revision,
+                        jinclude_merged_revisions, jcallback);
 }
 
 // TODO: lock

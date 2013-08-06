@@ -95,11 +95,13 @@ class RemoteSession : public SVNBase
     jobject stat(jstring jpath, jlong jrevision);
     jobject getLocations(jstring jpath, jlong jpeg_revision,
                          jobject jlocation_revisions);
-    jobject getLocationSegments(jstring jpath, jlong jpeg_revision,
-                                jlong jstart_revision, jlong jend_revision);
-    jobject getFileRevisions(jstring jpath,
+    void getLocationSegments(jstring jpath, jlong jpeg_revision,
                              jlong jstart_revision, jlong jend_revision,
-                             jboolean jinclude_merged_revisions);
+                             jobject jcallback);
+    void getFileRevisions(jstring jpath,
+                          jlong jstart_revision, jlong jend_revision,
+                          jboolean jinclude_merged_revisions,
+                          jobject jcallback);
     // TODO: getFileRevisions
     // TODO: lock
     // TODO: unlock

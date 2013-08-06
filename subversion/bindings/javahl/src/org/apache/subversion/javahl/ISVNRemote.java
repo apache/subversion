@@ -512,7 +512,31 @@ public interface ISVNRemote
     }
 
     /**
-     * Return a lost of segments in the location history of <code>path</code>
+     * Call <code>handler</code> for every segment in the location
+     * history of <code>path</code> at <code>pegRevision</code>,
+     * working backwards in time from <code>startRevision</code> to
+     * <code>endRevision</code>.
+     *
+     * @param path A session-relative path.
+     * @param pegRevision The peg revision to find <code>path</code> in.
+     * @param startRevision The upper bound of the revision range. Use
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}
+     *        to indicate HEAD.
+     * @param endRevision The lower bound of the revision range. Use
+     * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM}
+     *        to trace the history of the object to its origin.
+     * @param handler The callback handler.
+     * @throws ClientException
+     */
+    void getLocationSegments(String path,
+                             long pegRevision,
+                             long startRevision,
+                             long endRevision,
+                             RemoteLocationSegmentsCallback handler)
+            throws ClientException;
+
+    /**
+     * Return a list of segments in the location history of <code>path</code>
      * at <code>pegRevision</code>, working backwards in time from
      * <code>startRevision</code> to <code>endRevision</code>.
      *
@@ -597,6 +621,41 @@ public interface ISVNRemote
         private Map<String, byte[]> revisionProperties;
         private Map<String, byte[]> propertiesDelta;
     }
+
+    /**
+     * Call <code>handler</code> for each of a subset of the
+     * interesting revisions of a file <code>path</code> as seen in
+     * revision <code>endRevision</code>.
+     * <p>
+     * If there is an interesting revision of the file that is less
+     * than or equal to <code>startRevision</code>, the iteration will
+     * begin at that revision.  Otherwise the iteration will begin at
+     * the first revision of the file in the repository, which has to
+     * be less than or equal to <code>endRevision</code>.  Note that
+     * if the function succeeds, <code>handler</code> will be called
+     * at least once.
+     * <p>
+     * <b>Note:</b> This functionality is not available in pre-1.1
+     * servers.  If the server doesn't implement it, an alternative
+     * (but much slower) implementation based on {@link #getLog} is
+     * used.
+     * <p>
+     * <b>Note:</b> With Subversion 1.8 and newer servers this
+     * function supports reversion of the revision range for when
+     * <code>includeMergedRevisions</code> is <code>false</code>.
+     *
+     * @param path A path relative to the session URL.
+     * @param startRevision The lower bound of the revision interval.
+     * @param endRevision the upper bound of the revision interval.
+     * @param includeMergedRevisions When <code>true</code>, revisions that
+     *    contributed to a merge are included in the result.
+     * @throws ClientException
+     */
+    void getFileRevisions(String path,
+                          long startRevision, long endRevision,
+                          boolean includeMergedRevisions,
+                          RemoteFileRevisionsCallback handler)
+            throws ClientException;
 
     /**
      * Retrieve a subset of the interesting revisions of a file
