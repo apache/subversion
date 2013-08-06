@@ -848,9 +848,6 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                          !rep->has_sha1, pool),
            svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id, pool),
            buffer);
-
-#undef DISPLAY_MAYBE_NULL_CHECKSUM
-
 }
 
 
