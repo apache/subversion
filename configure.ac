@@ -1392,8 +1392,9 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_X, 1,
       [Defined if libsvn_fs should link against libsvn_fs_x])
   svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_X_DEPS)"
-  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsx-lib"
   svn_fs_lib_link="$svn_fs_lib_link \$(FS_X_LINK)"
+dnl  FSFS already installs fsmod
+dnl  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsmod-lib"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
