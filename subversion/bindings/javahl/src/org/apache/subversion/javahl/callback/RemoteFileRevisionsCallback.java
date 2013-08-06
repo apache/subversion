@@ -32,5 +32,5 @@ import org.apache.subversion.javahl.ISVNRemote;
 
 public interface RemoteFileRevisionsCallback
 {
-    public void doRevision(ISVNRemote.FileRevision fileRevision);
+    void doRevision(ISVNRemote.FileRevision fileRevision);
 }

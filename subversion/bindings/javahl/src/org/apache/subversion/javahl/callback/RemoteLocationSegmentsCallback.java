@@ -32,5 +32,5 @@ import org.apache.subversion.javahl.ISVNRemote;
 
 public interface RemoteLocationSegmentsCallback
 {
-    public void doSegment(ISVNRemote.LocationSegment locationSegment);
+    void doSegment(ISVNRemote.LocationSegment locationSegment);
 }
