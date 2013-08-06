@@ -1128,4 +1128,16 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(1, seg.getStartRevision());
         assertEquals(1, seg.getEndRevision());
     }
+
+    public void testGetFileRevisions() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        List<ISVNRemote.FileRevision> result =
+            session.getFileRevisions("iota", 0, 1, false);
+        assertEquals(1, result.size());
+        ISVNRemote.FileRevision rev = result.get(0);
+        assertEquals("/iota", rev.getPath());
+        assertFalse(rev.isResultOfMerge());
+    }
 }

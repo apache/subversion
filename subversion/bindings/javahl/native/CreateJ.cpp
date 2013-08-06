@@ -1091,12 +1091,111 @@ CreateJ::StringSet(const apr_array_header_t *strings)
   return CreateJ::Set(jstrs);
 }
 
-jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool)
+namespace {
+void fill_property_map(jobject map,
+                       apr_hash_t* prop_hash, apr_array_header_t* prop_diffs,
+                       apr_pool_t* scratch_pool, jmethodID put_mid)
 {
+  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
+                           || !prop_hash && !prop_diffs);
+
+  if (!map || (prop_hash == NULL && prop_diffs == NULL))
+    return;
+
   JNIEnv *env = JNIUtil::getEnv();
 
-  if (prop_hash == NULL)
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  // The caller may not know the concrete class of the map, so
+  // determine the "put" method identifier here.
+  if (put_mid == 0)
+    {
+      put_mid = env->GetMethodID(env->GetObjectClass(map), "put",
+                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+
+  struct body
+  {
+    void operator()(const char* key, const svn_string_t* val)
+      {
+        jstring jpropName = JNIUtil::makeJString(key);
+        if (JNIUtil::isJavaExceptionThrown())
+          return;
+
+        jbyteArray jpropVal = (!val ? NULL
+                               : JNIUtil::makeJByteArray(val));
+        if (JNIUtil::isJavaExceptionThrown())
+          return;
+
+        m_env->CallObjectMethod(m_map, m_put_mid, jpropName, jpropVal);
+        if (JNIUtil::isJavaExceptionThrown())
+          return;
+
+        m_env->DeleteLocalRef(jpropName);
+        m_env->DeleteLocalRef(jpropVal);
+      }
+
+    JNIEnv*& m_env;
+    jmethodID& m_put_mid;
+    jobject& m_map;
+
+    body(JNIEnv*& xenv, jmethodID& xput_mid, jobject& xmap)
+      : m_env(xenv), m_put_mid(xput_mid), m_map(xmap)
+      {}
+  } loop_body(env, put_mid, map);
+
+  if (prop_hash)
+    {
+      if (!scratch_pool)
+        scratch_pool = apr_hash_pool_get(prop_hash);
+
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(scratch_pool, prop_hash);
+           hi; hi = apr_hash_next(hi))
+        {
+          const char* key;
+          svn_string_t* val;
+
+          const void* v_key;
+          void* v_val;
+
+          apr_hash_this(hi, &v_key, NULL, &v_val);
+          key = static_cast<const char*>(v_key);
+          val = static_cast<svn_string_t*>(v_val);
+
+          loop_body(key, val);
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NOTHING();
+        }
+    }
+  else
+    {
+      for (int i = 0; i < prop_diffs->nelts; ++i)
+        {
+          svn_prop_t* prop = APR_ARRAY_IDX(prop_diffs, i, svn_prop_t*);
+          loop_body(prop->name, prop->value);
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NOTHING();
+        }
+    }
+}
+
+jobject property_map(apr_hash_t *prop_hash, apr_array_header_t* prop_diffs,
+                     apr_pool_t* scratch_pool)
+{
+  SVN_ERR_ASSERT_NO_RETURN(!prop_hash != !prop_diffs
+                           || !prop_hash && !prop_diffs);
+
+  if (prop_hash == NULL && prop_diffs == NULL)
     return NULL;
+
+  JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
@@ -1129,69 +1228,35 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  FillPropertyMap(map, prop_hash, scratch_pool, put_mid);
+  fill_property_map(map, prop_hash, prop_diffs, scratch_pool, put_mid);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
   return env->PopLocalFrame(map);
 }
+} // anonymous namespace
+
+jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool)
+{
+  return property_map(prop_hash, NULL, scratch_pool);
+}
+
+jobject CreateJ::PropertyMap(apr_array_header_t* prop_diffs,
+                             apr_pool_t* scratch_pool)
+{
+  return property_map(NULL, prop_diffs, scratch_pool);
+}
 
 void CreateJ::FillPropertyMap(jobject map, apr_hash_t* prop_hash,
                               apr_pool_t* scratch_pool, jmethodID put_mid)
 {
-  JNIEnv *env = JNIUtil::getEnv();
+  fill_property_map(map, prop_hash, NULL, scratch_pool, put_mid);
+}
 
-  if (!map || !prop_hash)
-    return;
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  // The caller may not know the concrete class of the map, so
-  // determine the "put" method identifier here.
-  if (put_mid == 0)
-    {
-      put_mid = env->GetMethodID(env->GetObjectClass(map), "put",
-                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
-                                 "Ljava/lang/Object;");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
-    }
-
-  if (!scratch_pool)
-    scratch_pool = apr_hash_pool_get(prop_hash);
-
-  apr_hash_index_t *hi;
-  for (hi = apr_hash_first(scratch_pool, prop_hash);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *key;
-      svn_string_t *val;
-
-      const void *v_key;
-      void *v_val;
-
-      apr_hash_this(hi, &v_key, NULL, &v_val);
-      key = static_cast<const char*>(v_key);
-      val = static_cast<svn_string_t*>(v_val);
-
-      jstring jpropName = JNIUtil::makeJString(key);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
-
-      jbyteArray jpropVal = JNIUtil::makeJByteArray(val);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
-
-      env->CallObjectMethod(map, put_mid, jpropName, jpropVal);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
-
-      env->DeleteLocalRef(jpropName);
-      env->DeleteLocalRef(jpropVal);
-    }
+void CreateJ::FillPropertyMap(jobject map, apr_array_header_t* prop_diffs,
+                              apr_pool_t* scratch_pool, jmethodID put_mid)
+{
+  fill_property_map(map, NULL, prop_diffs, scratch_pool, put_mid);
 }
 
 jobject CreateJ::InheritedProps(apr_array_header_t *iprops)
