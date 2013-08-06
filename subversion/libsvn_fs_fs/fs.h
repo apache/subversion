@@ -223,7 +223,7 @@ typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
 /* Key type for all caches that use revision + offset / counter as key.
 
    NOTE: always initialize this using calloc() or '= {0};'!  This is used
-   as a cahe key and the padding bytes on 32 bit archs should be zero for
+   as a cache key and the padding bytes on 32 bit archs should be zero for
    cache effectiveness. */
 typedef struct pair_cache_key_t
 {
