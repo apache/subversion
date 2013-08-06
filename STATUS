@@ -214,7 +214,7 @@ Candidate changes:
      Regression in 1.8.0 (ra_serf), basic functionality now fails with older
      servers which we still need to support.
    Votes:
-     +1: lgo
+     +1: lgo, gstein
 
 Veto-blocked changes:
 =====================
