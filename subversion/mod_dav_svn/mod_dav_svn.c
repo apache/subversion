@@ -31,6 +31,8 @@
 #include <http_config.h>
 #include <http_request.h>
 #include <http_log.h>
+#include <http_core.h>
+
 #include <ap_provider.h>
 #include <mod_dav.h>
 
@@ -93,6 +95,7 @@ typedef struct dir_conf_t {
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
+  const char *fs_parent_path_template; /* template for path to parent of SVN FS'es  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   dav_svn__bulk_upd_conf bulk_updates; /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
@@ -239,6 +242,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
+  newconf->fs_parent_path_template = INHERIT_VALUE(parent, child, fs_parent_path_template);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
@@ -449,8 +453,11 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
 
-  if (conf->fs_parent_path != NULL)
-    return "SVNPath cannot be defined at same time as SVNParentPath.";
+  if (conf->fs_parent_path || conf->fs_parent_path_template)
+    {
+      return ("SVNPath, SVNParentPath, and SVNParentPathTemplate are "
+              "mutually exclusive.");
+    }
 
   conf->fs_path = svn_dirent_internal_style(arg1, cmd->pool);
 
@@ -463,14 +470,33 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
 
-  if (conf->fs_path != NULL)
-    return "SVNParentPath cannot be defined at same time as SVNPath.";
+  if (conf->fs_path || conf->fs_parent_path_template)
+    {
+      return ("SVNPath, SVNParentPath, and SVNParentPathTemplate are "
+              "mutually exclusive.");
+    }
 
   conf->fs_parent_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
 
+
+static const char *
+SVNParentPathTemplate_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  dir_conf_t *conf = config;
+
+  if (conf->fs_path || conf->fs_parent_path)
+    {
+      return ("SVNPath, SVNParentPath, and SVNParentPathTemplate are "
+              "mutually exclusive.");
+    }
+
+  conf->fs_parent_path_template = svn_dirent_internal_style(arg1, cmd->pool);
+
+  return NULL;
+}
 
 static const char *
 SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
@@ -631,6 +657,12 @@ dav_svn__get_fs_parent_path(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  if (conf->fs_parent_path_template)
+    {
+      return apr_psprintf(r->pool,
+                          conf->fs_parent_path_template,
+                          ap_get_server_name(r));
+    }
   return conf->fs_parent_path;
 }
 
@@ -968,7 +1000,7 @@ merge_xml_filter_insert(request_rec *r)
       conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
       /* We only care if we are configured. */
-      if (conf->fs_path || conf->fs_parent_path)
+      if (conf->fs_path || conf->fs_parent_path || conf->fs_parent_path_template)
         {
           ap_add_input_filter("SVN-MERGE", NULL, r, r->connection);
         }
@@ -1079,7 +1111,7 @@ static int dav_svn__handler(request_rec *r)
 {
   dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-  if (conf->fs_path || conf->fs_parent_path)
+  if (conf->fs_path || conf->fs_parent_path || conf->fs_parent_path_template)
     {
       /* HTTP-defined Methods we handle */
       r->allowed = 0
@@ -1216,6 +1248,12 @@ static const command_rec cmds[] =
                 "of hook scripts. If not absolute, the path is relative to "
                 "the repository's conf directory (by default the hooks-env "
                 "file in the repository is used)."),
+
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNParentPathTemplate", SVNParentPathTemplate_cmd, NULL, ACCESS_CONF,
+                "specifies a template for a location in the filesystem whose "
+                "subdirectories are assumed to be Subversion repositories,"
+                "with %s representing the server name."),
   { NULL }
 };
 
