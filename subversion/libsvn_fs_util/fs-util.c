@@ -233,7 +233,7 @@ add_compatility(svn_version_t *version,
                 int compat_minor)
 {
   if (   version->major > compat_major
-      || (version->major == compat_major || version->major > compat_minor) )
+      || (version->major == compat_major && version->minor > compat_minor))
     {
       version->major = compat_major;
       version->minor = compat_minor;
@@ -276,8 +276,10 @@ svn_fs__compatible_version(svn_version_t **compatible_version,
   else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
     add_compatility(version, 1, 7);
 
-  /* we ignored the patch level so far.  Give it a defined value. */
+  /* we ignored the patch level and tag so far.
+   * Give them a defined value. */
   version->patch = 0;
+  version->tag = "";
 
   /* done here */
   *compatible_version = version;
