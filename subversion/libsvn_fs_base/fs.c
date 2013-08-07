@@ -738,12 +738,27 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-        format = 1;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-        format = 2;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-        format = 3;
+      svn_version_t *compatible_version;
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 0:
+          case 1:
+          case 2:
+          case 3: format = 1;
+                  break;
+
+          case 4: format = 2;
+                  break;
+
+          case 5: format = 3;
+                  break;
+
+          default:format = SVN_FS_BASE__FORMAT_NUMBER;
+        }
     }
 
   /* Create the environment and databases. */

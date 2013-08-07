@@ -42,7 +42,6 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
-#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 /* The default maximum number of files per directory to store in the
@@ -1082,34 +1081,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   if (fs->config)
     {
       svn_version_t *compatible_version;
-      const char *compatible;
-
-      /* This will cause a compiler warning as soon as we merge with
-         the FSX branch.  Remove this when it happens. */
-#define SVN_FS_CONFIG_COMPATIBLE_VERSION ""
-      /* TODO: move this code to fs_utils */
-      
-      /* set compatible version according to generic option */
-      compatible = svn_hash_gets(fs->config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
-      if (compatible)
-        SVN_ERR(svn_version__parse_version_string(&compatible_version,
-                                                  compatible, pool));
-      else
-        compatible_version = apr_pmemdup(pool, svn_subr_version(),
-                                         sizeof(*compatible_version));
-
-      /* we handle SVN 1.x only */
-      SVN_ERR_ASSERT(compatible_version->major == 1);
-
-      /* specific options take precedence */
-      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-        compatible_version->minor = 3;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-        compatible_version->minor = 4;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-        compatible_version->minor = 5;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
-        compatible_version->minor = 7;
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
 
       /* select format number */
       switch(compatible_version->minor)

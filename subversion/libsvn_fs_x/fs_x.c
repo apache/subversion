@@ -786,19 +786,25 @@ svn_fs_x__create(svn_fs_t *fs,
   if (fs->config)
     {
       svn_version_t *compatible_version;
-      const char *compatible;
-      compatible = svn_hash_gets(fs->config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
-      if (compatible)
-        SVN_ERR(svn_version__parse_version_string(&compatible_version,
-                                                  compatible, pool));
-      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE)
-          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE)
-          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE)
-          || svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE)
-          || (compatible && compatible_version->major == SVN_VER_MAJOR
-              && compatible_version->minor <= 8))
-        return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                 _("FSX is not compatible with Subversion prior to 1.9"));
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 0:
+          case 1:
+          case 2:
+          case 3:
+          case 4:
+          case 5:
+          case 6:
+          case 7:
+          case 8: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                  _("FSFS is not compatible with Subversion prior to 1.9"));
+
+          default:format = SVN_FS_X__FORMAT_NUMBER;
+        }
     }
   ffd->format = format;
   ffd->max_files_per_dir = SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR;
