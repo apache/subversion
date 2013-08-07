@@ -30,7 +30,11 @@
 #define ENCODED_INT_LENGTH 10
 
 /*
- * packed stream array
+ * packed stream
+ *
+ * This is a utility object that will read files containing 7b/8b encoded
+ * unsigned integers.  It decodes them in batches to minimize overhead
+ * and supports random access to random file locations.
  */
 
 /* How many numbers we will pre-fetch and buffer in a packed number stream.
