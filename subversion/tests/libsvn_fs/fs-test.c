@@ -38,6 +38,7 @@
 #include "svn_props.h"
 #include "svn_version.h"
 
+#include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 
 #include "../svn_test_fs.h"
@@ -5074,6 +5075,60 @@ test_fs_info_format(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_compat_version(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_version_t *compatible_version;
+  apr_hash_t *config = apr_hash_make(pool);
+  
+  svn_version_t vcurrent = {SVN_VER_MAJOR, SVN_VER_MINOR, 0, ""};
+  svn_version_t v1_2_0 = {1, 2, 0, ""};
+  svn_version_t v1_3_0 = {1, 3, 0, ""};
+  svn_version_t v1_5_0 = {1, 5, 0, ""};
+
+  /* no version specified -> default to the current one */
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &vcurrent));
+
+  /* test specific compat option */
+  svn_hash_sets(config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_5_0));
+
+  /* test precedence amongst compat options */
+  svn_hash_sets(config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_5_0));
+
+  svn_hash_sets(config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_3_0));
+
+  /* precedence should work with the generic option as well */
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.4.17-??");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_3_0));
+
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.2.3-no!");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_2_0));
+
+  /* test generic option alone */
+  config = apr_hash_make(pool);
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.2.3-no!");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_2_0));
+
+  /* out of range values should be caped by the current tool version */
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "2.3.4-x");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &vcurrent));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5160,5 +5215,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "filenames with trailing \\n might be rejected"),
     SVN_TEST_OPTS_PASS(test_fs_info_format,
                        "test svn_fs_info_format"),
+    SVN_TEST_OPTS_PASS(test_compat_version,
+                       "test svn_fs__compatible_version"),
     SVN_TEST_NULL
   };
