@@ -31,9 +31,11 @@
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_version.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 /* Return TRUE, if PATH of PATH_LEN > 0 chars starts with a '/' and does
@@ -219,5 +221,55 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
                     svn_rangelist_dup(rangelist, pool));
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs__compatible_version(svn_version_t **compatible_version,
+                           apr_hash_t *config,
+                           apr_pool_t *pool)
+{
+  svn_version_t *version;
+  const char *compatible;
+
+  /* set compatible version according to generic option */
+  compatible = svn_hash_gets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
+  if (compatible)
+    SVN_ERR(svn_version__parse_version_string(&version,
+                                              compatible, pool));
+  else
+    version = apr_pmemdup(pool, svn_subr_version(),
+                                     sizeof(*version));
+
+  /* specific options take precedence.
+     Let the lowest version compatibility requirement win */
+  if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
+    {
+      version->major = 1;
+      version->minor = 7;
+    }
+  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
+    {
+      version->major = 1;
+      version->minor = 5;
+    }
+  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
+    {
+      version->major = 1;
+      version->minor = 4;
+    }
+  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
+    {
+      version->major = 1;
+      version->minor = 3;
+    }
+
+  /* our backends only know how to handle 1.x compatibility */
+  if (version->major != 1)
+    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                      _("No compatibility possible to anything but 1.x"));
+
+  /* done here */
+  *compatible_version = version;
   return SVN_NO_ERROR;
 }

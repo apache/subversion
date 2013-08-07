@@ -210,6 +210,17 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
                                const char *rel_path,
                                apr_pool_t *pool);
 
+/* Given the FS creation options in CONFIG, return the oldest version that
+   we shall be compatible with in *COMPATIBLE_VERSION.
+   Allocate the result in POOL.
+
+   Note: For now, we will create an error for any compatibility request
+         that is not a 1.x. */
+svn_error_t *
+svn_fs__compatible_version(svn_version_t **compatible_version,
+                           apr_hash_t *config,
+                           apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
