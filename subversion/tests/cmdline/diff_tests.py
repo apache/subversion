@@ -4633,6 +4633,30 @@ def diff_local_missing_obstruction(sbox):
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'diff', wc_dir)
 
+@XFail()
+def diff_prev_copy_in_mixed_rev_parent(sbox):
+  "diff -r PREV in mixed-rev parent dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a change on A/B/E/alpha.
+  sbox.simple_append('A/B/E/alpha', 'more content')
+  sbox.simple_commit()
+
+  # Note: Running an update here would make this test pass.
+  #sbox.simple_update()
+
+  # Copy A/B/E/beta to A/B/E/beta-copy and commit the copy.
+  sbox.simple_copy('A/B/E/beta', 'A/B/E/beta-copy')
+  sbox.simple_commit()
+
+  # Try to diff beta-copy against its PREV revision. This should produce
+  # empty output, since the copy does not differ from its source.
+  # Currently fails with 'Unable to find repository location for
+  # beta-copy in revision 2' error.
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-r', 'PREV',
+                                     sbox.ospath('A/B/E/beta-copy'))
 
 ########################################################################
 #Run the tests
@@ -4715,6 +4739,7 @@ test_list = [ None,
               diff_repos_empty_file_addition,
               diff_missing_tree_conflict_victim,
               diff_local_missing_obstruction,
+              diff_prev_copy_in_mixed_rev_parent,
               ]
 
 if __name__ == '__main__':
