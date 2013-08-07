@@ -206,6 +206,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1511353
+   svnmucc: Fix an assertion failure.
+   Justification:
+     It's an assertion failure.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
