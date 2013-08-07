@@ -211,11 +211,11 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
                                apr_pool_t *pool);
 
 /* Given the FS creation options in CONFIG, return the oldest version that
-   we shall be compatible with in *COMPATIBLE_VERSION.
-   Allocate the result in POOL.
+   we shall be compatible with in *COMPATIBLE_VERSION.  The patch level
+   is always set to 0.   Allocate the result in POOL.
 
-   Note: For now, we will create an error for any compatibility request
-         that is not a 1.x. */
+   Note that the result will always be compatible to the current tool
+   version, i.e. will be a version number not more recent than this tool. */
 svn_error_t *
 svn_fs__compatible_version(svn_version_t **compatible_version,
                            apr_hash_t *config,

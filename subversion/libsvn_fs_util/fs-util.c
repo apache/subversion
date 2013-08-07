@@ -224,6 +224,22 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
   return SVN_NO_ERROR;
 }
 
+/* Set the version info in *VERSION to COMPAT_MAJOR and COMPAT_MINOR, if
+   the current value refers to a newer version than that.
+ */
+static void
+add_compatility(svn_version_t *version,
+                int compat_major,
+                int compat_minor)
+{
+  if (   version->major > compat_major
+      || (version->major == compat_major || version->major > compat_minor) )
+    {
+      version->major = compat_major;
+      version->minor = compat_minor;
+    }
+}
+
 svn_error_t *
 svn_fs__compatible_version(svn_version_t **compatible_version,
                            apr_hash_t *config,
@@ -232,42 +248,36 @@ svn_fs__compatible_version(svn_version_t **compatible_version,
   svn_version_t *version;
   const char *compatible;
 
-  /* set compatible version according to generic option */
+  /* set compatible version according to generic option.
+     Make sure, we are always compatible to the current SVN version
+     (or older). */
   compatible = svn_hash_gets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION);
   if (compatible)
-    SVN_ERR(svn_version__parse_version_string(&version,
-                                              compatible, pool));
+    {
+      SVN_ERR(svn_version__parse_version_string(&version,
+                                                compatible, pool));
+      add_compatility(version,
+                      svn_subr_version()->major,
+                      svn_subr_version()->minor);
+    }
   else
-    version = apr_pmemdup(pool, svn_subr_version(),
-                                     sizeof(*version));
+    {
+      version = apr_pmemdup(pool, svn_subr_version(), sizeof(*version));
+    }
 
   /* specific options take precedence.
      Let the lowest version compatibility requirement win */
-  if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
-    {
-      version->major = 1;
-      version->minor = 7;
-    }
-  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-    {
-      version->major = 1;
-      version->minor = 5;
-    }
+  if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
+    add_compatility(version, 1, 3);
   else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-    {
-      version->major = 1;
-      version->minor = 4;
-    }
-  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-    {
-      version->major = 1;
-      version->minor = 3;
-    }
+    add_compatility(version, 1, 4);
+  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
+    add_compatility(version, 1, 5);
+  else if (svn_hash_gets(config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
+    add_compatility(version, 1, 7);
 
-  /* our backends only know how to handle 1.x compatibility */
-  if (version->major != 1)
-    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                      _("No compatibility possible to anything but 1.x"));
+  /* we ignored the patch level so far.  Give it a defined value. */
+  version->patch = 0;
 
   /* done here */
   *compatible_version = version;
