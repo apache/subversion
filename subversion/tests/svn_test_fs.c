@@ -145,21 +145,36 @@ create_fs(svn_fs_t **fs_p,
  * copy that file into the filesystem FS and set *MUST_REOPEN to TRUE, else
  * set *MUST_REOPEN to FALSE. */
 static svn_error_t *
-maybe_install_fsfs_conf(svn_fs_t *fs,
-                        const svn_test_opts_t *opts,
-                        svn_boolean_t *must_reopen,
-                        apr_pool_t *pool)
+maybe_install_fs_conf(svn_fs_t *fs,
+                      const svn_test_opts_t *opts,
+                      svn_boolean_t *must_reopen,
+                      apr_pool_t *pool)
 {
   *must_reopen = FALSE;
-  if (strcmp(opts->fs_type, "fsfs") != 0 || ! opts->config_file)
+  if (! opts->config_file)
     return SVN_NO_ERROR;
 
-  *must_reopen = TRUE;
-  return svn_io_copy_file(opts->config_file,
-                          svn_path_join(svn_fs_path(fs, pool),
-                                        "fsfs.conf", pool),
-                          FALSE /* copy_perms */,
-                          pool);
+  if (strcmp(opts->fs_type, "fsfs") == 0)
+    {
+      *must_reopen = TRUE;
+      return svn_io_copy_file(opts->config_file,
+                              svn_path_join(svn_fs_path(fs, pool),
+                                            "fsfs.conf", pool),
+                              FALSE /* copy_perms */,
+                              pool);
+    }
+
+  if (strcmp(opts->fs_type, "fsx") == 0)
+    {
+      *must_reopen = TRUE;
+      return svn_io_copy_file(opts->config_file,
+                              svn_path_join(svn_fs_path(fs, pool),
+                                            "fsx.conf", pool),
+                              FALSE /* copy_perms */,
+                              pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -184,7 +199,7 @@ svn_test__create_fs(svn_fs_t **fs_p,
   SVN_ERR(create_fs(fs_p, name, opts->fs_type,
                     opts->server_minor_version, pool));
 
-  SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
+  SVN_ERR(maybe_install_fs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
     {
       SVN_ERR(svn_fs_open(fs_p, name, NULL, pool));
@@ -230,8 +245,8 @@ svn_test__create_repos(svn_repos_t **repos_p,
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup(name);
 
-  SVN_ERR(maybe_install_fsfs_conf(svn_repos_fs(repos), opts, &must_reopen,
-                                  pool));
+  SVN_ERR(maybe_install_fs_conf(svn_repos_fs(repos), opts, &must_reopen,
+                                pool));
   if (must_reopen)
     {
       SVN_ERR(svn_repos_open2(&repos, name, NULL, pool));

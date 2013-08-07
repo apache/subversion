@@ -354,9 +354,9 @@ svn_fs_fs__update_min_unpacked_rev(svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_fs__write_revnum_file(svn_fs_t *fs,
-                             svn_revnum_t revnum,
-                             apr_pool_t *scratch_pool)
+svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
+                                  svn_revnum_t revnum,
+                                  apr_pool_t *scratch_pool)
 {
   const char *final_path;
   char buf[SVN_INT64_BUFFER_SIZE];

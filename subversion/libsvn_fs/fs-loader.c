@@ -84,6 +84,17 @@ static struct fs_type_defn base_defn =
     NULL
   };
 
+static struct fs_type_defn fsx_defn =
+  {
+    SVN_FS_TYPE_FSX, "x",
+#ifdef SVN_LIBSVN_FS_LINKS_FS_X
+    svn_fs_x__init,
+#else
+    NULL,
+#endif
+    &base_defn
+  };
+
 static struct fs_type_defn fsfs_defn =
   {
     SVN_FS_TYPE_FSFS, "fs",
@@ -92,7 +103,7 @@ static struct fs_type_defn fsfs_defn =
 #else
     NULL,
 #endif
-    &base_defn
+    &fsx_defn
   };
 
 static struct fs_type_defn *fs_modules = &fsfs_defn;

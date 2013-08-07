@@ -340,8 +340,9 @@ hotcopy_copy_packed_shard(svn_revnum_t *dst_min_unpacked_rev,
   if (*dst_min_unpacked_rev < rev + max_files_per_dir)
     {
       *dst_min_unpacked_rev = rev + max_files_per_dir;
-      SVN_ERR(svn_fs_fs__write_revnum_file(dst_fs, *dst_min_unpacked_rev,
-                                           scratch_pool));
+      SVN_ERR(svn_fs_fs__write_min_unpacked_rev(dst_fs,
+                                                *dst_min_unpacked_rev,
+                                                scratch_pool));
     }
 
   return SVN_NO_ERROR;

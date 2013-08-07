@@ -262,15 +262,13 @@ svn_error_t *
 svn_fs_fs__update_min_unpacked_rev(svn_fs_t *fs,
                                    apr_pool_t *pool);
 
-/* Write a file FILENAME in directory FS_PATH, containing a single line
- * with the number REVNUM in ASCII decimal.  Move the file into place
- * atomically, overwriting any existing file.
- *
- * Similar to write_current(). */
+/* Atomically update the 'min-unpacked-rev' file in FS to hold the specifed
+ * REVNUM.  Perform temporary allocations in SCRATCH_POOL.
+ */
 svn_error_t *
-svn_fs_fs__write_revnum_file(svn_fs_t *fs,
-                             svn_revnum_t revnum,
-                             apr_pool_t *scratch_pool);
+svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
+                                  svn_revnum_t revnum,
+                                  apr_pool_t *scratch_pool);
 
 /* Atomically update the 'current' file to hold the specifed REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are

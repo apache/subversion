@@ -77,22 +77,22 @@ struct svn_spillbuf_t {
   /* When false, do not delete the spill file when it is closed. */
   svn_boolean_t delete_on_close;
 
-  /* When true, the spill file will contain all the data written to
-     the spillbuf, including those that would normally be held only in
-     memory. */
+  /* When true, and the amount of data written to the spillbuf is
+     larger than MAXSIZE, all spillbuf contents will be written to the
+     spill file. */
   svn_boolean_t spill_all_contents;
 
   /* The directory in which the spill file is created. */
   const char *dirpath;
 
   /* The name of the temporary spill file. */
-  const char *temp_path;
+  const char *filename;
 };
 
 
 struct svn_spillbuf_reader_t {
   /* Embed the spill-buffer within the reader.  */
-  struct svn_spillbuf_t buf;
+  struct svn_spillbuf_t *buf;
 
   /* When we read content from the underlying spillbuf, these fields store
      the ptr/len pair. The ptr will be incremented as we "read" out of this
@@ -185,7 +185,7 @@ svn_spillbuf__get_memory_size(const svn_spillbuf_t *buf)
 const char *
 svn_spillbuf__get_filename(const svn_spillbuf_t *buf)
 {
-  return buf->temp_path;
+  return buf->filename;
 }
 
 apr_file_t *
@@ -245,7 +245,7 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
       && (buf->memory_size + len) > buf->maxsize)
     {
       SVN_ERR(svn_io_open_unique_file3(&buf->spill,
-                                       &buf->temp_path,
+                                       &buf->filename,
                                        buf->dirpath,
                                        (buf->delete_on_close
                                         ? svn_io_file_del_on_close
@@ -253,7 +253,7 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
                                        buf->pool, scratch_pool));
 
       /* Optionally write the memory contents into the file. */
-      if (buf->spill_all_contents && buf->head != NULL)
+      if (buf->spill_all_contents)
         {
           mem = buf->head;
           while (mem != NULL)
@@ -262,6 +262,13 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
                                              NULL, scratch_pool));
               mem = mem->next;
             }
+
+          /* Adjust the start offset for reading from the spill file.
+
+             ### FIXME: Instead, we should simply discard the memory
+             buffers; but currently some tests expect to read data in
+             the same chunk sizes as were written, so we'll leave this
+             change for later.*/
           buf->spill_start = buf->memory_size;
         }
     }
@@ -527,25 +534,9 @@ svn_spillbuf__reader_create(apr_size_t blocksize,
                             apr_pool_t *result_pool)
 {
   svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
-  init_spillbuf(&sbr->buf, blocksize, maxsize, result_pool);
+  sbr->buf = svn_spillbuf__create(blocksize, maxsize, result_pool);
   return sbr;
 }
-
-svn_spillbuf_reader_t *
-svn_spillbuf__reader_create_extended(apr_size_t blocksize,
-                                     apr_size_t maxsize,
-                                     svn_boolean_t delete_on_close,
-                                     svn_boolean_t spill_all_contents,
-                                     const char *dirpath,
-                                     apr_pool_t *result_pool)
-{
-  svn_spillbuf_reader_t *sbr = apr_pcalloc(result_pool, sizeof(*sbr));
-  init_spillbuf_extended(&sbr->buf, blocksize, maxsize,
-                         delete_on_close, spill_all_contents, dirpath,
-                         result_pool);
-  return sbr;
-}
-
 
 svn_error_t *
 svn_spillbuf__reader_read(apr_size_t *amt,
@@ -585,7 +576,7 @@ svn_spillbuf__reader_read(apr_size_t *amt,
           if (reader->sb_len == 0)
             {
               SVN_ERR(svn_spillbuf__read(&reader->sb_ptr, &reader->sb_len,
-                                         &reader->buf,
+                                         reader->buf,
                                          scratch_pool));
 
               /* We've run out of content, so return with whatever has
@@ -644,7 +635,8 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
   if (reader->sb_len > 0)
     {
       if (reader->save_ptr == NULL)
-        reader->save_ptr = apr_palloc(reader->buf.pool, reader->buf.blocksize);
+        reader->save_ptr = apr_palloc(reader->buf->pool,
+                                      reader->buf->blocksize);
 
       memcpy(reader->save_ptr, reader->sb_ptr, reader->sb_len);
       reader->save_len = reader->sb_len;
@@ -654,7 +646,7 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
       reader->sb_len = 0;
     }
 
-  return svn_error_trace(svn_spillbuf__write(&reader->buf, data, len,
+  return svn_error_trace(svn_spillbuf__write(reader->buf, data, len,
                                              scratch_pool));
 }
 
@@ -692,14 +684,15 @@ write_handler_spillbuf(void *baton, const char *data, apr_size_t *len)
 }
 
 
-/* Wrap a spillbuf reader into a stream. */
-static svn_stream_t *
-stream_from_reader(svn_spillbuf_reader_t *reader, apr_pool_t *result_pool)
+svn_stream_t *
+svn_stream__from_spillbuf(svn_spillbuf_t *buf,
+                          apr_pool_t *result_pool)
 {
   svn_stream_t *stream;
   struct spillbuf_baton *sb = apr_palloc(result_pool, sizeof(*sb));
 
-  sb->reader = reader;
+  sb->reader = apr_pcalloc(result_pool, sizeof(*sb->reader));
+  sb->reader->buf = buf;
   sb->scratch_pool = svn_pool_create(result_pool);
 
   stream = svn_stream_create(sb, result_pool);
@@ -708,29 +701,4 @@ stream_from_reader(svn_spillbuf_reader_t *reader, apr_pool_t *result_pool)
   svn_stream_set_write(stream, write_handler_spillbuf);
 
   return stream;
-}
-
-svn_stream_t *
-svn_stream__from_spillbuf(apr_size_t blocksize,
-                          apr_size_t maxsize,
-                          apr_pool_t *result_pool)
-{
-  return stream_from_reader(
-      svn_spillbuf__reader_create(blocksize, maxsize, result_pool),
-      result_pool);
-}
-
-svn_stream_t *
-svn_stream__from_spillbuf_extended(apr_size_t blocksize,
-                                   apr_size_t maxsize,
-                                   svn_boolean_t delete_on_close,
-                                   svn_boolean_t spill_all_contents,
-                                   const char *dirpath,
-                                   apr_pool_t *result_pool)
-{
-  return stream_from_reader(
-      svn_spillbuf__reader_create_extended(
-          blocksize, maxsize, delete_on_close,
-          spill_all_contents, dirpath, result_pool),
-      result_pool);
 }
