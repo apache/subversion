@@ -606,6 +606,21 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
                                   to null-terminate. */
 }
 
+void
+svn_stringbuf_appendfill(svn_stringbuf_t *str,
+                         char byte,
+                         apr_size_t count)
+{
+  apr_size_t new_len = str->len + count;
+  svn_stringbuf_ensure(str, new_len);
+
+  memset(str->data + str->len, byte, count);
+
+  /* update buffer length and always NUL-terminate it */
+  str->len = new_len;
+  str->data[new_len] = '\0';
+}
+
 
 void
 svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,

@@ -1381,7 +1381,7 @@ set_uniquifier(svn_fs_t *fs,
   svn_fs_fs__id_part_t temp;
 
   SVN_ERR(get_new_txn_node_id(&temp, fs, &rep->txn_id, pool));
-  rep->uniquifier.txn_id = rep->txn_id;
+  rep->uniquifier.noderev_txn_id = rep->txn_id;
   rep->uniquifier.number = temp.number;
 
   return SVN_NO_ERROR;

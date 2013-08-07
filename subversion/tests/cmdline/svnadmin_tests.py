@@ -61,8 +61,7 @@ def check_hotcopy_bdb(src, dst):
   if origerr or backerr or origout != backout:
     raise svntest.Failure
 
-def check_hotcopy_fsfs(src, dst):
-    "Verify that the SRC FSFS repository has been correctly copied to DST."
+def check_hotcopy_fsfs_fsx(src, dst):
     # Walk the source and compare all files to the destination
     for src_dirpath, src_dirs, src_files in os.walk(src):
       # Verify that the current directory exists in the destination
@@ -146,6 +145,14 @@ def check_hotcopy_fsfs(src, dst):
         f1.close()
         f2.close()
 
+def check_hotcopy_fsfs(src, dst):
+    "Verify that the SRC FSFS repository has been correctly copied to DST."
+    check_hotcopy_fsfs_fsx(src, dst)
+
+def check_hotcopy_fsx(src, dst):
+    "Verify that the SRC FSX repository has been correctly copied to DST."
+    check_hotcopy_fsfs_fsx(src, dst)
+        
 #----------------------------------------------------------------------
 
 # How we currently test 'svnadmin' --
@@ -457,8 +464,10 @@ def hotcopy_dot(sbox):
 
   if svntest.main.is_fs_type_fsfs():
     check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
-  else:
+  if svntest.main.is_fs_type_bdb():
     check_hotcopy_bdb(sbox.repo_dir, backup_dir)
+  if svntest.main.is_fs_type_fsx():
+    check_hotcopy_fsx(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
@@ -549,9 +558,17 @@ def verify_windows_paths_in_repos(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  # unfortunately, FSFS needs to do more checks than BDB resulting in
-  # different progress output
-  if svntest.main.is_fs_type_fsfs():
+  # unfortunately, some backends needs to do more checks than other
+  # resulting in different progress output
+  if svntest.main.is_fs_type_fsx():
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verifying metadata at revision 0 ...\n",
+                 "* Verifying repository metadata ...\n",
+                 "* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], output)
+  elif svntest.main.is_fs_type_fsfs():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verifying repository metadata ...\n",
