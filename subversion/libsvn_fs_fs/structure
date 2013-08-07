@@ -614,9 +614,11 @@ In FS formats 1 and 2, it also contains:
   rev                        Prototype rev file with new text reps
   rev-lock                   Lockfile for writing to the above
 
-In format 7+ logical addressing mode, it contains two more files
-(see structure-indexes for a detailed description):
+In format 7+ logical addressing mode, it contains two additional index
+files (see structure-indexes for a detailed description) and one more
+counter file:
 
+  itemidx                    Next item_index value as decimal integer
   index.l2p                  Log-to-phys proto-index
   index.p2l                  Phys-to-log proto-index
 
