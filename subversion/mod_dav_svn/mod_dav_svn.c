@@ -95,7 +95,7 @@ typedef struct dir_conf_t {
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
-  const char *fs_parent_path_template; /* template for path to parent of SVN FS'es  */
+  const char *fs_parent_path_template; /* fs_parent_path-like template  */
   enum conf_flag autoversioning;     /* whether autoversioning is active */
   dav_svn__bulk_upd_conf bulk_updates; /* whether bulk updates are allowed */
   enum conf_flag v2_protocol;        /* whether HTTP v2 is advertised */
@@ -242,7 +242,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
-  newconf->fs_parent_path_template = INHERIT_VALUE(parent, child, fs_parent_path_template);
+  newconf->fs_parent_path_template = INHERIT_VALUE(parent, child,
+                                                   fs_parent_path_template);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->bulk_updates = INHERIT_VALUE(parent, child, bulk_updates);
   newconf->v2_protocol = INHERIT_VALUE(parent, child, v2_protocol);
@@ -659,9 +660,23 @@ dav_svn__get_fs_parent_path(request_rec *r)
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   if (conf->fs_parent_path_template)
     {
-      return apr_psprintf(r->pool,
-                          conf->fs_parent_path_template,
-                          ap_get_server_name(r));
+      svn_stringbuf_t *pp =
+        svn_stringbuf_create(conf->fs_parent_path_template, r->pool);
+
+      while (1)
+        {
+          const char *server_name;
+          const char *sub = strstr(pp->data, "%{SERVER_NAME}");
+
+          if (! sub)
+            break;
+
+          server_name = ap_get_server_name(r);
+          svn_stringbuf_replace(pp, sub - pp->data, 14,
+                                server_name, strlen(server_name));
+        }
+
+      return pp->data;
     }
   return conf->fs_parent_path;
 }
