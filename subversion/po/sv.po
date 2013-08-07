@@ -3951,7 +3951,7 @@ msgstr "Endast SHA1-kontrollsummor kan användas som nycklar i \"rep_cache\"-tab
 #: ../libsvn_fs_fs/rep-cache.c:323
 #, c-format
 msgid "Representation key for checksum '%%s' exists in filesystem '%%s' with a different value (%%ld,%%%s,%%%s,%%%s) than what we were about to store (%%ld,%%%s,%%%s,%%%s)"
-msgstr "En representationsnyckel för kontrollsumman \"%%s\" finns i filsystemet \"%%s\" med ett värde (%%ld,%%%s,%%%s,%%%s) som skiljer sig från det som som skulle lagras (%%ld,%%%s,%%%s,%%%s)"
+msgstr "En representationsnyckel för kontrollsumman \"%%s\" finns i filsystemet \"%%s\" med ett värde (%%ld,%%%s,%%%s,%%%s) som skiljer sig från det som skulle lagras (%%ld,%%%s,%%%s,%%%s)"
 
 #: ../libsvn_fs_fs/tree.c:2241 ../libsvn_subr/path.c:1229
 #, c-format
