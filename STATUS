@@ -199,6 +199,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1511272
+   svnauthz: improve help strings.
+   Justification:
+     I found the previous output confusing.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
