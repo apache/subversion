@@ -173,15 +173,6 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1507044
-   Fix a bug in the Perl bindings.
-   Branch: ^/subversion/branches/1.7.x-r1507044
-   Justification: The bug makes scripts using SVN::Client look like
-     as if they didn't honor config settings from ~/.subversion/servers,
-     though they should by default.
-   Votes:
-     +1: rschupp
-
 Veto-blocked changes:
 =====================
 
@@ -199,4 +190,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1507044
+   Fix a bug in the Perl bindings.
+   Branch: ^/subversion/branches/1.7.x-r1507044
+   Justification: The bug makes scripts using SVN::Client look like
+     as if they didn't honor config settings from ~/.subversion/servers,
+     though they should by default.
+   Votes:
+     +1: rschupp, danielsh
 
