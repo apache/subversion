@@ -4634,20 +4634,20 @@ def diff_local_missing_obstruction(sbox):
                                      'diff', wc_dir)
 
 @XFail()
-def diff_prev_copy_in_mixed_rev_parent(sbox):
-  "diff -r PREV in mixed-rev parent dir"
+def diff_prev_of_copy(sbox):
+  "diff -rPREV file copied across unrelated revision"
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make a change on A/B/E/alpha.
+  # Unrelated change to A/B/E/alpha to create r2.
+  # Otherwise, the bug doesn't trigger.
   sbox.simple_append('A/B/E/alpha', 'more content')
   sbox.simple_commit()
 
-  # Note: Running an update here would make this test pass.
-  #sbox.simple_update()
-
-  # Copy A/B/E/beta to A/B/E/beta-copy and commit the copy.
-  sbox.simple_copy('A/B/E/beta', 'A/B/E/beta-copy')
+  # Copy A/B/E/beta@1 to A/B/E/beta-copy and commit the copy, creating r3.
+  # If this copy is commited in r2 the bug won't trigger.
+  # Also, if A/B/E/beta@2 is copied, the bug won't trigger.
+  sbox.simple_copy('A/B/E/beta@1', 'A/B/E/beta-copy')
   sbox.simple_commit()
 
   # Try to diff beta-copy against its PREV revision. This should produce
@@ -4739,7 +4739,7 @@ test_list = [ None,
               diff_repos_empty_file_addition,
               diff_missing_tree_conflict_victim,
               diff_local_missing_obstruction,
-              diff_prev_copy_in_mixed_rev_parent,
+              diff_prev_of_copy,
               ]
 
 if __name__ == '__main__':
