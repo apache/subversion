@@ -1268,7 +1268,7 @@ static const command_rec cmds[] =
   AP_INIT_TAKE1("SVNParentPathTemplate", SVNParentPathTemplate_cmd, NULL, ACCESS_CONF,
                 "specifies a template for a location in the filesystem whose "
                 "subdirectories are assumed to be Subversion repositories,"
-                "with %s representing the server name."),
+                "with \"%{SERVER_NAME}\" representing the server name."),
   { NULL }
 };
 
