@@ -105,6 +105,34 @@ decompose_normalized(apr_size_t *result_length,
   return SVN_NO_ERROR;
 }
 
+/* Fill the given BUFFER with an NFC UTF-8 representation of the UTF-8
+ * STRING. If LENGTH is SVN_UTF__UNKNOWN_LENGTH, assume STRING is
+ * NUL-terminated; otherwise look only at the first LENGTH bytes in
+ * STRING. Upon return, BUFFER->data points at a NUL-terminated string
+ * of UTF-8 characters.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints. Any error message comes from utf8proc.
+ */
+static svn_error_t *
+normalize_cstring(apr_size_t *result_length,
+                  const char *string, apr_size_t length,
+                  svn_membuf_t *buffer)
+{
+  ssize_t result = unicode_decomposition(0, string, length, buffer);
+  if (result >= 0)
+    {
+      svn_membuf__resize(buffer, result * sizeof(apr_int32_t) + 1);
+      result = utf8proc_reencode(buffer->data, result,
+                                 UTF8PROC_COMPOSE | UTF8PROC_STABLE);
+    }
+  if (result < 0)
+    return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
+                            gettext(utf8proc_errmsg(result)));
+  *result_length = result;
+  return SVN_NO_ERROR;
+}
+
 /* Compare two arrays of UCS-4 codes, BUFA of length LENA and BUFB of
  * length LENB. Return 0 if they're equal, a negative value if BUFA is
  * less than BUFB, otherwise a positive value.
@@ -305,6 +333,22 @@ svn_utf__glob(svn_boolean_t *match,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_membuf_t buffer;
+  apr_size_t result_length;
+  const apr_size_t length = strlen(string);
+  svn_membuf__create(&buffer, length * sizeof(apr_int32_t), scratch_pool);
+  err = normalize_cstring(&result_length, string, length, &buffer);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+  return (length == result_length && 0 == strcmp(string, buffer.data));
+}
 
 const char *
 svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
