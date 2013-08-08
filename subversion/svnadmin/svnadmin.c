@@ -925,8 +925,8 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_load_node_done:
-      len = 7;
-      svn_error_clear(svn_stream_write(feedback_stream, _(" done.\n"), &len));
+      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+                                        "%s", _(" done.\n")));
       return;
 
     case svn_repos_notify_load_copied_node:
