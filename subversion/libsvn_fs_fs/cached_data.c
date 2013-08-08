@@ -30,6 +30,7 @@
 
 #include "fs_fs.h"
 #include "id.h"
+#include "index.h"
 #include "low_level.h"
 #include "pack.h"
 #include "util.h"
@@ -42,12 +43,6 @@
 /* Defined this to enable access logging via dgb__log_access
 #define SVN_FS_FS__LOG_ACCESS
  */
-
-/* Data / item types.
- */
-#define SVN_FS_FS__ITEM_TYPE_ANY_REP    1  /* item is a representation. */
-#define SVN_FS_FS__ITEM_TYPE_NODEREV    2  /* item is a noderev */
-#define SVN_FS_FS__ITEM_TYPE_CHANGES    3  /* item is a changed paths list */
 
 /* When SVN_FS_FS__LOG_ACCESS has been defined, write a line to console
  * showing where REVISION, ITEM_INDEX is located in FS and use ITEM to
@@ -470,30 +465,37 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-
-  apr_file_t *revision_file;
-  apr_off_t root_offset;
-  svn_fs_id_t *root_id = NULL;
-  svn_boolean_t is_cached;
-
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
-  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                         ffd->rev_root_id_cache, &rev, pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, fs, rev,
-                                  pool));
+  if (svn_fs_fs__use_log_addressing(fs, rev))
+    {
+      *root_id_p = svn_fs_fs__id_create_root(rev, pool);
+    }
+  else
+    {
+      apr_file_t *revision_file;
+      apr_off_t root_offset;
+      svn_fs_id_t *root_id = NULL;
+      svn_boolean_t is_cached;
 
-  SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
-                              root_offset, pool));
+      SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
+                            ffd->rev_root_id_cache, &rev, pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
 
-  SVN_ERR(svn_io_file_close(revision_file, pool));
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
+      SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file,
+                                      fs, rev, pool));
 
-  SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
+      SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, fs, rev,
+                                  root_offset, pool));
 
-  *root_id_p = root_id;
+      SVN_ERR(svn_io_file_close(revision_file, pool));
+
+      SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
+
+      *root_id_p = root_id;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2054,8 +2056,12 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev, pool));
 
-  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
-                                  rev, pool));
+  if (svn_fs_fs__use_log_addressing(fs, rev))
+    SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs, rev, NULL,
+                                   SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
+  else
+    SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, fs,
+	                                rev, pool));
 
   SVN_ERR(aligned_seek(fs, revision_file, changes_offset, pool));
   SVN_ERR(svn_fs_fs__read_changes(changes,

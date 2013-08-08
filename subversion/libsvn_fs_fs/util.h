@@ -242,6 +242,15 @@ svn_fs_fs__path_l2p_proto_index(svn_fs_t *fs,
                                 const svn_fs_fs__id_part_t *txn_id,
                                 apr_pool_t *pool);
 
+/* Return the path of the file containing item_index counter for
+ * the transaction identified by TXN_ID in FS.
+ * The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_txn_item_index(svn_fs_t *fs,
+                               const svn_fs_fs__id_part_t *txn_id,
+                               apr_pool_t *pool);
+
 /* Return the path of the file containing the node origins cachs for
  * the given NODE_ID in FS.  The result will be allocated in POOL.
  */
@@ -373,17 +382,5 @@ svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
 svn_boolean_t
 svn_fs_fs__use_log_addressing(svn_fs_t *fs,
                               svn_revnum_t rev);
-
-/* For ITEM_INDEX within REV in FS, return the position in the respective
-   rev or pack file in *ABSOLUTE_POSITION.  If TXN_ID is not NULL, return
-   the file offset within that transaction and REV should be given as
-   SVN_INVALID_REVNUM in that case.  Use POOL for allocations. */
-svn_error_t *
-svn_fs_fs__item_offset(apr_off_t *absolute_position,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       const svn_fs_fs__id_part_t *txn_id,
-                       apr_uint64_t item_index,
-                       apr_pool_t *pool);
 
 #endif
