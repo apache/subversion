@@ -185,9 +185,9 @@ static apr_hash_t *svn_swig_pl_to_hash(SV *source,
     h = (HV *)SvRV(source);
     cnt = hv_iterinit(h);
     while (cnt--) {
-	SV* item = hv_iternextsv(h, &key, &retlen);
-	void *val = cv(item, ctx, pool);
-	svn_hash_sets(hash, key, val);
+        SV* item = hv_iternextsv(h, &key, &retlen);
+        void *val = cv(item, ctx, pool);
+        svn_hash_sets(hash, apr_pstrmemdup(pool, key, retlen), val);
     }
 
     return hash;
