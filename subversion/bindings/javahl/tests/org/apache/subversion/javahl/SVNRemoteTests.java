@@ -1134,7 +1134,7 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session = getSession();
 
         List<ISVNRemote.FileRevision> result =
-            session.getFileRevisions("iota", 0, 1, false);
+            session.getFileRevisions("iota", 0, 1, true);
         assertEquals(1, result.size());
         ISVNRemote.FileRevision rev = result.get(0);
         assertEquals("/iota", rev.getPath());
