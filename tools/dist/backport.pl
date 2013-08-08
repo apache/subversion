@@ -59,9 +59,8 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 } // do {
   local $/; # slurp mode
   my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
-  open(USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$filename")
-  and
-  <USERNAME> =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
+  `cat $ENV{HOME}/.subversion/auth/svn.simple/$filename`
+  =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
 }
 // warn "Username for commits (of votes/merges) not found";
 
