@@ -26,6 +26,8 @@ use File::Basename qw/basename/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid strftime/;
+use Text::Wrap qw/wrap/;
+use Tie::File ();
 
 ############### Start of reading values from environment ###############
 
@@ -85,7 +87,7 @@ $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG eq 'true';
 
 
-sub usage {
+sub backport_usage {
   my $basename = basename $0;
   print <<EOF;
 backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
@@ -129,6 +131,27 @@ to stderr if it notices any conflicts.  These modes are normally used by the
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
 EOF
+}
+
+sub nominate_usage {
+  my $basename = basename $0;
+  print <<EOF;
+nominate.pl: a tool for adding entries to STATUS.
+
+Usage: $0 "r42,r43,45." "\$Some_justification"
+
+Will add:
+ * r42, r43, r45
+   (log message of r42)
+   Justification:
+     \$Some_justification
+   Votes:
+     +1: $AVAILID
+to STATUS.  Backport branches are detected automatically.
+EOF
+# TODO: Optionally add a "Notes" section.
+# TODO: Look for backport branches named after issues.
+# TODO: Handle log messages such as "* file.c: Change."
 }
 
 sub digest_string {
@@ -736,14 +759,14 @@ sub handle_entry {
 }
 
 
-sub main {
+sub backport_main {
   my %approved;
   my %votes;
   my $state = read_state;
 
-  usage, exit 0 if @ARGV;
+  backport_usage, exit 0 if @ARGV;
 
-  open STATUS, "<", $STATUS or (usage, exit 1);
+  open STATUS, "<", $STATUS or (backport_usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
   die "A vim with the +ex_extra feature is required for \$MAY_COMMIT mode"
@@ -806,4 +829,78 @@ sub main {
   exit_stage_left $state, \%approved, \%votes;
 }
 
-&main
+sub nominate_main {
+
+  local $Text::Wrap::columns = 79;
+
+  # Argument parsing.
+  nominate_usage, exit 0 if @ARGV != 2;
+  my (@revnums) = (+shift) =~ /(\d+)/g;
+  my $justification = shift;
+
+  @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
+  die "No revision numbers specified" unless @revnums;
+
+  # Determine whether a backport branch exists
+  my ($URL) = `$SVN info` =~ /^URL: (.*)$/m;
+  die "Can't retrieve URL of cwd" unless $URL;
+
+  die if $URL !~ m%^[A-Za-z0-9:_.+/][A-Za-z0-9:_.+/-]*$%;
+  system "$SVN info -- $URL-r$revnums[0] 2>/dev/null";
+  my $branch = ($? == 0) ? basename("$URL-r$revnums[0]") : undef;
+
+  # Construct entry.
+  my $logmsg = `$SVN propget --revprop -r $revnums[0] --strict svn:log '^/'`;
+  die "Can't fetch log message of r$revnums[0]: $!" unless $logmsg;
+  
+  my @lines;
+  push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
+  push @lines, wrap ' 'x3, ' 'x3, ($logmsg =~ /^(.*?)\n\n/s);
+  push @lines, "   Justification:";
+  push @lines, wrap ' 'x5, ' 'x5, $justification;
+  push @lines, "   Branch: $branch" if defined $branch;
+  push @lines, "   Votes:";
+  push @lines, "     +1: $AVAILID";
+  push @lines, "";
+  my $raw = join "", map "$_\n", @lines;
+
+  # Open the file in line-mode (not paragraph-mode).
+  my @STATUS;
+  tie @STATUS, "Tie::File", $STATUS, recsep => "\n";
+  my ($index) = grep { $STATUS[$_] =~ /^Veto/ } (0..$#STATUS);
+  die "Couldn't find where to add an entry" unless $index;
+
+  # Add an empty line if needed.
+  if ($STATUS[$index-1] =~ /\S/) {
+    splice @STATUS, $index, 0, "";
+    $index++;
+  }
+
+  # Add the entry.
+  splice @STATUS, $index, 0, @lines;
+
+  # Save.
+  untie @STATUS;
+
+  # Done!
+  system "$SVN diff -- $STATUS";
+  if (prompt "Commit this nomination? ") {
+    system "$SVN commit -m 'Nominate r$revnums[0].' -- $STATUS";
+    exit $?;
+  }
+
+  exit 0;
+}
+
+# Dispatch to the appropriate main().
+given (basename($0)) {
+  when (/^b$|backport/) {
+    &backport_main;
+  }
+  when (/^n$|nominate/) {
+    &nominate_main(@ARGV);
+  }
+  default {
+    &backport_main;
+  }
+}
