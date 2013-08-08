@@ -419,10 +419,9 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
             {
               const char *last;
 
-              /* Determine the lenght of the UTF-8 sequence */
+              /* Determine the length of the UTF-8 sequence */
               const char *const p = src + done;
-              const uint8_t index = (uint8_t)*p;
-              len = utf8proc_utf8class[index];
+              len = utf8proc_utf8class[(uint8_t)*p];
 
               /* Check if the multi-byte sequence is valid UTF-8. */
               if (len > 1 && len <= length - done)
