@@ -132,6 +132,15 @@ svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 const char *
+svn_fs_fs__path_l2p_index(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
+                      svn_fs_fs__path_rev_absolute(fs, rev, pool));
+}
+
+const char *
 svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
@@ -214,6 +223,15 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                               NULL);
 }
 
+const char*
+svn_fs_fs__path_l2p_proto_index(svn_fs_t *fs,
+                                const svn_fs_fs__id_part_t *txn_id,
+                                apr_pool_t *pool)
+{
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_INDEX PATH_EXT_L2P_INDEX, pool);
+}
+
 const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
@@ -229,6 +247,7 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV, pool);
 }
+
 
 const char *
 svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,

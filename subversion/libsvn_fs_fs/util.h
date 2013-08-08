@@ -169,6 +169,14 @@ svn_fs_fs__path_revprops(svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_pool_t *pool);
 
+/* Return the path of the file containing the log-to-phys index for the
+ * file containing revision REV in FS. The result will be allocated in POOL.
+ */
+const char *
+svn_fs_fs__path_l2p_index(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          apr_pool_t *pool);
+
 /* Return the path of the file storing the oldest non-packed revision in FS.
  * The result will be allocated in POOL.
  */
@@ -224,6 +232,15 @@ const char *
 svn_fs_fs__path_txn_node_children(svn_fs_t *fs,
                                   const svn_fs_id_t *id,
                                   apr_pool_t *pool);
+
+/* Return the path of the file containing the log-to-phys index for
+ * the transaction identified by TXN_ID in FS.
+ * The result will be allocated in POOL.
+ */
+const char*
+svn_fs_fs__path_l2p_proto_index(svn_fs_t *fs,
+                                const svn_fs_fs__id_part_t *txn_id,
+                                apr_pool_t *pool);
 
 /* Return the path of the file containing the node origins cachs for
  * the given NODE_ID in FS.  The result will be allocated in POOL.
