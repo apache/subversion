@@ -73,6 +73,8 @@ extern "C" {
                                                     shards */
 #define PATH_EXT_L2P_INDEX    ".l2p"             /* extension of the log-
                                                     to-phys index */
+#define PATH_EXT_P2L_INDEX    ".p2l"             /* extension of the phys-
+                                                    to-log index */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -110,6 +112,7 @@ extern "C" {
 #define CONFIG_SECTION_IO                "io"
 #define CONFIG_OPTION_BLOCK_SIZE         "block-size"
 #define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
+#define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -297,6 +300,9 @@ typedef struct fs_fs_data_t
   /* Capacity in entries of log-to-phys index pages */
   apr_int64_t l2p_page_size;
 
+  /* Rev / pack file granularity covered by phys-to-log index pages */
+  apr_int64_t p2l_page_size;
+  
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
@@ -385,6 +391,15 @@ typedef struct fs_fs_data_t
   /* Cache for l2p_page_t objects; the key is svn_fs_fs__page_cache_key_t.
      Will be NULL for pre-format7 repos */
   svn_cache__t *l2p_page_cache;
+
+  /* Cache for p2l_header_t objects; the key is (revision, is-packed).
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *p2l_header_cache;
+
+  /* Cache for apr_array_header_t objects containing svn_fs_fs__p2l_entry_t
+     elements; the key is svn_fs_fs__page_cache_key_t.
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *p2l_page_cache;
 
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;

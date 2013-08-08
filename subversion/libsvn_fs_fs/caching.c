@@ -684,11 +684,39 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            fs,
                            no_handler,
                            fs->pool));
+      SVN_ERR(create_cache(&(ffd->p2l_header_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_p2l_header,
+                           svn_fs_fs__deserialize_p2l_header,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "P2L_HEADER",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+      SVN_ERR(create_cache(&(ffd->p2l_page_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_p2l_page,
+                           svn_fs_fs__deserialize_p2l_page,
+                           sizeof(svn_fs_fs__page_cache_key_t),
+                           apr_pstrcat(pool, prefix, "P2L_PAGE",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
     }
   else
     {
       ffd->l2p_header_cache = NULL;
       ffd->l2p_page_cache = NULL;
+      ffd->p2l_header_cache = NULL;
+      ffd->p2l_page_cache = NULL;
     }
 
   return SVN_NO_ERROR;

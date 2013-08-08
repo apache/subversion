@@ -47,6 +47,25 @@
 #define SVN_FS_FS__ITEM_TYPE_ANY_REP    7  /* item is any representation.
                                               Only used in pre-format7. */
 
+/* (user visible) entry in the phys-to-log index.  It describes a section
+ * of some packed / non-packed rev file as containing a specific item.
+ * There must be no overlapping / conflicting entries.
+ */
+typedef struct svn_fs_fs__p2l_entry_t
+{
+  /* offset of the first byte that belongs to the item */
+  apr_off_t offset;
+  
+  /* length of the item in bytes */
+  apr_off_t size;
+
+  /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
+  unsigned type;
+
+  /* item in that block */
+  svn_fs_fs__id_part_t item;
+} svn_fs_fs__p2l_entry_t;
+
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
  * allocations.
@@ -88,6 +107,65 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
                             const char *file_name,
                             const char *proto_file_name,
                             svn_revnum_t revision,
+                            apr_pool_t *pool);
+
+/* Open / create a phys-to-log index file with the full file path name
+ * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
+ * allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_proto_index_open(apr_file_t **proto_index,
+                                const char *file_name,
+                                apr_pool_t *pool);
+
+/* Add a new mapping ENTRY to the phys-to-log index file in PROTO_INDEX.
+ * The entries must be added in ascending offset order and must not leave
+ * intermittent ranges uncovered.  The revision value in ENTRY may be
+ * SVN_INVALID_REVISION.  Use POOL for allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_proto_index_add_entry(apr_file_t *proto_index,
+                                     svn_fs_fs__p2l_entry_t *entry,
+                                     apr_pool_t *pool);
+
+/* Use the proto index file stored at PROTO_FILE_NAME and construct the
+ * final phys-to-log index file at FILE_NAME.  Entries without a valid
+ * revision will be assigned to the REVISION given here.
+ * Use POOL for allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_index_create(svn_fs_t *fs,
+                            const char *file_name,
+                            const char *proto_file_name,
+                            svn_revnum_t revision,
+                            apr_pool_t *pool);
+
+/* Use the phys-to-log mapping files in FS to build a list of entries
+ * that (partly) share in the same cluster as the item at global OFFSET
+ * in the rep file containing REVISION.  Return the array in *ENTRIES,
+ * elements being of type svn_fs_fs__p2l_entry_t.
+ * Use POOL for allocations.
+ *
+ * Note that (only) the first and the last mapping may cross a cluster
+ * boundary.
+ */
+svn_error_t *
+svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
+                            svn_fs_t *fs,
+                            svn_revnum_t revision,
+                            apr_off_t offset,
+                            apr_pool_t *pool);
+
+/* Use the phys-to-log mapping files in FS to return the entry for the
+ * item starting at global OFFSET in the rep file containing REVISION in
+ * *ENTRY.  Sets *ENTRY to NULL if no item starts at exactly that offset.
+ * Use POOL for allocations.
+ */
+svn_error_t *
+svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry,
+                            svn_fs_t *fs,
+                            svn_revnum_t revision,
+                            apr_off_t offset,
                             apr_pool_t *pool);
 
 /* For ITEM_INDEX within REV in FS, return the position in the respective
@@ -156,6 +234,44 @@ svn_fs_fs__serialize_l2p_page(void **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_l2p_page(void **out,
+                                void *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__serialize_func_t for p2l_header_t objects.
+ */
+svn_error_t *
+svn_fs_fs__serialize_p2l_header(void **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__deserialize_func_t for p2l_header_t objects.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_p2l_header(void **out,
+                                  void *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__serialize_func_t for apr_array_header_t objects
+ * with elements of type svn_fs_fs__p2l_entry_t.
+ */
+svn_error_t *
+svn_fs_fs__serialize_p2l_page(void **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool);
+
+/*
+ * Implements svn_cache__deserialize_func_t for apr_array_header_t objects
+ * with elements of type svn_fs_fs__p2l_entry_t.
+ */
+svn_error_t *
+svn_fs_fs__deserialize_p2l_page(void **out,
                                 void *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);

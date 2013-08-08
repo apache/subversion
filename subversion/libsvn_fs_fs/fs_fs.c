@@ -535,14 +535,20 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_IO,
                                    CONFIG_OPTION_L2P_PAGE_SIZE,
                                    0x2000));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->p2l_page_size,
+                                   CONFIG_SECTION_IO,
+                                   CONFIG_OPTION_P2L_PAGE_SIZE,
+                                   64));
 
       ffd->block_size *= 0x400;
+      ffd->p2l_page_size *= 0x400;
     }
   else
     {
       /* should be irrelevant but we initialize them anyway */
       ffd->block_size = 0x1000;
       ffd->l2p_page_size = 0x2000;
+      ffd->p2l_page_size = 0x1000;
     }
   
   return SVN_NO_ERROR;
@@ -714,6 +720,23 @@ write_config(svn_fs_t *fs,
 "### This is an expert setting.  Any non-zero value is possible."            NL
 "### l2p-page-size is 8192 entries by default."                              NL
 "# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
+"###"                                                                        NL
+"### The phys-to-log index maps positions within the rev or pack file to"    NL
+"### to data items,  i.e. describes what piece of information is being"      NL
+"### stored at that particular offset.  The index describes the rev file"    NL
+"### in chunks (pages) and keeps a global list of all those pages.  Large"   NL
+"### pages mean a shorter page table but a larger per-page description of"   NL
+"### data items in it.  The latency sweetspot depends on the change size"    NL
+"### distribution but is relatively wide."                                   NL
+"### If the repository contains very large files,  i.e. individual changes"  NL
+"### of tens of MB each,  increasing the page size will shorten the index"   NL
+"### file at the expense of a slightly increased latency in sections with"   NL
+"### smaller changes."                                                       NL
+"### For practical reasons,  this should match block-size.  Differing"       NL
+"### values are perfectly legal but may result in some processing overhead." NL
+"### Must be a power of 2."                                                  NL
+"### p2l-page-size is 64 kBytes by default."                                 NL
+"# " CONFIG_OPTION_P2L_PAGE_SIZE " = 64"                                     NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),
