@@ -4633,30 +4633,6 @@ def diff_local_missing_obstruction(sbox):
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'diff', wc_dir)
 
-@XFail()
-def diff_prev_of_copy(sbox):
-  "diff -rPREV file copied across unrelated revision"
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Unrelated change to A/B/E/alpha to create r2.
-  # Otherwise, the bug doesn't trigger.
-  sbox.simple_append('A/B/E/alpha', 'more content')
-  sbox.simple_commit()
-
-  # Copy A/B/E/beta@1 to A/B/E/beta-copy and commit the copy, creating r3.
-  # If this copy is commited in r2 the bug won't trigger.
-  # Also, if A/B/E/beta@2 is copied, the bug won't trigger.
-  sbox.simple_copy('A/B/E/beta@1', 'A/B/E/beta-copy')
-  sbox.simple_commit()
-
-  # Try to diff beta-copy against its PREV revision. This should produce
-  # empty output, since the copy does not differ from its source.
-  # Currently fails with 'Unable to find repository location for
-  # beta-copy in revision 2' error.
-  svntest.actions.run_and_verify_svn(None, [], [],
-                                     'diff', '-r', 'PREV',
-                                     sbox.ospath('A/B/E/beta-copy'))
 
 ########################################################################
 #Run the tests
@@ -4739,7 +4715,6 @@ test_list = [ None,
               diff_repos_empty_file_addition,
               diff_missing_tree_conflict_victim,
               diff_local_missing_obstruction,
-              diff_prev_of_copy,
               ]
 
 if __name__ == '__main__':
