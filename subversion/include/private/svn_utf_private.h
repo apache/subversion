@@ -73,6 +73,18 @@ svn_utf__last_valid(const char *src, apr_size_t len);
 const char *
 svn_utf__last_valid2(const char *src, apr_size_t len);
 
+/* Copy LENGTH bytes of SRC, converting characters as follows:
+    - Pass characters from the ASCII subset to the result
+    - Strip all combining marks from the string
+    - Represent other valid Unicode chars as {U+XXXX}
+    - Replace invalid Unicode chars with {U?XXXX}
+    - Represent chars that are not valid UTF-8 as ?\XX
+    - Replace codes outside the Unicode range with a sequence of ?\XX
+    - Represent the null byte as \0
+   Allocate the result in POOL. */
+const char *
+svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool);
+
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                  apr_pool_t *pool,

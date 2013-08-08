@@ -1485,8 +1485,8 @@ def verify_non_utf8_paths(sbox):
   expected_stderr = [
     "* Dumped revision 0.\n",
     "WARNING 0x0002: E160005: "
-      "While validating fspath '?\\230': "
-      "Path '?\\230' is not in UTF-8"
+      "While validating fspath '?\\E6': "
+      "Path '?\\E6' is not in UTF-8"
       "\n",
     "* Dumped revision 1.\n",
     ]
