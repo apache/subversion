@@ -531,13 +531,18 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_IO,
                                    CONFIG_OPTION_BLOCK_SIZE,
                                    64));
+      SVN_ERR(svn_config_get_int64(ffd->config, &ffd->l2p_page_size,
+                                   CONFIG_SECTION_IO,
+                                   CONFIG_OPTION_L2P_PAGE_SIZE,
+                                   0x2000));
 
       ffd->block_size *= 0x400;
     }
   else
     {
-      /* should be irrelevant but we initialize it anyway */
+      /* should be irrelevant but we initialize them anyway */
       ffd->block_size = 0x1000;
+      ffd->l2p_page_size = 0x2000;
     }
   
   return SVN_NO_ERROR;
@@ -692,6 +697,23 @@ write_config(svn_fs_t *fs,
 "### Can be changed at any time but must be a power of 2."                   NL
 "### block-size is 64 kBytes by default."                                    NL
 "# " CONFIG_OPTION_BLOCK_SIZE " = 64"                                        NL
+"###"                                                                        NL
+"### The log-to-phys index maps data item numbers to offsets within the"     NL
+"### rev or pack file.  A revision typically contains 2 .. 5 such items"     NL
+"### per changed path.  For each revision, at least one page is being"       NL
+"### allocated in the l2p index with unused parts resulting in no wasted"    NL
+"### space."                                                                 NL
+"### Changing this parameter only affects larger revisions with thousands"   NL
+"### of changed paths.  A smaller value means that more pages need to be"    NL
+"### allocated for such revisions,  increasing the size of the page table"   NL
+"### meaning it takes longer to read that table (once).  Access to each"     NL
+"### page is then faster because less data has to read.  So, if you have"    NL
+"### several extremely large revisions (approaching 1 mio changes),  think"  NL
+"### about increasing this setting.  Reducing the value will rarely result"  NL
+"### in a net speedup."                                                      NL
+"### This is an expert setting.  Any non-zero value is possible."            NL
+"### l2p-page-size is 8192 entries by default."                              NL
+"# " CONFIG_OPTION_L2P_PAGE_SIZE " = 8192"                                   NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),

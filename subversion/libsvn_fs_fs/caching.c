@@ -25,6 +25,7 @@
 #include "id.h"
 #include "dag.h"
 #include "tree.h"
+#include "index.h"
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -403,7 +404,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * - Data that can be reconstructed from other elements has low prio
    *   (e.g. fulltexts, directories etc.)
    * - Index data required to find any of the other data has high prio
-   *   (e.g. noderevs)
+   *   (e.g. noderevs, L2P and P2L index pages)
    * - everthing else should use default prio
    */
 
@@ -653,6 +654,41 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     {
       ffd->txdelta_window_cache = NULL;
       ffd->combined_window_cache = NULL;
+    }
+
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      SVN_ERR(create_cache(&(ffd->l2p_header_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_l2p_header,
+                           svn_fs_fs__deserialize_l2p_header,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "L2P_HEADER",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+      SVN_ERR(create_cache(&(ffd->l2p_page_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_l2p_page,
+                           svn_fs_fs__deserialize_l2p_page,
+                           sizeof(svn_fs_fs__page_cache_key_t),
+                           apr_pstrcat(pool, prefix, "L2P_PAGE",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+    }
+  else
+    {
+      ffd->l2p_header_cache = NULL;
+      ffd->l2p_page_cache = NULL;
     }
 
   return SVN_NO_ERROR;

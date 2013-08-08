@@ -71,6 +71,8 @@ extern "C" {
 #define PATH_PACKED           "pack"             /* Packed revision data file */
 #define PATH_EXT_PACKED_SHARD ".pack"            /* Extension for packed
                                                     shards */
+#define PATH_EXT_L2P_INDEX    ".l2p"             /* extension of the log-
+                                                    to-phys index */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -84,6 +86,8 @@ extern "C" {
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
 #define PATH_EXT_REV       ".rev"          /* Extension of protorev file */
 #define PATH_EXT_REV_LOCK  ".rev-lock"     /* Extension of protorev lock file */
+#define PATH_INDEX          "index"        /* name of index files w/o ext */
+
 /* Names of files in legacy FS formats */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
@@ -103,6 +107,7 @@ extern "C" {
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
 #define CONFIG_SECTION_IO                "io"
 #define CONFIG_OPTION_BLOCK_SIZE         "block-size"
+#define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -287,6 +292,9 @@ typedef struct fs_fs_data_t
   /* Rev / pack file read granularity. */
   apr_int64_t block_size;
 
+  /* Capacity in entries of log-to-phys index pages */
+  apr_int64_t l2p_page_size;
+
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
@@ -367,6 +375,14 @@ typedef struct fs_fs_data_t
      combination of revision, inheritance flags and path; value is "1"
      if the node has mergeinfo, "0" if it doesn't. */
   svn_cache__t *mergeinfo_existence_cache;
+
+  /* Cache for l2p_header_t objects; the key is (revision, is-packed).
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *l2p_header_cache;
+
+  /* Cache for l2p_page_t objects; the key is svn_fs_fs__page_cache_key_t.
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *l2p_page_cache;
 
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;
