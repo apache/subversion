@@ -245,14 +245,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1511057
-   Fix issue #4044: "svn log -v" fails with a 1.2.x server.
-   Justification:
-     Regression in 1.8.0 (ra_serf), basic functionality now fails with older
-     servers which we still need to support.
-   Votes:
-     +1: lgo, gstein, philip
-
  * r1507044
    Fix a bug in the Perl bindings.
    Justification: The bug makes scripts using SVN::Client look like
