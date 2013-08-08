@@ -32,6 +32,7 @@
 #include "private/svn_temp_serializer.h"
 
 #include "index.h"
+#include "pack.h"
 #include "temp_serializer.h"
 #include "util.h"
 
@@ -1325,6 +1326,52 @@ l2p_proto_index_lookup(apr_off_t *offset,
 
   SVN_ERR(svn_io_file_close(file, pool));
   
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__item_offset(apr_off_t *absolute_position,
+                       svn_fs_t *fs,
+                       svn_revnum_t revision,
+                       const svn_fs_fs__id_part_t *txn_id,
+                       apr_uint64_t item_index,
+                       apr_pool_t *pool)
+{
+  if (txn_id)
+    {
+      if (svn_fs_fs__use_log_addressing(fs, txn_id->revision + 1))
+        {
+          /* the txn is going to produce a rev with logical addressing.
+             So, we need to get our info from the (proto) index file. */
+          SVN_ERR(l2p_proto_index_lookup(absolute_position, fs, txn_id,
+                                         item_index, pool));
+        }
+      else
+        {
+          /* for data in txns, item_index *is* the offset */
+          *absolute_position = item_index;
+        }
+    }
+  else if (svn_fs_fs__use_log_addressing(fs, revision))
+    {
+      /* ordinary index lookup */
+      SVN_ERR(l2p_index_lookup(absolute_position, fs, revision,
+                               item_index, pool));
+    }
+  else if (svn_fs_fs__is_packed_rev(fs, revision))
+    {
+      /* pack file with physical addressing */
+      apr_off_t rev_offset;
+      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, revision, pool));
+      *absolute_position = rev_offset + item_index;
+    }
+  else
+    {
+      /* for non-packed revs with physical addressing,
+         item_index *is* the offset */
+      *absolute_position = item_index;
+    }
+
   return SVN_NO_ERROR;
 }
 

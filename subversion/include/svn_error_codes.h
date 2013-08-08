@@ -836,6 +836,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 58,
              "Index files are inconsistent.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_TXN_ADDRESSING_MODE_OUT_OF_DATE,
+             SVN_ERR_FS_CATEGORY_START + 59,
+             "Transaction addressing mode is out of date")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

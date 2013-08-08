@@ -26,6 +26,7 @@
 #include "svn_pools.h"
 #include "private/svn_string_private.h"
 
+#include "index.h"
 #include "low_level.h"
 #include "rep-cache.h"
 #include "revprops.h"

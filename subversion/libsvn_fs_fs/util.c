@@ -233,6 +233,15 @@ svn_fs_fs__path_l2p_proto_index(svn_fs_t *fs,
 }
 
 const char *
+svn_fs_fs__path_txn_item_index(svn_fs_t *fs,
+                               const svn_fs_fs__id_part_t *txn_id,
+                               apr_pool_t *pool)
+{
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_TXN_ITEM_INDEX, pool);
+}
+
+const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
                               apr_pool_t *pool)
@@ -645,29 +654,4 @@ svn_fs_fs__use_log_addressing(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   return ffd->min_log_addressing_rev != SVN_INVALID_REVNUM
       && ffd->min_log_addressing_rev <= rev;
-}
-
-svn_error_t *
-svn_fs_fs__item_offset(apr_off_t *absolute_position,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       const svn_fs_fs__id_part_t *txn_id,
-                       apr_uint64_t item_index,
-                       apr_pool_t *pool)
-{
-  /* for now, we only implement physical addressing */
-
-  if (txn_id == NULL && svn_fs_fs__is_packed_rev(fs, rev))
-    {
-      apr_off_t rev_offset;
-      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
-      *absolute_position = rev_offset + item_index;
-    }
-  else
-    {
-      /* for TXNs and non-packed revs, item_index *is* the offset */
-      *absolute_position = item_index;
-    }
-
-  return SVN_NO_ERROR;
 }
