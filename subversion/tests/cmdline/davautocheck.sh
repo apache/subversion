@@ -450,7 +450,7 @@ PidFile             "$HTTPD_PID"
 LogFormat           "%h %l %u %t \"%r\" %>s %b" common
 CustomLog           "$HTTPD_ACCESS_LOG" common
 ErrorLog            "$HTTPD_ERROR_LOG"
-LogLevel            Debug
+LogLevel            debug
 ServerRoot          "$HTTPD_ROOT"
 DocumentRoot        "$HTTPD_ROOT"
 ScoreBoardFile      "$HTTPD_ROOT/run"
