@@ -535,6 +535,17 @@ sub vote {
   }
 }
 
+sub check_local_mods_to_STATUS {
+  if (`$SVN status -q $STATUS`) {
+    die  "Local mods to STATUS file $STATUS" if $YES;
+    warn "Local mods to STATUS file $STATUS";
+    system "$SVN diff -- $STATUS";
+    prompt "Press the 'any' key to continue...\n", dontprint => 1;
+    return 1;
+  }
+  return 0;
+}
+
 sub revert {
   copy $STATUS, "$STATUS.$$.tmp";
   system "$SVN revert -q $STATUS";
@@ -779,12 +790,7 @@ sub backport_main {
   system("$SVN info $STATUS >/dev/null") == 0
     or die "$0: svn error; point \$SVN to an appropriate binary";
 
-  if (`$SVN status -q $STATUS`) {
-    die  "Local mods to STATUS file $STATUS" if $YES;
-    warn "Local mods to STATUS file $STATUS";
-    system "$SVN diff -- $STATUS";
-    prompt "Press the 'any' key to continue...\n", dontprint => 1;
-  }
+  check_local_mods_to_STATUS;
 
   # Skip most of the file
   $/ = ""; # paragraph mode
@@ -830,8 +836,11 @@ sub backport_main {
 }
 
 sub nominate_main {
+  my $had_local_mods;
 
   local $Text::Wrap::columns = 79;
+
+  $had_local_mods = check_local_mods_to_STATUS;
 
   # Argument parsing.
   nominate_usage, exit 0 if @ARGV != 2;
@@ -886,6 +895,11 @@ sub nominate_main {
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
     system "$SVN commit -m 'Nominate r$revnums[0].' -- $STATUS";
+    exit $?;
+  }
+  elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {
+    # TODO: we could be smarter and just un-splice the lines we'd added.
+    system "$SVN revert -- $STATUS";
     exit $?;
   }
 
