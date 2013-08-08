@@ -171,7 +171,7 @@ Candidate changes:
      Reverts r1485650 on trunk, which was merged to 1.8.x in r1486284.
      Merge with --accept mc to resolve conflict.
    Votes:
-     +1: philip (r1506966 only), danielsh
+     +1: philip, danielsh
 
  * r1507382, r1509186, r1509196
    Allow passing NULL for the config dir to use the default config dir path.
