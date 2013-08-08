@@ -674,6 +674,69 @@ test_utf_fuzzy_escape(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_utf_is_normalized(apr_pool_t *pool)
+{
+  /* Normalized: NFC */
+  static const char nfc[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe1\xbb\x9d"              /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  /* Normalized: NFD */
+  static const char nfd[] =
+    "S\xcc\xa3\xcc\x87"         /* S with dot above and below */
+    "u\xcc\x8a"                 /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "v\xcc\x83"                 /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "r\xcc\x8f"                 /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "i\xcc\x88\xcc\x81"         /* i with diaeresis and acute */
+    "o\xcc\x9b\xcc\x80"         /* o with grave and hook */
+    "n\xcc\xad";                /* n with circumflex below */
+
+  /* Mixed, denormalized */
+  static const char mixup[] =
+    "S\xcc\x87\xcc\xa3"         /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  /* Invalid UTF-8 */
+  static const char invalid[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe6"                      /* Invalid byte */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  SVN_ERR_ASSERT(svn_utf__is_normalized(nfc, pool));
+  SVN_ERR_ASSERT(!svn_utf__is_normalized(nfd, pool));
+  SVN_ERR_ASSERT(!svn_utf__is_normalized(mixup, pool));
+  SVN_ERR_ASSERT(!svn_utf__is_normalized(invalid, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -694,5 +757,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf__glob"),
     SVN_TEST_PASS2(test_utf_fuzzy_escape,
                    "test svn_utf__fuzzy_escape"),
+    SVN_TEST_PASS2(test_utf_is_normalized,
+                   "test svn_utf__is_normalized"),
     SVN_TEST_NULL
   };

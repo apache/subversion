@@ -112,6 +112,14 @@ svn_utf__normcmp(int *result,
                  const char *str2, apr_size_t len2,
                  svn_membuf_t *buf1, svn_membuf_t *buf2);
 
+/* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
+ * a FALSE return value may indicate that STRING is not valid UTF-8 at
+ * all.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_boolean_t
+svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool);
 
 /* Pattern matching similar to the the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
