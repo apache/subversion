@@ -803,7 +803,6 @@ repos_notify_handler(void *baton,
                      apr_pool_t *scratch_pool)
 {
   svn_stream_t *feedback_stream = baton;
-  apr_size_t len;
 
   switch (notify->action)
   {
@@ -837,7 +836,7 @@ repos_notify_handler(void *baton,
 
     case svn_repos_notify_verify_rev_structure:
       if (notify->revision == SVN_INVALID_REVNUM)
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+        svn_error_clear(svn_stream_puts(feedback_stream,
                                 _("* Verifying repository metadata ...\n")));
       else
         svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
@@ -925,13 +924,11 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_load_node_done:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                                        "%s", _(" done.\n")));
+      svn_error_clear(svn_stream_puts(feedback_stream, _(" done.\n")));
       return;
 
     case svn_repos_notify_load_copied_node:
-      len = 9;
-      svn_error_clear(svn_stream_write(feedback_stream, "COPIED...", &len));
+      svn_error_clear(svn_stream_puts(feedback_stream, "COPIED..."));
       return;
 
     case svn_repos_notify_load_txn_start:
@@ -959,7 +956,7 @@ repos_notify_handler(void *baton,
       return;
 
     case svn_repos_notify_recover_start:
-      svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
+      svn_error_clear(svn_stream_puts(feedback_stream,
                              _("Repository lock acquired.\n"
                                "Please wait; recovering the"
                                " repository may take some time...\n")));
