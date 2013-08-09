@@ -150,7 +150,6 @@ to STATUS.  Backport branches are detected automatically.
 EOF
 # TODO: Optionally add a "Notes" section.
 # TODO: Look for backport branches named after issues.
-# TODO: Handle log messages such as "* file.c: Change."
 }
 
 sub digest_string {
@@ -861,9 +860,16 @@ sub nominate_main {
   my $logmsg = `$SVN propget --revprop -r $revnums[0] --strict svn:log '^/'`;
   die "Can't fetch log message of r$revnums[0]: $!" unless $logmsg;
   
+  unless ($logmsg =~ s/^(.*?)\n\n.*/$1/s) {
+    # "* file\n  (symbol): Log message."
+    $logmsg =~ s/^.*?: //s;
+    $logmsg =~ s/^  \x28.*//ms;
+    $logmsg =~ s/\s*\n\s+/ /g;
+  }
+
   my @lines;
   push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
-  push @lines, wrap ' 'x3, ' 'x3, ($logmsg =~ /^(.*?)\n\n/s);
+  push @lines, wrap ' 'x3, ' 'x3, $logmsg;
   push @lines, "   Justification:";
   push @lines, wrap ' 'x5, ' 'x5, $justification;
   push @lines, "   Branch: $branch" if defined $branch;
