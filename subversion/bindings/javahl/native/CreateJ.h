@@ -87,8 +87,16 @@ class CreateJ
   static jobject
   PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool = NULL);
 
+  static jobject
+  PropertyMap(apr_array_header_t* prop_diffs, apr_pool_t* scratch_pool = NULL);
+
   static void
   FillPropertyMap(jobject map, apr_hash_t* prop_hash,
+                  apr_pool_t* scratch_pool,
+                  jmethodID put_method_id = 0);
+
+  static void
+  FillPropertyMap(jobject map, apr_array_header_t* prop_diffs,
                   apr_pool_t* scratch_pool,
                   jmethodID put_method_id = 0);
 

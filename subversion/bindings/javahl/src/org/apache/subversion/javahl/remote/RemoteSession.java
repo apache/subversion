@@ -34,6 +34,7 @@ import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -207,13 +208,68 @@ public class RemoteSession extends JNIObject implements ISVNRemote
             throws ClientException;
 
     public native
-        List<LocationSegment> getLocationSegments(String path,
-                                                  long pegRevision,
-                                                  long startRevision,
-                                                  long endRevision)
+        void getLocationSegments(String path,
+                                 long pegRevision,
+                                 long startRevision,
+                                 long endRevision,
+                                 RemoteLocationSegmentsCallback handler)
             throws ClientException;
 
-    // TODO: getFileRevisions
+    private static class GetLocationSegmentsHandler
+        implements RemoteLocationSegmentsCallback
+    {
+        public List<LocationSegment> locationSegments = null;
+        public void doSegment(LocationSegment locationSegment)
+        {
+            if (locationSegments == null)
+                locationSegments = new ArrayList<LocationSegment>();
+            locationSegments.add(locationSegment);
+        }
+    }
+
+    public List<LocationSegment> getLocationSegments(String path,
+                                                     long pegRevision,
+                                                     long startRevision,
+                                                     long endRevision)
+            throws ClientException
+    {
+        final GetLocationSegmentsHandler handler = new GetLocationSegmentsHandler();
+        getLocationSegments(path, pegRevision, startRevision, endRevision, handler);
+        return handler.locationSegments;
+    }
+
+    public native
+        void getFileRevisions(String path,
+                              long startRevision,
+                              long endRevision,
+                              boolean includeMergedRevisions,
+                              RemoteFileRevisionsCallback handler)
+            throws ClientException;
+
+    private static class GetFileRevisionsHandler
+        implements RemoteFileRevisionsCallback
+    {
+        public List<FileRevision> fileRevisions = null;
+        public void doRevision(FileRevision fileRevision)
+        {
+            if (fileRevisions == null)
+                fileRevisions = new ArrayList<FileRevision>();
+            fileRevisions.add(fileRevision);
+        }
+    }
+
+    public List<FileRevision> getFileRevisions(String path,
+                                               long startRevision,
+                                               long endRevision,
+                                               boolean includeMergedRevisions)
+            throws ClientException
+    {
+        final GetFileRevisionsHandler handler = new GetFileRevisionsHandler();
+        getFileRevisions(path, startRevision, endRevision,
+                         includeMergedRevisions, handler);
+        return handler.fileRevisions;
+    }
+
     // TODO: lock
     // TODO: unlock
     // TODO: getLock

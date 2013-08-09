@@ -980,37 +980,29 @@ public:
     {
       LocationSegmentHandler* const self =
         static_cast<LocationSegmentHandler*>(baton);
-      SVN_ERR_ASSERT(self->m_jresult_list != NULL);
-      self->add(segment);
+      SVN_ERR_ASSERT(self->m_jcallback != NULL);
+      self->call(segment);
       SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
       return SVN_NO_ERROR;
     }
 
-  LocationSegmentHandler()
-    : m_jresult_list(NULL)
+  LocationSegmentHandler(jobject jcallback)
+    : m_jcallback(jcallback),
+      m_call_mid(0)
     {
       JNIEnv* env = JNIUtil::getEnv();
-      jclass cls = env->FindClass("java/util/ArrayList");
+      jclass cls = env->GetObjectClass(jcallback);
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
-      static jmethodID mid = 0;
-      if (mid == 0)
-        {
-          mid = env->GetMethodID(cls, "<init>", "()V");
-          if (JNIUtil::isJavaExceptionThrown())
-            return;
-        }
-
-      jobject jresult_list = env->NewObject(cls, mid);
-      if (!JNIUtil::isJavaExceptionThrown() && jresult_list)
-        m_jresult_list = jresult_list;
+      m_call_mid = env->GetMethodID(
+          cls, "doSegment", "(L"JAVA_PACKAGE"/ISVNRemote$LocationSegment;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
     }
 
-  jobject get() const { return m_jresult_list; }
-
 private:
-  void add(svn_location_segment_t* segment)
+  void call(svn_location_segment_t* segment)
     {
       JNIEnv* env = JNIUtil::getEnv();
       jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$LocationSegment");
@@ -1026,60 +1018,157 @@ private:
             return;
         }
 
-      static jmethodID mid_add = 0;
-      if (mid_add == 0)
-        {
-          jclass list_cls = env->FindClass("java/util/ArrayList");
-          if (JNIUtil::isJavaExceptionThrown())
-            return;
-          mid_add = env->GetMethodID(list_cls, "add",
-                                     "(Ljava/lang/Object;)Z");
-          if (JNIUtil::isJavaExceptionThrown())
-            return;
-        }
-
       jstring jpath = JNIUtil::makeJString(segment->path);
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
-      env->CallBooleanMethod(m_jresult_list, mid_add,
-                             env->NewObject(cls, mid, jpath,
-                                            jlong(segment->range_start),
-                                            jlong(segment->range_end)));
+      env->CallVoidMethod(m_jcallback, m_call_mid,
+                          env->NewObject(cls, mid, jpath,
+                                         jlong(segment->range_start),
+                                         jlong(segment->range_end)));
       if (JNIUtil::isJavaExceptionThrown())
         return;
       env->DeleteLocalRef(jpath);
     }
 
-  jobject m_jresult_list;
+  jobject m_jcallback;
+  jmethodID m_call_mid;
 };
 } // anonymous namespace
 
-jobject
+void
 RemoteSession::getLocationSegments(jstring jpath, jlong jpeg_revision,
-                                   jlong jstart_revision, jlong jend_revision)
+                                   jlong jstart_revision, jlong jend_revision,
+                                   jobject jcallback)
 {
   SVN::Pool subPool(pool);
   Relpath path(jpath, subPool);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
-  SVN_JNI_ERR(path.error_occurred(), NULL);
+    return;
+  SVN_JNI_ERR(path.error_occurred(), );
 
-  LocationSegmentHandler handler;
+  LocationSegmentHandler handler(jcallback);
   if (JNIUtil::isExceptionThrown())
-    return NULL;
+    return ;
 
   SVN_JNI_ERR(svn_ra_get_location_segments(m_session, path.c_str(),
                                            svn_revnum_t(jpeg_revision),
                                            svn_revnum_t(jstart_revision),
                                            svn_revnum_t(jend_revision),
                                            handler.callback, &handler,
-                                           subPool.getPool()),
-              NULL);
-  return handler.get();
+                                           subPool.getPool()),);
 }
 
-// TODO: getFileRevisions
+namespace {
+class FileRevisionHandler
+{
+public:
+  static svn_error_t* callback(void* baton,
+                               const char* path, svn_revnum_t revision,
+                               apr_hash_t* revision_props,
+                               // We ignore the deltas as they're not
+                               // exposed in the JavaHL API.
+                               svn_boolean_t result_of_merge,
+                               svn_txdelta_window_handler_t*, void**,
+                               apr_array_header_t* prop_diffs,
+                               apr_pool_t* scratch_pool)
+    {
+      FileRevisionHandler* const self =
+        static_cast<FileRevisionHandler*>(baton);
+      SVN_ERR_ASSERT(self->m_jcallback != NULL);
+      self->call(path, revision, revision_props,
+                result_of_merge, prop_diffs, scratch_pool);
+      SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
+      return SVN_NO_ERROR;
+    }
+
+  FileRevisionHandler(jobject jcallback)
+    : m_jcallback(jcallback),
+      m_call_mid(0)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->GetObjectClass(jcallback);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      m_call_mid = env->GetMethodID(
+          cls, "doRevision", "(L"JAVA_PACKAGE"/ISVNRemote$FileRevision;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+private:
+  void call(const char* path, svn_revnum_t revision,
+           apr_hash_t* revision_props,
+           svn_boolean_t result_of_merge,
+           apr_array_header_t* prop_diffs,
+           apr_pool_t* scratch_pool)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$FileRevision");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>",
+                                 "(Ljava/lang/String;JZ"
+                                 "Ljava/util/Map;Ljava/util/Map;)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jstring jpath = JNIUtil::makeJString(path);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      jobject jrevprops = CreateJ::PropertyMap(revision_props, scratch_pool);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      jobject jpropdelta = CreateJ::PropertyMap(prop_diffs, scratch_pool);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      env->CallVoidMethod(m_jcallback, m_call_mid,
+                          env->NewObject(cls, mid, jpath, jlong(revision),
+                                         jboolean(result_of_merge),
+                                         jrevprops, jpropdelta));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      env->DeleteLocalRef(jpath);
+      env->DeleteLocalRef(jrevprops);
+      env->DeleteLocalRef(jpropdelta);
+    }
+
+  jobject m_jcallback;
+  jmethodID m_call_mid;
+};
+} // anonymous namespace
+
+void
+RemoteSession::getFileRevisions(jstring jpath,
+                                jlong jstart_revision, jlong jend_revision,
+                                jboolean jinclude_merged_revisions,
+                                jobject jcallback)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(path.error_occurred(), );
+
+  FileRevisionHandler handler(jcallback);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  SVN_JNI_ERR(svn_ra_get_file_revs2(m_session, path.c_str(),
+                                    svn_revnum_t(jstart_revision),
+                                    svn_revnum_t(jend_revision),
+                                    bool(jinclude_merged_revisions),
+                                    handler.callback, &handler,
+                                    subPool.getPool()),);
+}
+
 // TODO: lock
 // TODO: unlock
 // TODO: getLock
