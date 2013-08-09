@@ -529,7 +529,10 @@ sub vote {
         or warn("Committing the votes failed($?): $!") and return;
     unlink $logmsg_filename;
 
-    $state->{$_->{digest}}++ for @votesarray;
+    # Add to state votes that aren't '+0' or 'edit'
+    $state->{$_->{digest}}++ for grep
+                                   +{ qw/-1 t -0 t +1 t/ }->{$_->{vote}},
+                                 @votesarray;
   }
 }
 
