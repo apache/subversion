@@ -172,10 +172,12 @@ typedef struct svn_config_t svn_config_t;
 /* We want this to be printed on two lines in the generated config file,
  * but we don't want the # character to end up in the variable.
  */
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
   "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
   "*.rej *~ #*# .#* .*.swp .DS_Store"
+#endif
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
