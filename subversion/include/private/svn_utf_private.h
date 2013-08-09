@@ -73,6 +73,18 @@ svn_utf__last_valid(const char *src, apr_size_t len);
 const char *
 svn_utf__last_valid2(const char *src, apr_size_t len);
 
+/* Copy LENGTH bytes of SRC, converting characters as follows:
+    - Pass characters from the ASCII subset to the result
+    - Strip all combining marks from the string
+    - Represent other valid Unicode chars as {U+XXXX}
+    - Replace invalid Unicode chars with {U?XXXX}
+    - Represent chars that are not valid UTF-8 as ?\XX
+    - Replace codes outside the Unicode range with a sequence of ?\XX
+    - Represent the null byte as \0
+   Allocate the result in POOL. */
+const char *
+svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool);
+
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                  apr_pool_t *pool,
@@ -100,6 +112,14 @@ svn_utf__normcmp(int *result,
                  const char *str2, apr_size_t len2,
                  svn_membuf_t *buf1, svn_membuf_t *buf2);
 
+/* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
+ * a FALSE return value may indicate that STRING is not valid UTF-8 at
+ * all.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_boolean_t
+svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool);
 
 /* Pattern matching similar to the the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8

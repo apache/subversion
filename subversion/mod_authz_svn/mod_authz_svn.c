@@ -806,14 +806,15 @@ access_checker(request_rec *r)
                                                     &authz_svn_module);
   const char *repos_path = NULL;
   const char *dest_repos_path = NULL;
-  int status;
+  int status, authn_required;
 
   /* We are not configured to run */
   if (!conf->anonymous
       || (! (conf->access_file || conf->repo_relative_access_file)))
     return DECLINED;
 
-  if (ap_some_auth_required(r))
+  authn_required = ap_some_auth_required(r);
+  if (authn_required)
     {
       /* It makes no sense to check if a location is both accessible
        * anonymous and by an authenticated user (in the same request!).
@@ -843,7 +844,7 @@ access_checker(request_rec *r)
       if (!conf->authoritative)
         return DECLINED;
 
-      if (!ap_some_auth_required(r))
+      if (!authn_required)
         log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
 
       return HTTP_FORBIDDEN;

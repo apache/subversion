@@ -1485,8 +1485,8 @@ def verify_non_utf8_paths(sbox):
   expected_stderr = [
     "* Dumped revision 0.\n",
     "WARNING 0x0002: E160005: "
-      "While validating fspath '?\\230': "
-      "Path '?\\230' is not in UTF-8"
+      "While validating fspath '?\\E6': "
+      "Path '?\\E6' is not in UTF-8"
       "\n",
     "* Dumped revision 1.\n",
     ]
@@ -1635,7 +1635,7 @@ def hotcopy_incremental_packed(sbox):
   cwd = os.getcwd()
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write("4\nlayout sharded 2\n")
+  format_file.write("6\nlayout sharded 2\n")
   format_file.close()
 
   # Pack revisions 0 and 1.
