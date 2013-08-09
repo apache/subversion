@@ -211,6 +211,17 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1512300, r1512301
+   Clean up unpacked revprops in 'svnadmin hotcopy --incremental'
+   Justification:
+     Although keeping the unpacked revprop files should not do
+     harm, it still results in the target repo being different
+     from the source.  Also, it wastes disc space.
+   Notes:
+     r1512300 is merely a test case update to reproduce the problem.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
