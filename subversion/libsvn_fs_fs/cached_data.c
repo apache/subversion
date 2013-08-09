@@ -63,15 +63,18 @@ dbg_log_access(svn_fs_t *fs,
   /* no-op if this macro is not defined */
 #ifdef SVN_FS_FS__LOG_ACCESS
   fs_fs_data_t *ffd = fs->fsap_data;
-  static const char *types[] = {"<n/a>", "rep ", "node ", "chgs "};
+  apr_off_t end_offset = 0;
+  svn_fs_fs__p2l_entry_t *entry = NULL;
+  static const char *types[] = {"<n/a>", "frep ", "drep ", "fprop", "dprop",
+                                "node ", "chgs ", "rep  "};
   const char *description = "";
   const char *type = types[item_type];
   const char *pack = "";
-  apr_off_t offset_in_rev;
+  apr_off_t offset;
 
   /* determine rev / pack file offset */
-  SVN_ERR(svn_fs_fs__item_offset(&offset_in_rev, fs, revision, NULL,
-                                 item_index, scratch_pool));
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision, NULL, item_index,
+                                 scratch_pool));
 
   /* constructing the pack file description */
   if (revision < ffd->min_unpacked_rev)
@@ -129,10 +132,35 @@ dbg_log_access(svn_fs_t *fs,
         }
     }
 
-  printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
-          "   %s\n",
-          pack, (apr_uint64_t)(offset), type, revision, item_index,
-          description);
+  /* some info is only available in format7 repos */
+  if (svn_fs_fs__use_log_addressing(fs, revision))
+    {
+      /* reverse index lookup: get item description in ENTRY */
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, revision, offset,
+                                          scratch_pool));
+      if (entry)
+        {
+          /* more details */
+          end_offset = offset + entry->size;
+          type = types[entry->type];
+        }
+
+      /* line output */
+      printf("%5s%4lx:%04lx -%4lx:%04lx %s %7ld %5"APR_UINT64_T_FMT"   %s\n",
+             pack, (long)(offset / ffd->block_size),
+             (long)(offset % ffd->block_size),
+             (long)(end_offset / ffd->block_size),
+             (long)(end_offset % ffd->block_size),
+             type, revision, item_index, description);
+    }
+  else
+    {
+      /* reduced logging for format 6 and earlier */
+      printf("%5s%10" APR_UINT64_T_HEX_FMT " %s %7ld %7" APR_UINT64_T_FMT \
+             "   %s\n",
+             pack, (apr_uint64_t)(offset), type, revision, item_index,
+             description);
+    }
 
 #endif
 
