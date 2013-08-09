@@ -397,21 +397,18 @@ checkout_dir(dir_context_t *dir,
     {
       if (p_dir->added)
         {
-          /* Calculate how much of the relpath to skip to compose the
-           * working_url.  If the relpath is an empty string then the parent
-           * is the root of the commit and we need to just add the entire
-           * relpath to the parent's working_url.  Otherwise we need to skip
-           * the strlen(parent->relpath) + 1 to account for the slash.
-           * It is safe to assume that every added directory has a parent. */
+          /* Calculate the working_url by skipping the shared ancestor bewteen
+           * the parent->relpath and dir->relpath.  This is safe since an
+           * add is guaranteed to have a parent that is checked out. */
           dir_context_t *parent = p_dir->parent_dir;
-          size_t skip = strlen(parent->relpath);
-          if (skip)
-            skip++;
+          const char *relpath = svn_relpath_skip_ancestor(parent->relpath,
+                                                          dir->relpath);
 
           /* Implicitly checkout this dir now. */
+          SVN_ERR_ASSERT(parent->working_url);
           dir->working_url = svn_path_url_add_component2(
                                    parent->working_url,
-                                   dir->relpath + skip, dir->pool);
+                                   relpath, dir->pool);
           return SVN_NO_ERROR;
         }
       p_dir = p_dir->parent_dir;
