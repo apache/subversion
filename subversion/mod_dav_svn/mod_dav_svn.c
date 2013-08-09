@@ -1106,7 +1106,24 @@ static int dav_svn__translate_name(request_rec *r)
   /* Be paranoid and set it to NULL just in case some other module set it
    * before we got called. */ 
   r->filename = NULL;
+
+  /* Leave a note to ourselves so that we know not to decline in the 
+   * map_to_storage hook. */
+  apr_table_setn(r->notes, "dav_svn-no-map-to-storage", (const char*)1); 
   return OK;
+}
+
+/* Prevent core_map_to_storage from running if we prevented the r->filename
+ * from being set since core_map_to_storage doesn't like r->filename being
+ * NULL. */
+static int dav_svn__map_to_storage(request_rec *r)
+{
+  /* Check a note we left in translate_name since map_to_storage doesn't
+   * have access to our configuration. */
+  if (apr_table_get(r->notes, "dav_svn-no-map-to-storage"))
+    return OK;
+
+  return DECLINED;
 }
 
 
@@ -1284,6 +1301,9 @@ register_hooks(apr_pool_t *pconf)
   /* translate_name hook is LAST so that it doesn't interfere with modules
    * like mod_alias that are MIDDLE. */
   ap_hook_translate_name(dav_svn__translate_name, NULL, NULL, APR_HOOK_LAST);
+  /* map_to_stroage hook is LAST to avoid interferring with mod_http's
+   * handling of OPTIONS and TRACE. */
+  ap_hook_map_to_storage(dav_svn__map_to_storage, NULL, NULL, APR_HOOK_FIRST);
 }
 
 
