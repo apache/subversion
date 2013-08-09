@@ -43,6 +43,51 @@ public class DiffLib
         NativeResources.loadNativeLibrary();
     }
 
+    /** @see ISVNUtil.FileDiff */
+    public void FileDiff(String originalFile,
+                         String modifiedFile,
+                         SVNUtil.DiffOptions diffOptions,
+
+                         String originalHeader,
+                         String modifiedHeader,
+                         String headerEncoding,
+                         String relativeToDir,
+
+                         OutputStream resultStream)
+        throws ClientException
+    {
+        nativeFileDiff(originalFile, modifiedFile,
+
+                       // Interpret the diff options
+                       (diffOptions == null
+                        ? SVNUtil.DiffOptions.IgnoreSpace.none.ordinal()
+                        : diffOptions.ignoreSpace.ordinal()),
+                       (diffOptions == null ? false
+                        : diffOptions.ignoreEolStyle),
+                       (diffOptions == null ? false
+                        : diffOptions.showCFunction),
+
+                       originalHeader, modifiedHeader, headerEncoding,
+                       relativeToDir, resultStream);
+    }
+
+    private native
+        void nativeFileDiff(String originalFile,
+                            String modifiedFile,
+
+                            // Interpreted diff options
+                            int ignoreSpace,
+                            boolean ignoreEolStyle,
+                            boolean showCFunction,
+
+                            String originalHeader,
+                            String modifiedHeader,
+                            String headerEncoding,
+                            String relativeToDir,
+
+                            OutputStream resultStream)
+        throws ClientException;
+
     /** @see ISVNUtil.FileMerge */
     public void FileMerge(String originalFile,
                           String modifiedFile,
@@ -58,9 +103,7 @@ public class DiffLib
                           OutputStream resultStream)
         throws ClientException
     {
-        nativeFileMerge(originalFile,
-                        modifiedFile,
-                        latestFile,
+        nativeFileMerge(originalFile, modifiedFile, latestFile,
 
                         // Interpret the diff options
                         (diffOptions == null
@@ -71,9 +114,7 @@ public class DiffLib
                         (diffOptions == null ? false
                          : diffOptions.showCFunction),
 
-                        conflictOriginal,
-                        conflictModified,
-                        conflictLatest,
+                        conflictOriginal, conflictModified, conflictLatest,
                         conflistSeparator,
 
                         // Interpret the conflict style
