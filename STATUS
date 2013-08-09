@@ -189,7 +189,7 @@ Candidate changes:
    Justification:
      SEGV and Regression from 1.7.
    Votes:
-     +1: breser
+     +1: breser, danielsh
      +1: ivan (without r1512195)
 
  * r1507889, r1507891
