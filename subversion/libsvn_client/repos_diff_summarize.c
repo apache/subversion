@@ -93,14 +93,11 @@ create_item_baton(struct edit_baton *edit_baton,
   struct item_baton *b = apr_pcalloc(pool, sizeof(*b));
 
   b->edit_baton = edit_baton;
-  /* Issue #2765: b->path is supposed to be relative to the target.
-     If the target is a file, just use an empty path.  This way the
-     receiver can just concatenate this path to the original path
-     without doing any extra checks. */
-  if (node_kind == svn_node_file && strcmp(path, edit_baton->target) == 0)
-    b->path =  "";
-  else
-    b->path = apr_pstrdup(pool, path);
+  /* Issues #2765 & #4408: b->path is supposed to be relative to the target.
+     This way the receiver can just concatenate this path to the original
+     path without doing any extra checks. */
+  b->path = apr_pstrdup(pool,
+                        svn_relpath_skip_ancestor(edit_baton->target, path));
   b->node_kind = node_kind;
   b->item_pool = pool;
 
@@ -198,7 +195,8 @@ diff_deleted_dir(const char *dir,
 
       sum = apr_pcalloc(iterpool, sizeof(*sum));
       sum->summarize_kind = svn_client_diff_summarize_kind_deleted;
-      sum->path = path;
+      /* Issue #4408: sum->path should be relative to target. */
+      sum->path = svn_relpath_skip_ancestor(eb->target, path);
       sum->node_kind = kind;
 
       SVN_ERR(eb->summarize_func(sum,
@@ -240,7 +238,8 @@ delete_entry(const char *path,
 
   sum = apr_pcalloc(pool, sizeof(*sum));
   sum->summarize_kind = svn_client_diff_summarize_kind_deleted;
-  sum->path = path;
+  /* Issue #4408: sum->path should be relative to target. */
+  sum->path = svn_relpath_skip_ancestor(eb->target, path);
   sum->node_kind = kind;
 
   SVN_ERR(eb->summarize_func(sum, eb->summarize_func_baton, pool));
