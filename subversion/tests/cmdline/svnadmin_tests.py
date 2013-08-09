@@ -560,7 +560,9 @@ def verify_windows_paths_in_repos(sbox):
 
   # unfortunately, some backends needs to do more checks than other
   # resulting in different progress output
-  if svntest.main.is_fs_type_fsx():
+  if svntest.main.is_fs_type_fsx() or \
+    (svntest.main.is_fs_type_fsfs() and \
+        svntest.main.options.server_minor_version >= 9):
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verifying metadata at revision 0 ...\n",
@@ -1455,11 +1457,14 @@ def verify_non_utf8_paths(sbox):
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write("\xE6\n")
     elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
-      # fix up the representation checksum
+      # phys, PLAIN directories: fix up the representation checksum
       fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
     elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
-      # fix up the representation checksum
+      # phys, deltified directories: fix up the representation checksum
       fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
+    elif line == "text: 1 6 31 0 90f306aa9bfd72f456072076a2bd94f7\n":
+      # log addressing: fix up the representation checksum
+      fp_new.write("text: 1 6 31 0 db2d4a0bad5dff0aea9a288dec02f1fb\n")
     elif line == "cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")
@@ -1633,9 +1638,13 @@ def hotcopy_incremental_packed(sbox):
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
+
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write("6\nlayout sharded 2\n")
+  if svntest.main.options.server_minor_version >= 9:
+    format_file.write("7\nlayout sharded 2\naddressing logical 0\n")
+  else:
+    format_file.write("6\nlayout sharded 2\n")
   format_file.close()
 
   # Pack revisions 0 and 1.
