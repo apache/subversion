@@ -1092,7 +1092,22 @@ static int dav_svn__handler(request_rec *r)
   return DECLINED;
 }
 
+/* Prevent filename on the request from being set since we aren't serving a
+ * file off the disk.  This means that <Directory> blocks will not match and
+ * that * %f in logging formats will show as "-". */
+static int dav_svn__translate_name(request_rec *r)
+{
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
+  /* module is not configured, bail out early */
+  if (!conf->fs_path && !conf->fs_parent_path)
+    return DECLINED;
+
+  /* Be paranoid and set it to NULL just in case some other module set it
+   * before we got called. */ 
+  r->filename = NULL;
+  return OK;
+}
 
 
 
@@ -1266,6 +1281,9 @@ register_hooks(apr_pool_t *pconf)
   ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
                            NULL, AP_FTYPE_CONTENT_SET);
   ap_hook_fixups(dav_svn__proxy_request_fixup, NULL, NULL, APR_HOOK_MIDDLE);
+  /* translate_name hook is LAST so that it doesn't interfere with modules
+   * like mod_alias that are MIDDLE. */
+  ap_hook_translate_name(dav_svn__translate_name, NULL, NULL, APR_HOOK_LAST);
 }
 
 
