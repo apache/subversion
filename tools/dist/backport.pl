@@ -865,8 +865,12 @@ sub nominate_main {
   
   unless ($logmsg =~ s/^(.*?)\n\n.*/$1/s) {
     # "* file\n  (symbol): Log message."
+
+    # Strip before and after the first symbol's log message.
     $logmsg =~ s/^.*?: //s;
     $logmsg =~ s/^  \x28.*//ms;
+
+    # Undo line wrapping.  (We'll re-do it later.)
     $logmsg =~ s/\s*\n\s+/ /g;
   }
 
