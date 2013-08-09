@@ -1561,6 +1561,28 @@ store_l2p_index_entry(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* If the transaction TXN_ID in FS uses logical addressing, store ENTRY
+ * in the phys-to-log proto index file of transaction TXN_ID.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+store_p2l_index_entry(svn_fs_t *fs,
+                      const svn_fs_fs__id_part_t *txn_id,
+                      svn_fs_fs__p2l_entry_t *entry,
+                      apr_pool_t *pool)
+{
+  if (svn_fs_fs__use_log_addressing(fs, txn_id->revision + 1))
+    {
+      const char *path = svn_fs_fs__path_p2l_proto_index(fs, txn_id, pool);
+      apr_file_t *file;
+      SVN_ERR(svn_fs_fs__p2l_proto_index_open(&file, path, pool));
+      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(file, entry, pool));
+      SVN_ERR(svn_io_file_close(file, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Allocate an item index for the given MY_OFFSET in the transaction TXN_ID
  * of file system FS and return it in *ITEM_INDEX.  For old formats, it
  * will simply return the offset as item index; in new formats, it will
@@ -2082,7 +2104,19 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
                                        FALSE, b->pool));
   if (!old_rep)
-    SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
+    {
+      svn_fs_fs__p2l_entry_t entry;
+
+      entry.offset = b->rep_offset;
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->pool));
+      entry.size = offset - b->rep_offset;
+      entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
+      entry.item.revision = SVN_INVALID_REVNUM;
+      entry.item.number = rep->item_index;
+
+      SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
+      SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, &entry, b->pool));
+    }
 
   SVN_ERR(svn_io_file_close(b->file, b->pool));
   SVN_ERR(unlock_proto_rev(b->fs, &rep->txn_id, b->lockcookie, b->pool));
@@ -2320,12 +2354,23 @@ write_hash_rep(representation_t *rep,
     }
   else
     {
+      svn_fs_fs__p2l_entry_t entry;
+
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
                                   offset, pool));
       
+      entry.offset = offset;
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+      entry.size = offset - entry.offset;
+      entry.type = item_type;
+      entry.item.revision = SVN_INVALID_REVNUM;
+      entry.item.number = rep->item_index;
+
+      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, pool));
+
       /* update the representation */
       rep->size = whb->size;
       rep->expanded_size = 0;
@@ -2435,12 +2480,23 @@ write_hash_delta_rep(representation_t *rep,
     }
   else
     {
+      svn_fs_fs__p2l_entry_t entry;
+
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
                                   offset, pool));
+
+      entry.offset = offset;
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+      entry.size = offset - entry.offset;
+      entry.type = item_type;
+      entry.item.revision = SVN_INVALID_REVNUM;
+      entry.item.number = rep->item_index;
+
+      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, pool));
 
       /* update the representation */
       rep->expanded_size = whb->size;
@@ -2762,6 +2818,21 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
+  /* reference the root noderev from the log-to-phys index */
+  if (svn_fs_fs__use_log_addressing(fs, rev))
+    {
+      svn_fs_fs__p2l_entry_t entry;
+      rev_item.revision = SVN_INVALID_REVNUM;
+
+      entry.offset = my_offset;
+      SVN_ERR(svn_fs_fs__get_file_offset(&my_offset, file, pool));
+      entry.size = my_offset - entry.offset;
+      entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
+      entry.item = rev_item;
+
+      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
+    }
+
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
 
@@ -2795,7 +2866,17 @@ write_final_changed_path_info(apr_off_t *offset_p,
   /* reference changes from the indexes */
   if (svn_fs_fs__use_log_addressing(fs, new_rev))
     {
-      SVN_ERR(store_l2p_index_entry(fs, txn_id, *offset_p,
+      svn_fs_fs__p2l_entry_t entry;
+
+      entry.offset = offset;
+      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+      entry.size = offset - entry.offset;
+      entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
+      entry.item.revision = SVN_INVALID_REVNUM;
+      entry.item.number = SVN_FS_FS__ITEM_INDEX_CHANGES;
+
+      SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
+      SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
                                     SVN_FS_FS__ITEM_INDEX_CHANGES, pool));
     }
 
@@ -3123,6 +3204,10 @@ commit_body(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_fs_fs__l2p_index_create(cb->fs,
                       svn_fs_fs__path_l2p_index(cb->fs, new_rev, pool),
                       svn_fs_fs__path_l2p_proto_index(cb->fs, txn_id, pool),
+                      new_rev, pool));
+      SVN_ERR(svn_fs_fs__p2l_index_create(cb->fs,
+                      svn_fs_fs__path_p2l_index(cb->fs, new_rev, pool),
+                      svn_fs_fs__path_p2l_proto_index(cb->fs, txn_id, pool),
                       new_rev, pool));
     }
 
