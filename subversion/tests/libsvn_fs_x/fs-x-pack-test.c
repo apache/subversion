@@ -858,8 +858,13 @@ test_reps(const svn_test_opts_t *opts,
   svn_stringbuf_t *serialized;
   svn_stream_t *stream;
   svn_stringbuf_t *contents = svn_stringbuf_create_ensure(10000, pool);
-
   int i;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsx") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+    return SVN_NO_ERROR;
+
   for (i = 0; i < 10000; ++i)
     {
       int v, s = 0;
