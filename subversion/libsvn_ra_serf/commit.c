@@ -552,6 +552,7 @@ checkout_file(file_context_t *file,
       if (parent_dir->added)
         {
           /* Implicitly checkout this file now. */
+          SVN_ERR_ASSERT(parent_dir->working_url);
           file->working_url = svn_path_url_add_component2(
                                     parent_dir->working_url,
                                     svn_relpath_skip_ancestor(
