@@ -214,6 +214,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1508438
+   Try harder to pass an existing path to sleep for timestamps
+   Justification:
+     Performance regression from 1.6, reported by user.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
