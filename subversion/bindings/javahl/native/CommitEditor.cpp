@@ -528,7 +528,7 @@ CommitEditor::provide_base_cb(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   *contents = NULL;
-  *revision = NULL;
+  *revision = SVN_INVALID_REVNUM;
   return SVN_NO_ERROR;
 }
 
