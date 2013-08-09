@@ -340,6 +340,12 @@ canonicalize_access_file(const char **access_file, server_baton_t *server,
   return SVN_NO_ERROR;
 }
 
+/* Load the authz database for the listening server based on the
+   entries in the SERVER struct.
+
+   SERVER and CONN must not be NULL. The real errors will be logged with
+   SERVER and CONN but return generic errors to the client. */
+static 
 svn_error_t *load_authz_config(server_baton_t *server,
                                svn_ra_svn_conn_t *conn,
                                const char *repos_root,
