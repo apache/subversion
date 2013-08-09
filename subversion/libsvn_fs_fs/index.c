@@ -1347,6 +1347,90 @@ l2p_proto_index_lookup(apr_off_t *offset,
   return SVN_NO_ERROR;
 }
 
+/* Read the log-to-phys header info of the index covering REVISION from FS
+ * and return it in *HEADER.  To maximize efficiency, use or return the
+ * data stream in *STREAM.  Use POOL for allocations.
+ */
+static svn_error_t *
+get_l2p_header(l2p_header_t **header,
+               packed_number_stream_t **stream,
+               svn_fs_t *fs,
+               svn_revnum_t revision,
+               apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t is_cached = FALSE;
+
+  /* first, try cache lookop */
+  pair_cache_key_t key;
+  key.revision = base_revision(fs, revision);
+  key.second = svn_fs_fs__is_packed_rev(fs, revision);
+  SVN_ERR(svn_cache__get((void**)header, &is_cached, ffd->l2p_header_cache,
+                         &key, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
+
+  /* read from disk and cache the result */
+  SVN_ERR(get_l2p_header_body(header, stream, fs, revision, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
+                           svn_fs_t *fs,
+                           svn_revnum_t start_rev,
+                           apr_size_t count,
+                           apr_pool_t *pool)
+{
+  l2p_header_t *header = NULL;
+  svn_revnum_t revision;
+  svn_revnum_t last_rev = (svn_revnum_t)(start_rev + count);
+  packed_number_stream_t *stream = NULL;
+  apr_pool_t *header_pool = svn_pool_create(pool);
+
+  /* read index master data structure for the index covering START_REV */
+  SVN_ERR(get_l2p_header(&header, &stream, fs, start_rev, header_pool));
+  SVN_ERR(packed_stream_close(stream));
+  stream = NULL;
+
+  /* Determine the length of the item index list for each rev.
+   * Read new index headers as required. */
+  *max_ids = apr_array_make(pool, (int)count, sizeof(apr_uint64_t));
+  for (revision = start_rev; revision < last_rev; ++revision)
+    {
+      apr_uint64_t full_page_count;
+      apr_uint64_t item_count;
+      apr_size_t first_page_index, last_page_index;
+
+      if (revision >= header->first_revision + header->revision_count)
+        {
+          /* need to read the next index. Clear up memory used for the
+           * previous one. */
+          svn_pool_clear(header_pool);
+          SVN_ERR(get_l2p_header(&header, &stream, fs, revision,
+                                 header_pool));
+          SVN_ERR(packed_stream_close(stream));
+          stream = NULL;
+        }
+
+      /* in a revision with N index pages, the first N-1 index pages are
+       * "full", i.e. contain HEADER->PAGE_SIZE entries */
+      first_page_index
+         = header->page_table_index[revision - header->first_revision];
+      last_page_index
+         = header->page_table_index[revision - header->first_revision + 1];
+      full_page_count = last_page_index - first_page_index - 1;
+      item_count = full_page_count * header->page_size
+                 + header->page_table[last_page_index - 1].entry_count;
+
+      APR_ARRAY_PUSH(*max_ids, apr_uint64_t) = item_count;
+    }
+
+  svn_pool_destroy(header_pool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_fs_t *fs,
@@ -2246,6 +2330,58 @@ svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
   /* look for this info in our cache */
   SVN_ERR(p2l_entry_lookup(entry_p, &stream, fs, revision, offset, pool));
 
+  /* make sure we close files after usage */
+  SVN_ERR(packed_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__partial_getter_func_t for P2L headers, setting *OUT
+ * to the largest the first offset not covered by this P2L index.
+ */
+static svn_error_t *
+p2l_get_max_offset_func(void **out,
+                        const void *data,
+                        apr_size_t data_len,
+                        void *baton,
+                        apr_pool_t *result_pool)
+{
+  const p2l_header_t *header = data;
+  apr_off_t max_offset = header->page_size * header->page_count;
+  *out = apr_pmemdup(result_pool, &max_offset, sizeof(max_offset));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
+                              svn_fs_t *fs,
+                              svn_revnum_t revision,
+                              apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  packed_number_stream_t *stream = NULL;
+  p2l_header_t *header;
+  svn_boolean_t is_cached = FALSE;
+  apr_off_t *offset_p;
+
+  /* look for the header data in our cache */
+  pair_cache_key_t key;
+  key.revision = base_revision(fs, revision);
+  key.second = svn_fs_fs__is_packed_rev(fs, revision);
+
+  SVN_ERR(svn_cache__get_partial((void **)&offset_p, &is_cached,
+                                 ffd->p2l_header_cache, &key,
+                                 p2l_get_max_offset_func, NULL, pool));
+  if (is_cached)
+    {
+      *offset = *offset_p;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(get_p2l_header(&header, &stream, fs, revision, pool, pool));
+  *offset = header->page_count * header->page_size;
+  
   /* make sure we close files after usage */
   SVN_ERR(packed_stream_close(stream));
 
