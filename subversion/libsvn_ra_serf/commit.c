@@ -397,8 +397,8 @@ checkout_dir(dir_context_t *dir,
     {
       if (c_dir->added)
         {
-          /* Calculate the working_url by skipping the shared ancestor bewteen
-           * the c_dir_parent->relpath and dir->relpath.  This is safe since an
+          /* Calculate the working_url by skipping the shared ancestor between
+           * the c_dir_parent->relpath and dir->relpath. This is safe since an
            * add is guaranteed to have a parent that is checked out. */
           dir_context_t *c_dir_parent = c_dir->parent_dir;
           const char *relpath = svn_relpath_skip_ancestor(c_dir_parent->relpath,
