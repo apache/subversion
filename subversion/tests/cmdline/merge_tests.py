@@ -656,7 +656,7 @@ def simple_property_merges(sbox):
     'E/alpha.prej'
     : Item(error_message('foo', 'foo_val', 'mod_foo')),
     'E/beta.prej'
-    : Item(error_message('foo', 'foo?\\129val', 'mod?\\129foo')),
+    : Item(error_message('foo', 'foo?\\81val', 'mod?\\81foo')),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})

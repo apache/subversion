@@ -907,11 +907,14 @@ read_byte_stream_structure(svn_stringbuf_t *tree_struct,
                            svn_packed__byte_stream_t *stream,
                            svn_packed__int_stream_t *first_int_stream)
 {
-  /* read parameters from the TREE_STRUCT buffer */
-  apr_size_t dummy = (apr_size_t)read_packed_uint(tree_struct);
-  apr_size_t lengths_stream_index = (apr_size_t)read_packed_uint(tree_struct);
-  apr_size_t packed_size = (apr_size_t)read_packed_uint(tree_struct);
+  apr_size_t lengths_stream_index;
+  apr_size_t packed_size;
   apr_size_t i;
+
+  /* read parameters from the TREE_STRUCT buffer */
+  (void) (apr_size_t)read_packed_uint(tree_struct); /* discard first uint */
+  lengths_stream_index = (apr_size_t)read_packed_uint(tree_struct);
+  packed_size = (apr_size_t)read_packed_uint(tree_struct);
 
   /* allocate byte sequence buffer size */
   svn_stringbuf_ensure(stream->packed, packed_size);
