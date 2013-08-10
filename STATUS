@@ -253,12 +253,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1507567, r1507589, r1512195
-   Fix issue #4400: crash when committing cp with deep deletion.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4400
-   Justification:
-     SEGV and Regression from 1.7.
-   Votes:
-     +1: breser, danielsh, ivan
