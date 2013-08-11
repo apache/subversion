@@ -42,6 +42,84 @@
 #include "svn_private_config.h"
 #include "temp_serializer.h"
 
+/* Logical addressing packing logic:
+ *
+ * We pack files on a pack file basis (e.g. 1000 revs) without changing
+ * existing pack files nor the revision files outside the range to pack.
+ *
+ * First, we will scan the revision file indexes to determine the number
+ * of items to "place" (i.e. determine their optimal position within the
+ * future pack file).  For each item, we will need a constant amount of
+ * memory to track it.  A MAX_MEM parameter sets a limit to the number of
+ * items we may place in one go.  That means, we may not be able to add
+ * all revisions at once.  Instead, we will run the placement for a subset
+ * of revisions at a time.  The very unlikely worst case will simply append
+ * all revision data with just a little reshuffling inside each revision.
+ *
+ * In a second step, we read all revisions in the selected range, build
+ * the item tracking information and copy the items themselves from the
+ * revision files to temporary files.  The latter serve as buckets for a
+ * very coarse bucket presort:  Separate change lists, file properties,
+ * directory properties and noderevs + representations from one another.
+ *
+ * The third step will determine an optimized placement for the items in
+ * each of the 4 buckets separately.  The first three will simply order
+ * their items by revision, starting with the newest once.  Placing rep
+ * and noderev items is a more elaborate process documented in the code.
+ * 
+ * In short, we store items in the following order:
+ * - changed paths lists
+ * - node property
+ * - directory properties
+ * - noderevs and representations, reverse lexical path order
+ *
+ * Step 4 copies the items from the temporary buckets into the final
+ * pack file and writes the temporary index files.
+ *
+ * Finally, after the last range of revisions, create the final indexes.
+ */
+
+/* Maximum amount of memory we allocate for placement information during
+ * the pack process.
+ */
+#define DEFAULT_MAX_MEM (64 * 1024 * 1024)
+
+/* Data structure describing a node change at PATH, REVISION.
+ * We will sort these instances by PATH and NODE_ID such that we can combine
+ * similar nodes in the same reps container and store containers in path
+ * major order.
+ */
+typedef struct path_order_t
+{
+  /* changed path */
+  svn_prefix_string__t *path;
+
+  /* node ID for this PATH in REVISION */
+  svn_fs_fs__id_part_t node_id;
+
+  /* when this change happened */
+  svn_revnum_t revision;
+
+  /* length of the expanded representation content */
+  apr_int64_t expanded_size;
+
+  /* item ID of the noderev linked to the change. May be (0, 0). */
+  svn_fs_fs__id_part_t noderev_id;
+
+  /* item ID of the representation containing the new data. May be (0, 0). */
+  svn_fs_fs__id_part_t rep_id;
+} path_order_t;
+
+/* Represents a reference from item FROM to item TO.  FROM may be a noderev
+ * or rep_id while TO is (currently) always a representation.  We will sort
+ * them by TO which allows us to collect all dependent items.
+ */
+typedef struct reference_t
+{
+  svn_fs_fs__id_part_t to;
+  svn_fs_fs__id_part_t from;
+} reference_t;
+
 /* This structure keeps track of all the temporary data and status that
  * needs to be kept around during the creation of one pack file.  After
  * each revision range (in case we can't process all revs at once due to
@@ -91,6 +169,55 @@ typedef struct pack_context_t
   /* the pack file to ultimately write all data to */
   apr_file_t *pack_file;
 
+  /* array of svn_fs_fs__p2l_entry_t *, all referring to change lists.
+   * Will be filled in phase 2 and be cleared after each revision range. */
+  apr_array_header_t *changes;
+
+  /* temp file receiving all change list items (referenced by CHANGES).
+   * Will be filled in phase 2 and be cleared after each revision range. */
+  apr_file_t *changes_file;
+
+  /* array of svn_fs_fs__p2l_entry_t *, all referring to file properties.
+   * Will be filled in phase 2 and be cleared after each revision range. */
+  apr_array_header_t *file_props;
+
+  /* temp file receiving all file prop items (referenced by FILE_PROPS).
+   * Will be filled in phase 2 and be cleared after each revision range.*/
+  apr_file_t *file_props_file;
+
+  /* array of svn_fs_fs__p2l_entry_t *, all referring to directory properties.
+   * Will be filled in phase 2 and be cleared after each revision range. */
+  apr_array_header_t *dir_props;
+
+  /* temp file receiving all directory prop items (referenced by DIR_PROPS).
+   * Will be filled in phase 2 and be cleared after each revision range.*/
+  apr_file_t *dir_props_file;
+
+  /* container for all PATH members in PATH_ORDER. */
+  svn_prefix_tree__t *paths;
+
+  /* array of path_order_t *.  Will be filled in phase 2 and be cleared
+   * after each revision range.  Sorted by PATH, NODE_ID. */
+  apr_array_header_t *path_order;
+
+  /* array of reference_t *.  Will be filled in phase 2 and be cleared
+   * after each revision range.  It will be sorted by the TO members. */
+  apr_array_header_t *references;
+
+  /* array of svn_fs_fs__p2l_entry_t*.  Will be filled in phase 2 and be
+   * cleared after each revision range.  During phase 3, we will set items
+   * to NULL that we already processed. */
+  apr_array_header_t *reps;
+
+  /* array of int, marking for each revision, the which offset their items
+   * begin in REPS.  Will be filled in phase 2 and be cleared after
+   * each revision range. */
+  apr_array_header_t *rev_offsets;
+
+  /* temp file receiving all items referenced by REPS_INFOS.
+   * Will be filled in phase 2 and be cleared after each revision range.*/
+  apr_file_t *reps_file;
+
   /* pool used for temporary data structures that will be cleaned up when
    * the next range of revisions is being processed */
   apr_pool_t *info_pool;
@@ -109,12 +236,14 @@ initialize_pack_context(pack_context_t *context,
                         const char *pack_file_dir,
                         const char *shard_dir,
                         svn_revnum_t shard_rev,
+                        apr_size_t max_items,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
+  apr_size_t max_revs = MIN(ffd->max_files_per_dir, (int)max_items);
   
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
@@ -155,8 +284,32 @@ initialize_pack_context(pack_context_t *context,
                              pool),
              pool));
 
+  /* item buckets: one item info array and one temp file per bucket */
+  context->changes = apr_array_make(pool, max_items,
+                                    sizeof(svn_fs_fs__p2l_entry_t *));
+  SVN_ERR(svn_io_open_unique_file3(&context->changes_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close, pool, pool));
+  context->file_props = apr_array_make(pool, max_items,
+                                       sizeof(svn_fs_fs__p2l_entry_t *));
+  SVN_ERR(svn_io_open_unique_file3(&context->file_props_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close, pool, pool));
+  context->dir_props = apr_array_make(pool, max_items,
+                                      sizeof(svn_fs_fs__p2l_entry_t *));
+  SVN_ERR(svn_io_open_unique_file3(&context->dir_props_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close, pool, pool));
+
+  /* noderev and representation item bucket */
+  context->rev_offsets = apr_array_make(pool, max_revs, sizeof(int));
+  context->path_order = apr_array_make(pool, max_items, sizeof(path_order_t *));
+  context->references = apr_array_make(pool, max_items, sizeof(reference_t *));
+  context->reps = apr_array_make(pool, max_items,
+                                 sizeof(svn_fs_fs__p2l_entry_t *));
+  SVN_ERR(svn_io_open_unique_file3(&context->reps_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close, pool, pool));
+
   /* the pool used for temp structures */
   context->info_pool = svn_pool_create(pool);
+  context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
 };
@@ -168,6 +321,19 @@ static svn_error_t *
 reset_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
 {
+  apr_array_clear(context->changes);
+  SVN_ERR(svn_io_file_trunc(context->changes_file, 0, pool));
+  apr_array_clear(context->file_props);
+  SVN_ERR(svn_io_file_trunc(context->file_props_file, 0, pool));
+  apr_array_clear(context->dir_props);
+  SVN_ERR(svn_io_file_trunc(context->dir_props_file, 0, pool));
+
+  apr_array_clear(context->rev_offsets);
+  apr_array_clear(context->path_order);
+  apr_array_clear(context->references);
+  apr_array_clear(context->reps);
+  SVN_ERR(svn_io_file_trunc(context->reps_file, 0, pool));
+
   svn_pool_clear(context->info_pool);
   
   return SVN_NO_ERROR;
@@ -266,6 +432,181 @@ copy_file_data(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
+/* Writes SIZE bytes, all 0, to DEST.  Uses POOL for allocations.
+ */
+static svn_error_t *
+write_null_bytes(apr_file_t *dest,
+                 apr_off_t size,
+                 apr_pool_t *pool)
+{
+  /* Have a collection of high-quality, easy to access NUL bytes handy. */
+  enum { BUFFER_SIZE = 1024 };
+  static const char buffer[BUFFER_SIZE] = { 0 };
+
+  /* copy SIZE of them into the file's buffer */
+  while (size)
+    {
+      apr_size_t to_write = MIN(size, BUFFER_SIZE);
+      SVN_ERR(svn_io_file_write_full(dest, buffer, to_write, NULL, pool));
+      size -= to_write;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Copy the "simple" item (changed paths list or property representation)
+ * from the current position in REV_FILE to TEMP_FILE using CONTEXT.  Add
+ * a copy of ENTRY to ENTRIES but with an updated offset value that points
+ * to the copy destination in TEMP_FILE.  Use POOL for allocations.
+ */
+static svn_error_t *
+copy_item_to_temp(pack_context_t *context,
+                  apr_array_header_t *entries,
+                  apr_file_t *temp_file,
+                  apr_file_t *rev_file,
+                  svn_fs_fs__p2l_entry_t *entry,
+                  apr_pool_t *pool)
+{
+  svn_fs_fs__p2l_entry_t *new_entry
+    = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
+  new_entry->offset = 0;
+  SVN_ERR(svn_io_file_seek(temp_file, SEEK_CUR, &new_entry->offset, pool));
+  APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
+  
+  SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
+  
+  return SVN_NO_ERROR;
+}
+
+/* Return the offset within CONTEXT->REPS_INFOS that corresponds to item
+ * ITEM_INDEX in  REVISION.
+ */
+static int
+get_item_array_index(pack_context_t *context,
+                     svn_revnum_t revision,
+                     apr_int64_t item_index)
+{
+  assert(revision >= context->start_rev);
+  return (int)item_index + APR_ARRAY_IDX(context->rev_offsets,
+                                         revision - context->start_rev,
+                                         int);
+}
+
+/* Write INFO to the correct position in CONTEXT->REP_INFOS.  The latter
+ * may need auto-expanding.  Overwriting an array element is not allowed.
+ */
+static void
+add_item_rep_mapping(pack_context_t *context,
+                     svn_fs_fs__p2l_entry_t *entry)
+{
+  int idx;
+
+  /* index of INFO */
+  idx = get_item_array_index(context,
+                             entry->item.revision,
+                             entry->item.number);
+
+  /* make sure the index exists in the array */
+  while (context->reps->nelts <= idx)
+    APR_ARRAY_PUSH(context->reps, void *) = NULL;
+
+  /* set the element.  If there is already an entry, there are probably
+   * two items claiming to be the same -> bail out */
+  assert(!APR_ARRAY_IDX(context->reps, idx, void *));
+  APR_ARRAY_IDX(context->reps, idx, void *) = entry;
+}
+
+/* Return the P2L entry from CONTEXT->REPS for the given ID.  If there is
+ * none (or not anymore), return NULL.  If RESET has been specified, set
+ * the array entry to NULL after returning the entry.
+ */
+static svn_fs_fs__p2l_entry_t *
+get_item(pack_context_t *context,
+         const svn_fs_fs__id_part_t *id,
+         svn_boolean_t reset)
+{
+  svn_fs_fs__p2l_entry_t *result = NULL;
+  if (id->number && id->revision >= context->start_rev)
+    {
+      int idx = get_item_array_index(context, id->revision, id->number);
+      if (context->reps->nelts > idx)
+        {
+          result = APR_ARRAY_IDX(context->reps, idx, void *);
+          if (result && reset)
+            APR_ARRAY_IDX(context->reps, idx, void *) = NULL;
+        }
+    }
+
+  return result;
+}
+
+/* Copy representation item identified by ENTRY from the current position
+ * in REV_FILE into CONTEXT->REPS_FILE.  Add all tracking into needed by
+ * our placement algorithm to CONTEXT.  Use POOL for temporary allocations.
+ */
+static svn_error_t *
+copy_rep_to_temp(pack_context_t *context,
+                 apr_file_t *rev_file,
+                 svn_fs_fs__p2l_entry_t *entry,
+                 apr_pool_t *pool)
+{
+  svn_fs_fs__rep_header_t *rep_header;
+  svn_stream_t *stream;
+  apr_off_t source_offset = entry->offset;
+
+  /* create a copy of ENTRY, make it point to the copy destination and
+   * store it in CONTEXT */
+  entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
+  entry->offset = 0;
+  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR, &entry->offset,
+                           pool));
+  add_item_rep_mapping(context, entry);
+
+  /* read & parse the representation header */
+  stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
+  SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, stream, pool));
+  svn_stream_close(stream);
+
+  /* if the representation is a delta against some other rep, link the two */
+  if (   rep_header->type == svn_fs_fs__rep_delta
+      && rep_header->base_revision >= context->start_rev)
+    {
+      reference_t *reference = apr_pcalloc(context->info_pool,
+                                           sizeof(*reference));
+      reference->from = entry->item;
+      reference->to.revision = rep_header->base_revision;
+      reference->to.number = rep_header->base_item_index;
+      APR_ARRAY_PUSH(context->references, reference_t *) = reference;
+    }
+
+  /* copy the whole rep (including header!) to our temp file */
+  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
+                         pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Directories first, dirs / files sorted by name in reverse lexical order.
+ * This maximizes the chance of two items being located close to one another
+ * in *all* pack files independent of their change order.  It also groups
+ * multi-project repos nicely according to their sub-projects.  The reverse
+ * order aspect gives "trunk" preference over "tags" and "branches", so
+ * trunk-related items are more likely to be contiguous.
+ */
+static int
+compare_dir_entries_format7(const svn_sort__item_t *a,
+                            const svn_sort__item_t *b)
+{
+  const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
+  const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
+
+  if (lhs->kind != rhs->kind)
+    return lhs->kind == svn_node_dir ? -1 : 1;
+
+  return 0 - strcmp(lhs->name, rhs->name);
+}
+
 /* Directories entries sorted by revision (decreasing - to max cache hits)
  * and offset (increasing - to max benefit from APR file buffering).
  */
@@ -295,10 +636,15 @@ compare_dir_entries_format6(const svn_sort__item_t *a,
 apr_array_header_t *
 svn_fs_fs__order_dir_entries(svn_fs_t *fs,
                              apr_hash_t *directory,
+                             svn_revnum_t revision,
                              apr_pool_t *pool)
 {
   apr_array_header_t *ordered
-    = svn_sort__hash(directory, compare_dir_entries_format6, pool);
+    = svn_sort__hash(directory,
+                     svn_fs_fs__use_log_addressing(fs, revision)
+                       ? compare_dir_entries_format7
+                       : compare_dir_entries_format6,
+                     pool);
 
   apr_array_header_t *result
     = apr_array_make(pool, ordered->nelts, sizeof(svn_fs_dirent_t *));
@@ -309,6 +655,603 @@ svn_fs_fs__order_dir_entries(svn_fs_t *fs,
       = APR_ARRAY_IDX(ordered, i, svn_sort__item_t).value;
 
   return result;
+}
+
+/* Copy node revision item identified by ENTRY from the current position
+ * in REV_FILE into CONTEXT->REPS_FILE.  Add all tracking into needed by
+ * our placement algorithm to CONTEXT.  Use POOL for temporary allocations.
+ */
+static svn_error_t *
+copy_node_to_temp(pack_context_t *context,
+                  apr_file_t *rev_file,
+                  svn_fs_fs__p2l_entry_t *entry,
+                  apr_pool_t *pool)
+{
+  path_order_t *path_order = apr_pcalloc(context->info_pool,
+                                         sizeof(*path_order));
+  node_revision_t *noderev;
+  svn_stream_t *stream;
+  apr_off_t source_offset = entry->offset;
+
+  /* read & parse noderev */
+  stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool));
+  svn_stream_close(stream);
+
+  /* create a copy of ENTRY, make it point to the copy destination and
+   * store it in CONTEXT */
+  entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
+  entry->offset = 0;
+  SVN_ERR(svn_io_file_seek(context->reps_file, SEEK_CUR,
+                           &entry->offset, pool));
+  add_item_rep_mapping(context, entry);
+
+  /* copy the noderev to our temp file */
+  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &source_offset, pool));
+  SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
+                         pool));
+
+  /* if the node has a data representation, make that the node's "base".
+   * This will (often) cause the noderev to be placed right in front of
+   * its data representation. */
+
+  if (noderev->data_rep && noderev->data_rep->revision >= context->start_rev)
+    {
+      reference_t *reference = apr_pcalloc(context->info_pool,
+                                           sizeof(*reference));
+      reference->from = entry->item;
+      reference->to.revision = noderev->data_rep->revision;
+      reference->to.number = noderev->data_rep->item_index;
+      APR_ARRAY_PUSH(context->references, reference_t *) = reference;
+
+      path_order->rep_id = reference->to;
+      path_order->expanded_size = noderev->data_rep->expanded_size
+                                ? noderev->data_rep->expanded_size
+                                : noderev->data_rep->size;
+    }
+
+  path_order->path = svn_prefix_string__create(context->paths,
+                                               noderev->created_path);
+  path_order->node_id = *svn_fs_fs__id_node_id(noderev->id);
+  path_order->revision = svn_fs_fs__id_rev(noderev->id);
+  path_order->noderev_id = *svn_fs_fs__id_rev_item(noderev->id);
+  APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
+
+  return SVN_NO_ERROR;
+}
+
+/* implements compare_fn_t.  Sort descending by PATH, NODE_ID and REVISION.
+ */
+static int
+compare_path_order(const path_order_t * const * lhs_p,
+                   const path_order_t * const * rhs_p)
+{
+  const path_order_t * lhs = *lhs_p;
+  const path_order_t * rhs = *rhs_p;
+
+  /* reverse lexicographic order on path and node (i.e. latest first) */
+  int diff = svn_prefix_string__compare(rhs->path, lhs->path);
+  if (diff)
+    return diff;
+
+  /* reverse order on node (i.e. latest first) */
+  diff = svn_fs_fs__id_part_compare(&rhs->node_id, &lhs->node_id);
+  if (diff)
+    return diff;
+
+  /* reverse order on revision (i.e. latest first) */
+  if (lhs->revision != rhs->revision)
+    return lhs->revision < rhs->revision ? 1 : -1;
+
+  return 0;
+}
+
+/* implements compare_fn_t.  Sort ascending by TO, FROM.
+ */
+static int
+compare_references(const reference_t * const * lhs_p,
+                   const reference_t * const * rhs_p)
+{
+  const reference_t * lhs = *lhs_p;
+  const reference_t * rhs = *rhs_p;
+
+  int diff = svn_fs_fs__id_part_compare(&lhs->to, &rhs->to);
+  return diff ? diff : svn_fs_fs__id_part_compare(&lhs->from, &rhs->from);
+}
+
+/* Order the data collected in CONTEXT such that we can place them in the
+ * desired order.
+ */
+static void
+sort_reps(pack_context_t *context)
+{
+  qsort(context->path_order->elts, context->path_order->nelts,
+        context->path_order->elt_size,
+        (int (*)(const void *, const void *))compare_path_order);
+  qsort(context->references->elts, context->references->nelts,
+        context->references->elt_size,
+        (int (*)(const void *, const void *))compare_references);
+}
+
+/* implements compare_fn_t. Place LHS before RHS, if the latter is older.
+ */
+static int
+compare_p2l_info(const svn_fs_fs__p2l_entry_t * const * lhs,
+                 const svn_fs_fs__p2l_entry_t * const * rhs)
+{
+  assert(*lhs != *rhs);
+
+  if ((*lhs)->item.revision == (*rhs)->item.revision)
+    return (*lhs)->item.number > (*rhs)->item.number ? -1 : 1;
+
+  return (*lhs)->item.revision > (*rhs)->item.revision ? -1 : 1;
+}
+
+/* Sort svn_fs_fs__p2l_entry_t * array ENTRIES by age.  Place the latest
+ * items first.
+ */
+static void
+sort_items(apr_array_header_t *entries)
+{
+  qsort(entries->elts, entries->nelts, entries->elt_size,
+        (int (*)(const void *, const void *))compare_p2l_info);
+}
+
+/* Return the remaining unused bytes in the current block in CONTEXT's
+ * pack file.
+ */
+static apr_ssize_t
+get_block_left(pack_context_t *context)
+{
+  fs_fs_data_t *ffd = context->fs->fsap_data;
+  return ffd->block_size - (context->pack_offset % ffd->block_size);
+}
+
+/* To prevent items from overlapping a block boundary, we will usually
+ * put them into the next block and top up the old one with NUL bytes.
+ * Pad CONTEXT's pack file to the end of the current block, if TO_ADD does
+ * not fit into the current block and the padding is short enough.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+auto_pad_block(pack_context_t *context,
+               apr_off_t to_add,
+               apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = context->fs->fsap_data;
+
+  /* This is the maximum number of bytes "wasted" that way per block.
+   * Larger items will cross the block boundaries. */
+  const apr_off_t max_padding = MAX(ffd->block_size / 50, 512);
+
+  /* Is wasted space small enough to align the current item to the next
+   * block? */
+  apr_off_t padding = get_block_left(context);
+
+  if (padding < to_add && padding < max_padding)
+    {
+      /* Yes. To up with NUL bytes and don't forget to create
+       * an P2L index entry marking this section as unused. */
+      svn_fs_fs__p2l_entry_t null_entry;
+
+      null_entry.offset = context->pack_offset;
+      null_entry.size = padding;
+      null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
+      null_entry.item.number = SVN_INVALID_REVNUM;
+      null_entry.type = SVN_FS_FS__ITEM_INDEX_UNUSED;
+
+      SVN_ERR(write_null_bytes(context->pack_file, padding, pool));
+      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
+                  (context->proto_p2l_index, &null_entry, pool));
+      context->pack_offset += padding;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Read the contents of the non-empty items in ITEMS from TEMP_FILE and
+ * write them to CONTEXT->PACK_FILE.  Use POOL for allocations.
+ */
+static svn_error_t *
+store_items(pack_context_t *context,
+            apr_file_t *temp_file,
+            apr_array_header_t *items,
+            apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* copy all items in strict order */
+  for (i = 0; i < items->nelts; ++i)
+    {
+      apr_off_t safety_margin;
+
+      /* skip empty entries */
+      svn_fs_fs__p2l_entry_t *entry
+        = APR_ARRAY_IDX(items, i, svn_fs_fs__p2l_entry_t *);
+      if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
+        continue;
+
+      /* If the next item does not fit into the current block, auto-pad it.
+         Take special care of textual noderevs since their parsers may
+         prefetch up to 80 bytes and we don't want them to cross block
+         boundaries. */
+      safety_margin = entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV ? 80 : 0;
+      SVN_ERR(auto_pad_block(context, entry->size + safety_margin, iterpool));
+
+      /* select the item in the source file and copy it into the target
+       * pack file */
+      SVN_ERR(svn_io_file_seek(temp_file, SEEK_SET, &entry->offset,
+                               iterpool));
+      SVN_ERR(copy_file_data(context, context->pack_file, temp_file,
+                             entry->size, iterpool));
+
+      /* write index entry and update current position */
+      entry->offset = context->pack_offset;
+      context->pack_offset += entry->size;
+
+      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
+                  (context->proto_p2l_index, entry, iterpool));
+
+      APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *) = entry;
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* implements compare_fn_t.  Sort ascending by TO.
+ */
+static int
+compare_ref_to_item(const reference_t * const * lhs_p,
+                    const svn_fs_fs__id_part_t * rhs_p)
+{
+  return svn_fs_fs__id_part_compare(&(*lhs_p)->to, rhs_p);
+}
+
+/* Return the index of the first entry in CONTEXT->REFERENCES that
+ * references ITEM if such entries exist.  All matching items will be
+ * consecutive.
+ */
+static int
+find_first_reference(pack_context_t *context,
+                     svn_fs_fs__p2l_entry_t *item)
+{
+  return svn_sort__bsearch_lower_bound(&item->item, context->references,
+                (int (*)(const void *, const void *))compare_ref_to_item);
+}
+
+/* Check whether entry number IDX in CONTEXT->REFERENCES references ITEM.
+ */
+static svn_boolean_t
+is_reference_match(pack_context_t *context,
+                   int idx,
+                   svn_fs_fs__p2l_entry_t *item)
+{
+  reference_t *reference;
+  if (context->references->nelts <= idx)
+    return FALSE;
+
+  reference = APR_ARRAY_IDX(context->references, idx, reference_t *);
+  return svn_fs_fs__id_part_eq(&reference->to, &item->item);
+}
+
+/* Starting at IDX in CONTEXT->PATH_ORDER, select all representations and
+ * noderevs that should be placed into the same container, respectively.
+ * Append the svn_fs_fs__p2l_entry_t * of the representations that to
+ * REP_PARTS and apend the svn_fs_fs__p2l_entry_t * of the noderevs
+ * referencing those reps will to NODE_PARTS.
+ *
+ * Remove all returned items from the CONTEXT->REPS container and prevent
+ * them from being placed a second time later on.  That also means that the
+ * caller has to place all items returned.
+ */
+static svn_error_t *
+select_reps(pack_context_t *context,
+            int idx,
+            apr_array_header_t *node_parts,
+            apr_array_header_t *rep_parts)
+{
+  apr_array_header_t *path_order = context->path_order;
+  path_order_t *start_path = APR_ARRAY_IDX(path_order, idx, path_order_t *);
+
+  svn_fs_fs__p2l_entry_t *node_part;
+  svn_fs_fs__p2l_entry_t *rep_part;
+  svn_fs_fs__p2l_entry_t *depending;
+  int i, k;
+
+  /* collect all path_order records as well as rep and noderev items
+   * that occupy the same path with the same node. */
+  for (; idx < path_order->nelts; ++idx)
+    {
+      path_order_t *current_path
+        = APR_ARRAY_IDX(path_order, idx, path_order_t *);
+
+      if (!svn_fs_fs__id_part_eq(&start_path->node_id,
+                                 &current_path->node_id))
+        break;
+
+      APR_ARRAY_IDX(path_order, idx, path_order_t *) = NULL;
+      node_part = get_item(context, &current_path->noderev_id, TRUE);
+      rep_part = get_item(context, &current_path->rep_id, TRUE);
+
+      if (node_part)
+        APR_ARRAY_PUSH(node_parts, svn_fs_fs__p2l_entry_t *) = node_part;
+      if (rep_part)
+        APR_ARRAY_PUSH(rep_parts, svn_fs_fs__p2l_entry_t *) = rep_part;
+    }
+
+  /* collect depending reps and noderevs that reference any of the collected
+   * reps */
+  for (i = 0; i < rep_parts->nelts; ++i)
+    {
+      rep_part = APR_ARRAY_IDX(rep_parts, i, svn_fs_fs__p2l_entry_t*);
+      for (k = find_first_reference(context, rep_part);
+           is_reference_match(context, k, rep_part);
+           ++k)
+        {
+          reference_t *reference
+            = APR_ARRAY_IDX(context->references, k, reference_t *);
+
+          depending = get_item(context, &reference->from, TRUE);
+          if (!depending)
+            continue;
+
+          if (depending->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
+            APR_ARRAY_PUSH(node_parts, svn_fs_fs__p2l_entry_t *) = depending;
+          else
+            APR_ARRAY_PUSH(rep_parts, svn_fs_fs__p2l_entry_t *) = depending;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Copy (append) the items identified by svn_fs_fs__p2l_entry_t * elements
+ * in ENTRIES strictly in order from TEMP_FILE into CONTEXT->PACK_FILE.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+copy_reps_from_temp(pack_context_t *context,
+                    apr_file_t *temp_file,
+                    apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_array_header_t *path_order = context->path_order;
+  apr_array_header_t *node_parts = apr_array_make(pool, 16, sizeof(void*));
+  apr_array_header_t *rep_parts = apr_array_make(pool, 16, sizeof(void*));
+  int i;
+
+  /* copy items in path order. Create block-sized containers. */
+  for (i = 0; i < path_order->nelts; ++i)
+    {
+      if (APR_ARRAY_IDX(path_order, i, path_order_t *) == NULL)
+        continue;
+
+      /* Collect reps to combine and all noderevs referencing them */
+      SVN_ERR(select_reps(context, i, node_parts, rep_parts));
+
+      /* store the noderevs container in front of the reps */
+      SVN_ERR(store_items(context, temp_file, node_parts, iterpool));
+      SVN_ERR(store_items(context, temp_file, rep_parts, iterpool));
+      
+      /* processed all items */
+      apr_array_clear(node_parts);
+      apr_array_clear(rep_parts);
+
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* implements compare_fn_t. Place LHS before RHS, if the latter belongs to
+ * a newer revision.
+ */
+static int
+compare_p2l_info_rev(const svn_fs_fs__p2l_entry_t * const * lhs_p,
+                     const svn_fs_fs__p2l_entry_t * const * rhs_p)
+{
+  const svn_fs_fs__p2l_entry_t * lhs = *lhs_p;
+  const svn_fs_fs__p2l_entry_t * rhs = *rhs_p;
+
+  if (lhs->item.revision == rhs->item.revision)
+    return 0;
+
+  return lhs->item.revision < rhs->item.revision ? -1 : 1;
+}
+
+/* Write the log-to-phys proto index file for CONTEXT and use POOL for
+ * temporary allocations.  All items in all buckets must have been placed
+ * by now.
+ */
+static svn_error_t *
+write_l2p_index(pack_context_t *context,
+                apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_revnum_t prev_rev = SVN_INVALID_REVNUM;
+  int i, dest;
+
+  /* eliminate empty entries from CONTEXT->REPS */
+  for (i = 0, dest = 0; i < context->reps->nelts; ++i)
+    {
+      svn_fs_fs__p2l_entry_t *entry
+        = APR_ARRAY_IDX(context->reps, i, svn_fs_fs__p2l_entry_t *);
+      if (entry)
+        APR_ARRAY_IDX(context->reps, dest++, svn_fs_fs__p2l_entry_t *)
+          = entry;
+    }
+  context->reps->nelts = dest;
+
+  /* we need to write the l2p index revision by revision */
+  qsort(context->reps->elts, context->reps->nelts, sizeof(void*),
+        (int (*)(const void *, const void *))compare_p2l_info_rev);
+
+  /* write index entries */
+  for (i = 0; i < context->reps->nelts; ++i)
+    {
+      svn_fs_fs__p2l_entry_t *p2l_entry
+        = APR_ARRAY_IDX(context->reps, i, svn_fs_fs__p2l_entry_t *);
+      if (p2l_entry == NULL)
+        continue;
+
+      /* next revision? */
+      if (prev_rev != p2l_entry->item.revision)
+        {
+          prev_rev = p2l_entry->item.revision;
+          SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision
+                      (context->proto_l2p_index, iterpool));
+        }
+
+      /* add entry */
+      SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(context->proto_l2p_index,
+                                                   p2l_entry->offset,
+                                                   p2l_entry->item.number,
+                                                   iterpool));
+
+      /* keep memory usage in check */
+      if (i % 256 == 0)
+        svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Pack the current revision range of CONTEXT, i.e. this covers phases 2
+ * to 4.  Use POOL for allocations.
+ */
+static svn_error_t *
+pack_range(pack_context_t *context,
+           apr_pool_t *pool)
+{
+  apr_pool_t *revpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Phase 2: Copy items into various buckets and build tracking info */
+  svn_revnum_t revision;
+  for (revision = context->start_rev; revision < context->end_rev; ++revision)
+    {
+      apr_off_t offset = 0;
+      apr_finfo_t finfo;
+      apr_file_t *rev_file;
+
+      /* Get the size of the file. */
+      const char *path = svn_dirent_join(context->shard_dir,
+                                         apr_psprintf(revpool, "%ld",
+                                                      revision),
+                                         revpool);
+      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, revpool));
+
+      SVN_ERR(svn_io_file_open(&rev_file, path,
+                               APR_READ | APR_BUFFERED | APR_BINARY,
+                               APR_OS_DEFAULT, revpool));
+
+      /* store the indirect array index */
+      APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
+  
+      /* read the phys-to-log index file until we covered the whole rev file.
+       * That index contains enough info to build both target indexes from it. */
+      while (offset < finfo.size)
+        {
+          /* read one cluster */
+          int i;
+          apr_array_header_t *entries;
+          SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs,
+                                              revision, offset,
+                                              iterpool));
+
+          for (i = 0; i < entries->nelts; ++i)
+            {
+              svn_fs_fs__p2l_entry_t *entry
+                = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+
+              /* skip first entry if that was duplicated due crossing a
+                 cluster boundary */
+              if (offset > entry->offset)
+                continue;
+
+              /* process entry while inside the rev file */
+              offset = entry->offset;
+              if (offset < finfo.size)
+                {
+                  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &offset,
+                                           iterpool));
+
+                  if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
+                    SVN_ERR(copy_item_to_temp(context,
+                                              context->changes,
+                                              context->changes_file,
+                                              rev_file, entry, iterpool));
+                  else if (entry->type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
+                    SVN_ERR(copy_item_to_temp(context,
+                                              context->file_props,
+                                              context->file_props_file,
+                                              rev_file, entry, iterpool));
+                  else if (entry->type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS)
+                    SVN_ERR(copy_item_to_temp(context,
+                                              context->dir_props,
+                                              context->dir_props_file,
+                                              rev_file, entry, iterpool));
+                  else if (   entry->type == SVN_FS_FS__ITEM_TYPE_FILE_REP
+                           || entry->type == SVN_FS_FS__ITEM_TYPE_DIR_REP)
+                    SVN_ERR(copy_rep_to_temp(context, rev_file, entry,
+                                             iterpool));
+                  else if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
+                    SVN_ERR(copy_node_to_temp(context, rev_file, entry,
+                                              iterpool));
+                  else
+                    SVN_ERR_ASSERT(entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED);
+                    
+                  offset += entry->size;
+                }
+            }
+
+          if (context->cancel_func)
+            SVN_ERR(context->cancel_func(context->cancel_baton));
+
+          svn_pool_clear(iterpool);
+        }
+
+      svn_pool_clear(revpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  /* phase 3: placement.
+   * Use "newest first" placement for simple items. */
+  sort_items(context->changes);
+  sort_items(context->file_props);
+  sort_items(context->dir_props);
+
+  /* follow dependencies recursively for noderevs and data representations */
+  sort_reps(context);
+
+  /* phase 4: copy bucket data to pack file.  Write P2L index. */
+  SVN_ERR(store_items(context, context->changes_file, context->changes,
+                      revpool));
+  svn_pool_clear(revpool);
+  SVN_ERR(store_items(context, context->file_props_file, context->file_props,
+                      revpool));
+  svn_pool_clear(revpool);
+  SVN_ERR(store_items(context, context->dir_props_file, context->dir_props,
+                      revpool));
+  svn_pool_clear(revpool);
+  SVN_ERR(copy_reps_from_temp(context, context->reps_file, revpool));
+  svn_pool_clear(revpool);
+
+  /* write L2P index as well (now that we know all target offsets) */
+  SVN_ERR(write_l2p_index(context, revpool));
+
+  svn_pool_destroy(revpool);
+  
+  return SVN_NO_ERROR;
 }
 
 /* Append CONTEXT->START_REV to the context's pack file with no re-ordering.
@@ -398,29 +1341,75 @@ pack_log_addressed(svn_fs_t *fs,
                    const char *pack_file_dir,
                    const char *shard_dir,
                    svn_revnum_t shard_rev,
+                   apr_size_t max_mem,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
 {
+  enum
+    {
+      /* estimated amount of memory used to represent one item in memory
+       * during rev file packing */
+      PER_ITEM_MEM = APR_ALIGN_DEFAULT(sizeof(path_order_t))
+                   + APR_ALIGN_DEFAULT(2 *sizeof(void*))
+                   + APR_ALIGN_DEFAULT(sizeof(reference_t))
+                   + APR_ALIGN_DEFAULT(sizeof(svn_fs_fs__p2l_entry_t))
+                   + 6 * sizeof(void*)
+    };
+
+  apr_size_t max_items = max_mem / PER_ITEM_MEM;
+  apr_array_header_t *max_ids;
   pack_context_t context = { 0 };
-  svn_revnum_t rev;
+  int i;
+  apr_size_t item_count = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* set up a pack context */
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
-                                  shard_rev, cancel_func,
+                                  shard_rev, max_items, cancel_func,
                                   cancel_baton, pool));
 
+  /* phase 1: determine the size of the revisions to pack */
+  SVN_ERR(svn_fs_fs__l2p_get_max_ids(&max_ids, fs, shard_rev,
+                                     context.shard_end_rev - shard_rev,
+                                     pool));
+
   /* pack revisions in ranges that don't exceed MAX_MEM */
-  for (rev = context.shard_rev; rev < context.shard_end_rev; ++rev)
-    {
-      context.start_rev = rev;
-      context.end_rev = rev + 1;
+  for (i = 0; i < max_ids->nelts; ++i)
+    if (APR_ARRAY_IDX(max_ids, i, apr_uint64_t) + item_count <= max_items)
+      {
+        context.end_rev++;
+      }
+    else
+      {
+        /* some unpacked revisions before this one? */
+        if (context.start_rev < context.end_rev)
+          {
+            /* pack them intelligently (might be just 1 rev but still ...) */
+            SVN_ERR(pack_range(&context, iterpool));
+            SVN_ERR(reset_pack_context(&context, iterpool));
+            item_count = 0;
+          }
 
-      SVN_ERR(append_revision(&context, iterpool));
+        /* next revision range is to start with the current revision */
+        context.start_rev = i + context.shard_rev;
+        context.end_rev = context.start_rev + 1;
 
-      svn_pool_clear(iterpool);
-    }
+        /* if this is a very large revision, we must place it as is */
+        if (APR_ARRAY_IDX(max_ids, i, apr_uint64_t) > max_items)
+          {
+            SVN_ERR(append_revision(&context, iterpool));
+            context.start_rev++;
+          }
+        else
+          item_count += (apr_size_t)APR_ARRAY_IDX(max_ids, i, apr_uint64_t);
+
+        svn_pool_clear(iterpool);
+      }
+
+  /* non-empty revision range at the end? */
+  if (context.start_rev < context.end_rev)
+    SVN_ERR(pack_range(&context, iterpool));
 
   /* last phase: finalize indexes and clean up */
   SVN_ERR(reset_pack_context(&context, iterpool));
@@ -609,7 +1598,7 @@ pack_rev_shard(svn_fs_t *fs,
   /* Index information files */
   if (svn_fs_fs__use_log_addressing(fs, shard_rev))
     SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path, shard_rev,
-                               cancel_func, cancel_baton, pool));
+                               max_mem, cancel_func, cancel_baton, pool));
   else
     SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
                                 max_files_per_dir, cancel_func,
@@ -668,7 +1657,7 @@ pack_shard(const char *revs_dir,
 
   /* pack the revision content */
   SVN_ERR(pack_rev_shard(fs, rev_pack_file_dir, rev_shard_path,
-                         shard, max_files_per_dir, 64 * 1024 * 1024,
+                         shard, max_files_per_dir, DEFAULT_MAX_MEM,
                          cancel_func, cancel_baton, pool));
 
   /* if enabled, pack the revprops in an equivalent way */
