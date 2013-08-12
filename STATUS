@@ -231,6 +231,14 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1513156
+   Fix crash when updating in libsvn_wc/update_editor.c, window_handler().
+   Justification:
+     Multiple crash reports:
+     http://svn.haxx.se/dev/archive-2013-06/0385.shtml
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
