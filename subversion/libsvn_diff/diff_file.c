@@ -186,6 +186,11 @@ map_or_read_file(apr_file_t **file,
         {
           *buffer = (*mm)->mm;
         }
+      else
+        {
+          /* Clear *MM because output parameters are undefined on error. */
+          *mm = NULL;
+        }
 
       /* On failure we just fall through and try reading the file into
        * memory instead.
