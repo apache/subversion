@@ -220,7 +220,7 @@ Candidate changes:
      Silently converting file size to apr_size_t is definitely wrong. Got
      related crashes in TortoiseSVN code.
    Votes:
-     +1: ivan
+     +1: ivan, philip
 
  * r1513156
    Fix crash when updating in libsvn_wc/update_editor.c, window_handler().
@@ -228,7 +228,7 @@ Candidate changes:
      Multiple crash reports:
      http://svn.haxx.se/dev/archive-2013-06/0385.shtml
    Votes:
-     +1: ivan
+     +1: ivan, philip
 
 Veto-blocked changes:
 =====================
