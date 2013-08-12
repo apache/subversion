@@ -193,14 +193,14 @@ Candidate changes:
    Justification:
      It's an assertion failure.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1508438
    Try harder to pass an existing path to sleep for timestamps
    Justification:
      Performance regression from 1.6, reported by user.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1512300, r1512301
    Clean up unpacked revprops in 'svnadmin hotcopy --incremental'
@@ -212,15 +212,6 @@ Candidate changes:
      r1512300 is merely a test case update to reproduce the problem.
    Votes:
      +1: stefan2
-
- * r1513119, r1513122
-   Correctly error out for large files in svn_diff_file_output_merge2() on
-   32-bit platforms.
-   Justification:
-     Silently converting file size to apr_size_t is definitely wrong. Got
-     related crashes in TortoiseSVN code.
-   Votes:
-     +1: ivan, philip
 
  * r1513156
    Fix crash when updating in libsvn_wc/update_editor.c, window_handler().
@@ -263,10 +254,21 @@ Approved changes:
 =================
 
  * r1507382, r1509186, r1509196
-   Allow passing NULL for the config dir to use the default config dir path.
-   r1509186 is to update the docstring accordingly.
+   Allow passing NULL for the config dir to svn_config_walk_auth_data to use
+   the default config dir path, like other functions handle this.
    Justification: all other APIs that take a config dir param allow NULL as
      meaning the default config path. Clients should not try to figure out
      that path themselves.
+   Notes:
+      r1509186 and r1509196 update the docstring accordingly.
    Votes:
-     +1: steveking, philip, ivan
+     +1: steveking, philip, ivan, rhuijben
+
+ * r1513119, r1513122
+   Correctly error out for large files in svn_diff_file_output_merge2() on
+   32-bit platforms.
+   Justification:
+     Silently converting file size to apr_size_t is definitely wrong. Got
+     related crashes in TortoiseSVN code.
+   Votes:
+     +1: ivan, philip, rhuijben
