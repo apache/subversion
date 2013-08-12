@@ -173,15 +173,6 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1507382, r1509186, r1509196
-   Allow passing NULL for the config dir to use the default config dir path.
-   r1509186 is to update the docstring accordingly.
-   Justification: all other APIs that take a config dir param allow NULL as
-     meaning the default config path. Clients should not try to figure out
-     that path themselves.
-   Votes:
-     +1: steveking, philip
-
  * r1507889, r1507891
    davautocheck: use the correct apxs binary by default.
    Justification:
@@ -270,3 +261,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1507382, r1509186, r1509196
+   Allow passing NULL for the config dir to use the default config dir path.
+   r1509186 is to update the docstring accordingly.
+   Justification: all other APIs that take a config dir param allow NULL as
+     meaning the default config path. Clients should not try to figure out
+     that path themselves.
+   Votes:
+     +1: steveking, philip, ivan
