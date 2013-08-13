@@ -183,7 +183,15 @@ Candidate changes:
      See r1512154 for the actual change to review on the branch.
    Votes:
      +1: breser
-  
+
+  * r1512432, r1512471, r1512472
+   mod_dav_svn: No longer map requests to the filesystem.
+   Justification:
+     Prevents httpd from logging garbage filenames with %f and stops Directory
+     blocks from matching against requests served by mod_dav_svn.
+   Votes:
+     +1: breser 
+
 
 Veto-blocked changes:
 =====================
