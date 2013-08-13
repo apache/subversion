@@ -261,17 +261,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1507382, r1509186, r1509196
-   Allow passing NULL for the config dir to svn_config_walk_auth_data to use
-   the default config dir path, like other functions handle this.
-   Justification: all other APIs that take a config dir param allow NULL as
-     meaning the default config path. Clients should not try to figure out
-     that path themselves.
-   Notes:
-      r1509186 and r1509196 update the docstring accordingly.
-   Votes:
-     +1: steveking, philip, ivan, rhuijben
-
  * r1513119, r1513122
    Correctly error out for large files in svn_diff_file_output_merge2() on
    32-bit platforms.
