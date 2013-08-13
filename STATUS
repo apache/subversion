@@ -191,7 +191,7 @@ Candidate changes:
      blocks from matching against requests served by mod_dav_svn.
    Votes:
      +1: breser (not r1513463, r1513472)
-     +1: philip
+     +1: philip, ivan
 
 
 Veto-blocked changes:
