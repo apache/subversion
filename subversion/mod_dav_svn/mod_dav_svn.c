@@ -1092,6 +1092,8 @@ static int dav_svn__handler(request_rec *r)
   return DECLINED;
 }
 
+#define NO_MAP_TO_STORAGE_NOTE "dav_svn-no-map-to-storage"
+
 /* Prevent filename on the request from being set since we aren't serving a
  * file off the disk.  This means that <Directory> blocks will not match and
  * that * %f in logging formats will show as "-". */
@@ -1109,7 +1111,7 @@ static int dav_svn__translate_name(request_rec *r)
 
   /* Leave a note to ourselves so that we know not to decline in the 
    * map_to_storage hook. */
-  apr_table_setn(r->notes, "dav_svn-no-map-to-storage", (const char*)1); 
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1); 
   return OK;
 }
 
@@ -1120,7 +1122,7 @@ static int dav_svn__map_to_storage(request_rec *r)
 {
   /* Check a note we left in translate_name since map_to_storage doesn't
    * have access to our configuration. */
-  if (apr_table_get(r->notes, "dav_svn-no-map-to-storage"))
+  if (apr_table_get(r->notes, NO_MAP_TO_STORAGE_NOTE))
     return OK;
 
   return DECLINED;
