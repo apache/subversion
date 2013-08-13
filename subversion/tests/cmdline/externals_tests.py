@@ -3226,6 +3226,43 @@ def update_dir_external_shallow(sbox):
                                         '--set-depth=infinity',
                                         sbox.ospath('A/B/E'))
 
+@Issue(4411)
+@XFail()
+def switch_parent_relative_file_external(sbox):
+  "switch parent-relative file external"
+
+  sbox.build()
+
+  # Create a parent-relative file external in r2
+  sbox.simple_propset('svn:externals', '../D/gamma gamma-ext', 'A/B')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a branch that contains the file external
+  sbox.simple_copy('A', 'A_copy')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Check out A/B_copy to a new working copy
+  branch_wc = sbox.add_wc_path("branch")
+  branch_url = sbox.repo_url + '/A_copy'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout', branch_url,
+                                     branch_wc)
+
+  # Rename the branch
+  sbox.simple_move('A_copy', 'A_copy2')
+  sbox.simple_commit()
+
+  # Switch the branch working copy to the new branch URL
+  new_branch_url = sbox.repo_url + '/A_copy2'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', new_branch_url,
+                                     branch_wc)
+
+  # Bug: The branch working copy can no longer be updated.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', branch_wc)
 
 ########################################################################
 # Run the tests
@@ -3279,6 +3316,7 @@ test_list = [ None,
               move_with_file_externals,
               pinned_externals,
               update_dir_external_shallow,
+              switch_parent_relative_file_external,
              ]
 
 if __name__ == '__main__':
