@@ -260,12 +260,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1513119, r1513122
-   Correctly error out for large files in svn_diff_file_output_merge2() on
-   32-bit platforms.
-   Justification:
-     Silently converting file size to apr_size_t is definitely wrong. Got
-     related crashes in TortoiseSVN code.
-   Votes:
-     +1: ivan, philip, rhuijben
