@@ -3715,7 +3715,10 @@ get_revprop_packname(svn_fs_t *fs,
   /* parse the manifest. Every line is a file name */
   revprops->manifest = apr_array_make(pool, ffd->max_files_per_dir,
                                       sizeof(const char*));
-  while (content->data)
+
+  /* Read all lines.  Since the last line ends with a newline, we will
+     end up with a valid but empty string after the last entry. */
+  while (content->data && *content->data)
     {
       APR_ARRAY_PUSH(revprops->manifest, const char*) = content->data;
       content->data = strchr(content->data, '\n');
