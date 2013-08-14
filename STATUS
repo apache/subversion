@@ -217,6 +217,24 @@ Candidate changes:
      +0: rhuijben (in concept;
                    +1 for the documentation changes in r1513463, r1513472)
 
+ * r1513874
+   Fix packed revprop manifest growth in FSFS
+   Justification:
+     Users that frequently change existing revprops may, over time,
+     experience a performance degradation.
+   Votes:
+     +1: stefan2
+
+ * r1513879, r1513880
+   Fix packed revprop file splitting logic in FSFS
+   Justification:
+     Modifying revprops may result in the loss of revprops for one
+     or multiple revisions.
+   Notes:
+     r1513879 merely adds a test to reproduce the issue.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
