@@ -254,10 +254,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1511353
-   svnmucc: Fix an assertion failure.
-   Justification:
-     It's an assertion failure.
-   Votes:
-     +1: danielsh, rhuijben, ivan

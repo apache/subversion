@@ -1429,7 +1429,14 @@ main(int argc, const char **argv)
           if (! anchor)
             anchor = url;
           else
-            anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
+            {
+              anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
+              if (!anchor || !anchor[0])
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                               "URLs in the action list do not "
+                                               "share a common ancestor"),
+                             pool);
+            }
 
           if ((++i == action_args->nelts) && (j + 1 < num_url_args))
             insufficient(pool);
