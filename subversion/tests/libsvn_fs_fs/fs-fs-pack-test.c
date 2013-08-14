@@ -862,6 +862,75 @@ pack_shard_size_one(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 /* ------------------------------------------------------------------------ */
+#define REPO_NAME "get_set_multiple_huge_revprops_packed_fs"
+#define SHARD_SIZE 4
+#define MAX_REV 9
+static svn_error_t *
+get_set_multiple_huge_revprops_packed_fs(const svn_test_opts_t *opts,
+                                         apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_string_t *prop_value;
+  svn_revnum_t rev;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+    return SVN_NO_ERROR;
+
+  /* Create the packed FS and open it. */
+  SVN_ERR(prepare_revprop_repo(&fs, REPO_NAME, MAX_REV, SHARD_SIZE, opts,
+                               pool));
+
+  /* Set commit messages to different values */
+  for (rev = 0; rev <= MAX_REV; ++rev)
+    SVN_ERR(svn_fs_change_rev_prop(fs, rev, SVN_PROP_REVISION_LOG,
+                                   default_log(rev, pool),
+                                   pool));
+
+  /* verify */
+  for (rev = 0; rev <= MAX_REV; ++rev)
+    {
+      SVN_ERR(svn_fs_revision_prop(&prop_value, fs, rev,
+                                   SVN_PROP_REVISION_LOG, pool));
+      SVN_TEST_STRING_ASSERT(prop_value->data, default_log(rev, pool)->data);
+    }
+
+  /* Put a huge revprop into revision 1 and 2. */
+  SVN_ERR(svn_fs_change_rev_prop(fs, 1, SVN_PROP_REVISION_LOG,
+                                 huge_log(1, pool),
+                                 pool));
+  SVN_ERR(svn_fs_change_rev_prop(fs, 2, SVN_PROP_REVISION_LOG,
+                                 huge_log(2, pool),
+                                 pool));
+  SVN_ERR(svn_fs_change_rev_prop(fs, 5, SVN_PROP_REVISION_LOG,
+                                 huge_log(5, pool),
+                                 pool));
+  SVN_ERR(svn_fs_change_rev_prop(fs, 6, SVN_PROP_REVISION_LOG,
+                                 huge_log(6, pool),
+                                 pool));
+
+  /* verify */
+  for (rev = 0; rev <= MAX_REV; ++rev)
+    {
+      SVN_ERR(svn_fs_revision_prop(&prop_value, fs, rev,
+                                   SVN_PROP_REVISION_LOG, pool));
+
+      if (rev == 1 || rev == 2 || rev == 5 || rev == 6)
+        SVN_TEST_STRING_ASSERT(prop_value->data,
+                               huge_log(rev, pool)->data);
+      else
+        SVN_TEST_STRING_ASSERT(prop_value->data,
+                               default_log(rev, pool)->data);
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -890,5 +959,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_info"),
     SVN_TEST_OPTS_PASS(pack_shard_size_one,
                        "test packing with shard size = 1"),
+    SVN_TEST_OPTS_PASS(get_set_multiple_huge_revprops_packed_fs,
+                       "set multiple huge revprops in packed FSFS"),
     SVN_TEST_NULL
   };
