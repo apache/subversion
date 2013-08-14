@@ -206,14 +206,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1513156
-   Fix crash when updating in libsvn_wc/update_editor.c, window_handler().
-   Justification:
-     Multiple crash reports:
-     http://svn.haxx.se/dev/archive-2013-06/0385.shtml
-   Votes:
-     +1: ivan, philip
-
  * r1512432, r1512471, r1512472, r1513463, r1513472
    mod_dav_svn: No longer map requests to the filesystem.
    Justification:
@@ -222,6 +214,8 @@ Candidate changes:
    Votes:
      +1: breser (not r1513463, r1513472)
      +1: philip, ivan
+     +0: rhuijben (in concept;
+                   +1 for the documentation changes in r1513463, r1513472)
 
 Veto-blocked changes:
 =====================
@@ -254,3 +248,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1513156
+   Fix crash when updating in libsvn_wc/update_editor.c, window_handler().
+   Justification:
+     Multiple crash reports:
+     http://svn.haxx.se/dev/archive-2013-06/0385.shtml
+   Votes:
+     +1: ivan, philip, rhuijben
