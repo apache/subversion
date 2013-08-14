@@ -228,13 +228,11 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1513879, r1513880
+ * r1513880
    Fix packed revprop file splitting logic in FSFS
    Justification:
      Modifying revprops may result in the loss of revprops for one
      or multiple revisions.
-   Notes:
-     r1513879 merely adds a test to reproduce the issue.
    Votes:
      +1: stefan2
 
