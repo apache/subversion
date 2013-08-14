@@ -387,7 +387,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * support for Serf 2 (r1147538)
     * introduction of editor v2 (via private APIs only) (r1166332 et al)
     * improve SQLite setup for compatibility with OS X 10.7. (r1181666)
-    * rework switch statement to accomodate OWC compiler limitations (r1204407)
+    * rework switch statement to accommodate OWC compiler limitations (r1204407)
     * new --enable-sqlite-compatibility-version configure option (r1201421)
     * make test suite LD_LIBRARY_PATH include just-built auth plugins (r1200474)
     * packages/ directory removed, contents were outdated and unused (r1442167)
