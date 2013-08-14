@@ -125,19 +125,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1503010, r1503058, r1503061, r1503211
-   svn_utf_*: Describe APR errors as coming from APR.
-   Justification:
-     It is not obvious what needs to be recompiled to resolve "This function
-     has not been implemented on this platform".  We do the same for SQLite.
-     .
-     The current code will not enter the error path in the ENOTIMPL case; that
-     is being discussed on dev@ still.  The "Justification" field uses that
-     error code is used as an example only.
-   Votes:
-     +1: danielsh, rhuijben
-     +1 (without r1503211): stefan2
-
  * r1503318
    ra_serf: Do not retry HTTP requests if we started to parse them.
    Discussion: http://svn.haxx.se/dev/archive-2013-07/0290.shtml
@@ -150,14 +137,6 @@ Candidate changes:
      +1: ivan, rhuijben
      +0: danielsh
 
- * r1504192, r1504505
-   Make 'svn diff' continue on missing and obstructing files.
-   This resolves issue 4396
-   Justification:
-     Regression since 1.7.
-   Votes:
-     +1: philip, rhuijben
-
  * r1506047
    Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
    build.conf
@@ -165,16 +144,6 @@ Candidate changes:
      These targets should build all swig modules for the language.
    Votes:
      +1: rhuijben
-
- * r1506966, r1511603
-   Don't do double UTF8-to-native conversion in svnadmin notifications.
-   Justification:
-     Double conversion can produce garbled output in non-UTF8 environments.
-   Notes:
-     Reverts r1485650 on trunk, which was merged to 1.8.x in r1486284.
-     Merge with --accept mc to resolve conflict.
-   Votes:
-     +1: philip, danielsh
 
  * r1507889, r1507891
    davautocheck: use the correct apxs binary by default.
@@ -189,14 +158,7 @@ Candidate changes:
    Justification:
      I found the previous output confusing.
    Votes:
-     +1: danielsh
-
- * r1508438
-   Try harder to pass an existing path to sleep for timestamps
-   Justification:
-     Performance regression from 1.6, reported by user.
-   Votes:
-     +1: philip, rhuijben
+     +1: danielsh, stefan2
 
  * r1512300, r1512301
    Clean up unpacked revprops in 'svnadmin hotcopy --incremental'
@@ -275,3 +237,41 @@ Approved changes:
      http://svn.haxx.se/dev/archive-2013-06/0385.shtml
    Votes:
      +1: ivan, philip, rhuijben
+
+ * r1508438
+   Try harder to pass an existing path to sleep for timestamps
+   Justification:
+     Performance regression from 1.6, reported by user.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1506966, r1511603
+   Don't do double UTF8-to-native conversion in svnadmin notifications.
+   Justification:
+     Double conversion can produce garbled output in non-UTF8 environments.
+   Notes:
+     Reverts r1485650 on trunk, which was merged to 1.8.x in r1486284.
+     Merge with --accept mc to resolve conflict.
+   Votes:
+     +1: philip, danielsh, stefan2
+
+ * r1503010, r1503058, r1503061, r1503211
+   svn_utf_*: Describe APR errors as coming from APR.
+   Justification:
+     It is not obvious what needs to be recompiled to resolve "This function
+     has not been implemented on this platform".  We do the same for SQLite.
+     .
+     The current code will not enter the error path in the ENOTIMPL case; that
+     is being discussed on dev@ still.  The "Justification" field uses that
+     error code is used as an example only.
+   Votes:
+     +1: danielsh, rhuijben, stefan2
+
+ * r1504192, r1504505
+   Make 'svn diff' continue on missing and obstructing files.
+   This resolves issue 4396
+   Justification:
+     Regression since 1.7.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
