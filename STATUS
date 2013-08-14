@@ -52,7 +52,7 @@ Candidate changes:
      this makes many network (and server implementation) problems easier to
      diagnose.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
@@ -93,6 +93,9 @@ Candidate changes:
      Seen in the wild under 1.7.x.
    Votes:
      +1: danielsh
+     -0: stefan2 (the introduction of svn_ver_check_list2 does not reduce
+                  code churn, so stick with the suitably privately named
+                  svn_ver__check_list2)
 
  * r1502901
    Make ra_serf sessions reusable after a log callback uses the
