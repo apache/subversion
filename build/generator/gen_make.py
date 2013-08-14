@@ -238,6 +238,7 @@ class Generator(gen_base.GeneratorBase):
       header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
+      add_deps = target_ob.add_deps.split()
 
       for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
         if isinstance(link_dep, gen_base.TargetJava):
@@ -288,7 +289,7 @@ class Generator(gen_base.GeneratorBase):
                             varname=targ_varname,
                             path=path,
                             install=None,
-                            add_deps=target_ob.add_deps,
+                            add_deps=add_deps,
                             objects=objects,
                             deps=deps,
                             when=target_ob.when,
