@@ -230,14 +230,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1513156
-   Fix crash when updating in libsvn_wc/update_editor.c, window_handler().
-   Justification:
-     Multiple crash reports:
-     http://svn.haxx.se/dev/archive-2013-06/0385.shtml
-   Votes:
-     +1: ivan, philip, rhuijben
-
  * r1508438
    Try harder to pass an existing path to sleep for timestamps
    Justification:
