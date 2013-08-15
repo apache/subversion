@@ -95,7 +95,11 @@ Candidate changes:
      +1: danielsh
      -0: stefan2 (the introduction of svn_ver_check_list2 does not reduce
                   code churn, so stick with the suitably privately named
-                  svn_ver__check_list2)
+                  svn_ver__check_list2
+		  <danielsh> stefan2: the churn reduced is the delta wrt
+			     trunk - e.g., if a future commi to trunk touches
+			     the callsites, a backport of that commit wouldn't
+			     require a backport branch)
 
  * r1502901
    Make ra_serf sessions reusable after a log callback uses the
@@ -204,6 +208,11 @@ Candidate changes:
      Wrong User-Agent string is not good thing.
    Votes:
      +1: ivan
+     -0: danielsh (would prefer to see SVN_BUILD_HOST moved to the varargs,
+                   on the off chance that it contains a literal % sign.
+                   Ditto SVN_VER_NUMBER.  That is:
+                   apr_psprintf(pool, "SVN/%s (%s) serf/%d.%d.%d",
+                                SVN_VER_NUMBER, ...).)
 
  * r1514295, r1514318, r1514356
    Add serf library version information to svn --version.
@@ -211,6 +220,7 @@ Candidate changes:
      Makes ra_serf issues diagnostic a little bit easier.
    Votes:
      +1: ivan
+     +0: danielsh
 
 Veto-blocked changes:
 =====================
