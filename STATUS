@@ -205,6 +205,13 @@ Candidate changes:
    Votes:
      +1: ivan
 
+* r1514295, r1514318, r1514356
+  Add serf library version information to svn --version.
+  Justification:
+    Makes ra_serf issues diagnostic a little bit easier.
+  Votes:
+    +1: ivan
+
 Veto-blocked changes:
 =====================
 
