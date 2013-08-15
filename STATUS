@@ -230,18 +230,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1503010, r1503058, r1503061, r1503211
-   svn_utf_*: Describe APR errors as coming from APR.
-   Justification:
-     It is not obvious what needs to be recompiled to resolve "This function
-     has not been implemented on this platform".  We do the same for SQLite.
-     .
-     The current code will not enter the error path in the ENOTIMPL case; that
-     is being discussed on dev@ still.  The "Justification" field uses that
-     error code is used as an example only.
-   Votes:
-     +1: danielsh, rhuijben, stefan2
-
  * r1504192, r1504505
    Make 'svn diff' continue on missing and obstructing files.
    This resolves issue 4396
