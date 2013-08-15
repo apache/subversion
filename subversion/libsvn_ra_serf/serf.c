@@ -61,11 +61,18 @@ ra_serf_version(void)
 #define RA_SERF_DESCRIPTION \
     N_("Module for accessing a repository via WebDAV protocol using serf.")
 
+#define RA_SERF_DESCRIPTION_VER \
+    N_("Module for accessing a repository via WebDAV protocol using serf " \
+        "%d.%d.%d.")
+
 /* Implements svn_ra__vtable_t.get_description(). */
 static const char *
-ra_serf_get_description(void)
+ra_serf_get_description(apr_pool_t *pool)
 {
-  return _(RA_SERF_DESCRIPTION);
+  int major, minor, patch;
+
+  serf_lib_version(&major, &minor, &patch);
+  return apr_psprintf(pool, _(RA_SERF_DESCRIPTION_VER), major, minor, patch);
 }
 
 /* Implements svn_ra__vtable_t.get_schemes(). */
