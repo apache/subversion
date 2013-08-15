@@ -230,11 +230,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1504192, r1504505
-   Make 'svn diff' continue on missing and obstructing files.
-   This resolves issue 4396
-   Justification:
-     Regression since 1.7.
-   Votes:
-     +1: philip, rhuijben, stefan2
-
