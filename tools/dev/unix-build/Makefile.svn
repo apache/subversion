@@ -72,7 +72,7 @@ GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.4.1
 HTTPD_VER	= 2.2.25
 NEON_VER	= 0.29.6
-SERF_VER	= 1.3.0
+SERF_VER	= 1.3.1
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
 SQLITE_VER	= 3071600
@@ -733,7 +733,7 @@ $(SERF_OBJDIR)/.retrieved:
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
-		scons DEBUG=1 CFLAGS="-O0,-g,$(PROFILE_CFLAGS)" \
+		scons DEBUG=1 CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
 			PREFIX=$(PREFIX)/serf
@@ -1171,7 +1171,6 @@ $(SVN_OBJDIR)/.retrieved:
 ifeq ($(BRANCH_MAJOR),1.7)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
-SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
@@ -1180,7 +1179,6 @@ JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
-SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
@@ -1198,9 +1196,6 @@ JAVAHL_CHECK_TARGET=check-javahl
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
-# serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
-# so we have to do that ourselves :(
-SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
@@ -1227,7 +1222,7 @@ endif
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG)" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$$PATH \
