@@ -513,8 +513,9 @@ show_cert_failures(const char *failure_string,
 /* ### from libsvn_subr/ssl_client_cert_pw_providers.c */
 #define AUTHN_PASSPHRASE_KEY            "passphrase"
 
-struct list_credentials_baton_t
+struct walk_credentials_baton_t
 {
+  svn_boolean_t list;
   svn_boolean_t show_passwords;
   apr_array_header_t *patterns;
 };
@@ -602,83 +603,90 @@ match_ascii_cert(svn_boolean_t *match,
   return SVN_NO_ERROR;
 }
 
-/* This implements `svn_config_auth_walk_func_t` */
 static svn_error_t *
-list_credentials(svn_boolean_t *delete_cred,
-                 void *baton,
+match_credential(svn_boolean_t *match,
                  const char *cred_kind,
                  const char *realmstring,
-                 apr_hash_t *hash,
+                 apr_array_header_t *patterns,
+                 apr_array_header_t *cred_items,
                  apr_pool_t *scratch_pool)
 {
-  struct list_credentials_baton_t *b = baton;
-  apr_array_header_t *sorted_hash_items;
   int i;
-  apr_pool_t *iterpool;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  *delete_cred = FALSE;
+  *match = FALSE;
 
-  sorted_hash_items = svn_sort__hash(hash, svn_sort_compare_items_lexically,
-                                     scratch_pool);
-  iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < b->patterns->nelts; i++)
+  for (i = 0; i < patterns->nelts; i++)
     {
-      const char *pattern = APR_ARRAY_IDX(b->patterns, i, const char *);
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
       int j;
-      svn_boolean_t match;
 
-      match = match_pattern(pattern, cred_kind, iterpool);
-      if (!match)
-        match = match_pattern(pattern, realmstring, iterpool);
-      if (!match)
+      *match = match_pattern(pattern, cred_kind, iterpool);
+      if (!*match)
+        *match = match_pattern(pattern, realmstring, iterpool);
+      if (!*match)
         {
           svn_pool_clear(iterpool);
-          for (j = 0; j < sorted_hash_items->nelts; j++)
+          for (j = 0; j < cred_items->nelts; j++)
             {
               svn_sort__item_t item;
               const char *key;
               svn_string_t *value;
 
-              item = APR_ARRAY_IDX(sorted_hash_items, j, svn_sort__item_t);
+              item = APR_ARRAY_IDX(cred_items, j, svn_sort__item_t);
               key = item.key;
               value = item.value;
               if (strcmp(key, AUTHN_PASSWORD_KEY) == 0 ||
                   strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
                 continue; /* don't match secrets */
               else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
-                SVN_ERR(match_ascii_cert(&match, pattern, value->data,
+                SVN_ERR(match_ascii_cert(match, pattern, value->data,
                                          iterpool));
               else
-                match = match_pattern(pattern, value->data, iterpool);
+                *match = match_pattern(pattern, value->data, iterpool);
 
-              if (match)
+              if (*match)
                 break;
             }
         }
-      if (!match)
-        return SVN_NO_ERROR;
+      if (!*match)
+        break;
     }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+list_credential(const char *cred_kind,
+                const char *realmstring,
+                apr_array_header_t *cred_items,
+                svn_boolean_t show_passwords,
+                apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, SEP_STRING));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("Credential kind: %s\n"), cred_kind));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("Authentication realm: %s\n"), realmstring));
-  for (i = 0; i < sorted_hash_items->nelts; i++)
+
+  for (i = 0; i < cred_items->nelts; i++)
     {
       svn_sort__item_t item;
       const char *key;
       svn_string_t *value;
       
       svn_pool_clear(iterpool);
-      item = APR_ARRAY_IDX(sorted_hash_items, i, svn_sort__item_t);
+      item = APR_ARRAY_IDX(cred_items, i, svn_sort__item_t);
       key = item.key;
       value = item.value;
       if (strcmp(value->data, realmstring) == 0)
         continue; /* realm string was already shown above */
       else if (strcmp(key, AUTHN_PASSWORD_KEY) == 0)
         {
-          if (b->show_passwords)
+          if (show_passwords)
             SVN_ERR(svn_cmdline_printf(iterpool,
                                        _("Password: %s\n"), value->data));
           else
@@ -686,7 +694,7 @@ list_credentials(svn_boolean_t *delete_cred,
         }
       else if (strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
         {
-          if (b->show_passwords)
+          if (show_passwords)
             SVN_ERR(svn_cmdline_printf(iterpool,
                                        _("Passphrase: %s\n"), value->data));
           else
@@ -711,6 +719,41 @@ list_credentials(svn_boolean_t *delete_cred,
   return SVN_NO_ERROR;
 }
 
+/* This implements `svn_config_auth_walk_func_t` */
+static svn_error_t *
+walk_credentials(svn_boolean_t *delete_cred,
+                 void *baton,
+                 const char *cred_kind,
+                 const char *realmstring,
+                 apr_hash_t *cred_hash,
+                 apr_pool_t *scratch_pool)
+{
+  struct walk_credentials_baton_t *b = baton;
+  apr_array_header_t *sorted_cred_items;
+
+  *delete_cred = FALSE;
+
+  sorted_cred_items = svn_sort__hash(cred_hash,
+                                     svn_sort_compare_items_lexically,
+                                     scratch_pool);
+  if (b->patterns->nelts > 0)
+    {
+      svn_boolean_t match;
+
+      SVN_ERR(match_credential(&match, cred_kind, realmstring,
+                               b->patterns, sorted_cred_items,
+                               scratch_pool));
+      if (!match)
+        return SVN_NO_ERROR;
+    }
+
+  if (b->list)
+    SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
+                            b->show_passwords, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -718,16 +761,17 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnauth_opt_state *opt_state = baton;
   const char *config_path;
-  struct list_credentials_baton_t b;
+  struct walk_credentials_baton_t b;
 
   b.show_passwords = opt_state->show_passwords;
+  b.list = TRUE;
   SVN_ERR(parse_args(&b.patterns, os, 0, -1, pool));
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,
                                           opt_state->config_dir, NULL,
                                           pool));
 
-  SVN_ERR(svn_config_walk_auth_data(config_path, list_credentials, &b,
+  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b,
                                     pool));
   return SVN_NO_ERROR;
 }
