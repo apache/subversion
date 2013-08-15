@@ -230,16 +230,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1506966, r1511603
-   Don't do double UTF8-to-native conversion in svnadmin notifications.
-   Justification:
-     Double conversion can produce garbled output in non-UTF8 environments.
-   Notes:
-     Reverts r1485650 on trunk, which was merged to 1.8.x in r1486284.
-     Merge with --accept mc to resolve conflict.
-   Votes:
-     +1: philip, danielsh, stefan2
-
  * r1503010, r1503058, r1503061, r1503211
    svn_utf_*: Describe APR errors as coming from APR.
    Justification:
