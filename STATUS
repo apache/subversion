@@ -230,13 +230,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1508438
-   Try harder to pass an existing path to sleep for timestamps
-   Justification:
-     Performance regression from 1.6, reported by user.
-   Votes:
-     +1: philip, rhuijben, stefan2
-
  * r1506966, r1511603
    Don't do double UTF8-to-native conversion in svnadmin notifications.
    Justification:
