@@ -166,13 +166,6 @@ Candidate changes:
      +1: rhuijben, breser
      +0: danielsh (don't know whether GetLastError is the right API here)
 
- * r1490684
-   Return 500 rather than 409 when commit fails and it is not a conflict.
-   Justification:
-     Not a client failure so 4xx is wrong.
-   Votes:
-     +1: philip, brane
-
  * ^/subversion/branches/1.7.x-issue4408
    Fix invalid output from diff --summarize.
    Branch:
@@ -211,4 +204,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1490684
+   Return 500 rather than 409 when commit fails and it is not a conflict.
+   Justification:
+     Not a client failure so 4xx is wrong.
+   Votes:
+     +1: philip, brane, breser
 
