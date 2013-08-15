@@ -171,7 +171,7 @@ Candidate changes:
    Justification:
      Not a client failure so 4xx is wrong.
    Votes:
-     +1: philip
+     +1: philip, brane
 
  * ^/subversion/branches/1.7.x-issue4408
    Fix invalid output from diff --summarize.
