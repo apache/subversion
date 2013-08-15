@@ -1012,9 +1012,13 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   if (err)
     {
-      /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath, TRUE,
-                                          hb->pool));
+      /* We failed to apply the delta; clean up the temporary file if it
+         already created by lazy_open_target(). */
+      if (hb->new_text_base_tmp_abspath)
+        {
+          svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath,
+                                              TRUE, hb->pool));
+        }
     }
   else
     {
