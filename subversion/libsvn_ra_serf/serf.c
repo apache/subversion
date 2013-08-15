@@ -62,8 +62,8 @@ ra_serf_version(void)
     N_("Module for accessing a repository via WebDAV protocol using serf.")
 
 #define RA_SERF_DESCRIPTION_VER \
-    N_("Module for accessing a repository via WebDAV protocol using serf " \
-        "%d.%d.%d.")
+    N_("Module for accessing a repository via WebDAV protocol using serf.\n" \
+       "  - using serf %d.%d.%d")
 
 /* Implements svn_ra__vtable_t.get_description(). */
 static const char *
