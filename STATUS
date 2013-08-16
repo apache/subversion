@@ -92,14 +92,7 @@ Candidate changes:
    Notes:
      Seen in the wild under 1.7.x.
    Votes:
-     +1: danielsh
-     -0: stefan2 (the introduction of svn_ver_check_list2 does not reduce
-                  code churn, so stick with the suitably privately named
-                  svn_ver__check_list2
-		  <danielsh> stefan2: the churn reduced is the delta wrt
-			     trunk - e.g., if a future commi to trunk touches
-			     the callsites, a backport of that commit wouldn't
-			     require a backport branch)
+     +1: danielsh, stefan2
 
  * r1502901
    Make ra_serf sessions reusable after a log callback uses the
