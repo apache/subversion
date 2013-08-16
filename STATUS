@@ -175,7 +175,7 @@ Candidate changes:
    Notes:
      See r1512154 for the actual change to review on the branch.
    Votes:
-     +1: breser
+     +1: breser, philip
 
  * r1514763
    ra_serf: Use case-insensitive hostname comparision when validating server
