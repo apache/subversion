@@ -423,8 +423,8 @@ get_user_agent_string(apr_pool_t *pool)
   int major, minor, patch;
   serf_lib_version(&major, &minor, &patch);
 
-  return apr_psprintf(pool, "SVN/" SVN_VER_NUMBER " (" SVN_BUILD_TARGET ") "
-                      " serf/%d.%d.%d",
+  return apr_psprintf(pool, "SVN/%s (%s) serf/%d.%d.%d",
+                      SVN_VER_NUMBER, SVN_BUILD_TARGET,
                       major, minor, patch);
 }
 
