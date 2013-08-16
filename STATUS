@@ -219,7 +219,7 @@ Candidate changes:
      SSL certificate with uppercase letters in hostname considered as
      untrusted. Regression from Subversion 1.7.x.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
