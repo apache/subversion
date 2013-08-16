@@ -34,20 +34,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * ^/subversion/branches/1.7.x-commit-performance
-   r1337118, r1337281, r1337374, r1337377, r1337392, r1337394, r1337485
-   Use the working copy status walker as a first filter to find committable
-   nodes.
-   Justification:
-     Huge performance boost. Especially on NFS.
-   Notes:
-     Backports the status walker framework. Many other parts are backportable
-     too, but this branch delivers the plumbing.
-     [JAF] We might want to include some of the subsequent updates to this
-           code, such as: r1337403, r1337475, r1337736, r1338059, r1338338.
-   Votes:
-     +0: rhuijben (I would like to see some test results before backporting)
-
  * r1426762
    Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
    diff" produces incorrect diff.
@@ -77,28 +63,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
      +0: stsp (nice fix, but backport doesn't compile)
-
- * r1438602, r1438683, r1441810
-   Fix issue #4306, "multiple editor drive file merges record wrong mergeinfo
-   during conflicts"
-   Justification:
-     Bogus mergeinfo is created during conflicting merges with file targets.
-   Notes: r1438602 is the initial test and r1438683 the initial fix. r1441810
-     is a follow-up that addressed a bug in the initial fix (see
-     http://svn.haxx.se/dev/archive-2013-02/0001.shtml) and also reworked the
-     test to use prop edits rather than text edits as the changes to be
-     merged.  Unfortunately, 1.7.x has unrelated problems with property
-     conflicts: It doesn't abort the merge if it encounters them!  It merrily
-     plugs along sans any "One or more conflicts were produced while
-     merging...resolve all conflicts and rerun the merge to apply the
-     remaining unmerged revisions" error (this is fixed on trunk).  So while
-     r1441810 is a valid fix (IMO) its test fails for unrelated reasons.  So
-     I reworked the earlier version of test to demonstrate the problem
-     r1441810 fixes, but using file conflicts.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4306
-   Votes:
-     +1: stsp, pburba
 
  * r1438879
    Make 'show-diff' at the interactive conflict prompt show nicer diffs.
@@ -166,17 +130,6 @@ Candidate changes:
      +1: rhuijben, breser
      +0: danielsh (don't know whether GetLastError is the right API here)
 
- * ^/subversion/branches/1.7.x-issue4408
-   Fix invalid output from diff --summarize.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4408
-   Justification:
-     User ran into the issue and reported it.  Relatively straightforward fix.
-   Notes:
-     See r1512154 for the actual change to review on the branch.
-   Votes:
-     +1: breser, philip
-
  * r1514763
    ra_serf: Use case-insensitive hostname comparision when validating server
    certificate as it specified in RFC 2459.
@@ -211,3 +164,36 @@ Approved changes:
      blocks from matching against requests served by mod_dav_svn.
    Votes:
      +1: breser, philip, ivan
+
+ * r1438602, r1438683, r1441810
+   Fix issue #4306, "multiple editor drive file merges record wrong mergeinfo
+   during conflicts"
+   Justification:
+     Bogus mergeinfo is created during conflicting merges with file targets.
+   Notes: r1438602 is the initial test and r1438683 the initial fix. r1441810
+     is a follow-up that addressed a bug in the initial fix (see
+     http://svn.haxx.se/dev/archive-2013-02/0001.shtml) and also reworked the
+     test to use prop edits rather than text edits as the changes to be
+     merged.  Unfortunately, 1.7.x has unrelated problems with property
+     conflicts: It doesn't abort the merge if it encounters them!  It merrily
+     plugs along sans any "One or more conflicts were produced while
+     merging...resolve all conflicts and rerun the merge to apply the
+     remaining unmerged revisions" error (this is fixed on trunk).  So while
+     r1441810 is a valid fix (IMO) its test fails for unrelated reasons.  So
+     I reworked the earlier version of test to demonstrate the problem
+     r1441810 fixes, but using file conflicts.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4306
+   Votes:
+     +1: stsp, pburba, rhuijben
+
+ * ^/subversion/branches/1.7.x-issue4408
+   Fix invalid output from diff --summarize.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4408
+   Justification:
+     User ran into the issue and reported it.  Relatively straightforward fix.
+   Notes:
+     See r1512154 for the actual change to review on the branch.
+   Votes:
+     +1: breser, philip, rhuijben
