@@ -222,6 +222,15 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1514804
+   ra_serf: Format distinguished names properly.
+   Justification:
+     Displaying "Issuer: (null), (null), (null), Thawte, US (null)"
+     in SSL certificate confirmation is bad. Regression from
+     Subversion 1.7.x.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
