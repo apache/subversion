@@ -127,12 +127,13 @@ ensure_summarize(struct item_baton *ib)
 
 /* An editor function. The root of the comparison hierarchy */
 static svn_error_t *
-open_root(void *edit_baton,
+open_root(void *eb,
           svn_revnum_t base_revision,
           apr_pool_t *pool,
           void **root_baton)
 {
-  struct item_baton *ib = create_item_baton(edit_baton, "",
+  struct edit_baton *b = eb;
+  struct item_baton *ib = create_item_baton(eb, b->target,
                                             svn_node_dir, pool);
 
   *root_baton = ib;
