@@ -214,6 +214,14 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
+ * r1514785
+   ra_serf: Improve SSL certificate verification failure message.
+   Justification:
+     Generic 'Server SSL certificate untrusted' error message is not
+     informative. Regression from Subversion 1.7.x
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
