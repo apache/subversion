@@ -202,7 +202,7 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1514315
+ * r1514315, r1514628
    Use loaded serf version for User-Agent, not version used for compilation.
    Justification:
      Wrong User-Agent string is not good thing.
