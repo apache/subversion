@@ -177,21 +177,12 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1512432, r1512471, r1512472, r1513463, r1513472
-   mod_dav_svn: No longer map requests to the filesystem.
-   Justification:
-     Prevents httpd from logging garbage filenames with %f and stops Directory
-     blocks from matching against requests served by mod_dav_svn.
-   Votes:
-     +1: breser (not r1513463, r1513472)
-     +1: philip, ivan
-
  * r1514763
    ra_serf: Use case-insensitive hostname comparision when validating server
    certificate as it specified in RFC 2459.
    Justification:
      SSL certificate with uppercase letters considired as untrusted. Regression
-     from Subversion 1.7.x.
+     from neon.
    Votes:
      +1: rhuijben
 
@@ -213,3 +204,10 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1512432, r1512471, r1512472, r1513463, r1513472
+   mod_dav_svn: No longer map requests to the filesystem.
+   Justification:
+     Prevents httpd from logging garbage filenames with %f and stops Directory
+     blocks from matching against requests served by mod_dav_svn.
+   Votes:
+     +1: breser, philip, ivan
