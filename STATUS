@@ -194,15 +194,20 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1513879, r1513880
+ * r1513880
    Fix packed revprop file splitting logic in FSFS
    Justification:
      Modifying revprops may result in the loss of revprops for one
      or multiple revisions.
-   Branch: ^/subversion/branches/1.8.x-r1513879
    Votes:
-     +1: stefan2 (r1513880 only)
-     +1: philip
+     +1: stefan2
+
+ * r1514315, r1514628
+   Use loaded serf version for User-Agent, not version used for compilation.
+   Justification:
+     Wrong User-Agent string is not good thing.
+   Votes:
+     +1: ivan, danielsh
 
  * r1514295, r1514318, r1514356
    Add serf library version information to svn --version.
@@ -244,9 +249,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1514315, r1514628
-   Use loaded serf version for User-Agent, not version used for compilation.
-   Justification:
-     Wrong User-Agent string is not good thing.
-   Votes:
-     +1: ivan, danielsh, philip
