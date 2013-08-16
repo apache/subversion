@@ -216,8 +216,8 @@ Candidate changes:
    ra_serf: Use case-insensitive hostname comparision when validating server
    certificate as it specified in RFC 2459.
    Justification:
-     SSL certificate with uppercase letters considired as untrusted. Regression
-     from Subversion 1.7.x.
+     SSL certificate with uppercase letters in hostname considered as
+     untrusted. Regression from Subversion 1.7.x.
    Votes:
      +1: ivan
 
