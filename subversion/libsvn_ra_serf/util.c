@@ -303,7 +303,32 @@ ssl_server_cert(void *baton, int failures,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
   if (!server_creds)
-    return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL, NULL);
+    {
+      svn_stringbuf_t *errmsg;
+
+      errmsg = svn_stringbuf_create(
+                 _("Server SSL certificate verification failed: "),
+                 scratch_pool);
+
+      if (svn_failures & SVN_AUTH_SSL_NOTYETVALID)
+        svn_stringbuf_appendcstr(errmsg, _("certificate is not yet valid, "));
+
+      if (svn_failures & SVN_AUTH_SSL_EXPIRED)
+        svn_stringbuf_appendcstr(errmsg, _("certificate has expired, "));
+
+      if (svn_failures & SVN_AUTH_SSL_CNMISMATCH)
+        svn_stringbuf_appendcstr(errmsg,
+          _("certificate issued for a different hostname, "));
+
+      if (svn_failures & SVN_AUTH_SSL_UNKNOWNCA)
+        svn_stringbuf_appendcstr(errmsg, _("issuer is not trusted, "));
+
+      /* Chop last two characters. It could be ', ' or ': '. */
+      svn_stringbuf_chop(errmsg, 2);
+
+      return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL,
+                              errmsg->data);
+    }
 
   return SVN_NO_ERROR;
 }
