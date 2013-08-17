@@ -17492,6 +17492,122 @@ def merge_with_externals_with_mergeinfo(sbox):
     [], 'merge', '--reintegrate', sbox.repo_url + '/A_COPY',
     A_path)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4306)
+# Test for issue #4306 'multiple editor drive file merges record wrong
+# mergeinfo during conflicts'
+def conflict_aborted_mergeinfo_described_partial_merge(sbox):
+  "conflicted split merge can be repeated"
+
+  sbox.build()
+
+  trunk = 'A'
+  branch = 'A2'
+  file = 'mu'
+  trunk_file = 'A/mu'
+
+  # r2: initial state
+  file_text = 'line 1\n'
+  for i in range(2, 22):
+    file_text += 'line ' + str(i) + '.\n'
+  svntest.main.file_write(sbox.ospath('A/mu'), file_text)
+  sbox.simple_commit()
+
+  # r3: branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', sbox.wc_dir)
+  sbox.simple_copy(trunk, branch)
+  sbox.simple_commit()
+
+  # r4 through r13: simple edits
+  for r in range (1, 11):
+    file_text = file_text.replace('line ' + str(r*2) + '.', 'line ' +
+                                  str(r*2) + ' Edited in r' + str(r+3) + '.')
+    svntest.main.file_write(sbox.ospath('A/mu'), file_text)
+    sbox.simple_commit()
+
+  # r14: merge some changes to the branch so that later merges will be split
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c5,9',
+                                     '^/' + trunk, sbox.ospath(branch),
+                                     '--accept', 'theirs-conflict')
+  sbox.simple_commit()
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', sbox.wc_dir)
+
+  def try_merge(target, conflict_rev, rev_ranges, mergeinfo, expect_error=True):
+    """Revert TARGET_PATH in the branch; merge TARGET_PATH in the trunk
+       to TARGET_PATH in the branch; expect to find MERGEINFO.
+    """
+    src_url = '^/' + trunk + '/' + target
+    src_path = trunk + '/' + target
+    tgt_path = branch + '/' + target
+    svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R',
+                                       sbox.ospath(tgt_path))
+    file_text = open(sbox.ospath(tgt_path), 'r').read()
+    r = conflict_rev - 3
+    file_text = file_text.replace('line ' + str(r*2) + '.', 'line ' +
+                                  str(r*2) + ' Conflicted.')
+    svntest.main.file_write(sbox.ospath('A2/mu'), file_text)
+
+    if expect_error:
+      expected_error = ('^svn: E155015: .* conflicts were produced .* into$'
+                        "|^'.*" + sbox.ospath(tgt_path) + "' --$"
+                        '|^resolve all conflicts .* remaining$'
+                        '|^unmerged revisions$')
+    else:
+      expected_error = []
+    svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                       'merge',
+                                       src_url, sbox.ospath(tgt_path),
+                                       '--accept', 'postpone',
+                                       *rev_ranges)
+    expected_out = ['/' + src_path + ':' + mergeinfo + '\n']
+    svntest.actions.run_and_verify_svn(
+      "Incorrect mergeinfo set during conflict aborted merge",
+      expected_out, [], 'pg', SVN_PROP_MERGEINFO, sbox.ospath(tgt_path))
+
+  # In a mergeinfo-aware merge, each specified revision range is split
+  # internally into sub-ranges, to avoid any already-merged revisions.
+  #
+  # From white-box inspection, we see there are code paths that treat
+  # the last specified range and the last sub-range specially.  The
+  # first specified range or sub-range is not treated specially in terms
+  # of the code paths, although it might be in terms of data flow.
+  #
+  # We test merges that raise a conflict in the first and last sub-range
+  # of the first and last specified range.
+
+  # First test: Merge "everything" to the branch.
+  #
+  # This merge is split into three sub-ranges: r3-4, r6-8, r10-head.
+  # We have arranged that the merge will raise a conflict in the first
+  # sub-range.  Since we are postponing conflict resolution, the merge
+  # should stop after the first sub-range, allowing us to resolve and
+  # repeat the merge at which point the next sub-range(s) can be merged.
+  # The mergeinfo on the target then should only reflect that the first
+  # sub-range (r3-4) has been merged.
+  #
+  # Previously the merge failed after merging only r3-4 (as it should)
+  # but mergeinfo for the whole range was recorded, preventing subsequent
+  # repeat merges from applying the rest of the source changes.
+  try_merge(file, 4, [], '3-5,9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # first sub-range in the first specified range.
+  try_merge(file, 4, ['-r1:6', '-r7:10'], '3-5,9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # last sub-range in the first specified range.
+  try_merge(file, 6, ['-r1:6', '-r7:10'], '3-6,9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # first sub-range in the last specified range.
+  try_merge(file, 8, ['-r1:6', '-r7:10'], '3-6,8-9')
+
+  # Try a multiple-range merge that raises a conflict in the
+  # last sub-range in the last specified range.
+  # (Expect no error, because 'svn merge' does not throw an error if
+  # there is no more merging to do when a conflict occurs.)
+  try_merge(file, 10, ['-r1:6', '-r7:10'], '3-6,8-10', expect_error=False)
+
 ########################################################################
 # Run the tests
 
@@ -17624,6 +17740,7 @@ test_list = [ None,
               merge_adds_then_deletes_subtree,
               merge_with_added_subtrees_with_mergeinfo,
               merge_with_externals_with_mergeinfo,
+              conflict_aborted_mergeinfo_described_partial_merge,
              ]
 
 if __name__ == '__main__':
