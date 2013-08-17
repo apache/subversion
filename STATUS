@@ -156,14 +156,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * ^/subversion/branches/1.7.x-issue4408
-   Fix invalid output from diff --summarize.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4408
-   Justification:
-     User ran into the issue and reported it.  Relatively straightforward fix.
-   Notes:
-     See r1512154 for the actual change to review on the branch.
-   Votes:
-     +1: breser, philip, rhuijben
