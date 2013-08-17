@@ -194,8 +194,7 @@ Candidate changes:
      or multiple revisions.
    Branch: ^/subversion/branches/1.8.x-r1513879
    Votes:
-     +1: stefan2 (r1513880 only)
-     +1: philip
+     +1: stefan2, philip
 
  * r1514295, r1514318, r1514356
    Add serf library version information to svn --version.
@@ -205,22 +204,13 @@ Candidate changes:
      +1: ivan
      +0: danielsh
 
- * r1514763
-   ra_serf: Use case-insensitive hostname comparision when validating server
-   certificate as it specified in RFC 2459.
-   Justification:
-     SSL certificate with uppercase letters in hostname considered as
-     untrusted. Regression from Subversion 1.7.x.
-   Votes:
-     +1: ivan, rhuijben
-
  * r1514785
    ra_serf: Improve SSL certificate verification failure message.
    Justification:
      Generic 'Server SSL certificate untrusted' error message is not
      informative. Regression from Subversion 1.7.x
    Votes:
-     +1: ivan
+     +1: ivan, stefan2
 
  * r1514804
    ra_serf: Format distinguished names properly.
@@ -229,7 +219,7 @@ Candidate changes:
      in SSL certificate confirmation is bad. Regression from
      Subversion 1.7.x.
    Votes:
-     +1: ivan
+     +1: ivan, stefan2
 
 Veto-blocked changes:
 =====================
@@ -262,3 +252,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1514763
+   ra_serf: Use case-insensitive hostname comparision when validating server
+   certificate as it specified in RFC 2459.
+   Justification:
+     SSL certificate with uppercase letters in hostname considered as
+     untrusted. Regression from Subversion 1.7.x.
+   Votes:
+     +1: ivan, rhuijben, stefan2
+
