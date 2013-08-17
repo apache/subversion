@@ -28,34 +28,39 @@
 
 #include "../svn_test.h"
 
+/* Verify that DIGEST of checksum type KIND can be parsed and
+ * converted back to a string matching DIGEST.  NAME will be used
+ * to identify the type of checksum in error messages.
+ */
 static svn_error_t *
-test_checksum_parse(apr_pool_t *pool)
+checksum_parse_kind(const char *digest,
+                    svn_checksum_kind_t kind,
+                    const char *name,
+                    apr_pool_t *pool)
 {
-  const char *md5_digest = "8518b76f7a45fe4de2d0955085b41f98";
-  const char *sha1_digest = "74d82379bcc6771454377db03b912c2b62704139";
   const char *checksum_display;
   svn_checksum_t *checksum;
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, md5_digest, pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, kind, digest, pool));
   checksum_display = svn_checksum_to_cstring_display(checksum, pool);
 
-  if (strcmp(checksum_display, md5_digest) != 0)
+  if (strcmp(checksum_display, digest) != 0)
     return svn_error_createf
       (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-       "verify-checksum: md5 checksum mismatch:\n"
+       "verify-checksum: %s checksum mismatch:\n"
        "   expected:  %s\n"
-       "     actual:  %s\n", md5_digest, checksum_display);
+       "     actual:  %s\n", name, digest, checksum_display);
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, sha1_digest,
-                                 pool));
-  checksum_display = svn_checksum_to_cstring_display(checksum, pool);
+  return SVN_NO_ERROR;
+}
 
-  if (strcmp(checksum_display, sha1_digest) != 0)
-    return svn_error_createf
-      (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-       "verify-checksum: sha1 checksum mismatch:\n"
-       "   expected:  %s\n"
-       "     actual:  %s\n", sha1_digest, checksum_display);
+static svn_error_t *
+test_checksum_parse(apr_pool_t *pool)
+{
+  SVN_ERR(checksum_parse_kind("8518b76f7a45fe4de2d0955085b41f98",
+                              svn_checksum_md5, "md5", pool));
+  SVN_ERR(hecksum_parse_kind("74d82379bcc6771454377db03b912c2b62704139",
+                             svn_checksum_sha1, "sha1", pool));
 
   return SVN_NO_ERROR;
 }
@@ -63,20 +68,18 @@ test_checksum_parse(apr_pool_t *pool)
 static svn_error_t *
 test_checksum_empty(apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
-  char data = '\0';
+  svn_checksum_kind_t kind;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1; ++kind)
+    {
+      svn_checksum_t *checksum;
+      char data = '\0';
 
-  checksum = svn_checksum_empty_checksum(svn_checksum_md5, pool);
-  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+      checksum = svn_checksum_empty_checksum(kind, pool);
+      SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
 
-  checksum = svn_checksum_empty_checksum(svn_checksum_sha1, pool);
-  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
-
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, &data, 0, pool));
-  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
-
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1, &data, 0, pool));
-  SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+      SVN_ERR(svn_checksum(&checksum, kind, &data, 0, pool));
+      SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -113,44 +116,77 @@ test_pseudo_md5(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Verify that "zero" checksums work properly for the given checksum KIND.
+ */
+static svn_error_t *
+zero_match_kind(svn_checksum_kind_t kind, apr_pool_t *pool)
+{
+  svn_checksum_t *zero;
+  svn_checksum_t *A;
+  svn_checksum_t *B;
+
+  zero = svn_checksum_create(kind, pool);
+  SVN_ERR(svn_checksum_clear(zero));
+  SVN_ERR(svn_checksum(&A, kind, "A", 1, pool));
+  SVN_ERR(svn_checksum(&B, kind, "B", 1, pool));
+
+  /* Different non-zero don't match. */
+  SVN_TEST_ASSERT(!svn_checksum_match(A, B));
+
+  /* Zero matches anything of the same kind. */
+  SVN_TEST_ASSERT(svn_checksum_match(A, zero));
+  SVN_TEST_ASSERT(svn_checksum_match(zero, B));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 zero_match(apr_pool_t *pool)
 {
-  svn_checksum_t *zero_md5;
-  svn_checksum_t *zero_sha1;
-  svn_checksum_t *A_md5;
-  svn_checksum_t *B_md5;
-  svn_checksum_t *A_sha1;
-  svn_checksum_t *B_sha1;
+  svn_checksum_kind_t kind;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1; ++kind)
+    SVN_ERR(zero_match_kind(kind, pool));
 
+  return SVN_NO_ERROR;
+}
 
-  zero_md5 = svn_checksum_create(svn_checksum_md5, pool);
-  SVN_ERR(svn_checksum_clear(zero_md5));
-  SVN_ERR(svn_checksum(&A_md5, svn_checksum_md5, "A", 1, pool));
-  SVN_ERR(svn_checksum(&B_md5, svn_checksum_md5, "B", 1, pool));
+static svn_error_t *
+zero_cross_match(apr_pool_t *pool)
+{
+  svn_checksum_kind_t i_kind;
+  svn_checksum_kind_t k_kind;
 
-  zero_sha1 = svn_checksum_create(svn_checksum_sha1, pool);
-  SVN_ERR(svn_checksum_clear(zero_sha1));
-  SVN_ERR(svn_checksum(&A_sha1, svn_checksum_sha1, "A", 1, pool));
-  SVN_ERR(svn_checksum(&B_sha1, svn_checksum_sha1, "B", 1, pool));
+  for (i_kind = svn_checksum_md5; i_kind <= svn_checksum_sha1; ++i_kind)
+    {
+      svn_checksum_t *i_zero;
+      svn_checksum_t *i_A;
+    
+      i_zero = svn_checksum_create(i_kind, pool);
+      SVN_ERR(svn_checksum_clear(i_zero));
+      SVN_ERR(svn_checksum(&i_A, i_kind, "A", 1, pool));
 
-  /* Different non-zero don't match. */
-  SVN_TEST_ASSERT(!svn_checksum_match(A_md5, B_md5));
-  SVN_TEST_ASSERT(!svn_checksum_match(A_sha1, B_sha1));
-  SVN_TEST_ASSERT(!svn_checksum_match(A_md5, A_sha1));
-  SVN_TEST_ASSERT(!svn_checksum_match(A_md5, B_sha1));
+      for (k_kind = svn_checksum_md5; k_kind <= svn_checksum_sha1; ++k_kind)
+        {
+          svn_checksum_t *k_zero;
+          svn_checksum_t *k_A;
+          if (i_kind == k_kind)
+            continue;
 
-  /* Zero matches anything of the same kind. */
-  SVN_TEST_ASSERT(svn_checksum_match(A_md5, zero_md5));
-  SVN_TEST_ASSERT(svn_checksum_match(zero_md5, B_md5));
-  SVN_TEST_ASSERT(svn_checksum_match(A_sha1, zero_sha1));
-  SVN_TEST_ASSERT(svn_checksum_match(zero_sha1, B_sha1));
+          k_zero = svn_checksum_create(k_kind, pool);
+          SVN_ERR(svn_checksum_clear(k_zero));
+          SVN_ERR(svn_checksum(&k_A, k_kind, "A", 1, pool));
 
-  /* Zero doesn't match anything of a different kind... */
-  SVN_TEST_ASSERT(!svn_checksum_match(zero_md5, A_sha1));
-  SVN_TEST_ASSERT(!svn_checksum_match(zero_sha1, A_md5));
-  /* ...even another zero. */
-  SVN_TEST_ASSERT(!svn_checksum_match(zero_md5, zero_sha1));
+          /* Different non-zero don't match. */
+          SVN_TEST_ASSERT(!svn_checksum_match(i_A, k_A));
+
+          /* Zero doesn't match anything of a different kind... */
+          SVN_TEST_ASSERT(!svn_checksum_match(i_zero, k_A));
+          SVN_TEST_ASSERT(!svn_checksum_match(i_A, k_zero));
+
+          /* ...even another zero. */
+          SVN_TEST_ASSERT(!svn_checksum_match(i_zero, k_zero));
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -167,5 +203,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "pseudo-md5 compatibility"),
     SVN_TEST_PASS2(zero_match,
                    "zero checksum matching"),
+    SVN_TEST_PASS2(zero_cross_match,
+                   "zero checksum cross-type matching"),
     SVN_TEST_NULL
   };
