@@ -413,6 +413,18 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
     }
 }
 
+/** Our User-Agent string. */
+static const char *
+get_user_agent_string(apr_pool_t *pool)
+{
+  int major, minor, patch;
+  serf_lib_version(&major, &minor, &patch);
+
+  return apr_psprintf(pool, "SVN/%s (%s) serf/%d.%d.%d",
+                      SVN_VER_NUMBER, SVN_BUILD_TARGET,
+                      major, minor, patch);
+}
+
 /* Implements svn_ra__vtable_t.open_session(). */
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
@@ -495,10 +507,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
     SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, " ",
+    serf_sess->useragent = apr_pstrcat(pool, get_user_agent_string(pool), " ",
                                        client_string, (char *)NULL);
   else
-    serf_sess->useragent = USER_AGENT;
+    serf_sess->useragent = get_user_agent_string(pool);
 
   /* go ahead and tell serf about the connection. */
   status =
