@@ -201,8 +201,7 @@ Candidate changes:
    Justification:
      Makes ra_serf issues diagnostic a little bit easier.
    Votes:
-     +1: ivan
-     +0: danielsh
+     +1: ivan, danielsh
 
  * r1514785
    ra_serf: Improve SSL certificate verification failure message.
@@ -211,6 +210,8 @@ Candidate changes:
      informative. Regression from Subversion 1.7.x
    Votes:
      +1: ivan, stefan2
+     danielsh: I believe chopping off the last 2 bytes is wrong, _(", ") would
+       be longer than two bytes in Japanese locale.
 
  * r1514804
    ra_serf: Format distinguished names properly.
