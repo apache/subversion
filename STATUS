@@ -262,10 +262,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1514315, r1514628
-   Use loaded serf version for User-Agent, not version used for compilation.
-   Justification:
-     Wrong User-Agent string is not good thing.
-   Votes:
-     +1: ivan, danielsh, philip
