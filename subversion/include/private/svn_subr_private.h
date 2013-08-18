@@ -220,6 +220,13 @@ svn_stream__from_spillbuf(svn_spillbuf_t *buf,
 
 /** @} */
 
+/*----------------------------------------------------*/
+
+/**
+ * @defgroup svn_checksum_private Checksumming helper APIs
+ * @{
+ */
+
 /**
  * Internal function for creating a MD5 checksum from a binary digest.
  *
@@ -238,6 +245,50 @@ svn_checksum__from_digest_md5(const unsigned char *digest,
 svn_checksum_t *
 svn_checksum__from_digest_sha1(const unsigned char *digest,
                                apr_pool_t *result_pool);
+
+/**
+ * Internal function for creating a 32 bit FNV-1a checksum from a binary
+ * digest.
+ *
+ * @since New in 1.9
+ */
+svn_checksum_t *
+svn_checksum__from_digest_fnv1a_32(const unsigned char *digest,
+                                   apr_pool_t *result_pool);
+
+/**
+ * Internal function for creating a modified 32 bit FNV-1a checksum from
+ * a binary digest.
+ *
+ * @since New in 1.9
+ */
+svn_checksum_t *
+svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
+                                     apr_pool_t *result_pool);
+
+
+/**
+ * Return a 32 bit FNV-1a checksum for the first @a len bytes in @a input.
+ *
+ * @since New in 1.9
+ */
+apr_uint32_t
+svn__fnv1a_32(const void *input, apr_size_t len);
+
+/**
+ * Return a 32 bit modified FNV-1a checksum for the first @a len bytes in
+ * @a input.
+ * 
+ * @note This is a proprietary checksumming algorithm based FNV-1a with
+ *       approximately the same strength.  It is up to 4 times faster
+ *       than plain FNV-1a for longer data blocks.
+ *
+ * @since New in 1.9
+ */
+apr_uint32_t
+svn__fnv1a_32x4(const void *input, apr_size_t len);
+
+/** @} */
 
 
 /**

@@ -59,8 +59,13 @@ test_checksum_parse(apr_pool_t *pool)
 {
   SVN_ERR(checksum_parse_kind("8518b76f7a45fe4de2d0955085b41f98",
                               svn_checksum_md5, "md5", pool));
-  SVN_ERR(hecksum_parse_kind("74d82379bcc6771454377db03b912c2b62704139",
-                             svn_checksum_sha1, "sha1", pool));
+  SVN_ERR(checksum_parse_kind("74d82379bcc6771454377db03b912c2b62704139",
+                              svn_checksum_sha1, "sha1", pool));
+  SVN_ERR(checksum_parse_kind("deadbeef",
+                              svn_checksum_fnv1a_32, "fnv-1a", pool));
+  SVN_ERR(checksum_parse_kind("cafeaffe",
+                              svn_checksum_fnv1a_32x4,
+                              "modified fnv-1a", pool));
 
   return SVN_NO_ERROR;
 }
@@ -69,7 +74,7 @@ static svn_error_t *
 test_checksum_empty(apr_pool_t *pool)
 {
   svn_checksum_kind_t kind;
-  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
     {
       svn_checksum_t *checksum;
       char data = '\0';
@@ -144,7 +149,7 @@ static svn_error_t *
 zero_match(apr_pool_t *pool)
 {
   svn_checksum_kind_t kind;
-  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
     SVN_ERR(zero_match_kind(kind, pool));
 
   return SVN_NO_ERROR;
@@ -156,7 +161,9 @@ zero_cross_match(apr_pool_t *pool)
   svn_checksum_kind_t i_kind;
   svn_checksum_kind_t k_kind;
 
-  for (i_kind = svn_checksum_md5; i_kind <= svn_checksum_sha1; ++i_kind)
+  for (i_kind = svn_checksum_md5;
+       i_kind <= svn_checksum_fnv1a_32x4;
+       ++i_kind)
     {
       svn_checksum_t *i_zero;
       svn_checksum_t *i_A;
@@ -165,7 +172,9 @@ zero_cross_match(apr_pool_t *pool)
       SVN_ERR(svn_checksum_clear(i_zero));
       SVN_ERR(svn_checksum(&i_A, i_kind, "A", 1, pool));
 
-      for (k_kind = svn_checksum_md5; k_kind <= svn_checksum_sha1; ++k_kind)
+      for (k_kind = svn_checksum_md5;
+           k_kind <= svn_checksum_fnv1a_32x4;
+           ++k_kind)
         {
           svn_checksum_t *k_zero;
           svn_checksum_t *k_A;
