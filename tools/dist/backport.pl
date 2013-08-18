@@ -808,7 +808,8 @@ sub backport_main {
   my %votes;
   my $state = read_state;
 
-  backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1);
+  backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1) or grep /^--help$/, @ARGV;
+  backport_usage, exit 0 if grep /^(?:-h|-\?|--help|help)$/, @ARGV;
   my $skip = shift; # maybe undef
   # assert not defined $skip if $YES;
 
