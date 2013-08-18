@@ -225,32 +225,6 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1501049, r1501371
-   ra_serf: Return Subversion error codes in svn_error_t.
-   Justification:
-     Other error codes are useless to API users.
-   Votes:
-     +1: danielsh
-     -1: rhuijben (We also report apr and OS statuses, which are certainly
-                   not useless, as GUI clients depend on this extensive error
-                   codes to provide proper workarounds.
-                   This use-case should be fixed by directly setting
-                   the right message in the error chain when leaving ra_serf.
-                   This adds up to a -0 for me.
-                   
-                   The reason for the -1 is the re-use of a specific error code
-                   that is automatically unwrapped in some ra_serf code, to avoid
-                   handling codes like APR_EOF as non fatal
-                   [ without r1501371 ]
-                   <danielsh>: Responded in detail in the r1501049 thread.
-		   tldr: outermost svn_error_t->apr_err should be defined by
-                   Subversion or by APR, not by serf; can't find evidence of
-                   the "automatic unwrapping", and in any case happy to change
-                   the error code to something else if that's the problem.)
-     -1: gstein (apr_status_t was intended/designed to hold error codes from
-                 multiple apps/libs; check for known values, and propagate all
-                 unkown values)
-
 Approved changes:
 =================
 
