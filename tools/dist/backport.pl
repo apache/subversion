@@ -22,7 +22,7 @@ use feature qw/switch say/;
 
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
-use File::Basename qw/basename/;
+use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid strftime/;
@@ -93,8 +93,9 @@ backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
 CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
 should be at HEAD.
 
-Usage: [ -e \$d/STATUS ] && cd \$d && backport.pl
-Usage: [ -e \$d/STATUS ] && cd \$d && backport.pl pattern
+Usage: test -e \$d/STATUS && cd \$d && backport.pl [PATTERN]
+Usage: ln -s /path/to/backport.pl \$d/b && \$d/b [PATTERN]
+(where \$d is a working copy of branches/1.8.x)
 
 If PATTERN is provided, only entries which match PATTERN are considered.  The
 sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
@@ -144,6 +145,10 @@ sub nominate_usage {
 nominate.pl: a tool for adding entries to STATUS.
 
 Usage: $0 "r42,r43,45." "\$Some_justification"
+
+The STATUS file in the current directory is used, unless argv[0] is "n", in
+which case the STATUS file in the directory of argv[0] is used.  The intent
+is to create a symlink named "n" in the branch wc root.
 
 Will add:
  * r42, r43, r45
@@ -940,9 +945,11 @@ sub nominate_main {
 # Dispatch to the appropriate main().
 given (basename($0)) {
   when (/^b$|backport/) {
+    chdir dirname $0 if /^b$/ or die "Can't chdir: $!";
     &backport_main(@ARGV);
   }
   when (/^n$|nominate/) {
+    chdir dirname $0 if /^n$/ or die "Can't chdir: $!";
     &nominate_main(@ARGV);
   }
   default {
