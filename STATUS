@@ -242,6 +242,7 @@ Candidate changes:
    Justification:
      Avoid discarding information when stringifying an error number into a
      message.
+   Depends: r1514785
    Votes:
      +1: danielsh
 
