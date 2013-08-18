@@ -203,15 +203,14 @@ Candidate changes:
    Votes:
      +1: ivan, danielsh
 
- * r1514785
+ * r1514785, r1515201
    ra_serf: Improve SSL certificate verification failure message.
    Justification:
      Generic 'Server SSL certificate untrusted' error message is not
      informative. Regression from Subversion 1.7.x
    Votes:
-     +1: ivan, stefan2
-     danielsh: I believe chopping off the last 2 bytes is wrong, _(", ") would
-       be longer than two bytes in Japanese locale.
+     +1: danielsh
+     +1 (r1514785 only): ivan, stefan2
 
  * r1514804
    ra_serf: Format distinguished names properly.
