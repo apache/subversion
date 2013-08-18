@@ -893,8 +893,9 @@ sub nominate_main {
   }
 
   my @lines;
+  warn "Wrapping [$logmsg]\n";
   push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
-  push @lines, wrap ' 'x3, ' 'x3, $logmsg;
+  push @lines, wrap ' 'x3, ' 'x3, split /\n/, $logmsg;
   push @lines, "   Justification:";
   push @lines, wrap ' 'x5, ' 'x5, $justification;
   push @lines, "   Branch: $branch" if defined $branch;
