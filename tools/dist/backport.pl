@@ -94,7 +94,7 @@ backport.pl: a tool for reviewing, merging, and voting on STATUS entries.
 Normally, invoke this with CWD being the root of the stable branch (e.g.,
 1.8.x):
 
-    Usage: test -e \$d/STATUS && cd \$d && \
+    Usage: test -e \$d/STATUS && cd \$d && \\
            backport.pl [PATTERN]
     (where \$d is a working copy of branches/1.8.x)
 
