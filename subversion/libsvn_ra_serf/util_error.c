@@ -96,9 +96,5 @@ svn_ra_serf__wrap_err(apr_status_t status,
         }
     }
 
-  /* Make the outer-most error code be a Subversion/APR one. */
-  if (serf_err_msg)
-    err = svn_error_create(SVN_ERR_RA_SERF_WRAPPED_ERROR, err, NULL);
-
   return err;
 }

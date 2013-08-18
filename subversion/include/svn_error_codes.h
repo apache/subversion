@@ -1552,10 +1552,7 @@ SVN_ERROR_START
              SVN_ERR_RA_SERF_CATEGORY_START + 2,
              "Initialization of the GSSAPI context failed")
 
-  /** @since New in 1.7.
-   * @note When @c svn_error_t.apr_err is set to this,
-   * @c svn_error_t.child->apr_err is a serf error code, not a Subversion
-   * one! */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
              SVN_ERR_RA_SERF_CATEGORY_START + 3,
              "While handling serf response:")
