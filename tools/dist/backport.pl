@@ -945,11 +945,11 @@ sub nominate_main {
 # Dispatch to the appropriate main().
 given (basename($0)) {
   when (/^b$|backport/) {
-    chdir dirname $0 if /^b$/ or die "Can't chdir: $!";
+    chdir dirname $0 or die "Can't chdir: $!" if /^b$/;
     &backport_main(@ARGV);
   }
   when (/^n$|nominate/) {
-    chdir dirname $0 if /^n$/ or die "Can't chdir: $!";
+    chdir dirname $0 or die "Can't chdir: $!" if /^n$/;
     &nominate_main(@ARGV);
   }
   default {
