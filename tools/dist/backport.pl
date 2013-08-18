@@ -158,10 +158,6 @@ nominate.pl: a tool for adding entries to STATUS.
 
 Usage: $0 "foo r42 bar r43 qux 45." "\$Some_justification"
 
-The STATUS file in the current directory is used, unless argv[0] is "n", in
-which case the STATUS file in the directory of argv[0] is used.  The intent
-is to create a symlink named "n" in the branch wc root.
-
 Will add:
  * r42, r43, r45
    (log message of r42)
@@ -170,6 +166,11 @@ Will add:
    Votes:
      +1: $AVAILID
 to STATUS.  Backport branches are detected automatically.
+
+The STATUS file in the current directory is used (unless argv[0] is "n", in
+which case the STATUS file in the directory of argv[0] is used; the intent
+is to create a symlink named "n" in the branch wc root).
+
 EOF
 # TODO: Optionally add a "Notes" section.
 # TODO: Look for backport branches named after issues.
