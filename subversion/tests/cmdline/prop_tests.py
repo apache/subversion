@@ -910,7 +910,7 @@ def prop_value_conversions(sbox):
   svntest.actions.set_prop('some-prop', 'bar\n', iota_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
-  # client converts to local encoding and local eoln style.
+  # client converts to local encoding and local eol style.
   # Therefore, the expected output must contain the right kind of eoln
   # strings. That's why we use os.linesep in the tests below, not just
   # plain '\n'. The _last_ \n is also from the client, but it's not
