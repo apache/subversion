@@ -128,18 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1482282
-   Don't use unitialized variable to produce an error code.
-   Justification:
-     Silence compiler warning. Getting in this error path is as far as I can
-     tell impossible on Windows 2000 and later, but might be possible on Wine.
-     (Getting into this error path requires an on-disk path of the running
-      application that can't be expressed in unicode, which is very hard if the
-      path itself is stored in Unicode)
-   Votes:
-     +1: rhuijben, breser, stefan2
-     +0: danielsh (don't know whether GetLastError is the right API here)
-
  * ^/subversion/branches/1.7.x-gssapi-solaris10
    Justification:
      Make it easier to build svn+serf with kerberos support on Solaris10.
