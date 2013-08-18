@@ -34,6 +34,7 @@
 #include "svn_sorts.h"
 
 #include "checksum.h"
+#include "fnv1a.h"
 
 #include "private/svn_subr_private.h"
 
@@ -53,21 +54,35 @@ static const unsigned char sha1_empty_string_digest_array[] = {
   0xbf, 0xef, 0x95, 0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09
 };
 
+/* The FNV-1a digest for the empty string. */
+static const unsigned char fnv1a_32_empty_string_digest_array[] = {
+  0x81, 0x1c, 0x9d, 0xc5
+};
+
+/* The FNV-1a digest for the empty string. */
+static const unsigned char fnv1a_32x4_empty_string_digest_array[] = {
+  0x9b, 0x08, 0xec, 0x75
+};
+
 /* Digests for an empty string, indexed by checksum type */
 static const unsigned char * empty_string_digests[] = {
   md5_empty_string_digest_array,
-  sha1_empty_string_digest_array
+  sha1_empty_string_digest_array,
+  fnv1a_32_empty_string_digest_array,
+  fnv1a_32x4_empty_string_digest_array
 };
 
 /* Digest sizes in bytes, indexed by checksum type */
 static const apr_size_t digest_sizes[] = {
   APR_MD5_DIGESTSIZE,
-  APR_SHA1_DIGESTSIZE
+  APR_SHA1_DIGESTSIZE,
+  sizeof(apr_uint32_t),
+  sizeof(apr_uint32_t)
 };
 
 /* Returns the digest size of it's argument. */
 #define DIGESTSIZE(k) \
-  (((k) < svn_checksum_md5 || (k) > svn_checksum_sha1) ? 0 : digest_sizes[k])
+  (((k) < svn_checksum_md5 || (k) > svn_checksum_fnv1a_32x4) ? 0 : digest_sizes[k])
 
 /* Largest supported digest size */
 #define MAX_DIGESTSIZE (MAX(APR_MD5_DIGESTSIZE,APR_SHA1_DIGESTSIZE))
@@ -129,7 +144,7 @@ svn__digests_match(const unsigned char d1[],
 static svn_error_t *
 validate_kind(svn_checksum_kind_t kind)
 {
-  if (kind == svn_checksum_md5 || kind == svn_checksum_sha1)
+  if (kind >= svn_checksum_md5 && kind <= svn_checksum_fnv1a_32x4)
     return SVN_NO_ERROR;
   else
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
@@ -173,6 +188,8 @@ svn_checksum_create(svn_checksum_kind_t kind,
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         digest_size = digest_sizes[kind];
         break;
 
@@ -201,6 +218,22 @@ svn_checksum__from_digest_sha1(const unsigned char *digest,
                          result_pool);
 }
 
+svn_checksum_t *
+svn_checksum__from_digest_fnv1a_32(const unsigned char *digest,
+                                   apr_pool_t *result_pool)
+{
+  return checksum_create(svn_checksum_fnv1a_32, sizeof(digest), digest,
+                         result_pool);
+}
+
+svn_checksum_t *
+svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
+                                     apr_pool_t *result_pool)
+{
+  return checksum_create(svn_checksum_fnv1a_32x4, sizeof(digest), digest,
+                         result_pool);
+}
+
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum)
 {
@@ -224,6 +257,8 @@ svn_checksum_match(const svn_checksum_t *checksum1,
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         return svn__digests_match(checksum1->digest,
                                   checksum2->digest,
                                   digest_sizes[checksum1->kind]);
@@ -242,6 +277,8 @@ svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         return svn__digest_to_cstring_display(checksum->digest,
                                               digest_sizes[checksum->kind],
                                               pool);
@@ -263,6 +300,8 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         return svn__digest_to_cstring(checksum->digest,
                                       digest_sizes[checksum->kind],
                                       pool);
@@ -282,7 +321,7 @@ svn_checksum_serialize(const svn_checksum_t *checksum,
   const char *ckind_str;
 
   SVN_ERR_ASSERT_NO_RETURN(checksum->kind >= svn_checksum_md5
-                           || checksum->kind <= svn_checksum_sha1);
+                           || checksum->kind <= svn_checksum_fnv1a_32x4);
   ckind_str = (checksum->kind == svn_checksum_md5 ? "$md5 $" : "$sha1$");
   return apr_pstrcat(result_pool,
                      ckind_str,
@@ -387,6 +426,8 @@ svn_checksum_dup(const svn_checksum_t *checksum,
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         return checksum_create(checksum->kind,
                                digest_sizes[checksum->kind],
                                checksum->digest,
@@ -422,6 +463,16 @@ svn_checksum(svn_checksum_t **checksum,
         apr_sha1_final((unsigned char *)(*checksum)->digest, &sha1_ctx);
         break;
 
+      case svn_checksum_fnv1a_32:
+        *(apr_uint32_t *)(*checksum)->digest
+          = htonl(svn__fnv1a_32(data, len));
+        break;
+
+      case svn_checksum_fnv1a_32x4:
+        *(apr_uint32_t *)(*checksum)->digest
+          = htonl(svn__fnv1a_32x4(data, len));
+        break;
+
       default:
         /* We really shouldn't get here, but if we do... */
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
@@ -439,6 +490,8 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         return checksum_create(kind,
                                digest_sizes[kind],
                                empty_string_digests[kind],
@@ -475,6 +528,14 @@ svn_checksum_ctx_create(svn_checksum_kind_t kind,
         apr_sha1_init(ctx->apr_ctx);
         break;
 
+      case svn_checksum_fnv1a_32:
+        ctx->apr_ctx = svn_fnv1a_32__context_create(pool);
+        break;
+
+      case svn_checksum_fnv1a_32x4:
+        ctx->apr_ctx = svn_fnv1a_32x4__context_create(pool);
+        break;
+
       default:
         SVN_ERR_MALFUNCTION_NO_RETURN();
     }
@@ -495,6 +556,14 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
 
       case svn_checksum_sha1:
         apr_sha1_update(ctx->apr_ctx, data, (unsigned int)len);
+        break;
+
+      case svn_checksum_fnv1a_32:
+        svn_fnv1a_32__update(ctx->apr_ctx, data, len);
+        break;
+
+      case svn_checksum_fnv1a_32x4:
+        svn_fnv1a_32x4__update(ctx->apr_ctx, data, len);
         break;
 
       default:
@@ -520,6 +589,16 @@ svn_checksum_final(svn_checksum_t **checksum,
 
       case svn_checksum_sha1:
         apr_sha1_final((unsigned char *)(*checksum)->digest, ctx->apr_ctx);
+        break;
+
+      case svn_checksum_fnv1a_32:
+        *(apr_uint32_t *)(*checksum)->digest
+          = htonl(svn_fnv1a_32__finalize(ctx->apr_ctx));
+        break;
+
+      case svn_checksum_fnv1a_32x4:
+        *(apr_uint32_t *)(*checksum)->digest
+          = htonl(svn_fnv1a_32x4__finalize(ctx->apr_ctx));
         break;
 
       default:
@@ -571,6 +650,8 @@ svn_checksum_is_empty_checksum(svn_checksum_t *checksum)
     {
       case svn_checksum_md5:
       case svn_checksum_sha1:
+      case svn_checksum_fnv1a_32:
+      case svn_checksum_fnv1a_32x4:
         return svn__digests_match(checksum->digest,
                                   svn__empty_string_digest(checksum->kind),
                                   digest_sizes[checksum->kind]);
