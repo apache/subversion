@@ -230,6 +230,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1515141
+   Update documentation of mod_dav_svn installation to reflect changes
+   not-so-recently-made to configure's defaults.
+   Justification:
+     INSTALL should document configure's defaults correctly.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
