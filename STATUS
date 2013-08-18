@@ -110,6 +110,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
+ * r1515119
+   swig-py: prevent a segfaulting function from being called.  Also hide it
+   from swig-pl where it is unusable (raises a TypeError(!?) if called).
+   Justification:
+     It's a segfault.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
