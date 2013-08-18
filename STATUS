@@ -237,6 +237,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1515225
+   ra_serf: Stringify SVN_AUTH_SSL_OTHER as well
+   Justification:
+     Avoid discarding information when stringifying an error number into a
+     message.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
