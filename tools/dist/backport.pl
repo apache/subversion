@@ -93,6 +93,12 @@ backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
 CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
 should be at HEAD.
 
+Usage: [ -e \$d/STATUS ] && cd \$d && backport.pl
+Usage: [ -e \$d/STATUS ] && cd \$d && backport.pl pattern
+
+If PATTERN is provided, only entries which match PATTERN are considered.  The
+sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
+
 In interactive mode (the default), you will be prompted once per STATUS entry.
 At a prompt, you have the following options:
 
@@ -625,8 +631,12 @@ sub handle_entry {
   my $votes = shift;
   my $state = shift;
   my $raw = shift;
+  my $skip = shift;
   my %entry = parse_entry $raw, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
+
+  my $match = defined($skip) ? ($raw =~ /\Q$skip\E/ or $raw =~ /$skip/msi) : 0
+              unless $YES;
 
   if ($YES) {
     # Run a merge if:
@@ -664,11 +674,13 @@ sub handle_entry {
         revert;
       }
     }
-  } elsif ($state->{$entry{digest}}) {
+  } elsif (defined($skip) ? not $match : $state->{$entry{digest}}) {
     print "\n\n";
-    say "Skipping $entry{header} (remove $STATEFILE to reset):";
+    my $reason = defined($skip) ? "doesn't match pattern"
+                                : "remove $STATEFILE to reset";
+    say "Skipping $entry{header} ($reason):";
     say logsummarysummary \%entry;
-  } else {
+  } elsif ($match or not defined $skip) {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
     PROMPT: while (1) {
@@ -762,6 +774,9 @@ sub handle_entry {
     }
     last; } # QUESTION
     last; } # PROMPT
+  } else {
+    # NOTREACHED
+    die "Unreachable code reached.";
   }
 
   # TODO: merge() changes ./STATUS, which we're reading below, but
@@ -776,7 +791,9 @@ sub backport_main {
   my %votes;
   my $state = read_state;
 
-  backport_usage, exit 0 if @ARGV;
+  backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1);
+  my $skip = shift; # maybe undef
+  # assert not defined $skip if $YES;
 
   open STATUS, "<", $STATUS or (backport_usage, exit 1);
 
@@ -825,7 +842,8 @@ sub backport_main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%approved, \%votes, $state, $lines, @lines;
+        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
+                     @lines;
       }
       default {
         warn "Unknown entry '$lines[0]'";
@@ -921,12 +939,12 @@ sub nominate_main {
 # Dispatch to the appropriate main().
 given (basename($0)) {
   when (/^b$|backport/) {
-    &backport_main;
+    &backport_main(@ARGV);
   }
   when (/^n$|nominate/) {
     &nominate_main(@ARGV);
   }
   default {
-    &backport_main;
+    &backport_main(@ARGV);
   }
 }
