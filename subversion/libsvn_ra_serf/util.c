@@ -378,6 +378,9 @@ ssl_server_cert(void *baton, int failures,
       if (svn_failures & SVN_AUTH_SSL_UNKNOWNCA)
         append_reason(errmsg, _("issuer is not trusted"), &reasons);
 
+      if (svn_failures & SVN_AUTH_SSL_OTHER)
+        append_reason(errmsg, _("and other reason(s)"), &reasons);
+
       return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL,
                               errmsg->data);
     }
