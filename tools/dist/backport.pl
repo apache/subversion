@@ -89,13 +89,25 @@ $SVNq =~ s/-q// if $DEBUG eq 'true';
 sub backport_usage {
   my $basename = basename $0;
   print <<EOF;
-backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
-CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
-should be at HEAD.
+backport.pl: a tool for reviewing, merging, and voting on STATUS entries.
 
-Usage: test -e \$d/STATUS && cd \$d && backport.pl [PATTERN]
-Usage: ln -s /path/to/backport.pl \$d/b && \$d/b [PATTERN]
-(where \$d is a working copy of branches/1.8.x)
+Normally, invoke this with CWD being the root of the stable branch (e.g.,
+1.8.x):
+
+    Usage: test -e \$d/STATUS && cd \$d && \
+           backport.pl [PATTERN]
+    (where \$d is a working copy of branches/1.8.x)
+
+Alternatively, invoke this via a symlink named "b" placed at the same directory
+as the STATUS file, in which case the CWD doesn't matter (the script will cd):
+
+    Usage: ln -s /path/to/backport.pl \$d/b && \\
+           \$d/b [PATTERN]
+    (where \$d is a working copy of branches/1.8.x)
+
+In either case, the ./STATUS file should be at HEAD.  If it has local mods,
+they will be preserved through 'revert' operations but included in 'commit'
+operations.
 
 If PATTERN is provided, only entries which match PATTERN are considered.  The
 sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
@@ -127,12 +139,12 @@ y:   Open a shell.
 d:   View a diff.
 N:   Move to the next entry.
 
-There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
+There is also a batch mode (normally used only by cron jobs and buildbot tasks,
+rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
 the environment, this script will iterate the "Approved:" section, and merge
 and commit each entry therein.  If only \$YES is defined, the script will
 merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.  These modes are normally used by the
-'svn-role' cron job and/or buildbot, not by human users.
+to stderr if it notices any conflicts.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
@@ -144,7 +156,7 @@ sub nominate_usage {
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
 
-Usage: $0 "r42,r43,45." "\$Some_justification"
+Usage: $0 "foo r42 bar r43 qux 45." "\$Some_justification"
 
 The STATUS file in the current directory is used, unless argv[0] is "n", in
 which case the STATUS file in the directory of argv[0] is used.  The intent
