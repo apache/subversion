@@ -3732,6 +3732,7 @@ get_revprop_packname(svn_fs_t *fs,
           content->data++;
         }
     }
+  content = NULL; /* No longer a valid stringbuf. */
 
   /* Index for our revision. Rev 0 is excluded from the first shard. */
   revprops->manifest_start = revprops->revision
