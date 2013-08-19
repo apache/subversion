@@ -4153,7 +4153,8 @@ repack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new pack file name for the revisions at index [START,END)
+/* Allocate a new pack file name for revisions
+ *     [REVPROPS->START_REVISION + START, REVPROPS->START_REVISION + END - 1]
  * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
  * auto-create that array if necessary.  Return an open file stream to
  * the new file in *STREAM allocated in POOL.
