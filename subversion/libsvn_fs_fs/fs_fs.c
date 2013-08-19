@@ -3752,6 +3752,17 @@ get_revprop_packname(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE, if revision R1 and R2 refer to the same shard in FS.
+ */
+static svn_boolean_t
+same_shard(svn_fs_t *fs,
+           svn_revnum_t r1,
+           svn_revnum_t r2)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
+}
+
 /* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS,
  * fill the START_REVISION, SIZES, OFFSETS members. Also, make
  * PACKED_REVPROPS point to the first serialized revprop.
@@ -3782,6 +3793,25 @@ parse_packed_revprops(svn_fs_t *fs,
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
   SVN_ERR(read_number_from_stream(&first_rev, NULL, stream, iterpool));
   SVN_ERR(read_number_from_stream(&count, NULL, stream, iterpool));
+
+  /* Check revision range for validity. */
+  if (   !same_shard(fs, revprops->revision, first_rev)
+      || !same_shard(fs, revprops->revision, first_rev + count - 1)
+      || count < 1)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Revprop pack for revision r%ld"
+                               " contains revprops for r%ld .. r%ld"),
+                             revprops->revision, first_rev,
+                             first_rev + count -1);
+
+  /* Since start & end are in the same shard, it is enough to just test
+   * the FIRST_REV for being actually packed.  That will also cover the
+   * special case of rev 0 never being packed. */
+  if (!is_packed_revprop(fs, first_rev))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Revprop pack for revision r%ld"
+                               " starts at non-packed revisions r%ld"),
+                             revprops->revision, first_rev);
 
   /* make PACKED_REVPROPS point to the first char after the header.
    * This is where the serialized revprops are. */
