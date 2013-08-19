@@ -181,6 +181,8 @@ Candidate changes:
      Modifying revprops may result in the loss of revprops for one
      or multiple revisions.
    Branch: ^/subversion/branches/1.8.x-r1513879
+   Notes:
+     I added r1515534 to the branch as an obvious fix.
    Votes:
      +1: stefan2, danielsh
      +1: philip (not r1515516)
