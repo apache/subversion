@@ -175,19 +175,23 @@ Candidate changes:
    Votes:
      +1: stefan2, danielsh
 
- * r1513879, r1513880
+ * r1513879, r1513880, r1515516
    Fix packed revprop file splitting logic in FSFS
    Justification:
      Modifying revprops may result in the loss of revprops for one
      or multiple revisions.
    Branch: ^/subversion/branches/1.8.x-r1513879
    Votes:
-     +1: stefan2, philip
+     +1: stefan2
+     +1: philip (not r1515516)
      danielsh: withholding my +1.  APR_ARRAY_IDX(revprops->manifest,
        start + manifest_offset, const char *) would read random memory
        addresses if MANIFEST_OFFSET were negative --- which can happen since it
        is initialized from on-disk data (MANIFEST_OFFSET is derived from
        START_REVISION which ultimataely comes from atoi64() of file contents).
+     stefan2: r1515516 makes sure that revprops->START_REVISION is always in
+       the same shard as MANIFEST_START.  The latter is always the first
+       packed rev in the shard.
 
  * r1514295, r1514318, r1514356
    Add serf library version information to svn --version.
