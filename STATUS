@@ -260,6 +260,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1515366
+   Spurious error for info on working copy root with child in conflict.
+   Justification:
+     Error is confusing for users, difficult for people using the API.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
