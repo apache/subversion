@@ -3987,9 +3987,9 @@ get_revision_proplist(apr_hash_t **proplist_p,
    * likely invalid (or its revprops highly contested). */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
     {
-      packed_revprops_t *packed_revprops;
-      SVN_ERR(read_pack_revprop(&packed_revprops, fs, rev, generation, pool));
-      *proplist_p = packed_revprops->properties;
+      packed_revprops_t *revprops;
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+      *proplist_p = revprops->properties;
     }
 
   /* The revprops should have been there. Did we get them? */
