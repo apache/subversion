@@ -185,7 +185,7 @@ Candidate changes:
      Users that frequently change existing revprops may, over time,
      experience a performance degradation.
    Votes:
-     +1: stefan2
+     +1: stefan2, danielsh
 
  * r1513879, r1513880
    Fix packed revprop file splitting logic in FSFS
