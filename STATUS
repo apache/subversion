@@ -196,15 +196,6 @@ Candidate changes:
    Votes:
      +1: ivan, danielsh
 
- * r1514785, r1515201
-   ra_serf: Improve SSL certificate verification failure message.
-   Justification:
-     Generic 'Server SSL certificate untrusted' error message is not
-     informative. Regression from Subversion 1.7.x
-   Votes:
-     +1: danielsh, breser
-     +1 (r1514785 only): ivan, stefan2
-
  * r1515119
    swig-py: prevent a segfaulting function from being called.  Also hide it
    from swig-pl where it is unusable (raises a TypeError(!?) if called).
@@ -281,3 +272,12 @@ Approved changes:
    Votes:
      +1: ivan, rhuijben, philip
      +0: danielsh
+
+ * r1514785, r1515201
+   ra_serf: Improve SSL certificate verification failure message.
+   Justification:
+     Generic 'Server SSL certificate untrusted' error message is not
+     informative. Regression from Subversion 1.7.x
+   Votes:
+     +1: danielsh, breser, ivan
+     +1 (r1514785 only): stefan2
