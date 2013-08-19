@@ -482,7 +482,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
@@ -539,7 +539,7 @@ get_set_large_revprop_packed_fs(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
@@ -612,7 +612,7 @@ get_set_huge_revprop_packed_fs(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
@@ -875,7 +875,7 @@ get_set_multiple_huge_revprops_packed_fs(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+      || (opts->server_minor_version && (opts->server_minor_version < 8)))
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
