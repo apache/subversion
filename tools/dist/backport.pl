@@ -343,6 +343,7 @@ sub parse_entry {
 
   # revisions
   $branch = sanitize_branch $1
+    and shift
     if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^r/) {
     my $sawrevnum = 0;
