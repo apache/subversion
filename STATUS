@@ -195,6 +195,11 @@ Candidate changes:
    Branch: ^/subversion/branches/1.8.x-r1513879
    Votes:
      +1: stefan2, philip
+     danielsh: withholding my +1.  APR_ARRAY_IDX(revprops->manifest,
+       start + manifest_offset, const char *) would read random memory
+       addresses if MANIFEST_OFFSET were negative --- which can happen since it
+       is initialized from on-disk data (MANIFEST_OFFSET is derived from
+       START_REVISION which ultimataely comes from atoi64() of file contents).
 
  * r1514295, r1514318, r1514356
    Add serf library version information to svn --version.
