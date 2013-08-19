@@ -147,10 +147,16 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       state == OPEN_FILE || state == ADD_FILE)
     {
       replay_info_t *info;
+      apr_pool_t *pool;
 
-      info = apr_palloc(replay_ctx->dst_rev_pool, sizeof(*info));
+      if (state == OPEN_FILE || state == ADD_FILE)
+        pool = replay_ctx->file_pool;
+      else
+        pool = replay_ctx->dst_rev_pool;
 
-      info->pool = replay_ctx->dst_rev_pool;
+      info = apr_palloc(pool, sizeof(*info));
+
+      info->pool = pool;
       info->parent = parser->state->private;
       info->baton = NULL;
       info->stream = NULL;
