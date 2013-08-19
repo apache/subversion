@@ -204,14 +204,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1515141
-   Update documentation of mod_dav_svn installation to reflect changes
-   not-so-recently-made to configure's defaults.
-   Justification:
-     INSTALL should document configure's defaults correctly.
-   Votes:
-     +1: danielsh
-
  * r1515225
    ra_serf: Stringify SVN_AUTH_SSL_OTHER as well
    Justification:
@@ -281,3 +273,11 @@ Approved changes:
    Votes:
      +1: danielsh, breser, ivan
      +1 (r1514785 only): stefan2
+
+ * r1515141
+   Update documentation of mod_dav_svn installation to reflect changes
+   not-so-recently-made to configure's defaults.
+   Justification:
+     INSTALL should document configure's defaults correctly.
+   Votes:
+     +1: danielsh, philip
