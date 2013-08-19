@@ -251,7 +251,7 @@ Candidate changes:
      Fixed directly on 1.8.x since the switch to transition based parser solved
      this there.  See r1515249 and r1515269 on branch for the specific changes.
    Votes:
-     +1: breser
+     +1: breser, philip
 
  * r1499044, r1515343
    Spell revision numbers as "r%ld" in error messages.
