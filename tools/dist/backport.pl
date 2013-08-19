@@ -174,6 +174,8 @@ is to create a symlink named "n" in the branch wc root).
 EOF
 # TODO: Optionally add a "Notes" section.
 # TODO: Look for backport branches named after issues.
+# TODO: Do a dry-run merge on added entries.
+# TODO: Do a dry-run merge on interactively-edited entries in backport.pl
 }
 
 sub digest_string {
