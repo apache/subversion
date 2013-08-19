@@ -24,6 +24,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -36,7 +37,6 @@
 #include "svn_path.h"
 #include "svn_props.h"
 
-#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_skel.h"
@@ -382,7 +382,7 @@ checkout_dir(dir_context_t *dir,
              apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  dir_context_t *p_dir = dir;
+  dir_context_t *c_dir = dir;
   const char *checkout_url;
   const char **working;
 
@@ -393,17 +393,25 @@ checkout_dir(dir_context_t *dir,
 
   /* Is this directory or one of our parent dirs newly added?
    * If so, we're already implicitly checked out. */
-  while (p_dir)
+  while (c_dir)
     {
-      if (p_dir->added)
+      if (c_dir->added)
         {
+          /* Calculate the working_url by skipping the shared ancestor between
+           * the c_dir_parent->relpath and dir->relpath. This is safe since an
+           * add is guaranteed to have a parent that is checked out. */
+          dir_context_t *c_dir_parent = c_dir->parent_dir;
+          const char *relpath = svn_relpath_skip_ancestor(c_dir_parent->relpath,
+                                                          dir->relpath);
+
           /* Implicitly checkout this dir now. */
+          SVN_ERR_ASSERT(c_dir_parent->working_url);
           dir->working_url = svn_path_url_add_component2(
-                                   dir->parent_dir->working_url,
-                                   dir->name, dir->pool);
+                                   c_dir_parent->working_url,
+                                   relpath, dir->pool);
           return SVN_NO_ERROR;
         }
-      p_dir = p_dir->parent_dir;
+      c_dir = c_dir->parent_dir;
     }
 
   /* We could be called twice for the root: once to checkout the baseline;
@@ -544,6 +552,7 @@ checkout_file(file_context_t *file,
       if (parent_dir->added)
         {
           /* Implicitly checkout this file now. */
+          SVN_ERR_ASSERT(parent_dir->working_url);
           file->working_url = svn_path_url_add_component2(
                                     parent_dir->working_url,
                                     svn_relpath_skip_ancestor(
@@ -2269,7 +2278,9 @@ abort_edit(void *edit_baton,
       && handler->sline.code != 404
       )
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("DELETE returned unexpected status: %d"),
+                               handler->sline.code);
     }
 
   return SVN_NO_ERROR;

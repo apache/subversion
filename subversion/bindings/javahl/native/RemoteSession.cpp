@@ -110,8 +110,8 @@ RemoteSession::open(jint jretryAttempts,
 
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
-      configDirectory.c_str(), jconfigHandler,
-      usernameStr, passwordStr, prompter, jprogress);
+      (jconfigDirectory ? configDirectory.c_str() : NULL),
+      jconfigHandler, usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
@@ -125,7 +125,7 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory, jobject jconfigHandler,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter* prompter, jobject jprogress)
+                    Prompter*& prompter, jobject jprogress)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -168,7 +168,7 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
                              const char* configDirectory,
                              jobject jconfigHandler,
                              const char*  username, const char*  password,
-                             Prompter* prompter, jobject jprogress)
+                             Prompter*& prompter, jobject jprogress)
   : m_session(NULL), m_context(NULL)
 {
   // Create java session object
@@ -197,6 +197,14 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
       username, password, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;
+
+  // Avoid double-free in RemoteSession::open and
+  // SVNClient::openRemoteSession if the svn_ra_open call fails. The
+  // prompter object is now owned by m_context.
+  //
+  // FIXME: Should be using smart pointers, really -- but JavaHL
+  // currently doesn't. Future enhancements FTW.
+  prompter = NULL;
 
   const char* corrected_url = NULL;
   bool cycle_detected = false;
@@ -410,14 +418,13 @@ RemoteSession::getRevisionByTimestamp(jlong timestamp)
 }
 
 namespace {
-bool byte_array_to_svn_string(JNIByteArray& ary, svn_string_t& str)
+svn_string_t*
+byte_array_to_svn_string(JNIByteArray& ary, SVN::Pool& scratch_pool)
 {
   if (ary.isNull())
-    return false;
-
-  str.data = reinterpret_cast<const char*>(ary.getBytes());
-  str.len = ary.getLength();
-  return true;
+    return NULL;
+  return svn_string_ncreate(reinterpret_cast<const char*>(ary.getBytes()),
+                            ary.getLength(), scratch_pool.getPool());
 }
 } // anonymous namespace
 
@@ -438,21 +445,17 @@ RemoteSession::changeRevisionProperty(
   if (JNIUtil::isExceptionThrown())
     return;
 
-  svn_string_t str_old_value;
-  svn_string_t* const p_old_value = &str_old_value;
-  svn_string_t* const* pp_old_value = NULL;
-  if (byte_array_to_svn_string(old_value, str_old_value))
-      pp_old_value = &p_old_value;
-
-  svn_string_t str_value;
-  svn_string_t* p_value = NULL;
-  if (byte_array_to_svn_string(value, str_value))
-      p_value = &str_value;
-
   SVN::Pool subPool(pool);
+  svn_string_t* const* p_old_value = NULL;
+  svn_string_t* const str_old_value =
+    byte_array_to_svn_string(old_value, subPool);
+  if (str_old_value)
+    p_old_value = &str_old_value;
+
   SVN_JNI_ERR(svn_ra_change_rev_prop2(m_session,
                                       svn_revnum_t(jrevision),
-                                      name, pp_old_value, p_value,
+                                      name, p_old_value,
+                                      byte_array_to_svn_string(value, subPool),
                                       subPool.getPool()), );
 }
 
@@ -921,10 +924,355 @@ RemoteSession::checkPath(jstring jpath, jlong jrevision)
   return EnumMapper::mapNodeKind(kind);
 }
 
-// TODO: stat
-// TODO: getLocations
-// TODO: getLocationSegments
-// TODO: getFileRevisions
+jobject
+RemoteSession::stat(jstring jpath, jlong jrevision)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  svn_dirent_t* dirent;
+  SVN_JNI_ERR(svn_ra_stat(m_session, path.c_str(),
+                          svn_revnum_t(jrevision),
+                          &dirent, subPool.getPool()),
+              NULL);
+
+  if (dirent)
+    return CreateJ::DirEntry(path.c_str(), path.c_str(), dirent);
+  return NULL;
+}
+
+namespace {
+apr_array_header_t*
+long_iterable_to_revnum_array(jobject jlong_iterable, apr_pool_t* pool)
+{
+
+  JNIEnv* env = JNIUtil::getEnv();
+
+  jclass cls = env->FindClass("java/lang/Long");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      mid = env->GetMethodID(cls, "longValue", "()J");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  apr_array_header_t* array = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+  Iterator iter(jlong_iterable);
+  while (iter.hasNext())
+    {
+      const jlong entry = env->CallLongMethod(iter.next(), mid);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      APR_ARRAY_PUSH(array, svn_revnum_t) = svn_revnum_t(entry);
+    }
+  return array;
+}
+
+jobject
+location_hash_to_map(apr_hash_t* locations, apr_pool_t* scratch_pool)
+{
+  JNIEnv* env = JNIUtil::getEnv();
+
+  jclass long_cls = env->FindClass("java/lang/Long");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID long_ctor = 0;
+  if (0 == long_ctor)
+    {
+      long_ctor = env->GetMethodID(long_cls, "<init>", "(J)V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  jclass hash_cls = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  static jmethodID hash_ctor = 0;
+  if (0 == hash_ctor)
+    {
+      hash_ctor = env->GetMethodID(hash_cls, "<init>", "()V");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID hash_put = 0;
+  if (0 == hash_put)
+    {
+      hash_put = env->GetMethodID(hash_cls, "put",
+                                  "(Ljava/lang/Object;Ljava/lang/Object;"
+                                  ")Ljava/lang/Object;");
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+    }
+
+  jobject result = env->NewObject(hash_cls, hash_ctor);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+
+  if (!locations)
+    return result;
+
+  for (apr_hash_index_t* hi = apr_hash_first(scratch_pool, locations);
+       hi; hi = apr_hash_next(hi))
+    {
+      const void* key;
+      void* val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+
+      jobject jkey = env->NewObject(
+          long_cls, long_ctor, jlong(*static_cast<const svn_revnum_t*>(key)));
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      jstring jval = JNIUtil::makeJString(static_cast<const char*>(val));
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->CallObjectMethod(result, hash_put, jkey, jval);
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jkey);
+      env->DeleteLocalRef(jval);
+    }
+
+  return result;
+}
+} // anonymous namespace
+
+jobject
+RemoteSession::getLocations(jstring jpath, jlong jpeg_revision,
+                            jobject jlocation_revisions)
+{
+  if (!jpath || !jlocation_revisions)
+    return NULL;
+
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
+  SVN_JNI_ERR(path.error_occurred(), NULL);
+
+  apr_array_header_t* location_revisions =
+    long_iterable_to_revnum_array(jlocation_revisions, subPool.getPool());
+  if (!location_revisions)
+    return NULL;
+
+  apr_hash_t* locations;
+  SVN_JNI_ERR(svn_ra_get_locations(m_session, &locations,
+                                   path.c_str(), svn_revnum_t(jpeg_revision),
+                                   location_revisions, subPool.getPool()),
+              NULL);
+  return location_hash_to_map(locations, subPool.getPool());
+}
+
+namespace {
+class LocationSegmentHandler
+{
+public:
+  static svn_error_t* callback(svn_location_segment_t* segment,
+                               void* baton, apr_pool_t*)
+    {
+      LocationSegmentHandler* const self =
+        static_cast<LocationSegmentHandler*>(baton);
+      SVN_ERR_ASSERT(self->m_jcallback != NULL);
+      self->call(segment);
+      SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
+      return SVN_NO_ERROR;
+    }
+
+  LocationSegmentHandler(jobject jcallback)
+    : m_jcallback(jcallback),
+      m_call_mid(0)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->GetObjectClass(jcallback);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      m_call_mid = env->GetMethodID(
+          cls, "doSegment", "(L"JAVA_PACKAGE"/ISVNRemote$LocationSegment;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+private:
+  void call(svn_location_segment_t* segment)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$LocationSegment");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>",
+                                 "(Ljava/lang/String;JJ)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jstring jpath = JNIUtil::makeJString(segment->path);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      env->CallVoidMethod(m_jcallback, m_call_mid,
+                          env->NewObject(cls, mid, jpath,
+                                         jlong(segment->range_start),
+                                         jlong(segment->range_end)));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      env->DeleteLocalRef(jpath);
+    }
+
+  jobject m_jcallback;
+  jmethodID m_call_mid;
+};
+} // anonymous namespace
+
+void
+RemoteSession::getLocationSegments(jstring jpath, jlong jpeg_revision,
+                                   jlong jstart_revision, jlong jend_revision,
+                                   jobject jcallback)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(path.error_occurred(), );
+
+  LocationSegmentHandler handler(jcallback);
+  if (JNIUtil::isExceptionThrown())
+    return ;
+
+  SVN_JNI_ERR(svn_ra_get_location_segments(m_session, path.c_str(),
+                                           svn_revnum_t(jpeg_revision),
+                                           svn_revnum_t(jstart_revision),
+                                           svn_revnum_t(jend_revision),
+                                           handler.callback, &handler,
+                                           subPool.getPool()),);
+}
+
+namespace {
+class FileRevisionHandler
+{
+public:
+  static svn_error_t* callback(void* baton,
+                               const char* path, svn_revnum_t revision,
+                               apr_hash_t* revision_props,
+                               // We ignore the deltas as they're not
+                               // exposed in the JavaHL API.
+                               svn_boolean_t result_of_merge,
+                               svn_txdelta_window_handler_t*, void**,
+                               apr_array_header_t* prop_diffs,
+                               apr_pool_t* scratch_pool)
+    {
+      FileRevisionHandler* const self =
+        static_cast<FileRevisionHandler*>(baton);
+      SVN_ERR_ASSERT(self->m_jcallback != NULL);
+      self->call(path, revision, revision_props,
+                result_of_merge, prop_diffs, scratch_pool);
+      SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
+      return SVN_NO_ERROR;
+    }
+
+  FileRevisionHandler(jobject jcallback)
+    : m_jcallback(jcallback),
+      m_call_mid(0)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->GetObjectClass(jcallback);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      m_call_mid = env->GetMethodID(
+          cls, "doRevision", "(L"JAVA_PACKAGE"/ISVNRemote$FileRevision;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+private:
+  void call(const char* path, svn_revnum_t revision,
+           apr_hash_t* revision_props,
+           svn_boolean_t result_of_merge,
+           apr_array_header_t* prop_diffs,
+           apr_pool_t* scratch_pool)
+    {
+      JNIEnv* env = JNIUtil::getEnv();
+      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$FileRevision");
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      static jmethodID mid = 0;
+      if (mid == 0)
+        {
+          mid = env->GetMethodID(cls, "<init>",
+                                 "(Ljava/lang/String;JZ"
+                                 "Ljava/util/Map;Ljava/util/Map;)V");
+          if (JNIUtil::isJavaExceptionThrown())
+            return;
+        }
+
+      jstring jpath = JNIUtil::makeJString(path);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      jobject jrevprops = CreateJ::PropertyMap(revision_props, scratch_pool);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      jobject jpropdelta = CreateJ::PropertyMap(prop_diffs, scratch_pool);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+
+      env->CallVoidMethod(m_jcallback, m_call_mid,
+                          env->NewObject(cls, mid, jpath, jlong(revision),
+                                         jboolean(result_of_merge),
+                                         jrevprops, jpropdelta));
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+      env->DeleteLocalRef(jpath);
+      env->DeleteLocalRef(jrevprops);
+      env->DeleteLocalRef(jpropdelta);
+    }
+
+  jobject m_jcallback;
+  jmethodID m_call_mid;
+};
+} // anonymous namespace
+
+void
+RemoteSession::getFileRevisions(jstring jpath,
+                                jlong jstart_revision, jlong jend_revision,
+                                jboolean jinclude_merged_revisions,
+                                jobject jcallback)
+{
+  SVN::Pool subPool(pool);
+  Relpath path(jpath, subPool);
+  if (JNIUtil::isExceptionThrown())
+    return;
+  SVN_JNI_ERR(path.error_occurred(), );
+
+  FileRevisionHandler handler(jcallback);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  SVN_JNI_ERR(svn_ra_get_file_revs2(m_session, path.c_str(),
+                                    svn_revnum_t(jstart_revision),
+                                    svn_revnum_t(jend_revision),
+                                    bool(jinclude_merged_revisions),
+                                    handler.callback, &handler,
+                                    subPool.getPool()),);
+}
+
 // TODO: lock
 // TODO: unlock
 // TODO: getLock

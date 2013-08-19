@@ -20,31 +20,53 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
+ * @file RevisionRangeList.h
+ * @brief Interface of the class RevisionRangeList
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+#ifndef REVISION_RANGE_LIST_H
+#define REVISION_RANGE_LIST_H
 
 #include <jni.h>
+#include "svn_mergeinfo.h"
+
 #include "Pool.h"
 
-struct apr_hash_t;
-
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+/**
+ * A wrapper for svn_rangelist_t
+ */
+class RevisionRangeList
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
  public:
-  RevpropTable(jobject jrevpropTable, bool bytearray_values=false);
-  ~RevpropTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
+  /**
+   * Create a RevisionRangeList object from a Java list of revision ranges.
+   */
+  RevisionRangeList(jobject jrangelist, SVN::Pool &pool);
+
+  /**
+   * Create a RevisionRangeList object from a Java RevisionRangeList.
+   */
+  static RevisionRangeList create(jobject jthis, SVN::Pool &pool);
+
+  /**
+   * Wrap an svn_rangelist_t.
+   */
+  explicit RevisionRangeList(svn_rangelist_t* ranges)
+    : m_rangelist(ranges)
+  {}
+
+  /**
+   * Return an svn_rangelist_t.
+   */
+  const svn_rangelist_t* get() const { return m_rangelist; }
+
+  /**
+   * Make a Java list of reivison ranges.
+   */
+  jobject toList() const;
+
+ private:
+  svn_rangelist_t* m_rangelist;
 };
 
-#endif // REVPROPTABLE_H
+#endif  // REVISION_RANGE_LIST_H

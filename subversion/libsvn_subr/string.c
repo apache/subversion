@@ -418,6 +418,17 @@ svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool)
   return svn_stringbuf_ncreate(str->data, str->len, pool);
 }
 
+svn_stringbuf_t *
+svn_stringbuf_create_wrap(char *str, apr_pool_t *pool)
+{
+  svn_stringbuf_t *result = apr_palloc(pool, sizeof(*result));
+  result->pool = pool;
+  result->data = str;
+  result->len = strlen(str);
+  result->blocksize = result->len + 1;
+
+  return result;
+}
 
 svn_stringbuf_t *
 svn_stringbuf_createv(apr_pool_t *pool, const char *fmt, va_list ap)
@@ -593,6 +604,21 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *str, const char *bytes,
   str->data[str->len] = '\0';  /* We don't know if this is binary
                                   data or not, but convention is
                                   to null-terminate. */
+}
+
+void
+svn_stringbuf_appendfill(svn_stringbuf_t *str,
+                         char byte,
+                         apr_size_t count)
+{
+  apr_size_t new_len = str->len + count;
+  svn_stringbuf_ensure(str, new_len);
+
+  memset(str->data + str->len, byte, count);
+
+  /* update buffer length and always NUL-terminate it */
+  str->len = new_len;
+  str->data[new_len] = '\0';
 }
 
 
@@ -1196,6 +1222,86 @@ svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
   return apr_pstrdup(pool, buffer);
 }
 
+apr_size_t
+svn__ui64tobase36(char *dest, apr_uint64_t value)
+{
+  char *dest_start = dest;
+  if (value < 10)
+    {
+      /* pretty frequent and trivial case. Make it fast. */
+      *(dest++) = (char)(value) + '0';
+    }
+  else
+    {
+      char buffer[SVN_INT64_BUFFER_SIZE];
+      char *p = buffer;
+
+      /* write result as little-endian to buffer */
+      while (value > 0)
+        {
+          char c = (char)(value % 36);
+          value /= 36;
+
+          *p = (c <= 9) ? (c + '0') : (c - 10 + 'a');
+          ++p;
+        }
+
+      /* copy as big-endian to DEST */
+      while (p > buffer)
+        *(dest++) = *(--p);
+    }
+
+  *dest = '\0';
+  return dest - dest_start;
+}
+
+apr_uint64_t
+svn__base36toui64(const char **next, const char *source)
+{
+  apr_uint64_t result = 0;
+  apr_uint64_t factor = 1;
+  int i  = 0;
+  char digits[SVN_INT64_BUFFER_SIZE];
+
+  /* convert digits to numerical values and count the number of places.
+   * Also, prevent buffer overflow. */
+  while (i < sizeof(digits))
+    {
+      char c = *source;
+      if (c < 'a')
+        {
+          /* includes detection of NUL terminator */
+          if (c < '0' || c > '9')
+            break;
+
+          c -= '0';
+        }
+      else
+        {
+          if (c < 'a' || c > 'z')
+            break;
+
+          c -= 'a' - 10;
+        }
+
+      digits[i++] = c;
+      source++;
+    }
+
+  /* fold digits into the result */
+  while (i > 0)
+    {
+      result += factor * (apr_uint64_t)digits[--i];
+      factor *= 36;
+    }
+
+  if (next)
+    *next = source;
+
+  return result;
+}
+
+
 unsigned int
 svn_cstring__similarity(const char *stra, const char *strb,
                         svn_membuf_t *buffer, apr_size_t *rlcs)
@@ -1301,3 +1407,67 @@ svn_string__similarity(const svn_string_t *stringa,
   else
     return 1000;
 }
+
+apr_size_t
+svn_cstring__match_length(const char *a,
+                          const char *b,
+                          apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky processing is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
+      break;
+
+#endif
+
+  for (; pos < max_len; ++pos)
+    if (a[pos] != b[pos])
+      break;
+
+  return pos;
+}
+
+apr_size_t
+svn_cstring__reverse_match_length(const char *a,
+                                  const char *b,
+                                  apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky processing is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (pos = sizeof(apr_size_t); pos <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a - pos) != *(const apr_size_t*)(b - pos))
+      break;
+
+  pos -= sizeof(apr_size_t);
+
+#endif
+
+  /* If we find a mismatch at -pos, pos-1 characters matched.
+   */
+  while (++pos <= max_len)
+    if (a[0-pos] != b[0-pos])
+      return pos - 1;
+
+  /* No mismatch found -> at least MAX_LEN matching chars.
+   */
+  return max_len;
+}
+
+

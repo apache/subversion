@@ -28,6 +28,8 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -43,8 +45,6 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
-#define SVN_WANT_BDB
-#include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
 #include "bdb/bdb_compat.h"
@@ -1493,7 +1493,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
     return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
                              _("Unsupported FS loader version (%d) for bdb"),
                              loader_version->major);
-  SVN_ERR(svn_ver_check_list(base_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(base_version(), checklist, svn_ver_equal));
   SVN_ERR(check_bdb_version());
   SVN_ERR(svn_fs_bdb__init(common_pool));
 

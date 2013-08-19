@@ -32,6 +32,7 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -40,7 +41,6 @@
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_private_config.h"
 #include "svn_time.h"
 
 #include "wc.h"
@@ -924,7 +924,6 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, scratch_pool);
       db->already_notified = TRUE;
-
     }
 
   return SVN_NO_ERROR;
@@ -1012,9 +1011,13 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   if (err)
     {
-      /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath, TRUE,
-                                          hb->pool));
+      /* We failed to apply the delta; clean up the temporary file if it
+         already created by lazy_open_target(). */
+      if (hb->new_text_base_tmp_abspath)
+        {
+          svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath,
+                                              TRUE, hb->pool));
+        }
     }
   else
     {

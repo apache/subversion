@@ -214,6 +214,8 @@ def _usage_exit(err=None):
   print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
+  print("  --disable-gmock")
+  print("           do not use Googlemock")
   sys.exit(1)
 
 
@@ -222,9 +224,10 @@ class Options:
     self.list = []
     self.dict = {}
 
-  def add(self, opt, val):
+  def add(self, opt, val, overwrite=True):
     if opt in self.dict:
-      self.list[self.dict[opt]] = (opt, val)
+      if overwrite:
+        self.list[self.dict[opt]] = (opt, val)
     else:
       self.dict[opt] = len(self.list)
       self.list.append((opt, val))
@@ -262,7 +265,7 @@ if __name__ == '__main__':
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
-
+                            'disable-gmock',
                             # Keep distributions that help by adding a path
                             # working. On unix this would be filtered by
                             # configure, but on Windows gen-make.py is used
@@ -307,9 +310,12 @@ if __name__ == '__main__':
       gentype = val
     else:
       if opt == '--with-httpd':
-        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'))
-        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))
-        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'))
+        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'),
+                 overwrite=False)
+        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'),
+                 overwrite=False)
+        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'),
+                 overwrite=False)
 
   # Remember all options so that --reload and other scripts can use them
   opt_conf = open('gen-make.opts', 'w')

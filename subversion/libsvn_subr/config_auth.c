@@ -23,6 +23,7 @@
 
 
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_io.h"
@@ -31,14 +32,8 @@
 
 #include "auth.h"
 
-#include "svn_private_config.h"
-
 #include "private/svn_auth_private.h"
 
-/* Helper for svn_config_{read|write}_auth_data.  Return a path to a
-   file within ~/.subversion/auth/ that holds CRED_KIND credentials
-   within REALMSTRING.  If no path is available *PATH will be set to
-   NULL. */
 svn_error_t *
 svn_auth__file_path(const char **path,
                     const char *cred_kind,
@@ -172,12 +167,6 @@ svn_config_walk_auth_data(const char *config_dir,
       SVN_AUTH_CRED_SSL_SERVER_TRUST,
       NULL
     };
-
-  if (! config_dir)
-    {
-      /* Can't locate the cache to clear */
-      return SVN_NO_ERROR;
-    }
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; cred_kinds[i]; i++)

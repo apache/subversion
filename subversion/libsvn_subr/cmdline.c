@@ -42,6 +42,7 @@
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_ctype.h"
 #include "svn_dso.h"
@@ -63,8 +64,6 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_string_private.h"
-
-#include "svn_private_config.h"
 
 #include "win32_crashrpt.h"
 
@@ -131,30 +130,32 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif /* _MSC_VER < 1400 */
 
 #ifdef SVN_USE_WIN32_CRASHHANDLER
-  /* Attach (but don't load) the crash handler */
-  SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
+  if (!getenv("SVN_CMDLINE_DISABLE_CRASH_HANDLER"))
+    {
+      /* Attach (but don't load) the crash handler */
+      SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
 
 #if _MSC_VER >= 1400
-  /* ### This should work for VC++ 2002 (=1300) and later */
-  /* Show the abort message on STDERR instead of a dialog to allow
-     scripts (e.g. our testsuite) to continue after an abort without
-     user intervention. Allow overriding for easier debugging. */
-  if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
-    {
-      /* In release mode: Redirect abort() errors to stderr */
-      _set_error_mode(_OUT_TO_STDERR);
+      /* ### This should work for VC++ 2002 (=1300) and later */
+      /* Show the abort message on STDERR instead of a dialog to allow
+         scripts (e.g. our testsuite) to continue after an abort without
+         user intervention. Allow overriding for easier debugging. */
+      if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
+        {
+          /* In release mode: Redirect abort() errors to stderr */
+          _set_error_mode(_OUT_TO_STDERR);
 
-      /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in release builds) */
-      _CrtSetReportFile( _CRT_WARN, _CRTDBG_FILE_STDERR);
-      _CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR);
-      _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
-      _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-      _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-      _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-    }
+          /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
+             (Ignored in release builds) */
+          _CrtSetReportFile( _CRT_WARN, _CRTDBG_FILE_STDERR);
+          _CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR);
+          _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
+          _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+          _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+          _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+        }
 #endif /* _MSC_VER >= 1400 */
-
+    }
 #endif /* SVN_USE_WIN32_CRASHHANDLER */
 
 #endif /* WIN32 */

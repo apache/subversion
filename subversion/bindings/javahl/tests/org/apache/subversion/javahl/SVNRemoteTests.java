@@ -29,6 +29,7 @@ import org.apache.subversion.javahl.types.*;
 
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -167,6 +168,20 @@ public class SVNRemoteTests extends SVNTests
 
         kind = session.checkPath("A", 1);
         assertEquals(NodeKind.dir, kind);
+    }
+
+    public void testStat() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        DirEntry dirent = session.stat("iota", 1);
+        assertEquals(NodeKind.file, dirent.getNodeKind());
+
+        dirent = session.stat("iota", 0);
+        assertNull(dirent);
+
+        dirent = session.stat("A", 1);
+        assertEquals(NodeKind.dir, dirent.getNodeKind());
     }
 
     private String getTestRepoUrl()
@@ -308,8 +323,20 @@ public class SVNRemoteTests extends SVNTests
         }
         catch (ClientException ex)
         {
-            assertEquals("Disabled repository feature",
-                         ex.getAllMessages().get(0).getMessage());
+            ClientException.ErrorMessage error = null;
+            for (ClientException.ErrorMessage m : ex.getAllMessages())
+                if (!m.isGeneric()) {
+                    error = m;
+                    break;
+                }
+
+            if (error == null)
+                fail("Failed with no error message");
+
+            if (error.getCode() != 175002 && // SVN_ERR_RA_DAV_REQUEST_FAILED
+                error.getCode() != 165006)   // SVN_ERR_REPOS_DISABLED_FEATURE
+                fail(error.getMessage());
+
             return;
         }
 
@@ -351,8 +378,11 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(fetched_rev, 1);
         assertEquals(contents.toString("UTF-8"),
                      "This is the file 'lambda'.");
-        for (Map.Entry<String, byte[]> e : properties.entrySet())
-            assertTrue(e.getKey().startsWith("svn:entry:"));
+        for (Map.Entry<String, byte[]> e : properties.entrySet()) {
+            final String key = e.getKey();
+            assertTrue(key.startsWith("svn:entry:")
+                       || key.startsWith("svn:wc:"));
+        }
     }
 
     public void testGetDirectory() throws Exception
@@ -373,8 +403,11 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(dirents.get("E").getPath(), "E");
         assertEquals(dirents.get("F").getPath(), "F");
         assertEquals(dirents.get("lambda").getPath(), "lambda");
-        for (Map.Entry<String, byte[]> e : properties.entrySet())
-            assertTrue(e.getKey().startsWith("svn:entry:"));
+        for (Map.Entry<String, byte[]> e : properties.entrySet()) {
+            final String key = e.getKey();
+            assertTrue(key.startsWith("svn:entry:")
+                       || key.startsWith("svn:wc:"));
+        }
     }
 
     private final class CommitContext implements CommitCallback
@@ -574,19 +607,19 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(eolstyle, propval));
     }
 
-    public void testEditorSetFileProps() throws Exception
+    public void testEditorSetFileContents() throws Exception
     {
         Charset UTF8 = Charset.forName("UTF-8");
         ISVNRemote session = getSession();
 
-        byte[] eolstyle = "CRLF".getBytes(UTF8);
-        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
-        props.put("svn:eol-style", eolstyle);
+        byte[] contents = "This is modified file 'alpha'.".getBytes(UTF8);
+        Checksum hash = new Checksum(SHA1(contents), Checksum.Kind.SHA1);
+        ByteArrayInputStream stream = new ByteArrayInputStream(contents);
 
         CommitContext cc =
-            new CommitContext(session, "Change eol-style on A/B/E/alpha");
+            new CommitContext(session, "Change contents of A/B/E/alpha");
         try {
-            cc.editor.alterFile("A/B/E/alpha", 1, null, null, props);
+            cc.editor.alterFile("A/B/E/alpha", 1, hash, stream, null);
             cc.editor.complete();
         } finally {
             cc.editor.dispose();
@@ -594,12 +627,10 @@ public class SVNRemoteTests extends SVNTests
 
         assertEquals(2, cc.getRevision());
         assertEquals(2, session.getLatestRevision());
-        byte[] propval = client.propertyGet(session.getSessionUrl()
-                                            + "/A/B/E/alpha",
-                                            "svn:eol-style",
-                                            Revision.HEAD,
-                                            Revision.HEAD);
-        assertTrue(Arrays.equals(eolstyle, propval));
+        ByteArrayOutputStream checkcontents = new ByteArrayOutputStream();
+        client.streamFileContent(session.getSessionUrl() + "/A/B/E/alpha",
+                                 Revision.HEAD, Revision.HEAD, checkcontents);
+        assertTrue(Arrays.equals(contents, checkcontents.toByteArray()));
     }
 
     // public void testEditorRotate() throws Exception
@@ -787,7 +818,7 @@ public class SVNRemoteTests extends SVNTests
 
     private static class RemoteStatusReceiver implements RemoteStatus
     {
-        static class StatInfo
+        static class StatInfo implements Comparable<StatInfo>
         {
             public String relpath = null;
             public char kind = ' '; // F, D, L
@@ -812,6 +843,18 @@ public class SVNRemoteTests extends SVNTests
                 this.textChanged = textChanged;
                 this.propsChanged = propsChanged;
                 this.info = info;
+            }
+
+            @Override
+            public boolean equals(Object statinfo)
+            {
+                final StatInfo that = (StatInfo)statinfo;
+                return this.relpath.equals(that.relpath);
+            }
+
+            public int compareTo(StatInfo that)
+            {
+                return this.relpath.compareTo(that.relpath);
             }
         }
 
@@ -946,7 +989,11 @@ public class SVNRemoteTests extends SVNTests
         } finally {
             rp.dispose();
         }
+
         assertEquals(4, receiver.status.size());
+
+        // ra_serf returns the entries in inverted order compared to ra_local.
+        Collections.sort(receiver.status);
         RemoteStatusReceiver.StatInfo mod = receiver.status.get(3);
         assertEquals("A/D/gamma", mod.relpath);
         assertEquals('F', mod.kind);
@@ -979,6 +1026,9 @@ public class SVNRemoteTests extends SVNTests
             rp.dispose();
         }
         assertEquals(3, receiver.status.size());
+
+        // ra_serf returns the entries in inverted order compared to ra_local.
+        Collections.sort(receiver.status);
         RemoteStatusReceiver.StatInfo mod = receiver.status.get(2);
         assertEquals("A/mu", mod.relpath);
         assertEquals(' ', mod.kind);
@@ -1046,5 +1096,48 @@ public class SVNRemoteTests extends SVNTests
             catalog.get("Abranch/mu").getRevisions("/A/mu");
         assertEquals(1, ranges.size());
         assertEquals("1-3", ranges.get(0).toString());
+    }
+
+    public void testGetLocations() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        Long expected = new Long(1L);
+        ArrayList<Long> revs = new ArrayList<Long>(3);
+        revs.add(new Long(0L));
+        revs.add(expected);
+
+        Map<Long, String> locs = session.getLocations("A", 1, revs);
+
+        assertEquals(1, locs.size());
+        assertTrue(locs.containsKey(expected));
+        assertEquals("/A", locs.get(expected));
+    }
+
+    public void testGetLocationSegments() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        List<ISVNRemote.LocationSegment> result =
+            session.getLocationSegments("A", 1,
+                                        Revision.SVN_INVALID_REVNUM,
+                                        Revision.SVN_INVALID_REVNUM);
+        assertEquals(1, result.size());
+        ISVNRemote.LocationSegment seg = result.get(0);
+        assertEquals("A", seg.getPath());
+        assertEquals(1, seg.getStartRevision());
+        assertEquals(1, seg.getEndRevision());
+    }
+
+    public void testGetFileRevisions() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        List<ISVNRemote.FileRevision> result =
+            session.getFileRevisions("iota", 0, 1, true);
+        assertEquals(1, result.size());
+        ISVNRemote.FileRevision rev = result.get(0);
+        assertEquals("/iota", rev.getPath());
+        assertFalse(rev.isResultOfMerge());
     }
 }

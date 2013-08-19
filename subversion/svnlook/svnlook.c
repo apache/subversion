@@ -34,6 +34,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
@@ -58,8 +59,6 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_io_private.h"
-
-#include "svn_private_config.h"
 
 
 /*** Some convenience macros and types. ***/
@@ -397,7 +396,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 

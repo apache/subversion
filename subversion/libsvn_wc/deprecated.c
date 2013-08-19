@@ -28,6 +28,7 @@
 
 #include <apr_md5.h>
 
+#include "svn_private_config.h"
 #include "svn_wc.h"
 #include "svn_subst.h"
 #include "svn_pools.h"
@@ -46,8 +47,6 @@
 #include "props.h"
 #include "translate.h"
 #include "workqueue.h"
-
-#include "svn_private_config.h"
 
 /* baton for traversal_info_update */
 struct traversal_info_update_baton

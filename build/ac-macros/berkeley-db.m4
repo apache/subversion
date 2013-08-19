@@ -126,8 +126,8 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
     svn_lib_berkeley_db=no
   else
     AC_MSG_CHECKING([for availability of Berkeley DB])
-    AC_ARG_ENABLE(banging-head-against-wall,
-      AS_HELP_STRING([---disable-banging-head-against-wall],
+    AC_ARG_ENABLE(bdb6,
+      AS_HELP_STRING([--enable-bdb6],
                      [Allow building against BDB 6+.
                       See --with-berkeley-db for specifying the location of
                       the Berkeley DB installation.  Using BDB 6 will fail if
@@ -140,7 +140,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       svn_lib_berkeley_db=yes
     else
       if test "$svn_have_berkeley_db" = "no6"; then
-        AC_MSG_RESULT([no (found version 6, but --enable-banging-head-against-wall not specified)])
+        AC_MSG_RESULT([no (found version 6, but --enable-bdb6 not specified)])
         # A warning will be printed at the end of configure.ac.
       else
         AC_MSG_RESULT([no])

@@ -32,6 +32,7 @@
 #include <apr_hash.h>
 #include <apr_errno.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -51,8 +52,6 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_skel.h"
 #include "private/svn_string_private.h"
-
-#include "svn_private_config.h"
 
 /* --------------------------------------------------------------------
  * Conflict skel management

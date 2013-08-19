@@ -28,6 +28,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_private_config.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_hash.h"

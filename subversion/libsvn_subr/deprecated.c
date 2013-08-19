@@ -32,6 +32,7 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_path.h"
@@ -47,9 +48,6 @@
 #include "opt.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
-
-#include "svn_private_config.h"
-
 
 
 
@@ -1301,4 +1299,10 @@ svn_subst_build_keywords(svn_subst_keywords_t *kw,
   return SVN_NO_ERROR;
 }
 
-
+/*** From version.c ***/
+svn_error_t *
+svn_ver_check_list(const svn_version_t *my_version,
+                   const svn_version_checklist_t *checklist)
+{
+  return svn_ver_check_list2(my_version, checklist, svn_ver_compatible);
+}

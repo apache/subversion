@@ -29,6 +29,7 @@
 #include <apr_file_io.h>
 #include <apr_poll.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_diff.h"
 #include "svn_io.h"

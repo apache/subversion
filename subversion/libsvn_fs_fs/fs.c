@@ -484,7 +484,7 @@ svn_fs_fs__init(const svn_version_t *loader_version,
     return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
                              _("Unsupported FS loader version (%d) for fsfs"),
                              loader_version->major);
-  SVN_ERR(svn_ver_check_list(fs_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(fs_version(), checklist, svn_ver_equal));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

@@ -37,6 +37,7 @@
 #include <apr_strings.h>
 #include <apr_thread_mutex.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
@@ -66,7 +67,6 @@
 #include "private/svn_delta_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
-#include "svn_private_config.h"
 #include "temp_serializer.h"
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
@@ -472,9 +472,14 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 {
   const char *path;
   apr_off_t offset = 0;
+  svn_error_t *err;
 
-  if (apr_file_name_get(&path, file) != APR_SUCCESS)
-    path = "(unknown)";
+  err = svn_io_file_name_get(&path, file, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      path = "(unknown)";
+    }
 
   if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
     offset = -1;
@@ -602,7 +607,7 @@ get_lock_on_filesystem(const char *lock_filename,
       svn_error_clear(err);
       err = NULL;
 
-      SVN_ERR(svn_io_file_create(lock_filename, "", pool));
+      SVN_ERR(svn_io_file_create_empty(lock_filename, pool));
       SVN_ERR(svn_io_file_lock2(lock_filename, TRUE, FALSE, pool));
     }
 
@@ -3591,7 +3596,7 @@ typedef struct packed_revprops_t
   /* sum of values in SIZES */
   apr_size_t total_size;
 
-  /* first revision in the pack */
+  /* first revision in the pack (>= MANIFEST_START) */
   svn_revnum_t start_revision;
 
   /* size of the revprops in PACKED_REVPROPS */
@@ -3605,8 +3610,12 @@ typedef struct packed_revprops_t
    * in the pack, i.e. the pack content without header and compression */
   svn_stringbuf_t *packed_revprops;
 
+  /* First revision covered by MANIFEST.
+   * Will equal the shard start revision or 1, for the 1st shard. */
+  svn_revnum_t manifest_start;
+
   /* content of the manifest.
-   * Maps long(rev - START_REVISION) to const char* pack file name */
+   * Maps long(rev - MANIFEST_START) to const char* pack file name */
   apr_array_header_t *manifest;
 } packed_revprops_t;
 
@@ -3710,7 +3719,10 @@ get_revprop_packname(svn_fs_t *fs,
   /* parse the manifest. Every line is a file name */
   revprops->manifest = apr_array_make(pool, ffd->max_files_per_dir,
                                       sizeof(const char*));
-  while (content->data)
+
+  /* Read all lines.  Since the last line ends with a newline, we will
+     end up with a valid but empty string after the last entry. */
+  while (content->data && *content->data)
     {
       APR_ARRAY_PUSH(revprops->manifest, const char*) = content->data;
       content->data = strchr(content->data, '\n');
@@ -3720,11 +3732,14 @@ get_revprop_packname(svn_fs_t *fs,
           content->data++;
         }
     }
+  content = NULL; /* No longer a valid stringbuf. */
 
   /* Index for our revision. Rev 0 is excluded from the first shard. */
-  idx = (int)(revprops->revision % ffd->max_files_per_dir);
-  if (revprops->revision < ffd->max_files_per_dir)
-    --idx;
+  revprops->manifest_start = revprops->revision
+                           - (revprops->revision % ffd->max_files_per_dir);
+  if (revprops->manifest_start == 0)
+    ++revprops->manifest_start;
+  idx = (int)(revprops->revision - revprops->manifest_start);
 
   if (revprops->manifest->nelts <= idx)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -3759,10 +3774,9 @@ parse_packed_revprops(svn_fs_t *fs,
 
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
-  svn_string_t *compressed
-      = svn_stringbuf__morph_into_string(revprops->packed_revprops);
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
-  SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
+  SVN_ERR(svn__decompress(revprops->packed_revprops, uncompressed,
+                          APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
@@ -3973,9 +3987,9 @@ get_revision_proplist(apr_hash_t **proplist_p,
    * likely invalid (or its revprops highly contested). */
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
     {
-      packed_revprops_t *packed_revprops;
-      SVN_ERR(read_pack_revprop(&packed_revprops, fs, rev, generation, pool));
-      *proplist_p = packed_revprops->properties;
+      packed_revprops_t *revprops;
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, pool));
+      *proplist_p = revprops->properties;
     }
 
   /* The revprops should have been there. Did we get them? */
@@ -4159,7 +4173,7 @@ repack_revprops(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* compress / store the data */
-  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
+  SVN_ERR(svn__compress(uncompressed,
                         compressed,
                         ffd->compress_packed_revprops
                           ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
@@ -4191,10 +4205,13 @@ repack_stream_open(svn_stream_t **stream,
   svn_string_t *new_filename;
   int i;
   apr_file_t *file;
+  int manifest_offset
+    = (int)(revprops->start_revision - revprops->manifest_start);
 
   /* get the old (= current) file name and enlist it for later deletion */
-  const char *old_filename
-    = APR_ARRAY_IDX(revprops->manifest, start, const char*);
+  const char *old_filename = APR_ARRAY_IDX(revprops->manifest,
+                                           start + manifest_offset,
+                                           const char*);
 
   if (*files_to_delete == NULL)
     *files_to_delete = apr_array_make(pool, 3, sizeof(const char*));
@@ -4216,7 +4233,8 @@ repack_stream_open(svn_stream_t **stream,
 
   /* update the manifest to point to the new file */
   for (i = start; i < end; ++i)
-    APR_ARRAY_IDX(revprops->manifest, i, const char*) = new_filename->data;
+    APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, const char*)
+      = new_filename->data;
 
   /* create a file stream for the new file */
   SVN_ERR(svn_io_file_open(&file, svn_dirent_join(revprops->folder,
@@ -4656,14 +4674,19 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   const char *name;
   const char *last_part;
   const char *name_last;
+  svn_error_t *err;
 
   /* the rev file name containing the txdelta window.
    * If this fails we are in serious trouble anyways.
    * And if nobody else detects the problems, the file content checksum
    * comparison _will_ find them.
    */
-  if (apr_file_name_get(&name, rs->file))
-    return NULL;
+  err = svn_io_file_name_get(&name, rs->file, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
 
   /* Handle packed files as well by scanning backwards until we find the
    * revision or pack number. */
@@ -6634,16 +6657,16 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   SVN_ERR(create_new_txn_noderev_from_rev(fs, txn->id, root_id, pool));
 
   /* Create an empty rev file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_proto_rev(fs, txn->id, pool),
+                                   pool));
 
   /* Create an empty rev-lock file. */
-  SVN_ERR(svn_io_file_create(path_txn_proto_rev_lock(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_proto_rev_lock(fs, txn->id, pool),
+                                   pool));
 
   /* Create an empty changes file. */
-  SVN_ERR(svn_io_file_create(path_txn_changes(fs, txn->id, pool), "",
-                             pool));
+  SVN_ERR(svn_io_file_create_empty(path_txn_changes(fs, txn->id, pool),
+                                   pool));
 
   /* Create the next-ids file. */
   return svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
@@ -8493,6 +8516,7 @@ struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
+  svn_boolean_t set_timestamp;
   apr_array_header_t *reps_to_cache;
   apr_hash_t *reps_hash;
   apr_pool_t *reps_pool;
@@ -8518,7 +8542,6 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_hash_t *txnprops;
   apr_array_header_t *txnprop_list;
   svn_prop_t prop;
-  svn_string_t date;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -8639,12 +8662,18 @@ commit_body(void *baton, apr_pool_t *pool)
      remove the transaction directory later. */
   SVN_ERR(unlock_proto_rev(cb->fs, cb->txn->id, proto_file_lockcookie, pool));
 
-  /* Update commit time to ensure that svn:date revprops remain ordered. */
-  date.data = svn_time_to_cstring(apr_time_now(), pool);
-  date.len = strlen(date.data);
+  /* Update commit time to ensure that svn:date revprops remain ordered if
+     requested. */
+  if (cb->set_timestamp)
+    {
+      svn_string_t date;
 
-  SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
-                                     &date, pool));
+      date.data = svn_time_to_cstring(apr_time_now(), pool);
+      date.len = strlen(date.data);
+
+      SVN_ERR(svn_fs_fs__change_txn_prop(cb->txn, SVN_PROP_REVISION_DATE,
+                                         &date, pool));
+    }
 
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! is_packed_revprop(cb->fs, new_rev));
@@ -8698,6 +8727,7 @@ svn_error_t *
 svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                   svn_fs_t *fs,
                   svn_fs_txn_t *txn,
+                  svn_boolean_t set_timestamp,
                   apr_pool_t *pool)
 {
   struct commit_baton cb;
@@ -8706,6 +8736,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
+  cb.set_timestamp = set_timestamp;
 
   if (ffd->rep_sharing_allowed)
     {
@@ -8860,7 +8891,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                              (format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT
                               ? "0\n" : "0 1 1\n"),
                              pool));
-  SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create_empty(path_lock(fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, NULL, pool));
 
   SVN_ERR(write_revision_zero(fs));
@@ -8877,10 +8908,8 @@ svn_fs_fs__create(svn_fs_t *fs,
      the transaction sequence file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
-      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool),
-                                 "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create(path_txn_current(fs, pool), "0\n", pool));
+      SVN_ERR(svn_io_file_create_empty(path_txn_current_lock(fs, pool), pool));
     }
 
   /* This filesystem is ready.  Stamp it with a format number. */
@@ -10035,8 +10064,7 @@ copy_revprops(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* compress the content (or just store it for COMPRESSION_LEVEL 0) */
-  SVN_ERR(svn__compress(svn_stringbuf__morph_into_string(uncompressed),
-                        compressed, compression_level));
+  SVN_ERR(svn__compress(uncompressed, compressed, compression_level));
 
   /* write the pack file content to disk */
   stream = svn_stream_from_aprfile2(pack_file, FALSE, scratch_pool);
@@ -10935,6 +10963,55 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
 }
 
 
+/* Remove revision or revprop files between START_REV (inclusive) and
+ * END_REV (non-inclusive) from folder DST_SUBDIR in DST_FS.  Assume
+ * sharding as per MAX_FILES_PER_DIR.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+hotcopy_remove_files(svn_fs_t *dst_fs,
+                     const char *dst_subdir,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     int max_files_per_dir,
+                     apr_pool_t *scratch_pool)
+{
+  const char *shard;
+  const char *dst_subdir_shard;
+  svn_revnum_t rev;
+  apr_pool_t *iterpool;
+
+  /* Pre-compute paths for initial shard. */
+  shard = apr_psprintf(scratch_pool, "%ld", start_rev / max_files_per_dir);
+  dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (rev = start_rev; rev < end_rev; rev++)
+    {
+      const char *path;
+      svn_pool_clear(iterpool);
+
+      /* If necessary, update paths for shard. */
+      if (rev != start_rev && rev % max_files_per_dir == 0)
+        {
+          shard = apr_psprintf(iterpool, "%ld", rev / max_files_per_dir);
+          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
+        }
+
+      /* remove files for REV */
+      path = svn_dirent_join(dst_subdir_shard,
+                             apr_psprintf(iterpool, "%ld", rev),
+                             iterpool);
+
+      /* Make the rev file writable and remove it. */
+      SVN_ERR(svn_io_set_file_read_write(path, TRUE, iterpool));
+      SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Remove revisions between START_REV (inclusive) and END_REV (non-inclusive)
  * from DST_FS. Assume sharding as per MAX_FILES_PER_DIR.
  * Use SCRATCH_POOL for temporary allocations. */
@@ -10945,43 +11022,37 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
                          int max_files_per_dir,
                          apr_pool_t *scratch_pool)
 {
-  const char *dst_subdir;
-  const char *shard;
-  const char *dst_subdir_shard;
-  svn_revnum_t rev;
-  apr_pool_t *iterpool;
+  SVN_ERR_ASSERT(start_rev <= end_rev);
+  SVN_ERR(hotcopy_remove_files(dst_fs,
+                               svn_dirent_join(dst_fs->path,
+                                               PATH_REVS_DIR,
+                                               scratch_pool),
+                               start_rev, end_rev,
+                               max_files_per_dir, scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Remove revision properties between START_REV (inclusive) and END_REV
+ * (non-inclusive) from DST_FS. Assume sharding as per MAX_FILES_PER_DIR.
+ * Use SCRATCH_POOL for temporary allocations.  Revision 0 revprops will
+ * not be deleted. */
+static svn_error_t *
+hotcopy_remove_revprop_files(svn_fs_t *dst_fs,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             int max_files_per_dir,
+                             apr_pool_t *scratch_pool)
+{
   SVN_ERR_ASSERT(start_rev <= end_rev);
 
-  dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
-
-  /* Pre-compute paths for initial shard. */
-  shard = apr_psprintf(scratch_pool, "%ld", start_rev / max_files_per_dir);
-  dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (rev = start_rev; rev < end_rev; rev++)
-    {
-      const char *rev_path;
-
-      svn_pool_clear(iterpool);
-
-      /* If necessary, update paths for shard. */
-      if (rev != start_rev && rev % max_files_per_dir == 0)
-        {
-          shard = apr_psprintf(iterpool, "%ld", rev / max_files_per_dir);
-          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
-        }
-
-      rev_path = svn_dirent_join(dst_subdir_shard,
-                                 apr_psprintf(iterpool, "%ld", rev),
-                                 iterpool);
-
-      /* Make the rev file writable and remove it. */
-      SVN_ERR(svn_io_set_file_read_write(rev_path, TRUE, iterpool));
-      SVN_ERR(svn_io_remove_file2(rev_path, TRUE, iterpool));
-    }
-  svn_pool_destroy(iterpool);
+  /* don't delete rev 0 props */
+  SVN_ERR(hotcopy_remove_files(dst_fs,
+                               svn_dirent_join(dst_fs->path,
+                                               PATH_REVPROPS_DIR,
+                                               scratch_pool),
+                               start_rev ? start_rev : 1, end_rev,
+                               max_files_per_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -11022,6 +11093,27 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
   return SVN_NO_ERROR;
 }
 
+/* Remove folder PATH.  Ignore errors due to the sub-tree not being empty.
+ * CANCEL_FUNC and CANCEL_BATON do the usual thing.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+remove_folder(const char *path,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_remove_dir2(path, TRUE,
+                                        cancel_func, cancel_baton, pool);
+
+  if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(err);
+}
 
 /* Baton for hotcopy_body(). */
 struct hotcopy_body_baton {
@@ -11212,8 +11304,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* First, copy packed shards. */
   for (rev = 0; rev < src_min_unpacked_rev; rev += max_files_per_dir)
     {
-      svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       if (cancel_func)
@@ -11233,20 +11323,22 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
       /* Remove revision files which are now packed. */
       if (incremental)
-        SVN_ERR(hotcopy_remove_rev_files(dst_fs, rev, rev + max_files_per_dir,
-                                         max_files_per_dir, iterpool));
+        {
+          SVN_ERR(hotcopy_remove_rev_files(dst_fs, rev,
+                                           rev + max_files_per_dir,
+                                           max_files_per_dir, iterpool));
+          SVN_ERR(hotcopy_remove_revprop_files(dst_fs, rev,
+                                               rev + max_files_per_dir,
+                                               max_files_per_dir, iterpool));
+        }
 
       /* Now that all revisions have moved into the pack, the original
        * rev dir can be removed. */
-      err = svn_io_remove_dir2(path_rev_shard(dst_fs, rev, iterpool),
-                               TRUE, cancel_func, cancel_baton, iterpool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOTEMPTY(err->apr_err))
-            svn_error_clear(err);
-          else
-            return svn_error_trace(err);
-        }
+      SVN_ERR(remove_folder(path_rev_shard(dst_fs, rev, iterpool),
+                            cancel_func, cancel_baton, iterpool));
+      if (rev > 0)
+        SVN_ERR(remove_folder(path_revprops_shard(dst_fs, rev, iterpool),
+                              cancel_func, cancel_baton, iterpool));
     }
 
   if (cancel_func)
@@ -11476,7 +11568,7 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
                              pool));
 
   /* Create lock file and UUID. */
-  SVN_ERR(svn_io_file_create(path_lock(dst_fs, pool), "", pool));
+  SVN_ERR(svn_io_file_create_empty(path_lock(dst_fs, pool), pool));
   SVN_ERR(svn_fs_fs__set_uuid(dst_fs, src_fs->uuid, pool));
 
   /* Create the min unpacked rev file. */
@@ -11489,8 +11581,8 @@ hotcopy_create_empty_dest(svn_fs_t *src_fs,
     {
       SVN_ERR(svn_io_file_create(path_txn_current(dst_fs, pool),
                                  "0\n", pool));
-      SVN_ERR(svn_io_file_create(path_txn_current_lock(dst_fs, pool),
-                                 "", pool));
+      SVN_ERR(svn_io_file_create_empty(path_txn_current_lock(dst_fs, pool),
+                                       pool));
     }
 
   dst_ffd->youngest_rev_cache = 0;

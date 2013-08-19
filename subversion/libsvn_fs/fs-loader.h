@@ -171,6 +171,9 @@ svn_error_t *svn_fs_base__init(const svn_version_t *loader_version,
 svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
                              fs_library_vtable_t **vtable,
                              apr_pool_t* common_pool);
+svn_error_t *svn_fs_x__init(const svn_version_t *loader_version,
+                            fs_library_vtable_t **vtable,
+                            apr_pool_t* common_pool);
 
 
 
@@ -248,7 +251,8 @@ typedef struct fs_vtable_t
 typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
-                         svn_fs_txn_t *txn, apr_pool_t *pool);
+                         svn_fs_txn_t *txn, svn_boolean_t set_timestamp,
+                         apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);

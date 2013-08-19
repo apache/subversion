@@ -167,7 +167,6 @@ if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
 fi
 
 SVN_CHECK_FOR_ATOMIC_BUILTINS
-
 if test "$svn_cv_atomic_builtins" = "yes"; then
     AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi
@@ -628,6 +627,28 @@ fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl Googlemock -----------------
+AC_ARG_ENABLE([gmock],
+  AS_HELP_STRING([--disable-gmock],
+                 [Do not use the Googlemock testing framework]),
+  [],
+  [enable_gmock=yes])
+
+AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_MSG_CHECKING([whether use Googlemock])
+if test "$enable_gmock" != "no"; then
+  if test -d "$GMOCK_SRCDIR"; then
+    AC_MSG_RESULT([yes])
+    SVN_USE_GMOCK=true
+  else
+    AC_MSG_RESULT([no])
+    SVN_USE_GMOCK=false
+  fi
+else
+  AC_MSG_RESULT([no])
+  SVN_USE_GMOCK_SOURCES=false
+fi
+AC_SUBST([SVN_USE_GMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -710,6 +731,26 @@ AH_BOTTOM([
 #define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
+#endif
+
+/* compiler hints */
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
+# define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+# define SVN__PREDICT_FALSE(x) (x)
+# define SVN__PREDICT_TRUE(x) (x)
+#endif
+
+#if defined(SVN_DEBUG)
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#elif defined(__GNUC__)
+# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__PREVENT_INLINE __attribute__ ((noinline))
+#else
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
 #endif
 ])
 
@@ -1003,6 +1044,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
 
         CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
         CFLAGS="$CFLAGS_KEEP"
@@ -1347,6 +1389,13 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   svn_fs_lib_install_deps="install-fsmod-lib"
   svn_fs_lib_link="\$(FS_FS_LINK)"
 
+  AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_X, 1,
+      [Defined if libsvn_fs should link against libsvn_fs_x])
+  svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_X_DEPS)"
+  svn_fs_lib_link="$svn_fs_lib_link \$(FS_X_LINK)"
+dnl  FSFS already installs fsmod
+dnl  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsmod-lib"
+
   if test "$svn_lib_berkeley_db" = "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
       [Defined if libsvn_fs should link against libsvn_fs_base])
@@ -1517,9 +1566,9 @@ if test "$svn_have_berkeley_db" = "no6" && test "$enable_bdb6" != "no"; then
 
 
 Berkeley DB 6 was found, but not used.  Please re-run configure (see
-./config.nice) with the '--enable-banging-head-against-wall' flag to use it,
-or explicitly specify '--disable-banging-head-against-wall' or 
-'--without-berkeley-db' to silence this warning.
+./config.nice) with the '--enable-bdb6' flag to use it,
+or explicitly specify '--disable-bdb6' or '--without-berkeley-db'
+to silence this warning.
 
 Please note that some versions of Berkeley DB 6+ are under the GNU Affero
 General Public License, version 3:

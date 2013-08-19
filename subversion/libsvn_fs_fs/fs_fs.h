@@ -360,11 +360,13 @@ svn_error_t *svn_fs_fs__set_proplist(svn_fs_t *fs,
 
 /* Commit the transaction TXN in filesystem FS and return its new
    revision number in *REV.  If the transaction is out of date, return
-   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
-   allocations. */
+   the error SVN_ERR_FS_TXN_OUT_OF_DATE. Update commit time to ensure that
+   svn:date revprops remain ordered if SET_TIMESTAMP is non-zero. Use POOL for
+   temporary allocations. */
 svn_error_t *svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                                svn_fs_t *fs,
                                svn_fs_txn_t *txn,
+                               svn_boolean_t set_timestamp,
                                apr_pool_t *pool);
 
 /* Return the next available copy_id in *COPY_ID for the transaction

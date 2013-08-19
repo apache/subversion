@@ -28,6 +28,8 @@
 /*** Includes. ***/
 
 #include <string.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -43,7 +45,6 @@
 #include "client.h"
 #include "mergeinfo.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"

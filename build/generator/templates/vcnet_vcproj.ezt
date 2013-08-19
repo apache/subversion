@@ -45,7 +45,7 @@
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="TRUE"
-[end]				AdditionalIncludeDirectories="..\..\..\[configs.name];[for includes][includes][if-index includes last][else];[end][end]"
+[end]				AdditionalIncludeDirectories="..\..\..\[configs.name];[for configs.includes][configs.includes][if-index configs.includes last][else];[end][end]"
 				PreprocessorDefinitions="[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines][if-index configs.defines last][else];[end][end];_CRT_SECURE_NO_WARNINGS"
 [is configs.name "Debug"]				MinimalRebuild="TRUE"
 				RuntimeLibrary="3"
@@ -62,7 +62,8 @@
 				/we4002 /we4003 /we4013 /we4020 /we4022 /we4024 /we4028 /we4029 /we4030 /we4031 /we4033 /we4047 /we4089 /we4113 /we4115 /we4204 /we4715"
 				DebugInformationFormat="3"
 				ProgramDataBaseFileName="$(IntDir)\[target.output_pdb]"
-				CompileAsManaged="0"
+				[if-any configs.forced_include_files]ForcedIncludeFiles="[for configs.forced_include_files][configs.forced_include_files][if-index configs.forced_include_files last][else];[end][end]"
+				[end]CompileAsManaged="0"
 				CompileAs="0"[if-any is_exe][is configs.name "Release"]
 				OptimizeForWindowsApplication="TRUE"[end][end]/>
 			<Tool
@@ -114,7 +115,7 @@
 				Name="[configs.name]|[platforms]">
 				<Tool
 					Name="VCResourceCompilerTool"
-					AdditionalIncludeDirectories="[for includes][includes][if-index includes last][else];[end][end]"
+					AdditionalIncludeDirectories="[for configs.includes][configs.includes][if-index configs.includes last][else];[end][end]"
 					PreprocessorDefinitions="SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end]"/>
 			</FileConfiguration>[end][end]
 		</File>[end]
