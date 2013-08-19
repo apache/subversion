@@ -209,7 +209,7 @@ Candidate changes:
      Generic 'Server SSL certificate untrusted' error message is not
      informative. Regression from Subversion 1.7.x
    Votes:
-     +1: danielsh
+     +1: danielsh, breser
      +1 (r1514785 only): ivan, stefan2
 
  * r1514804
