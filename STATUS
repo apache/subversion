@@ -253,7 +253,7 @@ Candidate changes:
      Causes svnsync to fail due to excessive memory usage.
    Notes:
      Fixed directly on 1.8.x since the switch to transition based parser solved
-     this there.  See r1515249 on branch for the specific change.
+     this there.  See r1515249 and r1515269 on branch for the specific changes.
    Votes:
      +1: breser
 
