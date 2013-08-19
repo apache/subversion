@@ -95,6 +95,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_BULK_UPDATES         "http-bulk-updates"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS      "http-max-connections"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_BUSTED_PROXY              "busted-proxy"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"

@@ -24,6 +24,50 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Bindings:
 
 
+Version 1.8.1
+(?? July 2013, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.1
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * rename 'automatic merge' to 'complete merge' (r1491432)
+    * resolve endless loop problem when files contain inproper data (r1492145)
+    * remove revision property buffer limit in fsfs (r1491770)
+    * reduce network usage for 'svn mergeinfo --show-revs' (r1492005)
+    * resolve segfault in fsfs-stats when passing invalid path (r1492164)
+    * fix 'svnadmin upgrade' error of non-shared fsfs repositories (r1494287)
+    * fix data loss when cancelling 'svnadmin upgrade' in last stage (r1494298)
+    * deny 'svnadmin create --fs-type=fsfs --compatible-version=1.0' (r1494223)
+    * improve http status handling in ra_serf (r1495104)
+    * avoid unneeded ra session in 'svn merge' (r1495279)
+    * reduce network usage for 'svn merge' (r1478987)
+    * remove duplicated ancestry check in 'svn merge' (r1493424)
+    * fix the standard 'Accept-Encoding' header (r1497641)
+
+  - Server-side bugfixes:
+    * provide better http status for anonymous user errors (r1495918)
+    * provide better http status for commit failures (r1490684)
+    * fix performance regression in 'svn log' against root (r1494913)
+    * allow deleting non-default 'svn:' properties (r1495432)
+
+ Developer-visible changes
+  - General:
+    * fix some ra_serf specific test runner issues on Windows (r1490679)
+    * fix help output of 'svn-bench' (r1493951)
+    * fix two issues in reverse svn_ra_get_file_revs() (r1492148, et al)
+    * handle --compatible-version=1.8 in the C tests (r1494342)
+    * improve clang compatibility (r1480080 et all)
+    * add version header to svnpubsub server (r1491707)
+    * use proper cancel baton when handling conflicts (r1495850)
+    * tweak configure.ac documentation (r1495967)
+    * provide proper error value from BDB (r1495428)
+    * tweak ra_serf connection failed error value (r1496132, et al)
+    * resolve possible segfault in 'svn log' (r1496110)
+
+  - Bindings:
+    * fix swig-rb tests with out-of-tree-builds (r1492295)
+
+
 Version 1.8.0
 (18 Jun 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.0
@@ -125,7 +169,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * support ipv6 in URLs (e.g. http://[::1]/svn/repos) (r1454047)
     * conflict resolver now iterates paths in a sorted order (r1461820)
     * mod_dav_svn does keyword expansion with 'kw=1' query arg (r1466055)
-    * add support for custom keyword definitions (issue #890)
 
   - Minor new features and improvements (server-side):
     * improve performance of config file parsing (r1344347 et al)

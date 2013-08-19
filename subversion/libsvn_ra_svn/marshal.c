@@ -1025,7 +1025,6 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   char c = first_char;
   apr_uint64_t val;
-  svn_stringbuf_t *str;
   svn_ra_svn_item_t *listitem;
 
   if (++level >= ITEM_NESTING_LIMIT)
@@ -2421,5 +2420,163 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
   SVN_ERR(write_tuple_boolean(conn, pool, invalid_revnum));
   SVN_ERR(svn_ra_svn__write_number(conn, pool, revprop_count));
   
+  return SVN_NO_ERROR;
+}
+
+/* If condition COND is not met, return a "malformed network data" error.
+ */
+#define CHECK_PROTOCOL_COND(cond)\
+  if (!(cond)) \
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL, \
+                            _("Malformed network data"));
+
+/* In *RESULT, return the SVN-style string at index IDX in tuple ITEMS.
+ */
+static svn_error_t *
+svn_ra_svn__read_string(const apr_array_header_t *items,
+                        int idx,
+                        svn_string_t **result)
+{
+  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
+  *result = elt->u.string;
+    
+  return SVN_NO_ERROR;
+}
+
+/* In *RESULT, return the C-style string at index IDX in tuple ITEMS.
+ */
+static svn_error_t *
+svn_ra_svn__read_cstring(const apr_array_header_t *items,
+                         int idx,
+                         const char **result)
+{
+  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_STRING);
+  *result = elt->u.string->data;
+    
+  return SVN_NO_ERROR;
+}
+
+/* In *RESULT, return the word at index IDX in tuple ITEMS.
+ */
+static svn_error_t *
+svn_ra_svn__read_word(const apr_array_header_t *items,
+                      int idx,
+                      const char **result)
+{
+  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
+  *result = elt->u.word;
+   
+  return SVN_NO_ERROR;
+}
+
+/* In *RESULT, return the revision at index IDX in tuple ITEMS.
+ */
+static svn_error_t *
+svn_ra_svn__read_revision(const apr_array_header_t *items,
+                          int idx,
+                          svn_revnum_t *result)
+{
+  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_NUMBER);
+  *result = (svn_revnum_t)elt->u.number;
+    
+  return SVN_NO_ERROR;
+}
+
+/* In *RESULT, return the boolean at index IDX in tuple ITEMS.
+ */
+static svn_error_t *
+svn_ra_svn__read_boolean(const apr_array_header_t *items,
+                         int idx,
+                         apr_uint64_t *result)
+{
+  svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
+  if (elt->u.word[0] == 't' && strcmp(elt->u.word, "true") == 0)
+    *result = TRUE;
+  else if (strcmp(elt->u.word, "false") == 0)
+    *result = FALSE;
+  else
+    CHECK_PROTOCOL_COND(FALSE);
+    
+  return SVN_NO_ERROR;
+}
+
+/* In *RESULT, return the tuple at index IDX in tuple ITEMS.
+ */
+static svn_error_t *
+svn_ra_svn__read_list(const apr_array_header_t *items,
+                      int idx,
+                      const apr_array_header_t **result)
+{
+  svn_ra_svn_item_t *elt  = &APR_ARRAY_IDX(items, idx, svn_ra_svn_item_t);
+  CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_LIST);
+
+  *result = elt->u.list;
+  return SVN_NO_ERROR;
+}
+
+/* Verify the tuple ITEMS contains at least MIN and at most MAX elements.
+ */
+static svn_error_t *
+svn_ra_svn__read_check_array_size(const apr_array_header_t *items,
+                                  int min,
+                                  int max)
+{
+  CHECK_PROTOCOL_COND(items->nelts >= min && items->nelts <= max);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
+                                        svn_string_t **cpath,
+                                        const char **action,
+                                        const char **copy_path,
+                                        svn_revnum_t *copy_rev,
+                                        const char **kind_str,
+                                        apr_uint64_t *text_mods,
+                                        apr_uint64_t *prop_mods)
+{
+  const apr_array_header_t *sub_items;
+
+  /* initialize optional values */
+  *copy_path = NULL;
+  *copy_rev = SVN_INVALID_REVNUM;
+  *kind_str = NULL;
+  *text_mods = SVN_RA_SVN_UNSPECIFIED_NUMBER;
+  *prop_mods = SVN_RA_SVN_UNSPECIFIED_NUMBER;
+
+  /* top-level elements (mandatory) */
+  SVN_ERR(svn_ra_svn__read_check_array_size(items, 3, 4));
+  SVN_ERR(svn_ra_svn__read_string(items, 0, cpath));
+  SVN_ERR(svn_ra_svn__read_word(items, 1, action));
+
+  /* first sub-structure (mandatory) */
+  SVN_ERR(svn_ra_svn__read_list(items, 2, &sub_items));
+  if (sub_items->nelts)
+    {
+      SVN_ERR(svn_ra_svn__read_check_array_size(sub_items, 2, 2));
+      SVN_ERR(svn_ra_svn__read_cstring(sub_items, 0, copy_path));
+      SVN_ERR(svn_ra_svn__read_revision(sub_items, 1, copy_rev));
+    }
+
+  /* second sub-structure (optional) */
+  if (items->nelts == 4)
+    {
+      SVN_ERR(svn_ra_svn__read_list(items, 3, &sub_items));
+      SVN_ERR(svn_ra_svn__read_check_array_size(sub_items, 0, 3));
+
+      switch (sub_items->nelts)
+        {
+          case 3 : SVN_ERR(svn_ra_svn__read_boolean(sub_items, 2, prop_mods));
+          case 2 : SVN_ERR(svn_ra_svn__read_boolean(sub_items, 1, text_mods));
+          case 1 : SVN_ERR(svn_ra_svn__read_cstring(sub_items, 0, kind_str));
+          default: break;
+        }
+    }
+
   return SVN_NO_ERROR;
 }

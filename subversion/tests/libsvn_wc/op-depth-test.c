@@ -1109,6 +1109,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
   SVN_ERR(svn_wc__db_base_remove(b->wc_ctx->db, dir_abspath,
                                  FALSE /* keep_as_Working */,
                                  FALSE /* queue_deletes */,
+                                 FALSE /* remove_locks */,
                                  SVN_INVALID_REVNUM,
                                  NULL, NULL, b->pool));
   SVN_ERR(svn_wc__wq_run(b->wc_ctx->db, dir_abspath,
@@ -1892,7 +1893,7 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
     {
       const char *local_relpath = svn_sqlite__column_text(stmt, 0, b->pool);
       if (!apr_hash_get(path_hash, local_relpath, APR_HASH_KEY_STRING))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__close(sdb),
+        return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__reset(stmt),
                                  "actual '%s' unexpected", local_relpath);
       apr_hash_set(path_hash, local_relpath, APR_HASH_KEY_STRING, NULL);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -1902,7 +1903,7 @@ check_db_actual(svn_test__sandbox_t* b, actual_row_t *rows)
     {
       const char *local_relpath
         = svn__apr_hash_index_key(apr_hash_first(b->pool, path_hash));
-      return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__close(sdb),
+      return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__reset(stmt),
                                "actual '%s' expected", local_relpath);
     }
 
@@ -8148,6 +8149,63 @@ update_with_tree_conflict(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_update_parent_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_update_parent_replace", opts,
+                                   pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_delete(&b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  SVN_ERR(sbox_wc_move(&b, "A/B/C", "A/C"));
+
+  /* Update breaks the move and leaves a conflict. */
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       2, ""},
+      {0, "A",   "normal",       2, "A"},
+      {0, "A/B", "normal",       2, "A/B"},
+      {2, "A/C", "normal",       1, "A/B/C"},
+      {0}
+    };
+    actual_row_t actual[] = {
+      {"A/B", NULL},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_actual(&b, actual));
+  }
+
+  SVN_ERR(sbox_wc_resolve(&b, "A/B", svn_depth_infinity,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal",       2, ""},
+      {0, "A",   "normal",       2, "A"},
+      {0, "A/B", "normal",       2, "A/B"},
+      {2, "A/C", "normal",       1, "A/B/C"},
+      {0}
+    };
+    actual_row_t actual[] = {
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+    SVN_ERR(check_db_actual(&b, actual));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -8301,5 +8359,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move/delete file externals (issue 4293)"),
     SVN_TEST_OPTS_PASS(update_with_tree_conflict,
                        "update with tree conflict (issue 4347)"),
+    SVN_TEST_OPTS_PASS(move_update_parent_replace,
+                       "move update with replaced parent (issue 4388)"),
     SVN_TEST_NULL
   };

@@ -42,9 +42,9 @@ class RevpropTable
   std::map<std::string, std::string> m_revprops;
   jobject m_revpropTable;
  public:
-  RevpropTable(jobject jrevpropTable);
+  RevpropTable(jobject jrevpropTable, bool bytearray_values=false);
   ~RevpropTable();
-  const apr_hash_t *hash(const SVN::Pool &pool);
+  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
 };
 
 #endif // REVPROPTABLE_H

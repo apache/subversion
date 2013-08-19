@@ -255,6 +255,11 @@ SVN_ERROR_START
              SVN_ERR_XML_CATEGORY_START + 4,
              "Data cannot be safely XML-escaped")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_XML_UNEXPECTED_ELEMENT,
+             SVN_ERR_XML_CATEGORY_START + 5,
+             "Unexpected XML element found")
+
   /* io errors */
 
   SVN_ERRDEF(SVN_ERR_IO_INCONSISTENT_EOL,
@@ -849,6 +854,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
+             SVN_ERR_REPOS_CATEGORY_START + 11,
+             "Repository is corrupt")
 
   /* generic RA errors */
 

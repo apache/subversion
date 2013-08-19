@@ -561,7 +561,8 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
-                      ssl_cert=None, ssl_url=None, http_proxy=None):
+                      ssl_cert=None, ssl_url=None, http_proxy=None,
+                      exclusive_wc_locks=None):
   "Create config directories and files"
 
   # config file names
@@ -582,25 +583,41 @@ password-stores =
 [miscellany]
 interactive-conflicts = false
 """
-
+    if exclusive_wc_locks:
+      config_contents += """
+[working-copy]
+exclusive-locking = true
+"""
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
     if options.http_library:
       http_library_str = "http-library=%s" % (options.http_library)
     http_proxy_str = ""
+    http_proxy_username_str = ""
+    http_proxy_password_str = ""
     if options.http_proxy:
       http_proxy_parsed = urlparse("//" + options.http_proxy)
       http_proxy_str = "http-proxy-host=%s\n" % (http_proxy_parsed.hostname) + \
                        "http-proxy-port=%d" % (http_proxy_parsed.port or 80)
+    if options.http_proxy_username:
+      http_proxy_username_str = "http-proxy-username=%s" % \
+                                     (options.http_proxy_username)
+    if options.http_proxy_password:
+      http_proxy_password_str = "http-proxy-password=%s" % \
+                                     (options.http_proxy_password)
+
     server_contents = """
 #
 [global]
 %s
 %s
+%s
+%s
 store-plaintext-passwords=yes
 store-passwords=yes
-""" % (http_library_str, http_proxy_str)
+""" % (http_library_str, http_proxy_str, http_proxy_username_str,
+       http_proxy_password_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -1356,6 +1373,9 @@ def server_enforces_date_syntax():
 def server_has_atomic_revprop():
   return options.server_minor_version >= 7
 
+def server_has_reverse_get_file_revs():
+  return options.server_minor_version >= 8
+
 def is_plaintext_password_storage_disabled():
   try:
     predicate = re.compile("^WARNING: Plaintext password storage is enabled!")
@@ -1424,6 +1444,12 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
+    if options.http_proxy-username:
+      args.append('--http-proxy-username=' + options.http_proxy_username)
+    if options.http_proxy-password:
+      args.append('--http-proxy-password=' + options.http_proxy_password)
+    if options.exclusive_wc_locks:
+      args.append('--exclusive-wc-locks')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1769,8 +1795,14 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--http-proxy-username', action='store',
+                    help='Username for the HTTP Proxy.')
+  parser.add_option('--http-proxy-password', action='store',
+                    help='Password for the HTTP Proxy.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
+  parser.add_option('--exclusive-wc-locks', action='store_true',
+                    help='Use sqlite exclusive locking for working copies')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2092,7 +2124,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     create_config_dir(default_config_dir,
                       ssl_cert=options.ssl_cert,
                       ssl_url=options.test_area_url,
-                      http_proxy=options.http_proxy)
+                      http_proxy=options.http_proxy,
+                      exclusive_wc_locks=options.exclusive_wc_locks)
 
     # Setup the pristine repository
     svntest.actions.setup_pristine_greek_repository()

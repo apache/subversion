@@ -47,8 +47,8 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-enum {
-  INITIAL = 0,
+enum getlocks_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   LOCK,
   PATH,
@@ -246,10 +246,10 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_ctx->hash = apr_hash_make(pool);
 
   xmlctx = svn_ra_serf__xml_context_create(getlocks_ttable,
-                                           NULL, getlocks_closed, NULL,
+                                           NULL, getlocks_closed, NULL, NULL,
                                            lock_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -266,7 +266,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
      have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
   if (handler->sline.code != 404)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(handler->sline.code,
+      SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
                                            handler->path,
                                            handler->location));
     }

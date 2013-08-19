@@ -2808,13 +2808,13 @@ svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
            && APR_PROC_CHECK_CORE_DUMP(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       _("Process '%s' failed (exitwhy %d, signal %d, core dumped)"),
-       cmd, exitwhy_val, exitcode_val);
+       _("Process '%s' failed (signal %d, core dumped)"),
+       cmd, exitcode_val);
   else if (APR_PROC_CHECK_SIGNALED(exitwhy_val))
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       _("Process '%s' failed (exitwhy %d, signal %d)"),
-       cmd, exitwhy_val, exitcode_val);
+       _("Process '%s' failed (signal %d)"),
+       cmd, exitcode_val);
   else if (! APR_PROC_CHECK_EXIT(exitwhy_val))
     /* Don't really know what happened here. */
     return svn_error_createf
@@ -3613,6 +3613,9 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
       apr_size_t to_read = buf_size < 129 ? buf_size - 1 : 128;
       apr_size_t bytes_read = 0;
       char *eol;
+
+      if (to_read == 0)
+        break;
 
       /* read data block (or just a part of it) */
       SVN_ERR(svn_io_file_read_full2(file, buf, to_read,

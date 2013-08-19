@@ -34,8 +34,8 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 from svntest import wc, actions, verify, deeptrees
-from merge_tests import expected_merge_output
-from merge_tests import set_up_branch
+from svntest.mergetrees import expected_merge_output
+from svntest.mergetrees import set_up_branch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco

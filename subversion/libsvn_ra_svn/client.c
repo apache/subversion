@@ -978,6 +978,28 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   const svn_string_t *log_msg = svn_hash_gets(revprop_table,
                                               SVN_PROP_REVISION_LOG);
 
+  if (log_msg == NULL &&
+      ! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_COMMIT_REVPROPS))
+    {
+      return svn_error_createf(SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+                               _("ra_svn does not support not specifying "
+                                 "a log message with pre-1.5 servers; "
+                                 "consider passing an empty one, or upgrading "
+                                 "the server"));
+    } 
+  else if (log_msg == NULL)
+    /* 1.5+ server.  Set LOG_MSG to something, since the 'logmsg' argument
+       to the 'commit' protocol command is non-optional; on the server side,
+       only REVPROP_TABLE will be used, and LOG_MSG will be ignored.  The 
+       "svn:log" member of REVPROP_TABLE table is NULL, therefore the commit
+       will have a NULL log message (not just "", really NULL).
+
+       svnserve 1.5.x+ has always ignored LOG_MSG when REVPROP_TABLE was
+       present; this was elevated to a protocol promise in r1498550 (and
+       later documented in this comment) in order to fix the segmentation
+       fault bug described in the log message of r1498550.*/
+    log_msg = svn_string_create("", pool);
+
   /* If we're sending revprops other than svn:log, make sure the server won't
      silently ignore them. */
   if (apr_hash_count(revprop_table) > 1 &&
@@ -1597,8 +1619,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
-              SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, iterpool,
-                                              "sw(?cr)?(?c?BB)",
+              SVN_ERR(svn_ra_svn__read_data_log_changed_entry(elt->u.list,
                                               &cpath, &action, &copy_path,
                                               &copy_rev, &kind_str,
                                               &text_mods, &prop_mods));

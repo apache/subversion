@@ -99,6 +99,7 @@ struct expat_ctx_t {
   svn_ra_serf__xml_context_t *xmlctx;
   XML_Parser parser;
   svn_ra_serf__handler_t *handler;
+  const int *expected_status;
 
   svn_error_t *inner_error;
 
@@ -641,8 +642,9 @@ setup_serf_req(serf_request_t *request,
   serf_bucket_alloc_t *allocator = serf_request_get_alloc(request);
 
   svn_spillbuf_t *buf;
+  svn_boolean_t set_CL = session->http10 || !session->using_chunked_requests;
 
-  if (session->http10 && body_bkt != NULL)
+  if (set_CL && body_bkt != NULL)
     {
       /* Ugh. Use HTTP/1.0 to talk to the server because we don't know if
          it speaks HTTP/1.1 (and thus, chunked requests), or because the
@@ -670,7 +672,7 @@ setup_serf_req(serf_request_t *request,
 
   /* Set the Content-Length value. This will also trigger an HTTP/1.0
      request (rather than the default chunked request).  */
-  if (session->http10)
+  if (set_CL)
     {
       if (body_bkt == NULL)
         serf_bucket_request_set_CL(*req_bkt, 0);
@@ -2386,17 +2388,17 @@ svn_ra_serf__report_resource(const char **report_target,
 }
 
 svn_error_t *
-svn_ra_serf__error_on_status(int status_code,
+svn_ra_serf__error_on_status(serf_status_line sline,
                              const char *path,
                              const char *location)
 {
-  switch(status_code)
+  switch(sline.code)
     {
       case 301:
       case 302:
       case 307:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
-                                 (status_code == 301)
+                                 (sline.code == 301)
                                  ? _("Repository moved permanently to '%s';"
                                      " please relocate")
                                  : _("Repository moved temporarily to '%s';"
@@ -2411,7 +2413,17 @@ svn_ra_serf__error_on_status(int status_code,
       case 423:
         return svn_error_createf(SVN_ERR_FS_NO_LOCK_TOKEN, NULL,
                                  _("'%s': no lock token available"), path);
+
+      case 411:
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                _("DAV request failed: "
+                                  "Content length required"));
     }
+
+  if (sline.code >= 300)
+    return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                             _("Unexpected HTTP status %d '%s' on '%s'\n"),
+                             sline.code, sline.reason, path);
 
   return SVN_NO_ERROR;
 }
@@ -2493,6 +2505,41 @@ expat_response_handler(serf_request_t *request,
                        apr_pool_t *scratch_pool)
 {
   struct expat_ctx_t *ectx = baton;
+  svn_boolean_t got_expected_status;
+
+  if (ectx->expected_status)
+    {
+      const int *status = ectx->expected_status;
+      got_expected_status = FALSE;
+
+      while (*status && ectx->handler->sline.code != *status)
+        status++;
+
+      got_expected_status = (*status) != 0;
+    }
+  else
+    got_expected_status = (ectx->handler->sline.code == 200);
+
+  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300)
+      || ! got_expected_status)
+    {
+      /* By deferring to expect_empty_body(), it will make a choice on
+         how to handle the body. Whatever the decision, the core handler
+         will take over, and we will not be called again.  */
+
+      /* ### This handles xml bodies as svn-errors (returned via serf context
+         ### loop), but ignores non-xml errors.
+
+         Current code depends on this behavior and checks itself while other
+         continues, and then verifies if work has been performed.
+
+         ### TODO: Make error checking consistent */
+
+      /* ### If !GOT_EXPECTED_STATUS, this should always produce an error */
+      return svn_error_trace(svn_ra_serf__expect_empty_body(
+                               request, response, ectx->handler,
+                               scratch_pool));
+    }
 
   if (!ectx->parser)
     {
@@ -2504,27 +2551,19 @@ expat_response_handler(serf_request_t *request,
       XML_SetCharacterDataHandler(ectx->parser, expat_cdata);
     }
 
-  /* ### TODO: sline.code < 200 should really be handled by the core */
-  if ((ectx->handler->sline.code < 200) || (ectx->handler->sline.code >= 300))
-    {
-      /* By deferring to expect_empty_body(), it will make a choice on
-         how to handle the body. Whatever the decision, the core handler
-         will take over, and we will not be called again.  */
-      return svn_error_trace(svn_ra_serf__expect_empty_body(
-                               request, response, ectx->handler,
-                               scratch_pool));
-    }
-
   while (1)
     {
       apr_status_t status;
       const char *data;
       apr_size_t len;
       int expat_status;
+      svn_boolean_t at_eof = FALSE;
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
         return svn_ra_serf__wrap_err(status, NULL);
+      else if (APR_STATUS_IS_EOF(status))
+        at_eof = TRUE;
 
 #if 0
       /* ### move restart/skip into the core handler  */
@@ -2536,7 +2575,17 @@ expat_response_handler(serf_request_t *request,
 
       /* ### should we have an IGNORE_ERRORS flag like the v1 parser?  */
 
-      expat_status = XML_Parse(ectx->parser, data, (int)len, 0 /* isFinal */);
+      expat_status = XML_Parse(ectx->parser, data, (int)len,
+                               at_eof /* isFinal */);
+
+      if (at_eof 
+          || ectx->inner_error
+          || expat_status != XML_STATUS_OK)
+        {
+          /* Release xml parser state/tables. */
+          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
+                               xml_parser_cleanup);
+        }
 
       /* We need to check INNER_ERROR first. This is an error from the
          callbacks that has been "dropped off" for us to retrieve. On
@@ -2545,15 +2594,9 @@ expat_response_handler(serf_request_t *request,
 
          If an error is not present, THEN we go ahead and look for parsing
          errors.  */
-      if (ectx->inner_error)
-        {
-          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
-                               xml_parser_cleanup);
-          return svn_error_trace(ectx->inner_error);
-        }
-      if (expat_status == XML_STATUS_ERROR)
-        return svn_error_createf(SVN_ERR_XML_MALFORMED,
-                                 ectx->inner_error,
+      SVN_ERR(ectx->inner_error);
+      if (expat_status != XML_STATUS_OK)
+        return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
                                  _("The %s response contains invalid XML"
                                    " (%d %s)"),
                                  ectx->handler->method,
@@ -2562,18 +2605,10 @@ expat_response_handler(serf_request_t *request,
 
       /* The parsing went fine. What has the bucket told us?  */
 
-      if (APR_STATUS_IS_EOF(status))
+      if (at_eof)
         {
-          /* Tell expat we've reached the end of the content. Ignore the
-             return status. We just don't care.  */
-          (void) XML_Parse(ectx->parser, NULL, 0, 1 /* isFinal */);
-
-          svn_ra_serf__xml_context_destroy(ectx->xmlctx);
-          apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
-                               xml_parser_cleanup);
-
-          /* ### should check XMLCTX to see if it has returned to the
-             ### INITIAL state. we may have ended early...  */
+          /* Make sure we actually got xml and clean up after parsing */
+          SVN_ERR(svn_ra_serf__xml_context_done(ectx->xmlctx));
         }
 
       if (status && !SERF_BUCKET_READ_ERROR(status))
@@ -2588,6 +2623,7 @@ expat_response_handler(serf_request_t *request,
 
 svn_ra_serf__handler_t *
 svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+                                  const int *expected_status,
                                   apr_pool_t *result_pool)
 {
   svn_ra_serf__handler_t *handler;
@@ -2596,6 +2632,7 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
   ectx = apr_pcalloc(result_pool, sizeof(*ectx));
   ectx->xmlctx = xmlctx;
   ectx->parser = NULL;
+  ectx->expected_status = expected_status;
   ectx->cleanup_pool = result_pool;
 
 

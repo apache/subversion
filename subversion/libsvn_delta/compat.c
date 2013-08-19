@@ -218,6 +218,7 @@ locate_change(struct ev2_edit_baton *eb,
   change = apr_pcalloc(eb->edit_pool, sizeof(*change));
   change->changing = SVN_INVALID_REVNUM;
   change->deleting = SVN_INVALID_REVNUM;
+  change->kind = svn_node_unknown;
 
   svn_hash_sets(eb->changes, relpath, change);
 
@@ -439,8 +440,8 @@ process_actions(struct ev2_edit_baton *eb,
                                            change->changing, NULL, props));
       else
         SVN_ERR(svn_editor_alter_file(eb->editor, repos_relpath,
-                                      change->changing, props,
-                                      checksum, contents));
+                                      change->changing,
+                                      checksum, contents, props));
     }
 
   return SVN_NO_ERROR;
@@ -1182,9 +1183,9 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct editor_baton *eb = baton;
@@ -1234,8 +1235,8 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   /* ### should we verify the kind is truly a symlink?  */

@@ -1797,7 +1797,7 @@ def commit_out_of_date_deletions(sbox):
   I_path = sbox.ospath('A/I')
   os.mkdir(I_path)
   svntest.main.run_svn(None, 'add', I_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'prep', wc_dir)
+  sbox.simple_commit(message='prep')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # Make a backup copy of the working copy
@@ -2945,6 +2945,24 @@ def last_changed_of_copied_subdir(sbox):
              }
   svntest.actions.run_and_verify_info([expected], E_copied)
 
+@XFail()
+def commit_unversioned(sbox):
+  "verify behavior on unversioned targets"
+  
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+  
+  expected_err = 'E200009: .*existing.*\' is not under version control'
+
+  # Unversioned, but existing file
+  svntest.main.file_write(sbox.ospath('existing'), "xxxx")  
+  svntest.actions.run_and_verify_commit(wc_dir, None, None, expected_err,
+                                         sbox.ospath('existing'))
+  
+  # Unversioned, not existing
+  svntest.actions.run_and_verify_commit(wc_dir, None, None, expected_err,
+                                         sbox.ospath('not-existing'))
+                                         
 
 ########################################################################
 # Run the tests
@@ -3017,6 +3035,7 @@ test_list = [ None,
               commit_add_subadd,
               commit_danglers,
               last_changed_of_copied_subdir,
+              commit_unversioned,
              ]
 
 if __name__ == '__main__':

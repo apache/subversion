@@ -418,10 +418,66 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
   env->DeleteLocalRef(jfileName);
 }
 
+namespace {
+jobject construct_Jmessage_stack(
+    const JNIUtil::error_message_stack_t& message_stack)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass list_clazz = env->FindClass("java/util/ArrayList");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jmethodID mid = env->GetMethodID(list_clazz, "<init>", "(I)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jmethodID add_mid = env->GetMethodID(list_clazz, "add",
+                                       "(Ljava/lang/Object;)Z");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jobject jlist = env->NewObject(list_clazz, mid, jint(message_stack.size()));
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException$ErrorMessage");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  mid = env->GetMethodID(clazz, "<init>",
+                         "(ILjava/lang/String;Z)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  for (JNIUtil::error_message_stack_t::const_iterator
+         it = message_stack.begin();
+       it != message_stack.end(); ++it)
+    {
+      jobject jmessage = JNIUtil::makeJString(it->m_message.c_str());
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+      jobject jitem = env->NewObject(clazz, mid,
+                                     jint(it->m_code), jmessage,
+                                     jboolean(it->m_generic));
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+      env->CallBooleanMethod(jlist, add_mid, jitem);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(jmessage);
+      env->DeleteLocalRef(jitem);
+    }
+  return env->PopLocalFrame(jlist);
+}
+} // anonymous namespace
+
 void JNIUtil::handleSVNError(svn_error_t *err)
 {
   std::string msg;
-  assembleErrorMessage(svn_error_purge_tracing(err), 0, APR_SUCCESS, msg);
+  error_message_stack_t message_stack;
+  assembleErrorMessage(svn_error_purge_tracing(err),
+                       0, APR_SUCCESS, msg, &message_stack);
   const char *source = NULL;
 #ifdef SVN_DEBUG
 #ifndef SVN_ERR__TRACING
@@ -472,12 +528,18 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
+  jobject jmessageStack = construct_Jmessage_stack(message_stack);
+  if (isJavaExceptionThrown())
+    POP_AND_RETURN_NOTHING();
+
   jmethodID mid = env->GetMethodID(clazz, "<init>",
-                                   "(Ljava/lang/String;Ljava/lang/String;I)V");
+                                   "(Ljava/lang/String;"
+                                   "Ljava/lang/String;I"
+                                   "Ljava/util/List;)V");
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           static_cast<jint>(err->apr_err));
+                                           jint(err->apr_err), jmessageStack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -643,11 +705,11 @@ bool JNIUtil::isJavaExceptionThrown()
   return false;
 }
 
-const char *
-JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
+namespace {
+const char* exception_to_cstring(apr_pool_t* pool)
 {
   const char *msg;
-  JNIEnv *env = getEnv();
+  JNIEnv *env = JNIUtil::getEnv();
   if (env->ExceptionCheck())
     {
       jthrowable t = env->ExceptionOccurred();
@@ -656,12 +718,12 @@ JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
         {
           jclass clazz = env->FindClass("java/lang/Throwable");
           getMessage = env->GetMethodID(clazz, "getMessage",
-                                        "(V)Ljava/lang/String;");
+                                        "()Ljava/lang/String;");
           env->DeleteLocalRef(clazz);
         }
       jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
       JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(in_pool.getPool());
+      msg = tmp.pstrdup(pool);
       // ### Conditionally add t.printStackTrace() to msg?
     }
   else
@@ -669,6 +731,24 @@ JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
       msg = NULL;
     }
   return msg;
+}
+} // anonymous namespace
+
+const char *
+JNIUtil::thrownExceptionToCString(SVN::Pool &in_pool)
+{
+  return exception_to_cstring(in_pool.getPool());
+}
+
+svn_error_t*
+JNIUtil::checkJavaException(apr_status_t errorcode)
+{
+  if (!getEnv()->ExceptionCheck())
+    return SVN_NO_ERROR;
+  svn_error_t* err = svn_error_create(errorcode, NULL, NULL);
+  err->message = apr_psprintf(err->pool, _("Java exception: %s"),
+                              exception_to_cstring(err->pool));
+  return err;
 }
 
 /**
@@ -796,6 +876,31 @@ jobject JNIUtil::createDate(apr_time_t time)
   return ret;
 }
 
+apr_time_t
+JNIUtil::getDate(jobject jdate)
+{
+  JNIEnv *env = getEnv();
+  jclass clazz = env->FindClass("java/util/Date");
+  if (isJavaExceptionThrown())
+    return 0;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      mid = env->GetMethodID(clazz, "getTime", "()J");
+      if (isJavaExceptionThrown())
+        return 0;
+    }
+
+  jlong jmillis = env->CallLongMethod(jdate, mid);
+  if (isJavaExceptionThrown())
+    return 0;
+
+  env->DeleteLocalRef(clazz);
+
+  return jmillis * 1000;
+}
+
 /**
  * Create a Java byte array from an array of characters.
  * @param data      the character array
@@ -850,13 +955,15 @@ jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
  * @param parent_apr_err    the apr of the previous level, used for formating
  * @param buffer            the buffer where the formated error message will
  *                          be stored
+ * @param message_stack     an array of error codes and messages
  */
 void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,
-                                   std::string &buffer)
+                                   std::string &buffer,
+                                   error_message_stack_t* message_stack)
 {
   // buffer for a single error message
-  char errbuf[256];
+  char errbuf[1024];
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
@@ -865,21 +972,43 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
    * the same as before. */
   if (depth == 0 || err->apr_err != parent_apr_err)
     {
+      const char *message;
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
           && (err->apr_err <= APR_OS_START_CANONERR))
-        buffer.append(svn_strerror(err->apr_err, errbuf, sizeof(errbuf)));
+        message = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
       /* Otherwise, this must be an APR error code. */
       else
-        buffer.append(apr_strerror(err->apr_err, errbuf, sizeof(errbuf)));
+        {
+          /* Messages coming from apr_strerror are in the native
+             encoding, it's a good idea to convert them to UTF-8. */
+          apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
+          svn_error_t* utf8_err =
+            svn_utf_cstring_to_utf8(&message, errbuf, err->pool);
+          if (utf8_err)
+            {
+              /* Use fuzzy transliteration instead. */
+              svn_error_clear(utf8_err);
+              message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
+            }
+        }
+
+      if (message_stack)
+        message_stack->push_back(
+            message_stack_item(err->apr_err, message, true));
+      buffer.append(message);
       buffer.append("\n");
     }
   if (err->message)
-    buffer.append(_("svn: ")).append(err->message).append("\n");
+    {
+      if (message_stack)
+        message_stack->push_back(
+            message_stack_item(err->apr_err, err->message));
+      buffer.append(_("svn: ")).append(err->message).append("\n");
+    }
 
   if (err->child)
     assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);
-
 }
 
 /**

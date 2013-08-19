@@ -484,6 +484,7 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 
 
 
+
 /* Functions for working with shared transaction data. */
 
 /* Return the transaction object for transaction TXN_ID from the
@@ -1460,10 +1461,21 @@ delete_revprops_shard(const char *shard_path,
                       apr_pool_t *scratch_pool);
 
 /* In the filesystem FS, pack all revprop shards up to min_unpacked_rev.
- * Use SCRATCH_POOL for temporary allocations.
+ * 
+ * NOTE: Keep the old non-packed shards around until after the format bump.
+ * Otherwise, re-running upgrade will drop the packed revprop shard but
+ * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
+ * the bump.
+ * 
+ * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
+ * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
 static svn_error_t *
 upgrade_pack_revprops(svn_fs_t *fs,
+                      svn_fs_upgrade_notify_t notify_func,
+                      void *notify_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -1496,19 +1508,11 @@ upgrade_pack_revprops(svn_fs_t *fs,
                                   shard, ffd->max_files_per_dir,
                                   (int)(0.9 * ffd->revprop_pack_size),
                                   compression_level,
-                                  NULL, NULL, iterpool));
-      svn_pool_clear(iterpool);
-    }
+                                  cancel_func, cancel_baton, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, shard,
+                            svn_fs_upgrade_pack_revprops, iterpool));
 
-  /* delete the non-packed revprops shards afterwards */
-  for (shard = 0; shard < first_unpacked_shard; ++shard)
-    {
-      revprops_shard_path = svn_dirent_join(revsprops_dir,
-                       apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
-                       iterpool);
-      SVN_ERR(delete_revprops_shard(revprops_shard_path,
-                                    shard, ffd->max_files_per_dir,
-                                    NULL, NULL, iterpool));
       svn_pool_clear(iterpool);
     }
 
@@ -1517,13 +1521,75 @@ upgrade_pack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* In the filesystem FS, remove all non-packed revprop shards up to
+ * min_unpacked_rev.  Temporary allocations are done in SCRATCH_POOL.
+ * 
+ * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
+ * used in the usual way.  Cancellation is supported in the sense that we
+ * will cleanly abort the operation.  However, there will be remnant shards
+ * that must be removed manually.
+ *
+ * See upgrade_pack_revprops for more info.
+ */
+static svn_error_t *
+upgrade_cleanup_pack_revprops(svn_fs_t *fs,
+                              svn_fs_upgrade_notify_t notify_func,
+                              void *notify_baton,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *revprops_shard_path;
+  apr_int64_t shard;
+  apr_int64_t first_unpacked_shard
+    =  ffd->min_unpacked_rev / ffd->max_files_per_dir;
+
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *revsprops_dir = svn_dirent_join(fs->path, PATH_REVPROPS_DIR,
+                                              scratch_pool);
+  
+  /* delete the non-packed revprops shards afterwards */
+  for (shard = 0; shard < first_unpacked_shard; ++shard)
+    {
+      revprops_shard_path = svn_dirent_join(revsprops_dir,
+                       apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
+                       iterpool);
+      SVN_ERR(delete_revprops_shard(revprops_shard_path,
+                                    shard, ffd->max_files_per_dir,
+                                    cancel_func, cancel_baton, iterpool));
+      if (notify_func)
+        SVN_ERR(notify_func(notify_baton, shard,
+                            svn_fs_upgrade_cleanup_revprops, iterpool));
+
+      svn_pool_clear(iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying 
+ * parameters over between them. */
+struct upgrade_baton_t
+{
+  svn_fs_t *fs;
+  svn_fs_upgrade_notify_t notify_func;
+  void *notify_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
 static svn_error_t *
 upgrade_body(void *baton, apr_pool_t *pool)
 {
-  svn_fs_t *fs = baton;
+  struct upgrade_baton_t *upgrade_baton = baton;
+  svn_fs_t *fs = upgrade_baton->fs;
   int format, max_files_per_dir;
   const char *format_path = path_format(fs, pool);
   svn_node_kind_t kind;
+  svn_boolean_t needs_revprop_shard_cleanup = FALSE;
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
@@ -1575,22 +1641,62 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
     SVN_ERR(svn_io_file_create(path_min_unpacked_rev(fs, pool), "0\n", pool));
 
-  /* If the file system supports revision packing but not revprop packing,
-     pack the revprops up to the point that revision data has been packed. */
+  /* If the file system supports revision packing but not revprop packing
+     *and* the FS has been sharded, pack the revprops up to the point that
+     revision data has been packed.  However, keep the non-packed revprop
+     files around until after the format bump */
   if (   format >= SVN_FS_FS__MIN_PACKED_FORMAT
-      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
-    SVN_ERR(upgrade_pack_revprops(fs, pool));
+      && format < SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT
+      && max_files_per_dir > 0)
+    {
+      needs_revprop_shard_cleanup = TRUE;
+      SVN_ERR(upgrade_pack_revprops(fs,
+                                    upgrade_baton->notify_func,
+                                    upgrade_baton->notify_baton,
+                                    upgrade_baton->cancel_func,
+                                    upgrade_baton->cancel_baton,
+                                    pool));
+    }
 
   /* Bump the format file. */
-  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
-                      TRUE, pool);
+  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER,
+                       max_files_per_dir, TRUE, pool));
+  if (upgrade_baton->notify_func)
+    SVN_ERR(upgrade_baton->notify_func(upgrade_baton->notify_baton,
+                                       SVN_FS_FS__FORMAT_NUMBER,
+                                       svn_fs_upgrade_format_bumped,
+                                       pool));
+
+  /* Now, it is safe to remove the redundant revprop files. */
+  if (needs_revprop_shard_cleanup)
+    SVN_ERR(upgrade_cleanup_pack_revprops(fs,
+                                          upgrade_baton->notify_func,
+                                          upgrade_baton->notify_baton,
+                                          upgrade_baton->cancel_func,
+                                          upgrade_baton->cancel_baton,
+                                          pool));
+
+  /* Done */
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs_fs__upgrade(svn_fs_t *fs, apr_pool_t *pool)
+svn_fs_fs__upgrade(svn_fs_t *fs,
+                   svn_fs_upgrade_notify_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
 {
-  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)fs, pool);
+  struct upgrade_baton_t baton;
+  baton.fs = fs;
+  baton.notify_func = notify_func;
+  baton.notify_baton = notify_baton;
+  baton.cancel_func = cancel_func;
+  baton.cancel_baton = cancel_baton;
+  
+  return svn_fs_fs__with_write_lock(fs, upgrade_body, (void *)&baton, pool);
 }
 
 
@@ -3202,7 +3308,7 @@ ensure_revprop_generation(svn_fs_t *fs, apr_pool_t *pool)
   SVN_ERR(ensure_revprop_namespace(fs));
   if (ffd->revprop_generation == NULL)
     {
-      apr_int64_t current = 0;
+      apr_int64_t current;
 
       SVN_ERR(svn_named_atomic__get(&ffd->revprop_generation,
                                     ffd->revprop_namespace,
@@ -3242,15 +3348,17 @@ ensure_revprop_timeout(svn_fs_t *fs)
 }
 
 /* Create an error object with the given MESSAGE and pass it to the
-   WARNING member of FS. */
+   WARNING member of FS. Clears UNDERLYING_ERR. */
 static void
 log_revprop_cache_init_warning(svn_fs_t *fs,
                                svn_error_t *underlying_err,
-                               const char *message)
+                               const char *message,
+                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_error_createf(SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
-                                       underlying_err,
-                                       message, fs->path);
+  svn_error_t *err = svn_error_createf(
+                       SVN_ERR_FS_REVPROP_CACHE_INIT_FAILURE,
+                       underlying_err, message,
+                       svn_dirent_local_style(fs->path, pool));
 
   if (fs->warning)
     (fs->warning)(fs->warning_baton, err);
@@ -3279,7 +3387,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       ffd->revprop_cache = NULL;
       log_revprop_cache_init_warning(fs, NULL,
                                      "Revprop caching for '%s' disabled"
-                                     " because it would be inefficient.");
+                                     " because it would be inefficient.",
+                                     pool);
 
       return FALSE;
     }
@@ -3294,7 +3403,8 @@ has_revprop_cache(svn_fs_t *fs, apr_pool_t *pool)
       log_revprop_cache_init_warning(fs, error,
                                      "Revprop caching for '%s' disabled "
                                      "because SHM infrastructure for revprop "
-                                     "caching failed to initialize.");
+                                     "caching failed to initialize.",
+                                     pool);
 
       return FALSE;
     }
@@ -3315,9 +3425,9 @@ typedef struct revprop_generation_fixup_t
 /* If the revprop generation has an odd value, it means the original writer
    of the revprop got killed. We don't know whether that process as able
    to change the revprop data but we assume that it was. Therefore, we
-   increase the generation in that case to basically invalidate everyones
+   increase the generation in that case to basically invalidate everyone's
    cache content.
-   Execute this onlx while holding the write lock to the repo in baton->FFD.
+   Execute this only while holding the write lock to the repo in baton->FFD.
  */
 static svn_error_t *
 revprop_generation_fixup(void *void_baton,
@@ -3618,7 +3728,7 @@ get_revprop_packname(svn_fs_t *fs,
 
   if (revprops->manifest->nelts <= idx)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed revprop manifest for rev %ld too "
+                             _("Packed revprop manifest for r%ld too "
                                "small"), revprops->revision);
 
   /* Now get the file name */
@@ -3652,7 +3762,7 @@ parse_packed_revprops(svn_fs_t *fs,
   svn_string_t *compressed
       = svn_stringbuf__morph_into_string(revprops->packed_revprops);
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(pool);
-  SVN_ERR(svn__decompress(compressed, uncompressed, 0x1000000));
+  SVN_ERR(svn__decompress(compressed, uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
@@ -3791,14 +3901,14 @@ read_pack_revprop(packed_revprops_t **revprops,
   /* the file content should be available now */
   if (!result->packed_revprops)
     return svn_error_createf(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE, NULL,
-                  _("Failed to read revprop pack file for rev %ld"), rev);
+                  _("Failed to read revprop pack file for r%ld"), rev);
 
   /* parse it. RESULT will be complete afterwards. */
   err = parse_packed_revprops(fs, result, pool, iterpool);
   svn_pool_destroy(iterpool);
   if (err)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                  _("Revprop pack file for rev %ld is corrupt"), rev);
+                  _("Revprop pack file for r%ld is corrupt"), rev);
 
   *revprops = result;
 
@@ -4926,7 +5036,6 @@ get_combined_window(svn_stringbuf_t **result,
 {
   apr_pool_t *pool, *new_pool, *window_pool;
   int i;
-  svn_txdelta_window_t *window;
   apr_array_header_t *windows;
   svn_stringbuf_t *source, *buf = rb->base_window;
   struct rep_state *rs;
@@ -4939,6 +5048,8 @@ get_combined_window(svn_stringbuf_t **result,
   windows = apr_array_make(window_pool, 0, sizeof(svn_txdelta_window_t *));
   for (i = 0; i < rb->rs_list->nelts; ++i)
     {
+      svn_txdelta_window_t *window;
+
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       SVN_ERR(read_delta_window(&window, rb->chunk_index, rs, window_pool));
 
@@ -4954,6 +5065,7 @@ get_combined_window(svn_stringbuf_t **result,
   pool = svn_pool_create(rb->pool);
   for (--i; i >= 0; --i)
     {
+      svn_txdelta_window_t *window;
 
       rs = APR_ARRAY_IDX(rb->rs_list, i, struct rep_state *);
       window = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
@@ -7089,7 +7201,12 @@ choose_delta_base(representation_t **rep,
                   svn_boolean_t props,
                   apr_pool_t *pool)
 {
+  /* The zero-based index (counting from the "oldest" end), along NODEREVs line
+   * predecessors, of the node-rev we will use as delta base. */
   int count;
+  /* The length of the linear part of a delta chain.  (Delta chains use
+   * skip-delta bits for the high-order bits and are linear in the low-order
+   * bits.) */
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -7143,6 +7260,8 @@ choose_delta_base(representation_t **rep,
        * Please note that copied nodes - such as branch directories - will
        * look the same (false positive) while reps shared within the same
        * revision will not be caught (false negative).
+       *
+       * Message-ID: <CA+t0gk1wzitkih3GRCLDvK-bTEm=hgppGb_7xXMtvuXDYPfL+Q@mail.gmail.com>
        */
       if (props)
         {
@@ -7161,7 +7280,7 @@ choose_delta_base(representation_t **rep,
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
-  /* if we encountered a shared rep, it's parent chain may be different
+  /* if we encountered a shared rep, its parent chain may be different
    * from the node-rev parent chain. */
   if (*rep && maybe_shared_rep)
     {
@@ -7209,7 +7328,6 @@ choose_delta_base(representation_t **rep,
       svn_pool_destroy(sub_pool);
     }
 
-  /* verify that the reps don't form a degenerated '*/
   return SVN_NO_ERROR;
 }
 
@@ -7327,7 +7445,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   return SVN_NO_ERROR;
 }
 
-/* For the hash REP->SHA1, try to find an already existing representation
+/* For REP->SHA1_CHECKSUM, try to find an already existing representation
    in FS and return it in *OUT_REP.  If no such representation exists or
    if rep sharing has been disabled for FS, NULL will be returned.  Since
    there may be new duplicate representations within the same uncommitted
@@ -8173,12 +8291,9 @@ write_final_changed_path_info(apr_off_t *offset_p,
   sorted_changed_paths = svn_sort__hash(changed_paths,
                                         svn_sort_compare_items_lexically, pool);
 
-  /* Iterate through the changed paths one at a time, and convert the
-     temporary node-id into a permanent one for each change entry. */
+  /* Write all items to disk in the new order. */
   for (i = 0; i < sorted_changed_paths->nelts; ++i)
     {
-      node_revision_t *noderev;
-      const svn_fs_id_t *id;
       svn_fs_path_change2_t *change;
       const char *path;
 
@@ -8186,21 +8301,6 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
       change = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).value;
       path = APR_ARRAY_IDX(sorted_changed_paths, i, svn_sort__item_t).key;
-
-      id = change->node_rev_id;
-
-      /* If this was a delete of a mutable node, then it is OK to
-         leave the change entry pointing to the non-existent temporary
-         node, since it will never be used. */
-      if ((change->change_kind != svn_fs_path_change_delete) &&
-          (! svn_fs_fs__id_txn_id(id)))
-        {
-          SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, id, iterpool));
-
-          /* noderev has the permanent node-id at this point, so we just
-             substitute it for the temporary one. */
-          change->node_rev_id = noderev->id;
-        }
 
       /* Write out the new entry into the final rev-file. */
       SVN_ERR(write_change_entry(file, path, change, include_node_kinds,
@@ -9995,6 +10095,9 @@ pack_revprops_shard(const char *pack_file_dir,
   end_rev = (svn_revnum_t) ((shard + 1) * (max_files_per_dir) - 1);
   if (start_rev == 0)
     ++start_rev;
+    /* Special special case: if max_files_per_dir is 1, then at this point
+       start_rev == 1 and end_rev == 0 (!).  Fortunately, everything just
+       works. */
 
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));
@@ -10176,13 +10279,31 @@ pack_shard(const char *revs_dir,
                             (svn_revnum_t)((shard + 1) * max_files_per_dir),
                             pool));
 
-  /* Finally, remove the existing shard directories. */
+  /* Finally, remove the existing shard directories.
+   * For revprops, clean up older obsolete shards as well as they might
+   * have been left over from an interrupted FS upgrade. */
   SVN_ERR(svn_io_remove_dir2(rev_shard_path, TRUE,
                              cancel_func, cancel_baton, pool));
   if (revsprops_dir)
-    SVN_ERR(delete_revprops_shard(revprops_shard_path,
-                                  shard, max_files_per_dir,
-                                  cancel_func, cancel_baton, pool));
+    {
+      svn_node_kind_t kind = svn_node_dir;
+      apr_int64_t to_cleanup = shard;
+      do
+        {
+          SVN_ERR(delete_revprops_shard(revprops_shard_path,
+                                        to_cleanup, max_files_per_dir,
+                                        cancel_func, cancel_baton, pool));
+
+          /* If the previous shard exists, clean it up as well.
+             Don't try to clean up shard 0 as it we can't tell quickly
+             whether it actually needs cleaning up. */
+          revprops_shard_path = svn_dirent_join(revsprops_dir,
+                      apr_psprintf(pool, "%" APR_INT64_T_FMT, --to_cleanup),
+                      pool);
+          SVN_ERR(svn_io_check_path(revprops_shard_path, &kind, pool));
+        }
+      while (kind == svn_node_dir && to_cleanup > 0);
+    }
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)

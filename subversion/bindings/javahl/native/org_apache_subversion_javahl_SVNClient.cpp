@@ -660,7 +660,8 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doExport
 (JNIEnv *env, jobject jthis, jstring jsrcPath, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jboolean jforce,
- jboolean jignoreExternals, jobject jdepth, jstring jnativeEOL)
+ jboolean jignoreExternals, jboolean jignoreKeywords,
+ jobject jdepth, jstring jnativeEOL)
 {
   JNIEntry(SVNClient, doExport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -690,7 +691,9 @@ Java_org_apache_subversion_javahl_SVNClient_doExport
     return -1;
 
   return cl->doExport(srcPath, destPath, revision, pegRevision,
-                      jforce ? true : false, jignoreExternals ? true : false,
+                      jforce ? true : false,
+                      jignoreExternals ? true : false,
+                      jignoreKeywords ? true : false,
                       EnumMapper::toDepth(jdepth), nativeEOL);
 }
 
@@ -1631,6 +1634,21 @@ Java_org_apache_subversion_javahl_SVNClient_setConfigDirectory
   cl->getClientContext().setConfigDirectory(configDir);
 }
 
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler
+(JNIEnv *env, jobject jthis, jobject jconfigHandler)
+{
+  JNIEntry(SVNClient, setConfigDirectory);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setConfigCallback(jconfigHandler);
+}
+
 JNIEXPORT jstring JNICALL
 Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 (JNIEnv *env, jobject jthis)
@@ -1850,4 +1868,23 @@ Java_org_apache_subversion_javahl_SVNClient_patch
             jdryRun ? true : false, static_cast<int>(jstripCount),
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_nativeOpenRemoteSession
+(JNIEnv *env, jobject jthis, jstring jpath, jint jretryAttempts)
+{
+  JNIEntry(SVNClient, openRemoteSession);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return cl->openRemoteSession(path, jretryAttempts);
 }

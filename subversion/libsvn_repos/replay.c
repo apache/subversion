@@ -1457,8 +1457,8 @@ replay_node(svn_fs_root_t *root,
             }
 
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
-                                        SVN_INVALID_REVNUM, props, checksum,
-                                        contents));
+                                        SVN_INVALID_REVNUM,
+                                        checksum, contents, props));
         }
 
       if (change->node_kind == svn_node_dir

@@ -43,7 +43,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 enum loc_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   LOCATION
 };
@@ -176,10 +176,10 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getloc_ttable,
-                                           NULL, getloc_closed, NULL,
+                                           NULL, getloc_closed, NULL, NULL,
                                            loc_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -192,7 +192,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_one(handler, pool);
 
   SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(handler->sline.code,
+              svn_ra_serf__error_on_status(handler->sline,
                                            req_url,
                                            handler->location),
               err));

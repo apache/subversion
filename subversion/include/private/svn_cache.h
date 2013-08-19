@@ -173,6 +173,12 @@ typedef struct svn_cache__info_t
    * May be 0 if that information is not available.
    */
   apr_uint64_t total_entries;
+
+  /** Number of index buckets with the given number of entries.
+   * Bucket sizes larger than the array will saturate into the
+   * highest array index.
+   */
+  apr_uint64_t histogram[32];
 } svn_cache__info_t;
 
 /**
@@ -461,13 +467,16 @@ svn_cache__get_info(svn_cache__t *cache,
 
 /**
  * Return the information given in @a info formatted as a multi-line string.
- * Allocations take place in @a result_pool.
+ * If @a access_only has been set, size and fill-level statistics will be
+ * omitted.  Allocations take place in @a result_pool.
  */
 svn_string_t *
 svn_cache__format_info(const svn_cache__info_t *info,
+                       svn_boolean_t access_only,
                        apr_pool_t *result_pool);
 
-/* Access the process-global (singleton) membuffer cache. The first call
+/**
+ * Access the process-global (singleton) membuffer cache. The first call
  * will automatically allocate the cache using the current cache config.
  * NULL will be returned if the desired cache size is 0.
  *
@@ -475,6 +484,13 @@ svn_cache__format_info(const svn_cache__info_t *info,
  */
 struct svn_membuffer_t *
 svn_cache__get_global_membuffer_cache(void);
+
+/**
+ * Return total access and size stats over all membuffer caches as they
+ * share the underlying data buffer.  The result will be allocated in POOL.
+ */
+svn_cache__info_t *
+svn_cache__membuffer_get_global_info(apr_pool_t *pool);
 
 /** @} */
 

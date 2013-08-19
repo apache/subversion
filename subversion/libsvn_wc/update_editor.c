@@ -924,6 +924,7 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       do_notification(db->edit_baton, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, scratch_pool);
       db->already_notified = TRUE;
+
     }
 
   return SVN_NO_ERROR;
@@ -1813,6 +1814,7 @@ delete_entry(const char *path,
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
                                      FALSE /* keep_as_working */,
                                      FALSE /* queue_deletes */,
+                                     FALSE /* remove_locks */,
                                      SVN_INVALID_REVNUM /* not_present_rev */,
                                      NULL, NULL,
                                      scratch_pool));
@@ -1909,7 +1911,7 @@ delete_entry(const char *path,
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, queue_deletes,
+                                     keep_as_working, queue_deletes, FALSE,
                                      SVN_INVALID_REVNUM /* not_present_rev */,
                                      tree_conflict, NULL,
                                      scratch_pool));
@@ -1918,7 +1920,7 @@ delete_entry(const char *path,
     {
       /* Delete, leaving a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, queue_deletes,
+                                     keep_as_working, queue_deletes, FALSE,
                                      *eb->target_revision,
                                      tree_conflict, NULL,
                                      scratch_pool));
@@ -1937,8 +1939,19 @@ delete_entry(const char *path,
 
   /* Notify. */
   if (tree_conflict)
-    do_notification(eb, local_abspath, svn_node_unknown,
-                    svn_wc_notify_tree_conflict, scratch_pool);
+    {
+      if (eb->conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                 tree_conflict,
+                                                 NULL /* merge_options */,
+                                                 eb->conflict_func,
+                                                 eb->conflict_baton,
+                                                 eb->cancel_func,
+                                                 eb->cancel_baton,
+                                                 scratch_pool));
+      do_notification(eb, local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, scratch_pool);
+    }
   else
     {
       svn_wc_notify_action_t action = svn_wc_notify_update_delete;
@@ -2287,6 +2300,16 @@ add_directory(const char *path,
 
   if (tree_conflict != NULL)
     {
+      if (eb->conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                                 tree_conflict,
+                                                 NULL /* merge_options */,
+                                                 eb->conflict_func,
+                                                 eb->conflict_baton,
+                                                 eb->cancel_func,
+                                                 eb->cancel_baton,
+                                                 pool));
+
       db->already_notified = TRUE;
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
@@ -2905,7 +2928,7 @@ close_directory(void *dir_baton,
                                              eb->conflict_func,
                                              eb->conflict_baton,
                                              eb->cancel_func,
-                                             eb->conflict_baton,
+                                             eb->cancel_baton,
                                              scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
@@ -3377,6 +3400,16 @@ add_file(const char *path,
                                           fb->local_abspath,
                                           tree_conflict, NULL,
                                           scratch_pool));
+
+      if (eb->conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
+                                                 tree_conflict,
+                                                 NULL /* merge_options */,
+                                                 eb->conflict_func,
+                                                 eb->conflict_baton,
+                                                 eb->cancel_func,
+                                                 eb->cancel_baton,
+                                                 scratch_pool));
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_file,
@@ -4701,6 +4734,7 @@ close_edit(void *edit_baton,
               SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
                                              FALSE /* keep_as_working */,
                                              FALSE /* queue_deletes */,
+                                             FALSE /* remove_locks */,
                                              SVN_INVALID_REVNUM,
                                              NULL, NULL, scratch_pool));
             }

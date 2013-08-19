@@ -42,7 +42,7 @@
 
 /* Our current parsing state we're in for the PROPFIND response. */
 typedef enum prop_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MULTISTATUS,
   RESPONSE,
   HREF,
@@ -136,6 +136,10 @@ static const svn_ra_serf__xml_transition_t propfind_ttable[] = {
   { 0 }
 };
 
+static const int propfind_expected_status[] = {
+  207,
+  0
+};
 
 /* Return the HTTP status code contained in STATUS_LINE, or 0 if
    there's a problem parsing it. */
@@ -598,10 +602,12 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
   xmlctx = svn_ra_serf__xml_context_create(propfind_ttable,
                                            propfind_opened,
                                            propfind_closed,
-                                           NULL,
+                                           NULL, NULL,
                                            new_prop_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx,
+                                              propfind_expected_status,
+                                              pool);
 
   handler->method = "PROPFIND";
   handler->path = path;
@@ -635,7 +641,7 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
 
   err = svn_ra_serf__context_run_one(handler, scratch_pool);
 
-  err2 = svn_ra_serf__error_on_status(handler->sline.code,
+  err2 = svn_ra_serf__error_on_status(handler->sline,
                                       handler->path,
                                       handler->location);
 

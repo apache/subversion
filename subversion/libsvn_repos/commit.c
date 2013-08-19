@@ -1133,15 +1133,15 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision, props,
-                                checksum, contents));
+  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision,
+                                checksum, contents, props));
   return SVN_NO_ERROR;
 }
 
@@ -1151,14 +1151,14 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision, props,
-                                   target));
+  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision,
+                                   target, props));
   return SVN_NO_ERROR;
 }
 

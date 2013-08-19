@@ -654,8 +654,8 @@ ensure_repos_info(svn_wc_entry_t *entry,
 
 /*
  * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
- * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
+ * to a hash of pointers to svn_wc_conflict_description3_t objects indexed by
+ * svn_wc_conflict_description3_t.local_abspath, all newly allocated in @a
  * pool.  @a dir_path is the path to the working copy directory whose conflicts
  * are being read.  The conflicts read are the tree conflicts on the immediate
  * child nodes of @a dir_path.  Do all allocations in @a pool.
@@ -692,7 +692,7 @@ read_tree_conflicts(apr_hash_t **conflicts,
   iterpool = svn_pool_create(pool);
   for (skel = skel->children; skel != NULL; skel = skel->next)
     {
-      const svn_wc_conflict_description2_t *conflict;
+      const svn_wc_conflict_description3_t *conflict;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, dir_path,
@@ -727,7 +727,7 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
        hi;
        hi = apr_hash_next(hi))
     {
-      const svn_wc_conflict_description2_t *conflict =
+      const svn_wc_conflict_description3_t *conflict =
           svn__apr_hash_index_val(hi);
       const char *conflict_relpath;
       const char *conflict_data;
@@ -1431,7 +1431,7 @@ svn_wc__upgrade_conflict_skel_from_raw(svn_skel_t **conflicts,
   if (tree_conflict_data)
     {
       svn_skel_t *tc_skel;
-      const svn_wc_conflict_description2_t *tc;
+      const svn_wc_conflict_description3_t *tc;
       const char *local_abspath;
 
       if (!conflict_data)
@@ -2196,13 +2196,15 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   upgrade_working_copy_baton_t cb_baton;
   svn_error_t *err;
   int result_format;
+  svn_boolean_t bumped_format;
 
   /* Try upgrading a wc-ng-style working copy. */
   SVN_ERR(svn_wc__db_open(&db, NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
 
 
-  err = svn_wc__db_bump_format(&result_format, local_abspath, db,
+  err = svn_wc__db_bump_format(&result_format, &bumped_format,
+                               db, local_abspath,
                                scratch_pool);
   if (err)
     {
@@ -2223,6 +2225,17 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_close(db));
 
       SVN_ERR_ASSERT(result_format == SVN_WC__VERSION);
+
+      if (bumped_format && notify_func)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_upgraded_path,
+                                        scratch_pool);
+
+          notify_func(notify_baton, notify, scratch_pool);
+        }
 
       return SVN_NO_ERROR;
     }

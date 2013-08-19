@@ -85,7 +85,13 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*open_fs_for_recovery)(svn_fs_t *fs, const char *path,
                                        apr_pool_t *pool,
                                        apr_pool_t *common_pool);
-  svn_error_t *(*upgrade_fs)(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+  svn_error_t *(*upgrade_fs)(svn_fs_t *fs,
+                             const char *path,
+                             svn_fs_upgrade_notify_t notify_func,
+                             void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool,
                              apr_pool_t *common_pool);
   svn_error_t *(*verify_fs)(svn_fs_t *fs, const char *path,
                             svn_revnum_t start,
