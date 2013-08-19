@@ -212,15 +212,6 @@ Candidate changes:
      +1: danielsh, breser
      +1 (r1514785 only): ivan, stefan2
 
- * r1514804
-   ra_serf: Format distinguished names properly.
-   Justification:
-     Displaying "Issuer: (null), (null), (null), Thawte, US (null)"
-     in SSL certificate confirmation is bad. Regression from
-     Subversion 1.7.x.
-   Votes:
-     +1: ivan, stefan2
-
  * r1515119
    swig-py: prevent a segfaulting function from being called.  Also hide it
    from swig-pl where it is unusable (raises a TypeError(!?) if called).
@@ -262,4 +253,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1514804
+   ra_serf: Format distinguished names properly.
+   Justification:
+     Displaying "Issuer: (null), (null), (null), Thawte, US (null)"
+     in SSL certificate confirmation is bad. Regression from
+     Subversion 1.7.x.
+   Votes:
+     +1: ivan, stefan2, danielsh
 
