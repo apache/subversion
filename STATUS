@@ -220,14 +220,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1515141
-   Update documentation of mod_dav_svn installation to reflect changes
-   not-so-recently-made to configure's defaults.
-   Justification:
-     INSTALL should document configure's defaults correctly.
-   Votes:
-     +1: danielsh, philip
-
  * ^/subversion/branches/1.8.x-svnsync-serf-memory
    ra_serf: Fix high memory usage running svnsync.
    Branch: ^/subversion/branches/1.8.x-svnsync-serf-memory
