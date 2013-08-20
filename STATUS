@@ -119,11 +119,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1514763
-   ra_serf: Use case-insensitive hostname comparision when validating server
-   certificate as it specified in RFC 2459.
-   Justification:
-     SSL certificate with uppercase letters considired as untrusted. Regression
-     from neon.
-   Votes:
-     +1: rhuijben, stefan2, breser
