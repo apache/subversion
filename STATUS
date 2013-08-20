@@ -134,43 +134,20 @@ Candidate changes:
      +1: stefan2, danielsh
      +1: philip (not r1515516)
 
- * r1514295, r1514318, r1514356
-   Add serf library version information to svn --version.
-   Justification:
-     Makes ra_serf issues diagnostic a little bit easier.
-   Votes:
-     +1: ivan, danielsh
-
- * r1515119
-   swig-py: prevent a segfaulting function from being called.  Also hide it
-   from swig-pl where it is unusable (raises a TypeError(!?) if called).
-   Justification:
-     It's a segfault.
-   Votes:
-     +1: danielsh
-
- * r1515225
-   ra_serf: Stringify SVN_AUTH_SSL_OTHER as well
-   Justification:
-     Avoid discarding information when stringifying an error number into a
-     message.
-   Depends: r1514785
-   Votes:
-     +1: danielsh, ivan
-
- * r1499044, r1515343
+ * r1499044, r1515343, r1515721
    Spell revision numbers as "r%ld" in error messages.
    Justification:
      We should be using 'r%ld' or 'revision %ld' consistently in user output.
    Votes:
-     +1: danielsh
+     +1: breser
+     +1 (without r1515721): danielsh
 
  * r1515366
    Spurious error for info on working copy root with child in conflict.
    Justification:
      Error is confusing for users, difficult for people using the API.
    Votes:
-     +1: philip
+     +1: philip, breser
 
 Veto-blocked changes:
 =====================
@@ -226,3 +203,27 @@ Approved changes:
      experience a performance degradation.
    Votes:
      +1: stefan2, danielsh, breser
+
+ * r1514295, r1514318, r1514356
+   Add serf library version information to svn --version.
+   Justification:
+     Makes ra_serf issues diagnostic a little bit easier.
+   Votes:
+     +1: ivan, danielsh, breser
+
+ * r1515119
+   swig-py: prevent a segfaulting function from being called.  Also hide it
+   from swig-pl where it is unusable (raises a TypeError(!?) if called).
+   Justification:
+     It's a segfault.
+   Votes:
+     +1: danielsh, breser
+
+ * r1515225
+   ra_serf: Stringify SVN_AUTH_SSL_OTHER as well
+   Justification:
+     Avoid discarding information when stringifying an error number into a
+     message.
+   Depends: r1514785
+   Votes:
+     +1: danielsh, ivan, breser
