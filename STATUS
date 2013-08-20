@@ -120,15 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1515225
-   ra_serf: Stringify SVN_AUTH_SSL_OTHER as well
-   Justification:
-     Avoid discarding information when stringifying an error number into a
-     message.
-   Depends: r1514785
-   Votes:
-     +1: danielsh, ivan, breser
-
  * r1515366
    Spurious error for info on working copy root with child in conflict.
    Justification:
