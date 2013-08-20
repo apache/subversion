@@ -454,6 +454,31 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
+Version 1.7.12
+(?? Aug 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.12
+
+ User-visible changes:
+  - General
+    * merge: Fix bogus mergeinfo with conflicting file merges (issue #4306)
+    * diff: Fix duplicated path component in '--summarize' output (issue #4408)
+
+
+  - Server-side bugfixes:
+    * mod_dav_svn: Return correct status codes when commit fails (r1490684)
+    * mod_dav_svn: Do not map requests to filesystem. (r1512432 et al)
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+    * support linking against gssapi on Solaris 10 (r1515068)
+    * don't use uninitialized variable to produce an error code (r1482282)
+
+  - Bindings:
+    * swig-pl: Fix SVN::Client not honoring config file settings (r150744)
+ 
+ 
 Version 1.7.11
 (23 Jul 2013, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.11
