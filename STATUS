@@ -120,13 +120,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1513879, r1513880, r1515516
-   Fix packed revprop file splitting logic in FSFS
-   Justification:
-     Modifying revprops may result in the loss of revprops for one
-     or multiple revisions.
-   Branch: ^/subversion/branches/1.8.x-r1513879
-   Notes:
-     I added r1515534 to the branch as an obvious fix.
-   Votes:
-     +1: stefan2, danielsh, philip
