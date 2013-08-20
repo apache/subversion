@@ -126,14 +126,6 @@ Candidate changes:
      +1: stefan2, danielsh
      +1: philip (not r1515516)
 
- * r1506047
-   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
-   build.conf
-   Justification:
-     These targets should build all swig modules for the language.
-   Votes:
-     +1: rhuijben, breser, rschupp
-
  * r175
    Fix symlink attack on svnpubsub's pidfile. Pick up r175 from upstream
    of daemonize.py
@@ -238,3 +230,12 @@ Approved changes:
      apxs binary when invoked "by hand" (not via make).
    Votes:
      +1: danielsh, breser, stefan2
+
+ * r1506047
+   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
+   build.conf
+   Justification:
+     These targets should build all swig modules for the language.
+   Votes:
+     +1: rhuijben, breser, rschupp
+
