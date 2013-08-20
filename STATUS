@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1499044, r1515343, r1515721
-   Spell revision numbers as "r%ld" in error messages.
-   Justification:
-     We should be using 'r%ld' or 'revision %ld' consistently in user output.
-   Votes:
-     +1: breser, ivan, stefan2
-     +1 (without r1515721): danielsh
-
  * r1507889, r1507891
    davautocheck: use the correct apxs binary by default.
    Justification:

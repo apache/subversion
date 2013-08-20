@@ -1298,7 +1298,7 @@ replay_rev_finished(svn_revnum_t revision,
   if (rb->sb->committed_rev != revision)
     return svn_error_createf
              (APR_EINVAL, NULL,
-              _("Commit created rev %ld but should have created %ld"),
+              _("Commit created r%ld but should have created r%ld"),
               rb->sb->committed_rev, revision);
 
   SVN_ERR(svn_ra_rev_proplist(rb->to_session, revision, &existing_props,
