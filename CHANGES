@@ -476,7 +476,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
   - Bindings:
     * swig-pl: Fix SVN::Client not honoring config file settings (r150744)
     * swig-pl & swig-py: Disable unusable svn_fs_set_warning_func (r1515119)
-
  
  
 Version 1.7.11
