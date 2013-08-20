@@ -220,15 +220,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1514804
-   ra_serf: Format distinguished names properly.
-   Justification:
-     Displaying "Issuer: (null), (null), (null), Thawte, US (null)"
-     in SSL certificate confirmation is bad. Regression from
-     Subversion 1.7.x.
-   Votes:
-     +1: ivan, stefan2, danielsh
-
  * r1503318
    ra_serf: Do not retry HTTP requests if we started to parse them.
    Discussion: http://svn.haxx.se/dev/archive-2013-07/0290.shtml
