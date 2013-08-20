@@ -242,6 +242,16 @@ convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
   return buf->data;
 }
 
+static void append_reason(svn_stringbuf_t *errmsg, const char *reason, int *reasons)
+{
+  if (*reasons < 1)
+    svn_stringbuf_appendcstr(errmsg, _(": "));
+  else
+    svn_stringbuf_appendcstr(errmsg, _(", "));
+  svn_stringbuf_appendcstr(errmsg, reason);
+  (*reasons)++;
+}
+
 /* This function is called on receiving a ssl certificate of a server when
    opening a https connection. It allows Subversion to override the initial
    validation done by serf.
@@ -344,7 +354,32 @@ ssl_server_cert(void *baton, int failures,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
   if (!server_creds)
-    return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL, NULL);
+    {
+      svn_stringbuf_t *errmsg;
+      int reasons = 0;
+
+      errmsg = svn_stringbuf_create(
+                 _("Server SSL certificate verification failed"),
+                 scratch_pool);
+
+
+      if (svn_failures & SVN_AUTH_SSL_NOTYETVALID)
+        append_reason(errmsg, _("certificate is not yet valid"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_EXPIRED)
+        append_reason(errmsg, _("certificate has expired"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_CNMISMATCH)
+        append_reason(errmsg,
+                      _("certificate issued for a different hostname"),
+                      &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_UNKNOWNCA)
+        append_reason(errmsg, _("issuer is not trusted"), &reasons);
+
+      return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL,
+                              errmsg->data);
+    }
 
   return SVN_NO_ERROR;
 }

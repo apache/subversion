@@ -220,15 +220,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1514785, r1515201
-   ra_serf: Improve SSL certificate verification failure message.
-   Justification:
-     Generic 'Server SSL certificate untrusted' error message is not
-     informative. Regression from Subversion 1.7.x
-   Votes:
-     +1: danielsh, breser, ivan
-     +1 (r1514785 only): stefan2
-
  * r1515141
    Update documentation of mod_dav_svn installation to reflect changes
    not-so-recently-made to configure's defaults.
