@@ -119,14 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1515119
-   swig-py: prevent a segfaulting function from being called.  Also hide it
-   from swig-pl where it is unusable (raises a TypeError(!?) if called).
-   Justification:
-     It's a segfault.
-   Votes:
-     +1: danielsh, breser
-
  * r1514763
    ra_serf: Use case-insensitive hostname comparision when validating server
    certificate as it specified in RFC 2459.
