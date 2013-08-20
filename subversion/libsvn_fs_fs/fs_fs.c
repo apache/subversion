@@ -3536,7 +3536,7 @@ typedef struct packed_revprops_t
   /* sum of values in SIZES */
   apr_size_t total_size;
 
-  /* first revision in the pack */
+  /* first revision in the pack (>= MANIFEST_START) */
   svn_revnum_t start_revision;
 
   /* size of the revprops in PACKED_REVPROPS */
@@ -3550,8 +3550,12 @@ typedef struct packed_revprops_t
    * in the pack, i.e. the pack content without header and compression */
   svn_stringbuf_t *packed_revprops;
 
+  /* First revision covered by MANIFEST.
+   * Will equal the shard start revision or 1, for the 1st shard. */
+  svn_revnum_t manifest_start;
+
   /* content of the manifest.
-   * Maps long(rev - START_REVISION) to const char* pack file name */
+   * Maps long(rev - MANIFEST_START) to const char* pack file name */
   apr_array_header_t *manifest;
 } packed_revprops_t;
 
@@ -3670,9 +3674,11 @@ get_revprop_packname(svn_fs_t *fs,
     }
 
   /* Index for our revision. Rev 0 is excluded from the first shard. */
-  idx = (int)(revprops->revision % ffd->max_files_per_dir);
-  if (revprops->revision < ffd->max_files_per_dir)
-    --idx;
+  revprops->manifest_start = revprops->revision
+                           - (revprops->revision % ffd->max_files_per_dir);
+  if (revprops->manifest_start == 0)
+    ++revprops->manifest_start;
+  idx = (int)(revprops->revision - revprops->manifest_start);
 
   if (revprops->manifest->nelts <= idx)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -3683,6 +3689,17 @@ get_revprop_packname(svn_fs_t *fs,
   revprops->filename = APR_ARRAY_IDX(revprops->manifest, idx, const char*);
 
   return SVN_NO_ERROR;
+}
+
+/* Return TRUE, if revision R1 and R2 refer to the same shard in FS.
+ */
+static svn_boolean_t
+same_shard(svn_fs_t *fs,
+           svn_revnum_t r1,
+           svn_revnum_t r2)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
 }
 
 /* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS,
@@ -3716,6 +3733,25 @@ parse_packed_revprops(svn_fs_t *fs,
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
   SVN_ERR(read_number_from_stream(&first_rev, NULL, stream, iterpool));
   SVN_ERR(read_number_from_stream(&count, NULL, stream, iterpool));
+
+  /* Check revision range for validity. */
+  if (   !same_shard(fs, revprops->revision, first_rev)
+      || !same_shard(fs, revprops->revision, first_rev + count - 1)
+      || count < 1)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Revprop pack for revision r%ld"
+                               " contains revprops for r%ld .. r%ld"),
+                             revprops->revision, first_rev,
+                             first_rev + count -1);
+
+  /* Since start & end are in the same shard, it is enough to just test
+   * the FIRST_REV for being actually packed.  That will also cover the
+   * special case of rev 0 never being packed. */
+  if (!is_packed_revprop(fs, first_rev))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Revprop pack for revision r%ld"
+                               " starts at non-packed revisions r%ld"),
+                             revprops->revision, first_rev);
 
   /* make PACKED_REVPROPS point to the first char after the header.
    * This is where the serialized revprops are. */
@@ -4120,7 +4156,8 @@ repack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new pack file name for the revisions at index [START,END)
+/* Allocate a new pack file name for revisions
+ *     [REVPROPS->START_REVISION + START, REVPROPS->START_REVISION + END - 1]
  * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
  * auto-create that array if necessary.  Return an open file stream to
  * the new file in *STREAM allocated in POOL.
@@ -4139,10 +4176,13 @@ repack_stream_open(svn_stream_t **stream,
   svn_string_t *new_filename;
   int i;
   apr_file_t *file;
+  int manifest_offset
+    = (int)(revprops->start_revision - revprops->manifest_start);
 
   /* get the old (= current) file name and enlist it for later deletion */
-  const char *old_filename
-    = APR_ARRAY_IDX(revprops->manifest, start, const char*);
+  const char *old_filename = APR_ARRAY_IDX(revprops->manifest,
+                                           start + manifest_offset,
+                                           const char*);
 
   if (*files_to_delete == NULL)
     *files_to_delete = apr_array_make(pool, 3, sizeof(const char*));
@@ -4164,7 +4204,8 @@ repack_stream_open(svn_stream_t **stream,
 
   /* update the manifest to point to the new file */
   for (i = start; i < end; ++i)
-    APR_ARRAY_IDX(revprops->manifest, i, const char*) = new_filename->data;
+    APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, const char*)
+      = new_filename->data;
 
   /* create a file stream for the new file */
   SVN_ERR(svn_io_file_open(&file, svn_dirent_join(revprops->folder,
