@@ -220,17 +220,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * ^/subversion/branches/1.8.x-svnsync-serf-memory
-   ra_serf: Fix high memory usage running svnsync.
-   Branch: ^/subversion/branches/1.8.x-svnsync-serf-memory
-   Justification:
-     Causes svnsync to fail due to excessive memory usage.
-   Notes:
-     Fixed directly on 1.8.x since the switch to transition based parser solved
-     this there.  See r1515249 and r1515269 on branch for the specific changes.
-   Votes:
-     +1: breser, philip, stefan2
-
  * r1512432, r1512471, r1512472, r1513463, r1513472
    mod_dav_svn: No longer map requests to the filesystem.
    Justification:
