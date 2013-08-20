@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1513874
-   Fix packed revprop manifest growth in FSFS
-   Justification:
-     Users that frequently change existing revprops may, over time,
-     experience a performance degradation.
-   Votes:
-     +1: stefan2, danielsh, breser
-
  * r1514295, r1514318, r1514356
    Add serf library version information to svn --version.
    Justification:
