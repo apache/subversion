@@ -1631,22 +1631,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       return svn_error_trace(err);
     }
 
-  if (ctx->headers_baton == NULL)
-    ctx->headers_baton = serf_bucket_response_get_headers(response);
-  else if (ctx->headers_baton != serf_bucket_response_get_headers(response))
-    {
-      /* We got a new response to an existing parser...
-         This tells us the connection has restarted and we should continue
-         where we stopped last time.
-       */
-
-      /* Is this a second attempt?? */
-      if (!ctx->skip_size)
-        ctx->skip_size = ctx->read_size;
-
-      ctx->read_size = 0; /* New request, nothing read */
-    }
-
   if (!ctx->xmlp)
     {
       ctx->xmlp = XML_ParserCreate(NULL);
@@ -1666,39 +1650,9 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       apr_size_t len;
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
-
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return svn_ra_serf__wrap_err(status, NULL);
-        }
-
-      ctx->read_size += len;
-
-      if (ctx->skip_size)
-        {
-          /* Handle restarted requests correctly: Skip what we already read */
-          apr_size_t skip;
-
-          if (ctx->skip_size >= ctx->read_size)
-            {
-            /* Eek.  What did the file shrink or something? */
-              if (APR_STATUS_IS_EOF(status))
-                {
-                  SVN_ERR_MALFUNCTION();
-                }
-
-              /* Skip on to the next iteration of this loop. */
-              if (APR_STATUS_IS_EAGAIN(status))
-                {
-                  return svn_ra_serf__wrap_err(status, NULL);
-                }
-              continue;
-            }
-
-          skip = (apr_size_t)(len - (ctx->read_size - ctx->skip_size));
-          data += skip;
-          len -= skip;
-          ctx->skip_size = 0;
         }
 
       /* Note: once the callbacks invoked by inject_to_parser() sets the
@@ -1871,12 +1825,26 @@ handle_response(serf_request_t *request,
     {
       /* Uh-oh. Our connection died.  */
       if (handler->response_error)
-        SVN_ERR(handler->response_error(request, response, 0,
-                                        handler->response_error_baton));
+        {
+          /* Give a handler chance to prevent request requeue. */
+          SVN_ERR(handler->response_error(request, response, 0,
+                                          handler->response_error_baton));
 
-      /* Requeue another request for this handler.
-         ### how do we know if the handler can deal with this?!  */
-      svn_ra_serf__request_create(handler);
+          svn_ra_serf__request_create(handler);
+        }
+      /* Response error callback is not configured. Requeue another request
+         for this handler only if we didn't started to process body.
+         Return error otherwise. */
+      else if (!handler->reading_body)
+        {
+          svn_ra_serf__request_create(handler);
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    _("%s request on '%s' failed"),
+                                   handler->method, handler->path);
+        }
 
       return SVN_NO_ERROR;
     }

@@ -220,18 +220,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1503318
-   ra_serf: Do not retry HTTP requests if we started to parse them.
-   Discussion: http://svn.haxx.se/dev/archive-2013-07/0290.shtml
-   Justification:
-      There is absolutely no guarantee that REPORT or PROPFIND responses will
-      be equal for every request. Before r1503318 after request we skipped
-      recieved N bytes of original request response and continue with
-      remaining bytes from retried request. 
-   Votes:
-     +1: ivan, rhuijben, philip
-     +0: danielsh
-
  * r1514785, r1515201
    ra_serf: Improve SSL certificate verification failure message.
    Justification:
