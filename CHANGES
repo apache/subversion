@@ -1,3 +1,27 @@
+Version 1.7.12
+(27 Aug 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.12
+
+ User-visible changes:
+  - General
+    * merge: Fix bogus mergeinfo with conflicting file merges (issue #4306)
+    * diff: Fix duplicated path component in '--summarize' output (issue #4408)
+    * ra_serf: Ignore case when checking certificate common names (r1514763)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: Return correct status codes when commit fails (r1490684)
+    * mod_dav_svn: Do not map requests to filesystem. (r1512432 et al)
+
+ Developer-visible changes:
+  - General:
+    * support linking against gssapi on Solaris 10 (r1515068)
+    * don't use uninitialized variable to produce an error code (r1482282)
+
+  - Bindings:
+    * swig-pl: Fix SVN::Client not honoring config file settings (r150744)
+    * swig-pl & swig-py: Disable unusable svn_fs_set_warning_func (r1515119)
+ 
+ 
 Version 1.7.11
 (23 Jul 2013, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.11
@@ -8,9 +32,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.11
 
   - Server-side bugfixes:
     * mod_dav_svn: fix incorrect path canonicalization (r1503528)
+            See CVE-2013-4131, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2013-4131-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
+            See CVE-2013-2088, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2013-2088-advisory.txt
 
  Developer-visible changes:
   - Bindings:
@@ -36,7 +64,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.10
 
   - Server-side bugfixes:
     * fix FSFS repository corruption due to newline in filename (issue #4340)
+            See CVE-2013-1968, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2013-1968-advisory.txt
     * fix svnserve exiting when a client connection is aborted (r1482759)
+            See CVE-2013-2112, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2013-2112-advisory.txt
     * fix svnserve memory use after clear (issue #4365)
     * fix repository corruption on power/disk failure on Windows (r1483781)
 
@@ -62,6 +94,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.9
     * fix segfault when using kwallet (r1421103)
     
   - Server-side bugfixes:
+      See CVE-2013-1845, CVE-2013-1846, CVE-2013-1847, CVE-2013-1849,
+      and CVE-2013-1884, and descriptive advisories at
+            http://subversion.apache.org/security/
     * svnserve will log the replayed rev not the low-water rev. (r1461278)
     * mod_dav_svn will omit some property values for activity urls (r1453780)
     * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
@@ -599,6 +634,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.23
   - Server-side bugfixes:
     * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
+            See CVE-2013-2112, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2013-2112-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
