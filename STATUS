@@ -101,23 +101,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1514763
-   ra_serf: Use case-insensitive hostname comparision when validating server
-   certificate as it specified in RFC 2459.
-   Justification:
-     SSL certificate with uppercase letters considired as untrusted. Regression
-     from neon.
-   Votes:
-     +1: rhuijben, stefan2
-
- * r1515119
-   swig-py: prevent a segfaulting function from being called.  Also hide it
-   from swig-pl where it is unusable (raises a TypeError(!?) if called).
-   Justification:
-     It's a segfault.
-   Votes:
-     +1: danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -136,3 +119,19 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1515119
+   swig-py: prevent a segfaulting function from being called.  Also hide it
+   from swig-pl where it is unusable (raises a TypeError(!?) if called).
+   Justification:
+     It's a segfault.
+   Votes:
+     +1: danielsh, breser
+
+ * r1514763
+   ra_serf: Use case-insensitive hostname comparision when validating server
+   certificate as it specified in RFC 2459.
+   Justification:
+     SSL certificate with uppercase letters considired as untrusted. Regression
+     from neon.
+   Votes:
+     +1: rhuijben, stefan2, breser
