@@ -120,13 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1515366
-   Spurious error for info on working copy root with child in conflict.
-   Justification:
-     Error is confusing for users, difficult for people using the API.
-   Votes:
-     +1: philip, breser, stefan2
-
  * r1499044, r1515343, r1515721
    Spell revision numbers as "r%ld" in error messages.
    Justification:
