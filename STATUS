@@ -120,13 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1511272
-   svnauthz: improve help strings.
-   Justification:
-     I found the previous output confusing.
-   Votes:
-     +1: danielsh, stefan2, breser
-
  * r1513874
    Fix packed revprop manifest growth in FSFS
    Justification:
