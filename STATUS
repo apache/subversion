@@ -120,19 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1502901
-   Make ra_serf sessions reusable after a log callback uses the
-   SVN_ERR_CEASE_INVOCATION error.
-   Justification:
-     Without this patch a new session would be required for each of these
-     usages.
-     Required by the r1468980 group.
-   Notes:
-     Resets the connection used by ra_serf to avoid having to read all data,
-     which is mostly the same behavior as not re-using the ra session.
-   Votes:
-     +1: rhuijben, stefan2, breser
-
  * r1511272
    svnauthz: improve help strings.
    Justification:

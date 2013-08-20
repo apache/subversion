@@ -824,8 +824,6 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
          the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
           status = 0;
 
           if (sess->timeout)
@@ -836,8 +834,11 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                 }
               else
                 {
-                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                          _("Connection timed out"));
+                  return
+                      svn_error_compose_create(
+                            err,
+                            svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                             _("Connection timed out")));
                 }
             }
         }
@@ -883,6 +884,23 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
   /* Wait until the response logic marks its DONE status.  */
   err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
                                       scratch_pool);
+
+  /* A callback invocation has been canceled. In this simple case of
+     context_run_one, we can keep the ra-session operational by resetting
+     the connection.
+
+     If we don't do this, the next context run will notice that the connection
+     is still in the error state and will just return SVN_ERR_CEASE_INVOCATION
+     (=the last error for the connection) again  */
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+    {
+      apr_status_t status = serf_connection_reset(handler->conn->conn);
+
+      if (status)
+        err = svn_error_compose_create(err,
+                                       svn_ra_serf__wrap_err(status, NULL));
+    }
+
   if (handler->server_error)
     {
       err = svn_error_compose_create(err, handler->server_error->error);
