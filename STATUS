@@ -134,6 +134,17 @@ Candidate changes:
    Votes:
      +1: rhuijben, breser, rschupp
 
+ * r175
+   Fix symlink attack on svnpubsub's pidfile. Pick up r175 from upstream
+   of daemonize.py
+   Justification:
+     symlink attacks suck
+   Branch: ^/subversion/branches/1.8.x-r175-daemonize
+   Notes:
+     trunk has a full upgrade of daemonize.py. this is just the pidfile fix.
+   Votes:
+     +1: gstein, danielsh
+
 Veto-blocked changes:
 =====================
 
