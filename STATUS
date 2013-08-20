@@ -132,7 +132,7 @@ Candidate changes:
    Justification:
      These targets should build all swig modules for the language.
    Votes:
-     +1: rhuijben, breser
+     +1: rhuijben, breser, rschupp
 
 Veto-blocked changes:
 =====================
