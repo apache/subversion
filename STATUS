@@ -81,32 +81,6 @@ Candidate changes:
                    detection of BDB (via db.h) and even while debugging a
                    maintainer build of Subversion a release BDB works fine)
 
- * r1502267
-   Enforce strict version equality between cmdline tools and libraries.
-   Justification:
-     Without this, a 1.8.1 client will use a 1.8.2 libsvn_* library if that's
-     what the runtime linker finds.  This may be a (hard-to-diagnose) problem
-     due to possible incompatibilities in the subversion/include/private/ APIs
-     used.
-   Branch: 1.8.x-r1502267
-   Notes:
-     Seen in the wild under 1.7.x.
-   Votes:
-     +1: danielsh, stefan2
-
- * r1502901
-   Make ra_serf sessions reusable after a log callback uses the
-   SVN_ERR_CEASE_INVOCATION error.
-   Justification:
-     Without this patch a new session would be required for each of these
-     usages.
-     Required by the r1468980 group.
-   Notes:
-     Resets the connection used by ra_serf to avoid having to read all data,
-     which is mostly the same behavior as not re-using the ra session.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1468980, r1478987, r1502811
    Reduce the number of ra sessions for automatic merge calculations to two.
    Justification:
@@ -121,14 +95,13 @@ Candidate changes:
      r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
    Votes:
      +1: rhuijben, stefan2
-
- * r1506047
-   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
-   build.conf
-   Justification:
-     These targets should build all swig modules for the language.
-   Votes:
-     +1: rhuijben
+     +0: breser (I see that the call to
+                 svn_ra__assert_mergeinfo_capable_server() was removed from
+                 get_mergeinfo() in mergeinfo.c, but not mentioned in commit
+                 logs.  Looking at the code it seems that finding out if the
+                 server and repo support merginfo requires trying to get some,
+                 but don't we need to pretty up the error here like the assert
+                 would do for us?)
 
  * r1507889, r1507891
    davautocheck: use the correct apxs binary by default.
@@ -136,14 +109,7 @@ Candidate changes:
      Convenience aside, without this patch, davautocheck would use the wrong
      apxs binary when invoked "by hand" (not via make).
    Votes:
-     +1: danielsh
-
- * r1511272
-   svnauthz: improve help strings.
-   Justification:
-     I found the previous output confusing.
-   Votes:
-     +1: danielsh, stefan2
+     +1: danielsh, breser
 
  * r1512300, r1512301
    Clean up unpacked revprops in 'svnadmin hotcopy --incremental'
@@ -154,15 +120,7 @@ Candidate changes:
    Notes:
      r1512300 is merely a test case update to reproduce the problem.
    Votes:
-     +1: stefan2
-
- * r1513874
-   Fix packed revprop manifest growth in FSFS
-   Justification:
-     Users that frequently change existing revprops may, over time,
-     experience a performance degradation.
-   Votes:
-     +1: stefan2, danielsh
+     +1: stefan2, breser
 
  * r1513879, r1513880, r1515516
    Fix packed revprop file splitting logic in FSFS
@@ -220,3 +178,51 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1502267
+   Enforce strict version equality between cmdline tools and libraries.
+   Justification:
+     Without this, a 1.8.1 client will use a 1.8.2 libsvn_* library if that's
+     what the runtime linker finds.  This may be a (hard-to-diagnose) problem
+     due to possible incompatibilities in the subversion/include/private/ APIs
+     used.
+   Branch: 1.8.x-r1502267
+   Notes:
+     Seen in the wild under 1.7.x.
+   Votes:
+     +1: danielsh, stefan2, breser
+
+ * r1502901
+   Make ra_serf sessions reusable after a log callback uses the
+   SVN_ERR_CEASE_INVOCATION error.
+   Justification:
+     Without this patch a new session would be required for each of these
+     usages.
+     Required by the r1468980 group.
+   Notes:
+     Resets the connection used by ra_serf to avoid having to read all data,
+     which is mostly the same behavior as not re-using the ra session.
+   Votes:
+     +1: rhuijben, stefan2, breser
+
+ * r1506047
+   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
+   build.conf
+   Justification:
+     These targets should build all swig modules for the language.
+   Votes:
+     +1: rhuijben, breser
+
+ * r1511272
+   svnauthz: improve help strings.
+   Justification:
+     I found the previous output confusing.
+   Votes:
+     +1: danielsh, stefan2, breser
+
+ * r1513874
+   Fix packed revprop manifest growth in FSFS
+   Justification:
+     Users that frequently change existing revprops may, over time,
+     experience a performance degradation.
+   Votes:
+     +1: stefan2, danielsh, breser
