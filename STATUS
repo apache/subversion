@@ -120,14 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1507889, r1507891
-   davautocheck: use the correct apxs binary by default.
-   Justification:
-     Convenience aside, without this patch, davautocheck would use the wrong
-     apxs binary when invoked "by hand" (not via make).
-   Votes:
-     +1: danielsh, breser, stefan2
-
  * r1506047
    Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
    build.conf
