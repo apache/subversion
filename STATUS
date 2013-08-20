@@ -126,6 +126,14 @@ Candidate changes:
      +1: stefan2, danielsh
      +1: philip (not r1515516)
 
+ * r1506047
+   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
+   build.conf
+   Justification:
+     These targets should build all swig modules for the language.
+   Votes:
+     +1: rhuijben, breser
+
 Veto-blocked changes:
 =====================
 
@@ -157,14 +165,6 @@ Approved changes:
      which is mostly the same behavior as not re-using the ra session.
    Votes:
      +1: rhuijben, stefan2, breser
-
- * r1506047
-   Add swig_diff target to the __SWIG_PERL__ and __SWIG_RUBY__ targets in
-   build.conf
-   Justification:
-     These targets should build all swig modules for the language.
-   Votes:
-     +1: rhuijben, breser
 
  * r1511272
    svnauthz: improve help strings.
