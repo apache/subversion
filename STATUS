@@ -139,7 +139,7 @@ Candidate changes:
    Justification:
      We should be using 'r%ld' or 'revision %ld' consistently in user output.
    Votes:
-     +1: breser
+     +1: breser, ivan
      +1 (without r1515721): danielsh
 
  * r1515366
