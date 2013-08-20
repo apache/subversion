@@ -120,13 +120,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1514295, r1514318, r1514356
-   Add serf library version information to svn --version.
-   Justification:
-     Makes ra_serf issues diagnostic a little bit easier.
-   Votes:
-     +1: ivan, danielsh, breser
-
  * r1515119
    swig-py: prevent a segfaulting function from being called.  Also hide it
    from swig-pl where it is unusable (raises a TypeError(!?) if called).
