@@ -187,7 +187,7 @@ sub digest_entry($) {
   # on empty line after the last entry in Approved, for example.
   local $_ = shift;
   s/\n*\z// and $_ .= "\n\n";
-  Digest->new("MD5")->add($_)->hexdigest
+  digest_string($_)
 }
 
 sub prompt {
