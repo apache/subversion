@@ -1635,6 +1635,70 @@ allocate_item_index(apr_uint64_t *item_index,
   return SVN_NO_ERROR;
 }
 
+/* Baton used by fnv1a_write_handler to calculate the FNV checksum
+ * before passing the data on to the INNER_STREAM.
+ */
+typedef struct fnv1a_stream_baton_t
+{
+  svn_stream_t *inner_stream;
+  svn_checksum_ctx_t *context;
+} fnv1a_stream_baton_t;
+
+/* Implement svn_write_fn_t.
+ * Update checksum and pass data on to inner stream.
+ */
+static svn_error_t *
+fnv1a_write_handler(void *baton,
+                    const char *data,
+                    apr_size_t *len)
+{
+  fnv1a_stream_baton_t *b = baton;
+
+  SVN_ERR(svn_checksum_update(b->context, data, *len));
+  SVN_ERR(svn_stream_write(b->inner_stream, data, len));
+
+  return SVN_NO_ERROR;
+}
+
+/* Return a stream that calculates a FNV checksum in *CONTEXT
+ * over all data written to the stream and passes that data on
+ * to INNER_STREAM.  Allocate objects in POOL.
+ */
+static svn_stream_t *
+fnv1a_wrap_stream(svn_checksum_ctx_t **context,
+                  svn_stream_t *inner_stream,
+                  apr_pool_t *pool)
+{
+  svn_stream_t *outer_stream;
+
+  fnv1a_stream_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
+  baton->inner_stream = inner_stream;
+  baton->context = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
+  *context = baton->context;
+
+  outer_stream = svn_stream_create(baton, pool);
+  svn_stream_set_write(outer_stream, fnv1a_write_handler);
+
+  return outer_stream;
+}
+
+/* Set *DIGEST to the FNV checksum calculated in CONTEXT.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+fnv1a_checksum_finalize(apr_uint32_t *digest,
+                        svn_checksum_ctx_t *context,
+                        apr_pool_t *scratch_pool)
+{
+  svn_checksum_t *checksum;
+
+  SVN_ERR(svn_checksum_final(&checksum, context, scratch_pool));
+  SVN_ERR_ASSERT(checksum->kind == svn_checksum_kind_fnv);
+  *digest =  *(apr_uint32_t *)(checksum->digest);
+
+  return SVN_NO_ERROR;
+}
+
 /* This baton is used by the representation writing streams.  It keeps
    track of the checksum information as well as the total size of the
    representation so far. */
@@ -1670,6 +1734,9 @@ struct rep_write_baton
 
   svn_checksum_ctx_t *md5_checksum_ctx;
   svn_checksum_ctx_t *sha1_checksum_ctx;
+
+  /* calculate a modified FNV-1a checksum of the on-disk representation */
+  svn_checksum_ctx_t *fnv1a_checksum_ctx;
 
   apr_pool_t *pool;
 
@@ -1839,7 +1906,6 @@ rep_write_cleanup(void *data)
   return APR_SUCCESS;
 }
 
-
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
    POOL.  Only appropriate for file contents, not for props or
@@ -1877,7 +1943,10 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                                  b->pool));
 
   b->file = file;
-  b->rep_stream = svn_stream_from_aprfile2(file, TRUE, b->pool);
+  b->rep_stream = fnv1a_wrap_stream(&b->fnv1a_checksum_ctx,
+                                    svn_stream_from_aprfile2(file, TRUE,
+                                                             b->pool),
+                                    b->pool);
 
   SVN_ERR(svn_fs_fs__get_file_offset(&b->rep_offset, file, b->pool));
 
@@ -2113,6 +2182,9 @@ rep_write_contents_close(void *baton)
       entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = rep->item_index;
+      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                      b->fnv1a_checksum_ctx,
+                                      b->pool));
 
       SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
       SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, &entry, b->pool));
@@ -2318,6 +2390,7 @@ write_hash_rep(representation_t *rep,
 {
   svn_stream_t *stream;
   struct write_hash_baton *whb;
+  svn_checksum_ctx_t *fnv1a_checksum_ctx;
   representation_t *old_rep;
   apr_off_t offset = 0;
 
@@ -2325,7 +2398,9 @@ write_hash_rep(representation_t *rep,
 
   whb = apr_pcalloc(pool, sizeof(*whb));
 
-  whb->stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  whb->stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
+                                  svn_stream_from_aprfile2(file, TRUE, pool),
+                                  pool);
   whb->size = 0;
   whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
@@ -2368,6 +2443,9 @@ write_hash_rep(representation_t *rep,
       entry.type = item_type;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = rep->item_index;
+      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                      fnv1a_checksum_ctx,
+                                      pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, pool));
 
@@ -2406,6 +2484,7 @@ write_hash_delta_rep(representation_t *rep,
   svn_stream_t *stream;
   representation_t *base_rep;
   representation_t *old_rep;
+  svn_checksum_ctx_t *fnv1a_checksum_ctx;
   svn_stream_t *source;
   svn_fs_fs__rep_header_t header = { 0 };
 
@@ -2438,7 +2517,9 @@ write_hash_delta_rep(representation_t *rep,
       header.type = svn_fs_fs__rep_self_delta;
     }
 
-  file_stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
+                                  svn_stream_from_aprfile2(file, TRUE, pool),
+                                  pool);
   SVN_ERR(svn_fs_fs__write_rep_header(&header, file_stream, pool));
   SVN_ERR(svn_fs_fs__get_file_offset(&delta_start, file, pool));
 
@@ -2495,6 +2576,9 @@ write_hash_delta_rep(representation_t *rep,
       entry.type = item_type;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = rep->item_index;
+      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                      fnv1a_checksum_ctx,
+                                      pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, pool));
 
@@ -2638,6 +2722,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   svn_fs_fs__id_part_t node_id, copy_id, rev_item;
   fs_fs_data_t *ffd = fs->fsap_data;
   const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__id_txn_id(id);
+  svn_stream_t *file_stream;
+  svn_checksum_ctx_t *fnv1a_checksum_ctx;
+
   *new_id_p = NULL;
 
   /* Check to see if this is a transaction node. */
@@ -2813,8 +2900,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
 
-  SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   noderev, ffd->format,
+  file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
+                                  svn_stream_from_aprfile2(file, TRUE, pool),
+                                  pool);
+  SVN_ERR(svn_fs_fs__write_noderev(file_stream, noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
@@ -2829,6 +2918,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       entry.size = my_offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
       entry.item = rev_item;
+      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                      fnv1a_checksum_ctx,
+                                      pool));
 
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
     }
@@ -2853,13 +2945,17 @@ write_final_changed_path_info(apr_off_t *offset_p,
 {
   apr_hash_t *changed_paths;
   apr_off_t offset;
+  svn_stream_t *stream;
+  svn_checksum_ctx_t *fnv1a_checksum_ctx;
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
 
   SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, fs, txn_id, pool));
 
-  SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
-                                   fs, changed_paths, TRUE, pool));
+  stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
+                             svn_stream_from_aprfile2(file, TRUE, pool),
+                             pool);
+  SVN_ERR(svn_fs_fs__write_changes(stream, fs, changed_paths, TRUE, pool));
 
   *offset_p = offset;
 
@@ -2874,6 +2970,9 @@ write_final_changed_path_info(apr_off_t *offset_p,
       entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
       entry.item.revision = SVN_INVALID_REVNUM;
       entry.item.number = SVN_FS_FS__ITEM_INDEX_CHANGES;
+      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                      fnv1a_checksum_ctx,
+                                      pool));
 
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, pool));
       SVN_ERR(store_l2p_index_entry(fs, txn_id, entry.offset,
