@@ -62,6 +62,9 @@ typedef struct svn_fs_fs__p2l_entry_t
   /* type of the item (see SVN_FS_FS__ITEM_TYPE_*) defines */
   unsigned type;
 
+  /* modified FNV-1a checksum.  0 if unknown checksum */
+  apr_uint32_t fnv1_checksum;
+
   /* item in that block */
   svn_fs_fs__id_part_t item;
 } svn_fs_fs__p2l_entry_t;
@@ -193,8 +196,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            apr_size_t count,
                            apr_pool_t *pool);
 
-/* In *OFFSET, return the first OFFSET in the pack / rev file containing
- * REVISION in FS not covered by the log-to-phys index.
+/* In *OFFSET, return the first OFFSET in the pack / rev file containing.
  * Use POOL for allocations.
  */
 svn_error_t *

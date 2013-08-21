@@ -119,6 +119,9 @@ typedef struct p2l_header_t
   /* number of pages / clusters in that rev file */
   apr_size_t page_count;
 
+  /* number of bytes in the rev file */
+  apr_uint64_t file_size;
+
   /* offsets of the pages / cluster descriptions within the index file */
   apr_off_t *offsets;
 } p2l_header_t;
@@ -1528,6 +1531,7 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
   apr_uint64_t last_page_end = 0;
   apr_size_t last_buffer_size = 0;  /* byte offset in the spill buffer at
                                        the begin of the current revision */
+  apr_uint64_t file_size = 0;
 
   /* temporary data structures that collect the data which will be moved
      to the target file in a second step */
@@ -1566,6 +1570,8 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
          at the end the of the last page. */
       if (eof)
         {
+          file_size = last_entry_end;
+
           entry.offset = last_entry_end;
           entry.size = APR_ALIGN(entry.offset, page_size) - entry.offset;
           entry.type = 0;
@@ -1621,6 +1627,9 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_int(encoded, rev_diff),
                                   iter_pool));
+      SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
+                                  encode_uint(encoded, entry.fnv1_checksum),
+                                  iter_pool));
      
       last_entry_end = entry_end;
 
@@ -1636,9 +1645,12 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
                            | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
                            APR_OS_DEFAULT, local_pool));
 
-  /* write the start revision and page size */
+  /* write the start revision, file size and page size */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
                                  encode_uint(encoded, revision),
+                                 NULL, local_pool));
+  SVN_ERR(svn_io_file_write_full(index_file, encoded,
+                                 encode_uint(encoded, file_size),
                                  NULL, local_pool));
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
                                  encode_uint(encoded, page_size),
@@ -1720,6 +1732,8 @@ get_p2l_header(p2l_header_t **header,
   /* read table sizes and allocate page array */
   SVN_ERR(packed_stream_get(&value, *stream));
   result->first_revision = (svn_revnum_t)value;
+  SVN_ERR(packed_stream_get(&value, *stream));
+  result->file_size = value;
   SVN_ERR(packed_stream_get(&value, *stream));
   result->page_size = value;
   SVN_ERR(packed_stream_get(&value, *stream));
@@ -1904,6 +1918,9 @@ read_entry(packed_number_stream_t *stream,
   SVN_ERR(packed_stream_get(&value, stream));
   *last_revision += (svn_revnum_t)decode_int(value);
   entry.item.revision = *last_revision;
+
+  SVN_ERR(packed_stream_get(&value, stream));
+  entry.fnv1_checksum = (apr_uint32_t)value;
 
   APR_ARRAY_PUSH(result, svn_fs_fs__p2l_entry_t) = entry;
   *item_offset += entry.size;
@@ -2347,7 +2364,7 @@ p2l_get_max_offset_func(void **out,
                         apr_pool_t *result_pool)
 {
   const p2l_header_t *header = data;
-  apr_off_t max_offset = header->page_size * header->page_count;
+  apr_off_t max_offset = header->file_size;
   *out = apr_pmemdup(result_pool, &max_offset, sizeof(max_offset));
 
   return SVN_NO_ERROR;
@@ -2380,7 +2397,7 @@ svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
     }
 
   SVN_ERR(get_p2l_header(&header, &stream, fs, revision, pool, pool));
-  *offset = header->page_count * header->page_size;
+  *offset = header->file_size;
   
   /* make sure we close files after usage */
   SVN_ERR(packed_stream_close(stream));
