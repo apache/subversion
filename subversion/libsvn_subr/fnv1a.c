@@ -97,7 +97,11 @@ finalize_fnv1a_32x4(apr_uint32_t hashes[SCALING],
                     apr_size_t len)
 {
   char final_data[sizeof(apr_uint32_t) * SCALING + SCALING - 1];
+  apr_size_t i;
   assert(len < SCALING);
+
+  for (i = 0; i < SCALING; ++i)
+    hashes[i] = htonl(hashes[i]);
 
   /* run FNV-1a over the interleaved checksums plus the remaining
      (odd-lotted) input data */
