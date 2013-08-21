@@ -518,8 +518,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
     * ra_serf: ignore case when checking certificate common names (r1514763)
 
   - Server-side bugfixes:
-    * mod_dav_svn: return correct status codes when commit fails (r1490684)
-    * mod_dav_svn: do not map requests to filesystem. (r1512432 et al)
+    * mod_dav_svn: better status codes for commit failures (r1490684)
+    * mod_dav_svn: do not map requests to filesystem (r1512432 et al)
 
  Developer-visible changes:
   - General:
