@@ -196,7 +196,7 @@ All entries are pairs of 64 bit unsigned integers in machine endianess.
 Phys-to-log index
 =================
 
-This index has to map offset -> (rev, item_index, type, len).
+This index has to map offset -> (rev, item_index, type, len, checksum).
 
 
 Index data model
@@ -228,6 +228,7 @@ hierarchy:
 header:
 
   <first revision>   ... first revision covered by this index file
+  <file size>        ... size of the rev / pack file in bytes
   <page size>        ... number of bytes in the rev / pack file covered by
                          each index page
   <page count>       ... number of pages
@@ -245,6 +246,9 @@ entry:
   <offset>           ... absolute position in the pack / rev file
   <size>             ... on-disk size of the item in the pack / rev file
   <type>             ... item type
+  <FNV checksum>     ... modified 32 bit FNV-1a checksum of that section
+                         of the pack / rev file (see below). 0 for empty
+                         or zero-length items
   <revision>         ... revision that this item belongs to
   <item_index>       ... item_index within that revision
 
@@ -255,17 +259,19 @@ Index file format
   file := header pages items
 
   header := u(<header>.<first revision>) \
+            u(<header>.<file size>) \
             u(<header>.<page size>) \
             u(<header>.<page count>)
 
   pages := u(<header>.<offsets>[k+1] - <header>.<offsets>[k]),
            for k in 0 .. <header>.<page count> -1
 
-  items := u(<items in page k>[0].<offset>)
+  items := u(<items in page k>[0].<offset>) \
            u(<items in page k>[l].<size>) \
            i(c(<items in page k>[l]) - c(<items of page k>[l-1])) \
            i(  <items in page k>[l].<revision>
-             - <items in page k>[l-1].<revision>),
+             - <items in page k>[l-1].<revision>), \
+           u(FNV checksum)
            for l in 0 .. s(<items in page k>)-1,
            for k in 0 .. <header>.<page count>-1
 
@@ -299,3 +305,27 @@ the proto index file (e.g. while still writing the proto rev file).  Items
 with revision set to SVN_INVALID_REVNUM will therefore be automatically
 updated when creating the index file.  This is not possible in conjunction
 with rev files but not for pack files.
+
+
+FNV checksum
+------------
+
+FNV-1a can be found here: http://www.isthe.com/chongo/tech/comp/fnv/
+For performance reasons we use a modified version:
+
+* split the input byte stream [b0 .. bN] into 4 sub-streams of equal
+  length and up to 3 remnants:
+
+  [b0 b4 b8 ..], [b1 b5 b9 ..], [b2 b6 b10 ..], [b3 b7 b11 ..], [remnant]
+
+* calculate 32 bit FNV-1a checksums for the 4 substreams:
+
+  h0 = fnv_1a([b0 b4 b8 ..]), ..., h3 = fnv_1a([b3 b7 b11 ..])
+
+* combine the big endian representation of these checksums plus the
+  remnant of the original stream into a 12 to 15 byte long intermediate
+
+  [i0 .. iK], 12 <= K <= 15
+
+* FNV checksum = fnv_1a([i0 .. iK]) in big endian representation
+
