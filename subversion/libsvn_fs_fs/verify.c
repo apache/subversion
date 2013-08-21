@@ -21,6 +21,8 @@
  */
 
 #include "svn_sorts.h"
+#include "svn_checksum.h"
+#include "private/svn_subr_private.h"
 
 #include "verify.h"
 #include "fs_fs.h"
@@ -314,6 +316,255 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Items smaller than this can be read at once into a buffer and directly
+ * be checksummed.  Larger items require stream processing.
+ * Must be a multiple of 8. */
+#define STREAM_THRESHOLD 4096
+
+/* Verify that the next SIZE bytes read from FILE are NUL.
+ * SIZE must not exceed STREAM_THRESHOLD.  Use POOL for allocations.
+ */
+static svn_error_t *
+expect_buffer_nul(apr_file_t *file,
+                  apr_off_t size,
+                  apr_pool_t *pool)
+{
+  union
+  {
+    unsigned char buffer[STREAM_THRESHOLD];
+    apr_uint64_t chunks[STREAM_THRESHOLD / sizeof(apr_uint64_t)];
+  } data;
+
+  apr_size_t i;
+  SVN_ERR_ASSERT(size <= STREAM_THRESHOLD);
+
+  /* read the whole data block; error out on failure */
+  data.chunks[(size - 1)/ sizeof(apr_uint64_t)] = 0;
+  SVN_ERR(svn_io_file_read_full2(file, data.buffer, size, NULL, NULL, pool));
+
+  /* chunky check */
+  for (i = 0; i < size / sizeof(apr_uint64_t); ++i)
+    if (data.chunks[i] != 0)
+      break;
+
+  /* byte-wise check upon mismatch or at the end of the block */
+  for (i *= sizeof(apr_uint64_t); i < size; ++i)
+    if (data.buffer[i] != 0)
+      {
+        const char *file_name;
+        apr_off_t offset;
+        
+        SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
+        SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+        offset -= size - i;
+
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Empty section in file %s contains "
+                                   "non-NUL data at offset %s"),
+                                 file_name, apr_off_t_toa(pool, offset));
+      }
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the next SIZE bytes read from FILE are NUL.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+read_all_nul(apr_file_t *file,
+             apr_off_t size,
+             apr_pool_t *pool)
+{
+  for (; size >= STREAM_THRESHOLD; size -= STREAM_THRESHOLD)
+    SVN_ERR(expect_buffer_nul(file, STREAM_THRESHOLD, pool));
+
+  if (size)
+    SVN_ERR(expect_buffer_nul(file, size, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Compare the ACTUAL checksum with the one expected by ENTRY.
+ * Return an error in case of mismatch.  Use the name of FILE
+ * in error message.  Allocate data in POOL.
+ */
+static svn_error_t *
+expected_checksum(apr_file_t *file,
+                  svn_fs_fs__p2l_entry_t *entry,
+                  apr_uint32_t actual,
+                  apr_pool_t *pool)
+{
+  if (actual != entry->fnv1_checksum)
+    {
+      const char *file_name;
+
+      SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Checksum mismatch item at offset %s of "
+                                 "length %s bytes in file %s"),
+                               apr_off_t_toa(pool, entry->offset),
+                               apr_off_t_toa(pool, entry->size), file_name);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the FNV checksum over the next ENTRY->SIZE bytes read
+ * from FILE will match ENTRY's expected checksum.  SIZE must not
+ * exceed STREAM_THRESHOLD.  Use POOL for allocations.
+ */
+static svn_error_t *
+expected_buffered_checksum(apr_file_t *file,
+                           svn_fs_fs__p2l_entry_t *entry,
+                           apr_pool_t *pool)
+{
+  unsigned char buffer[STREAM_THRESHOLD];
+  SVN_ERR_ASSERT(entry->size <= STREAM_THRESHOLD);
+
+  SVN_ERR(svn_io_file_read_full2(file, buffer, (apr_size_t)entry->size,
+                                 NULL, NULL, pool));
+  SVN_ERR(expected_checksum(file, entry,
+                            svn__fnv1a_32x4(buffer, (apr_size_t)entry->size),
+                            pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that the FNV checksum over the next ENTRY->SIZE bytes read from
+ * FILE will match ENTRY's expected checksum.  Use POOL for allocations.
+ */
+static svn_error_t *
+expected_streamed_checksum(apr_file_t *file,
+                           svn_fs_fs__p2l_entry_t *entry,
+                           apr_pool_t *pool)
+{
+  unsigned char buffer[STREAM_THRESHOLD];
+  svn_checksum_t *checksum;
+  svn_checksum_ctx_t *context
+    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
+
+  while (entry->size > 0)
+    {
+      apr_size_t to_read = entry->size > sizeof(buffer)
+                         ? sizeof(buffer)
+                         : (apr_size_t)entry->size;
+      SVN_ERR(svn_io_file_read_full2(file, buffer, to_read, NULL, NULL,
+                                     pool));
+      SVN_ERR(svn_checksum_update(context, buffer, to_read));
+    }
+
+  SVN_ERR(svn_checksum_final(&checksum, context, pool));
+  SVN_ERR(expected_checksum(file, entry,
+                            *(apr_uint32_t *)checksum->digest,
+                            pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that for all phys-to-log index entries for revisions START to
+ * START + COUNT-1 in FS match the actual pack / rev file contents.
+ * If given, invoke CANCEL_FUNC with CANCEL_BATON at regular intervals.
+ * Use POOL for allocations.
+ *
+ * Please note that we can only check on pack / rev file granularity and
+ * must only be called for a single rev / pack file.
+ */
+static svn_error_t *
+compare_p2l_to_rev(svn_fs_t *fs,
+                   svn_revnum_t start,
+                   svn_revnum_t count,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_off_t max_offset;
+  apr_off_t offset = 0;
+  apr_file_t *file;
+
+  /* open the pack / rev file that is covered by the p2l index */
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&file, fs, start, pool));
+
+  /* check file size vs. range covered by index */
+  SVN_ERR(svn_io_file_seek(file, APR_END, &offset, pool));
+  SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs, start, pool));
+
+  if (offset != max_offset)
+    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT, NULL,
+                             _("File size of %s for revision r%ld does "
+                               "not match p2l index size of %s"),
+                             apr_off_t_toa(pool, offset), start,
+                             apr_off_t_toa(pool, max_offset));
+
+  SVN_ERR(svn_io_file_aligned_seek(file, ffd->block_size, NULL, 0, pool));
+
+  /* for all offsets in the file, get the P2L index entries and check
+     them against the L2P index */
+  for (offset = 0; offset < max_offset; )
+    {
+      apr_array_header_t *entries;
+      int i;
+
+      /* get all entries for the current block */
+      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, start, offset,
+                                          iterpool));
+
+      /* process all entries (and later continue with the next block) */
+      for (i = 0; i < entries->nelts; ++i)
+        {
+          svn_fs_fs__p2l_entry_t *entry
+            = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+
+          /* skip bits we previously checked */
+          if (i == 0 && entry->offset < offset)
+            continue;
+
+          /* skip zero-sized entries */
+          if (entry->size == 0)
+            continue;
+
+          /* p2l index must cover all rev / pack file offsets exactly once */
+          if (entry->offset != offset)
+            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+                                     NULL,
+                                     _("p2l index entry for revision r%ld"
+                                       " is non-contiguous between offsets "
+                                       " %s and %s"),
+                                     start,
+                                     apr_off_t_toa(pool, offset),
+                                     apr_off_t_toa(pool, entry->offset));
+
+          /* empty sections must contain NUL bytes only */
+          if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
+            {
+              /* skip filler entry at the end of the p2l index */
+              if (entry->offset != max_offset)
+                SVN_ERR(read_all_nul(file, entry->size, pool));
+            }
+          else if (entry->fnv1_checksum)
+            {
+              if (entry->size < STREAM_THRESHOLD)
+                SVN_ERR(expected_buffered_checksum(file, entry, pool));
+              else
+                SVN_ERR(expected_streamed_checksum(file, entry, pool));
+            }
+
+          /* advance offset */
+          offset += entry->size;
+        }
+
+      svn_pool_clear(iterpool);
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_revnum_t
 packed_base_rev(svn_fs_t *fs, svn_revnum_t rev)
 {
@@ -366,6 +617,10 @@ verify_index_consistency(svn_fs_t *fs,
                                        cancel_func, cancel_baton, iterpool));
       SVN_ERR(compare_p2l_to_l2p_index(fs, pack_start, pack_end - pack_start,
                                        cancel_func, cancel_baton, iterpool));
+
+      /* verify in-index checksums and types vs. actual rev / pack files */
+      SVN_ERR(compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
+                                 cancel_func, cancel_baton, iterpool));
 
       svn_pool_clear(iterpool);
     }
