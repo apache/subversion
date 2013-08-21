@@ -4,13 +4,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
 
  User-visible changes:
   - General
-    * merge: Fix bogus mergeinfo with conflicting file merges (issue #4306)
-    * diff: Fix duplicated path component in '--summarize' output (issue #4408)
-    * ra_serf: Ignore case when checking certificate common names (r1514763)
+    * merge: fix bogus mergeinfo with conflicting file merges (issue #4306)
+    * diff: fix duplicated path component in '--summarize' output (issue #4408)
+    * ra_serf: ignore case when checking certificate common names (r1514763)
 
   - Server-side bugfixes:
-    * mod_dav_svn: Return correct status codes when commit fails (r1490684)
-    * mod_dav_svn: Do not map requests to filesystem. (r1512432 et al)
+    * mod_dav_svn: better status codes for commit failures (r1490684)
+    * mod_dav_svn: do not map requests to filesystem (r1512432 et al)
 
  Developer-visible changes:
   - General:
@@ -18,8 +18,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
     * don't use uninitialized variable to produce an error code (r1482282)
 
   - Bindings:
-    * swig-pl: Fix SVN::Client not honoring config file settings (r150744)
-    * swig-pl & swig-py: Disable unusable svn_fs_set_warning_func (r1515119)
+    * swig-pl: fix SVN::Client not honoring config file settings (r150744)
+    * swig-pl & swig-py: disable unusable svn_fs_set_warning_func (r1515119)
  
  
 Version 1.7.11
