@@ -24,7 +24,7 @@
 
 
 #define UTF8PROC_INLINE
-#include "utf8proc/utf8proc.c.inline"
+#include "utf8proc/utf8proc.c"
 
 #include <apr_fnmatch.h>
 
@@ -37,7 +37,6 @@
 const char *svn_utf__utf8proc_version(void)
 {
   /* Unused static function warning removal hack. */
-  UNUSED(utf8proc_codepoint_valid);
   UNUSED(utf8proc_NFD);
   UNUSED(utf8proc_NFC);
   UNUSED(utf8proc_NFKD);
@@ -47,6 +46,42 @@ const char *svn_utf__utf8proc_version(void)
 }
 
 
+
+/* Fill the given BUFFER with decomposed UCS-4 representation of the
+ * UTF-8 STRING. If LENGTH is SVN_UTF__UNKNOWN_LENGTH, assume STRING
+ * is NUL-terminated; otherwise look only at the first LENGTH bytes in
+ * STRING. Upon return, BUFFER->data points at an array of UCS-4
+ * characters, and return the length of the array. TRANSFORM_FLAGS
+ * define exactly how the decomposition is performed.
+ *
+ * A negative return value is an utf8proc error code and may indicate
+ * that STRING contains invalid UTF-8 or was so long that an overflow
+ * occurred.
+ */
+static ssize_t
+unicode_decomposition(int transform_flags,
+                      const char *string, apr_size_t length,
+                      svn_membuf_t *buffer)
+{
+  const int nullterm = (length == SVN_UTF__UNKNOWN_LENGTH
+                        ? UTF8PROC_NULLTERM : 0);
+
+  for (;;)
+    {
+      apr_int32_t *const ucs4buf = buffer->data;
+      const ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
+      const ssize_t result =
+        utf8proc_decompose((const void*) string, length, ucs4buf, ucs4len,
+                           UTF8PROC_DECOMPOSE | UTF8PROC_STABLE
+                           | transform_flags | nullterm);
+
+      if (result < 0 || result <= ucs4len)
+        return result;
+
+      /* Increase the decomposition buffer size and retry */
+      svn_membuf__ensure(buffer, result * sizeof(*ucs4buf));
+    }
+}
 
 /* Fill the given BUFFER with an NFD UCS-4 representation of the UTF-8
  * STRING. If LENGTH is SVN_UTF__UNKNOWN_LENGTH, assume STRING is
@@ -62,32 +97,41 @@ decompose_normalized(apr_size_t *result_length,
                      const char *string, apr_size_t length,
                      svn_membuf_t *buffer)
 {
-  const int nullterm = (length == SVN_UTF__UNKNOWN_LENGTH
-                        ? UTF8PROC_NULLTERM : 0);
-
-  for (;;)
-    {
-      apr_int32_t *const ucs4buf = buffer->data;
-      const ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
-      const ssize_t result =
-        utf8proc_decompose((const void*) string, length, ucs4buf, ucs4len,
-                           UTF8PROC_DECOMPOSE | UTF8PROC_STABLE | nullterm);
-
-      if (result < 0)
-        return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
-                                gettext(utf8proc_errmsg(result)));
-
-      if (result <= ucs4len)
-        {
-          *result_length = result;
-          return SVN_NO_ERROR;
-        }
-
-      /* Increase the decomposition buffer size and retry */
-      svn_membuf__ensure(buffer, result * sizeof(*ucs4buf));
-    }
+  ssize_t result = unicode_decomposition(0, string, length, buffer);
+  if (result < 0)
+    return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
+                            gettext(utf8proc_errmsg(result)));
+  *result_length = result;
+  return SVN_NO_ERROR;
 }
 
+/* Fill the given BUFFER with an NFC UTF-8 representation of the UTF-8
+ * STRING. If LENGTH is SVN_UTF__UNKNOWN_LENGTH, assume STRING is
+ * NUL-terminated; otherwise look only at the first LENGTH bytes in
+ * STRING. Upon return, BUFFER->data points at a NUL-terminated string
+ * of UTF-8 characters.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints. Any error message comes from utf8proc.
+ */
+static svn_error_t *
+normalize_cstring(apr_size_t *result_length,
+                  const char *string, apr_size_t length,
+                  svn_membuf_t *buffer)
+{
+  ssize_t result = unicode_decomposition(0, string, length, buffer);
+  if (result >= 0)
+    {
+      svn_membuf__resize(buffer, result * sizeof(apr_int32_t) + 1);
+      result = utf8proc_reencode(buffer->data, result,
+                                 UTF8PROC_COMPOSE | UTF8PROC_STABLE);
+    }
+  if (result < 0)
+    return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
+                            gettext(utf8proc_errmsg(result)));
+  *result_length = result;
+  return SVN_NO_ERROR;
+}
 
 /* Compare two arrays of UCS-4 codes, BUFA of length LENA and BUFB of
  * length LENB. Return 0 if they're equal, a negative value if BUFA is
@@ -287,4 +331,182 @@ svn_utf__glob(svn_boolean_t *match,
 
   *match = !apr_fnmatch(pattern_buf->data, string_buf->data, 0);
   return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_membuf_t buffer;
+  apr_size_t result_length;
+  const apr_size_t length = strlen(string);
+  svn_membuf__create(&buffer, length * sizeof(apr_int32_t), scratch_pool);
+  err = normalize_cstring(&result_length, string, length, &buffer);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+  return (length == result_length && 0 == strcmp(string, buffer.data));
+}
+
+const char *
+svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
+{
+  /* Hexadecimal digits for code conversion. */
+  static const char digits[] = "0123456789ABCDEF";
+
+  /* Flags used for Unicode decomposition. */
+  static const int decomp_flags = (
+      UTF8PROC_COMPAT | UTF8PROC_STABLE | UTF8PROC_LUMP
+      | UTF8PROC_NLF2LF | UTF8PROC_STRIPCC | UTF8PROC_STRIPMARK);
+
+  svn_stringbuf_t *result;
+  svn_membuf_t buffer;
+  ssize_t decomp_length;
+  ssize_t len;
+
+  /* Decompose to a non-reversible compatibility format. */
+  svn_membuf__create(&buffer, length * sizeof(apr_int32_t), pool);
+  decomp_length = unicode_decomposition(decomp_flags, src, length, &buffer);
+  if (decomp_length < 0)
+    {
+      svn_membuf_t part;
+      apr_size_t done, prev;
+
+      /* The only other error we can receive here indicates an integer
+         overflow due to the length of the input string. Not very
+         likely, but we certainly shouldn't continue in that case. */
+      SVN_ERR_ASSERT_NO_RETURN(decomp_length == UTF8PROC_ERROR_INVALIDUTF8);
+
+      /* Break the decomposition into parts that are valid UTF-8, and
+         bytes that are not. Represent the invalid bytes in the target
+         erray by their negative value. This works because utf8proc
+         will not generate Unicode code points with values larger than
+         U+10FFFF. */
+      svn_membuf__create(&part, sizeof(apr_int32_t), pool);
+      decomp_length = 0;
+      done = prev = 0;
+      while (done < length)
+        {
+          apr_int32_t uc;
+
+          while (done < length)
+            {
+              len = utf8proc_iterate((uint8_t*)src + done, length - done, &uc);
+              if (len < 0)
+                break;
+              done += len;
+            }
+
+          /* Decompose the valid part */
+          if (done > prev)
+            {
+              len = unicode_decomposition(
+                  decomp_flags, src + prev, done - prev, &part);
+              SVN_ERR_ASSERT_NO_RETURN(len > 0);
+              svn_membuf__resize(
+                  &buffer, (decomp_length + len) * sizeof(apr_int32_t));
+              memcpy((apr_int32_t*)buffer.data + decomp_length,
+                     part.data, len * sizeof(apr_int32_t));
+              decomp_length += len;
+              prev = done;
+            }
+
+          /* What follows could be a valid UTF-8 sequence, but not
+             a valid Unicode character. */
+          if (done < length)
+            {
+              const char *last;
+
+              /* Determine the length of the UTF-8 sequence */
+              const char *const p = src + done;
+              len = utf8proc_utf8class[(uint8_t)*p];
+
+              /* Check if the multi-byte sequence is valid UTF-8. */
+              if (len > 1 && len <= length - done)
+                last = svn_utf__last_valid(p, len);
+              else
+                last = NULL;
+
+              /* Might not be a valid UTF-8 sequence at all */
+              if (!last || (last && last - p < len))
+                {
+                  uc = -((apr_int32_t)(*p & 0xff));
+                  len = 1;
+                }
+              else
+                {
+                  switch (len)
+                    {
+                      /* Decode the UTF-8 sequence without validation. */
+                    case 2:
+                      uc = ((p[0] & 0x1f) <<  6) + (p[1] & 0x3f);
+                      break;
+                    case 3:
+                      uc = (((p[0] & 0x0f) << 12) + ((p[1] & 0x3f) <<  6)
+                            + (p[2] & 0x3f));
+                      break;
+                    case 4:
+                      uc = (((p[0] & 0x07) << 18) + ((p[1] & 0x3f) << 12)
+                            + ((p[2] & 0x3f) <<  6) + (p[3] & 0x3f));
+                      break;
+                    default:
+                      SVN_ERR_ASSERT_NO_RETURN(
+                          !"Unexpected invalid UTF-8 byte");
+                    }
+
+                }
+
+              svn_membuf__resize(
+                  &buffer, (decomp_length + 1) * sizeof(apr_int32_t));
+              ((apr_int32_t*)buffer.data)[decomp_length++] = uc;
+              done += len;
+              prev = done;
+            }
+        }
+    }
+
+  /* Scan the result and deleting any combining diacriticals and
+     inserting placeholders where any non-ascii characters remain.  */
+  result = svn_stringbuf_create_ensure(decomp_length, pool);
+  for (len = 0; len < decomp_length; ++len)
+    {
+      const apr_int32_t cp = ((apr_int32_t*)buffer.data)[len];
+      if (cp > 0 && cp < 127)
+        svn_stringbuf_appendbyte(result, (char)cp);
+      else if (cp == 0)
+        svn_stringbuf_appendcstr(result, "\\0");
+      else if (cp < 0)
+        {
+          const apr_int32_t rcp = ((-cp) & 0xff);
+          svn_stringbuf_appendcstr(result, "?\\");
+          svn_stringbuf_appendbyte(result, digits[(rcp & 0x00f0) >> 4]);
+          svn_stringbuf_appendbyte(result, digits[(rcp & 0x000f)]);
+        }
+      else
+        {
+          if (utf8proc_codepoint_valid(cp))
+            {
+              const utf8proc_property_t *prop = utf8proc_get_property(cp);
+              if (prop->combining_class != 0)
+                continue;           /* Combining mark; ignore */
+              svn_stringbuf_appendcstr(result, "{U+");
+            }
+          else
+            svn_stringbuf_appendcstr(result, "{U?");
+          if (cp > 0xffff)
+            {
+              svn_stringbuf_appendbyte(result, digits[(cp & 0xf00000) >> 20]);
+              svn_stringbuf_appendbyte(result, digits[(cp & 0x0f0000) >> 16]);
+            }
+          svn_stringbuf_appendbyte(result, digits[(cp & 0xf000) >> 12]);
+          svn_stringbuf_appendbyte(result, digits[(cp & 0x0f00) >> 8]);
+          svn_stringbuf_appendbyte(result, digits[(cp & 0x00f0) >> 4]);
+          svn_stringbuf_appendbyte(result, digits[(cp & 0x000f)]);
+          svn_stringbuf_appendbyte(result, '}');
+        }
+    }
+
+  return result->data;
 }

@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -38,7 +39,6 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
-#include "svn_private_config.h"
 
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -48,7 +48,7 @@
  * This enum represents the current state of our XML parsing for a MERGE.
  */
 typedef enum merge_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MERGE_RESPONSE,
   UPDATED_SET,
   RESPONSE,
@@ -404,10 +404,10 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
   merge_ctx->merge_url = session->session_url.path;
 
   xmlctx = svn_ra_serf__xml_context_create(merge_ttable,
-                                           NULL, merge_closed, NULL,
+                                           NULL, merge_closed, NULL, NULL,
                                            merge_ctx,
                                            scratch_pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
 
   handler->method = "MERGE";
   handler->path = merge_ctx->merge_url;

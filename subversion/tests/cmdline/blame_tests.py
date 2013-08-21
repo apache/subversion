@@ -34,7 +34,7 @@ from svntest.main import server_has_mergeinfo
 from prop_tests import binary_mime_type_on_text_file_warning
 
 # For some basic merge setup used by blame -g tests.
-from merge_tests import set_up_branch
+from svntest.mergetrees import set_up_branch
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -772,7 +772,7 @@ def merge_sensitive_blame_and_empty_mergeinfo(sbox):
 
   # Make an edit to A/D/H/psi in r3.
   svntest.main.file_append(psi_path, "trunk edit in revision three.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+  sbox.simple_commit(message='trunk edit')
 
   # Merge r3 from A to A_COPY, reverse merge r3 from A/D/H/psi
   # to A_COPY/D/H/psi, and commit as r4.  This results in empty
@@ -782,21 +782,18 @@ def merge_sensitive_blame_and_empty_mergeinfo(sbox):
                        sbox.repo_url + '/A', A_COPY_path)
   svntest.main.run_svn(None, 'merge', '-c-3',
                        sbox.repo_url + '/A/D/H/psi', psi_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m',
-                       'Sync merge A to A_COPY excepting A_COPY/D/H/psi',
-                       wc_dir)
+  sbox.simple_commit(message='Sync merge A to A_COPY excepting A_COPY/D/H/psi')
 
   # Make an edit to A/D/H/psi in r5.
   svntest.main.file_append(psi_path, "trunk edit in revision five.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+  sbox.simple_commit(message='trunk edit')
 
   # Sync merge A/D/H/psi to A_COPY/D/H/psi and commit as r6.  This replaces
   # the empty mergeinfo on A_COPY/D/H/psi with '/A/D/H/psi:2-5'.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge',  sbox.repo_url + '/A/D/H/psi',
                        psi_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m',
-                       'Sync merge A/D/H/psi to A_COPY/D/H/psi', wc_dir)
+  sbox.simple_commit(message='Sync merge A/D/H/psi to A_COPY/D/H/psi')
 
   # Check the blame -g output:
   # Currently this test fails because the trunk edit done in r3 is
@@ -959,6 +956,34 @@ def blame_eol_handling(sbox):
                                        'blame', f2)
 
 
+@SkipUnless(svntest.main.server_has_reverse_get_file_revs)
+def blame_youngest_to_oldest(sbox):
+  "blame_youngest_to_oldest"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = sbox.ospath('iota')
+  orig_line = open(iota).read()
+  line = "New contents for iota\n"
+  svntest.main.file_append(iota, line)
+  sbox.simple_commit()
+  
+  # Move the file, to check that the operation will peg correctly.
+  iota_moved = sbox.ospath('iota_moved')
+  sbox.simple_move('iota', 'iota_moved')
+  sbox.simple_commit()
+  
+  # Delete a line.
+  open(iota_moved, 'w').write(line)
+  sbox.simple_commit()
+
+  expected_output = [
+        '     %d    jrandom %s\n' % (3, orig_line[:-1]),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'blame', '-r4:1', iota_moved)
+
 ########################################################################
 # Run the tests
 
@@ -982,6 +1007,7 @@ test_list = [ None,
               merge_sensitive_blame_and_empty_mergeinfo,
               blame_multiple_targets,
               blame_eol_handling,
+              blame_youngest_to_oldest,
              ]
 
 if __name__ == '__main__':

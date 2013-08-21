@@ -30,6 +30,7 @@
 #include "DiffSummaryReceiver.h"
 #include "ClientContext.h"
 #include "Prompter.h"
+#include "RemoteSession.h"
 #include "Pool.h"
 #include "Targets.h"
 #include "Revision.h"
@@ -50,7 +51,7 @@
 #include "CommitMessage.h"
 #include "EnumMapper.h"
 #include "StringArray.h"
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "DiffOptions.h"
 #include "CreateJ.h"
 #include "svn_auth.h"
@@ -70,6 +71,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 
 SVNClient::SVNClient(jobject jthis_in)
@@ -227,23 +229,23 @@ rev_range_vector_to_apr_array(std::vector<RevisionRange> &revRanges,
     std::vector<RevisionRange>::const_iterator it;
     for (it = revRanges.begin(); it != revRanges.end(); ++it)
     {
-        if (it->toRange(subPool)->start.kind
-            == svn_opt_revision_unspecified
-            && it->toRange(subPool)->end.kind
-            == svn_opt_revision_unspecified)
+        const svn_opt_revision_range_t *range = it->toRange(subPool);
+
+        if (range->start.kind == svn_opt_revision_unspecified
+            && range->end.kind == svn_opt_revision_unspecified)
         {
-            svn_opt_revision_range_t *range =
+            svn_opt_revision_range_t *full =
                 reinterpret_cast<svn_opt_revision_range_t *>
                     (apr_pcalloc(subPool.getPool(), sizeof(*range)));
-            range->start.kind = svn_opt_revision_number;
-            range->start.value.number = 1;
-            range->end.kind = svn_opt_revision_head;
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
+            full->start.kind = svn_opt_revision_number;
+            full->start.value.number = 1;
+            full->end.kind = svn_opt_revision_head;
+            full->end.value.number = 0;
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = full;
         }
         else
         {
-            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) =
-                it->toRange(subPool);
+            APR_ARRAY_PUSH(ranges, const svn_opt_revision_range_t *) = range;
         }
         if (JNIUtil::isExceptionThrown())
             return NULL;
@@ -317,7 +319,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
 }
 
 void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
-                       bool keep_local, RevpropTable &revprops,
+                       bool keep_local, PropertyTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -417,7 +419,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 void SVNClient::commit(Targets &targets, CommitMessage *message,
                        svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                       StringArray &changelists, RevpropTable &revprops,
+                       StringArray &changelists, PropertyTable &revprops,
                        CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -442,7 +444,7 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      CommitMessage *message, bool copyAsChild,
                      bool makeParents, bool ignoreExternals,
-                     RevpropTable &revprops, CommitCallback *callback)
+                     PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -471,7 +473,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      CommitMessage *message, bool force, bool moveAsChild,
                      bool makeParents, bool metadataOnly, bool allowMixRev,
-                     RevpropTable &revprops, CommitCallback *callback)
+                     PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
 
@@ -496,7 +498,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
 }
 
 void SVNClient::mkdir(Targets &targets, CommitMessage *message,
-                      bool makeParents, RevpropTable &revprops,
+                      bool makeParents, PropertyTable &revprops,
                       CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -545,6 +547,7 @@ void SVNClient::resolve(const char *path, svn_depth_t depth,
 jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                           Revision &revision, Revision &pegRevision,
                           bool force, bool ignoreExternals,
+                          bool ignoreKeywords,
                           svn_depth_t depth, const char *nativeEOL)
 {
     SVN::Pool subPool(pool);
@@ -563,7 +566,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                                    destinationPath.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(), force,
-                                   ignoreExternals, FALSE,
+                                   ignoreExternals, ignoreKeywords,
                                    depth,
                                    nativeEOL, ctx,
                                    subPool.getPool()),
@@ -613,7 +616,7 @@ void SVNClient::doImport(const char *path, const char *url,
                          CommitMessage *message, svn_depth_t depth,
                          bool noIgnore, bool noAutoProps,
                          bool ignoreUnknownNodeTypes,
-                         RevpropTable &revprops,
+                         PropertyTable &revprops,
                          ImportFilterCallback *ifCallback,
                          CommitCallback *commitCallback)
 {
@@ -749,8 +752,6 @@ jobject
 SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
 {
     SVN::Pool subPool(pool);
-    JNIEnv *env = JNIUtil::getEnv();
-
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
         return NULL;
@@ -765,57 +766,7 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
                 NULL);
     if (mergeinfo == NULL)
         return NULL;
-
-    // Transform mergeinfo into Java Mergeinfo object.
-    jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Mergeinfo");
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    static jmethodID ctor = 0;
-    if (ctor == 0)
-    {
-        ctor = env->GetMethodID(clazz, "<init>", "()V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    static jmethodID addRevisions = 0;
-    if (addRevisions == 0)
-    {
-        addRevisions = env->GetMethodID(clazz, "addRevisions",
-                                        "(Ljava/lang/String;"
-                                        "Ljava/util/List;)V");
-        if (JNIUtil::isJavaExceptionThrown())
-            return NULL;
-    }
-
-    jobject jmergeinfo = env->NewObject(clazz, ctor);
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
-    apr_hash_index_t *hi;
-    for (hi = apr_hash_first(subPool.getPool(), mergeinfo);
-         hi;
-         hi = apr_hash_next(hi))
-    {
-        const void *path;
-        void *val;
-        apr_hash_this(hi, &path, NULL, &val);
-
-        jstring jpath =
-            JNIUtil::makeJString(reinterpret_cast<const char *>(path));
-        jobject jranges =
-            CreateJ::RevisionRangeList(reinterpret_cast<svn_rangelist_t *>(val));
-
-        env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
-
-        env->DeleteLocalRef(jranges);
-        env->DeleteLocalRef(jpath);
-    }
-
-    env->DeleteLocalRef(clazz);
-
-    return jmergeinfo;
+    return CreateJ::Mergeinfo(mergeinfo, subPool.getPool());
 }
 
 void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
@@ -954,7 +905,7 @@ void SVNClient::propertySetRemote(const char *path, long base_rev,
                                   const char *name,
                                   CommitMessage *message,
                                   JNIByteArray &value, bool force,
-                                  RevpropTable &revprops,
+                                  PropertyTable &revprops,
                                   CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -1465,7 +1416,7 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
                                         &set_rev, ctx, subPool.getPool()),
                 NULL);
 
-    return CreateJ::PropertyMap(props);
+    return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
 struct info_baton
@@ -1523,6 +1474,68 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
                                  ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, subPool.getPool()), );
+}
+
+jobject
+SVNClient::openRemoteSession(const char* path, int retryAttempts)
+{
+    static const svn_opt_revision_t HEAD = { svn_opt_revision_head, {0}};
+    static const svn_opt_revision_t NONE = { svn_opt_revision_unspecified, {0}};
+
+    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
+
+    SVN::Pool subPool(pool);
+    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    if (ctx == NULL)
+        return NULL;
+
+    Path checkedPath(path, subPool);
+    SVN_JNI_ERR(checkedPath.error_occurred(), NULL);
+
+    struct PathInfo
+    {
+        std::string url;
+        std::string uuid;
+        static svn_error_t *callback(void *baton,
+                                     const char *,
+                                     const svn_client_info2_t *info,
+                                     apr_pool_t *)
+          {
+              PathInfo* const pi = static_cast<PathInfo*>(baton);
+              pi->url = info->URL;
+              pi->uuid = info->repos_UUID;
+              return SVN_NO_ERROR;
+          }
+    } path_info;
+
+    SVN_JNI_ERR(svn_client_info3(
+                    checkedPath.c_str(), &NONE,
+                    (svn_path_is_url(checkedPath.c_str()) ? &HEAD : &NONE),
+                    svn_depth_empty, FALSE, TRUE, NULL,
+                    PathInfo::callback, &path_info,
+                    ctx, subPool.getPool()),
+                NULL);
+
+    jobject jctx = context.getSelf();
+    if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+    /* Decouple the RemoteSession's context from SVNClient's context
+       by creating a copy of the prompter here. */
+    Prompter* prompter = new Prompter(context.getPrompter());
+    if (!prompter)
+      return NULL;
+
+    jobject jremoteSession = RemoteSession::open(
+        retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
+        context.getConfigDirectory(),
+        context.getConfigCallback(),
+        context.getUsername(), context.getPassword(),
+        prompter, jctx);
+    if (JNIUtil::isJavaExceptionThrown())
+      delete prompter;
+
+    return jremoteSession;
 }
 
 ClientContext &

@@ -200,29 +200,6 @@ svn_client__create_status(svn_client_status_t **cst,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/* Set *ANCESTOR_URL and *ANCESTOR_REVISION to the URL and revision,
- * respectively, of the youngest common ancestor of the two locations
- * PATH_OR_URL1@REV1 and PATH_OR_URL2@REV2.  Set *ANCESTOR_RELPATH to
- * NULL and *ANCESTOR_REVISION to SVN_INVALID_REVNUM if they have no
- * common ancestor.  This function assumes that PATH_OR_URL1@REV1 and
- * PATH_OR_URL2@REV2 both refer to the same repository.
- *
- * Use the authentication baton cached in CTX to authenticate against
- * the repository.
- *
- * See also svn_client__get_youngest_common_ancestor().
- */
-svn_error_t *
-svn_client__youngest_common_ancestor(const char **ancestor_url,
-                                     svn_revnum_t *ancestor_rev,
-                                     const char *path_or_url1,
-                                     const svn_opt_revision_t *revision1,
-                                     const char *path_or_url2,
-                                     const svn_opt_revision_t *revision2,
-                                     svn_client_ctx_t *ctx,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
-
 /* Get the repository location of the base node at LOCAL_ABSPATH.
  *
  * A pathrev_t wrapper around svn_wc__node_get_base().
@@ -306,6 +283,11 @@ svn_client__copy_foreign(const char *url,
  * The keys for the subtree mergeinfo are the repository root-relative
  * paths of TARGET_PATH_OR_URL and/or its subtrees, regardless of whether
  * TARGET_PATH_OR_URL is a URL or WC path.
+ *
+ * If RA_SESSION is not NULL, use it to obtain merge information instead of
+ * opening a new session. The session might be reparented after usage, so
+ * callers should reparent the session back to their original location if
+ * needed.
  */
 svn_error_t *
 svn_client__mergeinfo_log(svn_boolean_t finding_merged,
@@ -322,6 +304,7 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
                           svn_depth_t depth,
                           const apr_array_header_t *revprops,
                           svn_client_ctx_t *ctx,
+                          svn_ra_session_t *ra_session,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 

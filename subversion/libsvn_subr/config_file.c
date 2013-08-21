@@ -94,7 +94,7 @@ parser_getc(parse_context_t *ctx, int *c)
         }
       else if (ctx->buffer_pos < ctx->buffer_size)
         {
-          *c = ctx->parser_buffer[ctx->buffer_pos];
+          *c = (unsigned char)ctx->parser_buffer[ctx->buffer_pos];
           ctx->buffer_pos++;
         }
       else
@@ -107,7 +107,7 @@ parser_getc(parse_context_t *ctx, int *c)
 
           if (ctx->buffer_pos < ctx->buffer_size)
             {
-              *c = ctx->parser_buffer[ctx->buffer_pos];
+              *c = (unsigned char)ctx->parser_buffer[ctx->buffer_pos];
               ctx->buffer_pos++;
             }
           else
@@ -131,7 +131,7 @@ parser_getc_plain(parse_context_t *ctx, int *c)
 {
   if (ctx->buffer_pos < ctx->buffer_size)
     {
-      *c = ctx->parser_buffer[ctx->buffer_pos];
+      *c = (unsigned char)ctx->parser_buffer[ctx->buffer_pos];
       ctx->buffer_pos++;
 
       return SVN_NO_ERROR;
@@ -189,6 +189,32 @@ skip_to_eoln(parse_context_t *ctx, int *c)
   return SVN_NO_ERROR;
 }
 
+/* Skip a UTF-8 Byte Order Mark if found. */
+static APR_INLINE svn_error_t *
+skip_bom(parse_context_t *ctx)
+{
+  int ch;
+
+  SVN_ERR(parser_getc(ctx, &ch));
+  if (ch == 0xEF)
+    {
+      const unsigned char *buf = (unsigned char *)ctx->parser_buffer;
+      /* This makes assumptions about the implementation of parser_getc and
+       * the use of skip_bom.  Specifically that parser_getc() will get all
+       * of the BOM characters into the parse_context_t buffer.  This can
+       * safely be assumed as long as we only try to use skip_bom() at the
+       * start of the stream and the buffer is longer than 3 characters. */
+      SVN_ERR_ASSERT(ctx->buffer_size > ctx->buffer_pos + 1);
+      if (buf[ctx->buffer_pos] == 0xBB && buf[ctx->buffer_pos + 1] == 0xBF)
+        ctx->buffer_pos += 2;
+      else
+        SVN_ERR(parser_ungetc(ctx, ch));
+    }
+  else
+    SVN_ERR(parser_ungetc(ctx, ch));
+
+  return SVN_NO_ERROR;
+}
 
 /* Parse a single option value */
 static svn_error_t *
@@ -401,10 +427,13 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
                        svn_boolean_t must_exist, apr_pool_t *result_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+  apr_file_t *apr_file;
   svn_stream_t *stream;
   apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
-  err = svn_stream_open_readonly(&stream, file, scratch_pool, scratch_pool);
+  /* Use unbuffered IO since we use our own buffering. */
+  err = svn_io_file_open(&apr_file, file, APR_READ, APR_OS_DEFAULT,
+                         scratch_pool);
 
   if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -415,6 +444,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
   else
     SVN_ERR(err);
 
+  stream = svn_stream_from_aprfile2(apr_file, FALSE, scratch_pool);
   err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
 
   if (err != SVN_NO_ERROR)
@@ -449,6 +479,8 @@ svn_config__parse_stream(svn_config_t *cfg, svn_stream_t *stream,
   ctx->value = svn_stringbuf_create_empty(scratch_pool);
   ctx->buffer_pos = 0;
   ctx->buffer_size = 0;
+
+  SVN_ERR(skip_bom(ctx));
 
   do
     {
@@ -806,6 +838,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-max-connections       Maximum number of parallel server" NL
         "###                              connections to use for any given"  NL
         "###                              HTTP operation."                   NL
+        "###   http-chunked-requests      Whether to use chunked transfer"   NL
+        "###                              encoding for HTTP requests body."  NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL

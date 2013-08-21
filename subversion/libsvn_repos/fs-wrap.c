@@ -24,6 +24,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -34,7 +35,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "repos.h"
-#include "svn_private_config.h"
+
 #include "private/svn_repos_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_fspath.h"
@@ -171,6 +172,10 @@ svn_repos__validate_prop(const char *name,
                          apr_pool_t *pool)
 {
   svn_prop_kind_t kind = svn_property_kind2(name);
+
+  /* Allow deleting any property, even a property we don't allow to set. */
+  if (value == NULL)
+    return SVN_NO_ERROR;
 
   /* Disallow setting non-regular properties. */
   if (kind != svn_prop_regular_kind)

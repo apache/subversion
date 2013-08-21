@@ -23,6 +23,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -38,7 +39,6 @@
 
 #include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
-#include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
 
@@ -1534,6 +1534,54 @@ svn_repos_open2(svn_repos_t **repos_p,
   return get_repos(repos_p, path, FALSE, FALSE, TRUE, fs_config, pool);
 }
 
+/* Baton used with fs_upgrade_notify, specifying the svn_repos layer
+ * notification parameters.
+ */
+struct fs_upgrade_notify_baton_t
+{
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+};
+
+/* Implements svn_fs_upgrade_notify_t as forwarding to a
+ * svn_repos_notify_func_t passed in a fs_upgrade_notify_baton_t* BATON.
+ */
+static svn_error_t *
+fs_upgrade_notify(void *baton,
+                  apr_uint64_t number,
+                  svn_fs_upgrade_notify_action_t action,
+                  apr_pool_t *pool)
+{
+  struct fs_upgrade_notify_baton_t *fs_baton = baton;
+
+  svn_repos_notify_t *notify = svn_repos_notify_create(
+                                svn_repos_notify_mutex_acquired, pool);
+  switch(action)
+    {
+      case svn_fs_upgrade_pack_revprops:
+        notify->shard = number;
+        notify->action = svn_repos_notify_pack_revprops;
+        break;
+
+      case svn_fs_upgrade_cleanup_revprops:
+        notify->shard = number;
+        notify->action = svn_repos_notify_cleanup_revprops;
+        break;
+
+      case svn_fs_upgrade_format_bumped:
+        notify->revision = number;
+        notify->action = svn_repos_notify_format_bumped;
+        break;
+
+      default:
+        /* unknown notification */
+        SVN_ERR_MALFUNCTION();
+    }
+
+  fs_baton->notify_func(fs_baton->notify_baton, notify, pool);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_repos_upgrade2(const char *path,
@@ -1546,6 +1594,10 @@ svn_repos_upgrade2(const char *path,
   const char *format_path;
   int format;
   apr_pool_t *subpool = svn_pool_create(pool);
+
+  struct fs_upgrade_notify_baton_t fs_notify_baton;
+  fs_notify_baton.notify_func = notify_func;
+  fs_notify_baton.notify_baton = notify_baton;
 
   /* Fetch a repository object; for the Berkeley DB backend, it is
      initialized with an EXCLUSIVE lock on the database.  This will at
@@ -1575,7 +1627,9 @@ svn_repos_upgrade2(const char *path,
   SVN_ERR(svn_io_write_version_file(format_path, format, subpool));
 
   /* Try to upgrade the filesystem. */
-  SVN_ERR(svn_fs_upgrade(repos->db_path, subpool));
+  SVN_ERR(svn_fs_upgrade2(repos->db_path,
+                          notify_func ? fs_upgrade_notify : NULL,
+                          &fs_notify_baton, NULL, NULL, subpool));
 
   /* Now overwrite our format file with the latest version. */
   SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER,

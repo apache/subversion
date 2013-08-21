@@ -146,16 +146,6 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
                               svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool);
 
-/* Load the authz database for the listening server based on the
-   entries in the SERVER struct.
-
-   SERVER and CONN must not be NULL. The real errors will be logged with
-   SERVER and CONN but return generic errors to the client. */
-svn_error_t *load_authz_config(server_baton_t *server,
-                               svn_ra_svn_conn_t *conn,
-                               const char *repos_root,
-                               apr_pool_t *pool);
-
 /* Initialize the Cyrus SASL library. POOL is used for allocations. */
 svn_error_t *cyrus_init(apr_pool_t *pool);
 

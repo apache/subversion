@@ -28,6 +28,8 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -43,8 +45,6 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
-#define SVN_WANT_BDB
-#include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
 #include "bdb/bdb_compat.h"
@@ -898,7 +898,13 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 }
 
 static svn_error_t *
-base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_upgrade(svn_fs_t *fs,
+             const char *path,
+             svn_fs_upgrade_notify_t notify_func,
+             void *notify_baton,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *pool,
              apr_pool_t *common_pool)
 {
   const char *version_file_path;
@@ -921,6 +927,9 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* Bump the format file's stored version number. */
   SVN_ERR(svn_io_write_version_file(version_file_path,
                                     SVN_FS_BASE__FORMAT_NUMBER, pool));
+  if (notify_func)
+    SVN_ERR(notify_func(notify_baton, SVN_FS_BASE__FORMAT_NUMBER,
+                        svn_fs_upgrade_format_bumped, pool));
 
   /* Check and see if we need to record the "bump" revision. */
   if (old_format_number < SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
@@ -1484,7 +1493,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
     return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
                              _("Unsupported FS loader version (%d) for bdb"),
                              loader_version->major);
-  SVN_ERR(svn_ver_check_list(base_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(base_version(), checklist, svn_ver_equal));
   SVN_ERR(check_bdb_version());
   SVN_ERR(svn_fs_bdb__init(common_pool));
 

@@ -33,6 +33,7 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_types.h"
@@ -52,7 +53,6 @@
 #include "deprecated.h"
 
 #include "private/svn_ra_private.h"
-#include "svn_private_config.h"
 
 
 
@@ -1030,6 +1030,13 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
 
+  if (start > end)
+    SVN_ERR(
+     svn_ra__assert_capable_server(session,
+                                   SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                                   NULL,
+                                   pool));
+
   err = session->vtable->get_file_revs(session, path, start, end,
                                        include_merged_revisions,
                                        handler, handler_baton, pool);
@@ -1429,7 +1436,7 @@ svn_ra_print_modules(svn_stringbuf_t *output,
              built with SASL. */
           line = apr_psprintf(iterpool, "* ra_%s : %s\n",
                               defn->ra_name,
-                              vtable->get_description());
+                              vtable->get_description(iterpool));
           svn_stringbuf_appendcstr(output, line);
 
           for (schemes = vtable->get_schemes(iterpool); *schemes != NULL;

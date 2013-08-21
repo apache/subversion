@@ -121,6 +121,16 @@ typedef struct svn_fs_t svn_fs_t;
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
+/**
+ * EXPERIMENTAL filesystem backend.
+ *
+ * It is not ready for general production use.  Please consult the
+ * respective release notes on suggested usage scenarios.
+ * 
+ * @since New in 1.9.
+ */
+#define SVN_FS_TYPE_FSX                         "fsx"
+
 /** Create repository format compatible with Subversion versions
  * earlier than 1.4.
  *
@@ -148,6 +158,18 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.8.
  */
 #define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.9.  The value must be a version in the same format
+ * as #SVN_VER_NUMBER.
+ *
+ * @note The @c patch component would often be ignored, due to our forward
+ * compatibility promises within minor release lines.  It should therefore
+ * usually be set to @c 0.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
 /** @} */
 
 
@@ -222,6 +244,7 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  *
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
+ *   SVN_FS_TYPE_FSX   Experimental filesystem implementation
  *
  * If @a fs_config is @c NULL or does not contain a value for
  * #SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
@@ -264,6 +287,38 @@ svn_fs_open(svn_fs_t **fs_p,
             apr_hash_t *fs_config,
             apr_pool_t *pool);
 
+/** The kind of action being taken by 'upgrade'.
+ *
+ * @since New in 1.9.
+ */
+typedef enum svn_fs_upgrade_notify_action_t
+{
+  /** Packing of the revprop shard has completed.
+   *  The number parameter is the shard being processed. */
+  svn_fs_upgrade_pack_revprops = 0,
+
+  /** Removal of the non-packed revprop shard is completed.
+   *  The number parameter is the shard being processed */
+  svn_fs_upgrade_cleanup_revprops,
+
+  /** DB format has been set to the new value.
+   *  The number parameter is the new format number. */
+  svn_fs_upgrade_format_bumped
+} svn_fs_upgrade_notify_action_t;
+
+/** The type of a upgrade notification function.  @a number is specifc 
+ * to @a action (see #svn_fs_upgrade_notify_action_t); @a action is the
+ * type of action being performed.  @a baton is the corresponding baton
+ * for the notification function, and @a pool can be used for temporary
+ * allocations, but will be cleared between invocations.
+ * 
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_fs_upgrade_notify_t)(void *baton,
+                                      apr_uint64_t number,
+                                      svn_fs_upgrade_notify_action_t action,
+                                      apr_pool_t *pool);
+
 /**
  * Upgrade the Subversion filesystem located in the directory @a path
  * to the latest version supported by this library.  Return
@@ -271,11 +326,37 @@ svn_fs_open(svn_fs_t **fs_p,
  * filesystem if the requested upgrade is not supported.  Use @a pool
  * for necessary allocations.
  *
+ * The optional @a notify_func callback is only a general feedback that
+ * the operation is still in process but may be called in e.g. random shard
+ * order and more than once for the same shard.
+ *
+ * The optional @a cancel_func callback will be invoked as usual to allow
+ * the user to preempt this potentially lengthy operation.
+ *
  * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_upgrade() instead.
  *
+ * @note Canceling an upgrade is legal but may leave remnants of previous
+ * format data that may not be cleaned up automatically by later calls.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_upgrade2(const char *path,
+                svn_fs_upgrade_notify_t notify_func,
+                void *notify_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool);
+
+/**
+ * Like svn_fs_upgrade2 but with notify_func, notify_baton, cancel_func
+ * and cancel_baton being set to NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API. 
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_upgrade(const char *path,
                apr_pool_t *pool);
@@ -962,6 +1043,19 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * ###     conflict string
  * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
  * ###     to a valid, committed revision number
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_commit_txn2(const char **conflict_p,
+                   svn_revnum_t *new_rev,
+                   svn_fs_txn_t *txn,
+                   svn_boolean_t set_timestamp,
+                   apr_pool_t *pool);
+
+/*
+ * Same as svn_fs_commit_txn2(), but with @a set_timestamp
+ * always set to @c TRUE.
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
@@ -2590,6 +2684,32 @@ typedef struct svn_fs_fsfs_info_t {
   /* If you add fields here, check whether you need to extend svn_fs_info()
      or svn_fs_info_dup(). */
 } svn_fs_fsfs_info_t;
+
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSX filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_fs_fsx_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSX. */
+  const char *fs_type;
+
+  /** Shard size, always > 0. */
+  int shard_size;
+
+  /** The smallest revision which is not in a pack file. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+
+} svn_fs_fsx_info_t;
 
 /** @see svn_fs_info()
  * @since New in 1.9. */

@@ -213,6 +213,26 @@ memcache_get(void **value_p,
   return SVN_NO_ERROR;
 }
 
+/* Implement vtable.has_key in terms of the getter.
+ */
+static svn_error_t *
+memcache_has_key(svn_boolean_t *found,
+                 void *cache_void,
+                 const void *key,
+                 apr_pool_t *scratch_pool)
+{
+  char *data;
+  apr_size_t data_len;
+  SVN_ERR(memcache_internal_get(&data,
+                                &data_len,
+                                found,
+                                cache_void,
+                                key,
+                                scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Core functionality of our setter functions: store LENGH bytes of DATA
  * to be identified by KEY in the memcached given by CACHE_VOID. Use POOL
  * for temporary allocations.
@@ -366,17 +386,12 @@ memcache_get_info(void *cache_void,
 
   /* we don't have any memory allocation info */
 
-  info->used_size = 0;
-  info->total_size = 0;
-  info->data_size = 0;
-  info->used_entries = 0;
-  info->total_entries = 0;
-
   return SVN_NO_ERROR;
 }
 
 static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
+  memcache_has_key,
   memcache_set,
   memcache_iter,
   memcache_is_cachable,

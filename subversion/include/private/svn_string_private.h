@@ -142,7 +142,7 @@ svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base);
  * want to test for a more specific value range anyway.
  */
 unsigned long
-svn__strtoul(const char *buffer, char **end);
+svn__strtoul(const char *buffer, const char **end);
 
 /** Number of chars needed to represent signed (19 places + sign + NUL) or
  * unsigned (20 places + NUL) integers as strings.
@@ -174,6 +174,32 @@ svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool);
  */
 char *
 svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool);
+
+
+/** Writes the @a number as base36-encoded string into @a dest. The latter
+ * must provide space for at least #SVN_INT64_BUFFER_SIZE characters.
+ * Returns the number chars written excluding the terminating NUL.
+ *
+ * @note The actual maximum buffer requirement is much shorter than
+ * #SVN_INT64_BUFFER_SIZE but introducing yet another constant is only
+ * marginally useful and may open the door to security issues when e.g.
+ * switching between base10 and base36 encoding.
+ */
+apr_size_t
+svn__ui64tobase36(char *dest, apr_uint64_t number);
+
+/** Returns the value of the base36 encoded unsigned integer starting at
+ * @a source.  If @a next is not NULL, @a *next will be set to the first
+ * position after the integer.
+ *
+ * The data in @a source will be considered part of the number to parse
+ * as long as the characters are within the base36 range.  If there are
+ * no such characters to begin with, 0 is returned.  Inputs with more than
+ * #SVN_INT64_BUFFER_SIZE digits will not be fully parsed, i.e. the value
+ * of @a *next as well as the return value are undefined.
+ */
+apr_uint64_t
+svn__base36toui64(const char **next, const char *source);
 
 /**
  * Computes the similarity score of STRA and STRB. Returns the ratio
@@ -217,6 +243,76 @@ svn_string__similarity(const svn_string_t *stringa,
                        const svn_string_t *stringb,
                        svn_membuf_t *buffer, apr_size_t *rlcs);
 
+
+/* Return the lowest position at which A and B differ. If no difference
+ * can be found in the first MAX_LEN characters, MAX_LEN will be returned.
+ */
+apr_size_t
+svn_cstring__match_length(const char *a,
+                          const char *b,
+                          apr_size_t max_len);
+
+/* Return the number of bytes before A and B that don't differ.  If no
+ * difference can be found in the first MAX_LEN characters,  MAX_LEN will
+ * be returned.  Please note that A-MAX_LEN and B-MAX_LEN must both be
+ * valid addresses.
+ */
+apr_size_t
+svn_cstring__reverse_match_length(const char *a,
+                                  const char *b,
+                                  apr_size_t max_len);
+
+/** @} */
+
+/** Prefix trees.
+ *
+ * Prefix trees allow for a space-efficient representation of a set of path-
+ * like strings, i.e. those that share common prefixes.  Any given string
+ * value will be stored only once, i.e. two strings stored in the same tree
+ * are equal if and only if the point to the same #svn_prefix_string__t.
+ *
+ * @defgroup svn_prefix_string Strings in prefix trees.
+* @{
+ */
+
+/**
+ * Opaque data type for prefix-tree-based strings.
+ */
+typedef struct svn_prefix_string__t svn_prefix_string__t;
+
+/**
+ * Opaque data type representing a prefix tree
+ */
+typedef struct svn_prefix_tree__t svn_prefix_tree__t;
+
+/**
+ * Return a new prefix tree allocated in @a pool.
+ */
+svn_prefix_tree__t *
+svn_prefix_tree__create(apr_pool_t *pool);
+
+/**
+ * Return a string with the value @a s stored in @a tree.  If no such string
+ * exists yet, add it automatically.
+ */
+svn_prefix_string__t *
+svn_prefix_string__create(svn_prefix_tree__t *tree,
+                          const char *s);
+
+/**
+ * Return the contents of @a s as a new string object allocated in @a pool.
+ */
+svn_string_t *
+svn_prefix_string__expand(const svn_prefix_string__t *s,
+                          apr_pool_t *pool);
+
+/**
+ * Compare the two strings @a lhs and @a rhs that must be part of the same
+ * tree.
+ */
+int
+svn_prefix_string__compare(const svn_prefix_string__t *lhs,
+                           const svn_prefix_string__t *rhs);
 
 /** @} */
 

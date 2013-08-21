@@ -61,8 +61,7 @@ def check_hotcopy_bdb(src, dst):
   if origerr or backerr or origout != backout:
     raise svntest.Failure
 
-def check_hotcopy_fsfs(src, dst):
-    "Verify that the SRC FSFS repository has been correctly copied to DST."
+def check_hotcopy_fsfs_fsx(src, dst):
     # Walk the source and compare all files to the destination
     for src_dirpath, src_dirs, src_files in os.walk(src):
       # Verify that the current directory exists in the destination
@@ -146,6 +145,14 @@ def check_hotcopy_fsfs(src, dst):
         f1.close()
         f2.close()
 
+def check_hotcopy_fsfs(src, dst):
+    "Verify that the SRC FSFS repository has been correctly copied to DST."
+    check_hotcopy_fsfs_fsx(src, dst)
+
+def check_hotcopy_fsx(src, dst):
+    "Verify that the SRC FSX repository has been correctly copied to DST."
+    check_hotcopy_fsfs_fsx(src, dst)
+        
 #----------------------------------------------------------------------
 
 # How we currently test 'svnadmin' --
@@ -386,8 +393,7 @@ def dump_copied_dir(sbox):
   old_C_path = os.path.join(wc_dir, 'A', 'C')
   new_C_path = os.path.join(wc_dir, 'A', 'B', 'C')
   svntest.main.run_svn(None, 'cp', old_C_path, new_C_path)
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   if svntest.verify.compare_and_display_lines(
@@ -410,8 +416,7 @@ def dump_move_dir_modify_child(sbox):
   Q_path = os.path.join(wc_dir, 'A', 'Q')
   svntest.main.run_svn(None, 'cp', B_path, Q_path)
   svntest.main.file_append(os.path.join(Q_path, 'lambda'), 'hello')
-  svntest.main.run_svn(None, 'ci', wc_dir, '--quiet',
-                       '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
   exit_code, output, errput = svntest.main.run_svnadmin("dump", repo_dir)
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump' is unexpected.",
@@ -459,8 +464,10 @@ def hotcopy_dot(sbox):
 
   if svntest.main.is_fs_type_fsfs():
     check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
-  else:
+  if svntest.main.is_fs_type_bdb():
     check_hotcopy_bdb(sbox.repo_dir, backup_dir)
+  if svntest.main.is_fs_type_fsx():
+    check_hotcopy_fsx(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
@@ -551,9 +558,17 @@ def verify_windows_paths_in_repos(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  # unfortunately, FSFS needs to do more checks than BDB resulting in
-  # different progress output
-  if svntest.main.is_fs_type_fsfs():
+  # unfortunately, some backends needs to do more checks than other
+  # resulting in different progress output
+  if svntest.main.is_fs_type_fsx():
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verifying metadata at revision 0 ...\n",
+                 "* Verifying repository metadata ...\n",
+                 "* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], output)
+  elif svntest.main.is_fs_type_fsfs():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verifying repository metadata ...\n",
@@ -738,10 +753,10 @@ def recover_fsfs(sbox):
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   # Remember the contents of the db/current file.
   expected_current_contents = open(current_path).read()
@@ -949,10 +964,10 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
   # Commit up to r3, so we can test various recovery scenarios.
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newer line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
-  svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
+  sbox.simple_commit(message='log msg')
 
   rev_3 = fsfs_file(sbox.repo_dir, 'revs', '3')
   rev_was_3 = rev_3 + '.was'
@@ -1470,8 +1485,8 @@ def verify_non_utf8_paths(sbox):
   expected_stderr = [
     "* Dumped revision 0.\n",
     "WARNING 0x0002: E160005: "
-      "While validating fspath '?\\230': "
-      "Path '?\\230' is not in UTF-8"
+      "While validating fspath '?\\E6': "
+      "Path '?\\E6' is not in UTF-8"
       "\n",
     "* Dumped revision 1.\n",
     ]
@@ -1620,7 +1635,7 @@ def hotcopy_incremental_packed(sbox):
   cwd = os.getcwd()
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write("4\nlayout sharded 2\n")
+  format_file.write("6\nlayout sharded 2\n")
   format_file.close()
 
   # Pack revisions 0 and 1.
@@ -1828,6 +1843,67 @@ def recover_old(sbox):
   svntest.main.run_svnadmin("recover", sbox.repo_dir)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_keep_going(sbox):
+  "svnadmin verify --keep-going test"
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  B_url = sbox.repo_url + '/B'
+  C_url = sbox.repo_url + '/C'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     B_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     C_url)
+  
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  fp = open(r2, 'a')
+  fp.write("""inserting junk to corrupt the rev""")
+  fp.close()
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--keep-going",
+                                                        sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2.",
+                                           ".*Verified revision 3."])
+
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                           "svnadmin: E165011:.*"], False)
+
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2."])
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--quiet",
+                                                        sbox.repo_dir)
+
+  if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
+                                   None, errput, None, "svnadmin: E165011:.*"):
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -1864,6 +1940,7 @@ test_list = [ None,
               locking,
               mergeinfo_race,
               recover_old,
+              verify_keep_going,
              ]
 
 if __name__ == '__main__':

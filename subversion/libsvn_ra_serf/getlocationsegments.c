@@ -27,12 +27,12 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_serf.h"
@@ -52,8 +52,8 @@ typedef struct gls_context_t {
 
 } gls_context_t;
 
-enum {
-  INITIAL = 0,
+enum locseg_state_e {
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   SEGMENT
 };
@@ -178,10 +178,10 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
-                                           NULL, gls_closed, NULL,
+                                           NULL, gls_closed, NULL, NULL,
                                            gls_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
@@ -194,7 +194,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   err = svn_ra_serf__context_run_one(handler, pool);
 
   err = svn_error_compose_create(
-         svn_ra_serf__error_on_status(handler->sline.code,
+         svn_ra_serf__error_on_status(handler->sline,
                                       handler->path,
                                       handler->location),
          err);

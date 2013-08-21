@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -2560,6 +2561,7 @@ struct commit_args
 {
   svn_fs_txn_t *txn;
   svn_revnum_t new_rev;
+  svn_boolean_t set_timestamp;
 };
 
 
@@ -2619,7 +2621,7 @@ txn_body_commit(void *baton, trail_t *trail)
 
   /* Else, commit the txn. */
   return svn_fs_base__dag_commit_txn(&(args->new_rev), txn, trail,
-                                     trail->pool);
+                                     args->set_timestamp, trail->pool);
 }
 
 
@@ -2629,6 +2631,7 @@ svn_error_t *
 svn_fs_base__commit_txn(const char **conflict_p,
                         svn_revnum_t *new_rev,
                         svn_fs_txn_t *txn,
+                        svn_boolean_t set_timestamp,
                         apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
@@ -2732,6 +2735,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
 
       /* Try to commit. */
       commit_args.txn = txn;
+      commit_args.set_timestamp = set_timestamp;
       err = svn_fs_base__retry_txn(fs, txn_body_commit, &commit_args,
                                    FALSE, subpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
@@ -4810,6 +4814,13 @@ base_node_origin_rev(svn_revnum_t *revision,
   /* Canonicalize the input path so that the path-math that
      prev_location() does below will work. */
   path = svn_fs__canonicalize_abspath(path, pool);
+
+  /* Special-case the root node (for performance reasons) */
+  if (strcmp(path, "/") == 0)
+    {
+      *revision = 0;
+      return SVN_NO_ERROR;
+    }
 
   /* If we have support for the node-origins table, we'll try to use
      it. */

@@ -233,6 +233,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 15,
              "Invalid atomic")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_BAD_COMPRESSION_METHOD,
+             SVN_ERR_BAD_CATEGORY_START + 16,
+             "Invalid compression method")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -254,6 +259,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_XML_UNESCAPABLE_DATA,
              SVN_ERR_XML_CATEGORY_START + 4,
              "Data cannot be safely XML-escaped")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_XML_UNEXPECTED_ELEMENT,
+             SVN_ERR_XML_CATEGORY_START + 5,
+             "Unexpected XML element found")
 
   /* io errors */
 
@@ -796,6 +806,36 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
+             SVN_ERR_FS_CATEGORY_START + 53,
+             "Malformed transaction ID string.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+             SVN_ERR_FS_CATEGORY_START + 54,
+             "Corrupt index file.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_REVISION,
+             SVN_ERR_FS_CATEGORY_START + 55,
+             "Revision not covered by index.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_OVERFLOW,
+             SVN_ERR_FS_CATEGORY_START + 56,
+             "Item index too large for this revision.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_CONTAINER_INDEX,
+             SVN_ERR_FS_CATEGORY_START + 57,
+             "Container index out of range.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+             SVN_ERR_FS_CATEGORY_START + 58,
+             "Index files are inconsistent.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -849,6 +889,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
+             SVN_ERR_REPOS_CATEGORY_START + 11,
+             "Repository is corrupt")
 
   /* generic RA errors */
 
@@ -1344,6 +1389,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UTF8_GLOB,
              SVN_ERR_MISC_CATEGORY_START + 40,
              "Bad arguments to SQL operators GLOB or LIKE")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
+             SVN_ERR_MISC_CATEGORY_START + 41,
+             "Packed data stream is corrupt")
 
   /* command-line client errors */
 

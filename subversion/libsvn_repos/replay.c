@@ -25,6 +25,7 @@
 
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_hash.h"
@@ -35,7 +36,7 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
+
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_delta_private.h"
@@ -1457,8 +1458,8 @@ replay_node(svn_fs_root_t *root,
             }
 
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
-                                        SVN_INVALID_REVNUM, props, checksum,
-                                        contents));
+                                        SVN_INVALID_REVNUM,
+                                        checksum, contents, props));
         }
 
       if (change->node_kind == svn_node_dir

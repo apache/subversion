@@ -142,6 +142,10 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
   { 0 }
 };
 
+static const int locks_expected_status[] = {
+  207,
+  0
+};
 
 /* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
@@ -214,29 +218,26 @@ static svn_error_t *
 determine_error(svn_ra_serf__handler_t *handler,
                 svn_error_t *err)
 {
-    {
-      apr_status_t errcode;
+  apr_status_t errcode;
 
-      if (handler->sline.code == 423)
-        errcode = SVN_ERR_FS_PATH_ALREADY_LOCKED;
-      else if (handler->sline.code == 403)
-        errcode = SVN_ERR_RA_DAV_FORBIDDEN;
-      else
-        return err;
+  if (err)
+    return err;
 
-      /* Client-side or server-side error already. Return it.  */
-      if (err != NULL)
-        return err;
+  if (handler->sline.code == 200 || handler->sline.code == 207)
+    return SVN_NO_ERROR;
+  else if (handler->sline.code == 423)
+    errcode = SVN_ERR_FS_PATH_ALREADY_LOCKED;
+  else if (handler->sline.code == 403)
+    errcode = SVN_ERR_RA_DAV_FORBIDDEN;
+  else
+    errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
-      /* The server did not send us a detailed human-readable error.
-         Provide a generic error.  */
-      err = svn_error_createf(errcode, NULL,
-                              _("Lock request failed: %d %s"),
-                              handler->sline.code,
-                              handler->sline.reason);
-    }
-
-  return err;
+  /* The server did not send us a detailed human-readable error.
+     Provide a generic error.  */
+  return svn_error_createf(errcode, NULL,
+                           _("Lock request failed: %d %s"),
+                           handler->sline.code,
+                           handler->sline.reason ? handler->sline.reason : "");
 }
 
 
@@ -381,10 +382,10 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->lock->path = apr_pstrdup(pool, path); /* be sure  */
 
   xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                           NULL, locks_closed, NULL,
+                                           NULL, locks_closed, NULL, NULL,
                                            lock_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, locks_expected_status, pool);
 
   handler->method = "PROPFIND";
   handler->path = req_url;
@@ -406,7 +407,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->handler = handler;
 
   err = svn_ra_serf__context_run_one(handler, pool);
-  err = determine_error(handler, err);
+  err = svn_error_trace(determine_error(handler, err));
 
   if (handler->sline.code == 404)
     {
@@ -472,10 +473,10 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                                             lock_ctx->path, iterpool);
 
       xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                               NULL, locks_closed, NULL,
+                                               NULL, locks_closed, NULL, NULL,
                                                lock_ctx,
                                                iterpool);
-      handler = svn_ra_serf__create_expat_handler(xmlctx, iterpool);
+      handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, iterpool);
 
       handler->method = "LOCK";
       handler->path = req_url;
@@ -497,7 +498,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->handler = handler;
 
       err = svn_ra_serf__context_run_one(handler, iterpool);
-      err = determine_error(handler, err);
+      err = svn_error_trace(determine_error(handler, err));
 
       if (lock_func)
         new_err = lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock,

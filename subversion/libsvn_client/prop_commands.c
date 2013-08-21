@@ -30,6 +30,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_client.h"
 #include "client.h"
@@ -40,7 +41,6 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_client_private.h"

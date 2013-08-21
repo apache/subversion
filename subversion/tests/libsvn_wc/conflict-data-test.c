@@ -28,6 +28,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_private_config.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -88,8 +89,8 @@ compare_version(const svn_wc_conflict_version_t *actual,
  * (including names of temporary files), or are both NULL.  Return an
  * error if not. */
 static svn_error_t *
-compare_conflict(const svn_wc_conflict_description2_t *actual,
-                 const svn_wc_conflict_description2_t *expected)
+compare_conflict(const svn_wc_conflict_description3_t *actual,
+                 const svn_wc_conflict_description3_t *expected)
 {
   if (actual == NULL && expected == NULL)
     return SVN_NO_ERROR;
@@ -181,7 +182,7 @@ compare_prop_conflict(const svn_wc_conflict_description2_t *actual,
 }
 
 /* Create and return a tree conflict description */
-static svn_wc_conflict_description2_t *
+static svn_wc_conflict_description3_t *
 tree_conflict_create(const char *local_abspath,
                      svn_node_kind_t node_kind,
                      svn_wc_operation_t operation,
@@ -198,14 +199,14 @@ tree_conflict_create(const char *local_abspath,
                      apr_pool_t *result_pool)
 {
   svn_wc_conflict_version_t *left, *right;
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description3_t *conflict;
 
   left = svn_wc_conflict_version_create2(left_repo, NULL, left_path,
                                          left_revnum, left_kind, result_pool);
   right = svn_wc_conflict_version_create2(right_repo, NULL, right_path,
                                           right_revnum, right_kind,
                                           result_pool);
-  conflict = svn_wc_conflict_description_create_tree2(
+  conflict = svn_wc_conflict_description_create_tree3(
                     local_abspath, node_kind, operation,
                     left, right, result_pool);
   conflict->action = action;
@@ -216,8 +217,8 @@ tree_conflict_create(const char *local_abspath,
 static svn_error_t *
 test_deserialize_tree_conflict(apr_pool_t *pool)
 {
-  const svn_wc_conflict_description2_t *conflict;
-  svn_wc_conflict_description2_t *exp_conflict;
+  const svn_wc_conflict_description3_t *conflict;
+  svn_wc_conflict_description3_t *exp_conflict;
   const char *tree_conflict_data;
   const char *local_abspath;
   const svn_skel_t *skel;
@@ -226,7 +227,7 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
                         "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 ))";
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
-  exp_conflict = svn_wc_conflict_description_create_tree2(
+  exp_conflict = svn_wc_conflict_description_create_tree3(
                         local_abspath, svn_node_file, svn_wc_operation_update,
                         NULL, NULL, pool);
   exp_conflict->action = svn_wc_conflict_action_delete;
@@ -248,7 +249,7 @@ test_deserialize_tree_conflict(apr_pool_t *pool)
 static svn_error_t *
 test_serialize_tree_conflict_data(apr_pool_t *pool)
 {
-  svn_wc_conflict_description2_t *conflict;
+  svn_wc_conflict_description3_t *conflict;
   const char *tree_conflict_data;
   const char *expected;
   const char *local_abspath;
@@ -256,7 +257,7 @@ test_serialize_tree_conflict_data(apr_pool_t *pool)
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
 
-  conflict = svn_wc_conflict_description_create_tree2(
+  conflict = svn_wc_conflict_description_create_tree3(
                     local_abspath, svn_node_file, svn_wc_operation_update,
                     NULL, NULL, pool);
   conflict->action = svn_wc_conflict_action_delete;
@@ -285,7 +286,7 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   const char *parent_abspath;
   const char *child1_abspath, *child2_abspath;
-  svn_wc_conflict_description2_t *conflict1, *conflict2;
+  svn_wc_conflict_description3_t *conflict1, *conflict2;
 
   SVN_ERR(svn_test__sandbox_create(&sbox, "read_write_tree_conflicts", opts, pool));
   parent_abspath = svn_dirent_join(sbox.wc_abspath, "A", pool);
@@ -337,7 +338,7 @@ test_read_write_tree_conflicts(const svn_test_opts_t *opts,
 
   /* Read conflicts back */
   {
-    const svn_wc_conflict_description2_t *read_conflict;
+    const svn_wc_conflict_description3_t *read_conflict;
 
     SVN_ERR(svn_wc__get_tree_conflict(&read_conflict, sbox.wc_ctx,
                                       child1_abspath, pool, pool));

@@ -41,7 +41,6 @@ Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
-from externals_tests import change_external
 
 
 ### Bummer.  It would be really nice to have easy access to the URL
@@ -633,7 +632,7 @@ def nonrecursive_switching(sbox):
                        'up', wc1_dir)
   svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.\n")
   svntest.main.run_svn(None, 'add', wc1_new_file)
-  svntest.main.run_svn(None, 'ci', '-m', '', wc1_dir)
+  sbox.simple_commit()
 
   # Try to switch "wc2" to the branch (non-recursively)
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '-N',
@@ -1976,24 +1975,18 @@ def switch_to_dir_with_peg_rev(sbox):
   X_path = sbox.ospath('X')
   Y_path = sbox.ospath('Y')
   svntest.main.run_svn(None, 'mkdir', X_path, Y_path)
-  svntest.main.run_svn(None, 'ci',
-                       '-m', 'log message',
-                       wc_dir)
+  sbox.simple_commit(message='log message')
 
   # change tau in rev. 3
   ADG_path = sbox.ospath('A/D/G')
   tau_path = os.path.join(ADG_path, 'tau')
   svntest.main.file_append(tau_path, "new line\n")
-  svntest.main.run_svn(None, 'ci',
-                       '-m', 'log message',
-                       wc_dir)
+  sbox.simple_commit(message='log message')
 
   # delete A/D/G in rev. 4
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'rm', ADG_path)
-  svntest.main.run_svn(None, 'ci',
-                       '-m', 'log message',
-                       wc_dir)
+  sbox.simple_commit(message='log message')
 
   # Test 1: switch X to A/D/G@2
   ADG_url = repo_url + '/A/D/G'
@@ -2047,7 +2040,7 @@ def switch_urls_with_spaces(sbox):
   svntest.main.file_write(bbb_path, "This is the file 'bar baz bal'.\n")
   svntest.main.run_svn(None, 'add', tpm_path, bbb_path)
 
-  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  sbox.simple_commit(message='log message')
 
   # Test 1: switch directory 'A B C' to url 'X Y Z'
   XYZ_url = repo_url + '/X Y Z'
@@ -2112,23 +2105,19 @@ def switch_to_dir_with_peg_rev2(sbox):
   # prepare dir X in rev. 2
   X_path = sbox.ospath('X')
   svntest.main.run_svn(None, 'mkdir', X_path)
-  svntest.main.run_svn(None, 'ci',
-                       '-m', 'log message',
-                       wc_dir)
+  sbox.simple_commit(message='log message')
 
   # make a change in ADG in rev. 3
   tau_path = sbox.ospath('A/D/G/tau')
   svntest.main.file_append(tau_path, "extra line\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  sbox.simple_commit(message='log message')
 
   # Rename ADG to ADY in rev 4
   svntest.main.run_svn(None, 'up', wc_dir)
   ADG_path = sbox.ospath('A/D/G')
   ADY_path = sbox.ospath('A/D/Y')
   svntest.main.run_svn(None, 'mv', ADG_path, ADY_path)
-  svntest.main.run_svn(None, 'ci',
-                       '-m', 'log message',
-                       wc_dir)
+  sbox.simple_commit(message='log message')
 
   # Test switch X to rev 2 of A/D/Y@HEAD
   ADY_url = sbox.repo_url + '/A/D/Y'
@@ -2245,7 +2234,7 @@ def tolerate_local_mods(sbox):
 
   os.mkdir(L_path)
   svntest.main.run_svn(None, 'add', L_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
+  sbox.simple_commit(message='Commit added folder')
 
   # locally modified unversioned file
   svntest.main.file_write(LM_path, 'Locally modified file.\n', 'w+')
@@ -2807,12 +2796,12 @@ def copy_with_switched_subdir(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, state)
 
-  svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
+  sbox.simple_commit(message='Commit added folder')
 
   # Additional test, it should commit to R/G/alpha.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.file_append(sbox.ospath('R/G/alpha'), "apple")
-  svntest.main.run_svn(None, 'ci', '-m', 'Commit changed file', wc_dir)
+  sbox.simple_commit(message='Commit changed file')
 
   # Checkout working copy to verify result
   svntest.main.safe_rmtree(wc_dir, 1)

@@ -193,6 +193,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE,
                                             pool));
 

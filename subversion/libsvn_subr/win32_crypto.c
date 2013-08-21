@@ -32,6 +32,8 @@ typedef int win32_crypto__dummy;
 
 #include <apr_pools.h>
 #include <apr_base64.h>
+
+#include "svn_private_config.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_hash.h"
@@ -41,8 +43,6 @@ typedef int win32_crypto__dummy;
 #include "svn_base64.h"
 
 #include "private/svn_auth_private.h"
-
-#include "svn_private_config.h"
 
 #include <wincrypt.h>
 

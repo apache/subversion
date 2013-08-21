@@ -40,9 +40,9 @@
  * @param jprompter     a global reference to the Java callback object
  */
 Prompter::Prompter(jobject jprompter)
-{
-  m_prompter = jprompter;
-}
+  : m_prompter(jprompter),
+    m_maySave(false)
+{}
 
 Prompter::~Prompter()
 {

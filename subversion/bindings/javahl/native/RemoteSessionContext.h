@@ -20,31 +20,31 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RevpropTable.h
- * @brief Interface of the class RevpropTable
+ * @file RemoteSessionContext.h
+ * @brief Interface of the class RemoteSessionContext
  */
 
-#ifndef REVPROPTABLE_H
-#define REVPROPTABLE_H
+#ifndef JAVAHL_REMOTE_SESSION_CONTEXT_H
+#define JAVAHL_REMOTE_SESSION_CONTEXT_H
 
-#include <jni.h>
-#include "Pool.h"
+#include "svn_ra.h"
 
-struct apr_hash_t;
+#include "OperationContext.h"
 
-#include "Path.h"
-#include <map>
-#include <string>
-
-class RevpropTable
+class RemoteSessionContext : public OperationContext
 {
- private:
-  std::map<std::string, std::string> m_revprops;
-  jobject m_revpropTable;
- public:
-  RevpropTable(jobject jrevpropTable);
-  ~RevpropTable();
-  const apr_hash_t *hash(const SVN::Pool &pool);
+  public:
+    RemoteSessionContext(jobject contextHolder, SVN::Pool &pool,
+                         const char* jconfigDirectory,
+                         jobject jconfigHandler,
+                         const char* jusername, const char* jpassword,
+                         Prompter* prompter, jobject jprogress);
+    virtual ~RemoteSessionContext();
+    void * getCallbackBaton();
+    svn_ra_callbacks2_t* getCallbacks();
+
+  private:
+    svn_ra_callbacks2_t* m_raCallbacks;
 };
 
-#endif // REVPROPTABLE_H
+#endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */

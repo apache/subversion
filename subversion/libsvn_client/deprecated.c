@@ -33,6 +33,8 @@
 #define SVN_DEPRECATED
 
 #include <string.h>
+
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_compat.h"
@@ -47,8 +49,6 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
-
 
 
 
@@ -3058,3 +3058,11 @@ svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
   return new_item;
 }
 
+svn_error_t *
+svn_client_cleanup(const char *path,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_client_cleanup2(path, FALSE, FALSE, FALSE, ctx,
+                                             scratch_pool));
+}

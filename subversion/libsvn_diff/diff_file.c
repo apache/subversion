@@ -166,25 +166,38 @@ read_chunk(apr_file_t *file, const char *path,
 static svn_error_t *
 map_or_read_file(apr_file_t **file,
                  MMAP_T_PARAM(mm)
-                 char **buffer, apr_off_t *size,
+                 char **buffer, apr_size_t *size_p,
                  const char *path, apr_pool_t *pool)
 {
   apr_finfo_t finfo;
   apr_status_t rv;
+  apr_size_t size;
 
   *buffer = NULL;
 
   SVN_ERR(svn_io_file_open(file, path, APR_READ, APR_OS_DEFAULT, pool));
   SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, *file, pool));
 
-#if APR_HAS_MMAP
-  if (finfo.size > APR_MMAP_THRESHOLD)
+  if (finfo.size > APR_SIZE_MAX)
     {
-      rv = apr_mmap_create(mm, *file, 0, (apr_size_t) finfo.size,
-                           APR_MMAP_READ, pool);
+      return svn_error_createf(APR_ENOMEM, NULL,
+                               _("File '%s' is too large to be read in "
+                                 "to memory"), path);
+    }
+
+  size = (apr_size_t) finfo.size;
+#if APR_HAS_MMAP
+  if (size > APR_MMAP_THRESHOLD)
+    {
+      rv = apr_mmap_create(mm, *file, 0, size, APR_MMAP_READ, pool);
       if (rv == APR_SUCCESS)
         {
           *buffer = (*mm)->mm;
+        }
+      else
+        {
+          /* Clear *MM because output parameters are undefined on error. */
+          *mm = NULL;
         }
 
       /* On failure we just fall through and try reading the file into
@@ -193,12 +206,11 @@ map_or_read_file(apr_file_t **file,
     }
 #endif /* APR_HAS_MMAP */
 
-   if (*buffer == NULL && finfo.size > 0)
+   if (*buffer == NULL && size > 0)
     {
-      *buffer = apr_palloc(pool, (apr_size_t) finfo.size);
+      *buffer = apr_palloc(pool, size);
 
-      SVN_ERR(svn_io_file_read_full2(*file, *buffer, (apr_size_t) finfo.size,
-                                     NULL, NULL, pool));
+      SVN_ERR(svn_io_file_read_full2(*file, *buffer, size, NULL, NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
@@ -208,7 +220,7 @@ map_or_read_file(apr_file_t **file,
       *file = NULL;
     }
 
-  *size = finfo.size;
+  *size_p = size;
 
   return SVN_NO_ERROR;
 }
@@ -634,7 +646,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
         min_curp[0] += suffix_min_offset0;
 
       /* Scan quickly by reading with machine-word granularity. */
-      for (i = 0, can_read_word = TRUE; i < file_len; i++)
+      for (i = 0, can_read_word = TRUE; can_read_word && i < file_len; i++)
         can_read_word = can_read_word
                         && (  (file_for_suffix[i].curp + 1
                                  - sizeof(apr_uintptr_t))
@@ -652,7 +664,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
           if (contains_eol(chunk))
             break;
 
-          for (i = 1, is_match = TRUE; i < file_len; i++)
+          for (i = 1, is_match = TRUE; is_match && i < file_len; i++)
             is_match = is_match
                        && (   chunk
                            == *(const apr_uintptr_t *)
@@ -957,7 +969,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
          function.
 
          When changing things here, make sure the whitespace settings are
-         applied, or we mught not reach the exact suffix boundary as token
+         applied, or we might not reach the exact suffix boundary as token
          boundary. */
       SVN_ERR(read_chunk(file->file, file->path,
                          curp, length,
@@ -2360,7 +2372,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
 
   for (idx = 0; idx < 3; idx++)
     {
-      apr_off_t size;
+      apr_size_t size;
 
       SVN_ERR(map_or_read_file(&file[idx],
                                MMAP_T_ARG(mm[idx])

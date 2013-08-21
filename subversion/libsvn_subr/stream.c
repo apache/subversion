@@ -56,6 +56,7 @@ struct svn_stream_t {
   svn_stream_mark_fn_t mark_fn;
   svn_stream_seek_fn_t seek_fn;
   svn_stream__is_buffered_fn_t is_buffered_fn;
+  apr_file_t *file; /* Maybe NULL */
 };
 
 
@@ -81,6 +82,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->mark_fn = NULL;
   stream->seek_fn = NULL;
   stream->is_buffered_fn = NULL;
+  stream->file = NULL;
   return stream;
 }
 
@@ -913,11 +915,18 @@ svn_stream_from_aprfile2(apr_file_t *file,
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
   svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
+  stream->file = file;
 
   if (! disown)
     svn_stream_set_close(stream, close_handler_apr);
 
   return stream;
+}
+
+apr_file_t *
+svn_stream__aprfile(svn_stream_t *stream)
+{
+  return stream->file;
 }
 
 
@@ -1648,7 +1657,7 @@ svn_string_from_stream(svn_string_t **result,
 }
 
 
-/* These are somewhat arbirary, if we ever get good empirical data as to
+/* These are somewhat arbitrary, if we ever get good empirical data as to
    actually valid values, feel free to update them. */
 #define BUFFER_BLOCK_SIZE 1024
 #define BUFFER_MAX_SIZE 100000
@@ -1656,7 +1665,9 @@ svn_string_from_stream(svn_string_t **result,
 svn_stream_t *
 svn_stream_buffered(apr_pool_t *result_pool)
 {
-  return svn_stream__from_spillbuf(BUFFER_BLOCK_SIZE, BUFFER_MAX_SIZE,
+  return svn_stream__from_spillbuf(svn_spillbuf__create(BUFFER_BLOCK_SIZE,
+                                                        BUFFER_MAX_SIZE,
+                                                        result_pool),
                                    result_pool);
 }
 

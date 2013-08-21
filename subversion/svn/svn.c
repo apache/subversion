@@ -35,6 +35,7 @@
 #include <apr_general.h>
 #include <apr_signal.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -56,8 +57,6 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
-
-#include "svn_private_config.h"
 
 
 /*** Option Processing ***/
@@ -134,7 +133,11 @@ typedef enum svn_cl__longopt_t {
   opt_include_externals,
   opt_show_inherited_props,
   opt_search,
-  opt_search_and
+  opt_search_and,
+  opt_mergeinfo_log,
+  opt_remove_unversioned,
+  opt_remove_ignored,
+  opt_no_newline
 } svn_cl__longopt_t;
 
 
@@ -398,17 +401,21 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "Please run 'svn update' instead.")},
   {"include-externals", opt_include_externals, 0,
-                       N_("Also commit file and dir externals reached by\n"
+                       N_("also operate on externals defined by\n"
                        "                             "
-                       "recursion. This does not include externals with a\n"
-                       "                             "
-                       "fixed revision. (See the svn:externals property)")},
+                       "svn:externals properties")},
   {"show-inherited-props", opt_show_inherited_props, 0,
                        N_("retrieve target's inherited properties")},
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax)")},
   {"search-and", opt_search_and, 1,
                        N_("combine ARG with the previous search pattern")},
+  {"log", opt_mergeinfo_log, 0,
+                       N_("show revision log message, author and date")},
+  {"remove-unversioned", opt_remove_unversioned, 0,
+                       N_("remove unversioned items")},
+  {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
+  {"no-newline", opt_no_newline, 0, N_("do not output trailing newline")},
 
   /* Long-opt Aliases
    *
@@ -514,10 +521,29 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
-    ("Recursively clean up the working copy, removing locks, resuming\n"
+    ("Recursively clean up the working copy, removing write locks, resuming\n"
      "unfinished operations, etc.\n"
-     "usage: cleanup [WCPATH...]\n"),
-    {opt_merge_cmd} },
+     "usage: cleanup [WCPATH...]\n"
+     "\n"
+     "  By default, finish any unfinished business in the working copy at WCPATH,\n"
+     "  and remove write locks (shown as 'L' by the 'svn status' command) from\n"
+     "  the working copy. Usually, this is only necessary if a Subversion client\n"
+     "  has crashed while using the working copy, leaving it in an unusable state.\n"
+     "\n"
+     "  WARNING: There is no mechanism that will protect write locks still\n"
+     "           being used by other Subversion clients. Running this command\n"
+     "           while another client is using the working copy can corrupt\n"
+     "           the working copy beyond repair!\n"
+     "\n"
+     "  If the --remove-unversioned option or the --remove-ignored option\n"
+     "  is given, remove any unversioned or ignored items within WCPATH.\n"
+     "  To prevent accidental working copy corruption, unversioned or ignored\n"
+     "  items can only be removed if the working copy is not already locked\n"
+     "  for writing by another Subversion client.\n"
+     "  Note that the 'svn status' command shows unversioned items as '?',\n"
+     "  and ignored items as 'I' if the --no-ignore option is given to it.\n"),
+    {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored,
+     opt_include_externals, 'q'} },
 
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
@@ -526,7 +552,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  A log message must be provided, but it can be empty.  If it is not\n"
        "  given by a --message or --file option, an editor will be started.\n"
        "  If any targets are (or contain) locked items, those will be\n"
-       "  unlocked after a successful commit.\n"),
+       "  unlocked after a successful commit.\n"
+       "\n"
+       "  If --include-externals is given, also commit file and directory\n"
+       "  externals reached by recursion. Do not commit externals with a\n"
+       "  fixed revision.\n"),
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
      opt_changelist, opt_keep_changelists, opt_include_externals} },
 
@@ -679,8 +709,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
     {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
-     opt_include_externals },
-    {{opt_include_externals, N_("include externals definitions")}} },
+     opt_include_externals}, },
 
   { "lock", svn_cl__lock, {0}, N_
     ("Lock working copy paths or URLs in the repository, so that\n"
@@ -781,18 +810,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        * (with quotes and newlines removed). */
 "Merge changes into a working copy.\n"
 "usage: 1. merge SOURCE[@REV] [TARGET_WCPATH]\n"
-"          (the 'automatic' merge)\n"
+"          (the 'complete' merge)\n"
 "       2. merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
 "          (the 'cherry-pick' merge)\n"
 "       3. merge SOURCE1[@REV1] SOURCE2[@REV2] [TARGET_WCPATH]\n"
 "          (the '2-URL' merge)\n"
 "\n"
 "  1. This form, with one source path and no revision range, is called\n"
-"     an 'automatic' merge:\n"
+"     a 'complete' merge:\n"
 "\n"
 "       svn merge SOURCE[@REV] [TARGET_WCPATH]\n"
 "\n"
-"     The automatic merge is used for the 'sync' and 'reintegrate' merges\n"
+"     The complete merge is used for the 'sync' and 'reintegrate' merges\n"
 "     in the 'feature branch' pattern described below. It finds all the\n"
 "     changes on the source branch that have not already been merged to the\n"
 "     target branch, and merges them into the working copy. Merge tracking\n"
@@ -931,7 +960,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     of 'REV' is the base revision (usually the revision last updated to).\n"
 "\n"
 "     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
-"     assumed. The special cases noted above in the 'automatic' merge form\n"
+"     assumed. The special cases noted above in the 'complete' merge form\n"
 "     also apply here.\n"
 "\n"
 "     The revision ranges to be merged are specified by the '-r' and/or '-c'\n"
@@ -1002,7 +1031,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "     The three branches involved can be completely unrelated.\n"
 "\n"
 "     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
-"     assumed. The special cases noted above in the 'automatic' merge form\n"
+"     assumed. The special cases noted above in the 'complete' merge form\n"
 "     also apply here.\n"
 "\n"
 "     SOURCE1 and/or SOURCE2 can also be specified as a working copy path,\n"
@@ -1119,7 +1148,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     shows, from left to right:\n"
      "       the youngest common ancestor of the branches;\n"
      "       the latest full merge in either direction, and thus the common base\n"
-     "         that will be used for the next automatic merge;\n"
+     "         that will be used for the next complete merge;\n"
      "       the repository path and revision number of the tip of each branch.\n"
      "\n"
      "  2. Print the revision numbers on SOURCE that have been merged to TARGET\n"
@@ -1139,7 +1168,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
-    {'r', 'R', opt_depth, opt_show_revs} },
+    {'r', 'R', opt_depth, opt_show_revs, opt_mergeinfo_log} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -1461,9 +1490,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      ' ' no modifications\n"
      "      'C' Conflicted\n"
      "      'M' Modified\n"
-     "    Third column: Whether the working copy directory is locked\n"
-     "      ' ' not locked\n"
-     "      'L' locked\n"
+     "    Third column: Whether the working copy is locked for writing by\n"
+     "                  another Subversion client modifying the working copy\n"
+     "      ' ' not locked for writing\n"
+     "      'L' locked for writing\n"
      "    Fourth column: Scheduled commit will contain addition-with-history\n"
      "      ' ' no history scheduled with commit\n"
      "      '+' history scheduled with commit\n"
@@ -1471,16 +1501,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      ' ' normal\n"
      "      'S' the item has a Switched URL relative to the parent\n"
      "      'X' a versioned file created by an eXternals definition\n"
-     "    Sixth column: Repository lock token\n"
+     "    Sixth column: Whether the item is locked in repository for exclusive commit\n"
      "      (without -u)\n"
-     "      ' ' no lock token\n"
-     "      'K' lock token present\n"
+     "      ' ' not locked by this working copy\n"
+     "      'K' locked by this working copy, but lock might be stolen or broken\n"
      "      (with -u)\n"
-     "      ' ' not locked in repository, no lock token\n"
-     "      'K' locked in repository, lock toKen present\n"
-     "      'O' locked in repository, lock token in some Other working copy\n"
-     "      'T' locked in repository, lock token present but sTolen\n"
-     "      'B' not locked in repository, lock token present but Broken\n"
+     "      ' ' not locked in repository, not locked by this working copy\n"
+     "      'K' locked in repository, lock owned by this working copy\n"
+     "      'O' locked in repository, lock owned by another working copy\n"
+     "      'T' locked in repository, lock owned by this working copy was stolen\n"
+     "      'B' not locked in repository, lock owned by this working copy is broken\n"
      "    Seventh column: Whether the item is the victim of a tree conflict\n"
      "      ' ' normal\n"
      "      'C' tree-Conflicted\n"
@@ -1640,6 +1670,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Local modifications are preserved.\n"),
     { 'q' } },
 
+  { "youngest", svn_cl__youngest, {0}, N_
+    ("Print the youngest revision number of a target's repository.\n"
+     "usage: youngest [TARGET]\n"
+     "\n"
+     "  Print the revision number of the youngest revision in the repository\n"
+     "  with which TARGET is associated.\n"),
+    { opt_no_newline } },
+
   { NULL, NULL, {0}, NULL, {0} }
 };
 
@@ -1660,7 +1698,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 
@@ -1679,6 +1717,8 @@ signal_handler(int signum)
 svn_error_t *
 svn_cl__check_cancel(void *baton)
 {
+  /* Cancel baton should be always NULL in command line client. */
+  SVN_ERR_ASSERT(baton == NULL);
   if (cancelled)
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
   else
@@ -2246,6 +2286,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                _("'%s' is not a valid --show-revs value"),
                                utf8_opt_arg));
         break;
+      case opt_mergeinfo_log:
+        opt_state.mergeinfo_log = TRUE;
+        break;
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
         break;
@@ -2308,6 +2351,15 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_search_and:
         SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         add_search_pattern_to_latest_group(&opt_state, utf8_opt_arg, pool);
+      case opt_remove_unversioned:
+        opt_state.remove_unversioned = TRUE;
+        break;
+      case opt_remove_ignored:
+        opt_state.remove_ignored = TRUE;
+        break;
+      case opt_no_newline:
+        opt_state.no_newline = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -3002,6 +3054,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                          "because authentication is performed by SSH, not "
                          "Subversion"));
         }
+
+      /* Ensure that stdout is flushed, so the user will see any write errors.
+         This makes sure that output is not silently lost. */
+      SVN_INT_ERR(svn_cmdline_fflush(stdout));
 
       return EXIT_ERROR(err);
     }

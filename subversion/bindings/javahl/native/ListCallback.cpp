@@ -126,53 +126,5 @@ jobject
 ListCallback::createJavaDirEntry(const char *path, const char *absPath,
                                  const svn_dirent_t *dirent)
 {
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
-
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/DirEntry");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  static jmethodID mid = 0;
-  if (mid == 0)
-    {
-      mid = env->GetMethodID(clazz, "<init>",
-                             "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/NodeKind;"
-                             "JZJJLjava/lang/String;)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  jstring jPath = JNIUtil::makeJString(path);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jAbsPath = JNIUtil::makeJString(absPath);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jobject jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jlong jSize = dirent->size;
-  jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
-  jlong jLastChangedRevision = dirent->created_rev;
-  jlong jLastChanged = dirent->time;
-  jstring jLastAuthor = JNIUtil::makeJString(dirent->last_author);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jobject ret = env->NewObject(clazz, mid, jPath, jAbsPath, jNodeKind,
-                               jSize, jHasProps, jLastChangedRevision,
-                               jLastChanged, jLastAuthor);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  return env->PopLocalFrame(ret);
+  return CreateJ::DirEntry(path, absPath, dirent);
 }

@@ -38,10 +38,21 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Validate that property @a name is valid for use in a Subversion
- * repository; return @c SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some
- * "svn:" properties, also validate the @a value, and return
- * @c SVN_ERR_BAD_PROPERTY_VALUE if it is not valid.
+/** Validate that property @a name with @a value is valid (as an addition
+ * or edit or deletion) in a Subversion repository.  Return an error if not.
+ *
+ * If @a value is NULL, return #SVN_NO_ERROR to indicate that any property
+ * may be deleted, even an invalid one.  Otherwise, if the @a name is not
+ * of kind #svn_prop_regular_kind (see #svn_prop_kind_t), return
+ * #SVN_ERR_REPOS_BAD_ARGS.  Otherwise, for some "svn:" properties, also
+ * perform some validations on the @a value (e.g., for such properties,
+ * typically the @a value must be in UTF-8 with LF linefeeds), and return
+ * #SVN_ERR_BAD_PROPERTY_VALUE if it is not valid.
+ *
+ * Validations may be added in future releases, for example, for
+ * newly-added #SVN_PROP_PREFIX properties.  However, user-defined
+ * (non-#SVN_PROP_PREFIX) properties will never have their @a value
+ * validated in any way.
  *
  * Use @a pool for temporary allocations.
  *

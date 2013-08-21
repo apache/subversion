@@ -34,8 +34,15 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
 
-/* Upgrade the fsfs filesystem FS.  Use POOL for temporary allocations. */
+/* Upgrade the fsfs filesystem FS.  Indicate progress via the optional
+ * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
+ * will periodically be called with CANCEL_BATON to allow for preemption.
+ * Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__upgrade(svn_fs_t *fs,
+                                svn_fs_upgrade_notify_t notify_func,
+                                void *notify_baton,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 /* Verify metadata in fsfs filesystem FS.  Limit the checks to revisions
@@ -353,11 +360,13 @@ svn_error_t *svn_fs_fs__set_proplist(svn_fs_t *fs,
 
 /* Commit the transaction TXN in filesystem FS and return its new
    revision number in *REV.  If the transaction is out of date, return
-   the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
-   allocations. */
+   the error SVN_ERR_FS_TXN_OUT_OF_DATE. Update commit time to ensure that
+   svn:date revprops remain ordered if SET_TIMESTAMP is non-zero. Use POOL for
+   temporary allocations. */
 svn_error_t *svn_fs_fs__commit(svn_revnum_t *new_rev_p,
                                svn_fs_t *fs,
                                svn_fs_txn_t *txn,
+                               svn_boolean_t set_timestamp,
                                apr_pool_t *pool);
 
 /* Return the next available copy_id in *COPY_ID for the transaction

@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -48,7 +49,6 @@
 #include "workqueue.h"
 #include "token-map.h"
 
-#include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
@@ -1529,7 +1529,6 @@ svn_wc__db_init(svn_wc__db_t *db,
                         apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
-                        FALSE /* enforce_empty_wq */,
                         db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -2086,6 +2085,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                svn_wc__db_t *db, /* For checking conflicts */
                svn_boolean_t keep_as_working,
                svn_boolean_t queue_deletes,
+               svn_boolean_t remove_locks,
                svn_revnum_t not_present_revision,
                svn_skel_t *conflict,
                svn_skel_t *work_items,
@@ -2105,6 +2105,16 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                                             NULL, NULL, NULL, NULL, NULL,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
+
+  if (remove_locks)
+    {
+      svn_sqlite__stmt_t *lock_stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
+                                        STMT_DELETE_LOCK_RECURSIVELY));
+      SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
+      SVN_ERR(svn_sqlite__step_done(lock_stmt));
+    }
 
   if (status == svn_wc__db_status_normal
       && keep_as_working)
@@ -2333,6 +2343,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
                        svn_boolean_t queue_deletes,
+                       svn_boolean_t remove_locks,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
@@ -2349,7 +2360,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(db_base_remove(wcroot, local_relpath,
                                      db, keep_as_working, queue_deletes,
-                                     not_present_revision,
+                                     remove_locks, not_present_revision,
                                      conflict, work_items, scratch_pool),
                       wcroot);
 
@@ -10814,7 +10825,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
       svn_sqlite__stmt_t *lock_stmt;
 
       SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
-                                        STMT_DELETE_LOCK));
+                                        STMT_DELETE_LOCK_RECURSIVELY));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
     }
@@ -11058,7 +11069,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
               revision != new_rev)))
     {
       return svn_error_trace(db_base_remove(wcroot, local_relpath,
-                                            db, FALSE, FALSE,
+                                            db, FALSE, FALSE, FALSE,
                                             SVN_INVALID_REVNUM,
                                             NULL, NULL, scratch_pool));
     }
@@ -12288,7 +12299,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                                    dir_abspath),
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
-                                       FALSE /* enforce_empty_wq */,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -13493,6 +13503,7 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  int levels_to_lock,
                  svn_boolean_t steal_lock,
+                 svn_boolean_t enforce_empty_wq,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -13521,6 +13532,9 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
                                                         local_relpath,
                                                         scratch_pool));
     }
+
+  if (enforce_empty_wq)
+    SVN_ERR(svn_wc__db_verify_no_work(wcroot->sdb));
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
@@ -13696,7 +13710,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(
     wclock_obtain_cb(wcroot, local_relpath, levels_to_lock, steal_lock,
-                     scratch_pool),
+                     db->enforce_empty_wq, scratch_pool),
     wcroot);
   return SVN_NO_ERROR;
 }
@@ -14978,13 +14992,17 @@ svn_wc__db_verify(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_bump_format(int *result_format,
-                       const char *wcroot_abspath,
+                       svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
+                       const char *wcroot_abspath,
                        apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
   svn_error_t *err;
   int format;
+
+  if (bumped_format)
+    *bumped_format = FALSE;
 
   /* Do not scan upwards for a working copy root here to prevent accidental
    * upgrades of any working copies the WCROOT might be nested in.
@@ -15020,7 +15038,10 @@ svn_wc__db_bump_format(int *result_format,
 
   SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
   err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
-                                     sdb, format, scratch_pool);
+                            sdb, format, scratch_pool);
+
+  if (err == SVN_NO_ERROR && bumped_format)
+    *bumped_format = (*result_format > format);
 
   /* Make sure we return a different error than expected for upgrades from
      entries */

@@ -26,10 +26,12 @@
 #include <stdio.h>
 
 #include <apr.h>
+#include <apr_version.h>
 
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "private/svn_skel.h"
+#include "private/svn_dep_compat.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -481,6 +483,161 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
   return err;
 }
 
+static svn_error_t *
+read_length_line_shouldnt_loop(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  char buffer[4];
+  apr_size_t buffer_limit = sizeof(buffer);
+  apr_file_t *f;
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "read_length_tmp", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  SVN_ERR(svn_io_write_unique(&tmp_file, tmp_dir, "1234\r\n", 6,
+                              svn_io_file_del_on_pool_cleanup, pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
+
+  SVN_TEST_ASSERT_ERROR(svn_io_read_length_line(f, buffer, &buffer_limit,
+                                                pool), SVN_ERR_MALFORMED_FILE);
+  SVN_TEST_ASSERT(buffer_limit == 4);
+
+  return SVN_NO_ERROR;
+}
+
+/* Move the read pointer in FILE to absolute position OFFSET and align
+ * the read buffer to multiples of BLOCK_SIZE.  Use POOL for allocations.
+ */
+static svn_error_t *
+aligned_seek(apr_file_t *file,
+             apr_size_t block_size,
+             apr_size_t offset,
+             apr_pool_t *pool)
+{
+  apr_off_t block_start;
+  apr_off_t current;
+
+  SVN_ERR(svn_io_file_aligned_seek(file, (apr_off_t)block_size,
+                                   &block_start, (apr_off_t)offset, pool));
+
+  /* block start shall be aligned to multiples of block_size.
+     If it isn't, it must be aligned to APR's default block size(pre-1.3 APR)
+   */
+#if APR_VERSION_AT_LEAST(1,3,0)
+  SVN_TEST_ASSERT(block_start % block_size == 0);
+  SVN_TEST_ASSERT(offset - block_start < block_size);
+#else
+  SVN_TEST_ASSERT(block_start % 0x1000 == 0);
+  SVN_TEST_ASSERT(offset - block_start < 0x1000);
+#endif
+
+  /* we must be at the desired offset */
+  current = 0;
+  SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+  SVN_TEST_ASSERT(current == (apr_off_t)offset);
+
+  return SVN_NO_ERROR;
+}
+
+/* Move the read pointer in FILE to absolute position OFFSET, align the
+ * read buffer to multiples of BLOCK_SIZE and read one byte from that
+ * position.  Verify that it matches the CONTENTS for that offset.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+aligned_read_at(apr_file_t *file,
+                svn_stringbuf_t *contents,
+                apr_size_t block_size,
+                apr_size_t offset,
+                apr_pool_t *pool)
+{
+  char c;
+  SVN_ERR(aligned_seek(file, block_size, offset,pool));
+
+  /* the data we read must match whatever we wrote there */
+  SVN_ERR(svn_io_file_getc(&c, file, pool));
+  SVN_TEST_ASSERT(c == contents->data[offset]);
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that aligned seek with the given BLOCK_SIZE works for FILE.
+ * CONTENTS is the data expected from FILE.  Use POOL for allocations.
+ */
+static svn_error_t *
+aligned_read(apr_file_t *file,
+             svn_stringbuf_t *contents,
+             apr_size_t block_size,
+             apr_pool_t *pool)
+{
+  apr_size_t i;
+  apr_size_t offset = 0;
+  const apr_size_t prime = 78427;
+
+  /* "random" access to different offsets */
+  for (i = 0, offset = prime; i < 10; ++i, offset += prime)
+    SVN_ERR(aligned_read_at(file, contents, block_size,
+                            offset % contents->len, pool));
+
+  /* we can seek to EOF */
+  SVN_ERR(aligned_seek(file, contents->len, block_size, pool));
+
+  /* reversed order access to all bytes */
+  for (i = contents->len; i > 0; --i)
+    SVN_ERR(aligned_read_at(file, contents, block_size, i - 1, pool));
+
+  /* forward order access to all bytes */
+  for (i = 0; i < contents->len; ++i)
+    SVN_ERR(aligned_read_at(file, contents, block_size, i, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+aligned_seek_test(apr_pool_t *pool)
+{
+  apr_size_t i;
+  const char *tmp_dir;
+  const char *tmp_file;
+  apr_file_t *f;
+  svn_stringbuf_t *contents;
+  const apr_size_t file_size = 100000;
+
+  /* create a temp folder & schedule it for automatic cleanup */
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "aligned_seek_tmp", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* create a temp file with know contents */
+
+  contents = svn_stringbuf_create_ensure(file_size, pool);
+  for (i = 0; i < file_size; ++i)
+    svn_stringbuf_appendbyte(contents, (char)rand());
+
+  SVN_ERR(svn_io_write_unique(&tmp_file, tmp_dir, contents->data,
+                              contents->len,
+                              svn_io_file_del_on_pool_cleanup, pool));
+
+  /* now, access read data with varying alignment sizes */
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(aligned_read(f, contents,   0x1000, pool)); /* APR default */
+  SVN_ERR(aligned_read(f, contents,   0x8000, pool)); /* "unusual" 32K */
+  SVN_ERR(aligned_read(f, contents,  0x10000, pool)); /* FSX default */
+  SVN_ERR(aligned_read(f, contents, 0x100000, pool)); /* larger than file */
+  SVN_ERR(aligned_read(f, contents,    10001, pool)); /* odd, larger than
+                                                         APR default */
+  SVN_ERR(aligned_read(f, contents,     1003, pool)); /* odd, smaller than
+                                                         APR default */
+
+  return SVN_NO_ERROR;
+}
 
 
 /* The test table.  */
@@ -496,5 +653,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "three file size comparison"),
     SVN_TEST_PASS2(test_three_file_content_comparison,
                    "three file content comparison"),
+    SVN_TEST_PASS2(read_length_line_shouldnt_loop,
+                   "svn_io_read_length_line() shouldn't loop"),
+    SVN_TEST_PASS2(aligned_seek_test,
+                   "test aligned seek"),
     SVN_TEST_NULL
   };

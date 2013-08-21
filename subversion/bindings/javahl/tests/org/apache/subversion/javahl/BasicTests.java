@@ -251,16 +251,17 @@ public class BasicTests extends SVNTests
     public void testMergeinfoParser() throws Throwable
     {
         String mergeInfoPropertyValue =
-            "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
+            "/trunk:1-300,305*,307,400-405*\n" +
+            "/branches/branch:308-400";
         Mergeinfo info = new Mergeinfo(mergeInfoPropertyValue);
         Set<String> paths = info.getPaths();
         assertEquals(2, paths.size());
         List<RevisionRange> trunkRange = info.getRevisionRange("/trunk");
         assertEquals(4, trunkRange.size());
         assertEquals("1-300", trunkRange.get(0).toString());
-        assertEquals("305", trunkRange.get(1).toString());
+        assertEquals("305*", trunkRange.get(1).toString());
         assertEquals("307", trunkRange.get(2).toString());
-        assertEquals("400-405", trunkRange.get(3).toString());
+        assertEquals("400-405*", trunkRange.get(3).toString());
         List<RevisionRange> branchRange =
             info.getRevisionRange("/branches/branch");
         assertEquals(1, branchRange.size());
@@ -3299,6 +3300,16 @@ public class BasicTests extends SVNTests
         }
     }
 
+    private static class CountingProgressListener implements ProgressCallback
+    {
+        public void onProgress(ProgressEvent event)
+        {
+            // TODO: Examine the byte counts from "event".
+            gotProgress = true;
+        }
+        public boolean gotProgress = false;
+    }
+
     public void testDataTransferProgressReport() throws Throwable
     {
         // ### FIXME: This isn't working over ra_local, because
@@ -3308,25 +3319,13 @@ public class BasicTests extends SVNTests
 
         // build the test setup
         OneTest thisTest = new OneTest();
-        ProgressCallback listener = new ProgressCallback()
-        {
-            public void onProgress(ProgressEvent event)
-            {
-                // TODO: Examine the byte counts from "event".
-                throw new RuntimeException("Progress reported as expected");
-            }
-        };
+        CountingProgressListener listener = new CountingProgressListener();
         client.setProgressCallback(listener);
 
         // Perform an update to exercise the progress notification.
-        try
-        {
-            update(thisTest);
+        update(thisTest);
+        if (!listener.gotProgress)
             fail("No progress reported");
-        }
-        catch (RuntimeException progressReported)
-        {
-        }
     }
 
     /**
@@ -3742,6 +3741,39 @@ public class BasicTests extends SVNTests
     {
       SVNClient cl = new SVNClient();
       cl.dispose();
+    }
+
+    /**
+     * Test RevisionRangeList.remove
+     */
+    public void testRevisionRangeListRemove() throws Throwable
+    {
+        RevisionRangeList ranges =
+            new RevisionRangeList(new ArrayList<RevisionRange>());
+        ranges.getRanges()
+            .add(new RevisionRange(Revision.getInstance(1),
+                                   Revision.getInstance(5),
+                                   true));
+        ranges.getRanges()
+            .add(new RevisionRange(Revision.getInstance(7),
+                                   Revision.getInstance(9),
+                                   false));
+        RevisionRangeList eraser =
+            new RevisionRangeList(new ArrayList<RevisionRange>());
+        eraser.getRanges()
+            .add(new RevisionRange(Revision.getInstance(7),
+                                   Revision.getInstance(9),
+                                   true));
+
+        List<RevisionRange> result = ranges.remove(eraser, true).getRanges();
+        assertEquals(2, ranges.getRanges().size());
+        assertEquals(1, eraser.getRanges().size());
+        assertEquals(2, result.size());
+
+        result = ranges.remove(eraser.getRanges(), false);
+        assertEquals(2, ranges.getRanges().size());
+        assertEquals(1, eraser.getRanges().size());
+        assertEquals(1, result.size());
     }
 
     /**

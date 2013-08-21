@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_hash.h"
@@ -37,7 +38,6 @@
 #include "svn_pools.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 
@@ -231,8 +231,6 @@ switch_internal(svn_revnum_t *result_rev,
         yca = NULL; /* Not versioned */
       else
         {
-          /* ### It would be nice if this function could reuse the existing
-             ra session instead of opening two for its own use. */
           SVN_ERR(svn_client__get_youngest_common_ancestor(
                   &yca, switch_loc, target_base_loc, ra_session, ctx,
                   pool, pool));
@@ -241,7 +239,7 @@ switch_internal(svn_revnum_t *result_rev,
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
                                  _("'%s' shares no common ancestry with '%s'"),
                                  switch_url,
-                                 svn_dirent_dirname(local_abspath, pool));
+                                 svn_dirent_local_style(local_abspath, pool));
     }
 
   wcroot_iprops = apr_hash_make(pool);

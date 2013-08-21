@@ -39,6 +39,7 @@ endif
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
+EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
@@ -69,9 +70,9 @@ APR_VER		= 1.4.6
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.4.1
-HTTPD_VER	= 2.2.22
+HTTPD_VER	= 2.2.25
 NEON_VER	= 0.29.6
-SERF_VER	= 1.2.0
+SERF_VER	= 1.3.1
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
 SQLITE_VER	= 3071600
@@ -126,7 +127,7 @@ LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= http://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
-JUNIT_URL	= http://cloud.github.com/downloads/KentBeck/junit/$(JUNIT_DIST)
+JUNIT_URL	= http://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -547,15 +548,35 @@ httpd-reset:
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && make clean)
+	rm -f $(HTTPD_OBJDIR)/no_ssl_v2.diff
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(HTTPD_URL)
 
+$(HTTPD_OBJDIR)/no_ssl_v2.diff:
+	mkdir -p $(dir $@)
+	echo > $@.tmp '--- modules/ssl/ssl_engine_io.c.orig	Sat Jul 13 16:49:52 2013'
+	echo >> $@.tmp '+++ modules/ssl/ssl_engine_io.c	Sat Jul 13 16:50:10 2013'
+	echo >> $@.tmp '@@ -1079,7 +1079,9 @@'
+	echo >> $@.tmp '          * IPv4 and IPv6 addresses are not permitted".)'
+	echo >> $@.tmp '          */'
+	echo >> $@.tmp '         if (hostname_note &&'
+	echo >> $@.tmp '+#ifndef OPENSSL_NO_SSL2'
+	echo >> $@.tmp '             sc->proxy->protocol != SSL_PROTOCOL_SSLV2 &&'
+	echo >> $@.tmp '+#endif'
+	echo >> $@.tmp '             sc->proxy->protocol != SSL_PROTOCOL_SSLV3 &&'
+	echo >> $@.tmp '             apr_ipsubnet_create(&ip, hostname_note, NULL,'
+	echo >> $@.tmp '                                 c->pool) != APR_SUCCESS) {'
+	mv -f $@.tmp $@
+
 # retrieve httpd
-$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
+$(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
+				$(HTTPD_OBJDIR)/no_ssl_v2.diff
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -jxf $(DISTDIR)/$(HTTPD_DIST)
+	cd $(SRCDIR)/httpd-$(HTTPD_VER) && \
+		patch -p0 < $(HTTPD_OBJDIR)/no_ssl_v2.diff
 	touch $@
 
 # configure httpd
@@ -686,7 +707,7 @@ serf-reset:
 		rm -f $(SERF_OBJDIR)/$(f);)
 
 serf-clean:
-	-(cd $(SERF_SRCDIR) && ./serfmake clean)
+	-(cd $(SERF_SRCDIR) && scons -c)
 
 
 # fetch distfile for serf
@@ -712,19 +733,16 @@ $(SERF_OBJDIR)/.retrieved:
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
-		env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
-			./serfmake --with-apr=$(PREFIX)/apr \
-			--prefix=$(PREFIX)/serf \
-			build
+		scons DEBUG=1 CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			APR=$(PREFIX)/apr \
+			APU=$(PREFIX)/apr \
+			PREFIX=$(PREFIX)/serf
 	touch $@
 
 # install serf
 $(SERF_OBJDIR)/.installed: $(SERF_OBJDIR)/.compiled
 	cd $(SERF_SRCDIR) && \
-		./serfmake --with-apr=$(PREFIX)/apr \
-			--with-apr-util=$(PREFIX)/apr \
-			--prefix=$(PREFIX)/serf \
-			install
+		scons install
 	touch $@
 
 #######################################################################
@@ -1153,6 +1171,7 @@ $(SVN_OBJDIR)/.retrieved:
 ifeq ($(BRANCH_MAJOR),1.7)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
@@ -1161,6 +1180,7 @@ JAVAHL_CHECK_TARGET=check-javahl
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
@@ -1178,6 +1198,9 @@ JAVAHL_CHECK_TARGET=check-javahl
 else # 1.8
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+# serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
+# so we have to do that ourselves :(
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
@@ -1192,8 +1215,9 @@ else
 endif
 
 ifdef PROFILE
-SVN_ALL_STATIC=--enable-all-static
+SVN_STATIC_FLAG=--enable-all-static
 else
+SVN_STATIC_FLAG=--disable-static
 SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 	--with-apache-libexecdir="$(PREFIX)/httpd/modules/svn-$(WC)"
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
@@ -1203,7 +1227,7 @@ endif
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG)" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$$PATH \
@@ -1223,7 +1247,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST)
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
-			$(SVN_ALL_STATIC) \
+			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
 
@@ -1421,7 +1445,8 @@ define do_check
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) $1 FS_TYPE=$$fs; \
+        make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
+	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
     done; \

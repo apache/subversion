@@ -28,6 +28,8 @@
 /*** Includes. ***/
 
 #include <string.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -43,7 +45,6 @@
 #include "client.h"
 #include "mergeinfo.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"
@@ -385,6 +386,7 @@ static svn_error_t *
 verify_wc_dsts(const apr_array_header_t *copy_pairs,
                svn_boolean_t make_parents,
                svn_boolean_t is_move,
+               svn_boolean_t metadata_only,
                svn_client_ctx_t *ctx,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
@@ -435,8 +437,11 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
         }
 
       /* Check that there is no unversioned obstruction */
-      SVN_ERR(svn_io_check_path(pair->dst_abspath_or_url, &dst_kind,
-                                iterpool));
+      if (metadata_only)
+        dst_kind = svn_node_none;
+      else
+        SVN_ERR(svn_io_check_path(pair->dst_abspath_or_url, &dst_kind,
+                                  iterpool));
 
       if (dst_kind != svn_node_none)
         {
@@ -527,6 +532,7 @@ static svn_error_t *
 verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
                         svn_boolean_t make_parents,
                         svn_boolean_t is_move,
+                        svn_boolean_t metadata_only,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
@@ -557,7 +563,7 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
                                         scratch_pool));
     }
 
-  SVN_ERR(verify_wc_dsts(copy_pairs, make_parents, is_move, ctx,
+  SVN_ERR(verify_wc_dsts(copy_pairs, make_parents, is_move, metadata_only, ctx,
                          result_pool, iterpool));
 
   svn_pool_destroy(iterpool);
@@ -1454,7 +1460,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 #ifdef ENABLE_EV2_SHIMS
   if (commit_items)
     {
-      relpath_map = apr_hash_make(pool);
+      relpath_map = apr_hash_make(scratch_pool);
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item = APR_ARRAY_IDX(commit_items, i,
@@ -1727,8 +1733,8 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
   /* We've already checked for physical obstruction by a working file.
      But there could also be logical obstruction by an entry whose
      working file happens to be missing.*/
-  SVN_ERR(verify_wc_dsts(copy_pairs, FALSE, FALSE, ctx,
-                         scratch_pool, iterpool));
+  SVN_ERR(verify_wc_dsts(copy_pairs, FALSE, FALSE, FALSE /* metadata_only */,
+                         ctx, scratch_pool, iterpool));
 
   /* Decide whether the two repositories are the same or not. */
   {
@@ -2210,7 +2216,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
   if ((! srcs_are_urls) && (! dst_is_url))
     {
       SVN_ERR(verify_wc_srcs_and_dsts(copy_pairs, make_parents, is_move,
-                                      ctx, pool, pool));
+                                      metadata_only, ctx, pool, pool));
 
       /* Copy or move all targets. */
       if (is_move)

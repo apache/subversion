@@ -34,6 +34,7 @@
 #include <apr_lib.h>
 #include <apr_file_info.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_version.h"
@@ -50,7 +51,6 @@
 #include "private/svn_opt_private.h"
 
 #include "opt.h"
-#include "svn_private_config.h"
 
 
 /*** Code. ***/

@@ -32,6 +32,7 @@
 #include <apr_general.h>
 #include <apr_uri.h>
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
@@ -53,8 +54,6 @@
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
-
-#include "svn_private_config.h"
 
 /** Externals **/
 
@@ -1413,6 +1412,7 @@ svn_wc__external_remove(svn_wc_context_t *wc_ctx,
       SVN_ERR(svn_wc__db_base_remove(wc_ctx->db, local_abspath,
                                      FALSE /* keep_as_working */,
                                      TRUE /* queue_deletes */,
+                                     FALSE /* remove_locks */,
                                      SVN_INVALID_REVNUM,
                                      NULL, NULL, scratch_pool));
       SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,

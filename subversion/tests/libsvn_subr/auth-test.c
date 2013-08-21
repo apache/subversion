@@ -319,13 +319,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_platform_specific_auth_providers,
                    "test retrieving platform-specific auth providers"),
-#ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
     SVN_TEST_PASS2(test_auth_clear,
                    "test svn_auth_clear()"),
-#else
-    SVN_TEST_WIMP(test_auth_clear,
-                  "test svn_auth_clear()",
-                  "Needs testing with SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE"),
-#endif
     SVN_TEST_NULL
   };

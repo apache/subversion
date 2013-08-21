@@ -27,6 +27,8 @@
 
 #include "../svn_test.h"
 
+#include "svn_private_config.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_string.h"
@@ -3755,6 +3757,17 @@ small_file_integrity(const svn_test_opts_t *opts,
 
 
 static svn_error_t *
+almostmedium_file_integrity(const svn_test_opts_t *opts,
+                            apr_pool_t *pool)
+{
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+
+  return file_integrity_helper(SVN_DELTA_WINDOW_SIZE - 1, &seed, opts,
+                               "test-repo-almostmedium-file-integrity", pool);
+}
+
+
+static svn_error_t *
 medium_file_integrity(const svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
@@ -4946,12 +4959,14 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *root;
   svn_revnum_t youngest_rev = 0;
   svn_error_t *err;
-  svn_boolean_t allow_newlines;
+  svn_boolean_t legacy_backend;
+  static const char contents[] = "foo\003bar";
 
-  /* Some filesystem implementations can handle newlines in filenames
-   * and can be white-listed here.
-   * Currently, only BDB supports \n in filenames. */
-  allow_newlines = (strcmp(opts->fs_type, "bdb") == 0);
+  /* The FS API wants \n to be permitted, but FSFS never implemented that,
+   * so for FSFS we expect errors rather than successes in some of the commits.
+   * Use a blacklist approach so that new FSes default to implementing the API
+   * as originally defined. */
+  legacy_backend = (!strcmp(opts->fs_type, SVN_FS_TYPE_FSFS));
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-filename-trailing-newline",
                               opts, pool));
@@ -4969,17 +4984,59 @@ filename_trailing_newline(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
   err = svn_fs_copy(root, "/foo", txn_root, "/bar\n", subpool);
-  if (allow_newlines)
+  if (!legacy_backend)
     SVN_TEST_ASSERT(err == SVN_NO_ERROR);
   else
     SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
 
   /* Attempt to create a file /foo/baz\n. This should fail on FSFS. */
   err = svn_fs_make_file(txn_root, "/foo/baz\n", subpool);
-  if (allow_newlines)
+  if (!legacy_backend)
     SVN_TEST_ASSERT(err == SVN_NO_ERROR);
   else
     SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_PATH_SYNTAX);
+  
+
+  /* Create another file, with contents. */
+  if (!legacy_backend)
+    {
+      SVN_ERR(svn_fs_make_file(txn_root, "/bar\n/baz\n", subpool));
+      SVN_ERR(svn_test__set_file_contents(txn_root, "bar\n/baz\n",
+                                          contents, pool));
+    }
+
+  if (!legacy_backend)
+    {
+      svn_revnum_t after_rev;
+      static svn_test__tree_entry_t expected_entries[] = {
+        { "foo", NULL },
+        { "bar\n", NULL },
+        { "foo/baz\n", "" },
+        { "bar\n/baz\n", contents },
+        { NULL, NULL }
+      };
+      const char *expected_changed_paths[] = {
+        "/bar\n",
+        "/foo/baz\n",
+        "/bar\n/baz\n",
+        NULL
+      };
+      apr_hash_t *expected_changes = apr_hash_make(pool);
+      int i;
+
+      SVN_ERR(svn_fs_commit_txn(NULL, &after_rev, txn, subpool));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+
+      /* Validate the DAG. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, after_rev, pool));
+      SVN_ERR(svn_test__validate_tree(root, expected_entries, 4, pool));
+
+      /* Validate changed-paths, where the problem originally occurred. */
+      for (i = 0; expected_changed_paths[i]; i++)
+        svn_hash_sets(expected_changes, expected_changed_paths[i],
+                      "undefined value");
+      SVN_ERR(svn_test__validate_changes(root, expected_changes, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4992,15 +5049,27 @@ test_fs_info_format(const svn_test_opts_t *opts,
   int fs_format;
   svn_version_t *supports_version;
   svn_version_t v1_5_0 = {1, 5, 0, ""};
+  svn_version_t v1_9_0 = {1, 9, 0, ""};
   svn_test_opts_t opts2;
+  svn_boolean_t is_fsx = strcmp(opts->fs_type, "fsx") == 0;
 
   opts2 = *opts;
-  opts2.server_minor_version = 5;
+  opts2.server_minor_version = is_fsx ? 9 : 5;
 
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-format-info", &opts2, pool));
   SVN_ERR(svn_fs_info_format(&fs_format, &supports_version, fs, pool, pool));
-  SVN_TEST_ASSERT(fs_format == 3); /* happens to be the same for FSFS and BDB */
-  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_5_0));
+
+  if (is_fsx)
+    {
+      SVN_TEST_ASSERT(fs_format == 1);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_9_0));
+    }
+  else
+    {
+       /* happens to be the same for FSFS and BDB */
+      SVN_TEST_ASSERT(fs_format == 3);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_5_0));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5055,6 +5124,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check old revisions"),
     SVN_TEST_OPTS_PASS(check_all_revisions,
                        "after each commit, check all revisions"),
+    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
+                       "create and modify almostmedium file"),
     SVN_TEST_OPTS_PASS(medium_file_integrity,
                        "create and modify medium file"),
     SVN_TEST_OPTS_PASS(large_file_integrity,
