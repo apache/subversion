@@ -839,6 +839,7 @@ auto_pad_block(pack_context_t *context,
       null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
       null_entry.item.number = SVN_INVALID_REVNUM;
       null_entry.type = SVN_FS_FS__ITEM_INDEX_UNUSED;
+      null_entry.fnv1_checksum = 0;
 
       SVN_ERR(write_null_bytes(context->pack_file, padding, pool));
       SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
