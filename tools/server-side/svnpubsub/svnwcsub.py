@@ -476,7 +476,15 @@ def handle_options(options):
     # Otherwise, we should write this (foreground) PID into the file.
     if options.pidfile and not options.daemon:
         pid = os.getpid()
-        open(options.pidfile, 'w').write('%s\n' % pid)
+        # Be wary of symlink attacks
+        try:
+            os.remove(options.pidfile)
+        except OSError:
+            pass
+        fd = os.open(options.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                     0444)
+        os.write(fd, '%d\n' % pid)
+        os.close(fd)
         logging.info('pid %d written to %s', pid, options.pidfile)
 
     if options.gid:
