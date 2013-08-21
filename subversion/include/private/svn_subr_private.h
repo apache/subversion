@@ -269,6 +269,7 @@ svn_checksum__from_digest_fnv1a_32x4(const unsigned char *digest,
 
 /**
  * Return a 32 bit FNV-1a checksum for the first @a len bytes in @a input.
+ * The representation is in Big Endian.
  *
  * @since New in 1.9
  */
@@ -277,7 +278,7 @@ svn__fnv1a_32(const void *input, apr_size_t len);
 
 /**
  * Return a 32 bit modified FNV-1a checksum for the first @a len bytes in
- * @a input.
+ * @a input.  The representation is in Big Endian.
  * 
  * @note This is a proprietary checksumming algorithm based FNV-1a with
  *       approximately the same strength.  It is up to 4 times faster
