@@ -843,12 +843,35 @@ svn_fs_fs__check_rep(representation_t *rep,
                      void **hint,
                      apr_pool_t *pool)
 {
-  rep_state_t *rs;
-  svn_fs_fs__rep_header_t *rep_header;
+  if (svn_fs_fs__use_log_addressing(fs, rep->revision))
+    {
+      apr_off_t offset;
+      svn_fs_fs__p2l_entry_t *entry;
 
-  /* ### Should this be using read_rep_line() directly? */
-  SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint, rep,
-                           fs, pool));
+      SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rep->revision, NULL,
+                                     rep->item_index, pool));
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rep->revision,
+                                          offset, pool));
+
+      if (   entry == NULL
+          || entry->type < SVN_FS_FS__ITEM_TYPE_FILE_REP
+          || entry->type > SVN_FS_FS__ITEM_TYPE_DIR_PROPS)
+        return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+                                 _("No representation found at offset %s "
+                                   "for item %" APR_UINT64_T_FMT
+                                   " in revision %ld"),
+                                 apr_off_t_toa(pool, entry->offset),
+                                 rep->item_index, rep->revision);
+    }
+  else
+    {
+      rep_state_t *rs;
+      svn_fs_fs__rep_header_t *rep_header;
+
+      /* ### Should this be using read_rep_line() directly? */
+      SVN_ERR(create_rep_state(&rs, &rep_header, (shared_file_t**)hint,
+                               rep, fs, pool));
+    }
 
   return SVN_NO_ERROR;
 }
