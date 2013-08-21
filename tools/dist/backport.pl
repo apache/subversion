@@ -182,6 +182,14 @@ sub digest_string {
   Digest->new("MD5")->add(@_)->hexdigest
 }
 
+sub digest_entry($) {
+  # Canonicalize the number of trailing EOLs to two.  This matters when there's
+  # on empty line after the last entry in Approved, for example.
+  local $_ = shift;
+  s/\n*\z// and $_ .= "\n\n";
+  Digest->new("MD5")->add($_)->hexdigest
+}
+
 sub prompt {
   print $_[0]; shift;
   my %args = @_;
@@ -422,7 +430,7 @@ sub parse_entry {
     entry => [@lines],
     accept => $accept,
     raw => $raw,
-    digest => digest_string($raw),
+    digest => digest_entry($raw),
   );
 }
 
@@ -460,7 +468,7 @@ sub vote {
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
     $had_empty_line = /\n\n\z/;
-    my $key = digest_string $_;
+    my $key = digest_entry $_;
 
     $approvedcheck{$key}++ if exists $approved->{$key};
     $votescheck{$key}++ if exists $votes->{$key};
@@ -492,7 +500,7 @@ sub vote {
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
-      $votesarray[-1]->{digest} = digest_string $_;
+      $votesarray[-1]->{digest} = digest_entry $_;
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
@@ -501,7 +509,7 @@ sub vote {
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
         if $vote ne '+1';
-    $votesarray[-1]->{digest} = digest_string $_;
+    $votesarray[-1]->{digest} = digest_entry $_;
     (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
