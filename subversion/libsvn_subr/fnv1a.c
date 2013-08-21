@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#define APR_WANT_BYTEFUNC
 
 #include <assert.h>
 #include <apr.h>
@@ -104,15 +105,15 @@ finalize_fnv1a_32x4(apr_uint32_t hashes[SCALING],
   if (len)
     memcpy(final_data + sizeof(apr_uint32_t) * SCALING, input, len);
 
-  return fnv1a_32(FNV1_BASE_32,
-                  final_data,
-                  sizeof(apr_uint32_t) * SCALING + len);
+  return htonl(fnv1a_32(FNV1_BASE_32,
+                        final_data,
+                        sizeof(apr_uint32_t) * SCALING + len));
 }
 
 apr_uint32_t
 svn__fnv1a_32(const void *input, apr_size_t len)
 {
-  return fnv1a_32(FNV1_BASE_32, input, len);
+  return htonl(fnv1a_32(FNV1_BASE_32, input, len));
 }
 
 apr_uint32_t
@@ -152,7 +153,7 @@ svn_fnv1a_32__update(svn_fnv1a_32__context_t *context,
 apr_uint32_t
 svn_fnv1a_32__finalize(svn_fnv1a_32__context_t *context)
 {
-  return context->hash;
+  return htonl(context->hash);
 }
 
 
