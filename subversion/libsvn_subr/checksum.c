@@ -59,7 +59,7 @@ static const unsigned char fnv1a_32_empty_string_digest_array[] = {
 
 /* The FNV-1a digest for the empty string. */
 static const unsigned char fnv1a_32x4_empty_string_digest_array[] = {
-  0x9b, 0x08, 0xec, 0x75
+  0xcd, 0x6d, 0x9a, 0x85
 };
 
 /* Digests for an empty string, indexed by checksum type */
