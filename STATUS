@@ -145,13 +145,6 @@ Candidate changes:
      +1: ivan
      +0: danielsh
 
- * r1516271
-   svnwcsub: Fix creation of pid files.
-   Justification:
-     Security issue.
-   Votes:
-     +1: breser
-
 Veto-blocked changes:
 =====================
 
