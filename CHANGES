@@ -1,6 +1,6 @@
-Version 1.7.12
-(27 Aug 2013, from /branches/1.7.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.7.12
+Version 1.7.13
+(29 Aug 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.13
 
  User-visible changes:
   - General
@@ -9,6 +9,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
     * ra_serf: ignore case when checking certificate common names (r1514763)
 
   - Server-side bugfixes:
+    * svnserve: fix creation of pid files (r1516556)
     * mod_dav_svn: better status codes for commit failures (r1490684)
     * mod_dav_svn: do not map requests to filesystem (r1512432 et al)
 
@@ -20,6 +21,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
   - Bindings:
     * swig-pl: fix SVN::Client not honoring config file settings (r150744)
     * swig-pl & swig-py: disable unusable svn_fs_set_warning_func (r1515119)
+
+
+Version 1.7.12
+(Not released, see changes for 1.7.13.)
  
  
 Version 1.7.11
