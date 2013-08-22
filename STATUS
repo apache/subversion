@@ -114,13 +114,6 @@ Candidate changes:
    Votes:
      +1: stefan2, breser
 
- * r1516271
-   svnwcsub: Fix creation of pid files.
-   Justification:
-     Security issue.
-   Votes:
-     +1: breser, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -134,3 +127,11 @@ Approved changes:
      platforms.
    Votes:
      +1: philip, danielsh, rhuijben
+
+ * r1516271
+   svnwcsub: Fix creation of pid files.
+   Justification:
+     Security issue.
+   Votes:
+     +1: breser, danielsh
+
