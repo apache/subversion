@@ -22,7 +22,7 @@ use feature qw/switch say/;
 
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
-use File::Basename qw/basename/;
+use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use POSIX qw/ctermid strftime/;
@@ -89,9 +89,28 @@ $SVNq =~ s/-q// if $DEBUG eq 'true';
 sub backport_usage {
   my $basename = basename $0;
   print <<EOF;
-backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
-CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
-should be at HEAD.
+backport.pl: a tool for reviewing, merging, and voting on STATUS entries.
+
+Normally, invoke this with CWD being the root of the stable branch (e.g.,
+1.8.x):
+
+    Usage: test -e \$d/STATUS && cd \$d && \\
+           backport.pl [PATTERN]
+    (where \$d is a working copy of branches/1.8.x)
+
+Alternatively, invoke this via a symlink named "b" placed at the same directory
+as the STATUS file, in which case the CWD doesn't matter (the script will cd):
+
+    Usage: ln -s /path/to/backport.pl \$d/b && \\
+           \$d/b [PATTERN]
+    (where \$d is a working copy of branches/1.8.x)
+
+In either case, the ./STATUS file should be at HEAD.  If it has local mods,
+they will be preserved through 'revert' operations but included in 'commit'
+operations.
+
+If PATTERN is provided, only entries which match PATTERN are considered.  The
+sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
 
 In interactive mode (the default), you will be prompted once per STATUS entry.
 At a prompt, you have the following options:
@@ -120,12 +139,12 @@ y:   Open a shell.
 d:   View a diff.
 N:   Move to the next entry.
 
-There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
+There is also a batch mode (normally used only by cron jobs and buildbot tasks,
+rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
 the environment, this script will iterate the "Approved:" section, and merge
 and commit each entry therein.  If only \$YES is defined, the script will
 merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.  These modes are normally used by the
-'svn-role' cron job and/or buildbot, not by human users.
+to stderr if it notices any conflicts.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
@@ -137,7 +156,7 @@ sub nominate_usage {
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
 
-Usage: $0 "r42,r43,45." "\$Some_justification"
+Usage: $0 "foo r42 bar r43 qux 45." "\$Some_justification"
 
 Will add:
  * r42, r43, r45
@@ -147,14 +166,28 @@ Will add:
    Votes:
      +1: $AVAILID
 to STATUS.  Backport branches are detected automatically.
+
+The STATUS file in the current directory is used (unless argv[0] is "n", in
+which case the STATUS file in the directory of argv[0] is used; the intent
+is to create a symlink named "n" in the branch wc root).
+
 EOF
 # TODO: Optionally add a "Notes" section.
 # TODO: Look for backport branches named after issues.
-# TODO: Handle log messages such as "* file.c: Change."
+# TODO: Do a dry-run merge on added entries.
+# TODO: Do a dry-run merge on interactively-edited entries in backport.pl
 }
 
 sub digest_string {
   Digest->new("MD5")->add(@_)->hexdigest
+}
+
+sub digest_entry($) {
+  # Canonicalize the number of trailing EOLs to two.  This matters when there's
+  # on empty line after the last entry in Approved, for example.
+  local $_ = shift;
+  s/\n*\z// and $_ .= "\n\n";
+  digest_string($_)
 }
 
 sub prompt {
@@ -320,6 +353,7 @@ sub parse_entry {
 
   # revisions
   $branch = sanitize_branch $1
+    and shift
     if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^r/) {
     my $sawrevnum = 0;
@@ -396,7 +430,7 @@ sub parse_entry {
     entry => [@lines],
     accept => $accept,
     raw => $raw,
-    digest => digest_string($raw),
+    digest => digest_entry($raw),
   );
 }
 
@@ -434,7 +468,7 @@ sub vote {
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
     $had_empty_line = /\n\n\z/;
-    my $key = digest_string $_;
+    my $key = digest_entry $_;
 
     $approvedcheck{$key}++ if exists $approved->{$key};
     $votescheck{$key}++ if exists $votes->{$key};
@@ -466,7 +500,7 @@ sub vote {
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
-      $votesarray[-1]->{digest} = digest_string $_;
+      $votesarray[-1]->{digest} = digest_entry $_;
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
@@ -475,7 +509,7 @@ sub vote {
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
         if $vote ne '+1';
-    $votesarray[-1]->{digest} = digest_string $_;
+    $votesarray[-1]->{digest} = digest_entry $_;
     (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
@@ -530,7 +564,10 @@ sub vote {
         or warn("Committing the votes failed($?): $!") and return;
     unlink $logmsg_filename;
 
-    $state->{$_->{digest}}++ for @votesarray;
+    # Add to state votes that aren't '+0' or 'edit'
+    $state->{$_->{digest}}++ for grep
+                                   +{ qw/-1 t -0 t +1 t/ }->{$_->{vote}},
+                                 @votesarray;
   }
 }
 
@@ -623,8 +660,12 @@ sub handle_entry {
   my $votes = shift;
   my $state = shift;
   my $raw = shift;
+  my $skip = shift;
   my %entry = parse_entry $raw, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
+
+  my $match = defined($skip) ? ($raw =~ /\Q$skip\E/ or $raw =~ /$skip/msi) : 0
+              unless $YES;
 
   if ($YES) {
     # Run a merge if:
@@ -662,11 +703,13 @@ sub handle_entry {
         revert;
       }
     }
-  } elsif ($state->{$entry{digest}}) {
+  } elsif (defined($skip) ? not $match : $state->{$entry{digest}}) {
     print "\n\n";
-    say "Skipping $entry{header} (remove $STATEFILE to reset):";
+    my $reason = defined($skip) ? "doesn't match pattern"
+                                : "remove $STATEFILE to reset";
+    say "Skipping $entry{header} ($reason):";
     say logsummarysummary \%entry;
-  } else {
+  } elsif ($match or not defined $skip) {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
     PROMPT: while (1) {
@@ -760,6 +803,9 @@ sub handle_entry {
     }
     last; } # QUESTION
     last; } # PROMPT
+  } else {
+    # NOTREACHED
+    die "Unreachable code reached.";
   }
 
   # TODO: merge() changes ./STATUS, which we're reading below, but
@@ -774,7 +820,10 @@ sub backport_main {
   my %votes;
   my $state = read_state;
 
-  backport_usage, exit 0 if @ARGV;
+  backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1) or grep /^--help$/, @ARGV;
+  backport_usage, exit 0 if grep /^(?:-h|-\?|--help|help)$/, @ARGV;
+  my $skip = shift; # maybe undef
+  # assert not defined $skip if $YES;
 
   open STATUS, "<", $STATUS or (backport_usage, exit 1);
 
@@ -823,7 +872,8 @@ sub backport_main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%approved, \%votes, $state, $lines, @lines;
+        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
+                     @lines;
       }
       default {
         warn "Unknown entry '$lines[0]'";
@@ -861,9 +911,21 @@ sub nominate_main {
   my $logmsg = `$SVN propget --revprop -r $revnums[0] --strict svn:log '^/'`;
   die "Can't fetch log message of r$revnums[0]: $!" unless $logmsg;
   
+  unless ($logmsg =~ s/^(.*?)\n\n.*/$1/s) {
+    # "* file\n  (symbol): Log message."
+
+    # Strip before and after the first symbol's log message.
+    $logmsg =~ s/^.*?: //s;
+    $logmsg =~ s/^  \x28.*//ms;
+
+    # Undo line wrapping.  (We'll re-do it later.)
+    $logmsg =~ s/\s*\n\s+/ /g;
+  }
+
   my @lines;
+  warn "Wrapping [$logmsg]\n";
   push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
-  push @lines, wrap ' 'x3, ' 'x3, ($logmsg =~ /^(.*?)\n\n/s);
+  push @lines, wrap ' 'x3, ' 'x3, split /\n/, $logmsg;
   push @lines, "   Justification:";
   push @lines, wrap ' 'x5, ' 'x5, $justification;
   push @lines, "   Branch: $branch" if defined $branch;
@@ -908,12 +970,14 @@ sub nominate_main {
 # Dispatch to the appropriate main().
 given (basename($0)) {
   when (/^b$|backport/) {
-    &backport_main;
+    chdir dirname $0 or die "Can't chdir: $!" if /^b$/;
+    &backport_main(@ARGV);
   }
   when (/^n$|nominate/) {
+    chdir dirname $0 or die "Can't chdir: $!" if /^n$/;
     &nominate_main(@ARGV);
   }
   default {
-    &backport_main;
+    &backport_main(@ARGV);
   }
 }

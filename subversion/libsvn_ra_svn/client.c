@@ -701,7 +701,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   N_("Module for accessing a repository using the svn network protocol.")
 #endif
 
-static const char *ra_svn_get_description(void)
+static const char *ra_svn_get_description(apr_pool_t *pool)
 {
   return _(RA_SVN_DESCRIPTION);
 }

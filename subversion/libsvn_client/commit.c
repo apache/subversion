@@ -1030,16 +1030,16 @@ svn_client_commit6(const apr_array_header_t *targets,
      working copies. */
   if (timestamp_sleep)
     {
-      const char *wcroot_abspath;
-      svn_error_t *err = svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+      const char *sleep_abspath;
+      svn_error_t *err = svn_wc__get_wcroot(&sleep_abspath, ctx->wc_ctx,
                                             base_abspath, pool, pool);
       if (err)
         {
           svn_error_clear(err);
-          wcroot_abspath = NULL;
+          sleep_abspath = base_abspath;
         }
 
-      svn_io_sleep_for_timestamps(wcroot_abspath, pool);
+      svn_io_sleep_for_timestamps(sleep_abspath, pool);
     }
 
   /* Abort the commit if it is still in progress. */

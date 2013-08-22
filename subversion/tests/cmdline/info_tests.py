@@ -526,6 +526,11 @@ def binary_tree_conflict(sbox):
   }]
   svntest.actions.run_and_verify_info(expected_info, iota)
 
+  expected_info = [{
+      'Path' : '%s' % re.escape(wc_dir),
+  }]
+  svntest.actions.run_and_verify_info(expected_info, wc_dir)
+
 def relpath_escaping(sbox):
   "relpath escaping should be usable as-is"
 
