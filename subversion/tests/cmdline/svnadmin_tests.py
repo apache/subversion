@@ -251,7 +251,7 @@ def load_dumpstream(sbox, dump, *varargs):
 
 #----------------------------------------------------------------------
 
-def test_create(sbox):
+def test_create(sbox, minor_version=None):
   "'svnadmin create'"
 
 
@@ -261,7 +261,7 @@ def test_create(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.main.safe_rmtree(wc_dir)
 
-  svntest.main.create_repos(repo_dir)
+  svntest.main.create_repos(repo_dir, minor_version)
 
   svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
                                      ["Checked out revision 0.\n"], [],
@@ -615,7 +615,9 @@ def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
   # setup a repo with a directory 'c:hi'
-  sbox.build(create_wc = False)
+  # use physical addressing as this is hard to provoke with logical addressing
+  sbox.build(create_wc = False,
+             minor_version = min(svntest.main.options.server_minor_version,8))
   repo_url = sbox.repo_url
   E_url = sbox.repo_url + '/A/B/E'
 
@@ -1439,7 +1441,11 @@ def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
 
   dumpfile = clean_dumpfile()
-  test_create(sbox)
+
+  # Corruption only possible in physically addressed revisions created
+  # with pre-1.6 servers.
+  test_create(sbox,
+              minor_version = min(svntest.main.options.server_minor_version,8))
 
   # Load the dumpstream
   load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
@@ -1878,15 +1884,21 @@ def verify_keep_going(sbox):
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                           ".*Verified revision 0.",
-                                           ".*Verified revision 1.",
-                                           ".*Error verifying revision 2.",
-                                           ".*Verified revision 3."])
-
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                           "svnadmin: E165011:.*"], False)
-
+  if (svntest.main.options.server_minor_version < 9):
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                             ".*Verified revision 0.",
+                                             ".*Verified revision 1.",
+                                             ".*Error verifying revision 2.",
+                                             ".*Verified revision 3."])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                             "svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0",
+                                             ".*Verified revision 0.",
+                                             ".*Verified revision 1.",
+                                             ".*Verified revision 2.",
+                                             ".*Verified revision 3."])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E165011:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -1895,10 +1907,13 @@ def verify_keep_going(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                           ".*Verified revision 0.",
-                                           ".*Verified revision 1.",
-                                           ".*Error verifying revision 2."])
+  if (svntest.main.options.server_minor_version < 9):
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                             ".*Verified revision 0.",
+                                             ".*Verified revision 1.",
+                                             ".*Error verifying revision 2."])
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
