@@ -760,7 +760,7 @@ file_hint_at_shard_boundary(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsx") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
     return SVN_NO_ERROR;
 
   /* Create a packed FS and MAX_REV revisions */
@@ -809,7 +809,7 @@ test_info(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsx") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
     return SVN_NO_ERROR;
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
@@ -862,7 +862,7 @@ test_reps(const svn_test_opts_t *opts,
 
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsx") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 8)))
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
     return SVN_NO_ERROR;
 
   for (i = 0; i < 10000; ++i)

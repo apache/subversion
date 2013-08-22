@@ -72,6 +72,7 @@ del_lines_res = [
                  re.compile(r"\* ra_(neon|local|svn|serf) :"),
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
                  re.compile(r"  - with Cyrus SASL authentication"),
+                 re.compile(r"  - using serf \d+\.\d+\.\d+"),
                  re.compile(r"\* fs_(base|fs) :"),
                 ]
 

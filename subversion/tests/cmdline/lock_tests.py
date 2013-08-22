@@ -1889,6 +1889,36 @@ def drop_locks_on_parent_deletion(sbox):
                                         None,
                                         wc_dir)
 	
+
+def copy_with_lock(sbox):
+  """copy with lock on source"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  lock_url = sbox.repo_url + '/A/B/E/alpha'
+
+  svntest.actions.run_and_validate_lock(lock_url, svntest.main.wc_author)
+  sbox.simple_copy('A/B/E', 'A/B/E2')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E2' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', writelocked='O')
+  expected_status.add({
+    'A/B/E2'       : Item(status='  ', wc_rev=2),
+    'A/B/E2/alpha' : Item(status='  ', wc_rev=2),
+    'A/B/E2/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  # This is really a regression test for httpd: 2.2.25 and 2.4.6 have
+  # a bug that causes mod_dav to check for locks on the copy source
+  # and so the commit fails.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
 										
 ########################################################################
 # Run the tests
@@ -1943,6 +1973,7 @@ test_list = [ None,
               lock_unlock_deleted,
               commit_stolen_lock,
               drop_locks_on_parent_deletion,
+              copy_with_lock,
             ]
 
 if __name__ == '__main__':

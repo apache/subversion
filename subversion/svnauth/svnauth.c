@@ -25,6 +25,7 @@
 
 #include <apr_general.h>
 #include <apr_getopt.h>
+#include <apr_fnmatch.h>
 #include <apr_tables.h>
 
 #include "svn_private_config.h"
@@ -79,8 +80,20 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {0} },
 
   {"list", subcommand_list, {0}, N_
-   ("usage: svnauth list\n\n"
-    "List cached authentication credentials.\n"),
+   ("usage: svnauth list [PATTERN ...]\n"
+    "\n"
+    "  List cached authentication credentials.\n"
+    "\n"
+    "  If PATTERN is specified, only list credentials with attributes matching\n"
+    "  the pattern. All attributes except passwords can be matched. If more than\n"
+    "  one pattern is specified, credentials are shown if their attributes match\n"
+    "  any of the patterns. Patterns are matched case-sensitively, and may\n"
+    "  contain glob wildcards:\n"
+    "    ?      matches any single character\n"
+    "    *      matches a sequence of arbitrary characters\n"
+    "    [abc]  matches any of the characters listed inside the brackets\n"
+    "\n"
+    "  If no pattern is specified, all cached credentials are shown.\n"),
    {opt_config_dir, opt_show_passwords} },
 
   {NULL}
@@ -103,6 +116,47 @@ static const apr_getopt_option_t options_table[] =
 
     {NULL}
   };
+
+/* Parse the remaining command-line arguments from OS, returning them
+   in a new array *ARGS (allocated from POOL) and optionally verifying
+   that we got the expected number thereof.  If MIN_EXPECTED is not
+   negative, return an error if the function would return fewer than
+   MIN_EXPECTED arguments.  If MAX_EXPECTED is not negative, return an
+   error if the function would return more than MAX_EXPECTED
+   arguments.
+
+   As a special case, when MIN_EXPECTED and MAX_EXPECTED are both 0,
+   allow ARGS to be NULL.  */
+static svn_error_t *
+parse_args(apr_array_header_t **args,
+           apr_getopt_t *os,
+           int min_expected,
+           int max_expected,
+           apr_pool_t *pool)
+{
+  int num_args = os ? (os->argc - os->ind) : 0;
+
+  if (min_expected || max_expected)
+    SVN_ERR_ASSERT(args);
+
+  if ((min_expected >= 0) && (num_args < min_expected))
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
+                            "Not enough arguments");
+  if ((max_expected >= 0) && (num_args > max_expected))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                            "Too many arguments");
+  if (args)
+    {
+      *args = apr_array_make(pool, num_args, sizeof(const char *));
+
+      if (num_args)
+        while (os->ind < os->argc)
+          APR_ARRAY_PUSH(*args, const char *) =
+            apr_pstrdup(pool, os->argv[os->ind++]);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -307,24 +361,19 @@ split_ascii_cert(const char *ascii_cert,
 }
 #endif /* SVN_HAVE_SERF */
 
-/* ### from libsvn_subr/ssl_server_trust_providers.c */
-#define AUTHN_ASCII_CERT_KEY            "ascii_cert"
-#define AUTHN_FAILURES_KEY              "failures"
-
-/* Display the base64-encoded DER certificate ASCII_CERT. */
-static svn_error_t *
-show_ascii_cert(const char *ascii_cert,
-                apr_pool_t *scratch_pool)
-{
 #ifdef SVN_HAVE_SERF
+static svn_error_t *
+load_cert(serf_ssl_certificate_t **cert,
+          const char *ascii_cert,
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
+{
   apr_file_t *pem_file;
   const char *pem_path;
   const char *pem;
   apr_size_t pem_len;
   apr_size_t written;
   apr_status_t status;
-  serf_ssl_certificate_t *cert;
-  apr_hash_t *cert_info;
 
   SVN_ERR(svn_io_open_unique_file3(&pem_file, &pem_path, NULL,
                                    svn_io_file_del_on_pool_cleanup,
@@ -345,7 +394,7 @@ show_ascii_cert(const char *ascii_cert,
     }
   SVN_ERR(svn_io_file_flush_to_disk(pem_file, scratch_pool));
 
-  status = serf_ssl_load_cert_file(&cert, pem_path, scratch_pool);
+  status = serf_ssl_load_cert_file(cert, pem_path, result_pool);
   if (status)
     {
       svn_error_t *err;
@@ -355,6 +404,31 @@ show_ascii_cert(const char *ascii_cert,
       svn_handle_warning2(stderr, err, "svnauth: ");
       svn_error_clear(err);
 
+      *cert = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return SVN_NO_ERROR;
+}
+#endif
+
+/* ### from libsvn_subr/ssl_server_trust_providers.c */
+#define AUTHN_ASCII_CERT_KEY            "ascii_cert"
+#define AUTHN_FAILURES_KEY              "failures"
+
+/* Display the base64-encoded DER certificate ASCII_CERT. */
+static svn_error_t *
+show_ascii_cert(const char *ascii_cert,
+                apr_pool_t *scratch_pool)
+{
+#ifdef SVN_HAVE_SERF
+  serf_ssl_certificate_t *cert;
+  apr_hash_t *cert_info;
+
+  SVN_ERR(load_cert(&cert, ascii_cert, scratch_pool, scratch_pool));
+
+  if (cert == NULL)
+    {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                  _("Base64-encoded certificate: %s\n"),
                                  ascii_cert));
@@ -439,21 +513,158 @@ show_cert_failures(const char *failure_string,
 /* ### from libsvn_subr/ssl_client_cert_pw_providers.c */
 #define AUTHN_PASSPHRASE_KEY            "passphrase"
 
-/* This implements `svn_config_auth_walk_func_t` */
-static svn_error_t *
-list_credentials(svn_boolean_t *delete_cred,
-                 void *baton,
-                 const char *cred_kind,
-                 const char *realmstring,
-                 apr_hash_t *hash,
-                 apr_pool_t *scratch_pool)
+struct walk_credentials_baton_t
 {
-  struct svnauth_opt_state *opt_state = baton;
-  apr_array_header_t *sorted_hash_items;
+  svn_boolean_t list;
+  svn_boolean_t show_passwords;
+  apr_array_header_t *patterns;
+};
+
+static svn_boolean_t
+match_pattern(const char *pattern, const char *value,
+              apr_pool_t *scratch_pool)
+{
+  const char *p = apr_psprintf(scratch_pool, "*%s*", pattern);
+
+  return (apr_fnmatch(p, value, 0) == APR_SUCCESS);
+}
+
+#ifdef SVN_HAVE_SERF
+static svn_error_t *
+match_cert_info(svn_boolean_t *match,
+                const char *pattern,
+                apr_hash_t *cert_info,
+                apr_pool_t *scratch_pool)
+{
   int i;
   apr_pool_t *iterpool;
 
-  *delete_cred = FALSE;
+  *match = FALSE;
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < sizeof(cert_info_key_map) / sizeof(svn_token_map_t); i++)
+    {
+      const char *key = cert_info_key_map[i].str;
+      const char *value = svn_hash_gets(cert_info, key);
+
+      svn_pool_clear(iterpool);
+      if (value)
+        *match = match_pattern(pattern, value, iterpool);
+      if (*match)
+        break;
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+#endif
+
+
+static svn_error_t *
+match_ascii_cert(svn_boolean_t *match,
+                 const char *pattern,
+                 const char *ascii_cert,
+                 apr_pool_t *scratch_pool)
+{
+#ifdef SVN_HAVE_SERF
+  serf_ssl_certificate_t *cert;
+  apr_hash_t *cert_info;
+
+  *match = FALSE;
+
+  SVN_ERR(load_cert(&cert, ascii_cert, scratch_pool, scratch_pool));
+
+  cert_info = serf_ssl_cert_issuer(cert, scratch_pool);
+  if (cert_info && apr_hash_count(cert_info) > 0)
+    {
+      SVN_ERR(match_cert_info(match, pattern, cert_info, scratch_pool));
+      if (*match)
+        return SVN_NO_ERROR;
+    }
+
+  cert_info = serf_ssl_cert_subject(cert, scratch_pool);
+  if (cert_info && apr_hash_count(cert_info) > 0)
+    {
+      SVN_ERR(match_cert_info(match, pattern, cert_info, scratch_pool));
+      if (*match)
+        return SVN_NO_ERROR;
+    }
+
+  cert_info = serf_ssl_cert_certificate(cert, scratch_pool);
+  if (cert_info && apr_hash_count(cert_info) > 0)
+    {
+      SVN_ERR(match_cert_info(match, pattern, cert_info, scratch_pool));
+      if (*match)
+        return SVN_NO_ERROR;
+    }
+#else
+  *match = FALSE;
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+match_credential(svn_boolean_t *match,
+                 const char *cred_kind,
+                 const char *realmstring,
+                 apr_array_header_t *patterns,
+                 apr_array_header_t *cred_items,
+                 apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  *match = FALSE;
+
+  for (i = 0; i < patterns->nelts; i++)
+    {
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+      int j;
+
+      *match = match_pattern(pattern, cred_kind, iterpool);
+      if (!*match)
+        *match = match_pattern(pattern, realmstring, iterpool);
+      if (!*match)
+        {
+          svn_pool_clear(iterpool);
+          for (j = 0; j < cred_items->nelts; j++)
+            {
+              svn_sort__item_t item;
+              const char *key;
+              svn_string_t *value;
+
+              item = APR_ARRAY_IDX(cred_items, j, svn_sort__item_t);
+              key = item.key;
+              value = item.value;
+              if (strcmp(key, AUTHN_PASSWORD_KEY) == 0 ||
+                  strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
+                continue; /* don't match secrets */
+              else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
+                SVN_ERR(match_ascii_cert(match, pattern, value->data,
+                                         iterpool));
+              else
+                *match = match_pattern(pattern, value->data, iterpool);
+
+              if (*match)
+                break;
+            }
+        }
+      if (!*match)
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+list_credential(const char *cred_kind,
+                const char *realmstring,
+                apr_array_header_t *cred_items,
+                svn_boolean_t show_passwords,
+                apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(scratch_pool, SEP_STRING));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
@@ -461,24 +672,21 @@ list_credentials(svn_boolean_t *delete_cred,
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("Authentication realm: %s\n"), realmstring));
 
-  sorted_hash_items = svn_sort__hash(hash, svn_sort_compare_items_lexically,
-                                     scratch_pool);
-  iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < sorted_hash_items->nelts; i++)
+  for (i = 0; i < cred_items->nelts; i++)
     {
       svn_sort__item_t item;
       const char *key;
       svn_string_t *value;
       
       svn_pool_clear(iterpool);
-      item = APR_ARRAY_IDX(sorted_hash_items, i, svn_sort__item_t);
+      item = APR_ARRAY_IDX(cred_items, i, svn_sort__item_t);
       key = item.key;
       value = item.value;
       if (strcmp(value->data, realmstring) == 0)
         continue; /* realm string was already shown above */
       else if (strcmp(key, AUTHN_PASSWORD_KEY) == 0)
         {
-          if (opt_state->show_passwords)
+          if (show_passwords)
             SVN_ERR(svn_cmdline_printf(iterpool,
                                        _("Password: %s\n"), value->data));
           else
@@ -486,7 +694,7 @@ list_credentials(svn_boolean_t *delete_cred,
         }
       else if (strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
         {
-          if (opt_state->show_passwords)
+          if (show_passwords)
             SVN_ERR(svn_cmdline_printf(iterpool,
                                        _("Passphrase: %s\n"), value->data));
           else
@@ -511,6 +719,41 @@ list_credentials(svn_boolean_t *delete_cred,
   return SVN_NO_ERROR;
 }
 
+/* This implements `svn_config_auth_walk_func_t` */
+static svn_error_t *
+walk_credentials(svn_boolean_t *delete_cred,
+                 void *baton,
+                 const char *cred_kind,
+                 const char *realmstring,
+                 apr_hash_t *cred_hash,
+                 apr_pool_t *scratch_pool)
+{
+  struct walk_credentials_baton_t *b = baton;
+  apr_array_header_t *sorted_cred_items;
+
+  *delete_cred = FALSE;
+
+  sorted_cred_items = svn_sort__hash(cred_hash,
+                                     svn_sort_compare_items_lexically,
+                                     scratch_pool);
+  if (b->patterns->nelts > 0)
+    {
+      svn_boolean_t match;
+
+      SVN_ERR(match_credential(&match, cred_kind, realmstring,
+                               b->patterns, sorted_cred_items,
+                               scratch_pool));
+      if (!match)
+        return SVN_NO_ERROR;
+    }
+
+  if (b->list)
+    SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
+                            b->show_passwords, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
@@ -518,12 +761,17 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnauth_opt_state *opt_state = baton;
   const char *config_path;
+  struct walk_credentials_baton_t b;
+
+  b.show_passwords = opt_state->show_passwords;
+  b.list = TRUE;
+  SVN_ERR(parse_args(&b.patterns, os, 0, -1, pool));
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,
                                           opt_state->config_dir, NULL,
                                           pool));
 
-  SVN_ERR(svn_config_walk_auth_data(config_path, list_credentials, opt_state,
+  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b,
                                     pool));
   return SVN_NO_ERROR;
 }
