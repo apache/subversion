@@ -159,6 +159,9 @@ struct svn_ra_serf__session_t {
   svn_ra_progress_notify_func_t progress_func;
   void *progress_baton;
 
+  /* Total number of transferred so far. */
+  apr_off_t progress;
+
   /* Callback function to handle cancellation */
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
