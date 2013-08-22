@@ -3801,8 +3801,9 @@ parse_packed_revprops(svn_fs_t *fs,
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Revprop pack for revision r%ld"
                                " contains revprops for r%ld .. r%ld"),
-                             revprops->revision, first_rev,
-                             first_rev + count -1);
+                             revprops->revision,
+                             (svn_revnum_t)first_rev,
+                             (svn_revnum_t)(first_rev + count -1));
 
   /* Since start & end are in the same shard, it is enough to just test
    * the FIRST_REV for being actually packed.  That will also cover the
@@ -3811,7 +3812,7 @@ parse_packed_revprops(svn_fs_t *fs,
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Revprop pack for revision r%ld"
                                " starts at non-packed revisions r%ld"),
-                             revprops->revision, first_rev);
+                             revprops->revision, (svn_revnum_t)first_rev);
 
   /* make PACKED_REVPROPS point to the first char after the header.
    * This is where the serialized revprops are. */
