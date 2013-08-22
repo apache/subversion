@@ -544,7 +544,8 @@ def main(args):
 
     # We manage the logfile ourselves (along with possible rotation). The
     # daemon process can just drop stdout/stderr into /dev/null.
-    d = Daemon('/dev/null', options.pidfile, options.umask, bdec)
+    d = Daemon('/dev/null', os.path.abspath(options.pidfile),
+               options.umask, bdec)
     if options.daemon:
         # Daemonize the process and call sys.exit() with appropriate code
         d.daemonize_exit()
