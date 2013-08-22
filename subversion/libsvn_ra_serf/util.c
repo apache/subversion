@@ -192,13 +192,65 @@ construct_realm(svn_ra_serf__session_t *session,
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "%s, %s, %s, %s, %s (%s)",
-                      (char*)svn_hash_gets(org, "OU"),
-                      (char*)svn_hash_gets(org, "O"),
-                      (char*)svn_hash_gets(org, "L"),
-                      (char*)svn_hash_gets(org, "ST"),
-                      (char*)svn_hash_gets(org, "C"),
-                      (char*)svn_hash_gets(org, "E"));
+  const char *org_unit = svn_hash_gets(org, "OU");
+  const char *org_name = svn_hash_gets(org, "O");
+  const char *locality = svn_hash_gets(org, "L");
+  const char *state = svn_hash_gets(org, "ST");
+  const char *country = svn_hash_gets(org, "C");
+  const char *email = svn_hash_gets(org, "E");
+  svn_stringbuf_t *buf = svn_stringbuf_create_empty(pool);
+
+  if (org_unit)
+    {
+      svn_stringbuf_appendcstr(buf, org_unit);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (org_name)
+    {
+      svn_stringbuf_appendcstr(buf, org_name);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (locality)
+    {
+      svn_stringbuf_appendcstr(buf, locality);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (state)
+    {
+      svn_stringbuf_appendcstr(buf, state);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (country)
+    {
+      svn_stringbuf_appendcstr(buf, country);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  /* Chop ', ' if any. */
+  svn_stringbuf_chop(buf, 2);
+
+  if (email)
+    {
+      svn_stringbuf_appendcstr(buf, "(");
+      svn_stringbuf_appendcstr(buf, email);
+      svn_stringbuf_appendcstr(buf, ")");
+    }
+
+  return buf->data;
+}
+
+static void append_reason(svn_stringbuf_t *errmsg, const char *reason, int *reasons)
+{
+  if (*reasons < 1)
+    svn_stringbuf_appendcstr(errmsg, _(": "));
+  else
+    svn_stringbuf_appendcstr(errmsg, _(", "));
+  svn_stringbuf_appendcstr(errmsg, reason);
+  (*reasons)++;
 }
 
 /* This function is called on receiving a ssl certificate of a server when
@@ -259,11 +311,12 @@ ssl_server_cert(void *baton, int failures,
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
           if (apr_fnmatch(s, conn->session->session_url.hostname,
-                          APR_FNM_PERIOD) == APR_SUCCESS) {
+                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+            {
               found_matching_hostname = 1;
               cert_info.hostname = s;
               break;
-          }
+            }
       }
   }
 
@@ -271,7 +324,7 @@ ssl_server_cert(void *baton, int failures,
   if (!found_matching_hostname && cert_info.hostname)
     {
       if (apr_fnmatch(cert_info.hostname, conn->session->session_url.hostname,
-                      APR_FNM_PERIOD) == APR_FNM_NOMATCH)
+                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
         }
@@ -302,7 +355,35 @@ ssl_server_cert(void *baton, int failures,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
   if (!server_creds)
-    return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL, NULL);
+    {
+      svn_stringbuf_t *errmsg;
+      int reasons = 0;
+
+      errmsg = svn_stringbuf_create(
+                 _("Server SSL certificate verification failed"),
+                 scratch_pool);
+
+
+      if (svn_failures & SVN_AUTH_SSL_NOTYETVALID)
+        append_reason(errmsg, _("certificate is not yet valid"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_EXPIRED)
+        append_reason(errmsg, _("certificate has expired"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_CNMISMATCH)
+        append_reason(errmsg,
+                      _("certificate issued for a different hostname"),
+                      &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_UNKNOWNCA)
+        append_reason(errmsg, _("issuer is not trusted"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_OTHER)
+        append_reason(errmsg, _("and other reason(s)"), &reasons);
+
+      return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL,
+                              errmsg->data);
+    }
 
   return SVN_NO_ERROR;
 }

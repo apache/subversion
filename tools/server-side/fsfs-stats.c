@@ -1241,7 +1241,7 @@ parse_dir(fs_fs_t *fs,
       next = current ? strchr(++current, '\n') : NULL;
       if (next == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-           _("Corrupt directory representation in rev %ld at offset %ld"),
+           _("Corrupt directory representation in r%ld at offset %ld"),
                                  representation->revision,
                                  (long)representation->offset);
 
