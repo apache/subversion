@@ -120,10 +120,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1516271
-   svnwcsub: Fix creation of pid files.
-   Justification:
-     Security issue.
-   Votes:
-     +1: breser, danielsh
-
