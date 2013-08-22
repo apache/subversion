@@ -2029,7 +2029,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
         # it to a number if possible
         for testnum in list(range(1, len(test_list))):
           test_case = TestRunner(test_list[testnum], testnum)
-          if test_case.get_function_name() == str(arg):
+          if test_case.get_function_name() == str(arg).rstrip(','):
             testnums.append(testnum)
             appended = True
             break
