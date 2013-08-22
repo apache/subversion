@@ -1693,7 +1693,7 @@ fnv1a_checksum_finalize(apr_uint32_t *digest,
   svn_checksum_t *checksum;
 
   SVN_ERR(svn_checksum_final(&checksum, context, scratch_pool));
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_kind_fnv);
+  SVN_ERR_ASSERT(checksum->kind == svn_checksum_fnv1a_32x4);
   *digest =  *(apr_uint32_t *)(checksum->digest);
 
   return SVN_NO_ERROR;
