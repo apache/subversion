@@ -114,6 +114,14 @@ Candidate changes:
    Votes:
      +1: stefan2, breser
 
+ * r1516429
+   Cast to ensure int size matches format specifier.
+   Justification:
+     If the error condition triggers the message could be bogus on 32-bit
+     platforms.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
