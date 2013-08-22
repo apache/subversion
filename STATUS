@@ -120,7 +120,7 @@ Candidate changes:
      If the error condition triggers the message could be bogus on 32-bit
      platforms.
    Votes:
-     +1: philip
+     +1: philip, danielsh
 
 Veto-blocked changes:
 =====================
