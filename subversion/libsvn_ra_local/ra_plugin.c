@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "ra_local.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
@@ -35,7 +36,6 @@
 #include "svn_version.h"
 #include "svn_cache_config.h"
 
-#include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
@@ -502,7 +502,7 @@ apply_lock_tokens(svn_fs_t *fs,
         N_("Module for accessing a repository on local disk.")
 
 static const char *
-svn_ra_local__get_description(void)
+svn_ra_local__get_description(apr_pool_t *pool)
 {
   return _(RA_LOCAL_DESCRIPTION);
 }
@@ -1764,7 +1764,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
                                "ra_local"),
                              loader_version->major);
 
-  SVN_ERR(svn_ver_check_list(ra_local_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
   /* This assumes that POOL was the pool used to load the dso. */

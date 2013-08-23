@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -32,7 +33,6 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "repos.h"
-#include "svn_private_config.h"
 
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
@@ -499,7 +499,7 @@ get_revision_info(report_baton_t *b,
       info->author = author ? svn_string_dup(author, b->pool) : NULL;
 
       /* Cache it */
-      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);
     }
 
   *revision_info = info;

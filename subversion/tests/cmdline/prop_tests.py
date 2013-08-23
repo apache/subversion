@@ -910,7 +910,7 @@ def prop_value_conversions(sbox):
   svntest.actions.set_prop('some-prop', 'bar\n', iota_path)
 
   # NOTE: When writing out multi-line prop values in svn:* props, the
-  # client converts to local encoding and local eoln style.
+  # client converts to local encoding and local eol style.
   # Therefore, the expected output must contain the right kind of eoln
   # strings. That's why we use os.linesep in the tests below, not just
   # plain '\n'. The _last_ \n is also from the client, but it's not
@@ -2612,6 +2612,38 @@ def peg_rev_base_working(sbox):
                                      'propget', '--strict', 'ordinal',
                                      sbox.ospath('iota') + '@BASE')
 
+@Issue(4415)
+@XFail(svntest.main.is_ra_type_dav)
+def xml_unsafe_author(sbox):
+  "svn:author with XML unsafe chars"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # client sends svn:author (via PROPPATCH for DAV)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', '--revprop', '-r', '1',
+                                     'svn:author', 'foo\bbar', wc_dir)
+
+  # mod_dav_svn sends svn:author (via REPORT for DAV)
+  sbox.simple_update(revision=0)
+  sbox.simple_update(revision=1)
+  expected_info = [{
+      'Path' : re.escape(wc_dir),
+      'Repository Root' : sbox.repo_url,
+      'Repository UUID' : svntest.actions.get_wc_uuid(wc_dir),
+      'Last Changed Author' : 'foo\bbar',
+  }]
+  svntest.actions.run_and_verify_info(expected_info, wc_dir)
+
+  # mod_dav_svn sends svn:author (via PROPFIND for DAV)
+  svntest.actions.run_and_verify_svn(None, ['foo\bbar'], [],
+                                     'propget', '--revprop', '-r', '1',
+                                     'svn:author', '--strict', wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -2657,6 +2689,7 @@ test_list = [ None,
               inheritable_ignores,
               almost_known_prop_names,
               peg_rev_base_working,
+              xml_unsafe_author,
              ]
 
 if __name__ == '__main__':

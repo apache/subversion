@@ -233,6 +233,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 15,
              "Invalid atomic")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_BAD_COMPRESSION_METHOD,
+             SVN_ERR_BAD_CATEGORY_START + 16,
+             "Invalid compression method")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -801,6 +806,36 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 52,
              "Could not initialize the revprop caching infrastructure.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_MALFORMED_TXN_ID,
+             SVN_ERR_FS_CATEGORY_START + 53,
+             "Malformed transaction ID string.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_CORRUPTION,
+             SVN_ERR_FS_CATEGORY_START + 54,
+             "Corrupt index file.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_REVISION,
+             SVN_ERR_FS_CATEGORY_START + 55,
+             "Revision not covered by index.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_OVERFLOW,
+             SVN_ERR_FS_CATEGORY_START + 56,
+             "Item index too large for this revision.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_CONTAINER_INDEX,
+             SVN_ERR_FS_CATEGORY_START + 57,
+             "Container index out of range.")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
+             SVN_ERR_FS_CATEGORY_START + 58,
+             "Index files are inconsistent.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -1350,6 +1385,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 40,
              "Bad arguments to SQL operators GLOB or LIKE")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
+             SVN_ERR_MISC_CATEGORY_START + 41,
+             "Packed data stream is corrupt")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -1512,10 +1552,7 @@ SVN_ERROR_START
              SVN_ERR_RA_SERF_CATEGORY_START + 2,
              "Initialization of the GSSAPI context failed")
 
-  /** @since New in 1.7.
-   * @note When @c svn_error_t.apr_err is set to this,
-   * @c svn_error_t.child->apr_err is a serf error code, not a Subversion
-   * one! */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
              SVN_ERR_RA_SERF_CATEGORY_START + 3,
              "While handling serf response:")

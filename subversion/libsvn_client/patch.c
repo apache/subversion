@@ -29,6 +29,8 @@
 
 #include <apr_hash.h>
 #include <apr_fnmatch.h>
+
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
@@ -42,7 +44,6 @@
 #include "svn_wc.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
@@ -2676,8 +2677,8 @@ install_patched_prop_targets(patch_target_t *target,
         {
           if (! dry_run)
             {
-              SVN_ERR(svn_io_file_create(target->local_abspath, "",
-                                         scratch_pool));
+              SVN_ERR(svn_io_file_create_empty(target->local_abspath,
+                                               scratch_pool));
               SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, target->local_abspath,
                                             NULL /*props*/,
                                             /* suppress notification */

@@ -59,7 +59,9 @@ static const apr_getopt_option_t options_table[] =
   {"repository", svnauthz__repos, 1, ("repository authz name")},
   {"transaction", 't', 1, ("transaction id")},
   {"is", svnauthz__is, 1,
-    ("instead of outputing, tests if the access is ARG\n"
+    ("instead of outputting, test if the access is\n"
+     "                             "
+     "exactly ARG\n"
      "                             "
      "ARG can be one of the following values:\n"
      "                             "
@@ -67,10 +69,12 @@ static const apr_getopt_option_t options_table[] =
      "                             "
      "    r    read-only access\n"
      "                             "
-     "   no    no access\n")
+     "   no    no access")
   },
-  {"groups-file", svnauthz__groups_file, 1, ("path to the global groups file")},
-  {"recursive", 'R', 0, ("recursive access to path")},
+  {"groups-file", svnauthz__groups_file, 1,
+   ("use the groups from file ARG")},
+  {"recursive", 'R', 0,
+   ("determine recursive access to PATH")},
   {0, 0, 0, 0}
 };
 
@@ -129,27 +133,32 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'t'} },
   {"accessof", subcommand_accessof, {0} /* no aliases */,
    ("Print or test the permissions set by an authz file.\n"
-    "usage: 1. svnauthz accessof [--username USER] [--groups-file GROUPS_FILE] TARGET\n"
-    "       2. svnauthz accessof [--username USER] [--groups-file GROUPS_FILE] \\\n"
-    "                            -t TXN REPOS_PATH FILE_PATH\n\n"
-    "  1. Prints the access of USER based on TARGET.\n"
+    "usage: 1. svnauthz accessof TARGET\n"
+    "       2. svnauthz accessof -t TXN REPOS_PATH FILE_PATH\n"
+    "\n"
+    "  1. Prints the access of USER to PATH based on authorization file at TARGET.\n"
     "     TARGET can be a path to a file or an absolute file:// URL to an authz\n"
-    "     file in a repository, but cannot be a repository relative URL (^/).\n\n"
-    "  2. Prints the access of USER based on authz file at FILE_PATH in the\n"
-    "     transaction TXN in the repository at REPOS_PATH.\n\n"
-    "  If the --username argument is omitted then access of an anonymous user\n"
-    "  will be printed.  If --path argument is omitted prints if any access\n"
-    "  to the repo is allowed.  If --groups-file is specified, the groups from\n"
-    "  GROUPS_FILE will be used.\n\n"
+    "     file in a repository, but cannot be a repository relative URL (^/).\n"
+    "\n"
+    "  2. Prints the access of USER to PATH based on authz file at FILE_PATH in the\n"
+    "     transaction TXN in the repository at REPOS_PATH.\n"
+    "\n"
+    "  USER is the argument to the --username option; if that option is not\n"
+    "  provided, then access of an anonymous user will be printed or tested.\n"
+    "\n"
+    "  PATH is the argument to the --path option; if that option is not provided,\n"
+    "  the maximal access to any path in the repository will be considered.\n"
+    "\n"
     "Outputs one of the following:\n"
     "     rw    write access (which also implies read)\n"
     "      r    read access\n"
-    "     no    no access\n\n"
+    "     no    no access\n"
+    "\n"
     "Returns:\n"
-    "    0   when syntax is OK and --is argument (if any) matches.\n"
+    "    0   when syntax is OK and '--is' argument (if any) matches.\n"
     "    1   when syntax is invalid.\n"
     "    2   operational error\n"
-    "    3   when --is argument doesn't match\n"
+    "    3   when '--is' argument doesn't match\n"
     ),
    {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is,
     svnauthz__groups_file, 'R'} },

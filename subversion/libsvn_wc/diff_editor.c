@@ -57,6 +57,7 @@
 
 #include <assert.h>
 
+#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -74,8 +75,6 @@
 #include "adm_files.h"
 #include "translate.h"
 #include "diff.h"
-
-#include "svn_private_config.h"
 
 /*-------------------------------------------------------------------------*/
 
@@ -474,14 +473,18 @@ svn_wc__diff_base_working_diff(svn_wc__db_t *db,
     {
       const svn_io_dirent2_t *dirent;
 
+      /* Verify truename to mimic status for iota/IOTA difference on Windows */
       SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath,
-                                  FALSE /* verify truename */,
+                                  TRUE /* verify truename */,
                                   TRUE /* ingore_enoent */,
                                   scratch_pool, scratch_pool));
 
-      if (dirent->kind == svn_node_file
-          && dirent->filesize == recorded_size
-          && dirent->mtime == recorded_time)
+      /* If a file does not exist on disk (missing/obstructed) then we
+         can't provide a text diff */
+      if (dirent->kind != svn_node_file
+          || (dirent->kind == svn_node_file
+              && dirent->filesize == recorded_size
+              && dirent->mtime == recorded_time))
         {
           files_same = TRUE;
         }

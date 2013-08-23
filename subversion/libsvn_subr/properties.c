@@ -27,6 +27,8 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <string.h>       /* for strncmp() */
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_props.h"

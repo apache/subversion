@@ -28,6 +28,7 @@
 #include <apr_file_io.h>
 #include <apr_poll.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_diff.h"
 #include "svn_io.h"
@@ -1240,7 +1241,7 @@ parse_dir(fs_fs_t *fs,
       next = current ? strchr(++current, '\n') : NULL;
       if (next == NULL)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-           _("Corrupt directory representation in rev %ld at offset %ld"),
+           _("Corrupt directory representation in r%ld at offset %ld"),
                                  representation->revision,
                                  (long)representation->offset);
 
@@ -1573,7 +1574,9 @@ read_revisions(fs_fs_t **fs,
                                             svn_cache__get_global_membuffer_cache(),
                                             NULL, NULL,
                                             sizeof(window_cache_key_t),
-                                            "", FALSE, pool));
+                                            "",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE, pool));
 
   /* read all packed revs */
   for ( revision = start_revision

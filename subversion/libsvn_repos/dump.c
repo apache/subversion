@@ -1384,6 +1384,7 @@ verify_one_revision(svn_fs_t *fs,
                                             &cancel_edit_baton,
                                             scratch_pool));
   SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_verify_root(to_root, scratch_pool));
   SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                             cancel_editor, cancel_edit_baton,
                             NULL, NULL, scratch_pool));

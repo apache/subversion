@@ -30,6 +30,7 @@
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_ctype.h"
 #include "svn_types.h"
@@ -40,7 +41,6 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
-#include "svn_private_config.h"
 
 #include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"
@@ -84,6 +84,17 @@ static struct fs_type_defn base_defn =
     NULL
   };
 
+static struct fs_type_defn fsx_defn =
+  {
+    SVN_FS_TYPE_FSX, "x",
+#ifdef SVN_LIBSVN_FS_LINKS_FS_X
+    svn_fs_x__init,
+#else
+    NULL,
+#endif
+    &base_defn
+  };
+
 static struct fs_type_defn fsfs_defn =
   {
     SVN_FS_TYPE_FSFS, "fs",
@@ -92,7 +103,7 @@ static struct fs_type_defn fsfs_defn =
 #else
     NULL,
 #endif
-    &base_defn
+    &fsx_defn
   };
 
 static struct fs_type_defn *fs_modules = &fsfs_defn;
@@ -221,21 +232,19 @@ static svn_error_t *
 get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
                    apr_pool_t *pool)
 {
-  struct fs_type_defn **fst = &fs_modules;
+  struct fs_type_defn **fst;
   svn_boolean_t known = FALSE;
 
   /* There are two FS module definitions known at compile time.  We
      want to check these without any locking overhead even when
      dynamic third party modules are enabled.  The third party modules
      cannot be checked until the lock is held.  */
-  if (strcmp(fs_type, (*fst)->fs_type) == 0)
-    known = TRUE;
-  else
-    {
-      fst = &(*fst)->next;
-      if (strcmp(fs_type, (*fst)->fs_type) == 0)
+  for (fst = &fs_modules; *fst; fst = &(*fst)->next)
+    if (strcmp(fs_type, (*fst)->fs_type) == 0)
+      {
         known = TRUE;
-    }
+        break;
+      }
 
 #if defined(SVN_USE_DSO) && APR_HAS_DSO
   /* Third party FS modules that are unknown at compile time.
@@ -787,8 +796,9 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
 
 
 svn_error_t *
-svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
-                  svn_fs_txn_t *txn, apr_pool_t *pool)
+svn_fs_commit_txn2(const char **conflict_p, svn_revnum_t *new_rev,
+                   svn_fs_txn_t *txn, svn_boolean_t set_timestamp,
+                   apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -796,7 +806,7 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   if (conflict_p)
     *conflict_p = NULL;
 
-  err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
+  err = txn->vtable->commit(conflict_p, new_rev, txn, set_timestamp, pool);
 
 #ifdef SVN_DEBUG
   /* Check postconditions. */
@@ -829,6 +839,12 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
+                  svn_fs_txn_t *txn, apr_pool_t *pool)
+{
+  return svn_fs_commit_txn2(conflict_p, new_rev, txn, TRUE, pool);
+}
 
 svn_error_t *
 svn_fs_abort_txn(svn_fs_txn_t *txn, apr_pool_t *pool)

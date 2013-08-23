@@ -85,6 +85,7 @@ using std::tr1::enable_shared_from_this;
 // ::std given known compiler characteristics, then try Boost as a
 // last resort.
 
+#define SVN_CXXHL_USING_BOOST
 #include <boost/shared_ptr.hpp>
 namespace apache {
 namespace subversion {
@@ -99,5 +100,45 @@ using boost::enable_shared_from_this;
 } // namespace apache
 
 #endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
+
+// Configuration test: noncopyable mixin.
+#ifdef SVN_CXXHL_USING_BOOST
+
+#include <boost/noncopyable.hpp>
+namespace apache {
+namespace subversion {
+namespace cxxhl {
+namespace compat {
+using boost::noncopyable;
+} // namespace compat
+} // namespace cxxhl
+} // namespace subversion
+} // namespace apache
+
+#else  // !SVN_CXXHL_USING_BOOST
+
+namespace apache {
+namespace subversion {
+namespace cxxhl {
+namespace compat {
+namespace noncopyable_
+{
+class noncopyable
+{
+protected:
+  noncopyable() {}
+  ~noncopyable() {}
+private:
+  noncopyable(const noncopyable&);
+  noncopyable& operator=(const noncopyable&);
+};
+} // namespace noncopyable_
+typedef noncopyable_::noncopyable noncopyable;
+} // namespace compat
+} // namespace cxxhl
+} // namespace subversion
+} // namespace apache
+
+#endif // SVN_CXXHL_USING_BOOST
 
 #endif  // SVN_CXXHL_COMPAT_HPP

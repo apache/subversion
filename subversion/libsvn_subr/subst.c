@@ -33,6 +33,7 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
@@ -46,8 +47,6 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "private/svn_io_private.h"
-
-#include "svn_private_config.h"
 
 #include "private/svn_string_private.h"
 #include "private/svn_eol_private.h"
@@ -1960,7 +1959,11 @@ svn_subst_translate_string2(svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  if (encoding)
+  if (encoding && !strcmp(encoding, "UTF-8")) 
+    {
+      val_utf8 = value->data;
+    }
+  else if (encoding)
     {
       SVN_ERR(svn_utf_cstring_to_utf8_ex2(&val_utf8, value->data,
                                           encoding, scratch_pool));

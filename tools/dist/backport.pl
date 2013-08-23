@@ -22,13 +22,17 @@ use feature qw/switch say/;
 
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
+use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
-use POSIX qw/ctermid/;
+use POSIX qw/ctermid strftime/;
+use Text::Wrap qw/wrap/;
+use Tie::File ();
 
 ############### Start of reading values from environment ###############
 
 # Programs we use.
+my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
@@ -39,7 +43,7 @@ my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 #    svn-role:      YES=1 MAY_COMMIT=1
 #    conflicts-bot: YES=1 MAY_COMMIT=0
 #    interactive:   YES=0 MAY_COMMIT=0      (default)
-my $YES = ($ENV{YES} // 0) ? 1 : 0; # batch mode: eliminate prompts, add sleeps
+my $YES = exists $ENV{YES}; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = 'false';
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
@@ -48,14 +52,15 @@ my $VERBOSE = 0;
 my $DEBUG = (exists $ENV{DEBUG}) ? 'true' : 'false'; # 'set -x', etc
 
 # Username for entering votes.
+my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
 my ($AVAILID) = $ENV{AVAILID} // do {
-  my $SVN_A_O_REALM = 'd3c8a345b14f6a1b42251aef8027ab57';
-  open USERNAME, '<', "$ENV{HOME}/.subversion/auth/svn.simple/$SVN_A_O_REALM";
-  1 until <USERNAME> eq "username\n";
-  <USERNAME>;
-  local $_ = <USERNAME>;
-  chomp;
-  $_
+  local $_ = `$SVNAUTH list 2>/dev/null`;
+  ($? == 0 && /Auth.*realm: \Q$SVN_A_O_REALM\E\nUsername: (.*)/) ? $1 : undef
+} // do {
+  local $/; # slurp mode
+  my $filename = Digest->new("MD5")->add($SVN_A_O_REALM)->hexdigest;
+  `cat $ENV{HOME}/.subversion/auth/svn.simple/$filename`
+  =~ /K 8\nusername\nV \d+\n(.*)/ and $1 or undef
 }
 // warn "Username for commits (of votes/merges) not found";
 
@@ -81,13 +86,31 @@ $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG eq 'true';
 
 
-sub usage {
-  my $basename = $0;
-  $basename =~ s#.*/##;
+sub backport_usage {
+  my $basename = basename $0;
   print <<EOF;
-backport.pl: a tool for reviewing and merging STATUS entries.  Run this with
-CWD being the root of the stable branch (e.g., 1.8.x).  The ./STATUS file
-should be at HEAD.
+backport.pl: a tool for reviewing, merging, and voting on STATUS entries.
+
+Normally, invoke this with CWD being the root of the stable branch (e.g.,
+1.8.x):
+
+    Usage: test -e \$d/STATUS && cd \$d && \\
+           backport.pl [PATTERN]
+    (where \$d is a working copy of branches/1.8.x)
+
+Alternatively, invoke this via a symlink named "b" placed at the same directory
+as the STATUS file, in which case the CWD doesn't matter (the script will cd):
+
+    Usage: ln -s /path/to/backport.pl \$d/b && \\
+           \$d/b [PATTERN]
+    (where \$d is a working copy of branches/1.8.x)
+
+In either case, the ./STATUS file should be at HEAD.  If it has local mods,
+they will be preserved through 'revert' operations but included in 'commit'
+operations.
+
+If PATTERN is provided, only entries which match PATTERN are considered.  The
+sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
 
 In interactive mode (the default), you will be prompted once per STATUS entry.
 At a prompt, you have the following options:
@@ -116,29 +139,66 @@ y:   Open a shell.
 d:   View a diff.
 N:   Move to the next entry.
 
-There is also a batch mode: when \$YES and \$MAY_COMMIT are defined to '1' i
+There is also a batch mode (normally used only by cron jobs and buildbot tasks,
+rather than interactively): when \$YES and \$MAY_COMMIT are defined to '1' in
 the environment, this script will iterate the "Approved:" section, and merge
 and commit each entry therein.  If only \$YES is defined, the script will
 merge every nomination (including unapproved and vetoed ones), and complain
-to stderr if it notices any conflicts.  These mode are normally used by the
-'svn-role' cron job and/or buildbot, not by human users.
+to stderr if it notices any conflicts.
 
 The 'svn' binary defined by the environment variable \$SVN, or otherwise the
 'svn' found in \$PATH, will be used to manage the working copy.
 EOF
 }
 
+sub nominate_usage {
+  my $basename = basename $0;
+  print <<EOF;
+nominate.pl: a tool for adding entries to STATUS.
+
+Usage: $0 "foo r42 bar r43 qux 45." "\$Some_justification"
+
+Will add:
+ * r42, r43, r45
+   (log message of r42)
+   Justification:
+     \$Some_justification
+   Votes:
+     +1: $AVAILID
+to STATUS.  Backport branches are detected automatically.
+
+The STATUS file in the current directory is used (unless argv[0] is "n", in
+which case the STATUS file in the directory of argv[0] is used; the intent
+is to create a symlink named "n" in the branch wc root).
+
+EOF
+# TODO: Optionally add a "Notes" section.
+# TODO: Look for backport branches named after issues.
+# TODO: Do a dry-run merge on added entries.
+# TODO: Do a dry-run merge on interactively-edited entries in backport.pl
+}
+
 sub digest_string {
   Digest->new("MD5")->add(@_)->hexdigest
+}
+
+sub digest_entry($) {
+  # Canonicalize the number of trailing EOLs to two.  This matters when there's
+  # on empty line after the last entry in Approved, for example.
+  local $_ = shift;
+  s/\n*\z// and $_ .= "\n\n";
+  digest_string($_)
 }
 
 sub prompt {
   print $_[0]; shift;
   my %args = @_;
   my $getchar = sub {
+    my $answer;
     ReadMode 'cbreak';
-    my $answer = (ReadKey 0);
+    eval { $answer = (ReadKey 0) };
     ReadMode 'normal';
+    die $@ if $@;
     print $answer;
     return $answer;
   };
@@ -160,29 +220,38 @@ sub merge {
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my ($mergeargs, $pattern);
 
-  my $backupfile = "backport_pl.$$.tmp";
+  # Include the time so it's easier to find the interesting backups.
+  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
+  die if -s $backupfile;
 
   if ($entry{branch}) {
-    # NOTE: This doesn't escape the branch into the pattern.
-    $pattern = sprintf '\V\(%s branch(es)?\|branches\/%s\|Branch\(es\)\?: \*\n\? \*%s\)', $entry{branch}, $entry{branch}, $entry{branch};
+    my $vim_escaped_branch = 
+      join "",
+      map { sprintf '\[%s%s]', $_, ($_ x ($_ eq '\\')) }
+      split //,
+      $entry{branch};
+    $pattern = sprintf '\VBranch: \*\n\? \*\(\.\*\/branches\/\)\?%s',
+                 $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
-      say $logmsg_fh "Merge the $entry{header}:";
+      say $logmsg_fh "Merge $entry{header}:";
     } else {
       $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
-      say $logmsg_fh "Reintegrate the $entry{header}:";
+      say $logmsg_fh "Reintegrate $entry{header}:";
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
     $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
-    $mergeargs = join " ", (map { "-c$_" } @{$entry{revisions}}), '^/subversion/trunk';
-    if (@{$entry{revisions}} > 1) {
-      say $logmsg_fh "Merge the $entry{header} from trunk:";
-      say $logmsg_fh "";
-    } else {
-      say $logmsg_fh "Merge r$entry{revisions}->[0] from trunk:";
-      say $logmsg_fh "";
-    }
+    $mergeargs = join " ",
+      ($entry{accept} ? "--accept=$entry{accept}" : ()),
+      (map { "-c$_" } @{$entry{revisions}}),
+      '--',
+      '^/subversion/trunk';
+    say $logmsg_fh
+      "Merge $entry{header} from trunk",
+      $entry{accept} ? ", with --accept=$entry{accept}" : "",
+      ":";
+    say $logmsg_fh "";
   } else {
     die "Don't know how to call $entry{header}";
   }
@@ -219,7 +288,7 @@ fi
 if $MAY_COMMIT; then
   $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
-elif test 1 -ne $YES; then
+elif test -z "\$YES"; then
   echo "Would have committed:"
   echo '[[['
   $SVN status -q
@@ -236,7 +305,7 @@ if $MAY_COMMIT; then
   if [ -n "\$YES" ]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
   if [ -n "\$YES" ]; then sleep 1; fi
-elif test 1 -ne $YES; then
+elif test -z "\$YES"; then
   echo "Would remove $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
@@ -244,7 +313,7 @@ EOF
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{id}} = "sh($?): $!" if $?;
+  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
 
   if (-z $backupfile) {
     unlink $backupfile;
@@ -263,11 +332,18 @@ sub sanitize_branch {
   return $_;
 }
 
+sub logsummarysummary {
+  my $entry = shift;
+  join "",
+    $entry->{logsummary}->[0], ('[...]' x (0 < $#{$entry->{logsummary}}))
+}
+
 # TODO: may need to parse other headers too?
 sub parse_entry {
   my $raw = shift;
   my @lines = @_;
   my $depends;
+  my $accept;
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
@@ -277,6 +353,7 @@ sub parse_entry {
 
   # revisions
   $branch = sanitize_branch $1
+    and shift
     if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^r/) {
     my $sawrevnum = 0;
@@ -296,35 +373,64 @@ sub parse_entry {
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
-  # depends
-  # TODO: parse the value of this.
-  $depends = grep /^Depends:/, @_;
-
-  # branch
+  # depends, branch, notes
   while (@_) {
-    shift and next unless $_[0] =~ s/^\s*Branch(es)?:\s*//;
-    $branch = sanitize_branch (shift || shift || die "Branch header found without value");
+    given (shift) {
+      when (/^Depends:/) {
+        $depends++;
+      }
+      if (s/^Branch:\s*//) {
+        $branch = sanitize_branch ($_ || shift || die "Branch header found without value");
+      }
+      if (s/^Notes:\s*//) {
+        my $notes = $_;
+        $notes .= shift while @_ and $_[0] !~ /^\w/;
+        my %accepts = map { $_ => 1 } ($notes =~ /--accept[ =]([a-z-]+)/g);
+        given (scalar keys %accepts) {
+          when (0) { } 
+          when (1) { $accept = [keys %accepts]->[0]; } 
+          default  {
+            warn "Too many --accept values at '",
+                 logsummarysummary({ logsummary => [@logsummary] }),
+                 "'";
+          }
+        }
+      }
+    }
   }
 
   # Compute a header.
   my ($header, $id);
-  $header = "r$revisions[0] group" if @revisions;
-  $id = "r$revisions[0]"           if @revisions;
-  $header = "$branch branch"       if $branch;
-  $id = $branch                    if $branch;
-  warn "No header for [@lines]" unless $header;
+  if ($branch) {
+    $header = "the $branch branch";
+    $id = $branch;
+  } elsif (@revisions == 1) {
+    $header = "r$revisions[0]";
+    $id = "r$revisions[0]";
+  } elsif (@revisions) {
+    $header = "the r$revisions[0] group";
+    $id = "r$revisions[0]";
+  } else {
+    die "Entry '$raw' has neither revisions nor branch";
+  }
+  my $header_start = ($header =~ /^the/ ? ucfirst($header) : $header);
+
+  warn "Entry has both branch '$branch' and --accept=$accept specified\n"
+    if $branch and $accept;
 
   return (
     revisions => [@revisions],
     logsummary => [@logsummary],
     branch => $branch,
     header => $header,
+    header_start => $header_start,
     depends => $depends,
     id => $id,
     votes => [@votes],
     entry => [@lines],
+    accept => $accept,
     raw => $raw,
-    digest => digest_string($raw),
+    digest => digest_entry($raw),
   );
 }
 
@@ -349,9 +455,10 @@ sub edit_string {
 
 sub vote {
   my ($state, $approved, $votes) = @_;
+  # TODO: use votesarray instead of votescheck
   my (%approvedcheck, %votescheck);
   my $raw_approved = "";
-  my @votes;
+  my @votesarray;
   return unless %$approved or %$votes;
 
   my $had_empty_line;
@@ -361,21 +468,39 @@ sub vote {
   open VOTES, ">", "$STATUS.$$.tmp";
   while (<STATUS>) {
     $had_empty_line = /\n\n\z/;
-    my $key = digest_string $_;
+    my $key = digest_entry $_;
 
     $approvedcheck{$key}++ if exists $approved->{$key};
     $votescheck{$key}++ if exists $votes->{$key};
 
-    unless (exists $votes->{$key}) {
-      (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
+    unless (exists $votes->{$key} or exists $approved->{$key}) {
+      print VOTES;
       next;
     }
 
+    unless (exists $votes->{$key}) {
+      push @votesarray, {
+        entry => $approved->{$key},
+        approval => 1,
+        digest => $key,
+      };
+      $raw_approved .= $_;
+      next;
+    }
+
+    # We have a vote, and potentially an approval.
+
     my ($vote, $entry) = @{$votes->{$key}};
-    push @votes, [$vote, $entry, undef]; # ->[2] later set to $digest
+    push @votesarray, {
+      entry => $entry,
+      vote => $vote,
+      approval => (exists $approved->{$key}),
+      digest => $key,
+    };
 
     if ($vote eq 'edit') {
       local $_ = $entry->{raw};
+      $votesarray[-1]->{digest} = digest_entry $_;
       (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
       next;
     }
@@ -384,60 +509,77 @@ sub vote {
     or s/(.*\w.*?\n)/"$1     $vote: $AVAILID\n"/se;
     $_ = edit_string $_, $entry->{header}, trailing_eol => 2
         if $vote ne '+1';
-    $votes[$#votes]->[2] = digest_string $_;
+    $votesarray[-1]->{digest} = digest_entry $_;
     (exists $approved->{$key}) ? ($raw_approved .= $_) : (print VOTES);
   }
   close STATUS;
   print VOTES "\n" if $raw_approved and !$had_empty_line;
   print VOTES $raw_approved;
   close VOTES;
-  die "Some vote chunks weren't found: ",
+  warn "Some vote chunks weren't found: ",
+    join ',',
     map $votes->{$_}->[1]->{id},
     grep { !$votescheck{$_} } keys %$votes
     if scalar(keys %$votes) != scalar(keys %votescheck);
-  die "Some approval chunks weren't found: ",
+  warn "Some approval chunks weren't found: ",
+    join ',',
     map $approved->{$_}->{id},
     grep { !$approvedcheck{$_} } keys %$approved
     if scalar(keys %$approved) != scalar(keys %approvedcheck);
+  prompt "Press the 'any' key to continue...\n", dontprint => 1
+    if scalar(keys %$approved) != scalar(keys %approvedcheck) 
+    or scalar(keys %$votes) != scalar(keys %votescheck);
   move "$STATUS.$$.tmp", $STATUS;
 
   my $logmsg = do {
-    my %allkeys = map { $_ => 1 } keys(%$votes), keys(%$approved);
     my @sentences = map {
-       exists $votes->{$_}
+       my $words_vote = ", approving" x $_->{approval};
+       my $words_edit = " and approve" x $_->{approval};
+       exists $_->{vote}
        ? (
-         ( $votes->{$_}->[0] eq 'edit'
-           ? "Edit the $votes->{$_}->[1]->{id} entry"
-           : "Vote $votes->{$_}->[0] on the $votes->{$_}->[1]->{header}"
+         ( $_->{vote} eq 'edit'
+           ? "Edit$words_edit the $_->{entry}->{id} entry"
+           : "Vote $_->{vote} on $_->{entry}->{header}$words_vote"
          )
-         . (exists $approved->{$_} ? ", approving" : "")
          . "."
          )
       : # exists only in $approved
-        "Approve the $approved->{$_}->{header}."
-      } keys %allkeys;
+        "Approve $_->{entry}->{header}."
+      } @votesarray;
     (@sentences == 1)
     ? $sentences[0]
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
   };
 
   system "$SVN diff -- $STATUS";
-  say "Voting '$_->[0]' on $_->[1]->{id}." for @votes;
-  # say $logmsg;
+  printf "[[[\n%s%s]]]\n", $logmsg, ("\n" x ($logmsg !~ /\n\z/));
   if (prompt "Commit these votes? ") {
     my ($logmsg_fh, $logmsg_filename) = tempfile();
     print $logmsg_fh $logmsg;
     close $logmsg_fh;
-    warn "Tempfile name '$logmsg_filename' not shell-safe; "
-         ."refraining from commit.\n"
+    warn("Tempfile name '$logmsg_filename' not shell-safe; "
+         ."refraining from commit.\n") and return
         unless $logmsg_filename =~ /^([A-Z0-9._-]|\x2f)+$/i;
     system("$SVN commit -F $logmsg_filename -- $STATUS") == 0
         or warn("Committing the votes failed($?): $!") and return;
     unlink $logmsg_filename;
 
-    $state->{$approved->{$_}->{digest}}++ for keys %$approved;
-    $state->{$_->[2]}++ for @votes;
+    # Add to state votes that aren't '+0' or 'edit'
+    $state->{$_->{digest}}++ for grep
+                                   +{ qw/-1 t -0 t +1 t/ }->{$_->{vote}},
+                                 @votesarray;
   }
+}
+
+sub check_local_mods_to_STATUS {
+  if (`$SVN status -q $STATUS`) {
+    die  "Local mods to STATUS file $STATUS" if $YES;
+    warn "Local mods to STATUS file $STATUS";
+    system "$SVN diff -- $STATUS";
+    prompt "Press the 'any' key to continue...\n", dontprint => 1;
+    return 1;
+  }
+  return 0;
 }
 
 sub revert {
@@ -446,6 +588,7 @@ sub revert {
   system "$SVN revert -R ./" . ($YES && $MAY_COMMIT ne 'true'
                              ? " -q" : "");
   move "$STATUS.$$.tmp", $STATUS;
+  $MERGED_SOMETHING = 0;
 }
 
 sub maybe_revert {
@@ -456,14 +599,26 @@ sub maybe_revert {
   (@_ ? exit : return);
 }
 
+sub signal_handler {
+  my $sig = shift;
+
+  # Clean up after prompt()
+  ReadMode 'normal';
+
+  # Fall back to default action
+  delete $SIG{$sig};
+  kill $sig, $$;
+}
+
 sub warning_summary {
   return unless %ERRORS;
 
   warn "Warning summary\n";
   warn "===============\n";
   warn "\n";
-  for my $header (keys %ERRORS) {
-    warn "$header: $ERRORS{$header}\n";
+  for my $id (keys %ERRORS) {
+    my $title = logsummarysummary $ERRORS{$id}->[0];
+    warn "$id ($title): $ERRORS{$id}->[1]\n";
   }
 }
 
@@ -505,8 +660,12 @@ sub handle_entry {
   my $votes = shift;
   my $state = shift;
   my $raw = shift;
+  my $skip = shift;
   my %entry = parse_entry $raw, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
+
+  my $match = defined($skip) ? ($raw =~ /\Q$skip\E/ or $raw =~ /$skip/msi) : 0
+              unless $YES;
 
   if ($YES) {
     # Run a merge if:
@@ -519,34 +678,46 @@ sub handle_entry {
         merge %entry;
 
         my $output = `$SVN status`;
-        my (@conflicts) = ($output =~ m#^(?:C|.C|...C).*/(.*)#mg);
+        my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
-          $ERRORS{$entry{id}} //= "Conflicts merging the $entry{header}: "
-                                  . (join ', ', @conflicts);
-          say STDERR "Conflicts merging the $entry{header}!";
+          $ERRORS{$entry{id}} //= [\%entry,
+                                   sprintf "Conflicts on %s%s%s",
+                                     '[' x !!$#conflicts,
+                                     (join ', ',
+                                      map { basename $_ }
+                                      @conflicts),
+                                     ']' x !!$#conflicts,
+                                  ];
+          say STDERR "Conflicts merging $entry{header}!";
           say STDERR "";
           say STDERR $output;
+          system "$SVN diff -- @conflicts";
         } elsif (!@conflicts and $entry{depends}) {
-          warn "No conflicts merging the $entry{header}, but conflicts were "
+          # Not a warning since svn-role may commit the dependency without
+          # also committing the dependent in the same pass.
+          print "No conflicts merging $entry{header}, but conflicts were "
               ."expected ('Depends:' header set)\n";
         } elsif (@conflicts) {
-          say "Conflicts found merging $entry{id}, as expected.";
+          say "Conflicts found merging $entry{header}, as expected.";
         }
         revert;
       }
     }
-  } elsif ($state->{$entry{digest}}) {
+  } elsif (defined($skip) ? not $match : $state->{$entry{digest}}) {
     print "\n\n";
-    say "Skipping the $entry{header} (remove $STATEFILE to reset):";
-    say $entry{logsummary}->[0], ('[...]' x (0 < $#{$entry{logsummary}}));
-  } else {
+    my $reason = defined($skip) ? "doesn't match pattern"
+                                : "remove $STATEFILE to reset";
+    say "Skipping $entry{header} ($reason):";
+    say logsummarysummary \%entry;
+  } elsif ($match or not defined $skip) {
     # This loop is just a hack because 'goto' panics.  The goto should be where
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
     PROMPT: while (1) {
     say "";
-    say "\n>>> The $entry{header}:";
+    say "\n>>> $entry{header_start}:";
     say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
     say "$BRANCHES/$entry{branch}" if $entry{branch};
+    say "--accept=$entry{accept}" if $entry{accept};
     say "";
     say for @{$entry{logsummary}};
     say "";
@@ -572,6 +743,12 @@ sub handle_entry {
                 or warn "diff failed ($?): $!";
               next;
             }
+            when (/^N/i) {
+              # fall through.
+            }
+            default {
+              next;
+            }
           }
           revert;
           next PROMPT;
@@ -580,7 +757,7 @@ sub handle_entry {
       }
       when (/^l/i) {
         if ($entry{branch}) {
-            system "$SVN log --stop-on-copy -v -r 0:HEAD -- "
+            system "$SVN log --stop-on-copy -v -g -r 0:HEAD -- "
                    ."$BRANCHES/$entry{branch} "
                    ."| $PAGER";
         } elsif (@{$entry{revisions}}) {
@@ -602,6 +779,7 @@ sub handle_entry {
       when (/^([+-][01])\s*$/i) {
         $votes->{$key} = [$1, \%entry];
         say "Your '$1' vote has been recorded." if $VERBOSE;
+        last PROMPT;
       }
       when (/^e/i) {
         my $original = $entry{raw};
@@ -609,9 +787,11 @@ sub handle_entry {
                         trailing_eol => 2;
         $votes->{$key} = ['edit', \%entry] # marker for the 2nd pass
             if $original ne $entry{raw};
+        last PROMPT;
       }
       when (/^N/i) {
         $state->{$entry{digest}}++;
+        last PROMPT;
       }
       when (/^\x20/) {
         last PROMPT; # Fall off the end of the given/when block.
@@ -623,6 +803,9 @@ sub handle_entry {
     }
     last; } # QUESTION
     last; } # PROMPT
+  } else {
+    # NOTREACHED
+    die "Unreachable code reached.";
   }
 
   # TODO: merge() changes ./STATUS, which we're reading below, but
@@ -632,14 +815,17 @@ sub handle_entry {
 }
 
 
-sub main {
+sub backport_main {
   my %approved;
   my %votes;
   my $state = read_state;
 
-  usage, exit 0 if @ARGV;
+  backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1) or grep /^--help$/, @ARGV;
+  backport_usage, exit 0 if grep /^(?:-h|-\?|--help|help)$/, @ARGV;
+  my $skip = shift; # maybe undef
+  # assert not defined $skip if $YES;
 
-  open STATUS, "<", $STATUS or (usage, exit 1);
+  open STATUS, "<", $STATUS or (backport_usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
   die "A vim with the +ex_extra feature is required for \$MAY_COMMIT mode"
@@ -652,12 +838,7 @@ sub main {
   system("$SVN info $STATUS >/dev/null") == 0
     or die "$0: svn error; point \$SVN to an appropriate binary";
 
-  if (`$SVN status -q $STATUS`) {
-    die  "Local mods to STATUS file $STATUS" if $YES;
-    warn "Local mods to STATUS file $STATUS";
-    system "$SVN diff -- $STATUS";
-    prompt "Press the 'any' key to continue...\n", dontprint => 1;
-  }
+  check_local_mods_to_STATUS;
 
   # Skip most of the file
   $/ = ""; # paragraph mode
@@ -666,6 +847,7 @@ sub main {
   }
 
   $SIG{INT} = \&maybe_revert unless $YES;
+  $SIG{TERM} = \&signal_handler unless $YES;
 
   my $in_approved = 0;
   while (<STATUS>) {
@@ -690,7 +872,8 @@ sub main {
       when (/^ \*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ \*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%approved, \%votes, $state, $lines, @lines;
+        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
+                     @lines;
       }
       default {
         warn "Unknown entry '$lines[0]'";
@@ -701,4 +884,100 @@ sub main {
   exit_stage_left $state, \%approved, \%votes;
 }
 
-&main
+sub nominate_main {
+  my $had_local_mods;
+
+  local $Text::Wrap::columns = 79;
+
+  $had_local_mods = check_local_mods_to_STATUS;
+
+  # Argument parsing.
+  nominate_usage, exit 0 if @ARGV != 2;
+  my (@revnums) = (+shift) =~ /(\d+)/g;
+  my $justification = shift;
+
+  @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
+  die "No revision numbers specified" unless @revnums;
+
+  # Determine whether a backport branch exists
+  my ($URL) = `$SVN info` =~ /^URL: (.*)$/m;
+  die "Can't retrieve URL of cwd" unless $URL;
+
+  die if $URL !~ m%^[A-Za-z0-9:_.+/][A-Za-z0-9:_.+/-]*$%;
+  system "$SVN info -- $URL-r$revnums[0] 2>/dev/null";
+  my $branch = ($? == 0) ? basename("$URL-r$revnums[0]") : undef;
+
+  # Construct entry.
+  my $logmsg = `$SVN propget --revprop -r $revnums[0] --strict svn:log '^/'`;
+  die "Can't fetch log message of r$revnums[0]: $!" unless $logmsg;
+  
+  unless ($logmsg =~ s/^(.*?)\n\n.*/$1/s) {
+    # "* file\n  (symbol): Log message."
+
+    # Strip before and after the first symbol's log message.
+    $logmsg =~ s/^.*?: //s;
+    $logmsg =~ s/^  \x28.*//ms;
+
+    # Undo line wrapping.  (We'll re-do it later.)
+    $logmsg =~ s/\s*\n\s+/ /g;
+  }
+
+  my @lines;
+  warn "Wrapping [$logmsg]\n";
+  push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
+  push @lines, wrap ' 'x3, ' 'x3, split /\n/, $logmsg;
+  push @lines, "   Justification:";
+  push @lines, wrap ' 'x5, ' 'x5, $justification;
+  push @lines, "   Branch: $branch" if defined $branch;
+  push @lines, "   Votes:";
+  push @lines, "     +1: $AVAILID";
+  push @lines, "";
+  my $raw = join "", map "$_\n", @lines;
+
+  # Open the file in line-mode (not paragraph-mode).
+  my @STATUS;
+  tie @STATUS, "Tie::File", $STATUS, recsep => "\n";
+  my ($index) = grep { $STATUS[$_] =~ /^Veto/ } (0..$#STATUS);
+  die "Couldn't find where to add an entry" unless $index;
+
+  # Add an empty line if needed.
+  if ($STATUS[$index-1] =~ /\S/) {
+    splice @STATUS, $index, 0, "";
+    $index++;
+  }
+
+  # Add the entry.
+  splice @STATUS, $index, 0, @lines;
+
+  # Save.
+  untie @STATUS;
+
+  # Done!
+  system "$SVN diff -- $STATUS";
+  if (prompt "Commit this nomination? ") {
+    system "$SVN commit -m 'Nominate r$revnums[0].' -- $STATUS";
+    exit $?;
+  }
+  elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {
+    # TODO: we could be smarter and just un-splice the lines we'd added.
+    system "$SVN revert -- $STATUS";
+    exit $?;
+  }
+
+  exit 0;
+}
+
+# Dispatch to the appropriate main().
+given (basename($0)) {
+  when (/^b$|backport/) {
+    chdir dirname $0 or die "Can't chdir: $!" if /^b$/;
+    &backport_main(@ARGV);
+  }
+  when (/^n$|nominate/) {
+    chdir dirname $0 or die "Can't chdir: $!" if /^n$/;
+    &nominate_main(@ARGV);
+  }
+  default {
+    &backport_main(@ARGV);
+  }
+}

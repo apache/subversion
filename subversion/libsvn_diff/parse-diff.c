@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"

@@ -29,6 +29,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -46,7 +47,6 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
-#include "svn_private_config.h"
 
 #include "ra_serf.h"
 
@@ -61,11 +61,18 @@ ra_serf_version(void)
 #define RA_SERF_DESCRIPTION \
     N_("Module for accessing a repository via WebDAV protocol using serf.")
 
+#define RA_SERF_DESCRIPTION_VER \
+    N_("Module for accessing a repository via WebDAV protocol using serf.\n" \
+       "  - using serf %d.%d.%d")
+
 /* Implements svn_ra__vtable_t.get_description(). */
 static const char *
-ra_serf_get_description(void)
+ra_serf_get_description(apr_pool_t *pool)
 {
-  return _(RA_SERF_DESCRIPTION);
+  int major, minor, patch;
+
+  serf_lib_version(&major, &minor, &patch);
+  return apr_psprintf(pool, _(RA_SERF_DESCRIPTION_VER), major, minor, patch);
 }
 
 /* Implements svn_ra__vtable_t.get_schemes(). */
@@ -149,6 +156,7 @@ load_config(svn_ra_serf__session_t *session,
   const char *timeout_str = NULL;
   const char *exceptions;
   apr_port_t proxy_port;
+  svn_tristate_t chunked_requests;
 
   if (config_hash)
     {
@@ -225,11 +233,11 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Is this proxy potentially busted? Do we need to take special care?  */
-  SVN_ERR(svn_config_get_bool(config, &session->busted_proxy,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_BUSTED_PROXY,
-                              FALSE));
+  /* Should we use chunked transfer encoding. */ 
+  SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                  "auto", svn_tristate_unknown));
 
   if (config)
     server_group = svn_config_find_group(config,
@@ -288,12 +296,11 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
-      /* Do we need to take care with this proxy?  */
-      SVN_ERR(svn_config_get_bool(
-               config, &session->busted_proxy,
-               server_group,
-               SVN_CONFIG_OPTION_BUSTED_PROXY,
-               session->busted_proxy));
+      /* Should we use chunked transfer encoding. */ 
+      SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
+                                      server_group,
+                                      SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
+                                      "auto", chunked_requests));
     }
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -368,6 +375,24 @@ load_config(svn_ra_serf__session_t *session,
       session->using_proxy = FALSE;
     }
 
+  /* Setup detect_chunking and using_chunked_requests based on
+   * the chunked_requests tristate */
+  if (chunked_requests == svn_tristate_unknown)
+    {
+      session->detect_chunking = TRUE;
+      session->using_chunked_requests = TRUE;
+    }
+  else if (chunked_requests == svn_tristate_true)
+    {
+      session->detect_chunking = FALSE;
+      session->using_chunked_requests = TRUE;
+    }
+  else /* chunked_requests == svn_tristate_false */
+    {
+      session->detect_chunking = FALSE;
+      session->using_chunked_requests = FALSE;
+    }
+
   /* Setup authentication. */
   SVN_ERR(load_http_auth_types(pool, config, server_group,
                                &session->authn_types));
@@ -389,6 +414,18 @@ svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
                                serf_sess->progress_baton,
                                serf_sess->pool);
     }
+}
+
+/** Our User-Agent string. */
+static const char *
+get_user_agent_string(apr_pool_t *pool)
+{
+  int major, minor, patch;
+  serf_lib_version(&major, &minor, &patch);
+
+  return apr_psprintf(pool, "SVN/%s (%s) serf/%d.%d.%d",
+                      SVN_VER_NUMBER, SVN_BUILD_TARGET,
+                      major, minor, patch);
 }
 
 /* Implements svn_ra__vtable_t.open_session(). */
@@ -473,10 +510,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
     SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, USER_AGENT, " ",
+    serf_sess->useragent = apr_pstrcat(pool, get_user_agent_string(pool), " ",
                                        client_string, (char *)NULL);
   else
-    serf_sess->useragent = USER_AGENT;
+    serf_sess->useragent = get_user_agent_string(pool);
 
   /* go ahead and tell serf about the connection. */
   status =
@@ -506,11 +543,11 @@ svn_ra_serf__open(svn_ra_session_t *session,
   SVN_ERR(err);
 
   /* We have set up a useful connection (that doesn't indication a redirect).
-     If we've been told there is possibly a busted proxy in our path to the
+     If we've been told there is possibly a worrisome proxy in our path to the
      server AND we switched to HTTP/1.1 (chunked requests), then probe for
      problems in any proxy.  */
   if ((corrected_url == NULL || *corrected_url == NULL)
-      && serf_sess->busted_proxy && !serf_sess->http10)
+      && serf_sess->detect_chunking && !serf_sess->http10)
     SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
 
   return SVN_NO_ERROR;
@@ -1238,7 +1275,7 @@ svn_ra_serf__init(const svn_version_t *loader_version,
   int serf_minor;
   int serf_patch;
 
-  SVN_ERR(svn_ver_check_list(ra_serf_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_serf_version(), checklist, svn_ver_equal));
 
   /* Simplified version check to make sure we can safely use the
      VTABLE parameter. The RA loader does a more exhaustive check. */
