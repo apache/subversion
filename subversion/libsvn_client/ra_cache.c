@@ -53,6 +53,12 @@ typedef struct cached_session_s
 
   /* ID of RA session. Used only for diagnostics purpose. */
   int id;
+
+  /* Last progress reported by this session. */
+  apr_off_t last_progress;
+
+  /* Accumulated progress since last session open. */
+  apr_off_t progress;
 } cached_session_t;
 
 struct svn_client__ra_cache_s
@@ -250,8 +256,11 @@ progress_func(apr_off_t progress,
 {
   cached_session_t *b = baton;
 
+  b->progress += (progress - b->last_progress);
+  b->last_progress = progress;
+
   if (b->cb_table->progress_func)
-    b->cb_table->progress_func(progress, total, b->cb_table->progress_baton,
+    b->cb_table->progress_func(b->progress, -1, b->cb_table->progress_baton,
                                pool);
 }
 
@@ -385,6 +394,7 @@ svn_client__ra_cache_open_session(svn_ra_session_t **session_p,
   cache_entry->owner_pool = result_pool;
   cache_entry->cb_table = cbtable;
   cache_entry->cb_baton = callback_baton;
+  cache_entry->progress = 0;
   apr_pool_cleanup_register(result_pool, cache_entry, cleanup_session,
                             apr_pool_cleanup_null);
 
