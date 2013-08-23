@@ -33,8 +33,8 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_compat.h"
-#include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
@@ -340,6 +340,12 @@ canonicalize_access_file(const char **access_file, server_baton_t *server,
   return SVN_NO_ERROR;
 }
 
+/* Load the authz database for the listening server based on the
+   entries in the SERVER struct.
+
+   SERVER and CONN must not be NULL. The real errors will be logged with
+   SERVER and CONN but return generic errors to the client. */
+static 
 svn_error_t *load_authz_config(server_baton_t *server,
                                svn_ra_svn_conn_t *conn,
                                const char *repos_root,
@@ -2092,7 +2098,7 @@ static svn_error_t *log_receiver(void *baton,
   apr_hash_index_t *h;
   svn_boolean_t invalid_revnum = FALSE;
   const svn_string_t *author, *date, *message;
-  apr_uint64_t revprop_count;
+  unsigned revprop_count;
 
   if (log_entry->revision == SVN_INVALID_REVNUM)
     {

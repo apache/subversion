@@ -32,13 +32,13 @@
 #include <apr_lib.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
-#include "svn_private_config.h"
 #include "svn_ctype.h"
 #include "svn_time.h"
 
@@ -411,7 +411,7 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static APR_INLINE svn_error_t *
+static SVN__FORCE_INLINE svn_error_t *
 readbuf_getchar(svn_ra_svn_conn_t *conn, apr_pool_t *pool, char *result)
 {
   if (conn->read_ptr == conn->read_end)
@@ -1534,6 +1534,58 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
                            status);
 }
 
+static svn_error_t *
+svn_ra_svn__handle_command(svn_boolean_t *terminate,
+                           apr_hash_t *cmd_hash,
+                           void *baton,
+                           svn_ra_svn_conn_t *conn,
+                           svn_boolean_t error_on_disconnect,
+                           apr_pool_t *iterpool)
+{
+  const char *cmdname;
+  svn_error_t *err, *write_err;
+  apr_array_header_t *params;
+  const svn_ra_svn_cmd_entry_t *command;
+
+  err = svn_ra_svn__read_tuple(conn, iterpool, "wl", &cmdname, &params);
+  if (err)
+    {
+      if (!error_on_disconnect
+          && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+        {
+          svn_error_clear(err);
+          *terminate = TRUE;
+          return SVN_NO_ERROR;
+        }
+      return err;
+    }
+  command = svn_hash_gets(cmd_hash, cmdname);
+
+  if (command)
+    err = (*command->handler)(conn, iterpool, params, baton);
+  else
+    {
+      err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+                              _("Unknown editor command '%s'"), cmdname);
+      err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
+    }
+
+  if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
+    {
+      write_err = svn_ra_svn__write_cmd_failure(
+                      conn, iterpool,
+                      svn_ra_svn__locate_real_error_child(err));
+      svn_error_clear(err);
+      if (write_err)
+        return write_err;
+    }
+  else if (err)
+    return err;
+
+  *terminate = (command && command->terminate);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
                              apr_pool_t *pool,
@@ -1543,10 +1595,7 @@ svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(subpool);
-  const char *cmdname;
   const svn_ra_svn_cmd_entry_t *command;
-  svn_error_t *err, *write_err;
-  apr_array_header_t *params;
   apr_hash_t *cmd_hash = apr_hash_make(subpool);
 
   for (command = commands; command->cmdname; command++)
@@ -1554,43 +1603,18 @@ svn_ra_svn__handle_commands2(svn_ra_svn_conn_t *conn,
 
   while (1)
     {
+      svn_boolean_t terminate;
+      svn_error_t *err;
       svn_pool_clear(iterpool);
-      err = svn_ra_svn__read_tuple(conn, iterpool, "wl", &cmdname, &params);
+
+      err = svn_ra_svn__handle_command(&terminate, cmd_hash, baton, conn,
+                                       error_on_disconnect, iterpool);
       if (err)
         {
-          if (!error_on_disconnect
-              && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
-            {
-              svn_error_clear(err);
-              svn_pool_destroy(subpool);
-              return SVN_NO_ERROR;
-            }
-          return err;
+          svn_pool_destroy(subpool);
+          return svn_error_trace(err);
         }
-      command = svn_hash_gets(cmd_hash, cmdname);
-
-      if (command)
-        err = (*command->handler)(conn, iterpool, params, baton);
-      else
-        {
-          err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
-                                  _("Unknown editor command '%s'"), cmdname);
-          err = svn_error_create(SVN_ERR_RA_SVN_CMD_ERR, err, NULL);
-        }
-
-      if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
-        {
-          write_err = svn_ra_svn__write_cmd_failure(
-                          conn, iterpool,
-                          svn_ra_svn__locate_real_error_child(err));
-          svn_error_clear(err);
-          if (write_err)
-            return write_err;
-        }
-      else if (err)
-        return err;
-
-      if (command && command->terminate)
+      if (terminate)
         break;
     }
   svn_pool_destroy(iterpool);
@@ -2404,7 +2428,7 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
                                  const svn_string_t *message,
                                  svn_boolean_t has_children,
                                  svn_boolean_t invalid_revnum,
-                                 int revprop_count)
+                                 unsigned revprop_count)
 {
   SVN_ERR(write_tuple_revision(conn, pool, revision));
   SVN_ERR(write_tuple_start_list(conn, pool));

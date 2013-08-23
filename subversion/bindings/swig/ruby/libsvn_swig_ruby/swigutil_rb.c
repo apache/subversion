@@ -23,9 +23,16 @@
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
+/* Windows hack: Allow overriding some <ruby.h> defaults */
+#include "swigutil_rb__pre_ruby.h"
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
+
+#ifdef HAVE_RUBY_ST_H
+#include <ruby/st.h>
+#else
 #include <st.h>
+#endif
 
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -53,6 +60,7 @@
 #include <locale.h>
 #include <math.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_nls.h"
 #include "svn_pools.h"
@@ -1597,7 +1605,7 @@ typedef struct callback_handle_error_baton_t {
 } callback_handle_error_baton_t;
 
 static VALUE
-callback(VALUE baton)
+callback(VALUE baton, ...)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
   VALUE result;
@@ -1609,7 +1617,7 @@ callback(VALUE baton)
 }
 
 static VALUE
-callback_rescue(VALUE baton)
+callback_rescue(VALUE baton, ...)
 {
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
@@ -1626,7 +1634,7 @@ callback_rescue(VALUE baton)
 }
 
 static VALUE
-callback_ensure(VALUE pool)
+callback_ensure(VALUE pool, ...)
 {
   svn_swig_rb_pop_pool(pool);
 
@@ -1647,7 +1655,7 @@ invoke_callback(VALUE baton, VALUE pool)
 }
 
 static VALUE
-callback_handle_error(VALUE baton)
+callback_handle_error(VALUE baton, ...)
 {
   callback_handle_error_baton_t *handle_error_baton;
   handle_error_baton = (callback_handle_error_baton_t *)baton;
@@ -4026,4 +4034,7 @@ static svn_ra_reporter3_t rb_ra_reporter3 = {
   svn_swig_rb_ra_reporter_abort_report
 };
 
-svn_ra_reporter3_t *svn_swig_rb_ra_reporter3 = &rb_ra_reporter3;
+svn_ra_reporter3_t *svn_swig_rb_get_ra_reporter3()
+{
+  return &rb_ra_reporter3;
+}

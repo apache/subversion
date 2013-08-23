@@ -1014,6 +1014,11 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
+  /** Total number of bytes transferred over network.
+   *
+   * @Since New in 1.9. */
+  apr_off_t progress;
+
   /** A RA session cache for the client operation to use.
    * This is initialized by svn_client_create_context() and should never
    * be directly used or changed.

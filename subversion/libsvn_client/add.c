@@ -30,6 +30,8 @@
 #include <string.h>
 #include <apr_lib.h>
 #include <apr_fnmatch.h>
+
+#include "svn_private_config.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -49,8 +51,6 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_magic.h"
-
-#include "svn_private_config.h"
 
 
 
@@ -1243,35 +1243,34 @@ mkdir_urls(const apr_array_header_t *urls,
 
 
 svn_error_t *
-svn_client__make_local_parents(const char *path,
+svn_client__make_local_parents(const char *local_abspath,
                                svn_boolean_t make_parents,
                                svn_client_ctx_t *ctx,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_node_kind_t orig_kind;
-  SVN_ERR(svn_io_check_path(path, &orig_kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &orig_kind, scratch_pool));
   if (make_parents)
-    SVN_ERR(svn_io_make_dir_recursively(path, pool));
+    SVN_ERR(svn_io_make_dir_recursively(local_abspath, scratch_pool));
   else
-    SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+    SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
 
   /* Should no longer use svn_depth_empty to indicate that only the directory
      itself is added, since it not only constraints the operation depth, but
      also defines the depth of the target directory now. Moreover, the new
      directory will have no children at all.*/
-  err = svn_client_add5(path, svn_depth_infinity, FALSE, FALSE, FALSE,
-                        make_parents, ctx, pool);
+  err = svn_client_add5(local_abspath, svn_depth_infinity, FALSE, FALSE, FALSE,
+                        make_parents, ctx, scratch_pool);
 
   /* If we created a new directory, but couldn't add it to version
      control, then delete it. */
   if (err && (orig_kind == svn_node_none))
     {
-      /* ### If this returns an error, should we link it onto
-         err instead, so that the user is warned that we just
-         created an unversioned directory? */
-
-      svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
+      err = svn_error_compose_create(err,
+                                     svn_io_remove_dir2(local_abspath, FALSE,
+                                                        NULL, NULL,
+                                                        scratch_pool));
     }
 
   return svn_error_trace(err);
@@ -1300,23 +1299,25 @@ svn_client_mkdir4(const apr_array_header_t *paths,
   else
     {
       /* This is a regular "mkdir" + "svn add" */
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
       int i;
 
       for (i = 0; i < paths->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
 
           /* See if the user wants us to stop. */
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
+          SVN_ERR(svn_dirent_get_absolute(&path, path, iterpool));
+
           SVN_ERR(svn_client__make_local_parents(path, make_parents, ctx,
-                                                 subpool));
+                                                 iterpool));
         }
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;

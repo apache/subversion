@@ -32,6 +32,7 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
@@ -44,7 +45,6 @@
 #include "entries.h"
 #include "lock.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 

@@ -32,13 +32,13 @@
 #include <apr_xlate.h>
 #include <apr_atomic.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
-#include "svn_private_config.h"
 #include "win32_xlate.h"
 
 #include "private/svn_utf_private.h"
@@ -212,6 +212,7 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 {
   apr_status_t apr_err;
   apr_xlate_t *handle;
+  const char *name;
 
   /* The error handling doesn't support the following cases, since we don't
      use them currently.  Catch this here. */
@@ -224,8 +225,10 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 #if defined(WIN32)
   apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
                                        frompage, pool);
+  name = "win32-xlate: ";
 #else
   apr_err = apr_xlate_open(&handle, topage, frompage, pool);
+  name = "APR: ";
 #endif
 
   if (APR_STATUS_IS_EINVAL(apr_err) || APR_STATUS_IS_ENOTIMPL(apr_err))
@@ -233,6 +236,8 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
   else if (apr_err != APR_SUCCESS)
     {
       const char *errstr;
+      char apr_strerr[512];
+
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
       if (frompage == SVN_APR_LOCALE_CHARSET)
@@ -248,7 +253,13 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                               _("Can't create a character converter from "
                                 "'%s' to '%s'"), frompage, topage);
 
-      return svn_error_create(apr_err, NULL, errstr);
+      /* Just put the error on the stack, since svn_error_create duplicates it
+         later.  APR_STRERR will be in the local encoding, not in UTF-8, though.
+       */
+      svn_strerror(apr_err, apr_strerr, sizeof(apr_strerr));
+      return svn_error_createf(SVN_ERR_PLUGIN_LOAD_FAILURE, 
+                               svn_error_create(apr_err, NULL, apr_strerr),
+                               "%s%s", name, errstr);
     }
 
   /* Allocate and initialize the node. */
@@ -469,58 +480,6 @@ get_uton_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 }
 
 
-/* Copy LEN bytes of SRC, converting non-ASCII and zero bytes to ?\nnn
-   sequences, allocating the result in POOL. */
-static const char *
-fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
-{
-  const char *src_orig = src, *src_end = src + len;
-  apr_size_t new_len = 0;
-  char *new;
-  const char *new_orig;
-
-  /* First count how big a dest string we'll need. */
-  while (src < src_end)
-    {
-      if (! svn_ctype_isascii(*src) || *src == '\0')
-        new_len += 5;  /* 5 slots, for "?\XXX" */
-      else
-        new_len += 1;  /* one slot for the 7-bit char */
-
-      src++;
-    }
-
-  /* Allocate that amount, plus one slot for '\0' character. */
-  new = apr_palloc(pool, new_len + 1);
-
-  new_orig = new;
-
-  /* And fill it up. */
-  while (src_orig < src_end)
-    {
-      if (! svn_ctype_isascii(*src_orig) || src_orig == '\0')
-        {
-          /* This is the same format as svn_xml_fuzzy_escape uses, but that
-             function escapes different characters.  Please keep in sync!
-             ### If we add another fuzzy escape somewhere, we should abstract
-             ### this out to a common function. */
-          apr_snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
-          new += 5;
-        }
-      else
-        {
-          *new = *src_orig;
-          new += 1;
-        }
-
-      src_orig++;
-    }
-
-  *new = '\0';
-
-  return new_orig;
-}
-
 /* Convert SRC_LENGTH bytes of SRC_DATA in NODE->handle, store the result
    in *DEST, which is allocated in POOL. */
 static svn_error_t *
@@ -598,8 +557,8 @@ convert_to_stringbuf(xlate_handle_node_t *node,
           (pool, _("Can't convert string from '%s' to '%s':"),
            node->frompage, node->topage);
 
-      err = svn_error_create(apr_err, NULL, fuzzy_escape(src_data,
-                                                         src_length, pool));
+      err = svn_error_create(
+          apr_err, NULL, svn_utf__fuzzy_escape(src_data, src_length, pool));
       return svn_error_create(apr_err, err, errstr);
     }
   /* Else, exited due to success.  Trim the result buffer down to the
@@ -996,7 +955,7 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
   const char *escaped, *converted;
   svn_error_t *err;
 
-  escaped = fuzzy_escape(src, strlen(src), pool);
+  escaped = svn_utf__fuzzy_escape(src, strlen(src), pool);
 
   /* Okay, now we have a *new* UTF-8 string, one that's guaranteed to
      contain only 7-bit bytes :-).  Recode to native... */

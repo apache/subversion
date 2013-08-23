@@ -55,6 +55,7 @@
 #include <fcntl.h>
 #endif
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
@@ -65,7 +66,6 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_ctype.h"
 
 #include "private/svn_atomic.h"
@@ -1166,9 +1166,11 @@ svn_io_make_dir_recursively(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_io_file_create(const char *file,
-                                const char *contents,
-                                apr_pool_t *pool)
+svn_error_t *
+svn_io_file_create_binary(const char *file,
+                          const char *contents,
+                          apr_size_t length,
+                          apr_pool_t *pool)
 {
   apr_file_t *f;
   apr_size_t written;
@@ -1178,25 +1180,57 @@ svn_error_t *svn_io_file_create(const char *file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  if (contents && *contents)
-    err = svn_io_file_write_full(f, contents, strlen(contents),
-                                 &written, pool);
+  if (length)
+    err = svn_io_file_write_full(f, contents, length, &written, pool);
 
+  err = svn_error_compose_create(
+                    err,
+                    svn_io_file_close(f, pool));
 
-  return svn_error_trace(
-                        svn_error_compose_create(err,
-                                                 svn_io_file_close(f, pool)));
+  if (err)
+    {
+      /* Our caller doesn't know if we left a file or not if we return
+         an error. Better to cleanup after ourselves if we created the
+         file. */
+      return svn_error_trace(
+                svn_error_compose_create(
+                    err,
+                    svn_io_remove_file2(file, TRUE, pool)));
+    }
+
+  return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_io_dir_file_copy(const char *src_path,
-                                  const char *dest_path,
-                                  const char *file,
-                                  apr_pool_t *pool)
+svn_error_t *
+svn_io_file_create(const char *file,
+                   const char *contents,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_create_binary(file, contents,
+                                                   contents
+                                                        ? strlen(contents)
+                                                        : 0,
+                                                   pool));
+}
+
+svn_error_t *
+svn_io_file_create_empty(const char *file,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_create_binary(file, "", 0, pool));
+}
+
+svn_error_t *
+svn_io_dir_file_copy(const char *src_path,
+                     const char *dest_path,
+                     const char *file,
+                     apr_pool_t *pool)
 {
   const char *file_dest_path = svn_dirent_join(dest_path, file, pool);
   const char *file_src_path = svn_dirent_join(src_path, file, pool);
 
-  return svn_io_copy_file(file_src_path, file_dest_path, TRUE, pool);
+  return svn_error_trace(
+            svn_io_copy_file(file_src_path, file_dest_path, TRUE, pool));
 }
 
 
@@ -2300,36 +2334,35 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
   svn_error_t *err;
   svn_stringbuf_t *res = NULL;
   apr_size_t res_initial_len = SVN__STREAM_CHUNK_SIZE;
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  char *buf;
 
   /* If our caller wants us to check the size of the file for
      efficient memory handling, we'll try to do so. */
   if (check_size)
     {
-      apr_status_t status;
+      apr_finfo_t finfo;
 
-      /* If our caller didn't tell us the file's name, we'll ask APR
-         if it knows the name.  No problem if we can't figure it out.  */
-      if (! filename)
+      /* In some cases we get size 0 and no error for non files,
+          so we also check for the name. (= cached in apr_file_t) */
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_NAME, file)
+          && finfo.name != NULL)
         {
-          const char *filename_apr;
-          if (! (status = apr_file_name_get(&filename_apr, file)))
-            filename = filename_apr;
-        }
-
-      /* If we now know the filename, try to stat().  If we succeed,
-         we know how to allocate our stringbuf.  */
-      if (filename)
-        {
-          apr_finfo_t finfo;
-          if (! (status = apr_stat(&finfo, filename, APR_FINFO_MIN, pool)))
-            res_initial_len = (apr_size_t)finfo.size;
+          /* we've got the file length. Now, read it in one go. */
+          svn_boolean_t eof;
+          res_initial_len = (apr_size_t)finfo.size;
+          res = svn_stringbuf_create_ensure(res_initial_len, pool);
+          SVN_ERR(svn_io_file_read_full2(file, res->data,
+                                         res_initial_len, &res->len,
+                                         &eof, pool));
+          res->data[res->len] = 0;
+          
+          *result = res;
+          return SVN_NO_ERROR;
         }
     }
 
-
   /* XXX: We should check the incoming data for being of type binary. */
-
+  buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   res = svn_stringbuf_create_ensure(res_initial_len, pool);
 
   /* apr_file_read will not return data and eof in the same call. So this loop
@@ -2345,7 +2378,7 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
 
   /* Having read all the data we *expect* EOF */
   if (err && !APR_STATUS_IS_EOF(err->apr_err))
-    return err;
+    return svn_error_trace(err);
   svn_error_clear(err);
 
   *result = res;
@@ -3555,6 +3588,101 @@ svn_io_file_seek(apr_file_t *file, apr_seek_where_t where,
              N_("Can't set position pointer in file '%s'"),
              N_("Can't set position pointer in stream"),
              pool);
+}
+
+svn_error_t *
+svn_io_file_aligned_seek(apr_file_t *file,
+                         apr_off_t block_size,
+                         apr_off_t *buffer_start,
+                         apr_off_t offset,
+                         apr_pool_t *pool)
+{
+  const apr_size_t apr_default_buffer_size = 4096;
+  apr_size_t file_buffer_size = apr_default_buffer_size;
+  apr_off_t desired_offset = 0;
+  apr_off_t current = 0;
+  apr_off_t aligned_offset = 0;
+  svn_boolean_t fill_buffer = FALSE;
+
+  /* paranoia check: huge blocks on 32 bit machines may cause overflows */
+  SVN_ERR_ASSERT(block_size == (apr_size_t)block_size);
+
+  /* default for invalid block sizes */
+  if (block_size == 0)
+    block_size = apr_default_buffer_size;
+
+  /* on old APRs, we are simply stuck with 4k blocks */
+#if APR_VERSION_AT_LEAST(1,3,0)
+  file_buffer_size = apr_file_buffer_size_get(file);
+
+  /* don't try to set a buffer size for non-buffered files! */
+  if (file_buffer_size == 0)
+    {
+      aligned_offset = offset;
+    }
+  else if (file_buffer_size != (apr_size_t)block_size)
+    {
+      /* FILE has the wrong buffer size. correct it */
+      char *buffer;
+      file_buffer_size = (apr_size_t)block_size;
+      buffer = apr_palloc(apr_file_pool_get(file), file_buffer_size);
+      apr_file_buffer_set(file, buffer, file_buffer_size);
+
+      /* seek to the start of the block and cause APR to read 1 block */
+      aligned_offset = offset - (offset % block_size);
+      fill_buffer = TRUE;
+    }
+#endif
+    {
+      aligned_offset = offset - (offset % file_buffer_size);
+
+      /* We have no way to determine the block start of an APR file.
+         Furthermore, we don't want to throw away the current buffer
+         contents.  Thus, we re-align the buffer only if the CURRENT
+         offset definitely lies outside the desired, aligned buffer.
+         This covers the typical case of linear reads getting very
+         close to OFFSET but reading the previous / following block.
+
+         Note that ALIGNED_OFFSET may still be within the current
+         buffer and no I/O will actually happen in the FILL_BUFFER
+         section below.
+       */
+      SVN_ERR(svn_io_file_seek(file, SEEK_CUR, &current, pool));
+      fill_buffer = aligned_offset + file_buffer_size <= current
+                 || current <= aligned_offset;
+    }
+
+  if (fill_buffer)
+    {
+      char dummy;
+      apr_status_t status;
+
+      /* seek to the start of the block and cause APR to read 1 block */
+      SVN_ERR(svn_io_file_seek(file, SEEK_SET, &aligned_offset, pool));
+      status = apr_file_getc(&dummy, file);
+
+      /* read may fail if we seek to or behind EOF.  That's ok then. */
+      if (status != APR_SUCCESS && !APR_STATUS_IS_EOF(status))
+        return do_io_file_wrapper_cleanup(file, status,
+                                          N_("Can't read file '%s'"),
+                                          N_("Can't read stream"),
+                                          pool);
+    }
+
+  /* finally, seek to the OFFSET the caller wants */
+  desired_offset = offset;
+  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  if (desired_offset != offset)
+    return do_io_file_wrapper_cleanup(file, APR_EOF,
+                                      N_("Can't seek in file '%s'"),
+                                      N_("Can't seek in stream"),
+                                      pool);
+
+  /* return the buffer start that we (probably) enforced */
+  if (buffer_start)
+    *buffer_start = aligned_offset;
+
+  return SVN_NO_ERROR;
 }
 
 

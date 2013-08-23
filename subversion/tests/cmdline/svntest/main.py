@@ -1330,6 +1330,9 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_fsx():
+  return options.fs_type == 'fsx'
+
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
 
@@ -1753,7 +1756,7 @@ def _create_parser():
   parser.add_option('--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('--fs-type', action='store',
-                    help='Subversion file system type (fsfs or bdb)')
+                    help='Subversion file system type (fsfs, bdb or fsx)')
   parser.add_option('--cleanup', action='store_true',
                     help='Whether to clean up')
   parser.add_option('--enable-sasl', action='store_true',
@@ -2026,7 +2029,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
         # it to a number if possible
         for testnum in list(range(1, len(test_list))):
           test_case = TestRunner(test_list[testnum], testnum)
-          if test_case.get_function_name() == str(arg):
+          if test_case.get_function_name() == str(arg).rstrip(','):
             testnums.append(testnum)
             appended = True
             break

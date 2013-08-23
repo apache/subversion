@@ -26,13 +26,13 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_auth.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_dso.h"
 #include "svn_version.h"
 #include "private/svn_dep_compat.h"
@@ -481,7 +481,8 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
               check_list[0].version_query = version_function;
               check_list[1].label = NULL;
               check_list[1].version_query = NULL;
-              SVN_ERR(svn_ver_check_list(svn_subr_version(), check_list));
+              SVN_ERR(svn_ver_check_list2(svn_subr_version(), check_list,
+                                          svn_ver_equal));
             }
           if (apr_dso_sym(&provider_function_symbol,
                           dso,

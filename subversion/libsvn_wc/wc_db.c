@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -48,7 +49,6 @@
 #include "workqueue.h"
 #include "token-map.h"
 
-#include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"

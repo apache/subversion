@@ -57,7 +57,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
-[end]      <AdditionalIncludeDirectories>$(SolutionDir)[configs.name];[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+[end]      <AdditionalIncludeDirectories>$(SolutionDir)[configs.name];[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -65,7 +65,8 @@
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <DisableSpecificWarnings>4100;4127;4206;4701;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4204;4715;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
-    </ClCompile>
+[if-any configs.forced_include_files]      <ForcedIncludeFiles>[for configs.forced_include_files][configs.forced_include_files];[end]%(ForcedIncludeFiles)</ForcedIncludeFiles>
+[end]    </ClCompile>
 [is config_type "Application"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -79,8 +80,8 @@
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-[is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
-[end][if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
+      <IgnoreSpecificDefaultLibraries>[is configs.name "Debug"]msvcrt.lib[end][is configs.name "Release"]msvcrtd.lib[end]</IgnoreSpecificDefaultLibraries>
+[if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
 [else][is config_type "StaticLibrary"]    <Lib>
       <TargetMachine>[is platforms "X64"]MachineX64[else]MachineX86[end]</TargetMachine>
@@ -89,7 +90,7 @@
 [end][end][end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
     <ResourceCompile Include="..\svn.rc">
-[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for includes][includes];[end];%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end];%(PreprocessorDefinitions)</PreprocessorDefinitions>
 [end][end]    </ResourceCompile>
   </ItemGroup>

@@ -125,10 +125,7 @@
 
 (defun vc-svn-registered (file)
   "Return true if FILE is registered under Subversion."
-  ;; First, a quick false positive test: is there a `.svn/entries' file?
-  (and (file-exists-p (expand-file-name ".svn/entries"
-                                        (file-name-directory file)))
-       (not (null (vc-svn-run-status file)))))
+  (not (null (vc-svn-run-status file))))
 
 
 (put 'vc-svn-with-output-buffer 'lisp-indent-function 0)
