@@ -116,7 +116,8 @@ read_config(svn_memcache_t **memcache_p,
   *cache_txdeltas
     = svn_hash__get_bool(fs->config,
                          SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-                         FALSE);
+                         TRUE);
+
   /* by default, cache fulltexts.
    * Most SVN tools care about reconstructed file content.
    * Thus, this is a reasonable default.
@@ -397,6 +398,15 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   membuffer = svn_cache__get_global_membuffer_cache();
 
+  /* General rules for assigning cache priorities:
+   *
+   * - Data that can be reconstructed from other elements has low prio
+   *   (e.g. fulltexts, directories etc.)
+   * - Index data required to find any of the other data has high prio
+   *   (e.g. noderevs)
+   * - everthing else should use default prio
+   */
+
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
 
   /* schedule printing the global access statistics upon pool cleanup,
@@ -440,7 +450,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__dag_deserialize,
                        APR_HASH_KEY_STRING,
                        apr_pstrcat(pool, prefix, "DAG", (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -455,9 +465,9 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        1024, 8,
                        svn_fs_fs__serialize_dir_entries,
                        svn_fs_fs__deserialize_dir_entries,
-                       APR_HASH_KEY_STRING,
+                       sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "DIR", (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -473,7 +483,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        sizeof(svn_revnum_t),
                        apr_pstrcat(pool, prefix, "PACK-MANIFEST",
                                    (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -487,7 +497,21 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_node_revision,
                        sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "NODEREVS", (char *)NULL),
-                       0,
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       fs,
+                       no_handler,
+                       fs->pool));
+
+  /* initialize representation header cache, if caching has been enabled */
+  SVN_ERR(create_cache(&(ffd->rep_header_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_rep_header,
+                       svn_fs_fs__deserialize_rep_header,
+                       sizeof(representation_cache_key_t),
+                       apr_pstrcat(pool, prefix, "REPHEADER", (char *)NULL),
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
@@ -531,7 +555,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "PROP",
                                        (char *)NULL),
-                           0,
+                           SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                            fs,
                            no_handler,
                            fs->pool));
@@ -584,7 +608,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            sizeof(pair_cache_key_t),
                            apr_pstrcat(pool, prefix, "REVPROP",
                                        (char *)NULL),
-                           0,
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                            fs,
                            no_handler,
                            fs->pool));
@@ -603,7 +627,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            svn_fs_fs__serialize_txdelta_window,
                            svn_fs_fs__deserialize_txdelta_window,
-                           APR_HASH_KEY_STRING,
+                           sizeof(window_cache_key_t),
                            apr_pstrcat(pool, prefix, "TXDELTA_WINDOW",
                                        (char *)NULL),
                            0,
@@ -617,7 +641,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            0, 0, /* Do not use inprocess cache */
                            /* Values are svn_stringbuf_t */
                            NULL, NULL,
-                           APR_HASH_KEY_STRING,
+                           sizeof(window_cache_key_t),
                            apr_pstrcat(pool, prefix, "COMBINED_WINDOW",
                                        (char *)NULL),
                            SVN_CACHE__MEMBUFFER_LOW_PRIORITY,

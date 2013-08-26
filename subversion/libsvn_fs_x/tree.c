@@ -2199,7 +2199,6 @@ x_dir_entries(apr_hash_t **table_p,
   return svn_fs_x__dag_dir_entries(table_p, node, pool);
 }
 
-#if 0
 static svn_error_t *
 x_dir_optimal_order(apr_array_header_t **ordered_p,
                     svn_fs_root_t *root,
@@ -2210,7 +2209,6 @@ x_dir_optimal_order(apr_array_header_t **ordered_p,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* Create a new directory named PATH in ROOT.  The new directory has
    no entries, and no properties.  ROOT must be the root of a
@@ -4070,7 +4068,7 @@ static root_vtable_t root_vtable = {
   x_change_node_prop,
   x_props_changed,
   x_dir_entries,
-/*  x_dir_optimal_order,*/
+  x_dir_optimal_order,
   x_make_dir,
   x_copy,
   x_revision_link,
