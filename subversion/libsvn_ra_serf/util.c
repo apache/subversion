@@ -705,6 +705,9 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
  *
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  *
+ * If DAV_HEADERS is non-zero, it will add standard DAV capabilites headers
+ * to request.
+ *
  * REQUEST_POOL should live for the duration of the request. Serf will
  * construct this and provide it to the request_setup callback, so we
  * should just use that one.
@@ -717,6 +720,7 @@ setup_serf_req(serf_request_t *request,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type,
                const char *accept_encoding,
+               svn_boolean_t dav_headers,
                apr_pool_t *request_pool,
                apr_pool_t *scratch_pool)
 {
@@ -786,9 +790,12 @@ setup_serf_req(serf_request_t *request,
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
      hooks") for why. */
-  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+  if (dav_headers)
+    {
+      serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+      serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+      serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2241,7 +2248,8 @@ setup_request(serf_request_t *request,
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
                          handler->session, handler->method, handler->path,
                          body_bkt, handler->body_type, accept_encoding,
-                         request_pool, scratch_pool));
+                         !handler->no_dav_headers, request_pool,
+                         scratch_pool));
 
   if (handler->header_delegate)
     {

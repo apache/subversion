@@ -1033,10 +1033,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if version < (1, 3, 0):
         lib_dir = os.path.join(self.serf_path, 'Release')
         debug_lib_dir = os.path.join(self.serf_path, 'Debug')
+        is_src = True
       else:
         lib_dir = self.serf_path
         debug_lib_dir = None
-      is_src = True
+        inc_dir = self.serf_path
+        is_src = False
     elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-1/serf.h')):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-1')
