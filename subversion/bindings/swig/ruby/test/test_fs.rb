@@ -209,8 +209,12 @@ class SvnFsTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
     end
 
-    assert_raises(Svn::Error::FsNoSuchTransaction) do
+    assert_raises(Svn::Error::FsMalformedTxnId) do
       @fs.open_txn("NOT-EXIST")
+    end
+
+    assert_raises(Svn::Error::FsNoSuchTransaction) do
+      @fs.open_txn("9-9")
     end
 
     start_time = Time.now
