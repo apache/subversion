@@ -36,32 +36,20 @@ module SvnTestUtil
 
       def setup_svnserve
         @svnserve_port = @svnserve_ports.last
-        @svnserve_pid = @svnserve_pid_file
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
 
         @@service_created ||= begin
           @@service_created = true
 
-          svnserve_dir = File.expand_path("svnserve")
-          FileUtils.mkdir_p(svnserve_dir)
-          at_exit do
-            # KILL svnserve
-            FileUtils.rm_rf(svnserve_dir)
-          end
-          trap("INT") do
-            # KILL svnserve
-            FileUtils.rm_rf(svnserve_dir)
-          end
-
-          svnserve_path = File.join(svnserve_dir, "svnserve.exe")
-          svnserve_path = svnserve_path.tr(File::SEPARATOR,
-                                           File::ALT_SEPARATOR)
+          top_directory = File.join(File.dirname(__FILE__), "..", "..", "..", "..", "..")
+          build_type = ENV["BUILD_TYPE"] || "Release"
+          svnserve_path = File.join(top_directory, build_type, 'subversion', 'svnserve', 'svnserve.exe')
           svnserve_path = Svnserve.escape_value(svnserve_path)
 
           root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+          FileUtils.mkdir_p(root)
 
-          puts svnserve_path
-          IO.popen("svnserve.exe --version -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid}")
+          IO.popen("#{svnserve_path} -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid_file}")
           user = ENV["USERNAME"] || Etc.getlogin
         end
         true
