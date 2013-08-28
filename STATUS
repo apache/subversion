@@ -115,6 +115,15 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1518184
+   Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
+   for the specific case where a repository is placed in a Windows drive
+   root.
+   Justification:
+     Improves correctness. Resolves user reported problem.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
