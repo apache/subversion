@@ -127,13 +127,13 @@ public class UtilTests extends SVNTests
         assertTrue(conflicts);
 
         final byte[] expected = ("1\n2\n3\n4\n\n" +
-                                 "<<<<<<< branch" + NL +
+                                 "<<<<<<< branch\n" +
                                  "modified\n" +
-                                 "||||||| base" + NL +
+                                 "||||||| base\n" +
                                  "original\n" +
-                                 "=======" + NL +
+                                 "=======\n" +
                                  "latest\n" +
-                                 ">>>>>>> local" + NL +
+                                 ">>>>>>> local\n" +
                                  "\nN-3\nN-2\nN-1\nN\n").getBytes();
         Assert.assertArrayEquals(expected, result.toByteArray());
     }
