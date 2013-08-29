@@ -131,23 +131,25 @@ public class SVNUtil
      *        This path will be stripped from the beginning of those
      *        file names if they are used in the unidiff index header.
      * @param resultStream The stream that receives the merged output.
+     * @return <code>true</code> if there were differences between the files.
      * @throws ClientException
      */
-    public static void FileDiff(String originalFile,
-                                String modifiedFile,
-                                SVNUtil.DiffOptions diffOptions,
+    public static boolean fileDiff(String originalFile,
+                                   String modifiedFile,
+                                   SVNUtil.DiffOptions diffOptions,
 
-                                String originalHeader,
-                                String modifiedHeader,
-                                String headerEncoding,
-                                String relativeToDir,
+                                   String originalHeader,
+                                   String modifiedHeader,
+                                   String headerEncoding,
+                                   String relativeToDir,
 
-                                OutputStream resultStream)
+                                   OutputStream resultStream)
         throws ClientException
     {
-        new DiffLib().FileDiff(originalFile, modifiedFile, diffOptions,
-                               originalHeader, modifiedHeader, headerEncoding,
-                               relativeToDir, resultStream);
+        return new DiffLib().fileDiff(originalFile, modifiedFile, diffOptions,
+                                      originalHeader, modifiedHeader,
+                                      headerEncoding,
+                                      relativeToDir, resultStream);
     }
 
 
@@ -171,26 +173,27 @@ public class SVNUtil
      * @param conflictSeparator Optional custom conflict separator.
      * @param conflictStyle Determines how conflicts are displayed.
      * @param resultStream The stream that receives the merged output.
+     * @return <code>true</code> if there were any conflicts.
      * @throws ClientException
      */
-    public static void FileMerge(String originalFile,
-                                 String modifiedFile,
-                                 String latestFile,
-                                 DiffOptions diffOptions,
+    public static boolean fileMerge(String originalFile,
+                                    String modifiedFile,
+                                    String latestFile,
+                                    DiffOptions diffOptions,
 
-                                 String conflictOriginal,
-                                 String conflictModified,
-                                 String conflictLatest,
-                                 String conflictSeparator,
-                                 ConflictDisplayStyle conflictStyle,
+                                    String conflictOriginal,
+                                    String conflictModified,
+                                    String conflictLatest,
+                                    String conflictSeparator,
+                                    ConflictDisplayStyle conflictStyle,
 
-                                 OutputStream resultStream)
+                                    OutputStream resultStream)
         throws ClientException
     {
-        new DiffLib().FileMerge(originalFile, modifiedFile, latestFile,
-                                diffOptions,
-                                conflictOriginal, conflictModified,
-                                conflictLatest, conflictSeparator,
-                                conflictStyle, resultStream);
+        return new DiffLib().fileMerge(originalFile, modifiedFile, latestFile,
+                                       diffOptions,
+                                       conflictOriginal, conflictModified,
+                                       conflictLatest, conflictSeparator,
+                                       conflictStyle, resultStream);
     }
 }
