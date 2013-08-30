@@ -35,6 +35,8 @@ import org.junit.Assert;
  */
 public class UtilTests extends SVNTests
 {
+    private final static String NL = System.getProperty("line.separator");
+
     /**
      * Base name of all our tests.
      */
@@ -64,7 +66,7 @@ public class UtilTests extends SVNTests
         }
     }
 
-    private final byte[] fileContentsPrefix = "1\n2\n3\n4".getBytes();
+    private final byte[] fileContentsPrefix = "1\n2\n3\n4\n".getBytes();
     private final byte[] fileContentsSuffix = "N-3\nN-2\nN-1\nN\n".getBytes();
 
     private void writeFileContents(File file, String contents) throws Throwable
@@ -76,29 +78,55 @@ public class UtilTests extends SVNTests
         out.close();
     }
 
+    public void testFileDiff() throws Throwable
+    {
+        File original = File.createTempFile("merge", ".original", localTmp);
+        File modified = File.createTempFile("merge", ".modified", localTmp);
+
+        writeFileContents(original, "\noriginal\n\n");
+        writeFileContents(modified, "\nmodified\n\n");
+
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        boolean diffs =  SVNUtil.fileDiff(original.getAbsolutePath(),
+                                          modified.getAbsolutePath(),
+                                          null, "original", "modified", "UTF-8",
+                                          null, result);
+        assertTrue(diffs);
+
+        final byte[] expected = ("--- original" + NL +
+                                 "+++ modified" + NL +
+                                 "@@ -3,7 +3,7 @@" + NL +
+                                 " 3\n 4\n \n" +
+                                 "-original\n" +
+                                 "+modified\n" +
+                                 " \n N-3\n N-2\n").getBytes();
+        Assert.assertArrayEquals(expected, result.toByteArray());
+    }
+
     public void testFileMerge() throws Throwable
     {
         File original = File.createTempFile("merge", ".original", localTmp);
         File modified = File.createTempFile("merge", ".modified", localTmp);
         File latest = File.createTempFile("merge", ".latest", localTmp);
 
-        writeFileContents(original, "\noriginal\n");
-        writeFileContents(modified, "\nmodified\n");
-        writeFileContents(latest, "\nlatest\n");
+        writeFileContents(original, "\noriginal\n\n");
+        writeFileContents(modified, "\nmodified\n\n");
+        writeFileContents(latest, "\nlatest\n\n");
 
         ByteArrayOutputStream result = new ByteArrayOutputStream();
-        SVNUtil.FileMerge(original.getAbsolutePath(),
-                          modified.getAbsolutePath(),
-                          latest.getAbsolutePath(),
-                          null,
-                          "||||||| base",
-                          "<<<<<<< branch",
-                          ">>>>>>> local",
-                          "=======",
-                          SVNUtil.ConflictDisplayStyle.modified_original_latest,
-                          result);
+        boolean conflicts = SVNUtil.fileMerge(original.getAbsolutePath(),
+                                              modified.getAbsolutePath(),
+                                              latest.getAbsolutePath(),
+                                              null,
+                                              "||||||| base",
+                                              "<<<<<<< branch",
+                                              ">>>>>>> local",
+                                              "=======",
+                                              SVNUtil.ConflictDisplayStyle.modified_original_latest,
+                                              result);
+        assertTrue(conflicts);
 
-        final byte[] expected = ("1\n2\n3\n4\n" +
+        final byte[] expected = ("1\n2\n3\n4\n\n" +
                                  "<<<<<<< branch\n" +
                                  "modified\n" +
                                  "||||||| base\n" +
@@ -106,7 +134,7 @@ public class UtilTests extends SVNTests
                                  "=======\n" +
                                  "latest\n" +
                                  ">>>>>>> local\n" +
-                                 "N-3\nN-2\nN-1\nN\n").getBytes();
+                                 "\nN-3\nN-2\nN-1\nN\n").getBytes();
         Assert.assertArrayEquals(expected, result.toByteArray());
     }
 }

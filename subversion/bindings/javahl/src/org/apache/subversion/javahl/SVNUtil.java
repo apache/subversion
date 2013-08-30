@@ -108,15 +108,60 @@ public class SVNUtil
     }
 
     /**
-     * Given three versions of a file, base
-     * (<code>originalFile</code>), incoming
-     * (<code>modifiedFile</code>) and current
+     * Given two versions of a file, base (<code>originalFile</code>)
+     * and current (<code>modifiedFile</code>), show differences between
+     * them in unified diff format.
+     *
+     * @param originalFile The base file version (unmodified)
+     * @param modifiedFile The incoming file version (locally modified)
+     * @param diffOptions Options controlling how files are compared.
+     *        May be <code>null</code>.
+     * @param originalHeader The header to display for the base file
+     *        in the unidiff index block. If it is <code>null</code>,
+     *        the <code>originalFile</code> path and its modification
+     *        time will be used instead.
+     * @param modifiedHeader The header to display for the current
+     *        file in the unidiff index block. If it is <code>null</code>,
+     *        the <code>currentFile</code> path and its modification
+     *        time will be used instead.
+     * @param headerEncoding The character encoding of the unidiff headers.
+     * @param relativeToDir If this parameter is not <null>, it must
+     *        be the path of a (possibly non-immediate) parent of both
+     *        <code>originalFile</code> and <code>modifiedFile</code>.
+     *        This path will be stripped from the beginning of those
+     *        file names if they are used in the unidiff index header.
+     * @param resultStream The stream that receives the merged output.
+     * @return <code>true</code> if there were differences between the files.
+     * @throws ClientException
+     */
+    public static boolean fileDiff(String originalFile,
+                                   String modifiedFile,
+                                   SVNUtil.DiffOptions diffOptions,
+
+                                   String originalHeader,
+                                   String modifiedHeader,
+                                   String headerEncoding,
+                                   String relativeToDir,
+
+                                   OutputStream resultStream)
+        throws ClientException
+    {
+        return new DiffLib().fileDiff(originalFile, modifiedFile, diffOptions,
+                                      originalHeader, modifiedHeader,
+                                      headerEncoding,
+                                      relativeToDir, resultStream);
+    }
+
+
+    /**
+     * Given three versions of a file, base (<code>originalFile</code>),
+     * incoming (<code>modifiedFile</code>) and current
      * (<code>latestFile</code>, produce a merged result, possibly
      * displaying conflict markers.
      *
      * @param originalFile The base file version (common ancestor)
      * @param modifiedFile The incoming file version (modified elsewhere)
-     * @param latestFile The current file version (modified locally)
+     * @param latestFile The current file version (locally modified)
      * @param diffOptions Options controlling how files are compared.
      *        May be <code>null</code>.
      * @param conflictOriginal Optional custom conflict marker for
@@ -128,25 +173,27 @@ public class SVNUtil
      * @param conflictSeparator Optional custom conflict separator.
      * @param conflictStyle Determines how conflicts are displayed.
      * @param resultStream The stream that receives the merged output.
+     * @return <code>true</code> if there were any conflicts.
+     * @throws ClientException
      */
-    public static void FileMerge(String originalFile,
-                                 String modifiedFile,
-                                 String latestFile,
-                                 DiffOptions diffOptions,
+    public static boolean fileMerge(String originalFile,
+                                    String modifiedFile,
+                                    String latestFile,
+                                    DiffOptions diffOptions,
 
-                                 String conflictOriginal,
-                                 String conflictModified,
-                                 String conflictLatest,
-                                 String conflictSeparator,
-                                 ConflictDisplayStyle conflictStyle,
+                                    String conflictOriginal,
+                                    String conflictModified,
+                                    String conflictLatest,
+                                    String conflictSeparator,
+                                    ConflictDisplayStyle conflictStyle,
 
-                                 OutputStream resultStream)
+                                    OutputStream resultStream)
         throws ClientException
     {
-        new DiffLib().FileMerge(originalFile, modifiedFile, latestFile,
-                                diffOptions,
-                                conflictOriginal, conflictModified,
-                                conflictLatest, conflictSeparator,
-                                conflictStyle, resultStream);
+        return new DiffLib().fileMerge(originalFile, modifiedFile, latestFile,
+                                       diffOptions,
+                                       conflictOriginal, conflictModified,
+                                       conflictLatest, conflictSeparator,
+                                       conflictStyle, resultStream);
     }
 }
