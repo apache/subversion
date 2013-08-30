@@ -143,7 +143,14 @@ class Daemon(object):
       if daemon_accepting.signalled:
         # the daemon is up and running, so save the pid and return success.
         if self.pidfile:
-          open(self.pidfile, 'w').write('%d\n' % pid)
+          # Be wary of symlink attacks
+          try:
+            os.remove(self.pidfile)
+          except OSError:
+            pass
+          fd = os.open(self.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0444)
+          os.write(fd, '%d\n' % pid)
+          os.close(fd)
         return DAEMON_STARTED
 
       # some other signal popped us out of the pause. the daemon might not

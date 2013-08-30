@@ -27,7 +27,7 @@
 # testing are:
 #   - Subversion built using --enable-shared --enable-dso --with-apxs options,
 #   - Working Apache 2 HTTPD Server with the apxs program reachable through
-#     PATH or specified via the APXS environment variable,
+#     PATH or specified via the APXS Makefile variable or environment variable,
 #   - Modules dav_module and log_config_module compiled as DSO or built into
 #     Apache HTTPD Server executable.
 # The basic intension of this script is to be able to perform "make check"
@@ -159,6 +159,17 @@ get_prog_name() {
 # Don't assume sbin is in the PATH.
 PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
+# Find the source and build directories. The build dir can be found if it is
+# the current working dir or the source dir.
+ABS_SRCDIR=$(cd ${SCRIPTDIR}/../../../; pwd)
+if [ -x subversion/svn/svn ]; then
+  ABS_BUILDDIR=$(pwd)
+elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
+  ABS_BUILDDIR=$ABS_SRCDIR
+else
+  fail "Run this script from the root of Subversion's build tree!"
+fi
+
 # Remove any proxy environmental variables that affect wget or curl.
 # We don't need a proxy to connect to localhost and having the proxy
 # environmental variables set breaks the Apache configuration file
@@ -169,10 +180,18 @@ unset http_proxy
 unset HTTPS_PROXY
 
 # Pick up value from environment or PATH (also try apxs2 - for Debian)
-[ ${APXS:+set} ] \
- || APXS=$(which apxs) \
- || APXS=$(which apxs2) \
- || fail "neither apxs or apxs2 found - required to run davautocheck"
+if [ ${APXS:+set} ]; then
+  :
+elif APXS=$(grep '^APXS' $ABS_BUILDDIR/Makefile | sed 's/^APXS *= *//') && \
+     [ -n "$APXS" ]; then
+  :
+elif APXS=$(which apxs); then
+  :
+elif APXS=$(which apxs2); then
+  :
+else
+  fail "neither apxs or apxs2 found - required to run davautocheck"
+fi
 
 [ -x $APXS ] || fail "Can't execute apxs executable $APXS"
 
@@ -193,17 +212,6 @@ fi
 CACHE_REVPROPS_SETTING=off
 if [ ${CACHE_REVPROPS:+set} ]; then
   CACHE_REVPROPS_SETTING=on
-fi
-
-# Find the source and build directories. The build dir can be found if it is
-# the current working dir or the source dir.
-ABS_SRCDIR=$(cd ${SCRIPTDIR}/../../../; pwd)
-if [ -x subversion/svn/svn ]; then
-  ABS_BUILDDIR=$(pwd)
-elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
-  ABS_BUILDDIR=$ABS_SRCDIR
-else
-  fail "Run this script from the root of Subversion's build tree!"
 fi
 
 if [ ${MODULE_PATH:+set} ]; then

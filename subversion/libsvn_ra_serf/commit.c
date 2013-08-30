@@ -397,10 +397,18 @@ checkout_dir(dir_context_t *dir,
     {
       if (p_dir->added)
         {
+          /* Calculate the working_url by skipping the shared ancestor bewteen
+           * the parent->relpath and dir->relpath.  This is safe since an
+           * add is guaranteed to have a parent that is checked out. */
+          dir_context_t *parent = p_dir->parent_dir;
+          const char *relpath = svn_relpath_skip_ancestor(parent->relpath,
+                                                          dir->relpath);
+
           /* Implicitly checkout this dir now. */
+          SVN_ERR_ASSERT(parent->working_url);
           dir->working_url = svn_path_url_add_component2(
-                                   dir->parent_dir->working_url,
-                                   dir->name, dir->pool);
+                                   parent->working_url,
+                                   relpath, dir->pool);
           return SVN_NO_ERROR;
         }
       p_dir = p_dir->parent_dir;
