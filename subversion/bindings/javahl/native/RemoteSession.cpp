@@ -36,6 +36,7 @@
 #include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
+#include "svn_delta.h"
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
@@ -1173,10 +1174,14 @@ public:
                                // We ignore the deltas as they're not
                                // exposed in the JavaHL API.
                                svn_boolean_t result_of_merge,
-                               svn_txdelta_window_handler_t*, void**,
+                               svn_txdelta_window_handler_t* delta_handler,
+                               void** delta_handler_baton,
                                apr_array_header_t* prop_diffs,
                                apr_pool_t* scratch_pool)
     {
+      *delta_handler = svn_delta_noop_window_handler;
+      *delta_handler_baton = NULL;
+
       FileRevisionHandler* const self =
         static_cast<FileRevisionHandler*>(baton);
       SVN_ERR_ASSERT(self->m_jcallback != NULL);
