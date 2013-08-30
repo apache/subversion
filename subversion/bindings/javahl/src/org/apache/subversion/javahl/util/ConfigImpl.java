@@ -21,10 +21,14 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.util;
+
+import org.apache.subversion.javahl.ISVNConfig;
+import org.apache.subversion.javahl.ClientException;
 
 import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
+
 
 /**
  * Implementation of ISVNConfig.
