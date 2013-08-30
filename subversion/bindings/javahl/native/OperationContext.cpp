@@ -411,7 +411,7 @@ OperationContext::notifyConfigLoad()
         return;
     }
 
-  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/ConfigImpl");
+  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/util/ConfigImpl");
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
