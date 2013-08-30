@@ -901,6 +901,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   $2 = (void *)baton;
 }
 #endif
+#ifdef SWIGPERL
+%ignore svn_fs_set_warning_func;
+#endif
+#ifdef SWIGPYTHON
+%ignore svn_fs_set_warning_func;
+#endif
 
 /* -----------------------------------------------------------------------
    svn_stream_t interoperability with language native io handles

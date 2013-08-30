@@ -403,8 +403,9 @@ static svn_error_t *write_pid_file(const char *filename, apr_pool_t *pool)
   const char *contents = apr_psprintf(pool, "%" APR_PID_T_FMT "\n",
                                              getpid());
 
+  SVN_ERR(svn_io_remove_file2(filename, TRUE, pool));
   SVN_ERR(svn_io_file_open(&file, filename,
-                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_WRITE | APR_CREATE | APR_EXCL,
                            APR_OS_DEFAULT, pool));
   SVN_ERR(svn_io_file_write_full(file, contents, strlen(contents), NULL,
                                  pool));

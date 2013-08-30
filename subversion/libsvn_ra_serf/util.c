@@ -242,11 +242,12 @@ ssl_server_cert(void *baton, int failures,
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
           if (apr_fnmatch(s, conn->hostname,
-                          APR_FNM_PERIOD) == APR_SUCCESS) {
+                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+            {
               found_matching_hostname = 1;
               cert_info.hostname = s;
               break;
-          }
+            }
       }
   }
 
@@ -254,7 +255,7 @@ ssl_server_cert(void *baton, int failures,
   if (!found_matching_hostname && cert_info.hostname)
     {
       if (apr_fnmatch(cert_info.hostname, conn->hostname,
-                      APR_FNM_PERIOD) == APR_FNM_NOMATCH)
+                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
         }
