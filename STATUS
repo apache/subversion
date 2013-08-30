@@ -136,7 +136,7 @@ Candidate changes:
      The dependency handling on Windows was updated for 1.9+, so this
      needs a specific backport patch (r1517123)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
  * r1518184
    Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
