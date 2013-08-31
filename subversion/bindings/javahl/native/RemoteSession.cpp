@@ -67,7 +67,6 @@ jobject
 RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
-                    jobject jconfigHandler,
                     jstring jusername, jstring jpassword,
                     jobject jprompter, jobject jprogress)
 {
@@ -112,7 +111,7 @@ RemoteSession::open(jint jretryAttempts,
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
-      jconfigHandler, usernameStr, passwordStr, prompter, jprogress);
+      usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
@@ -124,7 +123,7 @@ RemoteSession::open(jint jretryAttempts,
 jobject
 RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
-                    const char* configDirectory, jobject jconfigHandler,
+                    const char* configDirectory,
                     const char*  usernameStr, const char*  passwordStr,
                     Prompter*& prompter, jobject jprogress)
 {
@@ -141,7 +140,7 @@ RemoteSession::open(jint jretryAttempts,
   jobject jthis_out = NULL;
   RemoteSession* session = new RemoteSession(
       &jthis_out, jretryAttempts, url, uuid,
-      configDirectory, jconfigHandler,
+      configDirectory,
       usernameStr, passwordStr, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
@@ -167,7 +166,6 @@ namespace{
 RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
-                             jobject jconfigHandler,
                              const char*  username, const char*  password,
                              Prompter*& prompter, jobject jprogress)
   : m_session(NULL), m_context(NULL)
@@ -194,7 +192,7 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
     return;
 
   m_context = new RemoteSessionContext(
-      jremoteSession, pool, configDirectory, jconfigHandler,
+      jremoteSession, pool, configDirectory,
       username, password, prompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return;

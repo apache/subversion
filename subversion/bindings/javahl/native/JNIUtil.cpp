@@ -35,6 +35,7 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <apr_file_info.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -44,7 +45,7 @@
 #include "svn_dso.h"
 #include "svn_path.h"
 #include "svn_cache_config.h"
-#include <apr_file_info.h>
+#include "private/svn_atomic.h"
 #include "svn_private_config.h"
 #ifdef WIN32
 /* FIXME: We're using an internal APR header here, which means we
@@ -68,6 +69,7 @@ apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
+JNIMutex *JNIUtil::g_configMutex = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
@@ -111,12 +113,10 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
   // This method has to be run only once during the run a program.
-  static bool run = false;
-  svn_error_t *err;
-  if (run) // already run
+  static volatile svn_atomic_t once = 0;
+  svn_atomic_t done = svn_atomic_cas(&once, 1, 0);
+  if (done)
     return true;
-
-  run = true;
 
   // Do not run this part more than one time.  This leaves a small
   // time window when two threads create their first SVNClient and
@@ -128,8 +128,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_inInit = true;
   g_initEnv = env;
 
+  svn_error_t *err;
   apr_status_t status;
-
 
 
   /* Initialize the APR subsystem, and register an atexit() function
@@ -265,6 +265,10 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     return false;
 
   g_logMutex = new JNIMutex(g_pool);
+  if (isExceptionThrown())
+    return false;
+
+  g_configMutex = new JNIMutex(g_pool);
   if (isExceptionThrown())
     return false;
 
