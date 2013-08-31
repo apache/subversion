@@ -57,13 +57,11 @@ public class RemoteFactory
      * Initializing constructor. Any or all of its arguments may be null.
      */
     public RemoteFactory(String configDirectory,
-                         ConfigEvent configHandler,
                          String username, String password,
                          UserPasswordCallback prompt,
                          ProgressCallback progress)
     {
         setConfigDirectory(configDirectory);
-        setConfigEventHandler(configHandler);
         setUsername(username);
         setPassword(password);
         setPrompt(prompt);
@@ -127,16 +125,6 @@ public class RemoteFactory
     }
 
     /**
-     * Set an event handler that will be called every time the
-     * configuration is loaded.
-     */
-    public void setConfigEventHandler(ConfigEvent configHandler)
-    {
-        this.configHandler = configHandler;
-    }
-
-
-    /**
      * Open a persistent session to a repository.
      * <p>
      * <b>Note:</b> The URL can point to a subtree of the repository.
@@ -152,8 +140,7 @@ public class RemoteFactory
     public ISVNRemote openRemoteSession(String url)
             throws ClientException, SubversionException
     {
-        return open(1, url, null,
-                    configDirectory, configHandler,
+        return open(1, url, null, configDirectory,
                     username, password, prompt, progress);
     }
 
@@ -180,8 +167,7 @@ public class RemoteFactory
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return open(retryAttempts, url, null,
-                    configDirectory, configHandler,
+        return open(retryAttempts, url, null, configDirectory,
                     username, password, prompt, progress);
     }
 
@@ -208,8 +194,7 @@ public class RemoteFactory
     {
         if (reposUUID == null)
             throw new IllegalArgumentException("reposUUID may not be null");
-        return open(1, url, reposUUID,
-                    configDirectory, configHandler,
+        return open(1, url, reposUUID, configDirectory,
                     username, password, prompt, progress);
     }
 
@@ -243,13 +228,11 @@ public class RemoteFactory
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return open(retryAttempts, url, reposUUID,
-                    configDirectory, configHandler,
+        return open(retryAttempts, url, reposUUID, configDirectory,
                     username, password, prompt, progress);
     }
 
     private String configDirectory;
-    private ConfigEvent configHandler;
     private String username;
     private String password;
     private UserPasswordCallback prompt;
@@ -259,7 +242,6 @@ public class RemoteFactory
     private static native ISVNRemote open(int retryAttempts,
                                           String url, String reposUUID,
                                           String configDirectory,
-                                          ConfigEvent configHandler,
                                           String username, String password,
                                           UserPasswordCallback prompt,
                                           ProgressCallback progress)

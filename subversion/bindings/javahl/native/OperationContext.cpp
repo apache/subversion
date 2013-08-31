@@ -28,6 +28,7 @@
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
+#include "GlobalConfig.h"
 #include "OperationContext.h"
 #include "JNIUtil.h"
 #include "JNICriticalSection.h"
@@ -77,6 +78,10 @@ OperationContext::attachJavaObject(
     return;
 
   env->DeleteLocalRef(jctx);
+
+  m_jcfgcb = env->NewGlobalRef(GlobalConfig::getConfigCallback());
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 }
 
 OperationContext::~OperationContext()
@@ -123,65 +128,78 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
       return NULL;
     }
 
-  svn_config_t *config = reinterpret_cast<svn_config_t *>(apr_hash_get(configData,
+  svn_config_t *config = static_cast<svn_config_t *>(apr_hash_get(configData,
       SVN_CONFIG_CATEGORY_CONFIG, APR_HASH_KEY_STRING));
+
+  const bool use_native_store = GlobalConfig::useNativeCredentialsStore();
 
   /* The whole list of registered providers */
   apr_array_header_t *providers;
-
-  /* Populate the registered providers with the platform-specific providers */
-  SVN_JNI_ERR(
-      svn_auth_get_platform_specific_client_providers(&providers, config, pool),
-      NULL);
-
-  /* Use the prompter (if available) to prompt for password and cert
-   * caching. */
-  svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
-  void *plaintext_prompt_baton = NULL;
-  svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
-  void *plaintext_passphrase_prompt_baton = NULL;
-
-  if (m_prompter != NULL)
-    {
-      plaintext_prompt_func = Prompter::plaintext_prompt;
-      plaintext_prompt_baton = m_prompter;
-      plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
-      plaintext_passphrase_prompt_baton = m_prompter;
-    }
-
-  /* The main disk-caching auth providers, for both
-   * 'username/password' creds and 'username' creds.  */
   svn_auth_provider_object_t *provider;
 
-  svn_auth_get_simple_provider2(&provider, plaintext_prompt_func,
-      plaintext_prompt_baton, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  if (use_native_store)
+    {
+      /* Populate the registered providers with the platform-specific providers */
+      SVN_JNI_ERR(
+          svn_auth_get_platform_specific_client_providers(
+              &providers, config, pool),
+          NULL);
 
-  svn_auth_get_username_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      /* Use the prompter (if available) to prompt for password and cert
+       * caching. */
+      svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
+      void *plaintext_prompt_baton = NULL;
+      svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
+      void *plaintext_passphrase_prompt_baton = NULL;
 
-  /* The server-cert, client-cert, and client-cert-password providers. */
-  SVN_JNI_ERR(
-      svn_auth_get_platform_specific_provider(&provider, "windows", "ssl_server_trust", pool),
-      NULL);
+      if (m_prompter != NULL)
+        {
+          plaintext_prompt_func = Prompter::plaintext_prompt;
+          plaintext_prompt_baton = m_prompter;
+          plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
+          plaintext_passphrase_prompt_baton = m_prompter;
+        }
 
-  if (provider)
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      /* The main disk-caching auth providers, for both
+       * 'username/password' creds and 'username' creds.  */
 
-  svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  svn_auth_get_ssl_client_cert_pw_file_provider2(&provider,
-      plaintext_passphrase_prompt_func, plaintext_passphrase_prompt_baton,
-      pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_simple_provider2(&provider, plaintext_prompt_func,
+                                    plaintext_prompt_baton, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_username_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      /* The server-cert, client-cert, and client-cert-password providers. */
+      SVN_JNI_ERR(
+          svn_auth_get_platform_specific_provider(
+              &provider, "windows", "ssl_server_trust", pool),
+          NULL);
+
+      if (provider)
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_ssl_client_cert_pw_file_provider2(
+          &provider,
+          plaintext_passphrase_prompt_func, plaintext_passphrase_prompt_baton,
+          pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    }
+  else
+    {
+      // Not using hte native credentials store, start with an empty
+      // providers array.
+      providers = apr_array_make(pool, 0, sizeof(svn_auth_provider_object_t *));
+    }
 
   if (m_prompter != NULL)
     {
       /* Two basic prompt providers: username/password, and just username.*/
       provider = m_prompter->getProviderSimple(in_pool);
-
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
       provider = m_prompter->getProviderUsername(in_pool);
@@ -254,32 +272,10 @@ OperationContext::setConfigDirectory(const char *configDir)
   m_config = NULL;
 }
 
-void
-OperationContext::setConfigCallback(jobject configCallback)
-{
-  JNIEnv* env = JNIUtil::getEnv();
-
-  if (m_jcfgcb)
-    {
-      env->DeleteGlobalRef(m_jcfgcb);
-      m_jcfgcb = NULL;
-    }
-  if (configCallback)
-    {
-      m_jcfgcb = env->NewGlobalRef(configCallback);
-      env->DeleteLocalRef(configCallback);
-    }
-}
-
 const char *
 OperationContext::getConfigDirectory() const
 {
   return (m_configDir.empty() ? NULL : m_configDir.c_str());
-}
-
-jobject OperationContext::getConfigCallback() const
-{
-  return m_jcfgcb;
 }
 
 const char *
@@ -411,7 +407,7 @@ OperationContext::notifyConfigLoad()
         return;
     }
 
-  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/ConfigImpl");
+  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/util/ConfigImpl");
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

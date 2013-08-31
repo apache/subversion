@@ -23,12 +23,97 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.util.*;
 
 import java.io.OutputStream;
 
 public class SVNUtil
 {
+    //
+    // Global configuration
+    //
+
+    /**
+     * Enable storing authentication credentials in Subversion's
+     * standard credentials store in the configuration directory and
+     * system-specific secure locations.
+     * <p>
+     * The standard credentials store is enabled by default.
+     * <p>
+     * This setting will be inherited by all ISVNClient and ISVNRemote
+     * objects. Changing the setting will not affect existing such
+     * objects.
+     * @throws ClientException
+     */
+    public static void enableNativeCredentialsStore()
+        throws ClientException
+      {
+          new ConfigLib().enableNativeCredentialsStore();
+      }
+
+    /**
+     * Disable storing authentication credentials in Subversion's
+     * standard credentials store in the configuration directory and
+     * system-specific secure locations. In this mode, the
+     * authentication (see {@link ISVNClient#setPrompt} and {@link
+     * remote.RemoteFactory#setPrompt}) will be called every time the
+     * underlying library needs access to the credentials.
+     * <p>
+     * This mode is intented to support client implementations that
+     * use their own credentials store.
+     * <p>
+     * The standard credentials store is enabled by default.
+     * <p>
+     * This setting will be inherited by all ISVNClient and ISVNRemote
+     * objects. Changing the setting will not affect existing such
+     * objects.
+     * @throws ClientException
+     */
+    public static void disableNativeCredentialsStore()
+        throws ClientException
+      {
+          new ConfigLib().disableNativeCredentialsStore();
+      }
+
+    /**
+     * Find out if the standard credentials store is enabled.
+     */
+    public static boolean isNativeCredentialsStoreEnabled()
+        throws ClientException
+      {
+          return new ConfigLib().isNativeCredentialsStoreEnabled();
+      }
+
+    /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded.
+     * <p>
+     * This setting will be inherited by all ISVNClient and ISVNRemote
+     * objects. Changing the setting will not affect existing such
+     * objects.
+     * @throws ClientException
+     */
+    public static void setConfigEventHandler(ConfigEvent configHandler)
+        throws ClientException
+      {
+          new ConfigLib().setConfigEventHandler(configHandler);
+      }
+
+    /**
+     * Return a reference to the installed configuration event
+     * handler. The returned value may be <code>null</code>.
+     */
+    public static ConfigEvent getConfigEventHandler()
+        throws ClientException
+      {
+          return new ConfigLib().getConfigEventHandler();
+      }
+
+    //
+    // Diff and Merge
+    //
+
     /**
      * Options to control the behaviour of the file diff routines.
      */
