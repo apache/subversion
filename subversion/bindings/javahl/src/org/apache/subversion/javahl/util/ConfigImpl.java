@@ -21,10 +21,14 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.util;
+
+import org.apache.subversion.javahl.ISVNConfig;
+import org.apache.subversion.javahl.ClientException;
 
 import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.callback.*;
+
 
 /**
  * Implementation of ISVNConfig.
@@ -67,24 +71,15 @@ class ConfigImpl implements ISVNConfig
         public long get(String section, String option, long defaultValue)
             throws ClientException
         {
-            String dflt = Long.toString(defaultValue, 10);
-            String val = get_str(category, context, section, option, dflt);
-            return Long.valueOf(val, 10).longValue();
+            return get_long(category, context, section, option, defaultValue);
         }
 
         public Tristate get(String section, String option,
                             String unknown, Tristate defaultValue)
             throws ClientException
         {
-            String str = get_str(category, context, section, option, null);
-            if (str == null)
-                return defaultValue;
-            if (str.equalsIgnoreCase(unknown))
-                return Tristate.Unknown;
-
-            boolean val = get_bool(category, context,
-                                   section, option, false);
-            return (val ? Tristate.True : Tristate.False);
+            return get_tri(category, context, section, option,
+                           unknown, defaultValue);
         }
 
         public String getYesNoAsk(String section, String option,
@@ -106,8 +101,7 @@ class ConfigImpl implements ISVNConfig
 
         public void set(String section, String option, long value)
         {
-            set_str(category, context, section, option,
-                    Long.toString(value, 10));
+            set_long(category, context, section, option, value);
         }
 
         public Iterable<String> sections()
@@ -142,6 +136,14 @@ class ConfigImpl implements ISVNConfig
                                         String secton, String option,
                                         boolean defaultValue)
             throws ClientException;
+        private native long get_long(String category, long context,
+                                     String secton, String option,
+                                     long defaultValue)
+            throws ClientException;
+        private native Tristate get_tri(String category, long context,
+                                        String secton, String option,
+                                        String unknown, Tristate defaultValue)
+            throws ClientException;
         private native String get_yna(String category, long context,
                                       String secton, String option,
                                       String defaultValue)
@@ -152,6 +154,9 @@ class ConfigImpl implements ISVNConfig
         private native void set_bool(String category, long context,
                                      String section, String option,
                                      boolean value);
+        private native void set_long(String category, long context,
+                                     String section, String option,
+                                     long value);
         private native Iterable<String> sections(String category,
                                                  long context);
         private native void enumerate(String category, long context,

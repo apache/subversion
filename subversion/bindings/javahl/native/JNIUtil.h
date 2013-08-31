@@ -164,6 +164,11 @@ class JNIUtil
   };
   typedef std::vector<message_stack_item> error_message_stack_t;
 
+  /**
+   * Mutex that secures the global configuration object.
+   */
+  static JNIMutex *g_configMutex;
+
  private:
   static void assembleErrorMessage(svn_error_t *err, int depth,
                                    apr_status_t parent_apr_err,

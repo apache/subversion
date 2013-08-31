@@ -20,12 +20,12 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_apache_subversion_javahl_ConfigImpl_Category.cpp
+ * @file org_apache_subversion_javahl_util_ConfigImpl_Category.cpp
  * @brief Implementation of the native methods in the Java class
- *        ConfigImpl.Category.
+ *        util.ConfigImpl.Category.
  */
 
-#include "../include/org_apache_subversion_javahl_ConfigImpl_Category.h"
+#include "../include/org_apache_subversion_javahl_util_ConfigImpl_Category.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
 #include "JNIStringHolder.h"
@@ -94,7 +94,7 @@ struct ImplContext
 
 
 JNIEXPORT jstring JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_get_1str(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_get_1str(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jstring joption, jstring jdefault_value)
 {
@@ -113,7 +113,7 @@ Java_org_apache_subversion_javahl_ConfigImpl_00024Category_get_1str(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_get_1bool(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_get_1bool(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jstring joption, jboolean jdefault_value)
 {
@@ -129,7 +129,7 @@ Java_org_apache_subversion_javahl_ConfigImpl_00024Category_get_1bool(
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_get_1yna(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_get_1yna(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jstring joption, jstring jdefault_value)
 {
@@ -145,12 +145,12 @@ Java_org_apache_subversion_javahl_ConfigImpl_00024Category_get_1yna(
                   ctx.m_config, &value,
                   ctx.m_section.c_str(), ctx.m_option.c_str(),
                   default_value.c_str()),
-              NULL);
+              NULL);              
   return JNIUtil::makeJString(value);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_set_1str(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_set_1str(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jstring joption, jstring jvalue)
 {
@@ -167,7 +167,7 @@ Java_org_apache_subversion_javahl_ConfigImpl_00024Category_set_1str(
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_set_1bool(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_set_1bool(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jstring joption, jboolean jvalue)
 {
@@ -180,7 +180,7 @@ Java_org_apache_subversion_javahl_ConfigImpl_00024Category_set_1bool(
 }
 
 JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_sections(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_sections(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext)
 {
   JNIEntry(ConfigImpl$Category, sections);
@@ -210,7 +210,7 @@ Java_org_apache_subversion_javahl_ConfigImpl_00024Category_sections(
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_ConfigImpl_00024Category_enumerate(
+Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_enumerate(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jobject jhandler)
 {

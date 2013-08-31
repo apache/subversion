@@ -68,14 +68,12 @@ public class SVNRemoteTests extends SVNTests
         thisTest = new OneTest();
     }
 
-    public static ISVNRemote getSession(String url, String configDirectory,
-                                        ConfigEvent configHandler)
+    public static ISVNRemote getSession(String url, String configDirectory)
     {
         try
         {
             RemoteFactory factory = new RemoteFactory();
             factory.setConfigDirectory(configDirectory);
-            factory.setConfigEventHandler(configHandler);
             factory.setUsername(USERNAME);
             factory.setPassword(PASSWORD);
             factory.setPrompt(new DefaultPromptUserPassword());
@@ -92,7 +90,7 @@ public class SVNRemoteTests extends SVNTests
 
     private ISVNRemote getSession()
     {
-        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath(), null);
+        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
     }
 
     /**
@@ -111,7 +109,7 @@ public class SVNRemoteTests extends SVNTests
         try
         {
             session = new RemoteFactory(
-                super.conf.getAbsolutePath(), null,
+                super.conf.getAbsolutePath(),
                 USERNAME, PASSWORD,
                 new DefaultPromptUserPassword(), null)
                 .openRemoteSession(getTestRepoUrl());
@@ -525,10 +523,13 @@ public class SVNRemoteTests extends SVNTests
                 }
             };
 
-        ISVNRemote session = getSession(getTestRepoUrl(),
-                                        super.conf.getAbsolutePath(),
-                                        handler);
-        session.getLatestRevision(); // Make sure the configuration gets loaded
+        try {
+            SVNUtil.setConfigEventHandler(handler);
+            ISVNRemote session = getSession();
+            session.getLatestRevision();
+        } finally {
+            SVNUtil.setConfigEventHandler(null);
+        }
     }
 
     public void testTrivialMergeinfo() throws Exception
