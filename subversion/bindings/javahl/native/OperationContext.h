@@ -79,7 +79,6 @@ class OperationContext
   virtual bool isCancelledOperation();
   jobject getSelf() const;
   const char *getConfigDirectory() const;
-  jobject getConfigCallback() const;
   const char *getUsername() const;
   const char *getPassword() const;
   const Prompter& getPrompter() const;
@@ -90,12 +89,6 @@ class OperationContext
    * specified location.
    */
   void setConfigDirectory(const char *configDir);
-
-  /**
-   * Set the config ConfigCallback instance to call when configuration
-   * is loaded..
-   */
-  void setConfigCallback(jobject configCallback);
 
   /**
    * Return configuration data for the context.

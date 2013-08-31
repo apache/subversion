@@ -20,30 +20,20 @@
  * ====================================================================
  * @endcopyright
  *
- * @file RemoteSessionContext.h
- * @brief Interface of the class RemoteSessionContext
+ * @file GlobalConfig.h
+ * @brief Interface of the class GlobalConfig
  */
 
-#ifndef JAVAHL_REMOTE_SESSION_CONTEXT_H
-#define JAVAHL_REMOTE_SESSION_CONTEXT_H
+#ifndef JAVAHL_GLOBAL_CONFIG_H
+#define JAVAHL_GLOBAL_CONFIG_H
 
-#include "svn_ra.h"
+#include "JNIUtil.h"
 
-#include "OperationContext.h"
-
-class RemoteSessionContext : public OperationContext
+class GlobalConfig
 {
-  public:
-    RemoteSessionContext(jobject contextHolder, SVN::Pool &pool,
-                         const char* jconfigDirectory,
-                         const char* jusername, const char* jpassword,
-                         Prompter* prompter, jobject jprogress);
-    virtual ~RemoteSessionContext();
-    void * getCallbackBaton();
-    svn_ra_callbacks2_t* getCallbacks();
-
-  private:
-    svn_ra_callbacks2_t* m_raCallbacks;
+ public:
+  static bool useNativeCredentialsStore();
+  static jobject getConfigCallback();
 };
 
-#endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */
+#endif  // JAVAHL_GLOBAL_CONFIG_H
