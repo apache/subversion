@@ -111,13 +111,6 @@
  * on their hash key.
  */
 
-/* A 16-way associative cache seems to be a good compromise between
- * performance (worst-case lookups) and efficiency-loss due to collisions.
- *
- * This value may be changed to any positive integer.
- */
-#define GROUP_SIZE 16
-
 /* For more efficient copy operations, let's align all data items properly.
  * Must be a power of 2.
  */
@@ -336,10 +329,11 @@ typedef struct entry_t
    */
   apr_uint64_t offset;
 
-  /* Size of the serialized item data. May be 0.
+  /* Size of the serialized item data. May be 0.  The MAX_ITEM_SIZE macro
+   * above ensures that there will be no overflows.
    * Only valid for used entries.
    */
-  apr_size_t size;
+  apr_uint32_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
@@ -372,15 +366,43 @@ typedef struct entry_t
 #endif
 } entry_t;
 
-/* We group dictionary entries to make this GROUP-SIZE-way associative.
+/* Group header struct.
  */
-typedef struct entry_group_t
+typedef struct group_header_t
 {
   /* number of entries used [0 .. USED-1] */
   apr_uint32_t used;
 
+} group_header_t;
+
+/* The size of the group struct should be a power of two make sure it does
+ * not cross memory page boundaries.  Since we already access the cache
+ * randomly, having two page table lookups instead of one is bad.
+ */
+#define GROUP_BLOCK_SIZE 512
+
+/* A ~10-way associative cache seems to be a good compromise between
+ * performance (worst-case lookups) and efficiency-loss due to collisions.
+ *
+ * This value may be changed to any positive integer.
+ */
+#define GROUP_SIZE \
+          ((GROUP_BLOCK_SIZE - sizeof(group_header_t)) / sizeof(entry_t))
+
+/* We group dictionary entries to make this GROUP-SIZE-way associative.
+ */
+typedef struct entry_group_t
+{
+  /* group globals */
+  group_header_t header;
+  
+  /* padding and also room for future extensions */
+  char padding[GROUP_BLOCK_SIZE - sizeof(group_header_t)
+               - sizeof(entry_t) * GROUP_SIZE];
+
   /* the actual entries */
   entry_t entries[GROUP_SIZE];
+
 } entry_group_t;
 
 /* Per-cache level header structure.  Instances of this are members of
@@ -767,7 +789,8 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   apr_uint32_t idx = get_index(cache, entry);
   apr_uint32_t group_index = idx / GROUP_SIZE;
   entry_group_t *group = &cache->directory[group_index];
-  apr_uint32_t last_in_group = group_index * GROUP_SIZE + group->used - 1;
+  apr_uint32_t last_in_group 
+    = group_index * GROUP_SIZE + group->header.used - 1;
   cache_level_t *level = get_cache_level(cache, entry);
 
   /* Only valid to be called for used entries.
@@ -806,7 +829,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* unlink it from the chain of used entries
    */
   unchain_entry(cache, level, entry, idx);
-  
+
   /* Move last entry into hole (if the removed one is not the last used).
    * We need to do this since all used entries are at the beginning of
    * the group's entries array.
@@ -815,7 +838,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
     {
       /* copy the last used entry to the removed entry's index
        */
-      *entry = group->entries[group->used-1];
+      *entry = group->entries[group->header.used-1];
 
       /* this ENTRY may belong to a different cache level than the entry
        * we have just removed */
@@ -839,7 +862,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
 
   /* Update the number of used entries.
    */
-  group->used--;
+  group->header.used--;
 }
 
 /* Insert ENTRY into the chain of used dictionary entries. The entry's
@@ -860,7 +883,7 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
    * It must also be the first unused entry in the group.
    */
   assert(entry->offset == level->current_data);
-  assert(idx == group_index * GROUP_SIZE + group->used);
+  assert(idx == group_index * GROUP_SIZE + group->header.used);
   level->current_data = ALIGN_VALUE(entry->offset + entry->size);
 
   /* update usage counters
@@ -868,7 +891,7 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
   cache->used_entries++;
   cache->data_used += entry->size;
   entry->hit_count = 0;
-  group->used++;
+  group->header.used++;
 
   /* update entry chain
    */
@@ -941,7 +964,7 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
     last_index = cache->group_count;
 
   for (i = first_index; i < last_index; ++i)
-    cache->directory[i].used = 0;
+    cache->directory[i].header.used = 0;
 
   /* set the "initialized" bit for these groups */
   bit_mask
@@ -995,7 +1018,7 @@ find_entry(svn_membuffer_t *cache,
 
   /* try to find the matching entry
    */
-  for (i = 0; i < group->used; ++i)
+  for (i = 0; i < group->header.used; ++i)
     if (   to_find[0] == group->entries[i].key[0]
         && to_find[1] == group->entries[i].key[1])
       {
@@ -1014,7 +1037,7 @@ find_entry(svn_membuffer_t *cache,
     {
       /* if there is no empty entry, delete the oldest entry
        */
-      if (group->used == GROUP_SIZE)
+      if (group->header.used == GROUP_SIZE)
         {
           /* every entry gets the same chance of being removed.
            * Otherwise, we free the first entry, fill it and remove it
@@ -1041,7 +1064,7 @@ find_entry(svn_membuffer_t *cache,
 
       /* initialize entry for the new key
        */
-      entry = &group->entries[group->used];
+      entry = &group->entries[group->header.used];
       entry->key[0] = to_find[0];
       entry->key[1] = to_find[1];
     }
@@ -2574,7 +2597,7 @@ svn_membuffer_get_segment_info(svn_membuffer_t *segment,
     for (i = 0; i < segment->group_count; ++i)
       {
         apr_size_t use
-          = MIN(segment->directory[i].used,
+          = MIN(segment->directory[i].header.used,
                 sizeof(info->histogram) / sizeof(info->histogram[0]) - 1);
         info->histogram[use]++;
       }
