@@ -271,7 +271,7 @@ get_node_revision_body(node_revision_t **noderev_p,
     {
       /* noderevs in rev / pack files can be cached */
       const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_offset(id);
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
       key.revision = rev_item->revision;
       key.second = rev_item->number;
 
