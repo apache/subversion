@@ -1360,10 +1360,12 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
 
           /* We might have touched the group that contains ENTRY. Recheck. */
           if (entry_index == cache->l1.next)
-            if (keep)
-              promote_entry(cache, entry);
-            else
-              drop_entry(cache, entry);
+            {
+              if (keep)
+                promote_entry(cache, entry);
+              else
+                drop_entry(cache, entry);
+            }
         }
     }
 
