@@ -1210,14 +1210,26 @@ find_entry(svn_membuffer_t *cache,
            * We hit only one random group instead of processing all
            * groups in the chain.
            */
+          cache_level_t *entry_level;
           int to_remove = rand() % (GROUP_SIZE * group->header.chain_length);
           entry_group_t *to_shrink
             = get_group(cache, group_index, to_remove / GROUP_SIZE);
 
           entry = &to_shrink->entries[to_remove % GROUP_SIZE];
+          entry_level = get_cache_level(cache, entry);
           for (i = 0; i < GROUP_SIZE; ++i)
-            if (entry->hit_count > to_shrink->entries[i].hit_count)
-              entry = &to_shrink->entries[i];
+            {
+              /* keep L1 entries whenever possible */
+
+              cache_level_t *level
+                = get_cache_level(cache, &to_shrink->entries[i]);
+              if (   (level != entry_level && entry_level == &cache->l1)
+                  || (entry->hit_count > to_shrink->entries[i].hit_count))
+                {
+                  entry_level = level;
+                  entry = &to_shrink->entries[i];
+                }
+            }
 
           /* for the entries that don't have been removed,
            * reduce their hit counts to put them at a relative
