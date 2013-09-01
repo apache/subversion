@@ -3599,7 +3599,7 @@ history_prev(svn_fs_history_t **prev_history,
      source cannot be from the same revision as its destination.  So,
      if our history revision matches its node's commit revision, we
      know that ... */
-  if (revision == commit_rev || strcmp(path, commit_path) != 0)
+  if (revision == commit_rev)
     {
       if (! reported)
         {
