@@ -1120,6 +1120,7 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
   apr_uint32_t idx = get_index(cache, entry);
   apr_size_t size = ALIGN_VALUE(entry->size);
   assert(get_cache_level(cache, entry) == &cache->l1);
+  assert(idx == cache->l1.next);
 
   /* copy item from the current location in L1 to the start of L2's
    * insertion window */
@@ -1142,16 +1143,14 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
  * 
  * If necessary, enlarge the insertion window of CACHE->L2 until it is at
  * least TO_FIT_IN->SIZE bytes long. TO_FIT_IN->SIZE must not exceed the
- * data buffer size allocated to CACHE->L2.  IDX is the item index of
- * TO_FIT_IN and is given for performance reasons.
+ * data buffer size allocated to CACHE->L2.
  * 
  * Return TRUE if enough room could be found or made.  A FALSE result
  * indicates that the respective item shall not be added.
  */
 static svn_boolean_t
 ensure_data_insertable_l2(svn_membuffer_t *cache,
-                          entry_t *to_fit_in,
-                          apr_uint32_t idx)
+                          entry_t *to_fit_in)
 {
   entry_t *entry;
   apr_uint64_t average_hit_value;
@@ -1169,9 +1168,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 
   /* accumulated "worth" of items dropped so far */
   apr_size_t drop_hits = 0;
-
-  /* verify parameters */
-  assert(idx == get_index(cache, to_fit_in));
 
   /* This loop will eventually terminate because every cache entry
    * would get dropped eventually:
@@ -1242,16 +1238,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
           if (   (apr_uint64_t)entry->size * cache->used_entries
                < cache->data_used / 8)
             {
-              keep = TRUE;
-            }
-          else if (cache->l2.next / GROUP_SIZE == idx / GROUP_SIZE)
-            {
-              /* Special case: we cannot drop entries that are in the same
-               * group as TO_FIT_IN because that might the latter to become
-               * invalidated it it happens to be the highest used entry in
-               * the group.  So, we must keep ENTRY unconditionally.
-               * (this is a very rare condition)
-               */
               keep = TRUE;
             }
           else if (   entry->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
@@ -1331,8 +1317,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 static svn_boolean_t
 ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
 {
-  entry_t *entry;
-
   /* Guarantees that the while loop will terminate. */
   if (size > cache->l1.size)
     return FALSE;
@@ -1344,9 +1328,11 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
     {
       /* first offset behind the insertion window
        */
+      apr_uint32_t entry_index = cache->l1.next;
+      entry_t *entry = get_entry(cache, entry_index);
       apr_uint64_t end = cache->l1.next == NO_INDEX
                        ? cache->l1.start_offset + cache->l1.size
-                       : get_entry(cache, cache->l1.next)->offset;
+                       : entry->offset;
 
       /* leave function as soon as the insertion window is large enough
        */
@@ -1370,12 +1356,14 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
           /* Remove the entry from the end of insertion window and promote
            * it to L2, if it is important enough.
            */
-          entry = get_entry(cache, cache->l1.next);
+          svn_boolean_t keep = ensure_data_insertable_l2(cache, entry);
 
-          if (ensure_data_insertable_l2(cache, entry, cache->l1.next))
-            promote_entry(cache, entry);
-          else
-            drop_entry(cache, entry);
+          /* We might have touched the group that contains ENTRY. Recheck. */
+          if (entry_index == cache->l1.next)
+            if (keep)
+              promote_entry(cache, entry);
+            else
+              drop_entry(cache, entry);
         }
     }
 
