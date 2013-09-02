@@ -112,19 +112,19 @@ public interface ISVNConfig
     public static final String HTTP_CHUNKED_REQUESTS     = "http-chunked-requests";
 
     /**
-     * "true" value in configuraition. One of the values returned by
+     * "true" value in configuration. One of the values returned by
      * {@link Category#getYesNoAsk}.
      */
     public static final String TRUE = "TRUE";
 
     /**
-     * "false" value in configuraition. One of the values returned by
+     * "false" value in configuration. One of the values returned by
      * {@link Category#getYesNoAsk}.
      */
     public static final String FALSE = "FALSE";
 
     /**
-     * "ask" value in configuraition. One of the values returned by
+     * "ask" value in configuration. One of the values returned by
      * {@link Category#getYesNoAsk}.
      */
     public static final String ASK = "ASK";
