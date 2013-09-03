@@ -147,7 +147,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1519615, r1519617
+ * r1519615, r1519617, r1519733
    Fix a memory problem in the 3rd party FS module loader.
    Justification:
      Not enabled in default build but a SEGV likely when triggered.
