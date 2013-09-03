@@ -1518,9 +1518,10 @@ svn_fs_fs__add_change(svn_fs_t *fs,
   svn_fs_path_change2_t *change;
   apr_hash_t *changes = apr_hash_make(pool);
 
+  /* Not using APR_BUFFERED to append change in one atomic write operation. */
   SVN_ERR(svn_io_file_open(&file, path_txn_changes(fs, txn_id, pool),
-                           APR_APPEND | APR_WRITE | APR_CREATE
-                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
+                           APR_APPEND | APR_WRITE | APR_CREATE,
+                           APR_OS_DEFAULT, pool));
 
   change = svn_fs__path_change_create_internal(id, change_kind, pool);
   change->text_mod = text_mod;
