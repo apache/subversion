@@ -81,7 +81,8 @@ static struct fs_type_defn base_defn =
 #else
     NULL,
 #endif
-    NULL
+    NULL /* End of static list: this needs to be reset to NULL if the
+            common_pool used when setting it has been cleared. */
   };
 
 static struct fs_type_defn fsx_defn =
