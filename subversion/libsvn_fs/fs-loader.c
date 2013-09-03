@@ -353,7 +353,6 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
 static apr_status_t uninit(void *data)
 {
   common_pool = NULL;
-  base_defn.next = NULL;
   return APR_SUCCESS;
 }
 
@@ -365,6 +364,7 @@ svn_fs_initialize(apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   common_pool = svn_pool_create(pool);
+  base_defn.next = NULL;
   SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
 
   /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
