@@ -353,6 +353,7 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
 static apr_status_t uninit(void *data)
 {
   common_pool = NULL;
+  base_defn.next = NULL;
   return APR_SUCCESS;
 }
 
