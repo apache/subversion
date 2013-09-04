@@ -2168,8 +2168,8 @@ close_file(void *file_baton,
     {
       proppatch_context_t *proppatch;
 
-      proppatch = apr_pcalloc(ctx->pool, sizeof(*proppatch));
-      proppatch->pool = ctx->pool;
+      proppatch = apr_pcalloc(scratch_pool, sizeof(*proppatch));
+      proppatch->pool = scratch_pool;
       proppatch->relpath = ctx->relpath;
       proppatch->path = ctx->url;
       proppatch->commit = ctx->commit;
@@ -2177,7 +2177,7 @@ close_file(void *file_baton,
       proppatch->removed_props = ctx->removed_props;
       proppatch->base_revision = ctx->base_revision;
 
-      SVN_ERR(proppatch_resource(proppatch, ctx->commit, ctx->pool));
+      SVN_ERR(proppatch_resource(proppatch, ctx->commit, scratch_pool));
     }
 
   return SVN_NO_ERROR;
