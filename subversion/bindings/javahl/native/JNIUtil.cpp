@@ -663,7 +663,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     POP_AND_RETURN_NOTHING();
 
   const jsize stSize = static_cast<jsize>(newStackTrace.size());
-  if (stSize != newStackTrace.size())
+  if (stSize < 0 || stSize != newStackTrace.size())
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C size_t to JNI jsize");
