@@ -36,6 +36,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_file_info.h>
+#include <apr_time.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"
