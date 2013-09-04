@@ -111,9 +111,6 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                             long replacesRevision)
             throws ClientException;
 
-//    public native void rotate(Iterable<RotatePair> elements)
-//            throws ClientException;
-
     public native void complete() throws ClientException;
 
     public native void abort() throws ClientException;

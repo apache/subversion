@@ -1297,15 +1297,6 @@ tc_editor_move(void *baton,
 }
 
 static svn_error_t *
-tc_editor_rotate(void *baton,
-                 const apr_array_header_t *relpaths,
-                 const apr_array_header_t *revisions,
-                 apr_pool_t *scratch_pool)
-{
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
-}
-
-static svn_error_t *
 tc_editor_complete(void *baton,
                    apr_pool_t *scratch_pool)
 {
@@ -1331,7 +1322,6 @@ static const svn_editor_cb_many_t editor_ops = {
   tc_editor_delete,
   tc_editor_copy,
   tc_editor_move,
-  tc_editor_rotate,
   tc_editor_complete,
   tc_editor_abort
 };

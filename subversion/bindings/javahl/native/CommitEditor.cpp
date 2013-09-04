@@ -452,21 +452,6 @@ void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
                               svn_revnum_t(jreplaces_revision)),);
 }
 
-// void CommitEditor::rotate(jobject jelements)
-// {
-//   if (!m_valid) { throw_editor_inactive(); return; }
-//   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-//
-//   SVN::Pool subPool(pool);
-//   const apr_array_header_t* relpaths;
-//   const apr_array_header_t* revisions;
-//   build_rotation(&relpaths, &revisions, jelements, subPool);
-//   if (JNIUtil::isJavaExceptionThrown())
-//     return;
-//
-//   SVN_JNI_ERR(svn_editor_rotate(m_editor, relpaths, revisions),);
-// }
-
 void CommitEditor::complete()
 {
   if (!m_valid) { throw_editor_inactive(); return; }
