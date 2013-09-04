@@ -1198,20 +1198,6 @@ move_cb(void *baton,
 }
 
 
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  struct ev2_baton *eb = baton;
-
-  SVN_ERR(svn_editor_rotate(eb->inner, relpaths, revisions));
-  return SVN_NO_ERROR;
-}
-
-
 /* This implements svn_editor_cb_complete_t */
 static svn_error_t *
 complete_cb(void *baton,
@@ -1333,7 +1319,6 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
     delete_cb,
     copy_cb,
     move_cb,
-    rotate_cb,
     complete_cb,
     abort_cb
   };

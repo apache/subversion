@@ -81,7 +81,6 @@ public:
             jstring jdst_relpath, jlong jreplaces_revision);
   void move(jstring jsrc_relpath, jlong jsrc_revision,
             jstring jdst_relpath, jlong jreplaces_revision);
-  // void rotate(jobject jelements);
   void complete();
   void abort();
 

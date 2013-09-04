@@ -631,48 +631,6 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(contents, checkcontents.toByteArray()));
     }
 
-    // public void testEditorRotate() throws Exception
-    // {
-    //     ISVNRemote session = getSession();
-    //
-    //     ArrayList<ISVNEditor.RotatePair> rotation =
-    //         new ArrayList<ISVNEditor.RotatePair>(3);
-    //     rotation.add(new ISVNEditor.RotatePair("A/B", 1));
-    //     rotation.add(new ISVNEditor.RotatePair("A/C", 1));
-    //     rotation.add(new ISVNEditor.RotatePair("A/D", 1));
-    //
-    //     CommitContext cc =
-    //         new CommitContext(session, "Rotate A/B -> A/C -> A/D");
-    //     try {
-    //         // No alter-dir of A is needed, children remain the same.
-    //         cc.editor.rotate(rotation);
-    //         cc.editor.complete();
-    //     } finally {
-    //         cc.editor.dispose();
-    //     }
-    //
-    //     assertEquals(2, cc.getRevision());
-    //     assertEquals(2, session.getLatestRevision());
-    //
-    //     HashMap<String, DirEntry> dirents = new HashMap<String, DirEntry>();
-    //     HashMap<String, byte[]> properties = new HashMap<String, byte[]>();
-    //
-    //     // A/B is now what used to be A/D, so A/B/H must exist
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/B",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertEquals(dirents.get("H").getPath(), "H");
-    //
-    //     // A/C is now what used to be A/B, so A/C/F must exist
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/C",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertEquals(dirents.get("F").getPath(), "F");
-    //
-    //     // A/D is now what used to be A/C and must be empty
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/D",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertTrue(dirents.isEmpty());
-    // }
-
     // Sanity check so that we don't forget about unimplemented methods.
     public void testEditorNotImplemented() throws Exception
     {
@@ -702,13 +660,6 @@ public class SVNRemoteTests extends SVNTests
             }
             assertEquals("Not implemented: CommitEditor.alterSymlink", exmsg);
 
-            // try {
-            //     exmsg = "";
-            //     cc.editor.rotate(rotation);
-            // } catch (RuntimeException ex) {
-            //     exmsg = ex.getMessage();
-            // }
-            // assertEquals("Not implemented: CommitEditor.rotate", exmsg);
         } finally {
             cc.editor.dispose();
         }
