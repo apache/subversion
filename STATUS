@@ -156,6 +156,13 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
+ * r1519955
+   Fix a segfault with 'svn mergeinfo'.
+   Justification:
+     Missing NULL pointer checks are bad, user complained.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
