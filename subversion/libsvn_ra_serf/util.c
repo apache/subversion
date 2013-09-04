@@ -2259,7 +2259,7 @@ setup_request(serf_request_t *request,
                                        request_pool));
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 /* Implements the serf_request_setup_t interface (which sets up both a
