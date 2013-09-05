@@ -296,17 +296,18 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 
 #define DEBUG_CACHE_MEMBUFFER_TAG tag,
 
-#define DEBUG_CACHE_MEMBUFFER_INIT_TAG                         \
-  entry_tag_t _tag;                                            \
-  entry_tag_t *tag = &_tag;                                    \
-  SVN_ERR(store_key_part(tag,                                  \
-                         cache->prefix,                        \
-                         cache->prefix_tail,                   \
-                         key,                                  \
-                         cache->key_len == APR_HASH_KEY_STRING \
-                             ? strlen((const char *) key)      \
-                             : cache->key_len,                 \
-                         cache->pool));
+#define DEBUG_CACHE_MEMBUFFER_INIT_TAG                           \
+  entry_tag_t _tag;                                              \
+  entry_tag_t *tag = &_tag;                                      \
+  if (key)                                                       \
+    SVN_ERR(store_key_part(tag,                                  \
+                           cache->prefix,                        \
+                           cache->prefix_tail,                   \
+                           key,                                  \
+                           cache->key_len == APR_HASH_KEY_STRING \
+                               ? strlen((const char *) key)      \
+                               : cache->key_len,                 \
+                           cache->pool));
 
 #else
 
