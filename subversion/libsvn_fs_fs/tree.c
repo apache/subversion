@@ -4323,19 +4323,28 @@ verify_node(dag_node_t *node,
         {
           svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
           dag_node_t *child;
-          svn_revnum_t child_rev;
           apr_int64_t child_mergeinfo;
 
           svn_pool_clear(iterpool);
 
           /* Compute CHILD_REV. */
-          SVN_ERR(svn_fs_fs__dag_get_node(&child, fs, dirent->id, iterpool));
-          SVN_ERR(svn_fs_fs__dag_get_revision(&child_rev, child, iterpool));
+          if (svn_fs_fs__id_rev(dirent->id) == rev)
+            {
+              SVN_ERR(svn_fs_fs__dag_get_node(&child, fs, dirent->id,
+                                              iterpool));
+              SVN_ERR(verify_node(child, rev, iterpool));
+              SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&child_mergeinfo,
+                                                         child));
+            }
+          else
+            {
+              /* access mergeinfo counter with minimal overhead */
+              node_revision_t *noderev;
+              SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, dirent->id,
+                                                   iterpool));
+              child_mergeinfo = noderev->mergeinfo_count;
+            }
 
-          if (child_rev == rev)
-            SVN_ERR(verify_node(child, rev, iterpool));
-
-          SVN_ERR(svn_fs_fs__dag_get_mergeinfo_count(&child_mergeinfo, child));
           children_mergeinfo += child_mergeinfo;
         }
 
