@@ -2076,7 +2076,24 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
                                  entry_key_t to_find,
                                  svn_boolean_t *found)
 {
-  *found = find_entry(cache, group_index, to_find, FALSE) != NULL;
+  entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
+  if (entry)
+    {
+      /* This is often happen in "block read" where most data is already
+         in L2 and only a few previously evicted items are added to L1
+         again.  While items in L1 are well protected for a while, L2
+         items may get evicted soon.  Thus, mark all them as "hit" to give
+         them a higher chance for survival. */
+      entry->hit_count++;
+      cache->hit_count++;
+      cache->total_hits++;
+
+      *found = TRUE;
+    }
+  else
+    {
+      *found = FALSE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2094,6 +2111,8 @@ membuffer_cache_has_key(svn_membuffer_t *cache,
   /* find the entry group that will hold the key.
    */
   apr_uint32_t group_index = get_group_index(&cache, key);
+  cache->total_reads++;
+
   WITH_READ_LOCK(cache,
                  membuffer_cache_has_key_internal(cache,
                                                   group_index,
