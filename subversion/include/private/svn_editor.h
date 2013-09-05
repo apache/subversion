@@ -346,9 +346,7 @@ svn_delta_shim_callbacks_default(apr_pool_t *result_pool);
  *   then its children are subject to the Once Rule. The source path of
  *   a move (and its child paths) may be referenced in add_*, or as the
  *   destination of a copy (where these new or copied nodes are subject
- *   to the Once Rule). Paths listed in a rotation are both sources and
- *   destinations, so they may not be referenced again in an add_* or a
- *   deletion; these paths may have alter_* operations applied.
+ *   to the Once Rule).
  *
  * - The ancestor of an added, copied-here, moved-here, or
  *   modified node may not be deleted. The ancestor may not be moved
