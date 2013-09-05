@@ -1468,7 +1468,7 @@ verify_fs2_notify_func(svn_revnum_t revision,
 }
 
 /* cache entry (de-)serialization support for svn_node_kind_t. */
-svn_error_t *
+static svn_error_t *
 serialize_node_kind(void **data,
                     apr_size_t *data_len,
                     void *in,
@@ -1480,7 +1480,7 @@ serialize_node_kind(void **data,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
+static svn_error_t *
 deserialize_node_kind(void **out,
                       void *data,
                       apr_size_t data_len,
