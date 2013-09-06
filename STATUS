@@ -124,6 +124,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1520529
+   Properly re-canonicalize urls read from xml based entries files.
+   Justification:
+     The canonicalization rules have been changed since 1.7 and while
+     we fixed the newer entries file parsing we forgot the xml based
+     entries.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
