@@ -131,9 +131,6 @@ public class CommitEditor extends JNIObject implements ISVNEditor
         notimplemented("move");
     }
 
-//    public void rotate(Iterable<RotatePair> elements)
-//            throws ClientException;
-
     public void complete() throws ClientException
     {
         notimplemented("complete");

@@ -1073,8 +1073,10 @@ public:
                                apr_array_header_t* prop_diffs,
                                apr_pool_t* scratch_pool)
     {
-      *delta_handler = svn_delta_noop_window_handler;
-      *delta_handler_baton = NULL;
+      if (delta_handler)
+        *delta_handler = svn_delta_noop_window_handler;
+      if (delta_handler_baton)
+        *delta_handler_baton = NULL;
 
       FileRevisionHandler* const self =
         static_cast<FileRevisionHandler*>(baton);

@@ -129,7 +129,9 @@ public class NativeResources
      */
     private static final void init()
     {
-        initNativeLibrary();
+        if (!initNativeLibrary())
+            throw new LinkageError("Native library initialization failed");
+
         version = new Version();
         if (!version.isAtLeast(1, 7, 0))
         {
@@ -141,5 +143,5 @@ public class NativeResources
     /**
      * Initialize the native library layer.
      */
-    private static native void initNativeLibrary();
+    private static native boolean initNativeLibrary();
 }

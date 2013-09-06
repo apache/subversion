@@ -261,8 +261,7 @@ public interface ISVNEditor
      * <code>sourceRelativePath</code> at the start of the whole edit
      * and<code>sourceRelativePath</code> at
      * <code>sourceRevision</code> must lie within the same node-rev
-     * (aka history-segment).  This is just like the #delete() and
-     * #rotate().
+     * (aka history-segment).  This is just like the #delete().
      * <p>
      * For a description of <code>replacesRevision</code>, see #addFile().
      *
@@ -273,42 +272,6 @@ public interface ISVNEditor
               String destinationRelativePath,
               long replacesRevision)
             throws ClientException;
-
-// Not implemented in the native API
-//    /**
-//     * Perform a rotation among multiple nodes in the target tree.
-//     * <p>
-//     * The <code>elements</code> list specifies the nodes in the tree
-//     * which are located at a path and expected to be at a specific
-//     * revision. These nodes are simultaneously moved in a rotation
-//     * pattern.  For example, the node at index 0
-//     * <code>elements</code> will be moved to the relative path
-//     * specified at index 1 of <code>elements</code>. The node at
-//     * index 1 will be moved to the location at index 2. The node at
-//     * index N-1 will be moved to the relative path specified at index 0.
-//     * <p>
-//     * The simplest form of this operation is to swap nodes A and
-//     * B. One may think to move A to a temporary location T, then move
-//     * B to A, then move T to B. However, this last move violations
-//     * the Once Rule by moving T (which had already by edited by the
-//     * move from A). In order to keep the restrictions against
-//     * multiple moves of a single node, the rotation operation is
-//     * needed for certain types of tree edits.
-//     *
-//     * @throws ClientException
-//     */
-//    void rotate(Iterable<RotatePair> elements) throws ClientException;
-//
-//    public static final class RotatePair
-//    {
-//        public RotatePair(String relativePath, long revision)
-//        {
-//            this.relativePath = relativePath;
-//            this.revision = revision;
-//        }
-//        public final String relativePath;
-//        public final long revision;
-//    }
 
     /**
      * Signal that the edit has been completed successfully.
