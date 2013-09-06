@@ -103,17 +103,6 @@ Candidate changes:
                  but don't we need to pretty up the error here like the assert
                  would do for us?)
 
- * r1512300, r1512301
-   Clean up unpacked revprops in 'svnadmin hotcopy --incremental'
-   Justification:
-     Although keeping the unpacked revprop files should not do
-     harm, it still results in the target repo being different
-     from the source.  Also, it wastes disc space.
-   Notes:
-     r1512300 is merely a test case update to reproduce the problem.
-   Votes:
-     +1: stefan2, breser
-
  * r1516806
    Do not look at the hostname part of an URI when checking that
    the schema data is canonical.
@@ -126,7 +115,7 @@ Candidate changes:
      commands later faile with a normal error in the RA layer, which
      validates the semantics of the hostname.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
  * ^/subversion/branches/1.8.x-serf-1.3+-windows
    Allow compiling against serf 1.3 and later on Windows
@@ -161,7 +150,16 @@ Candidate changes:
    Justification:
      Missing NULL pointer checks are bad, user complained.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
+
+ * r1520529
+   Properly re-canonicalize urls read from xml based entries files.
+   Justification:
+     The canonicalization rules have been changed since 1.7 and while
+     we fixed the newer entries file parsing we forgot the xml based
+     entries.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -169,3 +167,13 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1512300, r1512301
+   Clean up unpacked revprops in 'svnadmin hotcopy --incremental'
+   Justification:
+     Although keeping the unpacked revprop files should not do
+     harm, it still results in the target repo being different
+     from the source.  Also, it wastes disc space.
+   Notes:
+     r1512300 is merely a test case update to reproduce the problem.
+   Votes:
+     +1: stefan2, breser, rhuijben
