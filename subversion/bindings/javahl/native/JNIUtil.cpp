@@ -142,7 +142,7 @@ struct GlobalInitGuard
                m_state == state_init && shift < 8;
                ++shift)
             {
-              apr_sleep(apr_time_from_msec(1) << shift);
+              apr_sleep((APR_USEC_PER_SEC / 1000) << shift);
               m_state = InitState(svn_atomic_cas(&m_global_state,
                                                  state_null, state_null));
             }
