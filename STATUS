@@ -161,6 +161,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * r1520065, r1520745
+   Resolve a user triggerable assertion when during an update a file external
+   is being replaced by a server excluded (aka absent) node.
+   Justification:
+     Quite a few reports of this assertion on the users@s.a.o list since 1.7.0.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
