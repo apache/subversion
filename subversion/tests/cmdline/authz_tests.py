@@ -1551,7 +1551,7 @@ def log_diff_dontdothat(sbox):
                                       'log', ddt_url,
                                       '-c', 1, '--diff')
 
-@XFail()
+@Issue(4422)
 @Skip(svntest.main.is_ra_type_file)
 def authz_file_external_to_authz(sbox):
   "replace file external with authz node"
@@ -1582,11 +1582,10 @@ def authz_file_external_to_authz(sbox):
 
   expected_status.tweak(wc_rev=2)
 
-  # ### Currently this asserts with
-  # ### svn: E235000: In file 'update_editor.c' line 3043: assertion failed (status != svn_wc__db_status_normal)
+  # ### This used to assert with
+  # ### svn: E235000: In file 'update_editor.c' line 3043: assertion failed
+  # ###               (status != svn_wc__db_status_normal)
 
-  # ### The assumed status expects that the file external is still there,
-  # ### but there are many other valid ways to fix this issue.
   svntest.actions.run_and_verify_update(wc_dir,
                                         None, None, expected_status)
 
