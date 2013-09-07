@@ -1322,12 +1322,20 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
                              unparsed_id->data, pool));
 
       if (found)
-        return kind == dirent->kind
-             ? SVN_NO_ERROR
-             : svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 _("Unexpected node kind %d for '%s'. "
-                                   "Expected kind was %d."),
-                                 dirent->kind, path, kind);
+        {
+          if (kind == dirent->kind)
+            return SVN_NO_ERROR;
+          else
+            {
+              path = svn_relpath_join(db->path, (const char *)key, pool);
+
+              return
+                  svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                                    _("Unexpected node kind %d for '%s'. "
+                                      "Expected kind was %d."),
+                                    dirent->kind, path, kind);
+            }
+        }
     }
 
   path = svn_relpath_join(db->path, (const char *)key, pool);
