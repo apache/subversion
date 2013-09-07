@@ -24,6 +24,13 @@
  * @brief Implementation of the class JNIUtil
  */
 
+/* Include apr.h first, or INT64_C won't be defined properly on some C99
+   compilers, when other headers include <stdint.h> before defining some
+   macros.
+
+   See apr.h for the ugly details */
+#include <apr.h>
+
 #include "JNIUtil.h"
 #include "Array.h"
 
