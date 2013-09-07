@@ -36,6 +36,7 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 #include <apr_file_info.h>
+#include <apr_time.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -106,6 +107,93 @@ bool JNIUtil::JNIInit(JNIEnv *env)
   return true;
 }
 
+namespace
+{
+struct GlobalInitGuard
+{
+  enum InitState
+    {
+      state_null,
+      state_init,
+      state_done,
+      state_error
+    };
+
+  GlobalInitGuard()
+    : m_finished(false),
+      m_state(InitState(svn_atomic_cas(&m_global_state,
+                                       state_init, state_null)))
+    {
+      switch (m_state)
+        {
+        case state_null:
+          // This thread won the initialization contest.
+          break;
+
+        case state_done:
+          // The library is already initialized.
+          break;
+
+        case state_init:
+          // Another thread is currently initializing the
+          // library. Spin and wait for it to finish, with exponential
+          // backoff, but no longer than half a second.
+          for (unsigned shift = 0;
+               m_state == state_init && shift < 8;
+               ++shift)
+            {
+              apr_sleep((APR_USEC_PER_SEC / 1000) << shift);
+              m_state = InitState(svn_atomic_cas(&m_global_state,
+                                                 state_null, state_null));
+            }
+          if (m_state == state_init)
+            // The initialization didn't complete in half a second,
+            // which probably implies a thread crash or a deadlock.
+            m_state = state_error;
+          break;
+
+        default:
+          // Error state, or unknown state. In any case, do not continue.
+          m_state = state_error;
+        }
+    }
+
+  ~GlobalInitGuard()
+    {
+      // Signal the end of the library intialization if we're the
+      // initializing thread.
+      if (m_finished && m_state == state_null)
+        {
+          SVN_ERR_ASSERT_NO_RETURN(
+              state_init == svn_atomic_cas(&m_global_state,
+                                           state_done, state_init));
+        }
+    }
+
+  bool done() const
+    {
+      return (m_state == state_done);
+    }
+
+  bool error() const
+    {
+      return (m_state == state_error);
+    }
+
+  void finish()
+    {
+      m_finished = true;
+    }
+
+private:
+  bool m_finished;
+  InitState m_state;
+  static volatile svn_atomic_t m_global_state;
+};
+volatile svn_atomic_t
+GlobalInitGuard::m_global_state = GlobalInitGuard::state_null;
+} // anonymous namespace
+
 /**
  * Initialize the environment for all requests.
  * @param env   the JNI environment for this request
@@ -113,16 +201,10 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
   // This method has to be run only once during the run a program.
-  static volatile svn_atomic_t once = 0;
-  svn_atomic_t done = svn_atomic_cas(&once, 1, 0);
-  if (done)
+  GlobalInitGuard guard;
+  if (guard.done())
     return true;
-
-  // Do not run this part more than one time.  This leaves a small
-  // time window when two threads create their first SVNClient and
-  // SVNAdmin at the same time, but I do not see a better option
-  // without APR already initialized
-  if (g_inInit)
+  else if (guard.error())
     return false;
 
   g_inInit = true;
@@ -282,6 +364,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 
   g_initEnv = NULL;
   g_inInit = false;
+
+  guard.finish();
   return true;
 }
 
@@ -579,7 +663,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     POP_AND_RETURN_NOTHING();
 
   const jsize stSize = static_cast<jsize>(newStackTrace.size());
-  if (stSize != newStackTrace.size())
+  if (stSize < 0 || stSize != newStackTrace.size())
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C size_t to JNI jsize");

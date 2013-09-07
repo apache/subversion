@@ -182,16 +182,6 @@ Java_org_apache_subversion_javahl_remote_CommitEditor_move(
   editor->move(jsrc_relpath, jsrc_revision, jdst_relpath, jreplaces_revision);
 }
 
-//JNIEXPORT void JNICALL
-//Java_org_apache_subversion_javahl_remote_CommitEditor_rotate(
-//    JNIEnv* env, jobject jthis, jobject jelements)
-//{
-//  JNIEntry(CommitEditor, rotate);
-//  CommitEditor *editor = CommitEditor::getCppObject(jthis);
-//  CPPADDR_NULL_PTR(editor,);
-//  editor->rotate(jelements);
-//}
-
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_CommitEditor_complete(
     JNIEnv* env, jobject jthis)
