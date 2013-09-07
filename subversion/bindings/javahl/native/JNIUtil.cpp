@@ -31,6 +31,7 @@
 #include <vector>
 #include <locale.h>
 
+#include <apr.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
