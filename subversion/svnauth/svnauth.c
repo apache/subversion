@@ -67,7 +67,8 @@ typedef enum svnauth__longopt_t {
 /** Subcommands. **/
 static svn_opt_subcommand_t
   subcommand_help,
-  subcommand_list;
+  subcommand_list,
+  subcommand_delete;
 
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
@@ -95,6 +96,21 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "\n"
     "  If no pattern is specified, all cached credentials are shown.\n"),
    {opt_config_dir, opt_show_passwords} },
+
+  {"delete", subcommand_delete, {"del", "remove", "rm"}, N_
+   ("usage: svnauth delete PATTERN ...\n"
+    "\n"
+    "  Delete cached authentication credentials.\n"
+    "\n"
+    "  Delete credentials with attributes matching a pattern.\n"
+    "  All attributes except passwords can be matched. If more than one\n"
+    "  pattern is specified, credentials are deleted only if their attributes\n"
+    "  match all patterns. Patterns are matched case-sensitively, and may\n"
+    "  contain glob wildcards:\n"
+    "    ?      matches any single character\n"
+    "    *      matches a sequence of arbitrary characters\n"
+    "    [abc]  matches any of the characters listed inside the brackets\n"),
+   {opt_config_dir} },
 
   {NULL}
 };
@@ -516,6 +532,7 @@ show_cert_failures(const char *failure_string,
 struct walk_credentials_baton_t
 {
   svn_boolean_t list;
+  svn_boolean_t delete;
   svn_boolean_t show_passwords;
   apr_array_header_t *patterns;
 };
@@ -750,6 +767,13 @@ walk_credentials(svn_boolean_t *delete_cred,
   if (b->list)
     SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
                             b->show_passwords, scratch_pool));
+  if (b->delete)
+    {
+      *delete_cred = TRUE;
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("Deleting %s credential for realm '%s'\n"),
+                                 cred_kind, realmstring));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -765,6 +789,7 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   b.show_passwords = opt_state->show_passwords;
   b.list = TRUE;
+  b.delete = FALSE;
   SVN_ERR(parse_args(&b.patterns, os, 0, -1, pool));
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,
@@ -773,6 +798,28 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b,
                                     pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnauth_opt_state *opt_state = baton;
+  const char *config_path;
+  struct walk_credentials_baton_t b;
+
+  b.show_passwords = opt_state->show_passwords;
+  b.list = FALSE;
+  b.delete = TRUE;
+  SVN_ERR(parse_args(&b.patterns, os, 1, -1, pool));
+
+  SVN_ERR(svn_config_get_user_config_path(&config_path,
+                                          opt_state->config_dir, NULL,
+                                          pool));
+
+  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b, pool));
+
   return SVN_NO_ERROR;
 }
 
