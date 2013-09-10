@@ -556,7 +556,7 @@ open_dir(report_dir_t *dir)
       return SVN_NO_ERROR;
     }
 
-  if (dir->base_name[0] == '\0')
+  if (!dir->parent_dir)
     {
       dir->dir_baton_pool = svn_pool_create(dir->pool);
 
@@ -1374,20 +1374,36 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       info->dir->target_rev = ctx->target_rev;
       info->fetch_props = TRUE;
 
-      info->dir->base_name = "";
-      info->dir->name = "";
+      /* Technically this should always be "" since the root of the update
+       * report should always match the session root.  However, if the target
+       * provided has more than one component then they won't match.  Our API
+       * says you can't use multiple component targets but the client
+       * libraries diff implementation does (see r1201824 where issue #2873
+       * was fixed for why).  When you do this the root of
+       * the report ends up being the parent of the target. */
+      info->dir->name = svn_relpath_dirname(ctx->update_target,
+                                                 info->dir->pool);
+      info->dir->base_name = svn_relpath_basename(info->dir->name,
+                                                  info->dir->pool);
 
       info->base_name = info->dir->base_name;
       info->name = info->dir->name;
 
-      info->dir->repos_relpath = apr_hash_get(ctx->switched_paths, "",
+      info->dir->repos_relpath = apr_hash_get(ctx->switched_paths,
+                                              info->dir->name,
                                               APR_HASH_KEY_STRING);
 
       if (!info->dir->repos_relpath)
-        SVN_ERR(svn_ra_serf__get_relative_path(&info->dir->repos_relpath,
-                                               ctx->sess->session_url.path,
-                                               ctx->sess, ctx->conn,
-                                               info->dir->pool));
+        {
+          SVN_ERR(svn_ra_serf__get_relative_path(&info->dir->repos_relpath,
+                                                 ctx->sess->session_url.path,
+                                                 ctx->sess, ctx->conn,
+                                                 info->dir->pool));
+
+          info->dir->repos_relpath =
+              svn_relpath_join(info->dir->repos_relpath,
+                               info->name, info->dir->pool);
+        }
     }
   else if (state == NONE)
     {

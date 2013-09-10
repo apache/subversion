@@ -1486,8 +1486,16 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 
       if (DIR_DEPTH(rb) == 0)
         {
-          /* pathbuf has to live for the whole edit! */
-          pathbuf = svn_stringbuf_create("", rb->pool);
+          /* Technically this should always be "" since the root of the update
+           * report should always match the session root.  However, if the
+           * target provided has more than one component then they won't
+           * match.  Our API says you can't use multiple component targets but
+           * the client libraries diff implmenetation does (see r1201824 where
+           * issue #2873 was fixed for why).  When you do this
+           * the root of the report ends up being the parent of the target.
+           * pathbuf has to live for the whole edit! */
+          pathbuf = svn_stringbuf_create(svn_relpath_dirname(rb->target,
+                                                             rb->pool), rb->pool);
 
           /* During switch operations, we need to invalidate the
              tree's version resource URLs in case something goes
