@@ -133,6 +133,18 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
+ * ^/subversion/branches/1.7.x-issue4421
+   Fix Issue #4421
+   Justification:
+     Segfaults are bad.
+   Changes: diff: Fix crash with diff --summarize (issue #4421)
+   Notes:
+     This is straight to 1.7.x change since 1.8.x has a different diff
+     implementation without this problem.  It's not reasonable to backport
+     that to 1.7.x.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
