@@ -156,8 +156,7 @@ parse_args(apr_array_header_t **args,
     SVN_ERR_ASSERT(args);
 
   if ((min_expected >= 0) && (num_args < min_expected))
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                            "Not enough arguments");
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
   if ((max_expected >= 0) && (num_args > max_expected))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                             "Too many arguments");
