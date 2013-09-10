@@ -858,7 +858,7 @@ subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                "no matching credentials"),
                              svn_dirent_local_style(config_path, pool));
   else
-    SVN_ERR(svn_cmdline_printf(pool, _("Removed %d matching credentials "
+    SVN_ERR(svn_cmdline_printf(pool, _("Deleted %d matching credentials "
                                "from '%s'\n"), b.matches,
                                svn_dirent_local_style(config_path, pool)));
 
