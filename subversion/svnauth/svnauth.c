@@ -530,6 +530,7 @@ show_cert_failures(const char *failure_string,
 
 struct walk_credentials_baton_t
 {
+  int matches;
   svn_boolean_t list;
   svn_boolean_t delete;
   svn_boolean_t show_passwords;
@@ -763,6 +764,8 @@ walk_credentials(svn_boolean_t *delete_cred,
         return SVN_NO_ERROR;
     }
 
+  b->matches++;
+
   if (b->list)
     SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
                             b->show_passwords, scratch_pool));
@@ -786,6 +789,7 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *config_path;
   struct walk_credentials_baton_t b;
 
+  b.matches = 0;
   b.show_passwords = opt_state->show_passwords;
   b.list = TRUE;
   b.delete = FALSE;
@@ -797,6 +801,34 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b,
                                     pool));
+
+  if (b.matches == 0)
+    {
+      if (b.patterns->nelts == 0)
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Credentials cache in '%s' is empty\n"),
+                                   svn_dirent_local_style(config_path, pool)));
+      else 
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
+                                 _("Credentials cache in '%s' contains "
+                                   "no matching credentials"),
+                                 svn_dirent_local_style(config_path, pool));
+    }
+  else
+    {
+      if (b.patterns->nelts == 0)
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Credentials cache in '%s' contains %d "
+                                     "credentials\n"),
+                                   svn_dirent_local_style(config_path, pool),
+                                   b.matches));
+      else
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Credentials cache in '%s' contains %d "
+                                     "matching credentials\n"),
+                                   svn_dirent_local_style(config_path, pool),
+                                   b.matches));
+    }
   return SVN_NO_ERROR;
 }
 
@@ -808,6 +840,7 @@ subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *config_path;
   struct walk_credentials_baton_t b;
 
+  b.matches = 0;
   b.show_passwords = opt_state->show_passwords;
   b.list = FALSE;
   b.delete = TRUE;
@@ -818,6 +851,16 @@ subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                           pool));
 
   SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b, pool));
+
+  if (b.matches == 0)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
+                             _("Credentials cache in '%s' contains "
+                               "no matching credentials"),
+                             svn_dirent_local_style(config_path, pool));
+  else
+    SVN_ERR(svn_cmdline_printf(pool, _("Removed %d matching credentials "
+                               "from '%s'\n"), b.matches,
+                               svn_dirent_local_style(config_path, pool)));
 
   return SVN_NO_ERROR;
 }
