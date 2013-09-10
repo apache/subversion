@@ -93,6 +93,9 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "    ?      matches any single character\n"
     "    *      matches a sequence of arbitrary characters\n"
     "    [abc]  matches any of the characters listed inside the brackets\n"
+    "  Note that wildcards will usually need to be quoted or escaped on the\n"
+    "  command line because many command shells will interfere by trying to\n"
+    "  expand them.\n"
     "\n"
     "  If no pattern is specified, all cached credentials are shown.\n"),
    {opt_config_dir, opt_show_passwords} },
@@ -108,7 +111,10 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "  glob wildcards:\n"
     "    ?      matches any single character\n"
     "    *      matches a sequence of arbitrary characters\n"
-    "    [abc]  matches any of the characters listed inside the brackets\n"),
+    "    [abc]  matches any of the characters listed inside the brackets\n"
+    "  Note that wildcards will usually need to be quoted or escaped on the\n"
+    "  command line because many command shells will interfere by trying to\n"
+    "  expand them.\n"),
    {opt_config_dir} },
 
   {NULL}
