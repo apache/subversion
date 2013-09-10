@@ -88,7 +88,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "  If PATTERN is specified, only list credentials with attributes matching\n"
     "  the pattern. All attributes except passwords can be matched. If more than\n"
     "  one pattern is specified, credentials are shown if their attributes match\n"
-    "  any of the patterns. Patterns are matched case-sensitively, and may\n"
+    "  all patterns. Patterns are matched case-sensitively, and may\n"
     "  contain glob wildcards:\n"
     "    ?      matches any single character\n"
     "    *      matches a sequence of arbitrary characters\n"
