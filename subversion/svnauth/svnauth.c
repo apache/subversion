@@ -159,7 +159,7 @@ parse_args(apr_array_header_t **args,
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
   if ((max_expected >= 0) && (num_args > max_expected))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
-                            "Too many arguments");
+                            _("Too many arguments provided"));
   if (args)
     {
       *args = apr_array_make(pool, num_args, sizeof(const char *));
