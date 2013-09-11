@@ -796,7 +796,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
      need to create a bc_url. */
   if ((! SVN_IS_VALID_REVNUM(revision)) && (fetched_rev == NULL))
     {
-      final_url = url;
+      SVN_ERR(svn_ra_neon__get_url_path(&final_url, url, pool));
     }
   else
     {

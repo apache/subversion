@@ -71,7 +71,7 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-#define SVN_VER_PATCH      7
+#define SVN_VER_PATCH      14
 
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */

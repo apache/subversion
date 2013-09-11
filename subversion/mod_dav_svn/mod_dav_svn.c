@@ -573,7 +573,7 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_urlpath__join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_dirent_join(fs_parent_path, repos_name, r->pool);
   return NULL;
 }
 
@@ -924,7 +924,41 @@ static int dav_svn__handler(request_rec *r)
   return DECLINED;
 }
 
+#define NO_MAP_TO_STORAGE_NOTE "dav_svn-no-map-to-storage"
 
+/* Prevent filename on the request from being set since we aren't serving a
+ * file off the disk.  This means that <Directory> blocks will not match and
+ * that * %f in logging formats will show as "-". */
+static int dav_svn__translate_name(request_rec *r)
+{
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+  /* module is not configured, bail out early */
+  if (!conf->fs_path && !conf->fs_parent_path)
+    return DECLINED;
+
+  /* Be paranoid and set it to NULL just in case some other module set it
+   * before we got called. */ 
+  r->filename = NULL;
+
+  /* Leave a note to ourselves so that we know not to decline in the 
+   * map_to_storage hook. */
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1); 
+  return OK;
+}
+
+/* Prevent core_map_to_storage from running if we prevented the r->filename
+ * from being set since core_map_to_storage doesn't like r->filename being
+ * NULL. */
+static int dav_svn__map_to_storage(request_rec *r)
+{
+  /* Check a note we left in translate_name since map_to_storage doesn't
+   * have access to our configuration. */
+  if (apr_table_get(r->notes, NO_MAP_TO_STORAGE_NOTE))
+    return OK;
+
+  return DECLINED;
+}
 
 
 
@@ -1071,6 +1105,12 @@ register_hooks(apr_pool_t *pconf)
   ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
                            NULL, AP_FTYPE_CONTENT_SET);
   ap_hook_fixups(dav_svn__proxy_request_fixup, NULL, NULL, APR_HOOK_MIDDLE);
+  /* translate_name hook is LAST so that it doesn't interfere with modules
+   * like mod_alias that are MIDDLE. */
+  ap_hook_translate_name(dav_svn__translate_name, NULL, NULL, APR_HOOK_LAST);
+  /* map_to_storage hook is LAST to avoid interferring with mod_http's
+   * handling of OPTIONS and TRACE. */
+  ap_hook_map_to_storage(dav_svn__map_to_storage, NULL, NULL, APR_HOOK_LAST);
 }
 
 

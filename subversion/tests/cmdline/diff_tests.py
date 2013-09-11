@@ -2722,6 +2722,30 @@ def basic_diff_summarize(sbox):
   svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
                                                 wc_dir, '-c-3')
 
+  # Get the differences between a newly added file 
+  expected_diff = svntest.wc.State(wc_dir, {
+    'newfile': Item(status='A '),
+    })
+  expected_reverse_diff = svntest.wc.State(wc_dir, {
+    'newfile': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('newfile'), '-c3')
+  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
+                                                p('newfile'), '-c-3')
+
+  # Get the differences between a newly added dir 
+  expected_diff = svntest.wc.State(wc_dir, {
+    'P': Item(status='A '),
+    })
+  expected_reverse_diff = svntest.wc.State(wc_dir, {
+    'P': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('P'), '-c3')
+  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
+                                                p('P'), '-c-3')
+
 #----------------------------------------------------------------------
 def diff_weird_author(sbox):
   "diff with svn:author that has < in it"
@@ -3326,7 +3350,6 @@ def diff_url_against_local_mods(sbox):
 #----------------------------------------------------------------------
 # Diff against old revision of the parent directory of a removed and
 # locally re-added file.
-@XFail()
 @Issue(3797)
 def diff_preexisting_rev_against_local_add(sbox):
   "diff -r1 of dir with removed-then-readded file"
@@ -3400,6 +3423,52 @@ def diff_git_format_wc_wc(sbox):
     " This is the file 'iota'.\n",
     "+Changed 'iota'.\n",
   ]
+
+  expected = svntest.verify.UnorderedOutput(expected_output)
+
+  svntest.actions.run_and_verify_svn(None, expected, [], 'diff',
+                                     '--git', wc_dir)
+
+@Issue(4294)
+def diff_git_format_wc_wc_dir_mv(sbox):
+  "create a diff in git unidff format for wc dir mv"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  g_path = sbox.ospath('A/D/G')
+  g2_path = sbox.ospath('A/D/G2')
+  pi_path = sbox.ospath('A/D/G/pi')
+  rho_path = sbox.ospath('A/D/G/rho')
+  tau_path = sbox.ospath('A/D/G/tau')
+  new_pi_path = sbox.ospath('A/D/G2/pi')
+  new_rho_path = sbox.ospath('A/D/G2/rho')
+  new_tau_path = sbox.ospath('A/D/G2/tau')
+
+  svntest.main.run_svn(None, 'mv', g_path, g2_path)
+
+  expected_output = make_git_diff_header(pi_path, "A/D/G/pi",
+                                         "revision 1", "working copy",
+                                         delete=True) \
+  + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'pi'.\n"
+  ] + make_git_diff_header(rho_path, "A/D/G/rho",
+                           "revision 1", "working copy",
+                           delete=True) \
+  + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'rho'.\n"
+  ] + make_git_diff_header(tau_path, "A/D/G/tau",
+                           "revision 1", "working copy",
+                           delete=True) \
+  + [
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'tau'.\n"
+  ] + make_git_diff_header(new_pi_path, "A/D/G2/pi", None, None, cp=True,
+                           copyfrom_path="A/D/G/pi", text_changes=False) \
+  + make_git_diff_header(new_rho_path, "A/D/G2/rho", None, None, cp=True,
+                         copyfrom_path="A/D/G/rho", text_changes=False) \
+  + make_git_diff_header(new_tau_path, "A/D/G2/tau", None, None, cp=True,
+                         copyfrom_path="A/D/G/tau", text_changes=False)
 
   expected = svntest.verify.UnorderedOutput(expected_output)
 
@@ -3875,6 +3944,7 @@ test_list = [ None,
               diff_abs_localpath_from_wc_folder,
               no_spurious_conflict,
               diff_deleted_url,
+              diff_git_format_wc_wc_dir_mv,
               ]
 
 if __name__ == '__main__':

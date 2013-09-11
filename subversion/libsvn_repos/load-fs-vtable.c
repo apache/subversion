@@ -154,12 +154,12 @@ change_rev_prop(svn_repos_t *repos,
                 apr_pool_t *pool)
 {
   if (validate_props)
-    return svn_fs_change_rev_prop2(svn_repos_fs(repos), revision, name,
-                                   NULL, value, pool);
-  else
     return svn_repos_fs_change_rev_prop4(repos, revision, NULL, name,
                                          NULL, value, FALSE, FALSE,
                                          NULL, NULL, pool);
+  else
+    return svn_fs_change_rev_prop2(svn_repos_fs(repos), revision, name,
+                                   NULL, value, pool);
 }
 
 /* Change property NAME to VALUE for PATH in TXN_ROOT.  If

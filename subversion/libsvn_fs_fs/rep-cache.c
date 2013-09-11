@@ -45,25 +45,29 @@ open_rep_cache(void *baton,
 {
   svn_fs_t *fs = baton;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_sqlite__db_t *sdb;
   const char *db_path;
   int version;
 
   /* Open (or create) the sqlite database.  It will be automatically
      closed when fs->pool is destoyed. */
   db_path = svn_dirent_join(fs->path, REP_CACHE_DB_NAME, pool);
-  SVN_ERR(svn_sqlite__open(&ffd->rep_cache_db, db_path,
+  SVN_ERR(svn_sqlite__open(&sdb, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL,
                            fs->pool, pool));
 
-  SVN_ERR(svn_sqlite__read_schema_version(&version, ffd->rep_cache_db, pool));
+  SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, pool));
   if (version < REP_CACHE_SCHEMA_FORMAT)
     {
       /* Must be 0 -- an uninitialized (no schema) database. Create
          the schema. Results in schema version of 1.  */
-      SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db,
-                                          STMT_CREATE_SCHEMA));
+      SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_SCHEMA));
     }
+
+  /* This is used as a flag that the database is available so don't
+     set it earlier. */
+  ffd->rep_cache_db = sdb;
 
   return SVN_NO_ERROR;
 }

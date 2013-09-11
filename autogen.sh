@@ -140,6 +140,9 @@ if test -n "$RELEASE_MODE"; then
 
   # Build the SWIG-related files
   make -f autogen-standalone.mk autogen-swig
+
+  # Remove the .swig_checked file
+  rm -f .swig_checked
 fi
 
 if test -n "$SKIP_DEPS"; then

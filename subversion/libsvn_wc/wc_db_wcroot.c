@@ -602,11 +602,21 @@ try_symlink_as_dir:
          inside the wcroot, but we know the abspath is this directory
          (ie. where we found it).  */
 
-      SVN_ERR(svn_wc__db_pdh_create_wcroot(wcroot,
+      err = svn_wc__db_pdh_create_wcroot(wcroot,
                             apr_pstrdup(db->state_pool, local_abspath),
                             sdb, wc_id, FORMAT_FROM_SDB,
                             db->auto_upgrade, db->enforce_empty_wq,
-                            db->state_pool, scratch_pool));
+                            db->state_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT && is_symlink)
+        {
+          /* We found an unsupported WC after traversing upwards from a
+           * symlink. Fall through to code below to check if the symlink
+           * points at a supported WC. */
+          svn_error_clear(err);
+          *wcroot = NULL;
+        }
+      else
+        SVN_ERR(err);
     }
   else
     {
@@ -618,16 +628,17 @@ try_symlink_as_dir:
                             db->state_pool, scratch_pool));
     }
 
-  {
-    const char *dir_relpath;
+  if (*wcroot)
+    {
+      const char *dir_relpath;
 
-    /* The subdirectory's relpath is easily computed relative to the
-       wcroot that we just found.  */
-    dir_relpath = compute_relpath(*wcroot, local_dir_abspath, NULL);
+      /* The subdirectory's relpath is easily computed relative to the
+         wcroot that we just found.  */
+      dir_relpath = compute_relpath(*wcroot, local_dir_abspath, NULL);
 
-    /* And the result local_relpath may include a filename.  */
-    *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
-  }
+      /* And the result local_relpath may include a filename.  */
+      *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
+    }
 
   if (is_symlink)
     {
@@ -641,33 +652,38 @@ try_symlink_as_dir:
        * points to a directory, try to find a wcroot in that directory
        * instead. */
       
-      err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
-                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                          NULL, &conflicted, NULL, NULL, NULL,
-                                          NULL, NULL, NULL,
-                                          *wcroot, *local_relpath,
-                                          scratch_pool, scratch_pool);
-      if (err)
+      if (*wcroot)
         {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
-              && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
-            return svn_error_trace(err);
+          err = svn_wc__db_read_info_internal(&status, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, &conflicted,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, *wcroot, *local_relpath,
+                                              scratch_pool, scratch_pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
+                  && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
+                return svn_error_trace(err);
 
-          svn_error_clear(err);
-          retry_if_dir = TRUE; /* The symlink is unversioned. */
+              svn_error_clear(err);
+              retry_if_dir = TRUE; /* The symlink is unversioned. */
+            }
+          else
+            {
+              /* The symlink is versioned, or obstructs a versioned node.
+               * Ignore non-conflicted not-present/excluded nodes.
+               * This allows the symlink to redirect the wcroot query to a
+               * directory, regardless of 'invisible' nodes in this WC. */
+              retry_if_dir = ((status == svn_wc__db_status_not_present ||
+                               status == svn_wc__db_status_excluded ||
+                               status == svn_wc__db_status_server_excluded)
+                              && !conflicted);
+            }
         }
       else
-        {
-          /* The symlink is versioned, or obstructs a versioned node.
-           * Ignore non-conflicted not-present/excluded nodes.
-           * This allows the symlink to redirect the wcroot query to a
-           * directory, regardless of 'invisible' nodes in this WC. */
-          retry_if_dir = ((status == svn_wc__db_status_not_present ||
-                           status == svn_wc__db_status_excluded ||
-                           status == svn_wc__db_status_server_excluded)
-                          && !conflicted);
-        }
+        retry_if_dir = TRUE;
 
       if (retry_if_dir)
         {

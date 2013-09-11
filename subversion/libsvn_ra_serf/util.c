@@ -242,11 +242,12 @@ ssl_server_cert(void *baton, int failures,
       for (i = 0; i < san->nelts; i++) {
           char *s = APR_ARRAY_IDX(san, i, char*);
           if (apr_fnmatch(s, conn->hostname,
-                          APR_FNM_PERIOD) == APR_SUCCESS) {
+                          APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+            {
               found_matching_hostname = 1;
               cert_info.hostname = s;
               break;
-          }
+            }
       }
   }
 
@@ -254,7 +255,7 @@ ssl_server_cert(void *baton, int failures,
   if (!found_matching_hostname && cert_info.hostname)
     {
       if (apr_fnmatch(cert_info.hostname, conn->hostname,
-                      APR_FNM_PERIOD) == APR_FNM_NOMATCH)
+                      APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_FNM_NOMATCH)
         {
           svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
         }
@@ -758,7 +759,12 @@ start_error(svn_ra_serf__xml_parser_t *parser,
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
-      else
+
+      /* If there's no error code provided, or if the provided code is
+         0 (which can happen sometimes depending on how the error is
+         constructed on the server-side), just pick a generic error
+         code to run with. */
+      if (! ctx->error->apr_err)
         {
           ctx->error->apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
         }
@@ -1901,7 +1907,8 @@ handle_response(serf_request_t *request,
 
       if (err
           && (!SERF_BUCKET_READ_ERROR(err->apr_err)
-               || APR_STATUS_IS_ECONNRESET(err->apr_err)))
+               || APR_STATUS_IS_ECONNRESET(err->apr_err)
+               || APR_STATUS_IS_ECONNABORTED(err->apr_err)))
         {
           /* These errors are special cased in serf
              ### We hope no handler returns these by accident. */

@@ -163,6 +163,10 @@ struct svn_ra_serf__session_t {
      constants' addresses, therefore). */
   apr_hash_t *capabilities;
 
+  /* Activity collection URL.  (Cached from the initial OPTIONS
+     request when run against HTTPv1 servers.)  */
+  const char *activity_collection_url;
+
   /* Are we using a proxy? */
   int using_proxy;
 

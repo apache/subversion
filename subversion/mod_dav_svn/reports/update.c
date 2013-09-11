@@ -845,6 +845,49 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
 }
 
 
+/* Validate that REVISION is a valid revision number for repository in
+   which YOUNGEST is the latest revision.  Use RESOURCE as a
+   convenient way to access the request record and a pool for error
+   messaging.   (It's okay if REVISION is SVN_INVALID_REVNUM, as in
+   the related contexts that just means "the youngest revision".)
+
+   REVTYPE is just a string describing the type/purpose of REVISION,
+   used in the generated error string.  */
+static dav_error *
+validate_input_revision(svn_revnum_t revision,
+                        svn_revnum_t youngest,
+                        const char *revtype,
+                        const dav_resource *resource)
+{
+  if (! SVN_IS_VALID_REVNUM(revision))
+    return SVN_NO_ERROR;
+    
+  if (revision > youngest)
+    {
+      svn_error_t *serr;
+
+      if (dav_svn__get_master_uri(resource->info->r))
+        {
+          serr = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, 0,
+                                   "No such %s '%ld' found in the repository.  "
+                                   "Perhaps the repository is out of date with "
+                                   "respect to the master repository?",
+                                   revtype, revision);
+        }
+      else
+        {
+          serr = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, 0,
+                                   "No such %s '%ld' found in the repository.",
+                                   revtype, revision);
+        }
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Invalid revision found in update report "
+                                  "request.", resource->pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
@@ -854,8 +897,7 @@ dav_svn__update_report(const dav_resource *resource,
   apr_xml_elem *child;
   void *rbaton = NULL;
   update_ctx_t uc = { 0 };
-  svn_revnum_t revnum = SVN_INVALID_REVNUM;
-  svn_boolean_t revnum_is_head = FALSE;
+  svn_revnum_t youngest, revnum = SVN_INVALID_REVNUM;
   svn_revnum_t from_revnum = SVN_INVALID_REVNUM;
   int ns;
   /* entry_counter and entry_is_empty are for operational logging. */
@@ -919,6 +961,14 @@ dav_svn__update_report(const dav_resource *resource,
             }
         }
     }
+
+  /* Ask the repository about its youngest revision (which we'll need
+     for some input validation later). */
+  if ((serr = svn_fs_youngest_rev(&youngest, repos->fs, resource->pool)))
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not determine the youngest "
+                                "revision for the update process.",
+                                resource->pool);
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
@@ -1039,6 +1089,23 @@ dav_svn__update_report(const dav_resource *resource,
         }
     }
 
+  /* If a target revision wasn't requested, or the requested target
+     revision was invalid, just update to HEAD as of the moment we
+     queried the youngest revision.  Otherwise, at least make sure the
+     request makes sense in light of that youngest revision
+     number.  */
+  if (! SVN_IS_VALID_REVNUM(revnum))
+    {
+      revnum = youngest;
+    }
+  else
+    {
+      derr = validate_input_revision(revnum, youngest, "target revision",
+                                     resource);
+      if (derr)
+        return derr;
+    }
+
   if (!saw_depth && !saw_recursive && (requested_depth == svn_depth_unknown))
     requested_depth = svn_depth_infinity;
 
@@ -1052,18 +1119,6 @@ dav_svn__update_report(const dav_resource *resource,
          "This may indicate that your client is too old.",
          SVN_DAV_ERROR_NAMESPACE,
          SVN_DAV_ERROR_TAG);
-    }
-
-  /* If a revision for this operation was not dictated to us, this
-     means "update to whatever the current HEAD is now". */
-  if (revnum == SVN_INVALID_REVNUM)
-    {
-      if ((serr = svn_fs_youngest_rev(&revnum, repos->fs, resource->pool)))
-        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                    "Could not determine the youngest "
-                                    "revision for the update process.",
-                                    resource->pool);
-      revnum_is_head = TRUE;
     }
 
   uc.svndiff_version = resource->info->svndiff_version;
@@ -1179,27 +1234,10 @@ dav_svn__update_report(const dav_resource *resource,
                   {
                     rev = SVN_STR_TO_REV(this_attr->value);
                     saw_rev = TRUE;
-                    if (revnum_is_head && rev > revnum)
-                      {
-                        if (dav_svn__get_master_uri(resource->info->r))
-                          return dav_svn__new_error_tag(
-                                     resource->pool,
-                                     HTTP_INTERNAL_SERVER_ERROR, 0,
-                                     "A reported revision is higher than the "
-                                     "current repository HEAD revision.  "
-                                     "Perhaps the repository is out of date "
-                                     "with respect to the master repository?",
-                                     SVN_DAV_ERROR_NAMESPACE,
-                                     SVN_DAV_ERROR_TAG);
-                        else
-                          return dav_svn__new_error_tag(
-                                     resource->pool,
-                                     HTTP_INTERNAL_SERVER_ERROR, 0,
-                                     "A reported revision is higher than the "
-                                     "current repository HEAD revision.",
-                                     SVN_DAV_ERROR_NAMESPACE,
-                                     SVN_DAV_ERROR_TAG);
-                      }
+                    if ((derr = validate_input_revision(rev, youngest,
+                                                        "reported revision",
+                                                        resource)))
+                      return derr;
                   }
                 else if (strcmp(this_attr->name, "depth") == 0)
                   depth = svn_depth_from_word(this_attr->value);

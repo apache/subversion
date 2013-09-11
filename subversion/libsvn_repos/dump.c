@@ -34,6 +34,7 @@
 #include "svn_time.h"
 #include "svn_checksum.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_private.h"
@@ -733,17 +734,20 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
-  apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
+  unsigned int i;
+  apr_array_header_t *sorted_entries;
 
-  for (hi = apr_hash_first(pool, db->deleted_entries);
-       hi;
-       hi = apr_hash_next(hi))
+  /* Sort entries lexically instead of as paths. Even though the entries
+   * are full paths they're all in the same directory (see comment in struct
+   * dir_baton definition). So we really want to sort by basename, in which
+   * case the lexical sort function is more efficient. */
+  sorted_entries = svn_sort__hash(db->deleted_entries,
+                                  svn_sort_compare_items_lexically, pool);
+  for (i = 0; i < sorted_entries->nelts; i++)
     {
-      const void *key;
-      const char *path;
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = key;
+      const char *path = APR_ARRAY_IDX(sorted_entries, i,
+                                       svn_sort__item_t).key;
 
       svn_pool_clear(subpool);
 
