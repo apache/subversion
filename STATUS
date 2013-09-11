@@ -144,6 +144,7 @@ Candidate changes:
      that to 1.7.x.
    Votes:
      +1: breser
+     +0: stsp (wondering whether the r1306275 group would fix the same issue)
 
 Veto-blocked changes:
 =====================
