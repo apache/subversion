@@ -25,8 +25,9 @@ Candidate changes:
      http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
      with the paradigm that the target of an editor drive may never have more
      than one path component (which according to cmpilato is an API violation).
-   Depends: conflicts on diff_tests.py
    Notes:
+     Conflict in diff_tests.py can be interactively resolved with:
+       (m) merge -> 21 (your version first, then theirs) -> r (resolved)
      Please read the branch and related trunk log messages for detailed notes
      about these changes.
    Branch:
