@@ -18,7 +18,7 @@ Candidate changes:
  * r1306275, and other revisions
    New diff support code for added/deleted files and directories.
    Fixes issue #4153, "svn log --diff" on moved file gives "not found",
-   and other problems.
+   and other problems, such as issue #4421.
    Justification:
      The current code (introduced in 1.7.x in the r1207351 backport commit)
      produces inconsistent paths in diff output (see
@@ -143,7 +143,7 @@ Candidate changes:
      that to 1.7.x.
    Votes:
      +1: breser
-     +0: stsp (wondering whether the r1306275 group would fix the same issue)
+     -0: stsp (see r1306275 group for a more complete fix)
 
 Veto-blocked changes:
 =====================
