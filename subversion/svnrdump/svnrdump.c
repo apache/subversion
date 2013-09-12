@@ -726,6 +726,7 @@ help_cmd(apr_getopt_t *os,
 {
   const char *header =
     _("general usage: svnrdump SUBCOMMAND URL [-r LOWER[:UPPER]]\n"
+      "Subversion remote repository dump and load tool.\n"
       "Type 'svnrdump help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnrdump --version' to see the program version and RA modules.\n"
       "\n"

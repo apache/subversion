@@ -1846,6 +1846,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   const char *header =
     _("general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+      "Subversion repository replication tool.\n"
       "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnsync --version' to see the program version and RA modules.\n"
       "\n"

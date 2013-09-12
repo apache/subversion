@@ -310,15 +310,21 @@ static void help(apr_pool_t *pool)
 #ifdef WIN32
   svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [-d | -i | -t | -X "
                                       "| --service] [options]\n"
+                                      "Subversion repository server.\n"
+                                      "Type 'svnserve --version' to see the "
+                                      "program version.\n"
                                       "\n"
                                       "Valid options:\n"),
-                                    stdout, pool));
+                                      stdout, pool));
 #else
   svn_error_clear(svn_cmdline_fputs(_("usage: svnserve [-d | -i | -t | -X] "
                                       "[options]\n"
+                                      "Subversion repository server.\n"
+                                      "Type 'svnserve --version' to see the "
+                                      "program version.\n"
                                       "\n"
                                       "Valid options:\n"),
-                                    stdout, pool));
+                                      stdout, pool));
 #endif
   for (i = 0; svnserve__options[i].name && svnserve__options[i].optch; i++)
     {

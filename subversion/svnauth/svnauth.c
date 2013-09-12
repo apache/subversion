@@ -185,6 +185,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnauth_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnauth SUBCOMMAND [ARGS & OPTIONS ...]\n"
+      "Subversion authentication credentials management tool.\n"
       "Type 'svnauth help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnauth --version' to see the program version and available\n"
       "authentication credential caches.\n"
