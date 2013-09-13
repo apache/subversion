@@ -81,28 +81,6 @@ Candidate changes:
                    detection of BDB (via db.h) and even while debugging a
                    maintainer build of Subversion a release BDB works fine)
 
- * r1468980, r1478987, r1502811
-   Reduce the number of ra sessions for automatic merge calculations to two.
-   Justification:
-     10 concurrent ra sessions open to a single server at the same time breaks
-     in certain setups (e.g. xinetd svnserve), while we really don't need this
-     many. Opening ra session is still a performance killer in all other
-     scenarios, so reducing the number of sessions is a good thing.
-   Notes:
-     Depends on r1502901 and r1502909, to avoid ra-session reuse errors.
-     r1468980 is a small performance tweak needed for a clean merge.
-     r1478987 removes a common ra session.
-     r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
-   Votes:
-     +1: rhuijben, stefan2
-     +0: breser (I see that the call to
-                 svn_ra__assert_mergeinfo_capable_server() was removed from
-                 get_mergeinfo() in mergeinfo.c, but not mentioned in commit
-                 logs.  Looking at the code it seems that finding out if the
-                 server and repo support merginfo requires trying to get some,
-                 but don't we need to pretty up the error here like the assert
-                 would do for us?)
-
  * r1516806
    Do not look at the hostname part of an URI when checking that
    the schema data is canonical.
@@ -185,3 +163,25 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1468980, r1478987, r1502811
+   Reduce the number of ra sessions for automatic merge calculations to two.
+   Justification:
+     10 concurrent ra sessions open to a single server at the same time breaks
+     in certain setups (e.g. xinetd svnserve), while we really don't need this
+     many. Opening ra session is still a performance killer in all other
+     scenarios, so reducing the number of sessions is a good thing.
+   Notes:
+     Depends on r1502901 and r1502909, to avoid ra-session reuse errors.
+     r1468980 is a small performance tweak needed for a clean merge.
+     r1478987 removes a common ra session.
+     r1502811 avoids all ra session creations via svn_client__mergeinfo_log.
+   Votes:
+     +1: rhuijben, stefan2, ivan
+     +0: breser (I see that the call to
+                 svn_ra__assert_mergeinfo_capable_server() was removed from
+                 get_mergeinfo() in mergeinfo.c, but not mentioned in commit
+                 logs.  Looking at the code it seems that finding out if the
+                 server and repo support merginfo requires trying to get some,
+                 but don't we need to pretty up the error here like the assert
+                 would do for us?)
