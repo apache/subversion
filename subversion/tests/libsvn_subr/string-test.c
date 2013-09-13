@@ -656,7 +656,7 @@ test_string_similarity(apr_pool_t *pool)
     const char *stra;
     const char *strb;
     apr_size_t lcs;
-    int score;
+    unsigned int score;
   } tests[] =
       {
 #define SCORE(lcs, len) ((2000 * (lcs) + (len)/2) / (len))
