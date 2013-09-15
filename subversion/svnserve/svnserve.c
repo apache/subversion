@@ -530,9 +530,47 @@ release_shared_pool(struct shared_pool_t *shared)
 }
 #endif
 
+/* Wrapper around serve() that takes a socket instead of a connection.
+ * This is to off-load work from the main thread in threaded and fork modes.
+ */
+static svn_error_t *
+serve_socket(apr_socket_t *usock,
+             serve_params_t *params,
+             apr_pool_t *pool)
+{
+  apr_status_t status;
+  svn_ra_svn_conn_t *conn;
+  
+  /* Enable TCP keep-alives on the socket so we time out when
+   * the connection breaks due to network-layer problems.
+   * If the peer has dropped the connection due to a network partition
+   * or a crash, or if the peer no longer considers the connection
+   * valid because we are behind a NAT and our public IP has changed,
+   * it will respond to the keep-alive probe with a RST instead of an
+   * acknowledgment segment, which will cause svn to abort the session
+   * even while it is currently blocked waiting for data from the peer. */
+  status = apr_socket_opt_set(usock, APR_SO_KEEPALIVE, 1);
+  if (status)
+    {
+      /* It's not a fatal error if we cannot enable keep-alives. */
+    }
+
+  /* create the connection, configure ports etc. */
+  conn = svn_ra_svn_create_conn3(usock, NULL, NULL,
+                                 params->compression_level,
+                                 params->zero_copy_limit,
+                                 params->error_check_interval,
+                                 pool);
+
+  /* process the actual request */
+  SVN_ERR(serve(conn, params, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* "Arguments" passed from the main thread to the connection thread */
 struct serve_thread_t {
-  svn_ra_svn_conn_t *conn;
+  apr_socket_t *usock;
   serve_params_t *params;
   struct shared_pool_t *shared_pool;
 };
@@ -542,7 +580,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct serve_thread_t *d = data;
 
-  svn_error_clear(serve(d->conn, d->params, d->shared_pool->pool));
+  svn_error_clear(serve_socket(d->usock, d->params, d->shared_pool->pool));
   release_shared_pool(d->shared_pool);
 
   return NULL;
@@ -1201,29 +1239,9 @@ int main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
-      /* Enable TCP keep-alives on the socket so we time out when
-       * the connection breaks due to network-layer problems.
-       * If the peer has dropped the connection due to a network partition
-       * or a crash, or if the peer no longer considers the connection
-       * valid because we are behind a NAT and our public IP has changed,
-       * it will respond to the keep-alive probe with a RST instead of an
-       * acknowledgment segment, which will cause svn to abort the session
-       * even while it is currently blocked waiting for data from the peer. */
-      status = apr_socket_opt_set(usock, APR_SO_KEEPALIVE, 1);
-      if (status)
-        {
-          /* It's not a fatal error if we cannot enable keep-alives. */
-        }
-
-      conn = svn_ra_svn_create_conn3(usock, NULL, NULL,
-                                     params.compression_level,
-                                     params.zero_copy_limit,
-                                     params.error_check_interval,
-                                     connection_pool);
-
       if (run_mode == run_mode_listen_once)
         {
-          err = serve(conn, &params, connection_pool);
+          err = serve_socket(usock, &params, connection_pool);
 
           if (err)
             svn_handle_error2(err, stdout, FALSE, "svnserve: ");
@@ -1242,7 +1260,7 @@ int main(int argc, const char *argv[])
           if (status == APR_INCHILD)
             {
               apr_socket_close(sock);
-              err = serve(conn, &params, connection_pool);
+              err = serve_socket(usock, &params, connection_pool);
               log_error(err, params.log_file,
                         svn_ra_svn_conn_remote_host(conn),
                         NULL, NULL, /* user, repos */
@@ -1277,7 +1295,7 @@ int main(int argc, const char *argv[])
           shared_pool = attach_shared_pool(connection_pool);
 
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
-          thread_data->conn = conn;
+          thread_data->usock = usock;
           thread_data->params = &params;
           thread_data->shared_pool = shared_pool;
           status = apr_thread_pool_push(threads, serve_thread, thread_data,
@@ -1295,7 +1313,7 @@ int main(int argc, const char *argv[])
 
         case connection_mode_single:
           /* Serve one connection at a time. */
-          svn_error_clear(serve(conn, &params, connection_pool));
+          svn_error_clear(serve_socket(usock, &params, connection_pool));
           release_connection_pool(connection_pool);
         }
     }
