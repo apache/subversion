@@ -424,7 +424,7 @@ acquire_connection_pool_internal(apr_pool_t **pool)
  * create a new root pool and return that.
  */
 static apr_pool_t *
-acquire_connection_pool()
+acquire_connection_pool(void)
 {
   apr_pool_t *pool;
   svn_error_t *err = acquire_connection_pool_internal(&pool);
