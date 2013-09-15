@@ -485,8 +485,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   /* Perform the actual creation. */
   *fs_p = fs_new(fs_config, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->create(*fs_p, path, pool, common_pool));
+  SVN_ERR(vtable->create(*fs_p, path, common_pool_lock, pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -500,8 +499,7 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = fs_new(fs_config, pool);
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->open_fs(*fs_p, path, pool, common_pool));
+  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -521,11 +519,11 @@ svn_fs_upgrade2(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->upgrade_fs(fs, path,
-                                          notify_func, notify_baton,
-                                          cancel_func, cancel_baton,
-                                          pool, common_pool));
+  SVN_ERR(vtable->upgrade_fs(fs, path,
+                             notify_func, notify_baton,
+                             cancel_func, cancel_baton,
+                             common_pool_lock,
+                             pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -552,11 +550,11 @@ svn_fs_verify(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(fs_config, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->verify_fs(fs, path, start, end,
-                                         notify_func, notify_baton,
-                                         cancel_func, cancel_baton,
-                                         pool, common_pool));
+  SVN_ERR(vtable->verify_fs(fs, path, start, end,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton,
+                            common_pool_lock,
+                            pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -667,10 +665,9 @@ svn_fs_pack(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->pack_fs(fs, path, notify_func, notify_baton,
-                                       cancel_func, cancel_baton, pool,
-                                       common_pool));
+  SVN_ERR(vtable->pack_fs(fs, path, notify_func, notify_baton,
+                          cancel_func, cancel_baton, common_pool_lock,
+                          pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -685,9 +682,8 @@ svn_fs_recover(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->open_fs_for_recovery(fs, path, pool,
-                                                    common_pool));
+  SVN_ERR(vtable->open_fs_for_recovery(fs, path, common_pool_lock,
+                                       pool, common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
 }
@@ -728,8 +724,7 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   SVN_ERR(write_fs_type(path, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Perform the actual creation. */
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->create(fs, path, fs->pool, common_pool));
+  SVN_ERR(vtable->create(fs, path, common_pool_lock, fs->pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -741,8 +736,7 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->open_fs(fs, path, fs->pool, common_pool));
+  SVN_ERR(vtable->open_fs(fs, path, common_pool_lock, fs->pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
 
   return SVN_NO_ERROR;

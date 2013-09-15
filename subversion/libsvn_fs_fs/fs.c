@@ -229,9 +229,12 @@ initialize_fs_struct(svn_fs_t *fs)
 /* This implements the fs_library_vtable_t.create() API.  Create a new
    fsfs-backed Subversion filesystem at path PATH and link it into
    *FS.  Perform temporary allocations in POOL, and fs-global allocations
-   in COMMON_POOL. */
+   in COMMON_POOL.  The latter must be serialized using COMMON_POOL_LOCK. */
 static svn_error_t *
-fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+fs_create(svn_fs_t *fs,
+          const char *path,
+          svn_mutex__t *common_pool_lock,
+          apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
@@ -241,7 +244,10 @@ fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   SVN_ERR(svn_fs_fs__create(fs, path, pool));
 
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-  return fs_serialized_init(fs, common_pool, pool);
+  SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                       fs_serialized_init(fs, common_pool, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -251,17 +257,26 @@ fs_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 /* This implements the fs_library_vtable_t.open() API.  Open an FSFS
    Subversion filesystem located at PATH, set *FS to point to the
    correct vtable for the filesystem.  Use POOL for any temporary
-   allocations, and COMMON_POOL for fs-global allocations. */
+   allocations, and COMMON_POOL for fs-global allocations.
+   The latter must be serialized using COMMON_POOL_LOCK. */
 static svn_error_t *
-fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+fs_open(svn_fs_t *fs,
+        const char *path,
+        svn_mutex__t *common_pool_lock,
+        apr_pool_t *pool,
         apr_pool_t *common_pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+
   SVN_ERR(initialize_fs_struct(fs));
 
   SVN_ERR(svn_fs_fs__open(fs, path, pool));
 
   SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-  return fs_serialized_init(fs, common_pool, pool);
+  SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                       fs_serialized_init(fs, common_pool, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -270,7 +285,9 @@ fs_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 static svn_error_t *
 fs_open_for_recovery(svn_fs_t *fs,
                      const char *path,
-                     apr_pool_t *pool, apr_pool_t *common_pool)
+                     svn_mutex__t *common_pool_lock,
+                     apr_pool_t *pool,
+                     apr_pool_t *common_pool)
 {
   /* Recovery for FSFS is currently limited to recreating the 'current'
      file from the latest revision. */
@@ -288,7 +305,7 @@ fs_open_for_recovery(svn_fs_t *fs,
                                      "0 1 1\n", pool));
 
   /* Now open the filesystem properly by calling the vtable method directly. */
-  return fs_open(fs, path, pool, common_pool);
+  return fs_open(fs, path, common_pool_lock, pool, common_pool);
 }
 
 
@@ -301,14 +318,11 @@ fs_upgrade(svn_fs_t *fs,
            void *notify_baton,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
+           svn_mutex__t *common_pool_lock,
            apr_pool_t *pool,
            apr_pool_t *common_pool)
 {
-  SVN_ERR(svn_fs__check_fs(fs, FALSE));
-  SVN_ERR(initialize_fs_struct(fs));
-  SVN_ERR(svn_fs_fs__open(fs, path, pool));
-  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
+  SVN_ERR(fs_open(fs, path, common_pool_lock, pool, common_pool));
   return svn_fs_fs__upgrade(fs, notify_func, notify_baton,
                             cancel_func, cancel_baton, pool);
 }
@@ -321,14 +335,11 @@ fs_verify(svn_fs_t *fs, const char *path,
           void *notify_baton,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
+          svn_mutex__t *common_pool_lock,
           apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
-  SVN_ERR(svn_fs__check_fs(fs, FALSE));
-  SVN_ERR(initialize_fs_struct(fs));
-  SVN_ERR(svn_fs_fs__open(fs, path, pool));
-  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
+  SVN_ERR(fs_open(fs, path, common_pool_lock, pool, common_pool));
   return svn_fs_fs__verify(fs, start, end, notify_func, notify_baton,
                            cancel_func, cancel_baton, pool);
 }
@@ -340,14 +351,11 @@ fs_pack(svn_fs_t *fs,
         void *notify_baton,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
+        svn_mutex__t *common_pool_lock,
         apr_pool_t *pool,
         apr_pool_t *common_pool)
 {
-  SVN_ERR(svn_fs__check_fs(fs, FALSE));
-  SVN_ERR(initialize_fs_struct(fs));
-  SVN_ERR(svn_fs_fs__open(fs, path, pool));
-  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
-  SVN_ERR(fs_serialized_init(fs, common_pool, pool));
+  SVN_ERR(fs_open(fs, path, common_pool_lock, pool, common_pool));
   return svn_fs_fs__pack(fs, notify_func, notify_baton,
                          cancel_func, cancel_baton, pool);
 }
