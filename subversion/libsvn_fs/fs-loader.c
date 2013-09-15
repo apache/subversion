@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <apr.h>
+#include <apr_atomic.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
@@ -70,6 +71,7 @@ struct fs_type_defn {
   const char *fs_type;
   const char *fsap_name;
   fs_init_func_t initfunc;
+  fs_library_vtable_t *vtable;
   struct fs_type_defn *next;
 };
 
@@ -81,6 +83,7 @@ static struct fs_type_defn base_defn =
 #else
     NULL,
 #endif
+    NULL,
     NULL /* End of static list: this needs to be reset to NULL if the
             common_pool used when setting it has been cleared. */
   };
@@ -93,6 +96,7 @@ static struct fs_type_defn fsx_defn =
 #else
     NULL,
 #endif
+    NULL,
     &base_defn
   };
 
@@ -104,6 +108,7 @@ static struct fs_type_defn fsfs_defn =
 #else
     NULL,
 #endif
+    NULL,
     &fsx_defn
   };
 
@@ -159,13 +164,20 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 /* Fetch a library vtable by a pointer into the library definitions array. */
 static svn_error_t *
 get_library_vtable_direct(fs_library_vtable_t **vtable,
-                          const struct fs_type_defn *fst,
+                          struct fs_type_defn *fst,
                           apr_pool_t *pool)
 {
   fs_init_func_t initfunc = NULL;
   const svn_version_t *my_version = svn_fs_version();
   const svn_version_t *fs_version;
 
+  /* most times, we get lucky */
+  *vtable = apr_atomic_casptr((volatile void **)&fst->vtable, NULL, NULL);
+  if (*vtable)
+    return SVN_NO_ERROR;
+
+  /* o.k. the first access needs to actually load the module, find the
+     vtable and check for version compatibility. */
   initfunc = fst->initfunc;
   if (! initfunc)
     SVN_ERR(load_module(&initfunc, fst->fsap_name, pool));
@@ -202,6 +214,10 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
                              my_version->patch, my_version->tag,
                              fs_version->major, fs_version->minor,
                              fs_version->patch, fs_version->tag);
+
+  /* the vtable will not change.  Remember it */
+  apr_atomic_casptr((volatile void **)&fst->vtable, *vtable, NULL);
+
   return SVN_NO_ERROR;
 }
 
@@ -1625,7 +1641,7 @@ svn_error_t *
 svn_fs_print_modules(svn_stringbuf_t *output,
                      apr_pool_t *pool)
 {
-  const struct fs_type_defn *defn = fs_modules;
+  struct fs_type_defn *defn = fs_modules;
   fs_library_vtable_t *vtable;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
