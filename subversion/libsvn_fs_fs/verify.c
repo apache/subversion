@@ -442,15 +442,17 @@ expected_streamed_checksum(apr_file_t *file,
   svn_checksum_t *checksum;
   svn_checksum_ctx_t *context
     = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
+  apr_off_t size = entry->size;
 
-  while (entry->size > 0)
+  while (size > 0)
     {
-      apr_size_t to_read = entry->size > sizeof(buffer)
+      apr_size_t to_read = size > sizeof(buffer)
                          ? sizeof(buffer)
-                         : (apr_size_t)entry->size;
+                         : (apr_size_t)size;
       SVN_ERR(svn_io_file_read_full2(file, buffer, to_read, NULL, NULL,
                                      pool));
       SVN_ERR(svn_checksum_update(context, buffer, to_read));
+      size -= to_read;
     }
 
   SVN_ERR(svn_checksum_final(&checksum, context, pool));
