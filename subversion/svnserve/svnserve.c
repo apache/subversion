@@ -139,6 +139,15 @@ enum run_mode {
  */
 #define THREADPOOL_THREAD_IDLE_LIMIT 1000000
 
+/* Number of client to server connections that may concurrently in the
+ * TCP 3-way handshake state, i.e. are in the process of being created.
+ *
+ * Larger values improve scalability with lots of small requests comming
+ * on over long latency networks.
+ * 
+ * The OS may actually use a lower limit than specified here.
+ */
+#define ACCEPT_BACKLOG 128
 
 #ifdef WIN32
 static apr_os_sock_t winservice_svnserve_accept_socket = INVALID_SOCKET;
@@ -1115,7 +1124,7 @@ int main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
     }
 
-  apr_socket_listen(sock, 7);
+  apr_socket_listen(sock, ACCEPT_BACKLOG);
 
 #if APR_HAS_FORK
   if (run_mode != run_mode_listen_once && !foreground)
