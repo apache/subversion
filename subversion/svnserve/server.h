@@ -36,6 +36,8 @@ extern "C" {
 #include "svn_repos.h"
 #include "svn_ra_svn.h"
 
+#include "private/svn_mutex.h"
+
 enum username_case_type { CASE_FORCE_UPPER, CASE_FORCE_LOWER, CASE_ASIS };
 
 typedef struct server_baton_t {
@@ -60,6 +62,8 @@ typedef struct server_baton_t {
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
   apr_file_t *log_file;    /* Log filehandle. */
+  svn_mutex__t *log_file_mutex; /* Serializes access to log_file.
+                              May be NULL even if log_file is not. */
   svn_boolean_t vhost;     /* Use virtual-host-based path to repo. */
   apr_pool_t *pool;
 } server_baton_t;
@@ -99,6 +103,9 @@ typedef struct serve_params_t {
 
   /* A filehandle open for writing logs to; possibly NULL. */
   apr_file_t *log_file;
+
+  /* Mutex to serialize access to log_file; possibly NULL. */
+  svn_mutex__t *log_file_mutex;
 
   /* Username case normalization style. */
   enum username_case_type username_case;
@@ -162,11 +169,14 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
 apr_size_t escape_errorlog_item(char *dest, const char *source,
                                 apr_size_t buflen);
 
-/* Log ERR to LOG_FILE if LOG_FILE is not NULL.  Include REMOTE_HOST,
-   USER, and REPOS in the log if they are not NULL.  Allocate temporary
-   char buffers in POOL (which caller can then clear or dispose of). */
+/* Log ERR to LOG_FILE if LOG_FILE is not NULL.  In multi-threaded
+   servers, you should also provide a LOG_FILE_MUTEX object to serialize
+   access to the log file.   Include REMOTE_HOST, USER, and REPOS in the
+   log if they are not NULL.  Allocate temporary char buffers in POOL
+   (which caller can then clear or dispose of). */
 void
-log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
+log_error(svn_error_t *err, apr_file_t *log_file,
+          svn_mutex__t *log_file_mutex, const char *remote_host,
           const char *user, const char *repos, apr_pool_t *pool);
 
 #ifdef __cplusplus
