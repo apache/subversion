@@ -30,6 +30,7 @@
 #include <apr_network_io.h>
 #include <apr_signal.h>
 #include <apr_thread_proc.h>
+#include <apr_thread_pool.h>
 #include <apr_portable.h>
 
 #include <locale.h>
@@ -102,6 +103,41 @@ enum run_mode {
 #define CONNECTION_DEFAULT connection_mode_single
 
 #endif
+
+/* Parameters for the worker thread pool used in threaded mode. */
+
+/* Have at least this many worker threads (even if there are no requests
+ * to handle).
+ *
+ * A 0 value is legal but increases the latency for the next incoming
+ * request.  Higher values may be useful for servers that experience short
+ * bursts of concurrent requests followed by longer idle periods.
+ */
+#define THREADPOOL_MIN_SIZE 1
+
+/* Maximum number of worker threads.  If there are more concurrent requests
+ * than worker threads, the extra requests get queued.
+ *
+ * Since very slow connections will hog a full thread for a potentially
+ * long time before timing out, be sure to not set this limit too low.
+ * 
+ * On the other hand, keep in mind that every thread will allocate up to
+ * 4MB of unused RAM in the APR allocator of its root pool.  32 bit servers
+ * must hence do with fewer threads.
+ */
+#if (APR_SIZEOF_VOIDP <= 4)
+#define THREADPOOL_MAX_SIZE 64
+#else
+#define THREADPOOL_MAX_SIZE 256
+#endif
+
+/* Number of microseconds that an unused thread remains in the pool before
+ * being terminated.
+ *
+ * Higher values are useful if clients frequently send small requests and
+ * you want to minimize the latency for those.
+ */
+#define THREADPOOL_THREAD_IDLE_LIMIT 1000000
 
 
 #ifdef WIN32
@@ -569,8 +605,7 @@ int main(int argc, const char *argv[])
   svn_ra_svn_conn_t *conn;
   apr_proc_t proc;
 #if APR_HAS_THREADS
-  apr_threadattr_t *tattr;
-  apr_thread_t *tid;
+  apr_thread_pool_t *threads;
   struct shared_pool_t *shared_pool;
 
   struct serve_thread_t *thread_data;
@@ -1107,6 +1142,29 @@ int main(int argc, const char *argv[])
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
+#if APR_HAS_THREADS
+  if (handling_mode == connection_mode_thread)
+    {
+      /* create the thread pool */
+      status = apr_thread_pool_create(&threads,
+                                      THREADPOOL_MIN_SIZE,
+                                      THREADPOOL_MAX_SIZE,
+                                      pool);
+      if (status)
+        {
+          err = svn_error_wrap_apr (status, _("Can't create thread pool"));
+          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+        }
+
+      /* let idle threads linger for a while in case more requests are
+         coming in */
+      apr_thread_pool_idle_wait_set(threads, THREADPOOL_THREAD_IDLE_LIMIT);
+
+      /* don't queue requests unless we reached the worker thread limit */
+      apr_thread_pool_threshold_set(threads, 0);
+    }
+#endif
+
   while (1)
     {
 #ifdef WIN32
@@ -1216,31 +1274,16 @@ int main(int argc, const char *argv[])
              little different from forking one process per connection. */
 #if APR_HAS_THREADS
           shared_pool = attach_shared_pool(connection_pool);
-          status = apr_threadattr_create(&tattr, connection_pool);
-          if (status)
-            {
-              err = svn_error_wrap_apr(status, _("Can't create threadattr"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
-              exit(1);
-            }
-          status = apr_threadattr_detach_set(tattr, 1);
-          if (status)
-            {
-              err = svn_error_wrap_apr(status, _("Can't set detached state"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
-              exit(1);
-            }
+
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
           thread_data->conn = conn;
           thread_data->params = &params;
           thread_data->shared_pool = shared_pool;
-          status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
-                                     shared_pool->pool);
+          status = apr_thread_pool_push(threads, serve_thread, thread_data,
+                                        0, NULL);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't create thread"));
+              err = svn_error_wrap_apr(status, _("Can't push task"));
               svn_handle_error2(err, stderr, FALSE, "svnserve: ");
               svn_error_clear(err);
               exit(1);
