@@ -52,9 +52,15 @@ typedef struct file_stats_t
   /* number of lseek calls to clusters not previously read */
   apr_int64_t uncached_seek_count;
 
+  /* number of lseek counts not followed by a read */
+  apr_int64_t unnecessary_seeks;
+
   /* number of read() calls */
   apr_int64_t read_count;
 
+  /* number of read() calls that returned 0 bytes */
+  apr_int64_t empty_reads;
+  
   /* total number of bytes returned by those reads */
   apr_int64_t read_size;
 
@@ -86,6 +92,8 @@ typedef struct handle_info_t
   /* bytes read so far in the current series of reads started (default: 0) */
   apr_int64_t last_read_size;
 
+  /* number of read() calls in this series */
+  apr_int64_t read_count;
 } handle_info_t;
 
 /* useful typedef */
@@ -138,6 +146,11 @@ store_read_info(handle_info_t *handle_info)
           if (*count < 0xffff)
             ++*count;
         }
+    }
+  else if (handle_info->read_count == 0)
+    {
+      /* two consecutive seeks */
+      handle_info->file->unnecessary_seeks++;
     }
 }
 
@@ -231,9 +244,13 @@ read_file(int handle, apr_int64_t count)
     {
       /* known file handle -> expand current read sequence */
 
+      handle_info->read_count++;
       handle_info->last_read_size += count;
       handle_info->file->read_count++;
       handle_info->file->read_size += count;
+
+      if (count == 0)
+        handle_info->file->empty_reads++;
     }
 }
 
@@ -253,6 +270,7 @@ seek_file(int handle, apr_int64_t location)
 
       handle_info->last_read_size = 0;
       handle_info->last_read_start = location;
+      handle_info->read_count = 0;
       handle_info->file->seek_count++;
 
       /* if we seek to a location that had not been read from before,
@@ -678,6 +696,8 @@ print_stats(apr_pool_t *pool)
   apr_int64_t clusters_read = 0;
   apr_int64_t unique_clusters_read = 0;
   apr_int64_t uncached_seek_count = 0;
+  apr_int64_t unnecessary_seek_count = 0;
+  apr_int64_t empty_read_count = 0;
 
   apr_hash_index_t *hi;
   for (hi = apr_hash_first(pool, files); hi; hi = apr_hash_next(hi))
@@ -695,13 +715,17 @@ print_stats(apr_pool_t *pool)
       clusters_read += file->clusters_read;
       unique_clusters_read += file->unique_clusters_read;
       uncached_seek_count += file->uncached_seek_count;
+      unnecessary_seek_count += file->unnecessary_seeks;
+      empty_read_count += file->empty_reads;
     }
 
   printf("%20s files\n", svn__i64toa_sep(apr_hash_count(files), ',', pool));
   printf("%20s files opened\n", svn__i64toa_sep(open_count, ',', pool));
   printf("%20s seeks\n", svn__i64toa_sep(seek_count, ',', pool));
+  printf("%20s unnecessary seeks\n", svn__i64toa_sep(unnecessary_seek_count, ',', pool));
   printf("%20s uncached seeks\n", svn__i64toa_sep(uncached_seek_count, ',', pool));
   printf("%20s reads\n", svn__i64toa_sep(read_count, ',', pool));
+  printf("%20s empty reads\n", svn__i64toa_sep(empty_read_count, ',', pool));
   printf("%20s unique clusters read\n", svn__i64toa_sep(unique_clusters_read, ',', pool));
   printf("%20s clusters read\n", svn__i64toa_sep(clusters_read, ',', pool));
   printf("%20s bytes read\n", svn__i64toa_sep(read_size, ',', pool));
