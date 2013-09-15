@@ -480,6 +480,7 @@ static void
 release_connection_pool(apr_pool_t *pool)
 {
   svn_error_t *err;
+
   svn_pool_clear(pool);
 
   err = svn_mutex__lock(connection_pools_mutex);
