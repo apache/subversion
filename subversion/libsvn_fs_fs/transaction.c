@@ -688,6 +688,7 @@ fold_change(apr_hash_t *changes,
           /* An add at this point must be following a previous delete,
              so treat it just like a replace. */
           old_change->change_kind = svn_fs_path_change_replace;
+          old_change->node_kind = info->node_kind;
           old_change->node_rev_id = svn_fs_fs__id_copy(info->node_rev_id,
                                                        pool);
           old_change->text_mod = info->text_mod;
