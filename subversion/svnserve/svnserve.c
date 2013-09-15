@@ -30,9 +30,7 @@
 #include <apr_network_io.h>
 #include <apr_signal.h>
 #include <apr_thread_proc.h>
-#include <apr_thread_pool.h>
 #include <apr_portable.h>
-#include <apr_poll.h>
 
 #include <locale.h>
 
@@ -57,6 +55,16 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
+
+/* Alas! old APR-Utils don't provide thread pools */
+#if APR_VERSION_AT_LEAST(1,3,0)
+#  include <apr_thread_pool.h>
+#  define HAVE_THREADPOOLS 1
+#  define THREAD_ERROR_MSG _("Can't push task")
+#else
+#  define HAVE_THREADPOOLS 0
+#  define THREAD_ERROR_MSG _("Can't create thread")
+#endif
 
 #include "winservice.h"
 
@@ -657,10 +665,14 @@ int main(int argc, const char *argv[])
   apr_status_t status;
   apr_proc_t proc;
 #if APR_HAS_THREADS
-  apr_thread_pool_t *threads;
   struct shared_pool_t *shared_pool;
-
   struct serve_thread_t *thread_data;
+#if HAVE_THREADPOOLS
+  apr_thread_pool_t *threads;
+#else
+  apr_threadattr_t *tattr;
+  apr_thread_t *tid;
+#endif
 #endif
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
   apr_uint16_t port = SVN_RA_SVN_PORT;
@@ -1200,7 +1212,7 @@ int main(int argc, const char *argv[])
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
-#if APR_HAS_THREADS
+#if HAVE_THREADPOOLS
   if (handling_mode == connection_mode_thread)
     {
       /* create the thread pool */
@@ -1311,11 +1323,32 @@ int main(int argc, const char *argv[])
           thread_data->usock = usock;
           thread_data->params = &params;
           thread_data->shared_pool = shared_pool;
+#if HAVE_THREADPOOLS
           status = apr_thread_pool_push(threads, serve_thread, thread_data,
                                         0, NULL);
+#else
+          status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't push task"));
+              err = svn_error_wrap_apr(status, _("Can't create threadattr"));
+              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+              svn_error_clear(err);
+              exit(1);
+            }
+          status = apr_threadattr_detach_set(tattr, 1);
+          if (status)
+            {
+              err = svn_error_wrap_apr(status, _("Can't set detached state"));
+              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+              svn_error_clear(err);
+              exit(1);
+            }
+          status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
+                                     shared_pool->pool);
+#endif
+          if (status)
+            {
+              err = svn_error_wrap_apr(status, THREAD_ERROR_MSG);
               svn_handle_error2(err, stderr, FALSE, "svnserve: ");
               svn_error_clear(err);
               exit(1);
