@@ -112,20 +112,15 @@ log_write(apr_file_t *log_file, const char *errstr, apr_size_t len,
   return svn_io_file_write(log_file, errstr, &len, pool);
 }
 
-void
-log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
-          const char *user, const char *repos, apr_pool_t *pool)
+static void
+log_error_internal(svn_error_t *err, apr_file_t *log_file,
+                   const char *remote_host, const char *user,
+                   const char *repos, apr_pool_t *pool)
 {
   const char *timestr, *continuation;
   char errbuf[256];
   /* 8192 from MAX_STRING_LEN in from httpd-2.2.4/include/httpd.h */
   char errstr[8192];
-
-  if (err == SVN_NO_ERROR)
-    return;
-
-  if (log_file == NULL)
-    return;
 
   timestr = svn_time_to_cstring(apr_time_now(), pool);
   remote_host = (remote_host ? remote_host : "-");
@@ -160,13 +155,41 @@ log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
     }
 }
 
+
+void
+log_error(svn_error_t *err, apr_file_t *log_file,
+          svn_mutex__t *log_file_mutex, const char *remote_host,
+          const char *user, const char *repos, apr_pool_t *pool)
+{
+  if (err == SVN_NO_ERROR)
+    return;
+
+  if (log_file == NULL)
+    return;
+
+  if (log_file_mutex)
+    {
+      /* if the mutex functions fail, things look pretty grim.
+       * 
+       * Our best hope is to try to get some info into the log before
+       * everything breaks apart.  Therefore, ignore any mutex errors.
+       */
+      svn_error_clear(svn_mutex__lock(log_file_mutex));
+      log_error_internal(err, log_file, remote_host, user, repos, pool);
+      svn_error_clear(svn_mutex__unlock(log_file_mutex, SVN_NO_ERROR));
+    }
+  else
+    log_error_internal(err, log_file, remote_host, user, repos, pool);
+}
+
 /* Call log_error with log_file, remote_host, user, and repos
    arguments from SERVER and CONN. */
 static void
 log_server_error(svn_error_t *err, server_baton_t *server,
                  svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
-  log_error(err, server->log_file, svn_ra_svn_conn_remote_host(conn),
+  log_error(err, server->log_file, server->log_file_mutex,
+            svn_ra_svn_conn_remote_host(conn),
             server->user, server->repos_name, pool);
 }
 
@@ -3531,6 +3554,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.authzdb = NULL;
   b.realm = NULL;
   b.log_file = params->log_file;
+  b.log_file_mutex = params->log_file_mutex;
   b.pool = pool;
   b.use_sasl = FALSE;
   b.vhost = params->vhost;
@@ -3635,8 +3659,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     }
   if (err)
     {
-      log_error(err, b.log_file, svn_ra_svn_conn_remote_host(conn),
-                b.user, NULL, pool);
+      log_error(err, b.log_file, b.log_file_mutex,
+                svn_ra_svn_conn_remote_host(conn), b.user, NULL, pool);
       io_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
       svn_error_clear(err);
       SVN_ERR(io_err);

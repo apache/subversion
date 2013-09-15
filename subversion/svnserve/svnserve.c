@@ -32,6 +32,7 @@
 #include <apr_thread_proc.h>
 #include <apr_thread_pool.h>
 #include <apr_portable.h>
+#include <apr_poll.h>
 
 #include <locale.h>
 
@@ -549,6 +550,7 @@ serve_socket(apr_socket_t *usock,
 {
   apr_status_t status;
   svn_ra_svn_conn_t *conn;
+  svn_error_t *err;
   
   /* Enable TCP keep-alives on the socket so we time out when
    * the connection breaks due to network-layer problems.
@@ -571,10 +573,13 @@ serve_socket(apr_socket_t *usock,
                                  params->error_check_interval,
                                  pool);
 
-  /* process the actual request */
-  SVN_ERR(serve(conn, params, pool));
+  /* process the actual request and log errors */
+  err = serve(conn, params, pool);
+  if (err)
+    log_error(err, params->log_file, params->log_file_mutex,
+              svn_ra_svn_conn_remote_host(conn), NULL, NULL, pool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 /* "Arguments" passed from the main thread to the connection thread */
@@ -650,7 +655,6 @@ int main(int argc, const char *argv[])
   serve_params_t params;
   const char *arg;
   apr_status_t status;
-  svn_ra_svn_conn_t *conn;
   apr_proc_t proc;
 #if APR_HAS_THREADS
   apr_thread_pool_t *threads;
@@ -708,6 +712,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.log_file = NULL;
+  params.log_file_mutex = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
@@ -963,9 +968,12 @@ int main(int argc, const char *argv[])
     }
 
   if (log_filename)
-    SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
-                                 APR_WRITE | APR_CREATE | APR_APPEND,
-                                 APR_OS_DEFAULT, pool));
+    {
+      SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
+                                  APR_WRITE | APR_CREATE | APR_APPEND,
+                                  APR_OS_DEFAULT, pool));
+      SVN_INT_ERR(svn_mutex__init(&params.log_file_mutex, TRUE, pool));
+    }
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
@@ -978,6 +986,8 @@ int main(int argc, const char *argv[])
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
+      svn_ra_svn_conn_t *conn;
+
       params.tunnel = (run_mode == run_mode_tunnel);
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
@@ -1269,12 +1279,7 @@ int main(int argc, const char *argv[])
           if (status == APR_INCHILD)
             {
               apr_socket_close(sock);
-              err = serve_socket(usock, &params, connection_pool);
-              log_error(err, params.log_file,
-                        svn_ra_svn_conn_remote_host(conn),
-                        NULL, NULL, /* user, repos */
-                        connection_pool);
-              svn_error_clear(err);
+              svn_error_clear(serve_socket(usock, &params, connection_pool));
               apr_socket_close(usock);
               exit(0);
             }
@@ -1285,9 +1290,8 @@ int main(int argc, const char *argv[])
           else
             {
               err = svn_error_wrap_apr(status, "apr_proc_fork");
-              log_error(err, params.log_file,
-                        svn_ra_svn_conn_remote_host(conn),
-                        NULL, NULL, /* user, repos */
+              log_error(err, params.log_file, params.log_file_mutex,
+                        NULL, NULL, NULL, /* ip, user, repos */
                         connection_pool);
               svn_error_clear(err);
               apr_socket_close(usock);
