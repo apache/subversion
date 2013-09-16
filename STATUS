@@ -158,6 +158,16 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1523666
+   Fix path corruption in the calculation of reintegration merges.
+   Justification:
+     User reported path corruption. Possibly leading to invalid merge
+     suggestions.
+   Notes:
+     This appears to be a regression in 1.8 as 1.7 has a similar check.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
