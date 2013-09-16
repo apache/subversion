@@ -57,13 +57,17 @@
 #include "private/svn_mutex.h"
 
 /* Alas! old APR-Utils don't provide thread pools */
-#if APR_VERSION_AT_LEAST(1,3,0)
-#  include <apr_thread_pool.h>
-#  define HAVE_THREADPOOLS 1
-#  define THREAD_ERROR_MSG _("Can't push task")
+#if APR_HAS_THREADS
+#  if APR_VERSION_AT_LEAST(1,3,0)
+#    include <apr_thread_pool.h>
+#    define HAVE_THREADPOOLS 1
+#    define THREAD_ERROR_MSG _("Can't push task")
+#  else
+#    define HAVE_THREADPOOLS 0
+#    define THREAD_ERROR_MSG _("Can't create thread")
+#  endif
 #else
 #  define HAVE_THREADPOOLS 0
-#  define THREAD_ERROR_MSG _("Can't create thread")
 #endif
 
 #include "winservice.h"
