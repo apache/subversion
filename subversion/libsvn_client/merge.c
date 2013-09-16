@@ -10715,7 +10715,7 @@ log_find_operative_revs(void *baton,
 
           suffix = svn_relpath_skip_ancestor(subtree_missing_this_rev,
                                              source_rel_path);
-          if (suffix)
+          if (suffix && suffix[0] != '\0')
             {
               missing_path = apr_pstrmemdup(pool, path,
                                             strlen(path) - strlen(suffix) - 1);
