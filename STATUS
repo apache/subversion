@@ -162,11 +162,15 @@ Candidate changes:
    Fix path corruption in the calculation of reintegration merges.
    Justification:
      User reported path corruption. Possibly leading to invalid merge
-     suggestions.
+     suggestions. See http://svn.haxx.se/users/archive-2013-09/0116.shtml
    Notes:
      This appears to be a regression in 1.8 as 1.7 has a similar check.
+     To reproduce the problem, run in a working copy of 1.8.x:
+         svn merge --reintegrate ^/subversion/branches/1.7.x
+     and look for bad paths in 'Missing ranges' lines, e.g. '.../svnmucc.'
+     which should be '.../svnmucc.c'.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
 Veto-blocked changes:
 =====================
