@@ -172,6 +172,15 @@ Candidate changes:
    Votes:
      +1: rhuijben, stsp
 
+ * r1524145
+   Make the 'm' conflict prompt option run external merge tool if configured.
+   Justification:
+     Usability fix. The current behaviour ('m' -> internal merge tool,
+     'l' -> external merge tool) confuses users who try 'm' to run an
+     external merge tool. See issue #4426.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
