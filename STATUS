@@ -145,6 +145,17 @@ Candidate changes:
      +1: breser
      -0: stsp (see r1306275 group for a more complete fix)
 
+ * r1522892
+   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
+   command interrupted when using ra_serf.
+   Changes[client]:
+     * fixed: command line client crashes when piped command is interrupted on
+       Windows.
+   Justification:
+     User reported crash.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
