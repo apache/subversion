@@ -156,7 +156,7 @@ Candidate changes:
    Justification:
      User reported crash.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1523666
    Fix path corruption in the calculation of reintegration merges.
