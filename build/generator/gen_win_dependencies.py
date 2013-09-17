@@ -123,6 +123,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'magic',
   ]
 
+  # When build.conf contains a 'when = SOMETHING' where SOMETHING is not in
+  # this list, then the project is not generated on Windows.
+  _windows_when = [
+     'INSTALL_APACHE_MODS',
+     # not 'SVN_USE_GMOCK',
+  ]
+
   def parse_options(self, options):
     self.apr_path = 'apr'
     self.apr_util_path = 'apr-util'

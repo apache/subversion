@@ -198,6 +198,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL) \
                       + self.projects
 
+    install_targets = [x for x in install_targets if not x.when or
+                                                     x.when in self._windows_when]
+
     # Don't create projects for scripts
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
