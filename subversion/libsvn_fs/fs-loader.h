@@ -310,6 +310,16 @@ typedef struct root_vtable_t
                                     apr_pool_t *pool);
   svn_error_t *(*delete_node)(svn_fs_root_t *root, const char *path,
                               apr_pool_t *pool);
+  svn_error_t *(*copy)(svn_fs_root_t *from_root, const char *from_path,
+                       svn_fs_root_t *to_root, const char *to_path,
+                       apr_pool_t *pool);
+  svn_error_t *(*revision_link)(svn_fs_root_t *from_root,
+                                svn_fs_root_t *to_root,
+                                const char *path,
+                                apr_pool_t *pool);
+  svn_error_t *(*move)(svn_fs_root_t *from_root, const char *from_path,
+                       svn_fs_root_t *to_root, const char *to_path,
+                       apr_pool_t *pool);
   svn_error_t *(*copied_from)(svn_revnum_t *rev_p, const char **path_p,
                               svn_fs_root_t *root, const char *path,
                               apr_pool_t *pool);
@@ -340,13 +350,6 @@ typedef struct root_vtable_t
                                     apr_pool_t *pool);
   svn_error_t *(*make_dir)(svn_fs_root_t *root, const char *path,
                            apr_pool_t *pool);
-  svn_error_t *(*copy)(svn_fs_root_t *from_root, const char *from_path,
-                       svn_fs_root_t *to_root, const char *to_path,
-                       apr_pool_t *pool);
-  svn_error_t *(*revision_link)(svn_fs_root_t *from_root,
-                                svn_fs_root_t *to_root,
-                                const char *path,
-                                apr_pool_t *pool);
 
   /* Files */
   svn_error_t *(*file_length)(svn_filesize_t *length_p, svn_fs_root_t *root,
