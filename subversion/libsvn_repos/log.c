@@ -579,7 +579,7 @@ next_history_rev(const apr_array_header_t *histories)
    already contains the changed paths for REV, use that.  Otherwise,
    request that data and return it in *PREFETCHED_CHANGES.
    MOVE_BEHAVIOR is a simple pass-through parameter that tells the FS
-   layer which changes to report as moves instead of additions.
+   layer which changes to report as moves instead of additions. */
 /* ### TODO: This would make a *great*, useful public function,
    ### svn_repos_fs_mergeinfo_changed()!  -- cmpilato  */
 static svn_error_t *
