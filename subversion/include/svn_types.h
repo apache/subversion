@@ -1011,7 +1011,7 @@ typedef enum svn_move_behavior_t
 {
   /* report all moves as ADD with history.
      This also provides backward compatibility with 1.8 clients. */
-  svn_move_behavior_no_moves,
+  svn_move_behavior_no_moves = 0,
 
   /* report all changes, including moves, as they were reported.
      This is option with the least overhead. */
