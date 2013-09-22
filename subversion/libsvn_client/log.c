@@ -610,6 +610,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
                svn_boolean_t discover_changed_paths,
                svn_boolean_t strict_node_history,
                svn_boolean_t include_merged_revisions,
+               svn_move_behavior_t move_behavior,
                const apr_array_header_t *revprops,
                svn_log_entry_receiver_t real_receiver,
                void *real_receiver_baton,
@@ -768,7 +769,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
           passed_receiver_baton = &lb;
         }
 
-      SVN_ERR(svn_ra_get_log2(ra_session,
+      SVN_ERR(svn_ra_get_log3(ra_session,
                               paths,
                               range->range_start,
                               range->range_end,
@@ -776,6 +777,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
                               discover_changed_paths,
                               strict_node_history,
                               include_merged_revisions,
+                              move_behavior,
                               passed_receiver_revprops,
                               passed_receiver,
                               passed_receiver_baton,
@@ -798,13 +800,14 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
 /*** Public Interface. ***/
 
 svn_error_t *
-svn_client_log5(const apr_array_header_t *targets,
+svn_client_log6(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const apr_array_header_t *opt_rev_ranges,
                 int limit,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
+                svn_move_behavior_t move_behavior,
                 const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t real_receiver,
                 void *real_receiver_baton,
@@ -890,8 +893,8 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(run_ra_get_log(revision_ranges, relative_targets, log_segments,
                          actual_loc, ra_session, targets, limit,
                          discover_changed_paths, strict_node_history,
-                         include_merged_revisions, revprops, real_receiver,
-                         real_receiver_baton, ctx, pool));
+                         include_merged_revisions, move_behavior, revprops,
+                         real_receiver, real_receiver_baton, ctx, pool));
 
   return SVN_NO_ERROR;
 }
