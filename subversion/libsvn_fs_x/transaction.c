@@ -2972,7 +2972,7 @@ verify_moves(svn_fs_t *fs,
       change_t **changes_p;
 
       svn_pool_clear(iter_pool);
-      svn_fs_fs__get_changes(&changes, fs, revision, iter_pool);
+      svn_fs_x__get_changes(&changes, fs, revision, iter_pool);
 
       changes_p = (change_t **)&changes->elts;
       for (i = 0; i < changes->nelts; ++i)
