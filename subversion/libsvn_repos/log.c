@@ -69,7 +69,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 
   /* Fetch the changes associated with REVISION. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed2(&changes, rev_root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&changes, rev_root,
+                                svn_move_behavior_explicit_moves, pool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(changes) == 0)
@@ -105,6 +106,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
         {
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
+        case svn_fs_path_change_move:
+        case svn_fs_path_change_movereplace:
           {
             const char *copyfrom_path;
             svn_revnum_t copyfrom_rev;
@@ -163,7 +166,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  *
  * To prevent changes from being processed over and over again, the
  * changed paths for ROOT may be passed in PREFETCHED_CHANGES.  If the
- * latter is NULL, we will request the list inside this function.
+ * latter is NULL, we will request the list inside this function using
+ * the specified MOVE_BEHAVIOR.
  *
  * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
  * AUTHZ_READ_BATON and FS) to check whether each changed-path (and
@@ -184,6 +188,7 @@ detect_changed(apr_hash_t **changed,
                svn_fs_root_t *root,
                svn_fs_t *fs,
                apr_hash_t *prefetched_changes,
+               svn_move_behavior_t move_behavior,
                svn_repos_authz_func_t authz_read_func,
                void *authz_read_baton,
                apr_pool_t *pool)
@@ -196,7 +201,7 @@ detect_changed(apr_hash_t **changed,
 
   *changed = svn_hash__make(pool);
   if (changes == NULL)
-    SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+    SVN_ERR(svn_fs_paths_changed3(&changes, root, move_behavior, pool));
 
   if (apr_hash_count(changes) == 0)
     /* No paths changed in this revision?  Uh, sure, I guess the
@@ -255,6 +260,14 @@ detect_changed(apr_hash_t **changed,
           action = 'D';
           break;
 
+        case svn_fs_path_change_move:
+          action = 'V';
+          break;
+
+        case svn_fs_path_change_movereplace:
+          action = 'E';
+          break;
+
         case svn_fs_path_change_modify:
         default:
           action = 'M';
@@ -306,7 +319,8 @@ detect_changed(apr_hash_t **changed,
         }
 
 
-      if ((action == 'A') || (action == 'R'))
+      if (   (action == 'A') || (action == 'R')
+          || (action == 'V') || (action == 'E'))
         {
           const char *copyfrom_path = change->copyfrom_path;
           svn_revnum_t copyfrom_rev = change->copyfrom_rev;
@@ -563,7 +577,9 @@ next_history_rev(const apr_array_header_t *histories)
    catalogs describing how mergeinfo values on paths (which are the
    keys of those catalogs) were changed in REV.  If *PREFETCHED_CAHNGES
    already contains the changed paths for REV, use that.  Otherwise,
-   request that data and return it in *PREFETCHED_CHANGES. */
+   request that data and return it in *PREFETCHED_CHANGES.
+   MOVE_BEHAVIOR is a simple pass-through parameter that tells the FS
+   layer which changes to report as moves instead of additions.
 /* ### TODO: This would make a *great*, useful public function,
    ### svn_repos_fs_mergeinfo_changed()!  -- cmpilato  */
 static svn_error_t *
@@ -572,6 +588,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                      apr_hash_t **prefetched_changes,
                      svn_fs_t *fs,
                      svn_revnum_t rev,
+                     svn_move_behavior_t move_behavior,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 
@@ -592,7 +609,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      narrow down our search. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, scratch_pool));
   if (*prefetched_changes == NULL)
-    SVN_ERR(svn_fs_paths_changed2(prefetched_changes, root, scratch_pool));
+    SVN_ERR(svn_fs_paths_changed3(prefetched_changes, root, move_behavior,
+                                  scratch_pool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(*prefetched_changes) == 0)
@@ -638,6 +656,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
            was.  If not, there's no previous location to examine.  */
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
+        case svn_fs_path_change_move:
+        case svn_fs_path_change_movereplace:
           {
             const char *copyfrom_path;
             svn_revnum_t copyfrom_rev;
@@ -782,7 +802,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
    *ADDED_MERGEINFO and deleted mergeinfo in *DELETED_MERGEINFO.
    If *PREFETCHED_CAHNGES already contains the changed paths for
    REV, use that.  Otherwise, request that data and return it in
-   *PREFETCHED_CHANGES.
+   *PREFETCHED_CHANGES.  MOVE_BEHAVIOR tells the FS layer which
+   changes to report as moves instead of additions.
    Use POOL for all allocations. */
 static svn_error_t *
 get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
@@ -791,6 +812,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                svn_fs_t *fs,
                                const apr_array_header_t *paths,
                                svn_revnum_t rev,
+                               svn_move_behavior_t move_behavior,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
@@ -820,7 +842,8 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   err = fs_mergeinfo_changed(&deleted_mergeinfo_catalog,
                              &added_mergeinfo_catalog,
                              prefetched_changes,
-                             fs, rev, scratch_pool, scratch_pool);
+                             fs, rev, move_behavior,
+                             scratch_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -1025,6 +1048,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
                svn_fs_t *fs,
                apr_hash_t *prefetched_changes,
                svn_boolean_t discover_changed_paths,
+               svn_move_behavior_t move_behavior,
                const apr_array_header_t *revprops,
                svn_repos_authz_func_t authz_read_func,
                void *authz_read_baton,
@@ -1043,7 +1067,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
 
       SVN_ERR(svn_fs_revision_root(&newroot, fs, rev, pool));
       patherr = detect_changed(&changed_paths,
-                               newroot, fs, prefetched_changes,
+                               newroot, fs, prefetched_changes, move_behavior,
                                authz_read_func, authz_read_baton,
                                pool);
 
@@ -1160,9 +1184,9 @@ fill_log_entry(svn_log_entry_t *log_entry,
    only the revision properties named by the (const char *) array elements
    (i.e. retrieve none if the array is empty).
 
-   LOG_TARGET_HISTORY_AS_MERGEINFO, HANDLING_MERGED_REVISION, and
-   NESTED_MERGES are as per the arguments of the same name to DO_LOGS.  If
-   HANDLING_MERGED_REVISION is true and *all* changed paths within REV are
+   LOG_TARGET_HISTORY_AS_MERGEINFO, HANDLING_MERGED_REVISION, MOVE_BEHAVIOR,
+   and NESTED_MERGES are as per the arguments of the same name to DO_LOGS.
+   If HANDLING_MERGED_REVISION is true and *all* changed paths within REV are
    already represented in LOG_TARGET_HISTORY_AS_MERGEINFO, then don't send
    the log message for REV.  If SUBTRACTIVE_MERGE is true, then REV was
    reverse merged.
@@ -1180,6 +1204,7 @@ send_log(svn_revnum_t rev,
          svn_boolean_t discover_changed_paths,
          svn_boolean_t subtractive_merge,
          svn_boolean_t handling_merged_revision,
+         svn_move_behavior_t move_behavior,
          const apr_array_header_t *revprops,
          svn_boolean_t has_children,
          svn_log_entry_receiver_t receiver,
@@ -1195,8 +1220,8 @@ send_log(svn_revnum_t rev,
   log_entry = svn_log_entry_create(pool);
   SVN_ERR(fill_log_entry(log_entry, rev, fs, prefetched_changes,
                          discover_changed_paths || handling_merged_revision,
-                         revprops, authz_read_func, authz_read_baton,
-                         pool));
+                         move_behavior, revprops, 
+                         authz_read_func, authz_read_baton, pool));
   log_entry->has_children = has_children;
   log_entry->subtractive_merge = subtractive_merge;
 
@@ -1663,6 +1688,7 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t handling_merged_revisions,
         svn_boolean_t subtractive_merge,
         svn_boolean_t ignore_missing_locations,
+        svn_move_behavior_t move_behavior,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
         svn_log_entry_receiver_t receiver,
@@ -1712,6 +1738,7 @@ handle_merged_revisions(svn_revnum_t rev,
                         svn_mergeinfo_t deleted_mergeinfo,
                         svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
+                        svn_move_behavior_t move_behavior,
                         const apr_array_header_t *revprops,
                         svn_log_entry_receiver_t receiver,
                         void *receiver_baton,
@@ -1754,7 +1781,7 @@ handle_merged_revisions(svn_revnum_t rev,
                       pl_range->range.start, pl_range->range.end, 0,
                       discover_changed_paths, strict_node_history,
                       TRUE, pl_range->reverse_merge, TRUE, TRUE,
-                      revprops, TRUE, receiver, receiver_baton,
+                      move_behavior, revprops, TRUE, receiver, receiver_baton,
                       authz_read_func, authz_read_baton, iterpool));
     }
   svn_pool_destroy(iterpool);
@@ -1888,6 +1915,9 @@ store_search(svn_mergeinfo_t processed,
    If IGNORE_MISSING_LOCATIONS is set, don't treat requests for bogus
    repository locations as fatal -- just ignore them.
 
+   MOVE_BEHAVIOR is a simple pass-through parameter that tells the FS
+   layer which changes to report as moves instead of additions.
+
    If LOG_TARGET_HISTORY_AS_MERGEINFO is not NULL then it contains mergeinfo
    representing the history of PATHS between HIST_START and HIST_END.
 
@@ -1925,6 +1955,7 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t subtractive_merge,
         svn_boolean_t handling_merged_revisions,
         svn_boolean_t ignore_missing_locations,
+        svn_move_behavior_t move_behavior,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
         svn_log_entry_receiver_t receiver,
@@ -2019,8 +2050,8 @@ do_logs(svn_fs_t *fs,
                                                      &deleted_mergeinfo,
                                                      &changes,
                                                      fs, cur_paths,
-                                                     current, iterpool,
-                                                     iterpool));
+                                                     current, move_behavior,
+                                                     iterpool, iterpool));
               has_children = (apr_hash_count(added_mergeinfo) > 0
                               || apr_hash_count(deleted_mergeinfo) > 0);
             }
@@ -2034,7 +2065,7 @@ do_logs(svn_fs_t *fs,
                                log_target_history_as_mergeinfo, nested_merges,
                                discover_changed_paths,
                                subtractive_merge, handling_merged_revisions,
-                               revprops, has_children,
+                               move_behavior, revprops, has_children,
                                receiver, receiver_baton,
                                authz_read_func, authz_read_baton, iterpool));
 
@@ -2057,6 +2088,7 @@ do_logs(svn_fs_t *fs,
                     added_mergeinfo, deleted_mergeinfo,
                     discover_changed_paths,
                     strict_node_history,
+                    move_behavior,
                     revprops,
                     receiver, receiver_baton,
                     authz_read_func,
@@ -2138,7 +2170,8 @@ do_logs(svn_fs_t *fs,
           SVN_ERR(send_log(current, fs, NULL,
                            log_target_history_as_mergeinfo, nested_merges,
                            discover_changed_paths, subtractive_merge,
-                           handling_merged_revisions, revprops, has_children,
+                           handling_merged_revisions, move_behavior,
+                           revprops, has_children,
                            receiver, receiver_baton, authz_read_func,
                            authz_read_baton, iterpool));
           if (has_children)
@@ -2156,7 +2189,8 @@ do_logs(svn_fs_t *fs,
                                               added_mergeinfo,
                                               deleted_mergeinfo,
                                               discover_changed_paths,
-                                              strict_node_history, revprops,
+                                              strict_node_history,
+                                              move_behavior, revprops,
                                               receiver, receiver_baton,
                                               authz_read_func,
                                               authz_read_baton,
@@ -2258,7 +2292,7 @@ get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
 }
 
 svn_error_t *
-svn_repos_get_logs4(svn_repos_t *repos,
+svn_repos_get_logs5(svn_repos_t *repos,
                     const apr_array_header_t *paths,
                     svn_revnum_t start,
                     svn_revnum_t end,
@@ -2266,6 +2300,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
+                    svn_move_behavior_t move_behavior,
                     const apr_array_header_t *revprops,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
@@ -2374,7 +2409,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
             rev = start + i;
           SVN_ERR(send_log(rev, fs, NULL, NULL, NULL,
                            discover_changed_paths, FALSE,
-                           FALSE, revprops, FALSE, receiver,
+                           FALSE, move_behavior, revprops, FALSE, receiver,
                            receiver_baton, authz_read_func,
                            authz_read_baton, iterpool));
         }
@@ -2402,7 +2437,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
   return do_logs(repos->fs, paths, paths_history_mergeinfo, NULL, NULL, start, end,
                  limit, discover_changed_paths, strict_node_history,
-                 include_merged_revisions, FALSE, FALSE, FALSE, revprops,
+                 include_merged_revisions, FALSE, FALSE, FALSE,
+                 move_behavior, revprops,
                  descending_order, receiver, receiver_baton,
                  authz_read_func, authz_read_baton, pool);
 }
