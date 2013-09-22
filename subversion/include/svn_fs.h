@@ -1399,6 +1399,8 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * Allocate and return a hash @a *changed_paths2_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
  * <tt>const char *</tt> paths, and has #svn_fs_path_change2_t * values.
+ * @a move_behavior determines how moves are being detected and reported;
+ * see #svn_fs_move_behavior_t for the various options.
  *
  * Callers can assume that this function takes time proportional to
  * the amount of data output, and does not need to do tree crawls;
@@ -1408,8 +1410,22 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  *
  * Use @a pool for all allocations, including the hash and its values.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_paths_changed3(apr_hash_t **changed_paths2_p,
+                      svn_fs_root_t *root,
+                      svn_move_behavior_t move_behavior,
+                      apr_pool_t *pool);
+
+
+/** Same as svn_fs_paths_changed3 but with @a move_behavior set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths2_p,
                       svn_fs_root_t *root,
