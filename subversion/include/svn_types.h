@@ -1001,6 +1001,28 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
   const char *message,
   apr_pool_t *pool);
 
+/**
+ * This enumeration contains the various options how SVN shall report
+ * and process explicit MOVes as well as ADD+DEL pairs.
+ *
+ * @since New in 1.9.
+ */
+typedef enum svn_move_behavior_t
+{
+  /* report all moves as ADD with history.
+     This also provides backward compatibility with 1.8 clients. */
+  svn_move_behavior_no_moves,
+
+  /* report all changes, including moves, as they were reported.
+     This is option with the least overhead. */
+  svn_move_behavior_explicit_moves,
+
+  /* in addition to explicit moves, try to find matching DEL + ADD pairs
+     and report the ADD in those as moves as well.  Which of the eligible
+     DEL + ADD pairs will be detected is implementation-dependent. */
+  svn_move_behavior_auto_moves
+} svn_move_behavior_t;
+
 
 
 /** Callback function type for commits.

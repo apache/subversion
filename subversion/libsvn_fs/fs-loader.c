@@ -42,6 +42,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_sorts.h"
 
 #include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"
@@ -988,11 +989,177 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
   return root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
 }
 
+/* Return TRUE, if CHANGE deleted the node previously found at its target
+   path. */
+static svn_boolean_t
+is_deletion(svn_fs_path_change2_t *change)
+{
+  return change->change_kind == svn_fs_path_change_movereplace
+      || change->change_kind == svn_fs_path_change_replace
+      || change->change_kind == svn_fs_path_change_delete;
+}
+
+/* Change all moves in CHANGES to ADD.  Use POOL for temporary allocations.
+ */
+static void
+turn_moves_into_copies(apr_hash_t *changes,
+                       apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_ssize_t klen;
+      svn_fs_path_change2_t *change;
+      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+
+      switch (change->change_kind)
+        {
+          case svn_fs_path_change_move:
+            change->change_kind = svn_fs_path_change_add;
+            break;
+
+          case svn_fs_path_change_movereplace:
+            change->change_kind = svn_fs_path_change_replace;
+            break;
+
+          default:
+            break;
+        }
+    }
+}
+
+/* Replace ADDs with MOVes, if they are unique, have a matching deletion
+ * and if the copy-from revision is REVISION-1.  Use POOL for temporary
+ * allocations.
+ */
+static void
+turn_unique_copies_into_moves(apr_hash_t *changes,
+                              svn_revnum_t revision,
+                              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *unique_copy_sources;
+  const char **sources;
+  int i;
+
+  /* find all copy-from paths (ADD and MOV alike) */
+
+  svn_boolean_t any_deletion = FALSE;
+  apr_array_header_t *copy_sources
+    = apr_array_make(pool, apr_hash_count(changes), sizeof(const char*));
+
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_path_change2_t *change;
+      apr_hash_this(hi, NULL, NULL, (void**)&change);
+
+      if (change->copyfrom_path && change->copyfrom_rev == revision-1)
+        APR_ARRAY_PUSH(copy_sources, const char *)
+          = change->copyfrom_path;
+
+      any_deletion |= is_deletion(change);
+    }
+
+  /* no suitable copy-from or no deletion -> no moves */
+
+  if (!copy_sources->nelts || !any_deletion)
+    return;
+
+  /* identify copy-from paths that have been mentioned exactly once */
+
+  sources = (const char **)copy_sources->elts;
+  qsort(sources, copy_sources->nelts, copy_sources->elt_size,
+        (int (*)(const void *, const void *))svn_sort_compare_paths);
+
+  unique_copy_sources = apr_hash_make(pool);
+  for (i = 0; i < copy_sources->nelts; ++i)
+    if (   (i == 0 || strcmp(sources[i-1], sources[i]))
+        && (i == copy_sources->nelts-1 || strcmp(sources[i+1], sources[i])))
+      {
+        apr_hash_set(unique_copy_sources, sources[i],
+                     APR_HASH_KEY_STRING, sources[i]);
+      }
+
+  /* no unique copy-from paths -> no moves */
+
+  if (!apr_hash_count(unique_copy_sources))
+    return;
+
+  /* Replace all additions, replacements with a unique copy-from path,
+     the correct copy-from rev and a matching deletion in this revision,
+     with moves and move-replacements, respectively. */
+
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_ssize_t klen;
+      svn_fs_path_change2_t *change, *copy_from_change;
+
+      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+      if (   change->copyfrom_rev != revision-1
+          || !change->copyfrom_path
+          || !apr_hash_get(unique_copy_sources, change->copyfrom_path,
+                           APR_HASH_KEY_STRING))
+        continue;
+
+      copy_from_change = apr_hash_get(changes, change->copyfrom_path,
+                                      APR_HASH_KEY_STRING);
+      if (!copy_from_change || !is_deletion(copy_from_change))
+        continue;
+
+      /* There is a deletion of the ADD's copy-from path in *REVISION*.
+         This can either be the same as in REVISION-1 (o.k.) or must have
+         been replaced by some other node.  However, that would imply that
+         it still got deleted as part of the replacement, i.e. both cases
+         are o.k. */
+
+      switch (change->change_kind)
+        {
+          case svn_fs_path_change_add:
+            change->change_kind = svn_fs_path_change_move;
+            break;
+
+          case svn_fs_path_change_replace:
+            change->change_kind = svn_fs_path_change_movereplace;
+            break;
+
+          default:
+            break;
+        }
+    }
+}
+
+svn_error_t *
+svn_fs_paths_changed3(apr_hash_t **changed_paths_p,
+                      svn_fs_root_t *root,
+                      svn_move_behavior_t move_behavior,
+                      apr_pool_t *pool)
+{
+  SVN_ERR(root->vtable->paths_changed(changed_paths_p, root, pool));
+  switch(move_behavior)
+    {
+      case svn_move_behavior_no_moves:
+        turn_moves_into_copies(*changed_paths_p, pool);
+        break;
+
+      case svn_move_behavior_auto_moves:
+        turn_unique_copies_into_moves(*changed_paths_p, root->rev, pool);
+        break;
+
+      default:
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
                       apr_pool_t *pool)
 {
-  return root->vtable->paths_changed(changed_paths_p, root, pool);
+  return svn_fs_paths_changed3(changed_paths_p, root,
+                               svn_move_behavior_no_moves, pool);
 }
 
 svn_error_t *
