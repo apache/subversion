@@ -1169,7 +1169,8 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
   apr_hash_t *changed_paths_new_structs;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_fs_paths_changed2(&changed_paths_new_structs, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(changed_paths_p, root,
+                                svn_move_behavior_no_moves, pool));
   *changed_paths_p = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, changed_paths_new_structs);
        hi;
