@@ -1481,6 +1481,9 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
+ * @a move_behavior defines which changes are being reported as moves.
+ * See #svn_move_behavior_t for the various options.
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -1508,9 +1511,32 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
  *
- * @since New in 1.5.
+ * @since New in 1.9.
  */
 
+svn_error_t *
+svn_ra_get_log3(svn_ra_session_t *session,
+                const apr_array_header_t *paths,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_move_behavior_t move_behavior,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_log3(), but with @a move_behavior being set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_log2(svn_ra_session_t *session,
                 const apr_array_header_t *paths,

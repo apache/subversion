@@ -2207,18 +2207,20 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char *revprop_word;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit, include_merged_revs_param;
+  apr_uint64_t limit, include_merged_revs_param, move_behavior_param;
+  svn_move_behavior_t move_behavior;
   log_baton_t lb;
   authz_baton_t ab;
 
   ab.server = b;
   ab.conn = conn;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?n", &paths,
                                   &start_rev, &end_rev, &send_changed_paths,
                                   &strict_node, &limit,
                                   &include_merged_revs_param,
-                                  &revprop_word, &revprop_items));
+                                  &revprop_word, &revprop_items,
+                                  &move_behavior_param));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
@@ -2250,6 +2252,16 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              _("Unknown revprop word '%s' in log command"),
                              revprop_word);
 
+  if (move_behavior_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    move_behavior = svn_move_behavior_no_moves;
+  else if (move_behavior_param <= svn_move_behavior_auto_moves)
+    move_behavior = (svn_move_behavior_t) move_behavior_param;
+  else
+    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                             _("Invalid move_behavior value %"
+                               APR_UINT64_T_FMT " in log command"),
+                             move_behavior_param);
+
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
      messing with us, since we know the svn client libraries will never send
@@ -2280,11 +2292,11 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
   lb.stack_depth = 0;
-  err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs5(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, send_changed_paths, strict_node,
-                            include_merged_revisions, revprops,
-                            authz_check_access_cb_func(b), &ab, log_receiver,
-                            &lb, pool);
+                            include_merged_revisions, move_behavior,
+                            revprops, authz_check_access_cb_func(b),
+                            &ab, log_receiver, &lb, pool);
 
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)
