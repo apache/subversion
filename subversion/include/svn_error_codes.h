@@ -836,6 +836,16 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 58,
              "Index files are inconsistent.")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_AMBIGUOUS_MOVE,
+             SVN_ERR_FS_CATEGORY_START + 59,
+             "Ambiguous move")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_INCOMPLETE_MOVE,
+             SVN_ERR_FS_CATEGORY_START + 60,
+             "Move without a suitable deletion")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
