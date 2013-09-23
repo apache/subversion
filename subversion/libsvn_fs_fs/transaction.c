@@ -2873,23 +2873,27 @@ verify_locks(svn_fs_t *fs,
 
 /* If CHANGE is move, verify that there is no other move with the same
    copy-from path in SOURCE_PATHS already (parent or sub-node moves are fine).
-   Add the source path to SOURCE_PATHS after successful verification. */
+   Add the source path to SOURCE_PATHS after successful verification.
+   Allocate the hashed strings in POOL. */
 static svn_error_t *
 check_for_duplicate_move_source(apr_hash_t *source_paths,
-                                change_t *change)
+                                change_t *change,
+                                apr_pool_t *pool)
 {
   if (   change->info.change_kind == svn_fs_path_change_move
       || change->info.change_kind == svn_fs_path_change_movereplace)
     if (change->info.copyfrom_path)
       {
-        if (apr_hash_get(source_paths, change->info.copyfrom_path,
-                         APR_HASH_KEY_STRING))
+        apr_size_t len = strlen(change->info.copyfrom_path);
+        if (apr_hash_get(source_paths, change->info.copyfrom_path, len))
           return svn_error_createf(SVN_ERR_FS_AMBIGUOUS_MOVE, NULL,
                       _("Path '%s' has been moved to more than one target"),
                                    change->info.copyfrom_path);
 
-        apr_hash_set(source_paths, change->info.copyfrom_path,
-                     APR_HASH_KEY_STRING, change->info.copyfrom_path);
+        apr_hash_set(source_paths,
+                     apr_pstrmemdup(pool, change->info.copyfrom_path, len),
+                     len,
+                     change->info.copyfrom_path);
       }
 
   return SVN_NO_ERROR;
@@ -2984,7 +2988,8 @@ verify_moves(svn_fs_t *fs,
 
   for (i = 0; moves->nelts; ++i)
     SVN_ERR(check_for_duplicate_move_source (source_paths,
-                          APR_ARRAY_IDX(moves, i, svn_sort__item_t).value));
+                          APR_ARRAY_IDX(moves, i, svn_sort__item_t).value,
+                          pool));
 
   for (revision = txn_id->revision + 1; revision <= old_rev; ++revision)
     {
@@ -2996,7 +3001,8 @@ verify_moves(svn_fs_t *fs,
 
       changes_p = (change_t **)&changes->elts;
       for (i = 0; i < changes->nelts; ++i)
-        SVN_ERR(check_for_duplicate_move_source(source_paths, changes_p[i]));
+        SVN_ERR(check_for_duplicate_move_source(source_paths, changes_p[i],
+                                                pool));
     }
 
   /* The move source paths must been deleted in this txn. */
