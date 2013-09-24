@@ -1959,8 +1959,13 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
  *       but the deletion must be reported just as if this was a
  *       #svn_fs_copy call.
  *
+ * @warning This function is marked as @b experimental.  That means this
+ *          function will probably be supported in future releases but
+ *          might change in signature or various aspects of its semantics.
+ *
  * @since New in 1.9.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_fs_move(svn_fs_root_t *from_root,
             const char *from_path,
