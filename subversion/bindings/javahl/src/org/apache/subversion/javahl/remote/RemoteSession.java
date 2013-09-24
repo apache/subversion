@@ -32,6 +32,7 @@ import org.apache.subversion.javahl.ISVNReporter;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.NativeResources;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -46,6 +47,14 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class RemoteSession extends JNIObject implements ISVNRemote
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
     public void dispose()
     {
         if (editorReference != null)
