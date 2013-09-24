@@ -3044,10 +3044,10 @@ svn_io_create_custom_diff_cmd(const char *label1,
   tmp = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
 
   result = apr_palloc(pool, 
-                   (tmp->nelts + 1) * 
-                   tmp->elt_size*sizeof(char *));  
+                      (tmp->nelts + 1) * 
+                      tmp->elt_size*sizeof(char *));  
 
-  for (argv = 0;  argv < tmp->nelts ; argv++)
+  for (argv = 0; argv < tmp->nelts; argv++)
     {
       svn_stringbuf_t *com;
       int i;
@@ -3067,7 +3067,7 @@ svn_io_create_custom_diff_cmd(const char *label1,
           svn_stringbuf_appendcstr(token, token_list[i]);
           len = 0;
 
-          while ( (found = strstr(com->data, token->data)) && 
+          while ( (found = strstr(com->data, token->data) && 
                   (strlen(found) > len) ) 
             {
               len = strlen(found); 
