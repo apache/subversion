@@ -677,7 +677,8 @@ fold_change(apr_hash_t *changes,
 
       /* Sanity check: an add can't follow anything except
          a delete or reset.  */
-      if ((info->change_kind == svn_fs_path_change_add)
+      if ((   (info->change_kind == svn_fs_path_change_add)
+           || (info->change_kind == svn_fs_path_change_move))
           && (old_change->change_kind != svn_fs_path_change_delete)
           && (old_change->change_kind != svn_fs_path_change_reset))
         return svn_error_create
@@ -2710,7 +2711,8 @@ write_final_changed_path_info(apr_off_t *offset_p,
       svn_fs_path_change2_t *change;
       apr_hash_this(hi, NULL, NULL, (void **)&change);
 
-      if (change->change_kind == svn_fs_path_change_move)
+      if (   (change->change_kind == svn_fs_path_change_move)
+          || (change->change_kind == svn_fs_path_change_movereplace))
         change->copyfrom_rev = new_rev - 1;
     }
 
