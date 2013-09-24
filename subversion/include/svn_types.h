@@ -64,6 +64,23 @@ extern "C" {
 #endif
 
 
+/** Macro used to mark experimental functions.
+ *
+ * @since New in 1.9.
+ */
+#ifndef SVN_EXPERIMENTAL
+# if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
+#  if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
+#   define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
+#  else
+#   define SVN_EXPERIMENTAL
+#  endif
+# else
+#  define SVN_EXPERIMENTAL
+# endif
+#endif
+
+
 /** Indicate whether the current platform supports unaligned data access.
  *
  * On the majority of machines running SVN (x86 / x64), unaligned access
