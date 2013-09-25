@@ -639,3 +639,11 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
 
   return SVN_NO_ERROR;
 }
+
+svn_boolean_t
+svn_fs_fs__supports_move(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return ffd->format >= SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT;
+}
