@@ -1949,9 +1949,8 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
  * The move will remember its source; use svn_fs_copied_from() to
  * access this information.
  *
- * @a from_root must be the root of a revision; @a to_root must be the root
- * of a transaction based on that revision. Further, @a to_root and
- * @a from_root must represent the same filesystem.
+ * @a to_root must be the root of a transaction based on that revision.
+ * Further, @a to_root and @a from_root must represent the same filesystem.
  *
  * Do any necessary temporary allocation in @a pool.
  *

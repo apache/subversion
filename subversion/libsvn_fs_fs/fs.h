@@ -148,6 +148,9 @@ extern "C" {
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
 
+/* Minimum format number that will record moves */
+#define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
+
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
