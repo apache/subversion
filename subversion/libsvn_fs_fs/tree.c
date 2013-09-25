@@ -133,6 +133,12 @@ static svn_error_t *make_txn_root(svn_fs_root_t **root_p,
                                   apr_uint32_t flags,
                                   apr_pool_t *pool);
 
+static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
+                                    const char **path_p,
+                                    svn_fs_root_t *root,
+                                    const char *path,
+                                    apr_pool_t *pool);
+
 
 /*** Node Caching ***/
 
@@ -2431,10 +2437,10 @@ is_changed_node(svn_boolean_t *changed,
     return SVN_NO_ERROR;
 
   /* some node. might still be a lazy copy */
-  SVN_ERR(svn_fs_closest_copy(&copy_from_root1, &copy_from_path1, root,
-                              path, pool));
-  SVN_ERR(svn_fs_closest_copy(&copy_from_root2, &copy_from_path2, rev_root,
-                              path, pool));
+  SVN_ERR(fs_closest_copy(&copy_from_root1, &copy_from_path1, root,
+                          path, pool));
+  SVN_ERR(fs_closest_copy(&copy_from_root2, &copy_from_path2, rev_root,
+                          path, pool));
 
   if ((copy_from_root1 == NULL) != (copy_from_root2 == NULL))
     return SVN_NO_ERROR;
