@@ -72,6 +72,8 @@ extern "C" {
 # if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
 #  if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
 #   define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
+#  elif defined(_MSC_VER) && _MSC_VER >= 1300
+#   define SVN_EXPERIMENTAL __declspec(deprecated("experimental function used"))
 #  else
 #   define SVN_EXPERIMENTAL
 #  endif
