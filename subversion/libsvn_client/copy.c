@@ -1945,6 +1945,9 @@ try_copy(svn_boolean_t *timestamp_sleep,
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
 
+  /* Assert instead of crashing if the sources list is empty. */
+  SVN_ERR_ASSERT(sources->nelts > 0);
+
   /* Are either of our paths URLs?  Just check the first src_path.  If
      there are more than one, we'll check for homogeneity among them
      down below. */
