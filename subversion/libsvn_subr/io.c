@@ -3181,10 +3181,7 @@ __create_custom_diff_cmd(const char *label1,
                 {
                   /* it's a protected delimiter, so we consume one ';'  */
                   svn_stringbuf_remove(word, 0, 1);   
-                  
-                  /* put the special character back if it exists */
-                  if (special_end_marker) 
-                    svn_stringbuf_appendbyte(word, special_end_marker);
+                
                 }
             }
           else /* check that this is a regular delimiter (length 3) */
@@ -3208,11 +3205,12 @@ __create_custom_diff_cmd(const char *label1,
                                       3, /* delimiter is always length 3 */
                                       tokens_tab[j].token,
                                       strlen(tokens_tab[j].token));
-
-                /* put the special character back if it exists */
-                if (special_end_marker) 
-                  svn_stringbuf_appendbyte(word, special_end_marker);
               }
+
+          /* put the special character back if it exists */
+          if (special_end_marker) 
+            svn_stringbuf_appendbyte(word, special_end_marker);
+
         }
       result[argv] = word->data;
     }  
