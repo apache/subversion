@@ -3262,7 +3262,7 @@ def diff_external_diffcmd(sbox):
 
 # Check the correct parsing of arguments for an external diff tool
 def diff_invoke_external_diffcmd(sbox):
-  "svn diff --diff-invoke-cmd passes correct args"
+  "svn diff --invoke-diff-cmd passes correct args"
 
   diff_script_path = os.path.abspath(".")+"/diff"
 
@@ -3281,15 +3281,27 @@ def diff_invoke_external_diffcmd(sbox):
   expected_output = svntest.verify.ExpectedOutput([
       "Index: iota\n",
       "===================================================================\n",
-      "iota	(revision 1)\n",
+      # assert correct label ;l1
+      "iota	(revision 1)\n",   
+      # assert correct file ;f1 
       os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+      # assert correct label ;l2
       "iota	(working copy)\n",
-      os.path.abspath("iota") + "\n"])
+      # assert correct file ;f2
+      os.path.abspath("iota") + "\n",
+      # assert special end char is added ;f1+ -> (file)+
+      os.path.abspath(svntest.wc.text_base_path("iota")) + "+\n", 
+      ";f1\n",  # assert removal of ';' @ lower boundary '1' ;;f1  -> ;f1
+      ";;l3\n", # assert removal of ';' @ high boundary '3'  ;;;l3 -> ;;l3
+      ";;fo\n", # assert only eligible tokens are modified   ;;fo  -> ;;fo
+      ";f1o\n"  # assert correct length test of token        ;f1o ->  ;f1o
+      ])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
    'diff',
-   '--invoke-diff-cmd='+diff_script_path+' ;l1 ;f1 ;l2 ;f2',
+   '--invoke-diff-cmd='+diff_script_path+' ;l1 ;f1 ;l2 ;f2 ;f1+ ;;f1 ;;;l3 ;;fo ;f1o',
    iota_path)
+
 
 #----------------------------------------------------------------------
 # Diffing an unrelated repository URL against working copy with

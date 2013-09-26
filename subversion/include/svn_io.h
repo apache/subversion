@@ -2393,6 +2393,18 @@ svn_io_create_custom_diff_cmd(const char *label1,
                               const char *cmd,
                               apr_pool_t *pool);
 
+/* temporary hand rolled version of the above */
+const char **
+__create_custom_diff_cmd(const char *label1,
+                         const char *label2,
+                         const char *label3,
+                         const char *from,
+                         const char *to,
+                         const char *base,
+                         const char *cmd,
+                         apr_pool_t *pool);
+
+
 /** Run the external diff command defined by the invoke-diff-cmd
  *  option.
  *  

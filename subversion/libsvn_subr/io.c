@@ -3104,6 +3104,123 @@ svn_io_create_custom_diff_cmd(const char *label1,
   return result;
 }
 
+const char **
+__create_custom_diff_cmd(const char *label1,
+                         const char *label2,
+                         const char *label3,
+                         const char *from,
+                         const char *to,
+                         const char *base,
+                         const char *cmd,
+                         apr_pool_t *pool)
+{
+  /* The idea is that we can use the delimiter's characters to find
+     the correct indexes, and thus avoid repeated str(str|cmp|etc)
+     operation which easily turn this into an O(n^3) operation.  This
+     handrolled function is O(n).  */
+
+  struct replace_tokens_t
+  {
+    const char *token;
+  } tokens_tab[] = { /* corresponds to delimiter*/ 
+    { from },        /* f1                      */
+    { to },          /* f2                      */
+    { base },        /* f3                      */  
+    { label1 },      /* l1                      */
+    { label2 },      /* l2                      */
+    { label3 },      /* l3                      */
+  };
+  
+  apr_array_header_t *words;
+  const char ** result;
+  int argv;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+
+  /* split the user command into an array of words */
+  words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
+  
+  result = apr_palloc(pool, 
+                      (words->nelts+1) * words->elt_size*sizeof(char *) );
+
+  for (argv = 0; argv < words->nelts; argv++)
+    {
+      int j = 0;
+      svn_stringbuf_t *word;
+
+      word = svn_stringbuf_create_empty(scratch_pool);
+      svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, argv, char *));
+      
+      /* a delimiter token always starts with a ';' */
+      if (word->data[j] == ';')  
+        {
+          /* there are some cases where a '+' or other non-alphanumeric
+             character can be appended to a file name.  It's simpler if
+             this is removed for the check and added back onto the result. */
+          char special_end_marker = 0;  
+
+          /* if the last char is a non-alphanumeric, ie, + in ;f1+, remove it */
+          if (!isalnum(word->data[word->len-1]))
+            {
+              special_end_marker = word->data[word->len-1]; 
+              svn_stringbuf_remove(word, word->len-1, 1);   
+            }
+
+          if (word->data[++j] == ';')  /* likely to be a protected delimiter */
+            {
+              /* ensure that there is an unbroken line of ';' */ 
+              while (j < word->len && word->data[j++] == ';') ;
+  
+              /* ensure that the end characters are [f|l][1-3]. */
+              if ( (j == (word->len - 1)) 
+
+                   /* check the letters */
+                   && (word->data[j-1] == 'f' || word->data[j-1] == 'l') 
+
+                   /*check that next char is 1,2 or 3 */
+                   && (word->data[j] > 48) && (word->data[j] < 52) ) 
+                {
+                  /* it's a protected delimiter, so we consume one ';'  */
+                  svn_stringbuf_remove(word, 0, 1);   
+                  
+                  /* put the special character back if it exists */
+                  if (special_end_marker) 
+                    svn_stringbuf_appendbyte(word, special_end_marker);
+                }
+            }
+          else /* check that this is a regular delimiter (length 3) */
+            if ( (word->len == 3)
+
+                 /* check the letters */
+                 && (word->data[1] == 'f' || word->data[1] == 'l') 
+
+                 /*check that next char is 1,2 or 3 */
+                 && (word->data[2] > 48) && (word->data[2] < 52) )
+              {
+                /* extract the delimiter's integer 1,2 or 3 */
+                j = (int)word->data[2]-49;  
+
+                /* if it's 'l' it will be in position 4,5 or 6 */
+                if (word->data[1] == 'l') 
+                  j+=3;                  
+
+                /* pick the correct string parameter out of the tokens_tab */
+                svn_stringbuf_replace(word, 0, 
+                                      3, /* delimiter is always length 3 */
+                                      tokens_tab[j].token,
+                                      strlen(tokens_tab[j].token));
+
+                /* put the special character back if it exists */
+                if (special_end_marker) 
+                  svn_stringbuf_appendbyte(word, special_end_marker);
+              }
+        }
+      result[argv] = word->data;
+    }  
+  result[argv] = NULL;
+  svn_pool_destroy(scratch_pool);
+  return result;
+}
+
 svn_error_t *
 svn_io_run_external_diff(const char *dir,
                          const char *label1,
@@ -3122,9 +3239,9 @@ svn_io_run_external_diff(const char *dir,
   if (0 == strlen(external_diff_cmd)) 
      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
 
-  cmd = svn_io_create_custom_diff_cmd(label1, label2, NULL, 
-                                      tmpfile1, tmpfile2, NULL, 
-                                      external_diff_cmd, pool);
+  cmd = __create_custom_diff_cmd(label1, label2, NULL, 
+                                 tmpfile1, tmpfile2, NULL, 
+                                 external_diff_cmd, pool);
   if (pexitcode == NULL)
      pexitcode = &exitcode;
   
@@ -3137,7 +3254,8 @@ svn_io_run_external_diff(const char *dir,
       const char *failed_command = "";
 
       for (i = 0; cmd[i]; ++i)
-          failed_command = apr_pstrcat(pool, failed_command, cmd[i], " ", (char*) NULL);
+          failed_command = apr_pstrcat(pool, failed_command, 
+                                       cmd[i], " ", (char*) NULL);
 
       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                                _("'%s' was expanded to '%s' and returned %d"),
