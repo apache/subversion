@@ -181,6 +181,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1526439
+   Improve http status processing during commit using ra_serf to improve
+   diagnostics.
+   Justification:
+      With this patch the problem described as issue #4431, would
+      probably have been diagnosed months ago.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
