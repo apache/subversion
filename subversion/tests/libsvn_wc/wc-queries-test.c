@@ -165,7 +165,7 @@ test_sqlite_version(apr_pool_t *scratch_pool)
   printf("DBG: Using Sqlite %s\n", sqlite3_version);
 
   if (sqlite3_libversion_number() != SQLITE_VERSION_NUMBER)
-    printf("DBG: Compiled against Sqlite %s", SQLITE_VERSION);
+    printf("DBG: Compiled against Sqlite %s\n", SQLITE_VERSION);
 
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,

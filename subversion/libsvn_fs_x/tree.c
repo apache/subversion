@@ -2199,7 +2199,6 @@ x_dir_entries(apr_hash_t **table_p,
   return svn_fs_x__dag_dir_entries(table_p, node, pool);
 }
 
-#if 0
 static svn_error_t *
 x_dir_optimal_order(apr_array_header_t **ordered_p,
                     svn_fs_root_t *root,
@@ -2210,7 +2209,6 @@ x_dir_optimal_order(apr_array_header_t **ordered_p,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* Create a new directory named PATH in ROOT.  The new directory has
    no entries, and no properties.  ROOT must be the root of a
@@ -2332,15 +2330,30 @@ x_same_p(svn_boolean_t *same_p,
   return SVN_NO_ERROR;
 }
 
+/* Type to select the various behavioral modes of copy_helper.
+ */
+typedef enum copy_type_t
+{
+  /* add without history */
+  copy_type_plain_add,
+
+  /* add with history */
+  copy_type_add_with_history,
+
+  /* move (always with history) */
+  copy_type_move
+} copy_type_t;
+
 /* Copy the node at FROM_PATH under FROM_ROOT to TO_PATH under
-   TO_ROOT.  If PRESERVE_HISTORY is set, then the copy is recorded in
-   the copies table.  Perform temporary allocations in POOL. */
+   TO_ROOT.  COPY_TYPE determines whether then the copy is recorded in
+   the copies table and whether it is being marked as a move.
+   Perform temporary allocations in POOL. */
 static svn_error_t *
 copy_helper(svn_fs_root_t *from_root,
             const char *from_path,
             svn_fs_root_t *to_root,
             const char *to_path,
-            svn_boolean_t preserve_history,
+            copy_type_t copy_type,
             apr_pool_t *pool)
 {
   dag_node_t *from_node;
@@ -2357,10 +2370,21 @@ copy_helper(svn_fs_root_t *from_root,
        _("Cannot copy between two different filesystems ('%s' and '%s')"),
        from_root->fs->path, to_root->fs->path);
 
+  /* more things that we can't do ATM */
   if (from_root->is_txn_root)
     return svn_error_create
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Copy from mutable tree not currently supported"));
+
+  if (! to_root->is_txn_root)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Copy immutable tree not supported"));
+
+  if (copy_type == copy_type_move && from_root->rev != txn_id->revision)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Move from non-HEAD revision not currently supported"));
 
   /* Get the NODE for FROM_PATH in FROM_ROOT.*/
   SVN_ERR(get_dag(&from_node, from_root, from_path, TRUE, pool));
@@ -2398,13 +2422,19 @@ copy_helper(svn_fs_root_t *from_root,
          operation is a replacement, not an addition. */
       if (to_parent_path->node)
         {
-          kind = svn_fs_path_change_replace;
+          kind = copy_type == copy_type_move
+               ? svn_fs_path_change_movereplace
+               : svn_fs_path_change_replace;
+
           SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&mergeinfo_start,
                                                     to_parent_path->node));
         }
       else
         {
-          kind = svn_fs_path_change_add;
+          kind = copy_type == copy_type_move
+               ? svn_fs_path_change_move
+               : svn_fs_path_change_add;
+
           mergeinfo_start = 0;
         }
 
@@ -2420,12 +2450,12 @@ copy_helper(svn_fs_root_t *from_root,
       SVN_ERR(svn_fs_x__dag_copy(to_parent_path->parent->node,
                                  to_parent_path->entry,
                                  from_node,
-                                 preserve_history,
+                                 copy_type != copy_type_plain_add,
                                  from_root->rev,
                                  from_canonpath,
                                  txn_id, pool));
 
-      if (kind == svn_fs_path_change_replace)
+      if (kind != svn_fs_path_change_add)
         SVN_ERR(dag_node_cache_invalidate(to_root,
                                           parent_path_path(to_parent_path,
                                                            pool), pool));
@@ -2479,7 +2509,7 @@ x_copy(svn_fs_root_t *from_root,
                                      to_root,
                                      svn_fs__canonicalize_abspath(to_path,
                                                                   pool),
-                                     TRUE, pool));
+                                     copy_type_add_with_history, pool));
 }
 
 
@@ -2497,7 +2527,27 @@ x_revision_link(svn_fs_root_t *from_root,
 
   path = svn_fs__canonicalize_abspath(path, pool);
   return svn_error_trace(copy_helper(from_root, path, to_root, path,
-                                     FALSE, pool));
+                                     copy_type_plain_add, pool));
+}
+
+
+/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT and mark
+   it as a Move.  If FROM_PATH is a directory, copy it recursively. 
+   Temporary allocations are from POOL.*/
+static svn_error_t *
+x_move(svn_fs_root_t *from_root,
+       const char *from_path,
+       svn_fs_root_t *to_root,
+       const char *to_path,
+       apr_pool_t *pool)
+{
+  return svn_error_trace(copy_helper(from_root,
+                                     svn_fs__canonicalize_abspath(from_path,
+                                                                  pool),
+                                     to_root,
+                                     svn_fs__canonicalize_abspath(to_path,
+                                                                  pool),
+                                     copy_type_move, pool));
 }
 
 
@@ -4063,6 +4113,9 @@ static root_vtable_t root_vtable = {
   x_node_origin_rev,
   x_node_created_path,
   x_delete_node,
+  x_copy,
+  x_revision_link,
+  x_move,
   x_copied_from,
   x_closest_copy,
   x_node_prop,
@@ -4070,10 +4123,8 @@ static root_vtable_t root_vtable = {
   x_change_node_prop,
   x_props_changed,
   x_dir_entries,
-/*  x_dir_optimal_order,*/
+  x_dir_optimal_order,
   x_make_dir,
-  x_copy,
-  x_revision_link,
   x_file_length,
   x_file_checksum,
   x_file_contents,
@@ -4255,19 +4306,25 @@ verify_node(dag_node_t *node,
         {
           svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
           dag_node_t *child;
-          svn_revnum_t child_rev;
           apr_int64_t child_mergeinfo;
 
           svn_pool_clear(iterpool);
 
           /* Compute CHILD_REV. */
-          SVN_ERR(svn_fs_x__dag_get_node(&child, fs, dirent->id, iterpool));
-          SVN_ERR(svn_fs_x__dag_get_revision(&child_rev, child, iterpool));
+          if (svn_fs_x__id_rev(dirent->id) == rev)
+            {
+              SVN_ERR(svn_fs_x__dag_get_node(&child, fs, dirent->id,
+                                             iterpool));
+              SVN_ERR(verify_node(child, rev, iterpool));
+              SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&child_mergeinfo,
+                                                        child));
+            }
+          else
+            {
+              SVN_ERR(svn_fs_x__get_mergeinfo_count(&child_mergeinfo, fs,
+                                                    dirent->id, iterpool));
+            }
 
-          if (child_rev == rev)
-            SVN_ERR(verify_node(child, rev, iterpool));
-
-          SVN_ERR(svn_fs_x__dag_get_mergeinfo_count(&child_mergeinfo, child));
           children_mergeinfo += child_mergeinfo;
         }
 

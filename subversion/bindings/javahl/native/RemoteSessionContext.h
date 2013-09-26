@@ -36,7 +36,6 @@ class RemoteSessionContext : public OperationContext
   public:
     RemoteSessionContext(jobject contextHolder, SVN::Pool &pool,
                          const char* jconfigDirectory,
-                         jobject jconfigHandler,
                          const char* jusername, const char* jpassword,
                          Prompter* prompter, jobject jprogress);
     virtual ~RemoteSessionContext();

@@ -922,8 +922,9 @@ usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
   svn_error_clear(svn_cmdline_fputs(
-    _("Subversion multiple URL command client\n"
-      "usage: svnmucc ACTION...\n"
+    _("usage: svnmucc ACTION...\n"
+      "Subversion multiple URL command client.\n"
+      "Type 'svnmucc --version' to see the program version.\n"
       "\n"
       "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
       "  the result as a (single) new revision.\n"

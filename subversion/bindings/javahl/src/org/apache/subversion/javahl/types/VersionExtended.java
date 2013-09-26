@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl.types;
 
+import org.apache.subversion.javahl.NativeResources;
+
 /**
  * Encapsulates information about the compile-time and run-time
  * properties of the Subversion libraries.
@@ -30,6 +32,14 @@ package org.apache.subversion.javahl.types;
  */
 public class VersionExtended
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
     /**
      * @return The date when the libsvn_subr library was compiled, in
      * the format defined by the C standard macro #__DATE__.

@@ -1487,6 +1487,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
                    svn_boolean_t discover_changed_paths,
                    svn_boolean_t strict_node_history,
                    svn_boolean_t include_merged_revisions,
+                   svn_move_behavior_t move_behavior,
                    const apr_array_header_t *revprops,
                    svn_log_entry_receiver_t receiver,
                    void *receiver_baton,
@@ -1536,11 +1537,13 @@ perform_ra_svn_log(svn_error_t **outer_error,
           else
             want_custom_revprops = TRUE;
         }
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)n)",
+                                      (apr_uint64_t) move_behavior));
     }
   else
     {
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w())", "all-revprops"));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w()n)", "all-revprops",
+                                      (apr_uint64_t) move_behavior));
 
       want_author = TRUE;
       want_date = TRUE;
@@ -1712,6 +1715,7 @@ ra_svn_log(svn_ra_session_t *session,
            svn_boolean_t discover_changed_paths,
            svn_boolean_t strict_node_history,
            svn_boolean_t include_merged_revisions,
+           svn_move_behavior_t move_behavior,
            const apr_array_header_t *revprops,
            svn_log_entry_receiver_t receiver,
            void *receiver_baton, apr_pool_t *pool)
@@ -1726,7 +1730,7 @@ ra_svn_log(svn_ra_session_t *session,
                                            discover_changed_paths,
                                            strict_node_history,
                                            include_merged_revisions,
-                                           revprops,
+                                           move_behavior, revprops,
                                            receiver, receiver_baton,
                                            pool));
   return svn_error_trace(

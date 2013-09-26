@@ -112,20 +112,15 @@ log_write(apr_file_t *log_file, const char *errstr, apr_size_t len,
   return svn_io_file_write(log_file, errstr, &len, pool);
 }
 
-void
-log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
-          const char *user, const char *repos, apr_pool_t *pool)
+static void
+log_error_internal(svn_error_t *err, apr_file_t *log_file,
+                   const char *remote_host, const char *user,
+                   const char *repos, apr_pool_t *pool)
 {
   const char *timestr, *continuation;
   char errbuf[256];
   /* 8192 from MAX_STRING_LEN in from httpd-2.2.4/include/httpd.h */
   char errstr[8192];
-
-  if (err == SVN_NO_ERROR)
-    return;
-
-  if (log_file == NULL)
-    return;
 
   timestr = svn_time_to_cstring(apr_time_now(), pool);
   remote_host = (remote_host ? remote_host : "-");
@@ -160,13 +155,41 @@ log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
     }
 }
 
+
+void
+log_error(svn_error_t *err, apr_file_t *log_file,
+          svn_mutex__t *log_file_mutex, const char *remote_host,
+          const char *user, const char *repos, apr_pool_t *pool)
+{
+  if (err == SVN_NO_ERROR)
+    return;
+
+  if (log_file == NULL)
+    return;
+
+  if (log_file_mutex)
+    {
+      /* if the mutex functions fail, things look pretty grim.
+       * 
+       * Our best hope is to try to get some info into the log before
+       * everything breaks apart.  Therefore, ignore any mutex errors.
+       */
+      svn_error_clear(svn_mutex__lock(log_file_mutex));
+      log_error_internal(err, log_file, remote_host, user, repos, pool);
+      svn_error_clear(svn_mutex__unlock(log_file_mutex, SVN_NO_ERROR));
+    }
+  else
+    log_error_internal(err, log_file, remote_host, user, repos, pool);
+}
+
 /* Call log_error with log_file, remote_host, user, and repos
    arguments from SERVER and CONN. */
 static void
 log_server_error(svn_error_t *err, server_baton_t *server,
                  svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
-  log_error(err, server->log_file, svn_ra_svn_conn_remote_host(conn),
+  log_error(err, server->log_file, server->log_file_mutex,
+            svn_ra_svn_conn_remote_host(conn),
             server->user, server->repos_name, pool);
 }
 
@@ -2184,18 +2207,20 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char *revprop_word;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit, include_merged_revs_param;
+  apr_uint64_t limit, include_merged_revs_param, move_behavior_param;
+  svn_move_behavior_t move_behavior;
   log_baton_t lb;
   authz_baton_t ab;
 
   ab.server = b;
   ab.conn = conn;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?n", &paths,
                                   &start_rev, &end_rev, &send_changed_paths,
                                   &strict_node, &limit,
                                   &include_merged_revs_param,
-                                  &revprop_word, &revprop_items));
+                                  &revprop_word, &revprop_items,
+                                  &move_behavior_param));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
@@ -2227,6 +2252,16 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              _("Unknown revprop word '%s' in log command"),
                              revprop_word);
 
+  if (move_behavior_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    move_behavior = svn_move_behavior_no_moves;
+  else if (move_behavior_param <= svn_move_behavior_auto_moves)
+    move_behavior = (svn_move_behavior_t) move_behavior_param;
+  else
+    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                             _("Invalid move_behavior value %"
+                               APR_UINT64_T_FMT " in log command"),
+                             move_behavior_param);
+
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
      messing with us, since we know the svn client libraries will never send
@@ -2257,11 +2292,11 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
   lb.stack_depth = 0;
-  err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs5(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, send_changed_paths, strict_node,
-                            include_merged_revisions, revprops,
-                            authz_check_access_cb_func(b), &ab, log_receiver,
-                            &lb, pool);
+                            include_merged_revisions, move_behavior,
+                            revprops, authz_check_access_cb_func(b),
+                            &ab, log_receiver, &lb, pool);
 
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)
@@ -3531,6 +3566,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.authzdb = NULL;
   b.realm = NULL;
   b.log_file = params->log_file;
+  b.log_file_mutex = params->log_file_mutex;
   b.pool = pool;
   b.use_sasl = FALSE;
   b.vhost = params->vhost;
@@ -3635,8 +3671,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     }
   if (err)
     {
-      log_error(err, b.log_file, svn_ra_svn_conn_remote_host(conn),
-                b.user, NULL, pool);
+      log_error(err, b.log_file, b.log_file_mutex,
+                svn_ra_svn_conn_remote_host(conn), b.user, NULL, pool);
       io_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
       svn_error_clear(err);
       SVN_ERR(io_err);

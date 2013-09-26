@@ -499,7 +499,7 @@ get_revision_info(report_baton_t *b,
       info->author = author ? svn_string_dup(author, b->pool) : NULL;
 
       /* Cache it */
-      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);
     }
 
   *revision_info = info;
@@ -1143,6 +1143,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
+  apr_array_header_t *t_ordered_entries = NULL;
+  int i;
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
      source path so that we add all the properties.
@@ -1275,9 +1277,12 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         }
 
       /* Loop over the dirents in the target. */
-      for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
+      SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
+                                       t_entries, pool));
+      for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
-          const svn_fs_dirent_t *t_entry = svn__apr_hash_index_val(hi);
+          const svn_fs_dirent_t *t_entry
+             = APR_ARRAY_IDX(t_ordered_entries, i, svn_fs_dirent_t *);
           const svn_fs_dirent_t *s_entry;
           const char *s_fullpath, *t_fullpath, *e_fullpath;
 

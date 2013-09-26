@@ -858,7 +858,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
   jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
   jint jhunkFuzz = static_cast<jint>(wcNotify->hunk_fuzz);
-  if (jhunkFuzz != wcNotify->hunk_fuzz)
+  if (jhunkFuzz < 0 || jhunkFuzz != wcNotify->hunk_fuzz)
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C svn_linenum_t to Java int");

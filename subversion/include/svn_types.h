@@ -64,6 +64,25 @@ extern "C" {
 #endif
 
 
+/** Macro used to mark experimental functions.
+ *
+ * @since New in 1.9.
+ */
+#ifndef SVN_EXPERIMENTAL
+# if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
+#  if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
+#   define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
+#  elif defined(_MSC_VER) && _MSC_VER >= 1300
+#   define SVN_EXPERIMENTAL __declspec(deprecated("experimental function used"))
+#  else
+#   define SVN_EXPERIMENTAL
+#  endif
+# else
+#  define SVN_EXPERIMENTAL
+# endif
+#endif
+
+
 /** Indicate whether the current platform supports unaligned data access.
  *
  * On the majority of machines running SVN (x86 / x64), unaligned access
@@ -217,6 +236,16 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
 #define SVN__APR_STATUS_IS_ENOTDIR(s)  (APR_STATUS_IS_ENOTDIR(s) \
                       || ((s) == APR_OS_START_SYSERR + ERROR_DIRECTORY) \
                       || ((s) == APR_OS_START_SYSERR + ERROR_INVALID_NAME))
+#endif
+
+/** On Windows, APR_STATUS_IS_EPIPE does not include ERROR_NO_DATA error.
+ * So we include it.*/
+/* ### These fixes should go into APR. */
+#ifndef WIN32
+#define SVN__APR_STATUS_IS_EPIPE(s)  APR_STATUS_IS_EPIPE(s)
+#else
+#define SVN__APR_STATUS_IS_EPIPE(s)  (APR_STATUS_IS_EPIPE(s) \
+                      || ((s) == APR_OS_START_SYSERR + ERROR_NO_DATA))
 #endif
 
 /** @} */
@@ -752,7 +781,7 @@ svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
  */
 typedef struct svn_log_changed_path2_t
 {
-  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
+  /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify, mo'V'ed, move-replac'E'd */
   char action;
 
   /** Source path of copy (if any). */
@@ -990,6 +1019,28 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
   const char *date,  /* use svn_time_from_cstring() if need apr_time_t */
   const char *message,
   apr_pool_t *pool);
+
+/**
+ * This enumeration contains the various options how SVN shall report
+ * and process explicit MOVes as well as ADD+DEL pairs.
+ *
+ * @since New in 1.9.
+ */
+typedef enum svn_move_behavior_t
+{
+  /* report all moves as ADD with history.
+     This also provides backward compatibility with 1.8 clients. */
+  svn_move_behavior_no_moves = 0,
+
+  /* report all changes, including moves, as they were reported.
+     This is option with the least overhead. */
+  svn_move_behavior_explicit_moves,
+
+  /* in addition to explicit moves, try to find matching DEL + ADD pairs
+     and report the ADD in those as moves as well.  Which of the eligible
+     DEL + ADD pairs will be detected is implementation-dependent. */
+  svn_move_behavior_auto_moves
+} svn_move_behavior_t;
 
 
 

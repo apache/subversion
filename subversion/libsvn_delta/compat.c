@@ -1330,17 +1330,6 @@ move_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  SVN__NOT_IMPLEMENTED();
-}
-
-
 static int
 count_components(const char *relpath)
 {
@@ -1888,7 +1877,6 @@ svn_delta__editor_from_delta(svn_editor_t **editor_p,
       delete_cb,
       copy_cb,
       move_cb,
-      rotate_cb,
       complete_cb,
       abort_cb
     };

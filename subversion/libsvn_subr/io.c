@@ -3067,7 +3067,7 @@ svn_io_create_custom_diff_cmd(const char *label1,
           svn_stringbuf_appendcstr(token, token_list[i]);
           len = 0;
 
-          while ( (found = strstr(com->data, token->data) && 
+          while ( (found = strstr(com->data, token->data)) && 
                   (strlen(found) > len) ) 
             {
               len = strlen(found); 
@@ -3570,7 +3570,7 @@ do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
 
   /* ### Issue #3014: Return a specific error for broken pipes,
    * ### with a single element in the error chain. */
-  if (APR_STATUS_IS_EPIPE(status))
+  if (SVN__APR_STATUS_IS_EPIPE(status))
     return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
 
   if (name)

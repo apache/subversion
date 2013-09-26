@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <apr.h>
+#include <apr_atomic.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
@@ -41,6 +42,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_sorts.h"
 
 #include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"
@@ -70,6 +72,7 @@ struct fs_type_defn {
   const char *fs_type;
   const char *fsap_name;
   fs_init_func_t initfunc;
+  fs_library_vtable_t *vtable;
   struct fs_type_defn *next;
 };
 
@@ -81,7 +84,9 @@ static struct fs_type_defn base_defn =
 #else
     NULL,
 #endif
-    NULL
+    NULL,
+    NULL /* End of static list: this needs to be reset to NULL if the
+            common_pool used when setting it has been cleared. */
   };
 
 static struct fs_type_defn fsx_defn =
@@ -92,6 +97,7 @@ static struct fs_type_defn fsx_defn =
 #else
     NULL,
 #endif
+    NULL,
     &base_defn
   };
 
@@ -103,6 +109,7 @@ static struct fs_type_defn fsfs_defn =
 #else
     NULL,
 #endif
+    NULL,
     &fsx_defn
   };
 
@@ -158,13 +165,20 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
 /* Fetch a library vtable by a pointer into the library definitions array. */
 static svn_error_t *
 get_library_vtable_direct(fs_library_vtable_t **vtable,
-                          const struct fs_type_defn *fst,
+                          struct fs_type_defn *fst,
                           apr_pool_t *pool)
 {
   fs_init_func_t initfunc = NULL;
   const svn_version_t *my_version = svn_fs_version();
   const svn_version_t *fs_version;
 
+  /* most times, we get lucky */
+  *vtable = apr_atomic_casptr((volatile void **)&fst->vtable, NULL, NULL);
+  if (*vtable)
+    return SVN_NO_ERROR;
+
+  /* o.k. the first access needs to actually load the module, find the
+     vtable and check for version compatibility. */
   initfunc = fst->initfunc;
   if (! initfunc)
     SVN_ERR(load_module(&initfunc, fst->fsap_name, pool));
@@ -201,6 +215,10 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
                              my_version->patch, my_version->tag,
                              fs_version->major, fs_version->minor,
                              fs_version->patch, fs_version->tag);
+
+  /* the vtable will not change.  Remember it */
+  apr_atomic_casptr((volatile void **)&fst->vtable, *vtable, NULL);
+
   return SVN_NO_ERROR;
 }
 
@@ -364,6 +382,7 @@ svn_fs_initialize(apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   common_pool = svn_pool_create(pool);
+  base_defn.next = NULL;
   SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
 
   /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
@@ -467,8 +486,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   /* Perform the actual creation. */
   *fs_p = fs_new(fs_config, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->create(*fs_p, path, pool, common_pool));
+  SVN_ERR(vtable->create(*fs_p, path, common_pool_lock, pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -482,8 +500,7 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   *fs_p = fs_new(fs_config, pool);
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->open_fs(*fs_p, path, pool, common_pool));
+  SVN_ERR(vtable->open_fs(*fs_p, path, common_pool_lock, pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -503,11 +520,11 @@ svn_fs_upgrade2(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->upgrade_fs(fs, path,
-                                          notify_func, notify_baton,
-                                          cancel_func, cancel_baton,
-                                          pool, common_pool));
+  SVN_ERR(vtable->upgrade_fs(fs, path,
+                             notify_func, notify_baton,
+                             cancel_func, cancel_baton,
+                             common_pool_lock,
+                             pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -534,11 +551,11 @@ svn_fs_verify(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(fs_config, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->verify_fs(fs, path, start, end,
-                                         notify_func, notify_baton,
-                                         cancel_func, cancel_baton,
-                                         pool, common_pool));
+  SVN_ERR(vtable->verify_fs(fs, path, start, end,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton,
+                            common_pool_lock,
+                            pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -649,10 +666,9 @@ svn_fs_pack(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->pack_fs(fs, path, notify_func, notify_baton,
-                                       cancel_func, cancel_baton, pool,
-                                       common_pool));
+  SVN_ERR(vtable->pack_fs(fs, path, notify_func, notify_baton,
+                          cancel_func, cancel_baton, common_pool_lock,
+                          pool, common_pool));
   return SVN_NO_ERROR;
 }
 
@@ -667,9 +683,8 @@ svn_fs_recover(const char *path,
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
   fs = fs_new(NULL, pool);
 
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->open_fs_for_recovery(fs, path, pool,
-                                                    common_pool));
+  SVN_ERR(vtable->open_fs_for_recovery(fs, path, common_pool_lock,
+                                       pool, common_pool));
   return svn_error_trace(vtable->recover(fs, cancel_func, cancel_baton,
                                          pool));
 }
@@ -710,8 +725,7 @@ svn_fs_create_berkeley(svn_fs_t *fs, const char *path)
   SVN_ERR(write_fs_type(path, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Perform the actual creation. */
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->create(fs, path, fs->pool, common_pool));
+  SVN_ERR(vtable->create(fs, path, common_pool_lock, fs->pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -723,8 +737,7 @@ svn_fs_open_berkeley(svn_fs_t *fs, const char *path)
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, fs->pool));
-  SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       vtable->open_fs(fs, path, fs->pool, common_pool));
+  SVN_ERR(vtable->open_fs(fs, path, common_pool_lock, fs->pool, common_pool));
   SVN_ERR(vtable->set_svn_fs_open(fs, svn_fs_open));
 
   return SVN_NO_ERROR;
@@ -976,11 +989,177 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
   return root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
 }
 
+/* Return TRUE, if CHANGE deleted the node previously found at its target
+   path. */
+static svn_boolean_t
+is_deletion(svn_fs_path_change2_t *change)
+{
+  return change->change_kind == svn_fs_path_change_movereplace
+      || change->change_kind == svn_fs_path_change_replace
+      || change->change_kind == svn_fs_path_change_delete;
+}
+
+/* Change all moves in CHANGES to ADD.  Use POOL for temporary allocations.
+ */
+static void
+turn_moves_into_copies(apr_hash_t *changes,
+                       apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_ssize_t klen;
+      svn_fs_path_change2_t *change;
+      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+
+      switch (change->change_kind)
+        {
+          case svn_fs_path_change_move:
+            change->change_kind = svn_fs_path_change_add;
+            break;
+
+          case svn_fs_path_change_movereplace:
+            change->change_kind = svn_fs_path_change_replace;
+            break;
+
+          default:
+            break;
+        }
+    }
+}
+
+/* Replace ADDs with MOVes, if they are unique, have a matching deletion
+ * and if the copy-from revision is REVISION-1.  Use POOL for temporary
+ * allocations.
+ */
+static void
+turn_unique_copies_into_moves(apr_hash_t *changes,
+                              svn_revnum_t revision,
+                              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *unique_copy_sources;
+  const char **sources;
+  int i;
+
+  /* find all copy-from paths (ADD and MOV alike) */
+
+  svn_boolean_t any_deletion = FALSE;
+  apr_array_header_t *copy_sources
+    = apr_array_make(pool, apr_hash_count(changes), sizeof(const char*));
+
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_path_change2_t *change;
+      apr_hash_this(hi, NULL, NULL, (void**)&change);
+
+      if (change->copyfrom_path && change->copyfrom_rev == revision-1)
+        APR_ARRAY_PUSH(copy_sources, const char *)
+          = change->copyfrom_path;
+
+      any_deletion |= is_deletion(change);
+    }
+
+  /* no suitable copy-from or no deletion -> no moves */
+
+  if (!copy_sources->nelts || !any_deletion)
+    return;
+
+  /* identify copy-from paths that have been mentioned exactly once */
+
+  sources = (const char **)copy_sources->elts;
+  qsort(sources, copy_sources->nelts, copy_sources->elt_size,
+        (int (*)(const void *, const void *))svn_sort_compare_paths);
+
+  unique_copy_sources = apr_hash_make(pool);
+  for (i = 0; i < copy_sources->nelts; ++i)
+    if (   (i == 0 || strcmp(sources[i-1], sources[i]))
+        && (i == copy_sources->nelts-1 || strcmp(sources[i+1], sources[i])))
+      {
+        apr_hash_set(unique_copy_sources, sources[i],
+                     APR_HASH_KEY_STRING, sources[i]);
+      }
+
+  /* no unique copy-from paths -> no moves */
+
+  if (!apr_hash_count(unique_copy_sources))
+    return;
+
+  /* Replace all additions, replacements with a unique copy-from path,
+     the correct copy-from rev and a matching deletion in this revision,
+     with moves and move-replacements, respectively. */
+
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_ssize_t klen;
+      svn_fs_path_change2_t *change, *copy_from_change;
+
+      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+      if (   change->copyfrom_rev != revision-1
+          || !change->copyfrom_path
+          || !apr_hash_get(unique_copy_sources, change->copyfrom_path,
+                           APR_HASH_KEY_STRING))
+        continue;
+
+      copy_from_change = apr_hash_get(changes, change->copyfrom_path,
+                                      APR_HASH_KEY_STRING);
+      if (!copy_from_change || !is_deletion(copy_from_change))
+        continue;
+
+      /* There is a deletion of the ADD's copy-from path in *REVISION*.
+         This can either be the same as in REVISION-1 (o.k.) or must have
+         been replaced by some other node.  However, that would imply that
+         it still got deleted as part of the replacement, i.e. both cases
+         are o.k. */
+
+      switch (change->change_kind)
+        {
+          case svn_fs_path_change_add:
+            change->change_kind = svn_fs_path_change_move;
+            break;
+
+          case svn_fs_path_change_replace:
+            change->change_kind = svn_fs_path_change_movereplace;
+            break;
+
+          default:
+            break;
+        }
+    }
+}
+
+svn_error_t *
+svn_fs_paths_changed3(apr_hash_t **changed_paths_p,
+                      svn_fs_root_t *root,
+                      svn_move_behavior_t move_behavior,
+                      apr_pool_t *pool)
+{
+  SVN_ERR(root->vtable->paths_changed(changed_paths_p, root, pool));
+  switch(move_behavior)
+    {
+      case svn_move_behavior_no_moves:
+        turn_moves_into_copies(*changed_paths_p, pool);
+        break;
+
+      case svn_move_behavior_auto_moves:
+        turn_unique_copies_into_moves(*changed_paths_p, root->rev, pool);
+        break;
+
+      default:
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
                       apr_pool_t *pool)
 {
-  return root->vtable->paths_changed(changed_paths_p, root, pool);
+  return svn_fs_paths_changed3(changed_paths_p, root,
+                               svn_move_behavior_no_moves, pool);
 }
 
 svn_error_t *
@@ -990,7 +1169,8 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
   apr_hash_t *changed_paths_new_structs;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_fs_paths_changed2(&changed_paths_new_structs, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&changed_paths_new_structs, root,
+                                svn_move_behavior_no_moves, pool));
   *changed_paths_p = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, changed_paths_new_structs);
        hi;
@@ -1184,6 +1364,16 @@ svn_fs_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
+                         svn_fs_root_t *root,
+                         apr_hash_t *entries,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(root->vtable->dir_optimal_order(ordered_p, root,
+                                                         entries, pool));
+}
+
+svn_error_t *
 svn_fs_make_dir(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   SVN_ERR(svn_fs__path_valid(path, pool));
@@ -1211,6 +1401,15 @@ svn_fs_revision_link(svn_fs_root_t *from_root, svn_fs_root_t *to_root,
 {
   return svn_error_trace(to_root->vtable->revision_link(from_root, to_root,
                                                         path, pool));
+}
+
+svn_error_t *
+svn_fs_move(svn_fs_root_t *from_root, const char *from_path,
+            svn_fs_root_t *to_root, const char *to_path, apr_pool_t *pool)
+{
+  SVN_ERR(svn_fs__path_valid(to_path, pool));
+  return svn_error_trace(to_root->vtable->move(from_root, from_path,
+                                               to_root, to_path, pool));
 }
 
 svn_error_t *
@@ -1613,7 +1812,7 @@ svn_error_t *
 svn_fs_print_modules(svn_stringbuf_t *output,
                      apr_pool_t *pool)
 {
-  const struct fs_type_defn *defn = fs_modules;
+  struct fs_type_defn *defn = fs_modules;
   fs_library_vtable_t *vtable;
   apr_pool_t *iterpool = svn_pool_create(pool);
 

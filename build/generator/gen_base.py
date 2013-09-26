@@ -334,6 +334,10 @@ class DependencyGraph:
     else:
       self.deps[type][target] = [ source ]
 
+  def remove(self, type, target, source):
+    if target in self.deps[type] and source in self.deps[type][target]:
+      self.deps[type][target].remove(source)
+
   def bulk_add(self, type, target, sources):
     if target in self.deps[type]:
       self.deps[type][target].extend(sources)
@@ -541,6 +545,8 @@ class TargetExe(TargetLinked):
     self.manpages = options.get('manpages', '')
     self.testing = options.get('testing')
 
+    self.msvc_force_static = options.get('msvc-force-static') == 'yes'
+
   def add_dependencies(self):
     TargetLinked.add_dependencies(self)
 
@@ -594,7 +600,6 @@ class TargetLib(TargetLinked):
     "tries to disable building as a shared library,"
 
     self.msvc_static = True
-    self.msvc_export = []
 
 class TargetApacheMod(TargetLib):
 

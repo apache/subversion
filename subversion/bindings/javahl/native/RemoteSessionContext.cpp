@@ -33,13 +33,12 @@
 
 RemoteSessionContext::RemoteSessionContext(
     jobject contextHolder, SVN::Pool &pool,
-    const char* configDirectory, jobject jconfigHandler,
+    const char* configDirectory,
     const char*  usernameStr, const char*  passwordStr,
     Prompter* prompter, jobject jprogress)
   : OperationContext(pool), m_raCallbacks(NULL)
 {
   setConfigDirectory(configDirectory);
-  setConfigCallback(jconfigHandler);
   if (usernameStr != NULL)
     username(usernameStr);
 

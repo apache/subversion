@@ -217,6 +217,7 @@ create_dir_config(apr_pool_t *p, char *dir)
   conf->bulk_updates = CONF_BULKUPD_ON;
   conf->v2_protocol = CONF_FLAG_ON;
   conf->hooks_env = NULL;
+  conf->txdelta_cache = CONF_FLAG_ON;
 
   return conf;
 }
@@ -1207,7 +1208,7 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "speeds up data access to older revisions by caching "
                "delta information if sufficient in-memory cache is "
-               "available (default is Off)."),
+               "available (default is On)."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNCacheFullTexts", SVNCacheFullTexts_cmd, NULL,

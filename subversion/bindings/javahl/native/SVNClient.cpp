@@ -1120,7 +1120,7 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
         return;
 
     SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(subPool),
-                                path, pegRevision.revision(),
+                                intPath.c_str(), pegRevision.revision(),
                                 revision.revision(), ctx, subPool.getPool()),
                 );
 }
@@ -1529,7 +1529,6 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
     jobject jremoteSession = RemoteSession::open(
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
-        context.getConfigCallback(),
         context.getUsername(), context.getPassword(),
         prompter, jctx);
     if (JNIUtil::isJavaExceptionThrown())

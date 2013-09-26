@@ -24,9 +24,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Bindings:
 
 
-Version 1.8.2
-(27 August 2013, from /branches/1.8.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.8.2
+Version 1.8.3
+(29 August 2013, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.3
 
  User-visible changes:
   - Client- and server-side bugfixes:
@@ -53,6 +53,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.2
     * info: fix spurious error on wc root with child in conflict (r1515366)
 
   - Server-side bugfixes:
+    * svnserve: fix creation of pid files (r1516556)
     * svnadmin: fix output encoding in non-UTF8 environments (r1506966)
     * svnsync: fix high memory usage when running over ra_serf (r1515249 et al)
     * mod_dav_svn: do not map requests to filesystem (r1512432 et al)
@@ -61,7 +62,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.2
     * fsfs: fix packed revprops causing loss of revprops (r1513879 et al)
   
   - Other tool improvements and bugfixes:
-    * svnpubsub: fix symlink attack via pid file (r175 from upstream)
+    * svnwcsub/irkerbridge: fix symlink attack via pid file (r175 from upstream)
 
  Developer-visible changes:
   - General:
@@ -77,6 +78,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.2
     * swig-pl & swig-py: disable unusable svn_fs_set_warning_func (r1515119)
 
 
+Version 1.8.2
+(Not released, see changes for 1.8.3.)
+ 
+ 
 Version 1.8.1
 (23 July 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.1
@@ -507,9 +512,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
-Version 1.7.12
-(27 Aug 2013, from /branches/1.7.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.7.12
+Version 1.7.13
+(29 Aug 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.13
 
  User-visible changes:
   - General
@@ -518,6 +523,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
     * ra_serf: ignore case when checking certificate common names (r1514763)
 
   - Server-side bugfixes:
+    * svnserve: fix creation of pid files (r1516556)
     * mod_dav_svn: better status codes for commit failures (r1490684)
     * mod_dav_svn: do not map requests to filesystem (r1512432 et al)
 
@@ -529,6 +535,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.12
   - Bindings:
     * swig-pl: fix SVN::Client not honoring config file settings (r150744)
     * swig-pl & swig-py: disable unusable svn_fs_set_warning_func (r1515119)
+
+
+Version 1.7.12
+(Not released, see changes for 1.7.13.)
  
  
 Version 1.7.11

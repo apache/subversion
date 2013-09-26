@@ -1311,7 +1311,13 @@ typedef enum svn_fs_path_change_kind_t
   svn_fs_path_change_replace,
 
   /** ignore all previous change items for path (internal-use only) */
-  svn_fs_path_change_reset
+  svn_fs_path_change_reset,
+
+  /** moved to this path in txn */
+  svn_fs_path_change_move,
+
+  /** path removed and replaced by moved path in txn */
+  svn_fs_path_change_movereplace
 
 } svn_fs_path_change_kind_t;
 
@@ -1393,6 +1399,8 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * Allocate and return a hash @a *changed_paths2_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
  * <tt>const char *</tt> paths, and has #svn_fs_path_change2_t * values.
+ * @a move_behavior determines how moves are being detected and reported;
+ * see #svn_fs_move_behavior_t for the various options.
  *
  * Callers can assume that this function takes time proportional to
  * the amount of data output, and does not need to do tree crawls;
@@ -1402,8 +1410,22 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  *
  * Use @a pool for all allocations, including the hash and its values.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_paths_changed3(apr_hash_t **changed_paths2_p,
+                      svn_fs_root_t *root,
+                      svn_move_behavior_t move_behavior,
+                      apr_pool_t *pool);
+
+
+/** Same as svn_fs_paths_changed3 but with @a move_behavior set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths2_p,
                       svn_fs_root_t *root,
@@ -1832,6 +1854,19 @@ svn_fs_dir_entries(apr_hash_t **entries_p,
                    const char *path,
                    apr_pool_t *pool);
 
+/** Take the #svn_fs_dirent_t structures in @a entries as returned by
+ * #svn_fs_dir_entries for @a root and determine an optimized ordering
+ * in which data access would most likely be efficient.  Set @a *ordered_p
+ * to a newly allocated APR array of pointers to these #svn_fs_dirent_t
+ * structures.  Allocate the array (but not its contents) in @a pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
+                         svn_fs_root_t *root,
+                         apr_hash_t *entries,
+                         apr_pool_t *pool);
 
 /** Create a new directory named @a path in @a root.  The new directory has
  * no entries, and no properties.  @a root must be the root of a transaction,
@@ -1905,6 +1940,38 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
                      svn_fs_root_t *to_root,
                      const char *path,
                      apr_pool_t *pool);
+
+/** Create a copy of @a from_path in @a from_root named @a to_path in
+ * @a to_root and record it as a Move.  If @a from_path in @a from_root is
+ * a directory, copy the tree it refers to recursively.  @a from_root must
+ * be @a to_root's base revision.
+ *
+ * The move will remember its source; use svn_fs_copied_from() to
+ * access this information.
+ *
+ * @a to_root must be the root of a transaction based on that revision.
+ * Further, @a to_root and @a from_root must represent the same filesystem.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @note This will not implicitly delete the @a from_path in @a to_root
+ *       but the deletion must be reported just as if this was a
+ *       #svn_fs_copy call.
+ *
+ * @warning This function is marked as @b experimental.  That means this
+ *          function will probably be supported in future releases but
+ *          might change in signature or various aspects of its semantics.
+ *
+ * @since New in 1.9.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_fs_move(svn_fs_root_t *from_root,
+            const char *from_path,
+            svn_fs_root_t *to_root,
+            const char *to_path,
+            apr_pool_t *pool);
+
 
 /* Files.  */
 

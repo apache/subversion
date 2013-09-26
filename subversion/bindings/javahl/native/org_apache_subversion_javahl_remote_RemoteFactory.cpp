@@ -38,7 +38,7 @@ JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
     JNIEnv *env, jclass jclass, jint jretryAttempts,
     jstring jurl, jstring juuid,
-    jstring jconfigDirectory, jobject jconfigHandler,
+    jstring jconfigDirectory,
     jstring jusername, jstring jpassword,
     jobject jprompter, jobject jprogress)
 {
@@ -51,8 +51,7 @@ Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
    */
   jobject jremoteSession = RemoteSession::open(
       jretryAttempts, jurl, juuid,
-      jconfigDirectory, jconfigHandler,
-      jusername, jpassword, jprompter, jprogress);
+      jconfigDirectory, jusername, jpassword, jprompter, jprogress);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

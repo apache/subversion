@@ -115,6 +115,7 @@ static svn_error_t *
 do_resources(const dav_svn_repos *repos,
              svn_fs_root_t *root,
              svn_revnum_t revision,
+             svn_move_behavior_t move_behavior,
              ap_filter_t *output,
              apr_bucket_brigade *bb,
              apr_pool_t *pool)
@@ -129,7 +130,7 @@ do_resources(const dav_svn_repos *repos,
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&changes, root, move_behavior, pool));
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
@@ -155,6 +156,8 @@ do_resources(const dav_svn_repos *repos,
 
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
+        case svn_fs_path_change_move:
+        case svn_fs_path_change_movereplace:
           send_self = TRUE;
           send_parent = TRUE;
           break;
@@ -360,7 +363,10 @@ dav_svn__merge_response(ap_filter_t *output,
          ### we can pass back the new version URL */
 
       /* and go make me proud, boy! */
-      serr = do_resources(repos, root, new_rev, output, bb, pool);
+      serr = do_resources(repos, root, new_rev,
+                          /* report changes with no further interpretation */
+                          svn_move_behavior_explicit_moves,
+                          output, bb, pool);
       if (serr != NULL)
         {
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

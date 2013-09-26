@@ -27,6 +27,8 @@
 #include "svn_delta.h"
 #include "private/svn_cache.h"
 
+#include "id.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -224,7 +226,7 @@ svn_error_t *svn_fs_fs__dag_revision_root(dag_node_t **node_p,
    for a transaction, call svn_fs_fs__dag_clone_root.  */
 svn_error_t *svn_fs_fs__dag_txn_root(dag_node_t **node_p,
                                      svn_fs_t *fs,
-                                     const char *txn_id,
+                                     const svn_fs_fs__id_part_t *txn_id,
                                      apr_pool_t *pool);
 
 
@@ -232,7 +234,7 @@ svn_error_t *svn_fs_fs__dag_txn_root(dag_node_t **node_p,
    allocating from POOL.  Allocate the node in TRAIL->pool.  */
 svn_error_t *svn_fs_fs__dag_txn_base_root(dag_node_t **node_p,
                                           svn_fs_t *fs,
-                                          const char *txn_id,
+                                          const svn_fs_fs__id_part_t *txn_id,
                                           apr_pool_t *pool);
 
 
@@ -242,7 +244,7 @@ svn_error_t *svn_fs_fs__dag_txn_base_root(dag_node_t **node_p,
    root directory clone.  Allocate *ROOT_P in POOL.  */
 svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
                                        svn_fs_t *fs,
-                                       const char *txn_id,
+                                       const svn_fs_fs__id_part_t *txn_id,
                                        apr_pool_t *pool);
 
 
@@ -272,14 +274,16 @@ svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
 
 /* Fetches the NODE's entries and returns a copy of the entry selected
    by the key value given in NAME and set *DIRENT to a copy of that
-   entry. If such entry was found, the copy will be allocated in POOL.
+   entry. If such entry was found, the copy will be allocated in
+   RESULT_POOL.  Temporary data will be used in SCRATCH_POOL.
    Otherwise, the *DIRENT will be set to NULL.
  */
 /* ### This function is currently only called from dag.c. */
 svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
                                        dag_node_t *node,
                                        const char* name,
-                                       apr_pool_t *pool);
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  NODE must be a mutable directory.  ID can refer to a
@@ -294,7 +298,7 @@ svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
                                       const char *entry_name,
                                       const svn_fs_id_t *id,
                                       svn_node_kind_t kind,
-                                      const char *txn_id,
+                                      const svn_fs_fs__id_part_t *txn_id,
                                       apr_pool_t *pool);
 
 
@@ -321,8 +325,8 @@ svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                                         dag_node_t *parent,
                                         const char *parent_path,
                                         const char *name,
-                                        const char *copy_id,
-                                        const char *txn_id,
+                                        const svn_fs_fs__id_part_t *copy_id,
+                                        const svn_fs_fs__id_part_t *txn_id,
                                         svn_boolean_t is_parent_copyroot,
                                         apr_pool_t *pool);
 
@@ -341,7 +345,7 @@ svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
  */
 svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
                                    const char *name,
-                                   const char *txn_id,
+                                   const svn_fs_fs__id_part_t *txn_id,
                                    apr_pool_t *pool);
 
 
@@ -384,7 +388,7 @@ svn_error_t *svn_fs_fs__dag_make_dir(dag_node_t **child_p,
                                      dag_node_t *parent,
                                      const char *parent_path,
                                      const char *name,
-                                     const char *txn_id,
+                                     const svn_fs_fs__id_part_t *txn_id,
                                      apr_pool_t *pool);
 
 
@@ -495,7 +499,7 @@ svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
                                       dag_node_t *parent,
                                       const char *parent_path,
                                       const char *name,
-                                      const char *txn_id,
+                                      const svn_fs_fs__id_part_t *txn_id,
                                       apr_pool_t *pool);
 
 
@@ -522,7 +526,7 @@ svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
                                  svn_boolean_t preserve_history,
                                  svn_revnum_t from_rev,
                                  const char *from_path,
-                                 const char *txn_id,
+                                 const svn_fs_fs__id_part_t *txn_id,
                                  apr_pool_t *pool);
 
 
