@@ -166,6 +166,16 @@ Candidate changes:
    Votes:
      +1: neels
 
+ * r1527112
+   Fix OOM with concurrent requests right after threaded server start.
+   Changes:
+     This was a common condition in my load tests.  Affects threaded
+     servers only.  Apache will just respawn a new worker process.
+   Branch:
+     ^/subversion/branches/1.7.x-r1527103
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
