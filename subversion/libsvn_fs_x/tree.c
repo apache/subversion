@@ -2374,8 +2374,8 @@ is_changed_node(svn_boolean_t *changed,
   SVN_ERR(get_dag(&rev_node, rev_root, path, TRUE, pool));
 
   /* different ID -> got changed */
-  if (!svn_fs_fs__id_eq(svn_fs_fs__dag_get_id(node),
-                        svn_fs_fs__dag_get_id(rev_node)))
+  if (!svn_fs_x__id_eq(svn_fs_x__dag_get_id(node),
+                       svn_fs_x__dag_get_id(rev_node)))
     {
       *changed = TRUE;
        return SVN_NO_ERROR;
@@ -2472,8 +2472,8 @@ copy_helper(svn_fs_root_t *from_root,
             }
 
           /* always move from the txn's base rev */
-          SVN_ERR(svn_fs_fs__revision_root(&from_root, from_root->fs,
-                                           txn_id->revision, pool));
+          SVN_ERR(svn_fs_x__revision_root(&from_root, from_root->fs,
+                                          txn_id->revision, pool));
         }
     }
 
