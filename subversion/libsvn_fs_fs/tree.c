@@ -2513,6 +2513,13 @@ copy_helper(svn_fs_root_t *from_root,
           svn_error_t *err = is_changed_node(&changed, from_root,
                                              from_path, txn_id->revision,
                                              pool);
+
+          /* Only "not found" is considered to be caused by out-of-date-ness.
+             Everything else means something got very wrong ... */
+          if (err && err->apr_err != SVN_ERR_FS_NOT_FOUND)
+            return svn_error_trace(err);
+
+          /* here error means "out of data" */
           if (err || changed)
             {
               svn_error_clear(err);
