@@ -72,10 +72,10 @@ svn_cache_config_get(void)
 
 /* Initializer function as required by svn_atomic__init_once.  Allocate
  * the process-global (singleton) membuffer cache and return it in the
- * svn_membuffer_t * in *BATON.  POOL is unused and should be NULL.
+ * svn_membuffer_t * in *BATON.  UNUSED_POOL is unused and should be NULL.
  */
 static svn_error_t *
-initialize_cache(void *baton, apr_pool_t *pool)
+initialize_cache(void *baton, apr_pool_t *unused_pool)
 {
   svn_membuffer_t **cache_p = baton;
   svn_membuffer_t *cache = NULL;
