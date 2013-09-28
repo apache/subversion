@@ -58,6 +58,7 @@ use_root_pool(svn_root_pools__t *pools)
     }
 }
 
+#if APR_HAS_THREADS
 static void *
 APR_THREAD_FUNC thread_func(apr_thread_t *tid, void *data)
 {
@@ -69,6 +70,7 @@ APR_THREAD_FUNC thread_func(apr_thread_t *tid, void *data)
 
   return NULL;
 }
+#endif
 
 static svn_error_t *
 test_root_pool(apr_pool_t *pool)
