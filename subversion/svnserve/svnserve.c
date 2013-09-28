@@ -1187,7 +1187,6 @@ int main(int argc, const char *argv[])
   while (1)
     {
       apr_pool_t *socket_pool;
-      static int run = 0;
 
 #ifdef WIN32
       if (winservice_is_stopping())
