@@ -65,6 +65,7 @@ APR_THREAD_FUNC thread_func(apr_thread_t *tid, void *data)
   apr_thread_yield();
 
   use_root_pool(data);
+  apr_thread_exit(tid, APR_SUCCESS);
 
   return NULL;
 }
