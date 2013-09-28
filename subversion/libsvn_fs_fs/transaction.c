@@ -2706,15 +2706,16 @@ write_final_changed_path_info(apr_off_t *offset_p,
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
 
   /* all moves specify the "copy-from-rev" as REV-1 */
-  for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_path_change2_t *change;
-      apr_hash_this(hi, NULL, NULL, (void **)&change);
+  if (svn_fs_fs__supports_move(fs))
+    for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
+      {
+        svn_fs_path_change2_t *change;
+        apr_hash_this(hi, NULL, NULL, (void **)&change);
 
-      if (   (change->change_kind == svn_fs_path_change_move)
-          || (change->change_kind == svn_fs_path_change_movereplace))
-        change->copyfrom_rev = new_rev - 1;
-    }
+        if (   (change->change_kind == svn_fs_path_change_move)
+            || (change->change_kind == svn_fs_path_change_movereplace))
+          change->copyfrom_rev = new_rev - 1;
+      }
 
   SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
                                    fs, changed_paths, TRUE, pool));
@@ -3091,7 +3092,10 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, cb->fs, txn_id,
                                        pool));
 
-  SVN_ERR(verify_moves(cb->fs, txn_id, old_rev, changed_paths, pool));
+  /* ensure that no change in this txn or any txn committed since the start
+   * of this txn violates our move semantics */
+  if (svn_fs_fs__supports_move(cb->fs))
+    SVN_ERR(verify_moves(cb->fs, txn_id, old_rev, changed_paths, pool));
 
   /* Get the next node_id and copy_id to use. */
   if (ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
