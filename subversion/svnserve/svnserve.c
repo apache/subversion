@@ -55,6 +55,7 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
+#include "private/svn_subr_private.h"
 
 /* Alas! old APR-Utils don't provide thread pools */
 #if APR_HAS_THREADS
@@ -350,14 +351,6 @@ static const apr_getopt_option_t svnserve__options[] =
     {0,                  0,   0, 0}
   };
 
-/* unused connection pools.
- * Use CONNECTION_POOLS_MUTEX to serialize access to this collection.
- */
-apr_array_header_t *connection_pools = NULL;
-
-/* Mutex to serialize access to connection_pools */
-svn_mutex__t *connection_pools_mutex = NULL;
-
 static void usage(const char *progname, apr_pool_t *pool)
 {
   if (!progname)
@@ -451,74 +444,6 @@ static apr_status_t redirect_stdout(void *arg)
   return apr_file_dup2(out_file, err_file, pool);
 }
 
-/* Create the global collection object for unused connection pools plus
- * the necessary mutex.  Their lifetime will be bound to POOL.
- */
-static svn_error_t *
-initialize_connection_pools(apr_pool_t *pool)
-{
-  SVN_ERR(svn_mutex__init(&connection_pools_mutex, TRUE, pool));
-  connection_pools = apr_array_make(pool, 16, sizeof(apr_pool_t *));
-
-  return SVN_NO_ERROR;
-}
-
-/* Return a currently unused connection pool in *POOL. If no such pool
- * exists, create a new root pool and return that in *POOL.
- */
-static svn_error_t *
-acquire_connection_pool_internal(apr_pool_t **pool)
-{
-  SVN_ERR(svn_mutex__lock(connection_pools_mutex));
-  *pool = connection_pools->nelts
-        ? *(apr_pool_t **)apr_array_pop(connection_pools)
-        : apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-  SVN_ERR(svn_mutex__unlock(connection_pools_mutex, SVN_NO_ERROR));
-    
-  return SVN_NO_ERROR;
-}
-
-/* Return a currently unused connection pool. If no such pool exists,
- * create a new root pool and return that.
- */
-static apr_pool_t *
-acquire_connection_pool(void)
-{
-  apr_pool_t *pool;
-  svn_error_t *err = acquire_connection_pool_internal(&pool);
-  if (err)
-    {
-      /* Mutex failure?!  Well, try to continue with unrecycled data. */
-      svn_error_clear(err);
-      pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-    }
-
-  return pool;
-}
-
-/* Clear and release the given connection POOL.
- */
-static void
-release_connection_pool(apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  svn_pool_clear(pool);
-
-  err = svn_mutex__lock(connection_pools_mutex);
-  if (err)
-    {
-      svn_error_clear(err);
-      svn_pool_destroy(pool);
-    }
-  else
-    {
-      APR_ARRAY_PUSH(connection_pools, apr_pool_t *) = pool;
-      svn_error_clear(svn_mutex__unlock(connection_pools_mutex,
-                                        SVN_NO_ERROR));
-    }
-}
-
 #if APR_HAS_THREADS
 /* The pool passed to apr_thread_create can only be released when both
 
@@ -528,17 +453,20 @@ release_connection_pool(apr_pool_t *pool)
    So we set the atomic counter to 2 then both the calling thread and
    the new thread decrease it and when it reaches 0 the pool can be
    released.  */
-struct shared_pool_t {
+typedef struct shared_pool_t {
   svn_atomic_t count;
-  apr_pool_t *pool;
-};
+  apr_pool_t *pool;              /* root pool used to allocate the socket */
+  svn_root_pools__t *root_pools; /* put it back into this after use */
+} shared_pool_t;
 
-static struct shared_pool_t *
-attach_shared_pool(apr_pool_t *pool)
+static shared_pool_t *
+attach_shared_pool(apr_pool_t *pool,
+                   svn_root_pools__t *root_pools)
 {
-  struct shared_pool_t *shared = apr_palloc(pool, sizeof(struct shared_pool_t));
+  shared_pool_t *shared = apr_palloc(pool, sizeof(*shared));
 
   shared->pool = pool;
+  shared->root_pools = root_pools;
   svn_atomic_set(&shared->count, 2);
 
   return shared;
@@ -548,7 +476,7 @@ static void
 release_shared_pool(struct shared_pool_t *shared)
 {
   if (svn_atomic_dec(&shared->count) == 0)
-    release_connection_pool(shared->pool);
+    svn_root_pools__release_pool(shared->pool, shared->root_pools);
 }
 #endif
 
@@ -598,15 +526,23 @@ serve_socket(apr_socket_t *usock,
 struct serve_thread_t {
   apr_socket_t *usock;
   serve_params_t *params;
-  struct shared_pool_t *shared_pool;
+  shared_pool_t *shared_pool;
 };
 
 #if APR_HAS_THREADS
+
+/* allocate and recycle root pools for connection objects.
+   There should be at most THREADPOOL_MAX_SIZE such pools. */
+svn_root_pools__t *connection_pools;
+
 static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct serve_thread_t *d = data;
 
-  svn_error_clear(serve_socket(d->usock, d->params, d->shared_pool->pool));
+  apr_pool_t *pool = svn_root_pools__acquire_pool(connection_pools);
+  svn_error_clear(serve_socket(d->usock, d->params, pool));
+  svn_root_pools__release_pool(pool, connection_pools);
+
   release_shared_pool(d->shared_pool);
 
   return NULL;
@@ -660,7 +596,6 @@ int main(int argc, const char *argv[])
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
   apr_pool_t *pool;
-  apr_pool_t *connection_pool;
   svn_error_t *err;
   apr_getopt_t *os;
   int opt;
@@ -694,6 +629,7 @@ int main(int argc, const char *argv[])
   const char *pid_filename = NULL;
   const char *log_filename = NULL;
   svn_node_kind_t kind;
+  svn_root_pools__t *socket_pools;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
@@ -1002,6 +938,7 @@ int main(int argc, const char *argv[])
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
     {
+      apr_pool_t *connection_pool;
       svn_ra_svn_conn_t *conn;
 
       params.tunnel = (run_mode == run_mode_tunnel);
@@ -1212,9 +1149,17 @@ int main(int argc, const char *argv[])
     svn_cache_config_set(&settings);
   }
 
-  err = initialize_connection_pools(pool);
+  /* we use (and recycle) separate pools for sockets (many small ones)
+     and connections (fewer but larger ones) */
+  err = svn_root_pools__create(&socket_pools);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+
+#if APR_HAS_THREADS
+  err = svn_root_pools__create(&connection_pools);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+#endif
 
 #if HAVE_THREADPOOLS
   if (handling_mode == connection_mode_thread)
@@ -1241,6 +1186,9 @@ int main(int argc, const char *argv[])
 
   while (1)
     {
+      apr_pool_t *socket_pool;
+      static int run = 0;
+
 #ifdef WIN32
       if (winservice_is_stopping())
         return ERROR_SUCCESS;
@@ -1250,21 +1198,21 @@ int main(int argc, const char *argv[])
          the connection threads so it cannot clean up after each one.  So
          separate pools that can be cleared at thread exit are used. */
 
-      connection_pool = acquire_connection_pool();
+      socket_pool = svn_root_pools__acquire_pool(socket_pools);
 
-      status = apr_socket_accept(&usock, sock, connection_pool);
+      status = apr_socket_accept(&usock, sock, socket_pool);
       if (handling_mode == connection_mode_fork)
         {
           /* Collect any zombie child processes. */
           while (apr_proc_wait_all_procs(&proc, NULL, NULL, APR_NOWAIT,
-                                         connection_pool) == APR_CHILD_DONE)
+                                         socket_pool) == APR_CHILD_DONE)
             ;
         }
       if (APR_STATUS_IS_EINTR(status)
           || APR_STATUS_IS_ECONNABORTED(status)
           || APR_STATUS_IS_ECONNRESET(status))
         {
-          release_connection_pool(connection_pool);
+          svn_root_pools__release_pool(socket_pool, socket_pools);
           continue;
         }
       if (status)
@@ -1276,7 +1224,7 @@ int main(int argc, const char *argv[])
 
       if (run_mode == run_mode_listen_once)
         {
-          err = serve_socket(usock, &params, connection_pool);
+          err = serve_socket(usock, &params, socket_pool);
 
           if (err)
             svn_handle_error2(err, stdout, FALSE, "svnserve: ");
@@ -1291,11 +1239,11 @@ int main(int argc, const char *argv[])
         {
         case connection_mode_fork:
 #if APR_HAS_FORK
-          status = apr_proc_fork(&proc, connection_pool);
+          status = apr_proc_fork(&proc, socket_pool);
           if (status == APR_INCHILD)
             {
               apr_socket_close(sock);
-              svn_error_clear(serve_socket(usock, &params, connection_pool));
+              svn_error_clear(serve_socket(usock, &params, socket_pool));
               apr_socket_close(usock);
               exit(0);
             }
@@ -1308,11 +1256,11 @@ int main(int argc, const char *argv[])
               err = svn_error_wrap_apr(status, "apr_proc_fork");
               log_error(err, params.log_file, params.log_file_mutex,
                         NULL, NULL, NULL, /* ip, user, repos */
-                        connection_pool);
+                        socket_pool);
               svn_error_clear(err);
               apr_socket_close(usock);
             }
-          release_connection_pool(connection_pool);
+          svn_root_pools__release_pool(socket_pool, socket_pools);
 #endif
           break;
 
@@ -1321,9 +1269,9 @@ int main(int argc, const char *argv[])
              particularly sophisticated strategy for a threaded server, it's
              little different from forking one process per connection. */
 #if APR_HAS_THREADS
-          shared_pool = attach_shared_pool(connection_pool);
+          shared_pool = attach_shared_pool(socket_pool, socket_pools);
 
-          thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
+          thread_data = apr_palloc(socket_pool, sizeof(*thread_data));
           thread_data->usock = usock;
           thread_data->params = &params;
           thread_data->shared_pool = shared_pool;
@@ -1331,7 +1279,7 @@ int main(int argc, const char *argv[])
           status = apr_thread_pool_push(threads, serve_thread, thread_data,
                                         0, NULL);
 #else
-          status = apr_threadattr_create(&tattr, connection_pool);
+          status = apr_threadattr_create(&tattr, socket_pool);
           if (status)
             {
               err = svn_error_wrap_apr(status, _("Can't create threadattr"));
@@ -1363,8 +1311,8 @@ int main(int argc, const char *argv[])
 
         case connection_mode_single:
           /* Serve one connection at a time. */
-          svn_error_clear(serve_socket(usock, &params, connection_pool));
-          release_connection_pool(connection_pool);
+          svn_error_clear(serve_socket(usock, &params, socket_pool));
+          svn_root_pools__release_pool(socket_pool, socket_pools);
         }
     }
 
