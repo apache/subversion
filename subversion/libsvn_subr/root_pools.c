@@ -26,7 +26,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_mutex.h"
 
-typedef struct svn_root_pools__t
+struct svn_root_pools__t
 {
   /* unused pools.
    * Use MUTEX to serialize access to this collection.
@@ -36,7 +36,7 @@ typedef struct svn_root_pools__t
   /* Mutex to serialize access to UNUSED_POOLS */
   svn_mutex__t *mutex;
 
-} svn_root_pools__t;
+};
 
 svn_error_t *
 svn_root_pools__create(svn_root_pools__t **pools)
