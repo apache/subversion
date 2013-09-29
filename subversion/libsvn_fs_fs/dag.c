@@ -663,7 +663,6 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                            const char *name,
                            const svn_fs_fs__id_part_t *copy_id,
                            const svn_fs_fs__id_part_t *txn_id,
-                           svn_boolean_t is_parent_copyroot,
                            apr_pool_t *pool)
 {
   dag_node_t *cur_entry; /* parent's current entry named NAME */
@@ -695,18 +694,10 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
     }
   else
     {
-      node_revision_t *noderev, *parent_noderev;
+      node_revision_t *noderev;
 
       /* Go get a fresh NODE-REVISION for current child node. */
       SVN_ERR(get_node_revision(&noderev, cur_entry));
-
-      if (is_parent_copyroot)
-        {
-          SVN_ERR(get_node_revision(&parent_noderev, parent));
-          noderev->copyroot_rev = parent_noderev->copyroot_rev;
-          noderev->copyroot_path = apr_pstrdup(pool,
-                                               parent_noderev->copyroot_path);
-        }
 
       noderev->copyfrom_path = NULL;
       noderev->copyfrom_rev = SVN_INVALID_REVNUM;
