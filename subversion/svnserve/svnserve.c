@@ -526,7 +526,9 @@ serve_socket(apr_socket_t *usock,
 struct serve_thread_t {
   apr_socket_t *usock;
   serve_params_t *params;
-  struct shared_pool_t *shared_pool;
+#if APR_HAS_THREADS
+  shared_pool_t *shared_pool;
+#endif
 };
 
 #if APR_HAS_THREADS
@@ -604,7 +606,7 @@ int main(int argc, const char *argv[])
   apr_status_t status;
   apr_proc_t proc;
 #if APR_HAS_THREADS
-  struct shared_pool_t *shared_pool;
+  shared_pool_t *shared_pool;
   struct serve_thread_t *thread_data;
 #if HAVE_THREADPOOLS
   apr_thread_pool_t *threads;
