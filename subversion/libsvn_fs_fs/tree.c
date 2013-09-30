@@ -1139,11 +1139,15 @@ make_path_mutable(svn_fs_root_t *root,
   /* Are we trying to clone the root, or somebody's child node?  */
   if (parent_path->parent)
     {
-      const svn_fs_id_t *parent_id;
+      const svn_fs_id_t *parent_id, *child_id, *copyroot_id;
       svn_fs_fs__id_part_t copy_id = { SVN_INVALID_REVNUM, 0 };
       svn_fs_fs__id_part_t *copy_id_ptr = &copy_id;
       copy_id_inherit_t inherit = parent_path->copy_inherit;
-      const char *clone_path;
+      const char *clone_path, *copyroot_path;
+      svn_revnum_t copyroot_rev;
+      svn_boolean_t is_parent_copyroot = FALSE;
+      svn_fs_root_t *copyroot_root;
+      dag_node_t *copyroot_node;
 
       /* We're trying to clone somebody's child.  Make sure our parent
          is mutable.  */
@@ -1172,6 +1176,20 @@ make_path_mutable(svn_fs_root_t *root,
                       inheritance data. */
         }
 
+      /* Determine what copyroot our new child node should use. */
+      SVN_ERR(svn_fs_fs__dag_get_copyroot(&copyroot_rev, &copyroot_path,
+                                          parent_path->node));
+      SVN_ERR(svn_fs_fs__revision_root(&copyroot_root, root->fs,
+                                       copyroot_rev, pool));
+      SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path,
+                      FALSE, pool));
+
+      child_id = svn_fs_fs__dag_get_id(parent_path->node);
+      copyroot_id = svn_fs_fs__dag_get_id(copyroot_node);
+      if (!svn_fs_fs__id_part_eq(svn_fs_fs__id_node_id(child_id),
+                                 svn_fs_fs__id_node_id(copyroot_id)))
+        is_parent_copyroot = TRUE;
+
       /* Now make this node mutable.  */
       clone_path = parent_path_path(parent_path->parent, pool);
       SVN_ERR(svn_fs_fs__dag_clone_child(&clone,
@@ -1179,6 +1197,7 @@ make_path_mutable(svn_fs_root_t *root,
                                          clone_path,
                                          parent_path->entry,
                                          copy_id_ptr, txn_id,
+                                         is_parent_copyroot,
                                          pool));
 
       /* Update the path cache. */
