@@ -1133,7 +1133,56 @@ public interface ISVNClient
             throws ClientException;
 
     /**
+     * Invoke <code>callback</code> to return information
+     * <code>pathOrUrl</code> in <code>revision</code>.  The
+     * information returned is system-generated metadata, not the sort
+     * of "property" metadata created by users.
+     * <p>
+     * If both revision arguments are either <code>null</code> or
+     * {@link Revision#START}, then information will be pulled solely
+     * from the working copy; no network connections will be made.
+     * <p>
+     * Otherwise, information will be pulled from a repository.  The
+     * actual node revision selected is determined by the
+     * <code>pathOrUrl</code> as it exists in
+     * <code>pegRevision</code>.  If <code>pegRevision</code> is
+     * {@link Revision#START}, then it defaults to {@link
+     * Revision#HEAD} for URLs or {@link Revision#WORKING} for WC
+     * targets.
+     * <p>
+     * If <code>pathOrUrl</code> is not a local path, then if
+     * <code>revision</code> is {@link Revision#PREVIOUS} (or some
+     * other kind that requires a local path), an error will be
+     * returned, because the desired revision cannot be determined.
+     * <p>
+     * If <code>pathOrUrl</code> is a file, just invoke the callback on it.  If it
+     * is a directory, then descend according to <code>depth</code>.
+     * <p>
+     * @param pathOrUrl     the path or the url of the item
+     * @param revision      the revision of the item to return
+     * @param pegRevision   the revision to interpret pathOrUrl
+     * @param depth         the depth to recurse
+     * @param fetchExcluded when <code>true</code>, retreive
+     * information about nodes that are excluded from the working copy
+     * @param fetchActualOnly when <code>true</code>, retreive
+     * information about node that are not versioned, but are still
+     * tree conflicted.
+     * @param changelists   if non-null, filter paths using changelists
+     * @param callback      a callback to receive the infos retrieved
+     * @since 1.9
+     */
+    void info2(String pathOrUrl,
+               Revision revision, Revision pegRevision, Depth depth,
+               boolean fertchExcluded, boolean fetchActualOnly,
+               Collection<String> changelists, InfoCallback callback)
+        throws ClientException;
+
+    /**
      * Retrieve information about repository or working copy items.
+     * <p>
+     * Behaves like the 1.9 version, with <code>fetchExcluded</code>
+     * set to <code>false</code> and <code>fetchActualOnly</code> set
+     * to <code>true</code>.
      * @param pathOrUrl     the path or the url of the item
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
