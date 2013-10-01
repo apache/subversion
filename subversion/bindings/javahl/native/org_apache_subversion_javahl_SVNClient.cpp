@@ -1795,8 +1795,9 @@ Java_org_apache_subversion_javahl_SVNClient_unlock
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jobject jchangelists,
- jobject jinfoCallback)
+ jobject jpegRevision, jobject jdepth,
+ jboolean jfetchExcluded, jboolean jfetchActualOnly,
+ jobject jchangelists, jobject jinfoCallback)
 {
   JNIEntry(SVNClient, info2);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1823,6 +1824,7 @@ Java_org_apache_subversion_javahl_SVNClient_info2
 
   InfoCallback callback(jinfoCallback);
   cl->info2(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
+            svn_boolean_t(jfetchExcluded), svn_boolean_t(jfetchActualOnly),
             changelists, &callback);
 }
 
