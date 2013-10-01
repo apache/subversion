@@ -1419,12 +1419,6 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
     return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
-struct info_baton
-{
-    std::vector<info_entry> infoVect;
-    apr_pool_t *pool;
-};
-
 void
 SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
                  svn_depth_t depth, StringArray &changelists,
