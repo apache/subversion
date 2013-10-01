@@ -459,9 +459,20 @@ public class SVNClient implements ISVNClient
 
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, Depth depth,
+                             boolean fetchExcluded, boolean fetchActualOnly,
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
+
+    public void info2(String pathOrUrl, Revision revision,
+                      Revision pegRevision, Depth depth,
+                      Collection<String> changelists,
+                      InfoCallback callback)
+            throws ClientException
+    {
+        info2(pathOrUrl, revision, pegRevision, depth,
+              false, true, changelists, callback);
+    }
 
     public native void patch(String patchPath, String targetPath,
                              boolean dryRun, int stripCount, boolean reverse,
