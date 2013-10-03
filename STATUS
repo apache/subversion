@@ -166,6 +166,13 @@ Candidate changes:
    Votes:
      +1: neels
 
+ * r1524869
+   JavaHL: Canonicalize path for streamFileContent method.
+   Justification:
+      JavaHL is designed around us doing the canoicalization.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
