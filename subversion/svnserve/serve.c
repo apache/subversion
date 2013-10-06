@@ -741,7 +741,7 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  svn_boolean_t needs_username)
 {
 #ifdef SVN_HAVE_SASL
-  if (b->use_sasl)
+  if (b->repository->use_sasl)
     return cyrus_auth_request(conn, pool, b, required, needs_username);
 #endif
 

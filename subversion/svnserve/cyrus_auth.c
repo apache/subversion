@@ -265,7 +265,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   /* Create a SASL context. SASL_SUCCESS_DATA tells SASL that the protocol
      supports sending data along with the final "success" message. */
   result = sasl_server_new(SVN_RA_SVN_SASL_NAME,
-                           hostname, b->realm,
+                           hostname, b->repository->realm,
                            localaddrport, remoteaddrport,
                            NULL, SASL_SUCCESS_DATA,
                            &sasl_ctx);
@@ -289,13 +289,13 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   if (no_anonymous)
     secprops.security_flags |= SASL_SEC_NOANONYMOUS;
 
-  svn_config_get(b->cfg, &val,
+  svn_config_get(b->repository->cfg, &val,
                  SVN_CONFIG_SECTION_SASL,
                  SVN_CONFIG_OPTION_MIN_SSF,
                  "0");
   SVN_ERR(svn_cstring_atoui(&secprops.min_ssf, val));
 
-  svn_config_get(b->cfg, &val,
+  svn_config_get(b->repository->cfg, &val,
                  SVN_CONFIG_SECTION_SASL,
                  SVN_CONFIG_OPTION_MAX_SSF,
                  "256");
@@ -330,7 +330,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
 
   /* Send the list of mechanisms and the realm to the client. */
   SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, "(w)c",
-                                         mechlist, b->realm));
+                                         mechlist, b->repository->realm));
 
   /* The main authentication loop. */
   subpool = svn_pool_create(pool);
