@@ -3281,26 +3281,39 @@ def diff_invoke_external_diffcmd(sbox):
   expected_output = svntest.verify.ExpectedOutput([
       "Index: iota\n",
       "===================================================================\n",
-      # assert correct label ;l1
+      # correct label ;l1 -> label 1
       "iota	(revision 1)\n",   
-      # assert correct file ;f1 
+
+      # correct file ;f1 -> file1
       os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
-      # assert correct label ;l2
+
+      # correct label ;l2 -> label 2
       "iota	(working copy)\n",
-      # assert correct file ;f2
+
+      # correct file ;f2 -> file2
       os.path.abspath("iota") + "\n",
-      # assert special end char is added ;f1+ -> file+
+
+      # special start char is retained +;f1 -> +file
+      "+" + os.path.abspath(svntest.wc.text_base_path("iota")) + "\n", 
+
+      # special end char is retained ;f1+ -> file+
       os.path.abspath(svntest.wc.text_base_path("iota")) + "+\n", 
-      ";f1\n",  # assert removal of ';' @ lower boundary '1'     ;;f1  -> ;f1
-      ";;l3\n", # assert removal of ';' @ high boundary '3'      ;;;l3 -> ;;l3
-      ";;fo\n", # assert only eligible delimiters are modified   ;;fo  -> ;;fo
-      ";f1o\n", # assert correct length test of delimiter        ;f1o  -> ;f1o
-      ";f15+\n" # assert non-modification of ineligble delimiter ;f15+ -> ;f15+
+
+      # special start and end char are retained +;f1+ -> +file+
+      "+"+os.path.abspath(svntest.wc.text_base_path("iota")) + "+\n", 
+
+      ";f1\n",  #  removal of ';' @ lower boundary '1'     ;;f1  -> ;f1
+      ";;l3\n", #  removal of ';' @ high  boundary '3'     ;;;l3 -> ;;l3
+      ";;fo\n", #  only eligible delimiters are modified   ;;fo  -> ;;fo
+      ";f1o\n", #  correct length test of delimiter        ;f1o  -> ;f1o
+      ";f15+\n",#  non-modification of ineligble delimiter ;f15+ -> ;f15+
+      "-u\n"    #  non-modification of ineligble element      -u -> -u
       ])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
    'diff',
-   '--invoke-diff-cmd='+diff_script_path+' ;l1 ;f1 ;l2 ;f2 ;f1+ ;;f1 ;;;l3 ;;fo ;f1o ;f15+',
+   '--invoke-diff-cmd='+diff_script_path+
+      ' ;l1 ;f1 ;l2 ;f2 +;f1 ;f1+ +;f1+ ;;f1 ;;;l3 ;;fo ;f1o ;f15+ -u',
    iota_path)
 
 

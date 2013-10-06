@@ -373,6 +373,12 @@ const apr_getopt_option_t svn_cl__options[] =
                       "Any other instances of ';' or multiples thereof not    \n"
                       "                             "
                       "accompanied by f1, f2, l1 or l3 will not be modified.  \n"
+                      "                             "
+		      "Non-alphanumeric characters at the beginning or the end\n"
+                      "                             "
+		      "are permitted, ie. +;f1, ;f1+ and +;f1+                \n"
+
+
      )},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},

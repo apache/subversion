@@ -3114,10 +3114,12 @@ __create_custom_diff_cmd(const char *label1,
                          const char *cmd,
                          apr_pool_t *pool)
 {
-  /* The idea is that we can use the delimiter's characters to find
-     the correct indexes, and thus avoid repeated str(str|cmp|etc)
-     operation which easily turn this into an O(n^3) operation.  This
-     handrolled function is O(n).  */
+  /* 
+  We use the delimiter's characters to find the correct index.
+
+  This function can be tested by using the test 
+  /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
+  */
 
   struct replace_tokens_t
   {
@@ -3140,32 +3142,48 @@ __create_custom_diff_cmd(const char *label1,
   words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
   
   result = apr_palloc(pool, 
-                      (words->nelts+1) * words->elt_size*sizeof(char *) );
+                      (words->nelts+1) * words->elt_size * sizeof(char *) );
 
   for (argv = 0; argv < words->nelts; argv++)
     {
       int j = 0;
       svn_stringbuf_t *word;
+      char special_start_marker = 0;  
+      char special_end_marker = 0;  
 
       word = svn_stringbuf_create_empty(scratch_pool);
       svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, argv, char *));
       
-      /* a delimiter token always starts with a ';' */
-      if (word->data[j] == ';')  
+      /* If the first character of the string is a alphanumeric, it's
+         not a delimiter. */
+      if (!isalnum(word->data[j]))
         {
+          /* check for the case that the first character is not a ';' and
+             that the second character is a ';' */
+          if ( (word->data[j] != ';') && (word->data[j+1] == ';') )
+            {
+              /* there are some cases where a '+' or other non-alphanumeric
+                 character can be prepended to a file name.  It's simpler if
+                 this is removed for the check and added back onto the result. */
+              special_start_marker = word->data[0]; 
+              svn_stringbuf_remove(word, 0, 1);   
+            }
+
+          /* Test that the first character is ';' and the string is a delimiter */
+          if (word->data[j] != ';')  /* this excludes switches etc, eg -u   */
+            goto end_of_isalnum_if;  /* this spares the code another indent */
+
           /* there are some cases where a '+' or other non-alphanumeric
              character can be appended to a file name.  It's simpler if
              this is removed for the check and added back onto the result. */
-          char special_end_marker = 0;  
-
-          /* if the last char is a non-alphanumeric, ie, + in ;f1+, remove it */
           if (!isalnum(word->data[word->len-1]))
             {
               special_end_marker = word->data[word->len-1]; 
               svn_stringbuf_remove(word, word->len-1, 1);   
             }
 
-          if (word->data[++j] == ';')  /* likely to be a protected delimiter */
+          /* A ';' in second place could be a protected delimiter */      
+          if (word->data[++j] == ';')  
             {
               /* ensure that there is an unbroken line of ';' */ 
               while (j < word->len && word->data[j++] == ';') ;
@@ -3181,7 +3199,6 @@ __create_custom_diff_cmd(const char *label1,
                 {
                   /* it's a protected delimiter, so we consume one ';'  */
                   svn_stringbuf_remove(word, 0, 1);   
-                
                 }
             }
           else /* check that this is a regular delimiter (length 3) */
@@ -3206,12 +3223,17 @@ __create_custom_diff_cmd(const char *label1,
                                       tokens_tab[j].token,
                                       strlen(tokens_tab[j].token));
               }
-
-          /* put the special character back if it exists */
-          if (special_end_marker) 
-            svn_stringbuf_appendbyte(word, special_end_marker);
-
         }
+    end_of_isalnum_if:
+
+      /* put the special start character back if it exists */
+      if (special_start_marker) 
+        svn_stringbuf_insert(word, 0, &special_start_marker, 1);
+
+      /* put the special end character back if it exists */
+      if (special_end_marker) 
+        svn_stringbuf_appendbyte(word, special_end_marker);
+      
       result[argv] = word->data;
     }  
   result[argv] = NULL;
@@ -3278,6 +3300,10 @@ svn_io_run_diff2(const char *dir,
                  const char *diff_cmd,
                  apr_pool_t *pool)
 {
+  /* 
+  This function can be tested by using the test 
+  /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
+  */
   svn_stringbuf_t *com;
   com = svn_stringbuf_create_empty(pool);
   svn_stringbuf_appendcstr(com, diff_cmd);
