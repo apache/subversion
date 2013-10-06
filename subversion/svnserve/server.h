@@ -40,7 +40,10 @@ extern "C" {
 
 enum username_case_type { CASE_FORCE_UPPER, CASE_FORCE_LOWER, CASE_ASIS };
 
-typedef struct server_baton_t {
+enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
+enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
+
+typedef struct repository_t {
   svn_repos_t *repos;
   const char *repos_name;  /* URI-encoded name of repository (not for authz) */
   svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
@@ -53,14 +56,18 @@ typedef struct server_baton_t {
   const char *repos_url;   /* URL to base of repository */
   svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
   apr_hash_t *fs_config;   /* Additional FS configuration parameters */
-  const char *user;        /* Authenticated username of the user */
   enum username_case_type username_case; /* Case-normalize the username? */
+  svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
+                              always false if SVN_HAVE_SASL not defined */
+} repository_t;
+
+typedef struct server_baton_t {
+  struct repository_t *repository;
+  const char *user;        /* Authenticated username of the user */
   const char *authz_user;  /* Username for authz ('user' + 'username_case') */
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
-  svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
-                              always false if SVN_HAVE_SASL not defined */
   apr_file_t *log_file;    /* Log filehandle. */
   svn_mutex__t *log_file_mutex; /* Serializes access to log_file.
                               May be NULL even if log_file is not. */
@@ -68,8 +75,6 @@ typedef struct server_baton_t {
   apr_pool_t *pool;
 } server_baton_t;
 
-enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
-enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
 enum access_type get_access(server_baton_t *b, enum authn_type auth);
 
