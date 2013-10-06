@@ -61,16 +61,20 @@ typedef struct repository_t {
                               always false if SVN_HAVE_SASL not defined */
 } repository_t;
 
-typedef struct server_baton_t {
-  struct repository_t *repository;
+typedef struct client_info_t {
   const char *user;        /* Authenticated username of the user */
   const char *authz_user;  /* Username for authz ('user' + 'username_case') */
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
-  svn_boolean_t read_only; /* Disallow write access (global flag) */
+} client_info_t;
+
+typedef struct server_baton_t {
+  repository_t *repository; /* repository-specific data to use */
+  client_info_t *client_info; /* client-specific data to use */
   apr_file_t *log_file;    /* Log filehandle. */
   svn_mutex__t *log_file_mutex; /* Serializes access to log_file.
                               May be NULL even if log_file is not. */
+  svn_boolean_t read_only; /* Disallow write access (global flag) */
   svn_boolean_t vhost;     /* Use virtual-host-based path to repo. */
   apr_pool_t *pool;
 } server_baton_t;
@@ -144,6 +148,12 @@ typedef struct serve_params_t {
   /* Use virtual-host-based path to repo. */
   svn_boolean_t vhost;
 } serve_params_t;
+
+/* Return a client_info_t structure allocated in POOL and initialize it
+ * with data from CONN. */
+client_info_t * get_client_info(svn_ra_svn_conn_t *conn,
+                                serve_params_t *params,
+                                apr_pool_t *pool);
 
 /* Serve the connection CONN according to the parameters PARAMS. */
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,

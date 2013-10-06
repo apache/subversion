@@ -177,7 +177,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
   SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?s)", &mech, &in));
 
   if (strcmp(mech, "EXTERNAL") == 0 && !in)
-    in = svn_string_create(b->tunnel_user, pool);
+    in = svn_string_create(b->client_info->tunnel_user, pool);
   else if (in)
     in = svn_base64_decode_string(in, pool);
 
@@ -307,8 +307,9 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
     return fail_cmd(conn, pool, sasl_ctx);
 
   /* SASL needs to know if we are externally authenticated. */
-  if (b->tunnel_user)
-    result = sasl_setprop(sasl_ctx, SASL_AUTH_EXTERNAL, b->tunnel_user);
+  if (b->client_info->tunnel_user)
+    result = sasl_setprop(sasl_ctx, SASL_AUTH_EXTERNAL,
+                          b->client_info->tunnel_user);
   if (result != SASL_OK)
     return fail_cmd(conn, pool, sasl_ctx);
 
@@ -358,7 +359,8 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
       if ((p = strchr(user, '@')) != NULL)
         {
           /* Drop the realm part. */
-          b->user = apr_pstrndup(b->pool, user, p - (const char *)user);
+          b->client_info->user = apr_pstrndup(b->pool, user,
+                                              p - (const char *)user);
         }
       else
         {

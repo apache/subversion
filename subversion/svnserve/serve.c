@@ -190,7 +190,7 @@ log_server_error(svn_error_t *err, server_baton_t *server,
 {
   log_error(err, server->log_file, server->log_file_mutex,
             svn_ra_svn_conn_remote_host(conn),
-            server->user, server->repository->repos_name, pool);
+            server->client_info->user, server->repository->repos_name, pool);
 }
 
 /* svn_error_create() a new error, log_server_error() it, and
@@ -244,7 +244,7 @@ static svn_error_t *log_command(server_baton_t *b,
                       " %s %s %s %s %s" APR_EOL_STR,
                       getpid(), timestr,
                       (remote_host ? remote_host : "-"),
-                      (b->user ? b->user : "-"),
+                      (b->client_info->user ? b->client_info->user : "-"),
                       b->repository->repos_name, log);
   nbytes = strlen(line);
 
@@ -264,7 +264,7 @@ log_authz_denied(const char *path,
   if (b->log_file == NULL)
     return SVN_NO_ERROR;
 
-  if (!b->user)
+  if (!b->client_info || !b->client_info->user)
     return SVN_NO_ERROR;
 
   timestr = svn_time_to_cstring(apr_time_now(), pool);
@@ -274,7 +274,7 @@ log_authz_denied(const char *path,
                       " %s %s %s %s Authorization Failed %s%s %s" APR_EOL_STR,
                       getpid(), timestr,
                       (remote_host ? remote_host : "-"),
-                      (b->user ? b->user : "-"),
+                      b->client_info->user,
                       b->repository->repos_name,
                       (required & svn_authz_recursive ? "recursive " : ""),
                       (required & svn_authz_write ? "write" : "read"),
@@ -487,6 +487,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
                                        apr_pool_t *pool)
 {
   repository_t *repository = b->repository;
+  client_info_t *client_info = b->client_info;
 
   /* If authz cannot be performed, grant access.  This is NOT the same
      as the default policy when authz is performed on a path with no
@@ -510,21 +511,21 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
   /* If we have a username, and we've not yet used it + any username
      case normalization that might be requested to determine "the
      username we used for authz purposes", do so now. */
-  if (b->user && (! b->authz_user))
+  if (client_info->user && (! client_info->authz_user))
     {
-      char *authz_user = apr_pstrdup(b->pool, b->user);
+      char *authz_user = apr_pstrdup(b->pool, client_info->user);
       if (repository->username_case == CASE_FORCE_UPPER)
         convert_case(authz_user, TRUE);
       else if (repository->username_case == CASE_FORCE_LOWER)
         convert_case(authz_user, FALSE);
 
-      b->authz_user = authz_user;
+      client_info->authz_user = authz_user;
     }
 
   SVN_ERR(svn_repos_authz_check_access(repository->authzdb,
                                        repository->authz_repos_name,
-                                       path, b->authz_user, required,
-                                       allowed, pool));
+                                       path, client_info->authz_user,
+                                       required, allowed, pool));
   if (!*allowed)
     SVN_ERR(log_authz_denied(path, required, b, conn, pool));
 
@@ -591,7 +592,8 @@ enum access_type get_access(server_baton_t *b, enum authn_type auth)
 
 static enum access_type current_access(server_baton_t *b)
 {
-  return get_access(b, (b->user) ? AUTHENTICATED : UNAUTHENTICATED);
+  return get_access(b,
+                    b->client_info->user ? AUTHENTICATED : UNAUTHENTICATED);
 }
 
 /* Send authentication mechs for ACCESS_TYPE to the client.  If NEEDS_USERNAME
@@ -603,7 +605,7 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   if (!needs_username && get_access(b, UNAUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, "ANONYMOUS"));
-  if (b->tunnel_user && get_access(b, AUTHENTICATED) >= required)
+  if (b->client_info->tunnel_user && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, "EXTERNAL"));
   if (b->repository->pwdb && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, "CRAM-MD5"));
@@ -645,10 +647,10 @@ create_fs_access(server_baton_t *b, apr_pool_t *pool)
   svn_fs_access_t *fs_access;
   struct cleanup_fs_access_baton *cleanup_baton;
 
-  if (!b->user)
+  if (!b->client_info->user)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_create_access(&fs_access, b->user, pool));
+  SVN_ERR(svn_fs_create_access(&fs_access, b->client_info->user, pool));
   SVN_ERR(svn_fs_set_access(b->repository->fs, fs_access));
 
   cleanup_baton = apr_pcalloc(pool, sizeof(*cleanup_baton));
@@ -676,12 +678,12 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   *success = FALSE;
 
   if (get_access(b, AUTHENTICATED) >= required
-      && b->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
+      && b->client_info->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
     {
-      if (*mecharg && strcmp(mecharg, b->tunnel_user) != 0)
+      if (*mecharg && strcmp(mecharg, b->client_info->tunnel_user) != 0)
         return svn_ra_svn__write_tuple(conn, pool, "w(c)", "failure",
                                        "Requested username does not match");
-      b->user = b->tunnel_user;
+      b->client_info->user = b->client_info->tunnel_user;
       SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
@@ -700,7 +702,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->repository->pwdb,
                                      &user, success));
-      b->user = apr_pstrdup(b->pool, user);
+      b->client_info->user = apr_pstrdup(b->pool, user);
       return SVN_NO_ERROR;
     }
 
@@ -797,7 +799,7 @@ static svn_boolean_t lookup_access(apr_pool_t *pool,
      lookup has succeeded. */
   if (current_access(baton) >= req
       && authorized
-      && (! needs_username || baton->user))
+      && (! needs_username || baton->client_info->user))
     return TRUE;
 
   return FALSE;
@@ -842,9 +844,9 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
      requiring a username because we need one to be able to check
      authz configuration again with a different user credentials than
      the first time round. */
-  if (b->user == NULL
+  if (b->client_info->user == NULL
       && get_access(b, AUTHENTICATED) >= req
-      && (b->tunnel_user || b->repository->pwdb
+      && (b->client_info->tunnel_user || b->repository->pwdb
           || b->repository->use_sasl))
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
 
@@ -1202,7 +1204,7 @@ static svn_error_t *do_change_rev_prop(svn_ra_svn_conn_t *conn,
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__change_rev_prop(rev, name, pool)));
   SVN_CMD_ERR(svn_repos_fs_change_rev_prop4(b->repository->repos, rev,
-                                            b->user,
+                                            b->client_info->user,
                                             name, old_value_p, value,
                                             TRUE, TRUE,
                                             authz_check_access_cb_func(b), &ab,
@@ -1497,7 +1499,9 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Get author from the baton, making sure clients can't circumvent
      the authentication via the revision props. */
   svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                b->user ? svn_string_create(b->user, pool) : NULL);
+                b->client_info->user
+                   ? svn_string_create(b->client_info->user, pool)
+                   : NULL);
 
   ccb.pool = pool;
   ccb.new_rev = &new_rev;
@@ -1525,7 +1529,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
          and thus kill the server.  But otherwise, deltify after
          answering the client, to avoid user-visible delay. */
 
-      if (b->tunnel)
+      if (b->client_info->tunnel)
         SVN_ERR(svn_fs_deltify_revision(b->repository->fs, new_rev, pool));
 
       /* Unlock the paths. */
@@ -1535,7 +1539,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "r(?c)(?c)(?c)",
                                       new_rev, date, author, post_commit_err));
 
-      if (! b->tunnel)
+      if (! b->client_info->tunnel)
         SVN_ERR(svn_fs_deltify_revision(b->repository->fs, new_rev, pool));
     }
   return SVN_NO_ERROR;
@@ -3411,7 +3415,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
      are given by the client. */
   if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
       && (get_access(b, AUTHENTICATED) == NO_ACCESS
-          || (!b->tunnel_user && !repository->pwdb && !repository->use_sasl)))
+          || (!b->client_info->tunnel_user && !repository->pwdb
+              && !repository->use_sasl)))
     return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  "No access allowed to this repository",
                                  b, conn, pool);
@@ -3577,6 +3582,21 @@ fetch_base_func(const char **filename,
   return SVN_NO_ERROR;
 }
 
+client_info_t *
+get_client_info(svn_ra_svn_conn_t *conn,
+                serve_params_t *params,
+                apr_pool_t *pool)
+{
+  client_info_t *client_info = apr_pcalloc(pool, sizeof(*client_info));
+
+  client_info->tunnel = params->tunnel;
+  client_info->tunnel_user = get_tunnel_user(params, pool);
+  client_info->user = NULL;
+  client_info->authz_user = NULL;
+
+  return client_info;
+}
+
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool)
 {
@@ -3589,10 +3609,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   fs_warning_baton_t warn_baton;
   svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(pool);
 
-  b.tunnel = params->tunnel;
-  b.tunnel_user = get_tunnel_user(params, pool);
-  b.user = NULL;
-
   repository.username_case = params->username_case;
   repository.base = params->base;
   repository.cfg = params->cfg;
@@ -3601,7 +3617,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   repository.realm = NULL;
   repository.use_sasl = FALSE;
 
-  b.authz_user = NULL;
   b.read_only = params->read_only;
   b.log_file = params->log_file;
   b.log_file_mutex = params->log_file_mutex;
@@ -3609,6 +3624,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.vhost = params->vhost;
 
   b.repository = &repository;
+  b.client_info = get_client_info(conn, params, pool);
 
   /* construct FS configuration parameters */
   repository.fs_config = apr_hash_make(pool);
@@ -3711,7 +3727,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   if (err)
     {
       log_error(err, b.log_file, b.log_file_mutex,
-                svn_ra_svn_conn_remote_host(conn), b.user, NULL, pool);
+                svn_ra_svn_conn_remote_host(conn), b.client_info->user,
+                NULL, pool);
       io_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
       svn_error_clear(err);
       SVN_ERR(io_err);
