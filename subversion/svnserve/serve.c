@@ -283,16 +283,19 @@ log_authz_denied(const char *path,
   return log_write(b->log_file, line, strlen(line), pool);
 }
 
-
-svn_error_t *load_pwdb_config(server_baton_t *server,
-                              svn_ra_svn_conn_t *conn,
-                              apr_pool_t *pool)
+/* If CFG specifies a path to the password DB, read that DB and store it
+ * in REPOSITORY->PWDB.
+ */
+static svn_error_t *
+load_pwdb_config(repository_t *repository,
+                 svn_config_t *cfg,
+                 apr_pool_t *pool)
 {
   const char *pwdb_path;
   svn_error_t *err;
-  repository_t *repository = server->repository;
 
-  svn_config_get(repository->cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(cfg, &pwdb_path,
+                 SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
 
   repository->pwdb = NULL;
@@ -305,8 +308,6 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
                              FALSE, FALSE, pool);
       if (err)
         {
-          log_server_error(err, server, conn, pool);
-
           /* Because it may be possible to read the pwdb file with some
              access methods and not others, ignore errors reading the pwdb
              file and just don't present password authentication as an
@@ -319,11 +320,7 @@ svn_error_t *load_pwdb_config(server_baton_t *server,
           if (err->apr_err != SVN_ERR_BAD_FILENAME
               && ! APR_STATUS_IS_EACCES(err->apr_err))
             {
-                /* Now that we've logged the error, clear it and return a
-                 * nice, generic error to the user:
-                 * http://subversion.tigris.org/issues/show_bug.cgi?id=2271 */
-                svn_error_clear(err);
-                return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
+              return svn_error_create(SVN_ERR_AUTHN_FAILED, err, NULL);
             }
           else
             /* Ignore SVN_ERR_BAD_FILENAME and APR_EACCES and proceed. */
@@ -370,22 +367,21 @@ canonicalize_access_file(const char **access_file, repository_t *repository,
 
    SERVER and CONN must not be NULL. The real errors will be logged with
    SERVER and CONN but return generic errors to the client. */
-static 
-svn_error_t *load_authz_config(server_baton_t *server,
-                               svn_ra_svn_conn_t *conn,
-                               const char *repos_root,
-                               apr_pool_t *pool)
+static svn_error_t *
+load_authz_config(repository_t *repository,
+                  const char *repos_root,
+                  svn_config_t *cfg,
+                  apr_pool_t *pool)
 {
   const char *authzdb_path;
   const char *groupsdb_path;
   svn_error_t *err;
-  repository_t *repository = server->repository;
 
   /* Read authz configuration. */
-  svn_config_get(repository->cfg, &authzdb_path, SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(cfg, &authzdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_AUTHZ_DB, NULL);
 
-  svn_config_get(repository->cfg, &groupsdb_path, SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(cfg, &groupsdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_GROUPS_DB, NULL);
 
   if (authzdb_path)
@@ -406,15 +402,11 @@ svn_error_t *load_authz_config(server_baton_t *server,
                                     groupsdb_path, TRUE, pool);
 
       if (err)
-        {
-          log_server_error(err, server, conn, pool);
-          svn_error_clear(err);
-          return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL, NULL);
-        }
+        return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, err, NULL);
 
       /* Are we going to be case-normalizing usernames when we consult
        * this authz file? */
-      svn_config_get(repository->cfg, &case_force_val,
+      svn_config_get(cfg, &case_force_val,
                      SVN_CONFIG_SECTION_GENERAL,
                      SVN_CONFIG_OPTION_FORCE_USERNAME_CASE, NULL);
       if (case_force_val)
@@ -434,6 +426,33 @@ svn_error_t *load_authz_config(server_baton_t *server,
     }
 
   return SVN_NO_ERROR;
+}
+
+/* If ERROR is a AUTH* error as returned by load_pwdb_config or
+ * load_authz_config, write it to SERVER's log file and use CONN for
+ * context information.  Return a sanitized version of ERROR.
+ */
+static svn_error_t *
+handle_config_error(svn_error_t *error,
+                    server_baton_t *server,
+                    svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool)
+{
+  if (   error
+      && (   error->apr_err == SVN_ERR_AUTHZ_INVALID_CONFIG
+          || error->apr_err == SVN_ERR_AUTHN_FAILED))
+    {
+      apr_status_t apr_err = error->apr_err;
+      log_server_error(error, server, conn, pool);
+
+      /* Now that we've logged the error, clear it and return a
+       * nice, generic error to the user:
+       * http://subversion.tigris.org/issues/show_bug.cgi?id=2271 */
+      svn_error_clear(error);
+      return svn_error_create(apr_err, NULL, NULL);
+    }
+
+  return error;
 }
 
 /* Set *FS_PATH to the portion of URL that is the path within the
@@ -3385,16 +3404,10 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                FALSE, /* section_names_case_sensitive */
                                FALSE, /* option_names_case_sensitive */
                                pool));
-      SVN_ERR(load_pwdb_config(b, conn, pool));
-      SVN_ERR(load_authz_config(b, conn, repos_root, pool));
     }
-  /* svnserve.conf has been loaded via the --config-file option so need
-   * to load pwdb and authz. */
-  else
-    {
-      SVN_ERR(load_pwdb_config(b, conn, pool));
-      SVN_ERR(load_authz_config(b, conn, repos_root, pool));
-    }
+
+  SVN_ERR(load_pwdb_config(repository, repository->cfg, pool));
+  SVN_ERR(load_authz_config(repository, repos_root, repository->cfg, pool));
 
 #ifdef SVN_HAVE_SASL
   /* Should we use Cyrus SASL? */
@@ -3715,7 +3728,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       }
   }
 
-  err = find_repos(client_url, params->root, &b, conn, cap_words, pool);
+  err = handle_config_error(find_repos(client_url, params->root, &b, conn,
+                            cap_words, pool), &b, conn, pool);
   if (!err)
     {
       SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
