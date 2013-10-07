@@ -182,14 +182,14 @@ log_error(svn_error_t *err, apr_file_t *log_file,
     log_error_internal(err, log_file, remote_host, user, repos, pool);
 }
 
-/* Call log_error with log_file, remote_host, user, and repos
-   arguments from SERVER and CONN. */
+/* Call log_error with log_file, remote_host, user, repos and remote_host
+   arguments from SERVER. */
 static void
 log_server_error(svn_error_t *err, server_baton_t *server,
-                 svn_ra_svn_conn_t *conn, apr_pool_t *pool)
+                 apr_pool_t *pool)
 {
   log_error(err, server->log_file, server->log_file_mutex,
-            svn_ra_svn_conn_remote_host(conn),
+            server->client_info->remote_host,
             server->client_info->user, server->repository->repos_name, pool);
 }
 
@@ -198,10 +198,10 @@ log_server_error(svn_error_t *err, server_baton_t *server,
 static svn_error_t *
 error_create_and_log(apr_status_t apr_err, svn_error_t *child,
                      const char *message, server_baton_t *server,
-                     svn_ra_svn_conn_t *conn, apr_pool_t *pool)
+                     apr_pool_t *pool)
 {
   svn_error_t *err = svn_error_create(apr_err, child, message);
-  log_server_error(err, server, conn, pool);
+  log_server_error(err, server, pool);
   return err;
 }
 
@@ -213,7 +213,7 @@ log_fail_and_flush(svn_error_t *err, server_baton_t *server,
 {
   svn_error_t *io_err;
 
-  log_server_error(err, server, conn, pool);
+  log_server_error(err, server, pool);
   io_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
   svn_error_clear(err);
   SVN_ERR(io_err);
@@ -256,7 +256,6 @@ static svn_error_t *
 log_authz_denied(const char *path,
                  svn_repos_authz_access_t required,
                  server_baton_t *b,
-                 svn_ra_svn_conn_t *conn,
                  apr_pool_t *pool)
 {
   const char *timestr, *remote_host, *line;
@@ -268,7 +267,7 @@ log_authz_denied(const char *path,
     return SVN_NO_ERROR;
 
   timestr = svn_time_to_cstring(apr_time_now(), pool);
-  remote_host = svn_ra_svn_conn_remote_host(conn);
+  remote_host = b->client_info->remote_host;
 
   line = apr_psprintf(pool, "%" APR_PID_T_FMT
                       " %s %s %s %s Authorization Failed %s%s %s" APR_EOL_STR,
@@ -429,13 +428,12 @@ load_authz_config(repository_t *repository,
 }
 
 /* If ERROR is a AUTH* error as returned by load_pwdb_config or
- * load_authz_config, write it to SERVER's log file and use CONN for
- * context information.  Return a sanitized version of ERROR.
+ * load_authz_config, write it to SERVER's log file.
+ * Return a sanitized version of ERROR.
  */
 static svn_error_t *
 handle_config_error(svn_error_t *error,
                     server_baton_t *server,
-                    svn_ra_svn_conn_t *conn,
                     apr_pool_t *pool)
 {
   if (   error
@@ -443,7 +441,7 @@ handle_config_error(svn_error_t *error,
           || error->apr_err == SVN_ERR_AUTHN_FAILED))
     {
       apr_status_t apr_err = error->apr_err;
-      log_server_error(error, server, conn, pool);
+      log_server_error(error, server, pool);
 
       /* Now that we've logged the error, clear it and return a
        * nice, generic error to the user:
@@ -502,7 +500,6 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
                                        const char *path,
                                        svn_repos_authz_access_t required,
                                        server_baton_t *b,
-                                       svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool)
 {
   repository_t *repository = b->repository;
@@ -546,7 +543,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
                                        path, client_info->authz_user,
                                        required, allowed, pool));
   if (!*allowed)
-    SVN_ERR(log_authz_denied(path, required, b, conn, pool));
+    SVN_ERR(log_authz_denied(path, required, b, pool));
 
   return SVN_NO_ERROR;
 }
@@ -564,7 +561,7 @@ static svn_error_t *authz_check_access_cb(svn_boolean_t *allowed,
   authz_baton_t *sb = baton;
 
   return authz_check_access(allowed, path, svn_authz_read,
-                            sb->server, sb->conn, pool);
+                            sb->server, pool);
 }
 
 /* If authz is enabled in the specified BATON, return a read authorization
@@ -590,8 +587,7 @@ static svn_error_t *authz_commit_cb(svn_repos_authz_access_t required,
 {
   authz_baton_t *sb = baton;
 
-  return authz_check_access(allowed, path, required,
-                            sb->server, sb->conn, pool);
+  return authz_check_access(allowed, path, required, sb->server, pool);
 }
 
 
@@ -792,7 +788,6 @@ static svn_error_t *trivial_auth_request(svn_ra_svn_conn_t *conn,
  */
 static svn_boolean_t lookup_access(apr_pool_t *pool,
                                    server_baton_t *baton,
-                                   svn_ra_svn_conn_t *conn,
                                    svn_repos_authz_access_t required,
                                    const char *path,
                                    svn_boolean_t needs_username)
@@ -803,12 +798,12 @@ static svn_boolean_t lookup_access(apr_pool_t *pool,
   svn_error_t *err;
 
   /* Get authz's opinion on the access. */
-  err = authz_check_access(&authorized, path, required, baton, conn, pool);
+  err = authz_check_access(&authorized, path, required, baton, pool);
 
   /* If an error made lookup fail, deny access. */
   if (err)
     {
-      log_server_error(err, baton, conn, pool);
+      log_server_error(err, baton, pool);
       svn_error_clear(err);
       return FALSE;
     }
@@ -851,7 +846,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
   /* See whether the user already has the required access.  If so,
      nothing needs to be done.  Create the FS access and send a
      trivial auth request. */
-  if (lookup_access(pool, b, conn, required, path, needs_username))
+  if (lookup_access(pool, b, required, path, needs_username))
     {
       SVN_ERR(create_fs_access(b, pool));
       return trivial_auth_request(conn, pool, b);
@@ -871,10 +866,10 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
 
   /* Now that an authentication has been done get the new take of
      authz on the request. */
-  if (! lookup_access(pool, b, conn, required, path, needs_username))
+  if (! lookup_access(pool, b, required, path, needs_username))
     return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
                             error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
-                                                 NULL, NULL, b, conn, pool),
+                                                 NULL, NULL, b, pool),
                             NULL);
 
   /* Else, access is granted, and there is much rejoicing. */
@@ -1358,8 +1353,7 @@ static svn_error_t *commit_done(const svn_commit_info_t *commit_info,
  * violates the authz configuration, return SVN_ERR_RA_NOT_AUTHORIZED
  * to the client.  Use POOL for temporary allocations only.
  */
-static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
-                                    const apr_array_header_t *lock_tokens,
+static svn_error_t *add_lock_tokens(const apr_array_header_t *lock_tokens,
                                     server_baton_t *sb,
                                     apr_pool_t *pool)
 {
@@ -1397,10 +1391,9 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
                                    svn_relpath_canonicalize(path, pool),
                                    pool);
 
-      if (! lookup_access(pool, sb, conn, svn_authz_write,
-                          full_path, TRUE))
+      if (! lookup_access(pool, sb, svn_authz_write, full_path, TRUE))
         return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL, NULL,
-                                    sb, conn, pool);
+                                    sb, pool);
 
       token = token_item->u.string->data;
       SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
@@ -1413,7 +1406,6 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
    LOCK_TOKENS contains svn_ra_svn_item_t elements, assumed to be lists. */
 static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
                                  server_baton_t *sb,
-                                 svn_ra_svn_conn_t *conn,
                                  apr_pool_t *pool)
 {
   int i;
@@ -1443,7 +1435,7 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
          errors. */
       err = svn_repos_fs_unlock(sb->repository->repos, full_path, token,
                                 FALSE, iterpool);
-      log_server_error(err, sb, conn, iterpool);
+      log_server_error(err, sb, iterpool);
       svn_error_clear(err);
     }
 
@@ -1503,7 +1495,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Authorize the lock tokens and give them to the FS if we got
      any. */
   if (lock_tokens && lock_tokens->nelts)
-    SVN_CMD_ERR(add_lock_tokens(conn, lock_tokens, b, pool));
+    SVN_CMD_ERR(add_lock_tokens(lock_tokens, b, pool));
 
   /* Ignore LOG_MSG, per the protocol.  See ra_svn_commit(). */
   if (revprop_list)
@@ -1553,7 +1545,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       /* Unlock the paths. */
       if (! keep_locks && lock_tokens && lock_tokens->nelts)
-        SVN_ERR(unlock_paths(lock_tokens, b, conn, pool));
+        SVN_ERR(unlock_paths(lock_tokens, b, pool));
 
       SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "r(?c)(?c)(?c)",
                                       new_rev, date, author, post_commit_err));
@@ -1799,8 +1791,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           svn_pool_clear(subpool);
 
           file_path = svn_fspath__join(full_path, name, subpool);
-          if (! lookup_access(subpool, b, conn, svn_authz_read,
-                              file_path, FALSE))
+          if (! lookup_access(subpool, b, svn_authz_read, file_path, FALSE))
             continue;
 
           if (dirent_fields & SVN_DIRENT_KIND)
@@ -2806,10 +2797,10 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    pool);
       APR_ARRAY_PUSH(log_paths, const char *) = full_path;
 
-      if (! lookup_access(pool, b, conn, svn_authz_write, full_path, TRUE))
+      if (! lookup_access(pool, b, svn_authz_write, full_path, TRUE))
         {
           err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL, NULL,
-                                     b, conn, pool);
+                                     b, pool);
           break;
         }
 
@@ -2927,12 +2918,11 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    pool);
       APR_ARRAY_PUSH(log_paths, const char *) = full_path;
 
-      if (! lookup_access(subpool, b, conn, svn_authz_write, full_path,
+      if (! lookup_access(subpool, b, svn_authz_write, full_path,
                           ! break_lock))
         return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
                                 error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
-                                                     NULL, NULL,
-                                                     b, conn, pool),
+                                                     NULL, NULL, b, pool),
                                 NULL);
 
       err = svn_repos_fs_unlock(b->repository->repos, full_path, token,
@@ -3333,7 +3323,6 @@ repos_path_valid(const char *path)
  */
 static svn_error_t *find_repos(const char *url, const char *root,
                                server_baton_t *b,
-                               svn_ra_svn_conn_t *conn,
                                const apr_array_header_t *capabilities,
                                apr_pool_t *pool)
 {
@@ -3432,7 +3421,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
               && !repository->use_sasl)))
     return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  "No access allowed to this repository",
-                                 b, conn, pool);
+                                 b, pool);
 
   /* Configure hook script environment variables. */
   svn_config_get(repository->cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
@@ -3462,7 +3451,7 @@ static void
 fs_warning_func(void *baton, svn_error_t *err)
 {
   fs_warning_baton_t *b = baton;
-  log_server_error(err, b->server, b->conn, b->pool);
+  log_server_error(err, b->server, b->pool);
   /* TODO: Keep log_pool in the server baton, cleared after every log? */
   svn_pool_clear(b->pool);
 }
@@ -3606,6 +3595,7 @@ get_client_info(svn_ra_svn_conn_t *conn,
   client_info->tunnel_user = get_tunnel_user(params, pool);
   client_info->user = NULL;
   client_info->authz_user = NULL;
+  client_info->remote_host = svn_ra_svn_conn_remote_host(conn);
 
   return client_info;
 }
@@ -3728,15 +3718,15 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       }
   }
 
-  err = handle_config_error(find_repos(client_url, params->root, &b, conn,
-                            cap_words, pool), &b, conn, pool);
+  err = handle_config_error(find_repos(client_url, params->root, &b,
+                            cap_words, pool), &b, pool);
   if (!err)
     {
       SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
       if (current_access(&b) == NO_ACCESS)
         err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                    "Not authorized for access",
-                                   &b, conn, pool);
+                                   &b, pool);
     }
   if (err)
     {
