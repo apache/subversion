@@ -63,6 +63,7 @@ typedef struct repository_t {
 
 typedef struct client_info_t {
   const char *user;        /* Authenticated username of the user */
+  const char *remote_host; /* IP of the client that contacted the server */
   const char *authz_user;  /* Username for authz ('user' + 'username_case') */
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
