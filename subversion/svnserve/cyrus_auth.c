@@ -246,7 +246,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   apr_status_t apr_err;
   const char *localaddrport = NULL, *remoteaddrport = NULL;
-  const char *mechlist, *val;
+  const char *mechlist;
   char hostname[APRMAXHOSTLEN + 1];
   sasl_security_properties_t secprops;
   svn_boolean_t success, no_anonymous;
