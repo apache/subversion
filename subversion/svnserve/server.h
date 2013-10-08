@@ -48,7 +48,6 @@ typedef struct repository_t {
   const char *repos_name;  /* URI-encoded name of repository (not for authz) */
   svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
   const char *base;        /* Base directory for config files */
-  svn_config_t *cfg;       /* Parsed repository svnserve.conf */
   svn_config_t *pwdb;      /* Parsed password database */
   svn_authz_t *authzdb;    /* Parsed authz rules */
   const char *authz_repos_name; /* The name of the repository for authz */
@@ -59,6 +58,8 @@ typedef struct repository_t {
   enum username_case_type username_case; /* Case-normalize the username? */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
+  unsigned min_ssf;        /* min-encryption SASL parameter */
+  unsigned max_ssf;        /* max-encryption SASL parameter */
 
   enum access_type auth_access; /* access granted to authenticated users */
   enum access_type anon_access; /* access granted to annonymous users */
