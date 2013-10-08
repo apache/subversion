@@ -285,7 +285,7 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
   svn_ra_svn__default_secprops(&secprops);
 
   /* Don't allow ANONYMOUS if a username is required. */
-  no_anonymous = needs_username || get_access(b, UNAUTHENTICATED) < required;
+  no_anonymous = needs_username || b->repository->anon_access < required;
   if (no_anonymous)
     secprops.security_flags |= SASL_SEC_NOANONYMOUS;
 
