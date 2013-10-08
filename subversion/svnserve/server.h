@@ -59,6 +59,10 @@ typedef struct repository_t {
   enum username_case_type username_case; /* Case-normalize the username? */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
+
+  enum access_type auth_access; /* access granted to authenticated users */
+  enum access_type anon_access; /* access granted to annonymous users */
+  
 } repository_t;
 
 typedef struct client_info_t {
@@ -79,9 +83,6 @@ typedef struct server_baton_t {
   svn_boolean_t vhost;     /* Use virtual-host-based path to repo. */
   apr_pool_t *pool;
 } server_baton_t;
-
-
-enum access_type get_access(server_baton_t *b, enum authn_type auth);
 
 typedef struct serve_params_t {
   /* The virtual root of the repositories to serve.  The client URL

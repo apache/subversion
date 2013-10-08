@@ -590,25 +590,47 @@ static svn_error_t *authz_commit_cb(svn_repos_authz_access_t required,
   return authz_check_access(allowed, path, required, sb->server, pool);
 }
 
-
-enum access_type get_access(server_baton_t *b, enum authn_type auth)
+/* Return the access level specified for OPTION in CFG.  If no such
+ * setting exists, use DEF.  If READ_ONLY is set, unconditionally disable
+ * write access.
+ */
+static enum access_type
+get_access(svn_config_t *cfg,
+           const char *option,
+           const char *def,
+           svn_boolean_t read_only)
 {
-  const char *var = (auth == AUTHENTICATED) ? SVN_CONFIG_OPTION_AUTH_ACCESS :
-    SVN_CONFIG_OPTION_ANON_ACCESS;
-  const char *val, *def = (auth == AUTHENTICATED) ? "write" : "read";
   enum access_type result;
+  const char *val;
 
-  svn_config_get(b->repository->cfg, &val, SVN_CONFIG_SECTION_GENERAL, var,
-                 def);
+  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_GENERAL, option, def);
   result = (strcmp(val, "write") == 0 ? WRITE_ACCESS :
             strcmp(val, "read") == 0 ? READ_ACCESS : NO_ACCESS);
-  return (result == WRITE_ACCESS && b->read_only) ? READ_ACCESS : result;
+
+  return result == WRITE_ACCESS && read_only ? READ_ACCESS : result;
 }
 
-static enum access_type current_access(server_baton_t *b)
+/* Set the *_ACCESS members in REPOSITORY according to the settings in
+ * CFG.  If READ_ONLY is set, unconditionally disable write access.
+ */
+static void
+set_access(repository_t *repository,
+           svn_config_t *cfg,
+           svn_boolean_t read_only)
 {
-  return get_access(b,
-                    b->client_info->user ? AUTHENTICATED : UNAUTHENTICATED);
+  repository->auth_access = get_access(cfg, SVN_CONFIG_OPTION_AUTH_ACCESS,
+                                       "write", read_only);
+  repository->anon_access = get_access(cfg, SVN_CONFIG_OPTION_ANON_ACCESS,
+                                       "read", read_only);
+}
+
+/* Return the access level for the user in B.
+ */
+static enum access_type
+current_access(server_baton_t *b)
+{
+  return b->client_info->user ? b->repository->auth_access
+                              : b->repository->anon_access;
 }
 
 /* Send authentication mechs for ACCESS_TYPE to the client.  If NEEDS_USERNAME
@@ -618,11 +640,11 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                server_baton_t *b, enum access_type required,
                                svn_boolean_t needs_username)
 {
-  if (!needs_username && get_access(b, UNAUTHENTICATED) >= required)
+  if (!needs_username && b->repository->anon_access >= required)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, "ANONYMOUS"));
-  if (b->client_info->tunnel_user && get_access(b, AUTHENTICATED) >= required)
+  if (b->client_info->tunnel_user && b->repository->auth_access >= required)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, "EXTERNAL"));
-  if (b->repository->pwdb && get_access(b, AUTHENTICATED) >= required)
+  if (b->repository->pwdb && b->repository->auth_access >= required)
     SVN_ERR(svn_ra_svn__write_word(conn, pool, "CRAM-MD5"));
   return SVN_NO_ERROR;
 }
@@ -692,7 +714,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *user;
   *success = FALSE;
 
-  if (get_access(b, AUTHENTICATED) >= required
+  if (b->repository->auth_access >= required
       && b->client_info->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
     {
       if (*mecharg && strcmp(mecharg, b->client_info->tunnel_user) != 0)
@@ -704,7 +726,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       return SVN_NO_ERROR;
     }
 
-  if (get_access(b, UNAUTHENTICATED) >= required
+  if (b->repository->anon_access >= required
       && strcmp(mech, "ANONYMOUS") == 0 && ! needs_username)
     {
       SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w()", "success"));
@@ -712,7 +734,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       return SVN_NO_ERROR;
     }
 
-  if (get_access(b, AUTHENTICATED) >= required
+  if (b->repository->auth_access >= required
       && b->repository->pwdb && strcmp(mech, "CRAM-MD5") == 0)
     {
       SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->repository->pwdb,
@@ -859,7 +881,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
      authz configuration again with a different user credentials than
      the first time round. */
   if (b->client_info->user == NULL
-      && get_access(b, AUTHENTICATED) >= req
+      && b->repository->auth_access >= req
       && (b->client_info->tunnel_user || b->repository->pwdb
           || b->repository->use_sasl))
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
@@ -3415,8 +3437,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
      that this doesn't take into account any authz configuration read
      above, because we can't know about access it grants until paths
      are given by the client. */
-  if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
-      && (get_access(b, AUTHENTICATED) == NO_ACCESS
+  set_access(repository, repository->cfg, b->read_only);
+  if (repository->anon_access == NO_ACCESS
+      && (repository->auth_access == NO_ACCESS
           || (!b->client_info->tunnel_user && !repository->pwdb
               && !repository->use_sasl)))
     return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
