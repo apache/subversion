@@ -3338,19 +3338,20 @@ repos_path_valid(const char *path)
 }
 
 /* Look for the repository given by URL, using ROOT as the virtual
- * repository root.  If we find one, fill in the repos, fs, cfg,
- * repos_url, and fs_path fields of B.  Set B->repos's client
+ * repository root.  If we find one, fill in the repos, fs, repos_url,
+ * and fs_path fields of REPOSITORY.  Set REPOSITORY->repos's client
  * capabilities to CAPABILITIES, which must be at least as long-lived
- * as POOL, and whose elements are SVN_RA_CAPABILITY_*.
+ * as POOL, and whose elements are SVN_RA_CAPABILITY_*.  VHOST and
+ * READ_ONLY flags are the same as in the server baton.
  */
 static svn_error_t *find_repos(const char *url, const char *root,
-                               server_baton_t *b,
+                               svn_boolean_t vhost, svn_boolean_t read_only,
+                               svn_config_t *cfg, repository_t *repository,
                                const apr_array_header_t *capabilities,
                                apr_pool_t *pool)
 {
-  const char *path, *full_path, *repos_root, *fs_path, *hooks_env;
+  const char *path, *full_path, *repos_root, *fs_path, *hooks_env, *val;
   svn_stringbuf_t *url_buf;
-  repository_t *repository = b->repository;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -3358,7 +3359,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "Non-svn URL passed to svn server: '%s'", url);
 
-  if (! b->vhost)
+  if (! vhost)
     {
       path = strchr(path, '/');
       if (path == NULL)
@@ -3404,12 +3405,12 @@ static svn_error_t *find_repos(const char *url, const char *root,
 
   /* If the svnserve configuration has not been loaded then load it from the
    * repository. */
-  if (NULL == b->repository->cfg)
+  if (NULL == cfg)
     {
       repository->base = svn_repos_conf_dir(repository->repos, pool);
 
-      SVN_ERR(svn_config_read3(&b->repository->cfg,
-                               svn_repos_svnserve_conf(b->repository->repos,
+      SVN_ERR(svn_config_read3(&cfg,
+                               svn_repos_svnserve_conf(repository->repos,
                                                        pool),
                                FALSE, /* must_exist */
                                FALSE, /* section_names_case_sensitive */
@@ -3417,37 +3418,38 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                pool));
     }
 
-  SVN_ERR(load_pwdb_config(repository, repository->cfg, pool));
-  SVN_ERR(load_authz_config(repository, repos_root, repository->cfg, pool));
+  SVN_ERR(load_pwdb_config(repository, cfg, pool));
+  SVN_ERR(load_authz_config(repository, repos_root, cfg, pool));
 
 #ifdef SVN_HAVE_SASL
   /* Should we use Cyrus SASL? */
-  SVN_ERR(svn_config_get_bool(repository->cfg, &repository->use_sasl,
+  SVN_ERR(svn_config_get_bool(cfg, &repository->use_sasl,
                               SVN_CONFIG_SECTION_SASL,
                               SVN_CONFIG_OPTION_USE_SASL, FALSE));
+
+  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
+                 SVN_CONFIG_OPTION_MIN_SSF, "0");
+  SVN_ERR(svn_cstring_atoui(&repository->min_ssf, val));
+
+  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
+                 SVN_CONFIG_OPTION_MAX_SSF, "256");
+  SVN_ERR(svn_cstring_atoui(&repository->max_ssf, val));
+
 #endif
 
   /* Use the repository UUID as the default realm. */
   SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, pool));
-  svn_config_get(repository->cfg, &repository->realm,
-                 SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(cfg, &repository->realm, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_REALM, repository->realm);
 
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
      above, because we can't know about access it grants until paths
      are given by the client. */
-  set_access(repository, repository->cfg, b->read_only);
-  if (repository->anon_access == NO_ACCESS
-      && (repository->auth_access == NO_ACCESS
-          || (!b->client_info->tunnel_user && !repository->pwdb
-              && !repository->use_sasl)))
-    return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                 "No access allowed to this repository",
-                                 b, pool);
+  set_access(repository, cfg, read_only);
 
   /* Configure hook script environment variables. */
-  svn_config_get(repository->cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
+  svn_config_get(cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
     hooks_env = svn_dirent_internal_style(hooks_env, pool);
@@ -3637,7 +3639,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   repository.username_case = params->username_case;
   repository.base = params->base;
-  repository.cfg = params->cfg;
   repository.pwdb = NULL;
   repository.authzdb = NULL;
   repository.realm = NULL;
@@ -3741,8 +3742,20 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       }
   }
 
-  err = handle_config_error(find_repos(client_url, params->root, &b,
-                            cap_words, pool), &b, pool);
+  err = handle_config_error(find_repos(client_url, params->root,
+                                       b.vhost, b.read_only,
+                                       params->cfg, b.repository,
+                                       cap_words, pool), &b, pool);
+  if (!err)
+    {
+      if (repository.anon_access == NO_ACCESS
+          && (repository.auth_access == NO_ACCESS
+              || (!b.client_info->tunnel_user && !repository.pwdb
+                  && !repository.use_sasl)))
+        err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                   "No access allowed to this repository",
+                                   &b, pool);
+    }
   if (!err)
     {
       SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
