@@ -81,20 +81,6 @@ Candidate changes:
                    detection of BDB (via db.h) and even while debugging a
                    maintainer build of Subversion a release BDB works fine)
 
- * r1516806
-   Do not look at the hostname part of an URI when checking that
-   the schema data is canonical.
-   Justification:
-     As reported on dev@, "svn co file://./" and similar commands abort
-     instead of returning an error that the URL is invalid.  This was
-     caused by svn_uri_is_canonical treating the hostname "." as a path
-     segment.  After this change, svn_uri_is_canonicall correctly
-     determines that the URL is (syntactically) canonical, and the
-     commands later faile with a normal error in the RA layer, which
-     validates the semantics of the hostname.
-   Votes:
-     +1: brane, rhuijben
-
  * ^/subversion/branches/1.8.x-serf-1.3+-windows
    Allow compiling against serf 1.3 and later on Windows
    Justification:
@@ -112,32 +98,7 @@ Candidate changes:
    Justification:
      Improves correctness. Resolves user reported problem.
    Votes:
-     +1: rhuijben
-
- * r1519615, r1519617, r1519733
-   Fix a memory problem in the 3rd party FS module loader.
-   Changes[dev]:
-    * fs loader: fix segfault with 3rd party modules and common_pool (rNNNNNNN)
-   Justification:
-     Not enabled in default build but a SEGV likely when triggered.
-   Votes:
-     +1: philip, danielsh
-
- * r1519955
-   Fix a segfault with 'svn mergeinfo'.
-   Justification:
-     Missing NULL pointer checks are bad, user complained.
-   Votes:
-     +1: stsp, rhuijben
-
- * r1520529, r1520532, r1520539
-   Properly re-canonicalize urls read from xml based entries files.
-   Justification:
-     The canonicalization rules have been changed since 1.3 and while
-     we fixed the newer entries file parsing we forgot the xml based
-     entries.  Fixes a client assert.
-   Votes:
-     +1: rhuijben, philip
+     +1: rhuijben, stefan2
 
  * r1520065, r1520745
    Resolve a user triggerable assertion when during an update a file external
@@ -146,31 +107,6 @@ Candidate changes:
      Quite a few reports of this assertion on the users@s.a.o list since 1.7.0.
    Votes:
      +1: rhuijben
-
- * r1522892
-   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
-   command interrupted.
-   Changes[client]:
-     * fixed: command line client crashes when piped command is interrupted on
-       Windows.
-   Justification:
-     User reported crash.
-   Votes:
-     +1: ivan, rhuijben
-
- * r1523666
-   Fix path corruption in the calculation of reintegration merges.
-   Justification:
-     User reported path corruption. Possibly leading to invalid merge
-     suggestions. See http://svn.haxx.se/users/archive-2013-09/0116.shtml
-   Notes:
-     This appears to be a regression in 1.8 as 1.7 has a similar check.
-     To reproduce the problem, run in a working copy of 1.8.x:
-         svn merge --reintegrate ^/subversion/branches/1.7.x
-     and look for bad paths in 'Missing ranges' lines, e.g. '.../svnmucc.'
-     which should be '.../svnmucc.c'.
-   Votes:
-     +1: rhuijben, stsp
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
@@ -203,10 +139,75 @@ Candidate changes:
    Justification:
       JavaHL is designed around us doing the canoicalization.
    Votes:
-     +1: breser
+     +1: breser, stefan2
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1516806
+   Do not look at the hostname part of an URI when checking that
+   the schema data is canonical.
+   Justification:
+     As reported on dev@, "svn co file://./" and similar commands abort
+     instead of returning an error that the URL is invalid.  This was
+     caused by svn_uri_is_canonical treating the hostname "." as a path
+     segment.  After this change, svn_uri_is_canonicall correctly
+     determines that the URL is (syntactically) canonical, and the
+     commands later faile with a normal error in the RA layer, which
+     validates the semantics of the hostname.
+   Votes:
+     +1: brane, rhuijben, stefan2
+
+ * r1519615, r1519617, r1519733
+   Fix a memory problem in the 3rd party FS module loader.
+   Changes[dev]:
+    * fs loader: fix segfault with 3rd party modules and common_pool (rNNNNNNN)
+   Justification:
+     Not enabled in default build but a SEGV likely when triggered.
+   Votes:
+     +1: philip, danielsh, stefan2
+
+ * r1519955
+   Fix a segfault with 'svn mergeinfo'.
+   Justification:
+     Missing NULL pointer checks are bad, user complained.
+   Votes:
+     +1: stsp, rhuijben, stefan2
+
+ * r1520529, r1520532, r1520539
+   Properly re-canonicalize urls read from xml based entries files.
+   Justification:
+     The canonicalization rules have been changed since 1.3 and while
+     we fixed the newer entries file parsing we forgot the xml based
+     entries.  Fixes a client assert.
+   Votes:
+     +1: rhuijben, philip, stefan2
+
+ * r1522892
+   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
+   command interrupted.
+   Changes[client]:
+     * fixed: command line client crashes when piped command is interrupted on
+       Windows.
+   Justification:
+     User reported crash.
+   Votes:
+     +1: ivan, rhuijben, stefan2
+
+ * r1523666
+   Fix path corruption in the calculation of reintegration merges.
+   Justification:
+     User reported path corruption. Possibly leading to invalid merge
+     suggestions. See http://svn.haxx.se/users/archive-2013-09/0116.shtml
+   Notes:
+     This appears to be a regression in 1.8 as 1.7 has a similar check.
+     To reproduce the problem, run in a working copy of 1.8.x:
+         svn merge --reintegrate ^/subversion/branches/1.7.x
+     and look for bad paths in 'Missing ranges' lines, e.g. '.../svnmucc.'
+     which should be '.../svnmucc.c'.
+   Votes:
+     +1: rhuijben, stsp, stefan2
+
