@@ -78,6 +78,7 @@
 #endif
 
 #include "server.h"
+#include "logger.h"
 
 /* The strategy for handling incoming connections.  Some of these may be
    unavailable due to platform limitations. */
@@ -516,8 +517,8 @@ serve_socket(apr_socket_t *usock,
   /* process the actual request and log errors */
   err = serve(conn, params, pool);
   if (err)
-    log_error(err, params->log_file, params->log_file_mutex,
-              svn_ra_svn_conn_remote_host(conn), NULL, NULL, pool);
+    logger__log_error(params->logger, err, NULL,
+                      get_client_info(conn, params, pool));
 
   return svn_error_trace(err);
 }
@@ -665,8 +666,7 @@ int main(int argc, const char *argv[])
   params.base = NULL;
   params.cfg = NULL;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
-  params.log_file = NULL;
-  params.log_file_mutex = NULL;
+  params.logger = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
@@ -922,12 +922,7 @@ int main(int argc, const char *argv[])
     }
 
   if (log_filename)
-    {
-      SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
-                                  APR_WRITE | APR_CREATE | APR_APPEND,
-                                  APR_OS_DEFAULT, pool));
-      SVN_INT_ERR(svn_mutex__init(&params.log_file_mutex, TRUE, pool));
-    }
+    SVN_INT_ERR(logger__create(&params.logger, log_filename, pool));
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
@@ -1255,9 +1250,7 @@ int main(int argc, const char *argv[])
           else
             {
               err = svn_error_wrap_apr(status, "apr_proc_fork");
-              log_error(err, params.log_file, params.log_file_mutex,
-                        NULL, NULL, NULL, /* ip, user, repos */
-                        socket_pool);
+              logger__log_error(params.logger, err, NULL, NULL);
               svn_error_clear(err);
               apr_socket_close(usock);
             }

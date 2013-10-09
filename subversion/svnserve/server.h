@@ -77,8 +77,7 @@ typedef struct client_info_t {
 typedef struct server_baton_t {
   repository_t *repository; /* repository-specific data to use */
   client_info_t *client_info; /* client-specific data to use */
-  apr_file_t *log_file;    /* Log filehandle. */
-  svn_mutex__t *log_file_mutex; /* Serializes access to log_file.
+  struct logger_t *logger; /* Log file data structure.
                               May be NULL even if log_file is not. */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   svn_boolean_t vhost;     /* Use virtual-host-based path to repo. */
@@ -113,11 +112,8 @@ typedef struct serve_params_t {
      per-repository svnserve.conf are not read. */
   svn_config_t *cfg;
 
-  /* A filehandle open for writing logs to; possibly NULL. */
-  apr_file_t *log_file;
-
-  /* Mutex to serialize access to log_file; possibly NULL. */
-  svn_mutex__t *log_file_mutex;
+  /* logging data structure; possibly NULL. */
+  struct logger_t *logger;
 
   /* Username case normalization style. */
   enum username_case_type username_case;
@@ -177,16 +173,6 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
    written, including terminating null byte. */
 apr_size_t escape_errorlog_item(char *dest, const char *source,
                                 apr_size_t buflen);
-
-/* Log ERR to LOG_FILE if LOG_FILE is not NULL.  In multi-threaded
-   servers, you should also provide a LOG_FILE_MUTEX object to serialize
-   access to the log file.   Include REMOTE_HOST, USER, and REPOS in the
-   log if they are not NULL.  Allocate temporary char buffers in POOL
-   (which caller can then clear or dispose of). */
-void
-log_error(svn_error_t *err, apr_file_t *log_file,
-          svn_mutex__t *log_file_mutex, const char *remote_host,
-          const char *user, const char *repos, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
