@@ -113,11 +113,11 @@ class RemoteSession : public SVNBase
 
   private:
     friend class CommitEditor;
-    RemoteSession(jobject*, int retryAttempts,
+    RemoteSession(int retryAttempts,
                   const char* url, const char* uuid,
                   const char* configDirectory,
                   const char* username, const char* password,
-                  Prompter*& prompter, jobject jprogress);
+                  Prompter*& prompter);
 
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;

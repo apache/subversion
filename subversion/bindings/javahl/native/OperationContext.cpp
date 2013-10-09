@@ -328,6 +328,9 @@ OperationContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
     apr_pool_t *pool)
 {
   jobject jctx = (jobject) baton;
+  if (!jctx)
+    return;
+
   JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references

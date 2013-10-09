@@ -29,13 +29,11 @@
 #include "JNIUtil.h"
 #include "Prompter.h"
 
-#define STRING_RETURN_SIGNATURE "()Ljava/lang/String;"
 
 RemoteSessionContext::RemoteSessionContext(
-    jobject contextHolder, SVN::Pool &pool,
-    const char* configDirectory,
-    const char*  usernameStr, const char*  passwordStr,
-    Prompter* prompter, jobject jprogress)
+    SVN::Pool &pool, const char* configDirectory,
+    const char* usernameStr, const char* passwordStr,
+    Prompter* prompter)
   : OperationContext(pool), m_raCallbacks(NULL)
 {
   setConfigDirectory(configDirectory);
@@ -48,10 +46,41 @@ RemoteSessionContext::RemoteSessionContext(
   setPrompt(prompter);
 
   /*
+   * Setup callbacks
+   */
+  SVN_JNI_ERR(svn_ra_create_callbacks(&m_raCallbacks, m_pool->getPool()), );
+
+  m_raCallbacks->auth_baton = getAuthBaton(pool);
+  m_raCallbacks->cancel_func = checkCancel;
+  m_raCallbacks->get_client_string = clientName;
+  m_raCallbacks->progress_baton = NULL;
+  m_raCallbacks->progress_func = progress;
+
+  /*
+   * JNI RA layer does not work with WC so all WC callbacks are set to NULL
+   */
+  m_raCallbacks->get_wc_prop = NULL;
+  m_raCallbacks->invalidate_wc_props = NULL;
+  m_raCallbacks->push_wc_prop = NULL;
+  m_raCallbacks->set_wc_prop = NULL;
+
+  /*
+   * Don't set deprecated callback
+   */
+  m_raCallbacks->open_tmp_file = NULL;
+}
+
+RemoteSessionContext::~RemoteSessionContext()
+{
+}
+
+void RemoteSessionContext::activate(jobject jremoteSession, jobject jprogress)
+{
+  /*
    * Attach session context java object
    */
   static jfieldID ctxFieldID = 0;
-  attachJavaObject(contextHolder,
+  attachJavaObject(jremoteSession,
       "L"JAVA_PACKAGE"/remote/RemoteSession$RemoteSessionContext;",
       "sessionContext", &ctxFieldID);
 
@@ -72,34 +101,7 @@ RemoteSessionContext::RemoteSessionContext(
 
   env->CallVoidMethod(m_jctx, mid, jprogress);
   env->DeleteLocalRef(jprogress);
-
-  /*
-   * Setup callbacks
-   */
-  SVN_JNI_ERR(svn_ra_create_callbacks(&m_raCallbacks, m_pool->getPool()), );
-
-  m_raCallbacks->auth_baton = getAuthBaton(pool);
-  m_raCallbacks->cancel_func = checkCancel;
-  m_raCallbacks->get_client_string = clientName;
   m_raCallbacks->progress_baton = m_jctx;
-  m_raCallbacks->progress_func = progress;
-
-  /*
-   * JNI RA layer does not work with WC so all WC callbacks are set to NULL
-   */
-  m_raCallbacks->get_wc_prop = NULL;
-  m_raCallbacks->invalidate_wc_props = NULL;
-  m_raCallbacks->push_wc_prop = NULL;
-  m_raCallbacks->set_wc_prop = NULL;
-
-  /*
-   * Don't set deprecated callback
-   */
-  m_raCallbacks->open_tmp_file = NULL;
-}
-
-RemoteSessionContext::~RemoteSessionContext()
-{
 }
 
 void *
