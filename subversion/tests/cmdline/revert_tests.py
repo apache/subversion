@@ -1643,6 +1643,24 @@ def revert_obstructing_wc(sbox):
   svntest.actions.run_and_verify_svn(None, "Skipped '.*A' -- .*obstruct.*", [],
                                      'revert', '-R', wc_dir)
 
+@XFail()
+@Issue(4436)
+def revert_move(sbox):
+  "revert a move"
+
+  sbox.build()
+  sbox.simple_mkdir('NEW')
+  sbox.simple_append('NEW/file', '1')
+  sbox.simple_add('NEW/file')
+  sbox.simple_commit('NEW')
+
+  sbox.simple_move('NEW/file', 'file')
+  sbox.simple_rm('NEW')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', sbox.path('NEW'))
+
+
 
 ########################################################################
 # Run the tests
@@ -1683,7 +1701,8 @@ test_list = [ None,
               revert_no_text_change_conflict_recursive,
               revert_with_unversioned_targets,
               revert_nonexistent,
-              revert_obstructing_wc
+              revert_obstructing_wc,
+              revert_move,
              ]
 
 if __name__ == '__main__':
