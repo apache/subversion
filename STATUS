@@ -112,7 +112,7 @@ Candidate changes:
      commands later faile with a normal error in the RA layer, which
      validates the semantics of the hostname.
    Votes:
-     +1: brane
+     +1: brane, stefan2
 
  * r1518184
    Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
@@ -121,16 +121,7 @@ Candidate changes:
    Justification:
      Improves correctness. Resolves user reported problem.
    Votes:
-     +1: rhuijben
-
- * r1520529, r1520532, r1520539
-   Properly re-canonicalize urls read from xml based entries files.
-   Justification:
-     The canonicalization rules have been changed since 1.3 and while
-     we fixed the newer entries file parsing we forgot the xml based
-     entries.  Fixes a client assert.
-   Votes:
-     +1: rhuijben, philip
+     +1: rhuijben, stefan2
 
  * ^/subversion/branches/1.7.x-issue4421
    Fix Issue #4421
@@ -154,7 +145,7 @@ Candidate changes:
    Justification:
      User reported crash.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1525902
    Fix issues #4428 and #4429: external references a redirected HTTP-URL.
@@ -164,14 +155,14 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4428
    Votes:
-     +1: neels
+     +1: neels, stefan2
 
  * r1524869
    JavaHL: Canonicalize path for streamFileContent method.
    Justification:
-      JavaHL is designed around us doing the canoicalization.
+      JavaHL is designed around us doing the canonicalization.
    Votes:
-     +1: breser
+     +1: breser, stefan2
 
 Veto-blocked changes:
 =====================
@@ -190,4 +181,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1520529, r1520532, r1520539
+   Properly re-canonicalize urls read from xml based entries files.
+   Justification:
+     The canonicalization rules have been changed since 1.3 and while
+     we fixed the newer entries file parsing we forgot the xml based
+     entries.  Fixes a client assert.
+   Votes:
+     +1: rhuijben, philip, stefan2
 
