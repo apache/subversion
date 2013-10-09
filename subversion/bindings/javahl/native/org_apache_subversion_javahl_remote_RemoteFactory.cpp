@@ -36,15 +36,14 @@
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteFactory_open(
-    JNIEnv *env, jclass jclass, jint jretryAttempts,
+    JNIEnv *env, jclass jclazz, jint jretryAttempts,
     jstring jurl, jstring juuid,
     jstring jconfigDirectory,
     jstring jusername, jstring jpassword,
     jobject jprompter, jobject jprogress)
 {
   //JNI macros need jthis but this is a static call
-  jobject jthis = NULL;
-  JNIEntry(Remotefactory, open);
+  JNIEntryStatic(RemoteFactory, open);
 
   /*
    * Create RemoteSession C++ object and return its java wrapper to the caller
