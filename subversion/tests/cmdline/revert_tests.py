@@ -1649,16 +1649,11 @@ def revert_move(sbox):
   "revert a move"
 
   sbox.build()
-  sbox.simple_mkdir('NEW')
-  sbox.simple_append('NEW/file', '1')
-  sbox.simple_add('NEW/file')
-  sbox.simple_commit('NEW')
-
-  sbox.simple_move('NEW/file', 'file')
-  sbox.simple_rm('NEW')
+  sbox.simple_move('A/mu', 'mu')
+  sbox.simple_rm('A')
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'revert', '-R', sbox.path('NEW'))
+                                     'revert', '-R', sbox.path('A'))
 
 
 
