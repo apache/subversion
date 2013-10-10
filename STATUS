@@ -147,15 +147,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1519615, r1519617, r1519733
-   Fix a memory problem in the 3rd party FS module loader.
-   Changes[dev]:
-    * fs loader: fix segfault with 3rd party modules and common_pool (rNNNNNNN)
-   Justification:
-     Not enabled in default build but a SEGV likely when triggered.
-   Votes:
-     +1: philip, danielsh, stefan2
-
  * r1519955
    Fix a segfault with 'svn mergeinfo'.
    Justification:
