@@ -1500,6 +1500,28 @@ def move_many_update_add(sbox):
                                         None, None, None,
                                         wc_dir, '--accept', 'mine-conflict')
 
+@Issue(4437)
+@XFail()
+def move_del_moved(sbox):
+  "delete moved node, still a move"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('A/NEW')
+  sbox.simple_move('A/mu', 'A/NEW/mu')
+  sbox.simple_rm('A/NEW/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  expected_status.add({
+      'A/NEW' : Item(status='A ', wc_rev='-')
+    })
+
+  # A/mu still reports that it is moved to A/NEW/mu, while it is already
+  # deleted there.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 #######################################################################
 # Run the tests
@@ -1515,6 +1537,7 @@ test_list = [ None,
               nested_replaces,
               move_many_update_delete,
               move_many_update_add,
+              move_del_moved,
             ]
 
 if __name__ == '__main__':
