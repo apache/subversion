@@ -8262,6 +8262,44 @@ copy_mixed_rev_mods(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_child_to_parent_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "move_child_to_parent_revert", opts,
+                                   pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+
+  SVN_ERR(sbox_wc_move(&b, "A/B", "B"));
+  SVN_ERR(sbox_wc_delete(&b, "A"));
+
+  /* Verify that the move is still recorded correctly */
+  {
+    nodes_row_t nodes[] = {
+      {0, "",    "normal", 0, ""},
+      {0, "A",   "normal", 1, "A"},
+      {0, "A/B", "normal", 1, "A/B"},
+
+      {1, "A",   "base-deleted", NO_COPY_FROM},
+      {1, "A/B", "base-deleted", NO_COPY_FROM, "B"},
+
+      {1, "B", "normal", 1, "A/B", MOVED_HERE},
+      {0}
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_revert(&b, "A", svn_depth_infinity));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -8419,5 +8457,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move update with replaced parent (issue 4388)"),
     SVN_TEST_OPTS_XFAIL(copy_mixed_rev_mods,
                        "copy mixed-rev with mods"),
+    SVN_TEST_OPTS_XFAIL(move_child_to_parent_revert,
+                       "move child to parent and revert (issue 4436)"),
     SVN_TEST_NULL
   };
