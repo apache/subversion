@@ -147,13 +147,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1519955
-   Fix a segfault with 'svn mergeinfo'.
-   Justification:
-     Missing NULL pointer checks are bad, user complained.
-   Votes:
-     +1: stsp, rhuijben, stefan2
-
  * r1520529, r1520532, r1520539
    Properly re-canonicalize urls read from xml based entries files.
    Justification:
