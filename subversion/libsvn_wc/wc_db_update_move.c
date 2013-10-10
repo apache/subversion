@@ -2442,6 +2442,10 @@ svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
                                        relpath_depth(local_relpath) - 1,
                                        wcroot, local_relpath,
                                        scratch_pool, scratch_pool));
+
+  SVN_ERR_ASSERT(move_src_op_root_relpath != NULL
+                 && move_dst_op_root_relpath != NULL);
+
   SVN_ERR(break_move(wcroot, local_relpath,
                      relpath_depth(move_src_op_root_relpath),
                      move_dst_op_root_relpath,
