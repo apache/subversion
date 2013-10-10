@@ -2435,15 +2435,17 @@ break_move(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
                                              const char *local_relpath,
+                                             int op_depth,
                                              apr_pool_t *scratch_pool)
 {
   const char *dummy1, *move_dst_op_root_relpath;
   const char *dummy2, *move_src_op_root_relpath;
 
+  /* We want to include the passed op-depth, but the function does a > check */
   SVN_ERR(svn_wc__db_op_depth_moved_to(&dummy1, &move_dst_op_root_relpath,
                                        &dummy2,
                                        &move_src_op_root_relpath,
-                                       relpath_depth(local_relpath) - 1,
+                                       op_depth - 1,
                                        wcroot, local_relpath,
                                        scratch_pool, scratch_pool));
 
@@ -2518,6 +2520,7 @@ svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(
     svn_wc__db_resolve_break_moved_away_internal(wcroot, local_relpath,
+                                                 relpath_depth(local_relpath),
                                                  scratch_pool),
     wcroot);
 
