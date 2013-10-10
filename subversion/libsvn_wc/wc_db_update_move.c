@@ -2275,30 +2275,34 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
-  const char *dummy1, *move_dst_op_root_relpath;
-  const char *move_src_root_relpath, *move_src_op_root_relpath;
   apr_hash_t *src_done;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_UPDATE_MOVE_LIST));
 
-  SVN_ERR(svn_wc__db_op_depth_moved_to(&dummy1, &move_dst_op_root_relpath,
-                                       &move_src_root_relpath,
-                                       &move_src_op_root_relpath, 0,
-                                       wcroot, local_relpath,
-                                       scratch_pool, scratch_pool));
-
-  if (move_src_root_relpath)
+  if (local_relpath[0] != '\0')
     {
-      if (strcmp(move_src_root_relpath, local_relpath))
-        {
-          SVN_ERR(bump_mark_tree_conflict(wcroot, move_src_root_relpath,
-                                          move_src_op_root_relpath,
-                                          move_dst_op_root_relpath,
-                                          db, scratch_pool));
-          return SVN_NO_ERROR;
-        }
+      const char *dummy1, *move_dst_op_root_relpath;
+      const char *move_src_root_relpath, *move_src_op_root_relpath;
 
+      /* Is the root of the update moved away? (Impossible for the wcroot) */
+      SVN_ERR(svn_wc__db_op_depth_moved_to(&dummy1, &move_dst_op_root_relpath,
+                                           &move_src_root_relpath,
+                                           &move_src_op_root_relpath, 0,
+                                           wcroot, local_relpath,
+                                           scratch_pool, scratch_pool));
+
+      if (move_src_root_relpath)
+        {
+          if (strcmp(move_src_root_relpath, local_relpath))
+            {
+              SVN_ERR(bump_mark_tree_conflict(wcroot, move_src_root_relpath,
+                                              move_src_op_root_relpath,
+                                              move_dst_op_root_relpath,
+                                              db, scratch_pool));
+              return SVN_NO_ERROR;
+            }
+        }
     }
 
   src_done = apr_hash_make(scratch_pool);
