@@ -147,17 +147,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1522892
-   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
-   command interrupted.
-   Changes[client]:
-     * fixed: command line client crashes when piped command is interrupted on
-       Windows.
-   Justification:
-     User reported crash.
-   Votes:
-     +1: ivan, rhuijben, stefan2
-
  * r1523666
    Fix path corruption in the calculation of reintegration merges.
    Justification:
