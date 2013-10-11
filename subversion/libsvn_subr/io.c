@@ -3115,10 +3115,8 @@ __create_custom_diff_cmd(const char *label1,
                          apr_pool_t *pool)
 {
   /* 
-  We use the delimiter's characters to find the correct index.
-
-  This function can be tested by using the test 
-  /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
+     This function can be tested with:
+     /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
   */
 
   struct replace_tokens_t
@@ -3135,7 +3133,7 @@ __create_custom_diff_cmd(const char *label1,
   
   apr_array_header_t *words;
   const char ** result;
-  int argv;
+  int argv, item;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* split the user command into an array of words */
@@ -3144,52 +3142,92 @@ __create_custom_diff_cmd(const char *label1,
   result = apr_palloc(pool, 
                       (words->nelts+1) * words->elt_size * sizeof(char *) );
 
-  for (argv = 0; argv < words->nelts; argv++)
+  /* argv indexes result[], item indexes words */
+  for (item = 0, argv = 0; item < words->nelts; argv++, item++)
     {
-      int j = 0;
       svn_stringbuf_t *word;
       char special_start_marker = 0;  
       char special_end_marker = 0;  
 
       word = svn_stringbuf_create_empty(scratch_pool);
-      svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, argv, char *));
+      svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, item, char *));
       
       /* If the first character of the string is a alphanumeric, it's
-         not a delimiter. */
-      if (!isalnum(word->data[j]))
+         not a delimiter or a quote and we're done. */
+      if ( isalnum(word->data[0]) )
+        goto check_done;
+
+      if (word->data[0] != '"') 
         {
           /* check for the case that the first character is not a ';' and
              that the second character is a ';' */
-          if ( (word->data[j] != ';') && (word->data[j+1] == ';') )
+          if ( (word->data[0] != ';') && (word->data[1] == ';') )
             {
-              /* there are some cases where a '+' or other non-alphanumeric
-                 character can be prepended to a file name.  It's simpler if
-                 this is removed for the check and added back onto the result. */
+              /* there are some cases where a '+' or other
+                 non-alphanumeric character can be prepended to a file
+                 name.  It's simpler if this is removed for the check
+                 and added back onto the result.*/
               special_start_marker = word->data[0]; 
               svn_stringbuf_remove(word, 0, 1);   
             }
+        }
 
-          /* Test that the first character is ';' and the string is a delimiter */
-          if (word->data[j] != ';')  /* this excludes switches etc, eg -u   */
-            goto end_of_isalnum_if;  /* this spares the code another indent */
+      /* check for quoted text that may contain spaces and needs to be
+         treated as one element and so the next entries need to be
+         collated until the original quoted string is restored.  This
+         occurs because svn_cstring_split() splits on spaces and does
+         not protect quoted entities, ie, "a b c" expresses as
+         '"a','b','c"' */
+      if ( (word->data[0] == '"') && (word->data[word->len-1] != '"') )
+        {
+          svn_stringbuf_t * complete = svn_stringbuf_create_empty(scratch_pool);
 
-          /* there are some cases where a '+' or other non-alphanumeric
-             character can be appended to a file name.  It's simpler if
-             this is removed for the check and added back onto the result. */
-          if (!isalnum(word->data[word->len-1]))
+          while(item < words->nelts)
             {
-              special_end_marker = word->data[word->len-1]; 
-              svn_stringbuf_remove(word, word->len-1, 1);   
+              svn_stringbuf_appendcstr(complete, 
+                                       APR_ARRAY_IDX(words, item, char *)); 
+
+              /* Either we find a closing quote, or we run out of
+                 words trying to discover it.  We ship whatever we
+                 have, otherwise the reason for the failure will not
+                 be immediately obvious to the user (ie, missing
+                 closing quotes) */
+              if ( (complete->data[complete->len-1] == '"') 
+                   || (item == words->nelts - 1) )
+                {
+                  word->data = complete->data;
+                  goto check_done; 
+                }
+              svn_stringbuf_appendcstr(complete, " ");
+              item++;
+            }
+        }
+
+      /*  First character  must be ';' since all delimiters start thus */
+      if (word->data[0] == ';')  
+        {
+          int last_letter = word->len - 1;
+
+          /* there are some cases where a '+' or other
+             non-alphanumeric character can be appended to a file
+             name.  It's simpler if this is removed for the check
+             and added back onto the result. */
+          if (!isalnum(word->data[last_letter]))
+            {
+              special_end_marker = word->data[last_letter]; 
+              svn_stringbuf_remove(word, last_letter, 1);   
             }
 
-          /* A ';' in second place could be a protected delimiter */      
-          if (word->data[++j] == ';')  
+          /* A ';' in second place could be a protected delimiter */
+          if (word->data[1] == ';')  
             {
+              int j = 1;
+
               /* ensure that there is an unbroken line of ';' */ 
               while (j < word->len && word->data[j++] == ';') ;
   
               /* ensure that the end characters are [f|l][1-3]. */
-              if ( (j == (word->len - 1)) 
+              if ( (j == last_letter) 
 
                    /* check the letters */
                    && (word->data[j-1] == 'f' || word->data[j-1] == 'l') 
@@ -3197,7 +3235,7 @@ __create_custom_diff_cmd(const char *label1,
                    /*check that next char is 1,2 or 3 */
                    && (word->data[j] > 48) && (word->data[j] < 52) ) 
                 {
-                  /* it's a protected delimiter, so we consume one ';'  */
+                  /* it's a protected delimiter, so we consume one ';' */
                   svn_stringbuf_remove(word, 0, 1);   
                 }
             }
@@ -3211,21 +3249,20 @@ __create_custom_diff_cmd(const char *label1,
                  && (word->data[2] > 48) && (word->data[2] < 52) )
               {
                 /* extract the delimiter's integer 1,2 or 3 */
-                j = (int)word->data[2]-49;  
+                int j = (int)word->data[2]-49;  
 
                 /* if it's 'l' it will be in position 4,5 or 6 */
                 if (word->data[1] == 'l') 
                   j+=3;                  
 
-                /* pick the correct string parameter out of the tokens_tab */
+                /* pick the correct string parameter in the tokens_tab */
                 svn_stringbuf_replace(word, 0, 
                                       3, /* delimiter is always length 3 */
                                       tokens_tab[j].token,
                                       strlen(tokens_tab[j].token));
               }
         }
-    end_of_isalnum_if:
-
+      
       /* put the special start character back if it exists */
       if (special_start_marker) 
         svn_stringbuf_insert(word, 0, &special_start_marker, 1);
@@ -3233,7 +3270,8 @@ __create_custom_diff_cmd(const char *label1,
       /* put the special end character back if it exists */
       if (special_end_marker) 
         svn_stringbuf_appendbyte(word, special_end_marker);
-      
+
+    check_done:
       result[argv] = word->data;
     }  
   result[argv] = NULL;
