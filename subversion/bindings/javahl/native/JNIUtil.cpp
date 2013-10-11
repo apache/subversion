@@ -403,16 +403,6 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
   env->DeleteLocalRef(clazz);
 }
 
-jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
-{
-  if (err == NULL)
-    return NULL;
-  std::string buffer;
-  assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
-  jstring jmessage = makeJString(buffer.c_str());
-  return jmessage;
-}
-
 void
 JNIUtil::throwNativeException(const char *className, const char *msg,
                               const char *source, int aprErr)
@@ -514,8 +504,91 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
 }
 
 namespace {
-jobject construct_Jmessage_stack(
-    const JNIUtil::error_message_stack_t& message_stack)
+struct MessageStackItem
+{
+  apr_status_t m_code;
+  std::string m_message;
+  bool m_generic;
+
+  MessageStackItem(apr_status_t code, const char* message,
+                   bool generic = false)
+    : m_code(code),
+      m_message(message),
+      m_generic(generic)
+    {}
+};
+typedef std::vector<MessageStackItem> ErrorMessageStack;
+
+/*
+ * Build the error message from the svn error into buffer.  This
+ * method iterates through all the chained errors
+ *
+ * @param err               the subversion error
+ * @param buffer            the buffer where the formated error message will
+ *                          be stored
+ * @return An array of error codes and messages
+ */
+ErrorMessageStack assemble_error_message(
+    svn_error_t *err, std::string &result)
+{
+  // buffer for a single error message
+  char errbuf[1024];
+  apr_status_t parent_apr_err = 0;
+  ErrorMessageStack message_stack;
+
+  /* Pretty-print the error */
+  /* Note: we can also log errors here someday. */
+
+  for (int depth = 0; err;
+       ++depth, parent_apr_err = err->apr_err, err = err->child)
+    {
+      /* When we're recursing, don't repeat the top-level message if its
+       * the same as before. */
+      if (depth == 0 || err->apr_err != parent_apr_err)
+        {
+          const char *message;
+          /* Is this a Subversion-specific error code? */
+          if ((err->apr_err > APR_OS_START_USEERR)
+              && (err->apr_err <= APR_OS_START_CANONERR))
+            message = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
+          /* Otherwise, this must be an APR error code. */
+          else
+            {
+              /* Messages coming from apr_strerror are in the native
+                 encoding, it's a good idea to convert them to UTF-8. */
+              apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
+              svn_error_t* utf8_err =
+                svn_utf_cstring_to_utf8(&message, errbuf, err->pool);
+              if (utf8_err)
+                {
+                  /* Use fuzzy transliteration instead. */
+                  svn_error_clear(utf8_err);
+                  message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
+                }
+            }
+
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, message, true));
+        }
+      if (err->message)
+        {
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, err->message));
+        }
+    }
+
+  for (ErrorMessageStack::const_iterator it = message_stack.begin();
+       it != message_stack.end(); ++it)
+    {
+      if (!it->m_generic)
+        result += "svn: ";
+      result += it->m_message;
+      result += '\n';
+    }
+  return message_stack;
+}
+
+jobject construct_Jmessage_stack(const ErrorMessageStack& message_stack)
 {
   JNIEnv *env = JNIUtil::getEnv();
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
@@ -544,8 +617,7 @@ jobject construct_Jmessage_stack(
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  for (JNIUtil::error_message_stack_t::const_iterator
-         it = message_stack.begin();
+  for (ErrorMessageStack::const_iterator it = message_stack.begin();
        it != message_stack.end(); ++it)
     {
       jobject jmessage = JNIUtil::makeJString(it->m_message.c_str());
@@ -567,12 +639,37 @@ jobject construct_Jmessage_stack(
 }
 } // anonymous namespace
 
+std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
+                                         jstring *jerror_message,
+                                         jobject *jmessage_stack)
+{
+  if (jerror_message)
+    *jerror_message = NULL;
+  if (jmessage_stack)
+    *jmessage_stack = NULL;
+
+  std::string buffer;
+  err = svn_error_purge_tracing(err);
+  if (err == NULL || err->apr_err == 0
+      || !(jerror_message || jmessage_stack))
+  return buffer;
+
+  ErrorMessageStack message_stack = assemble_error_message(err, buffer);
+  if (jerror_message)
+    *jerror_message = makeJString(buffer.c_str());
+  if (jmessage_stack)
+    *jmessage_stack = construct_Jmessage_stack(message_stack);
+  return buffer;
+}
+
 void JNIUtil::handleSVNError(svn_error_t *err)
 {
-  std::string msg;
-  error_message_stack_t message_stack;
-  assembleErrorMessage(svn_error_purge_tracing(err),
-                       0, APR_SUCCESS, msg, &message_stack);
+  jstring jmessage;
+  jobject jstack;
+  std::string msg = makeSVNErrorMessage(err, &jmessage, &jstack);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   const char *source = NULL;
 #ifdef SVN_DEBUG
 #ifndef SVN_ERR__TRACING
@@ -616,14 +713,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
-  jstring jmessage = makeJString(msg.c_str());
-  if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
   jstring jsource = makeJString(source);
-  if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
-
-  jobject jmessageStack = construct_Jmessage_stack(message_stack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -634,7 +724,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           jint(err->apr_err), jmessageStack);
+                                           jint(err->apr_err), jstack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -1041,71 +1131,6 @@ jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
     return NULL;
 
   return JNIUtil::makeJByteArray(str->data, static_cast<int>(str->len));
-}
-
-/**
- * Build the error message from the svn error into buffer.  This
- * method calls itselft recursively for all the chained errors
- *
- * @param err               the subversion error
- * @param depth             the depth of the call, used for formating
- * @param parent_apr_err    the apr of the previous level, used for formating
- * @param buffer            the buffer where the formated error message will
- *                          be stored
- * @param message_stack     an array of error codes and messages
- */
-void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
-                                   apr_status_t parent_apr_err,
-                                   std::string &buffer,
-                                   error_message_stack_t* message_stack)
-{
-  // buffer for a single error message
-  char errbuf[1024];
-
-  /* Pretty-print the error */
-  /* Note: we can also log errors here someday. */
-
-  /* When we're recursing, don't repeat the top-level message if its
-   * the same as before. */
-  if (depth == 0 || err->apr_err != parent_apr_err)
-    {
-      const char *message;
-      /* Is this a Subversion-specific error code? */
-      if ((err->apr_err > APR_OS_START_USEERR)
-          && (err->apr_err <= APR_OS_START_CANONERR))
-        message = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
-      /* Otherwise, this must be an APR error code. */
-      else
-        {
-          /* Messages coming from apr_strerror are in the native
-             encoding, it's a good idea to convert them to UTF-8. */
-          apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
-          svn_error_t* utf8_err =
-            svn_utf_cstring_to_utf8(&message, errbuf, err->pool);
-          if (utf8_err)
-            {
-              /* Use fuzzy transliteration instead. */
-              svn_error_clear(utf8_err);
-              message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
-            }
-        }
-
-      if (message_stack)
-        message_stack->push_back(
-            message_stack_item(err->apr_err, message, true));
-      buffer.append(message);
-      buffer.append("\n");
-    }
-  if (err->message)
-    {
-      if (message_stack)
-        message_stack->push_back(
-            message_stack_item(err->apr_err, err->message));
-      buffer.append(_("svn: ")).append(err->message).append("\n");
-    }
-
-  if (err->child)
-    assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);
 }
 
 /**
