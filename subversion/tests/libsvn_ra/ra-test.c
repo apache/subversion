@@ -31,10 +31,16 @@
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
+#include "svn_ra_svn.h"
+#include "svn_pools.h"
+#include "svn_cmdline.h"
+#include "svn_dirent_uri.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
+
+static const char tunnel_repos_name[] = "test-repo-tunnel";
 
 /*-------------------------------------------------------------------*/
 
@@ -58,7 +64,7 @@ make_and_open_local_repos(svn_ra_session_t **session,
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&url, repos_name, pool));
 
-  SVN_ERR(svn_ra_open3(session, url, NULL, cbtable, NULL, NULL, pool));
+  SVN_ERR(svn_ra_open4(session, NULL, url, NULL, cbtable, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -87,6 +93,77 @@ commit_changes(svn_ra_session_t *session,
   SVN_ERR(editor->close_edit(edit_baton, pool));
   return SVN_NO_ERROR;
 }
+
+static int tunnel_open_count;
+
+static svn_error_t *
+open_tunnel(svn_ra_svn_conn_t **conn, void **tunnel_baton,
+            void *callbacks_baton,
+            const char *tunnel_name, const char *user,
+            const char *hostname, int port,
+            apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  apr_proc_t *proc;
+  apr_procattr_t *attr;
+  apr_status_t status;
+  const char *args[] = { "svnserve", "-t", "-r", ".", NULL };
+  const char *svnserve;
+
+  SVN_ERR(svn_dirent_get_absolute(&svnserve, "../../svnserve/svnserve", pool));
+#ifdef WIN32
+  svnserve = apr_pstrcat(pool, svnserve, ".exe", NULL);
+#endif
+  SVN_ERR(svn_io_check_path(svnserve, &kind, pool));
+  if (kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Could not find svnserve at %s",
+                             svn_dirent_local_style(svnserve, pool));
+
+  status = apr_procattr_create(&attr, pool);
+  if (status == APR_SUCCESS)
+    status = apr_procattr_io_set(attr, 1, 1, 0);
+  if (status == APR_SUCCESS)
+    status = apr_procattr_cmdtype_set(attr, APR_PROGRAM);
+  proc = apr_palloc(pool, sizeof(*proc));
+  if (status == APR_SUCCESS)
+    status = apr_proc_create(proc,
+                             svn_dirent_local_style(svnserve, pool),
+                             args, NULL, attr, pool);
+  if (status != APR_SUCCESS)
+    return svn_error_wrap_apr(status, "Could not run svnserve");
+#ifdef WIN32
+  apr_pool_note_subprocess(pool, proc, APR_KILL_NEVER);
+#else
+  apr_pool_note_subprocess(pool, proc, APR_KILL_ONLY_ONCE);
+#endif
+
+  /* APR pipe objects inherit by default.  But we don't want the
+   * tunnel agent's pipes held open by future child processes
+   * (such as other ra_svn sessions), so turn that off. */
+  apr_file_inherit_unset(proc->in);
+  apr_file_inherit_unset(proc->out);
+
+  *conn = svn_ra_svn_create_conn3(NULL, proc->out, proc->in,
+                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                                  0, 0, pool);
+
+  *tunnel_baton = NULL;
+  ++tunnel_open_count;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+close_tunnel(void *tunnel_baton, void *callbacks_baton,
+             const char *tunnel_name, const char *user,
+             const char *hostname, int port)
+{
+  --tunnel_open_count;
+  return SVN_NO_ERROR;
+}
+
+
+
 
 /*-------------------------------------------------------------------*/
 
@@ -151,6 +228,50 @@ location_segments_test(const svn_test_opts_t *opts,
 }
 
 
+/* Test ra_svn tunnel callbacks. */
+static svn_error_t *
+tunel_callback_test(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  apr_pool_t *connection_pool;
+  svn_repos_t *repos;
+  const char *url;
+  svn_ra_callbacks2_t *cbtable;
+  svn_ra_session_t *session;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test__create_repos(&repos, tunnel_repos_name, opts, pool));
+
+  url = apr_pstrcat(pool, "svn+test://localhost/", tunnel_repos_name, NULL);
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
+  cbtable->open_tunnel = open_tunnel;
+  cbtable->close_tunnel = close_tunnel;
+  SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
+                                        TRUE  /* non_interactive */,
+                                        "jrandom", "rayjandom",
+                                        NULL,
+                                        TRUE  /* no_auth_cache */,
+                                        FALSE /* trust_server_cert */,
+                                        NULL, NULL, NULL, pool));
+
+  tunnel_open_count = 0;
+  connection_pool = svn_pool_create(pool);
+  err = svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+                     connection_pool);
+  if (err && err->apr_err == SVN_ERR_TEST_FAILED)
+    {
+      svn_handle_error2(err, stderr, FALSE, "svn_tests: ");
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(tunnel_open_count > 0);
+  svn_pool_destroy(connection_pool);
+  SVN_TEST_ASSERT(tunnel_open_count == 0);
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 struct svn_test_descriptor_t test_funcs[] =
@@ -158,5 +279,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(location_segments_test,
                        "test svn_ra_get_location_segments"),
+    SVN_TEST_OPTS_PASS(tunel_callback_test,
+                       "test ra_svn tunnel creation callbacks"),
     SVN_TEST_NULL
   };
