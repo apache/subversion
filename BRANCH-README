@@ -1,26 +1,126 @@
-This branch implements the 'invoke-diff-cmd' feature.
+This branch implements the 'invoke-diff-cmd' feature and is located at 
+https://svn.apache.org/repos/asf/subversion/branches/invoke-diff-cmd-feature/
 
---invoke-diff-cmd calls an external diff command with a user-defined
-  arbitrary command.
+It is a feature branch, receiving regular sync merges from /trunk, and
+expected to be reintegrated back thereto.
 
---invoke-diff-cmd is currently is implemented for 'diff', 'log',
-  'svnlook' and the config file.
+See: http://subversion.tigris.org/issues/show_bug.cgi?id=2044 for the
+original motivation for this project.
 
-Also see: http://subversion.tigris.org/issues/show_bug.cgi?id=2044
+--invoke-diff-cmd allows command line selection of an external diff
+program and will be extended to cover the existing diff3 option with a
+similar --invoke-diff3-cmd option.
 
-DONE
+Currently this capability is provided by user written shell scripts
+which are passed as the diff program via the svn config file.
 
-   * deprechate svn_io_run_diff2()
+--invoke-diff-cmd is currently implemented for 'diff', 'log',
+'svnlook' and the config file.
+
+
+What --invoke-diff-cmd and --invoke-diff3-cmd provide
+------------------------------------------------------
+
+Users can type 'free-style' command lines for their selected
+diff/merge program, from 'svn help diff':
+
+  --invoke-diff-cmd ARG:
+
+   use ARG as format string for external diff command
+   invocation. 
+               
+   Substitutions: ;f1 original file                       
+                  ;f2 changed file                        
+                  ;l1 label of the original file          
+                  ;l2 label of the changed file           
+   Examples: --invoke-diff-cmd="diff -y ;f1 ;f2"        
+      --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \  
+        +;f1 ;l2 --L1 ;l1 --L2 "Custom Label" "        
+
+   The delimiter ';' can be escaped by adding a ';', which will be
+   consumed in the process.  The delimiter can appear anywhere in the
+   string, ie, file=;f1 will expand as expected and file=;;f1 will be
+   rendered as file=;f1.
+
+Structure of the feature:
+=========================
+
+API components 
+--------------
+
+   ./subversion/libsvn_subr/io.c:3030 __create_custom_diff_cmd()
+ 
+   transforms the user input 'invoke-diff-cmd' into a command line
+   call by substitution the file names, whilst leaving everything else
+   untouched.  This is more of an internal routine and probably not
+   well placed in the API.  It will be reused for the merge part of
+   this project.
+
+   NOTE:  
+
+   ./subversion/libsvn_subr/io.c:3108 svn_io_run_external_diff()
+
+   calls svn_io_create_custom_diff_cmd() and does all the error
+   checking required, before routing the result to the actual call to
+   the APR routine that makes it.
+ 
+
+UI components
+-------------
+
+  --invoke-diff-cmd and its user interface components for the command
+  line have been installed everywhere where --diff-cmd is available,
+  in svnlook.c, svn.c, svnlog.c.
+
+  Users can specify the following mutually exclusive options:
+
+  --invoke-diff-cmd, --diff-cmd and --internal-diff-cmd, and also
+  define what diff program to use via the ./svn/config file, using the
+  new config file parameter "invoke-diff-cmd"..
+
+  The selection first defaults to the internal diff program, then to
+  the config file entry (if defined) which in turn is overridden when
+  one of --invoke-diff-cmd, --diff-cmd or --internal-diff-cmd are
+  invoked.
+
+
+Changes to the existing code structure:
+=======================================
+
+the original --diff-cmd parsing and routing code has been deprecated
+and the call to --diff-cmd is now handled by the
+svn_io_create_custom_diff_cmd() and svn_io_run_external_diff()
+routines.  All the original functionality and user syntax has been
+retained.
+
+TESTS
+=====
+
+The test for this feature is
+
+/subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
+
+
+The test for the updated --diff-cmd is 
+
+/subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
 
 
 TODO:
+====
 
-  * figure out if/how to solve file-type issue
-    http://subversion.tigris.org/issues/show_bug.cgi?id=2447
+  * add invoke-diff-cmd option to the blame section
+  
+  * add help info to log, svnlook, blame
 
-  * add invoke-diff-3-cmd as per:  issue 2447
+  * Adding invoke-diff-cmd to merge:
+    add --invoke-diff-3-cmd using the svn_io_create_custom_diff_cmd()
+    and creating a new svn_io_run_external_merge function to manage
+    the external call in the same way that svn_io_run_external_diff
+    does.  Add the necessary UI components.  Add --invoke-diff-3-cmd
+    to 'svn up'.
 
-  * consider adding to svn up, see issue:
-    http://subversion.tigris.org/issues/show_bug.cgi?id=3836
+  * Fix the issue of unclear labels being displayed in external merge
+    programs:
 
-
+       http://subversion.tigris.org/issues/show_bug.cgi?id=3836

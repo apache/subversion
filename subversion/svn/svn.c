@@ -364,21 +364,13 @@ const apr_getopt_option_t svn_cl__options[] =
                       "                             "
                       "     +;f1 ;l2 --L1 ;l1 --L2 \"Custom Label\" \"        \n"
                       "                             "
-                      "The delimiter  ';' can be escaped in case ';f1', ';f2',\n"
+                      "The delimiter ';' can be escaped by adding a ';', which\n"
                       "                             "
-                      "';l1' and ';l2' should be preserved.  Ie. ';;f1' will  \n"          
+                      "will be consumed in the process.  The delimiter can    \n"
                       "                             "
-                      "be rendered as ';f1' and ';;;;f1' as ';;;f1'.          \n"
+                      "appear anywhere in the string, ie, file=;f1 will expand\n"
                       "                             "
-                      "Any other instances of ';' or multiples thereof not    \n"
-                      "                             "
-                      "accompanied by f1, f2, l1 or l3 will not be modified.  \n"
-                      "                             "
-		      "Non-alphanumeric characters at the beginning or the end\n"
-                      "                             "
-		      "are permitted, ie. +;f1, ;f1+ and +;f1+                \n"
-
-
+                      "as expected and file=;;f1 will be rendered as file=;f1.\n"
      )},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
