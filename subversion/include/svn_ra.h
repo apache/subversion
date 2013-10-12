@@ -270,6 +270,52 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
   apr_hash_t *rev_props,
   apr_pool_t *pool);
 
+
+/**
+ * Forward-declared ra_svn connection type.
+ * @see svn_ra_svn.h
+ */
+struct svn_ra_svn_conn_st;
+
+/**
+ * Callback function for opening a tunnel in ra_svn.
+ *
+ * Given the @a tunnel_name, tunnel @a user and server @a hostname and
+ * @a port, return a new ra_svn connection in @a conn. The returned
+ * connection must be allocated from @a pool.
+ *
+ * @a tunnel_baton will be passed on to the close-unnel callback.
+ *
+ * @a open_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
+    struct svn_ra_svn_conn_st **conn,
+    void **tunnel_baton, void *open_baton,
+    const char *tunnel_name, const char *user,
+    const char *hostname, int port,
+    apr_pool_t *pool);
+
+/**
+ * Callback function for closing a tunnel in ra_svn.
+ *
+ * This function will be called when the pool that owns the tunnel
+ * connection is cleared or destroyed. It receives the @a baton that
+ * was created by the open-tunnel callback, and the same
+ * @a tunnel_name, @a user, @a hostname and @a port parameters.
+ *
+ * @a tunel_baton was returned by the open-tunnel callback.
+ *
+ * @a open_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_ra_close_tunnel_func_t)(
+    void *tunnel_baton, void *open_baton,
+    const char *tunnel_name, const char *user,
+    const char *hostname, int port);
+
 
 /**
  * The update Reporter.
@@ -537,6 +583,24 @@ typedef struct svn_ra_callbacks2_t
    * @since New in 1.8.
    */
   svn_ra_get_wc_contents_func_t get_wc_contents;
+
+  /** Open-tunnel callback
+   * If not @c null, this callback will be invoked to create an ra_svn
+   * connection that needs a tunnel, overriding any tunnel definitions
+   * in the client config file. This callback is used only for ra_svn
+   * and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel;
+
+  /** Close-tunnel callback
+   * If not @c null, this callback will be invoked when the pool that
+   * owns the connection created by the open_tunnel callback is
+   * cleared or destroyed. This callback is used only for ra_svn and
+   * ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_close_tunnel_func_t close_tunnel;
 
 } svn_ra_callbacks2_t;
 

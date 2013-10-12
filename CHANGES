@@ -20,6 +20,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - General:
 
   - API changes:
+    * New RA callbacks for managing ra_svn tunnels:
+      svn_ra_callbacks2_t::open_tunnel and svn_ra_callbacks2_t::close_tunnel.
 
   - Bindings:
 
