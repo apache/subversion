@@ -109,9 +109,7 @@ The test for the updated --diff-cmd is
 TODO:
 ====
 
-  * add invoke-diff-cmd option to the blame section
-  
-  * add help info to log, svnlook, blame
+  * add help info to log, svnlook 
 
   * Adding invoke-diff-cmd to merge:
     add --invoke-diff-3-cmd using the svn_io_create_custom_diff_cmd()
@@ -124,3 +122,153 @@ TODO:
     programs:
 
        http://subversion.tigris.org/issues/show_bug.cgi?id=3836
+
+
+Log messages of Salient Code changes with minor fixes and reverts omitted:
+==========================================================================
+
+* subversion/include/svn_client.h 
+
+  (svn_client_diff7, svn_client_diff_peg7): Declare the new API.  Like
+    svn_client_diff[_peg]6 but with invoke_diff_cmd parameter.
+
+  (svn_client_diff6, svn_client_diff_peg_6): Deprecate. 
+
+
+* subversion/svn/log-cmd.c 
+
+  (svn_client_diff_peg7): Update call to svn_client_diff_peg6 to
+    svn_client_diff_peg7.
+
+  (log_receiver_baton): New struct member invoke_diff_cmd.
+
+  (display_diff): New parameter 'invoke_diff_cmd' . Pass
+    invoke_diff_cmd parameter into svn_client_diff_peg7().
+
+  (log_entry_receiver): Pass invoke_diff_cmd into display_diff().
+ 
+  (svn_cl__log): Ensure mutual exclusions between invoke_diff_cmd and
+    quiet and diff-cmd, require 'diff' option. Populate
+    log_receiver_baton member invoke_diff_cmd.  
+
+  (svn_cl__options): Expand help info for invoke-diff-cmd option.      
+
+
+* subversion/include/svn_config.h
+
+  (SVN_CONFIG_OPTION_INVOKE_DIFF_CMD): New definition.
+
+
+* subversion/include/svn_io.h
+
+   (svn_io_create_custom_diff_cmd): New function.
+
+   (svn_io_run_external_diff): New function.
+ 
+   (svn_io_run_diff2): Deprecate function.
+
+
+* subversion/libsvn_client/deprecated.c
+
+  (svn_client_diff6, svn_client_diff_peg6): New deprecation wrappers.
+
+
+* subversion/libsvn_client/diff.c
+
+  (struct diff_cmd_baton): New member: 'invoke_diff_cmd'.
+
+  (diff_content_changed): Call svn_io_run_external_diff if
+    --invoke-diff-cmd option was specified, otherwise retain previous
+    behaviour.
+
+  (set_up_diff_cmd_and_options): Apply invoke-diff-cmd option 
+    preferentially.  Old behaviour unchanged.
+   
+  (svn_client_diff_peg_7): Rename and update from
+    svn_client_diff_peg_6.  Add new parameter: invoke_diff_cmd.
+
+  (svn_client_diff7): Rename and update from svn_client_diff6, add
+    new parameter 'invoke_diff_cmd'.  
+
+  (): Update all comments mentioning 'svn_client_diff6' to
+    'svn_client_diff7'.
+
+  (diff_content_changed): Raise an error if both diff_cmd and
+    invoke-diff-cmd are set.
+
+
+* subversion/libsvn_subr/config_file.c
+
+  (svn_config_ensure): New entry: invoke-diff-cmd. 
+
+
+* subversion/libsvn_subr/io.c
+
+  (svn_io_create_custom_diff_cmd): New function.
+
+  (svn_io_run_external_diff): New function.
+
+
+* subversion/svn/cl.h
+
+  (struct svn_cl__opt_state_t.diff): New member: 'invoke_diff_cmd'.
+
+
+* subversion/svn/diff-cmd.c
+
+  (svn_cl__diff): Update call to svn_client_diff6 to svn_client_diff7.
+
+
+* subversion/svn/svn.c
+
+  (svn_cl__options[]): Add help info and new variable: 
+    'opt_invoke_diff_cmd'.
+
+  (svn_cl__cmd_table[]): New option: 'invoke-diff-cmd'.
+
+  (sub_main): Prohibit simultaneous usage of --invoke-diff-cmd and
+    --internal-diff. Add new opt_state.diff.invoke-diff-cmd option 
+    to the option selector.  Add call to svn_config_set.
+
+  (svn_cl__cmd_table): Add opt_invoke_diff_cmd to the list of valid
+    sub-commands. 
+
+  (sub_main): Add guard against concurrent usage of incompatible diff 
+    options.  Remove previous guard code. 
+
+
+* subversion/tests/cmdline/diff_tests.py
+
+  (diff_invoke_external_diffcmd): New function.
+
+  (test_list): Add new entry 'diff_invoke_external_diffcmd'.
+
+
+* subversion/include/svn_error_codes.h
+
+  (SVN_CLIENT_DIFF_CMD): New macro.
+
+
+* subversion/svnlook/svnlook.c
+
+  (enum): New variable svnlook__invoke_diff_cmd.
+
+  (options_table[]): New entry 'invoke-diff-cmd'.
+
+  (cmd_tablcmd[]): Add svnlook__invoke_diff_cmd to diff cmd table
+    entry.
+
+  (svnlook_opt_state): New member variable "invoke_diff_cmd".
+
+  (svnlook_ctxt_t): New member variable "invoke_diff_cmd".
+
+  (print_diff_tree): Modify if condition to include new
+    invoke_diff_cmd. Add conditional call to
+    /include/svn_io.c:svn_io_run_external_diff().
+
+  (get_ctxt_baton): Assign invoke_diff_cmd data.
+
+  (main): Assign opt_arg to opt_state.invoke_diff_cmd.  Add
+    exclusiveness test for invoke_diff_cmd and diff_cmd.
+
+

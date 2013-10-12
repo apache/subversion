@@ -3105,7 +3105,7 @@ __create_custom_diff_cmd(const char *label1,
           if (!found)
             continue;
             
-          len = word->len - strlen(found) - 1;;
+          len = word->len - strlen(found) - 1;
             
           /* if we find a protective semi-colon in front of this, consume it */
           if ( (len >= 0) 
