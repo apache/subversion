@@ -3294,28 +3294,20 @@ def diff_invoke_external_diffcmd(sbox):
       # correct file ;f2 -> file2
       os.path.abspath("iota") + "\n",
 
-      # special start char is retained +;f1 -> +file
-      "+" + os.path.abspath(svntest.wc.text_base_path("iota")) + "\n", 
+      # preservation of quoted string  "X Y Z"-> "X Y Z"
+      "\"X Y Z\"\n",
 
-      # special end char is retained ;f1+ -> file+
-      os.path.abspath(svntest.wc.text_base_path("iota")) + "+\n", 
+      # correct insertion of filename into string "+;f2+" -> "+" + file2 + "+"
+      "+" + os.path.abspath("iota") + "+\n",
 
-      # special start and end char are retained +;f1+ -> +file+
-      "+"+os.path.abspath(svntest.wc.text_base_path("iota")) + "+\n", 
-
-      ";f1\n",      # removal of ';' @ lower boundary '1'     ;;f1  -> ;f1
-      ";;l3\n",     # removal of ';' @ high  boundary '3'     ;;;l3 -> ;;l3
-      "\"A B\"\n",  # non-modification of 1st quoted element   "A B"-> "A B"
-      ";;fo\n",     # only eligible delimiters are modified   ;;fo  -> ;;fo
-      ";f1o\n",     # correct length test of delimiter        ;f1o  -> ;f1o
-      "-u\n",       # non-modification of ineligble element      -u -> -u
-      "\"X Y Z\"\n",# non-modification of 2nd quoted element "X Y Z"-> "X Y Z"
+      # removal of protective ';' ";;f1" -> ";f1"
+      ";f1\n",
       ])
   
   svntest.actions.run_and_verify_svn(None, expected_output, [],
    'diff',
    '--invoke-diff-cmd='+diff_script_path+
-   ' ;l1 ;f1 ;l2 ;f2 +;f1 ;f1+ +;f1+ ;;f1 ;;;l3 \"A B\" ;;fo ;f1o -u \"X Y Z\"',
+   ' ;l1 ;f1 ;l2 ;f2 \"X Y Z\" +;f2+ ;;f1',
   iota_path)
 
 

@@ -3027,84 +3027,6 @@ svn_io_run_cmd(const char *path,
 }
 
 const char **
-svn_io_create_custom_diff_cmd(const char *label1,
-                              const char *label2,
-                              const char *label3,
-                              const char *tmpfile1,
-                              const char *tmpfile2,
-                              const char *base,
-                              const char *cmd,
-                              apr_pool_t *pool)
-{
-  apr_array_header_t *tmp;
-  const char ** result;
-  int argv;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-
-  tmp = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
-
-  result = apr_palloc(pool, 
-                      (tmp->nelts + 1) * 
-                      tmp->elt_size*sizeof(char *));  
-
-  for (argv = 0; argv < tmp->nelts; argv++)
-    {
-      svn_stringbuf_t *com;
-      int i;
-      
-      com = svn_stringbuf_create_empty(scratch_pool);
-      svn_stringbuf_appendcstr(com, APR_ARRAY_IDX(tmp, argv, char *));
-
-      for (i = 0; i < 6 /* sizeof(token_list) */; i++) 
-        {        
-          static const char *token_list[] = 
-            {";f1",";f2", ";f3", ";l1", ";l2",";l3" };
-          svn_stringbuf_t *token;
-          int len;
-          char *found;
-
-          token = svn_stringbuf_create_empty(scratch_pool);
-          svn_stringbuf_appendcstr(token, token_list[i]);
-          len = 0;
-
-          while ( (found = strstr(com->data, token->data)) && 
-                  (strlen(found) > len) ) 
-            {
-              len = strlen(found); 
-
-              /* if we find a semi-colon in front of this, consume it */
-              if (found > 0 && /* ensure there is a char in front */
-                  (com->data[com->len - (len-1)] == ';'))
-                  svn_stringbuf_remove(com, len-1, 1);
-              else if (i == 0) /* f1 */
-                svn_stringbuf_replace(com, com->len - len, token->len,
-                                      tmpfile1, strlen(tmpfile1));
-              else if (i == 1) /* f2 */
-                svn_stringbuf_replace(com, com->len - len, token->len, 
-                                      tmpfile2, strlen(tmpfile2));
-              else if (i == 2) /* f3 */
-                svn_stringbuf_replace(com, com->len - len, token->len, 
-                                      base, strlen(base));
-              else if (i == 3) /* l1 */
-                svn_stringbuf_replace(com, com->len - len, token->len, 
-                                      label1, strlen(label1));
-              else if (i == 4) /* l2 */
-                svn_stringbuf_replace(com, com->len - len, token->len, 
-                                      label2, strlen(label2));
-              else if (i == 5) /* l3 */
-                svn_stringbuf_replace(com, com->len - len, token->len, 
-                                      label3, strlen(label3));
-            }
-        }
-      result[argv] = com->data;
-    }  
-  result[argv] = NULL;
-
-  svn_pool_destroy(scratch_pool);
-  return result;
-}
-
-const char **
 __create_custom_diff_cmd(const char *label1,
                          const char *label2,
                          const char *label3,
@@ -3119,162 +3041,89 @@ __create_custom_diff_cmd(const char *label1,
      /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
   */
 
-  struct replace_tokens_t
-  {
-    const char *token;
-  } tokens_tab[] = { /* corresponds to delimiter*/ 
-    { from },        /* f1                      */
-    { to },          /* f2                      */
-    { base },        /* f3                      */  
-    { label1 },      /* l1                      */
-    { label2 },      /* l2                      */
-    { label3 },      /* l3                      */
-  };
-  
   apr_array_header_t *words;
   const char ** result;
-  int argv, item;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-
-  /* split the user command into an array of words */
-  words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
+  size_t argv, item, i, delimiters = 6;
+  apr_pool_t *scratch_pool = svn_pool_create(pool); 
   
+  struct replace_tokens_tab
+  {
+    const char *delimiter;
+    const char *replace;
+  } tokens_tab[] = { 
+    { ";l1", label1 },
+    { ";l2", label2 },
+    { ";l3", label3 },
+    { ";f1", from },  
+    { ";f2", to },    
+    { ";f3", base },    
+    { NULL, NULL }
+  };
+
+  words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
+
   result = apr_palloc(pool, 
                       (words->nelts+1) * words->elt_size * sizeof(char *) );
 
-  /* argv indexes result[], item indexes words */
   for (item = 0, argv = 0; item < words->nelts; argv++, item++)
     {
       svn_stringbuf_t *word;
-      char special_start_marker = 0;  
-      char special_end_marker = 0;  
 
       word = svn_stringbuf_create_empty(scratch_pool);
       svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, item, char *));
       
-      /* If the first character of the string is a alphanumeric, it's
-         not a delimiter or a quote and we're done. */
-      if ( isalnum(word->data[0]) )
-        goto check_done;
 
-      if (word->data[0] != '"') 
-        {
-          /* check for the case that the first character is not a ';' and
-             that the second character is a ';' */
-          if ( (word->data[0] != ';') && (word->data[1] == ';') )
-            {
-              /* there are some cases where a '+' or other
-                 non-alphanumeric character can be prepended to a file
-                 name.  It's simpler if this is removed for the check
-                 and added back onto the result.*/
-              special_start_marker = word->data[0]; 
-              svn_stringbuf_remove(word, 0, 1);   
-            }
-        }
-
-      /* check for quoted text that may contain spaces and needs to be
-         treated as one element and so the next entries need to be
-         collated until the original quoted string is restored.  This
-         occurs because svn_cstring_split() splits on spaces and does
-         not protect quoted entities, ie, "a b c" expresses as
-         '"a','b','c"' */
       if ( (word->data[0] == '"') && (word->data[word->len-1] != '"') )
         {
           svn_stringbuf_t * complete = svn_stringbuf_create_empty(scratch_pool);
+          int done = 0;
 
-          while(item < words->nelts)
+          while( (!done) && item < words->nelts)
             {
               svn_stringbuf_appendcstr(complete, 
                                        APR_ARRAY_IDX(words, item, char *)); 
 
-              /* Either we find a closing quote, or we run out of
-                 words trying to discover it.  We ship whatever we
-                 have, otherwise the reason for the failure will not
-                 be immediately obvious to the user (ie, missing
-                 closing quotes) */
               if ( (complete->data[complete->len-1] == '"') 
                    || (item == words->nelts - 1) )
                 {
                   word->data = complete->data;
-                  goto check_done; 
+                  done = 1;
                 }
-              svn_stringbuf_appendcstr(complete, " ");
-              item++;
+              else 
+                { 
+                  svn_stringbuf_appendcstr(complete, " ");
+                  item++;
+                }
             }
         }
 
-      /*  First character  must be ';' since all delimiters start thus */
-      if (word->data[0] == ';')  
+      for (i = 0; i < delimiters; i++)
         {
-          int last_letter = word->len - 1;
+          char *found = strstr(word->data, tokens_tab[i].delimiter);
+          int len;
 
-          /* there are some cases where a '+' or other
-             non-alphanumeric character can be appended to a file
-             name.  It's simpler if this is removed for the check
-             and added back onto the result. */
-          if (!isalnum(word->data[last_letter]))
+          if (!found)
+            continue;
+            
+          len = word->len - strlen(found) - 1;;
+            
+          /* if we find a protective semi-colon in front of this, consume it */
+          if ( (len >= 0) 
+               && (word->data[len] == ';') )
+            svn_stringbuf_remove(word, len, 1);
+          else
             {
-              special_end_marker = word->data[last_letter]; 
-              svn_stringbuf_remove(word, last_letter, 1);   
+              svn_stringbuf_replace(word, found - word->data,
+                                    strlen(tokens_tab[i].delimiter),
+                                    tokens_tab[i].replace,
+                                    strlen(tokens_tab[i].replace));
+              i = delimiters;
             }
-
-          /* A ';' in second place could be a protected delimiter */
-          if (word->data[1] == ';')  
-            {
-              int j = 1;
-
-              /* ensure that there is an unbroken line of ';' */ 
-              while (j < word->len && word->data[j++] == ';') ;
-  
-              /* ensure that the end characters are [f|l][1-3]. */
-              if ( (j == last_letter) 
-
-                   /* check the letters */
-                   && (word->data[j-1] == 'f' || word->data[j-1] == 'l') 
-
-                   /*check that next char is 1,2 or 3 */
-                   && (word->data[j] > 48) && (word->data[j] < 52) ) 
-                {
-                  /* it's a protected delimiter, so we consume one ';' */
-                  svn_stringbuf_remove(word, 0, 1);   
-                }
-            }
-          else /* check that this is a regular delimiter (length 3) */
-            if ( (word->len == 3)
-
-                 /* check the letters */
-                 && (word->data[1] == 'f' || word->data[1] == 'l') 
-
-                 /*check that next char is 1,2 or 3 */
-                 && (word->data[2] > 48) && (word->data[2] < 52) )
-              {
-                /* extract the delimiter's integer 1,2 or 3 */
-                int j = (int)word->data[2]-49;  
-
-                /* if it's 'l' it will be in position 4,5 or 6 */
-                if (word->data[1] == 'l') 
-                  j+=3;                  
-
-                /* pick the correct string parameter in the tokens_tab */
-                svn_stringbuf_replace(word, 0, 
-                                      3, /* delimiter is always length 3 */
-                                      tokens_tab[j].token,
-                                      strlen(tokens_tab[j].token));
-              }
         }
-      
-      /* put the special start character back if it exists */
-      if (special_start_marker) 
-        svn_stringbuf_insert(word, 0, &special_start_marker, 1);
-
-      /* put the special end character back if it exists */
-      if (special_end_marker) 
-        svn_stringbuf_appendbyte(word, special_end_marker);
-
-    check_done:
       result[argv] = word->data;
     }  
   result[argv] = NULL;
+
   svn_pool_destroy(scratch_pool);
   return result;
 }

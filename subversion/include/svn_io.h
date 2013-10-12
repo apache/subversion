@@ -2384,17 +2384,6 @@ svn_io_file_readline(apr_file_t *file,
  * @since New in 1.9.
  */
 const char **
-svn_io_create_custom_diff_cmd(const char *label1,
-                              const char *label2,
-                              const char *label3,
-                              const char *tmpfile1,
-                              const char *tmpfile2,
-                              const char *base,
-                              const char *cmd,
-                              apr_pool_t *pool);
-
-/* temporary hand rolled version of the above */
-const char **
 __create_custom_diff_cmd(const char *label1,
                          const char *label2,
                          const char *label3,
