@@ -1419,16 +1419,11 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
     return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
-struct info_baton
-{
-    std::vector<info_entry> infoVect;
-    apr_pool_t *pool;
-};
-
 void
-SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
-                 svn_depth_t depth, StringArray &changelists,
-                 InfoCallback *callback)
+SVNClient::info2(const char *path,
+                 Revision &revision, Revision &pegRevision, svn_depth_t depth,
+                 svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
+                 StringArray &changelists, InfoCallback *callback)
 {
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -1443,7 +1438,7 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_info3(checkedPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
-                                 depth, FALSE, TRUE,
+                                 depth, fetchExcluded, fetchActualOnly,
                                  changelists.array(subPool),
                                  InfoCallback::callback, callback,
                                  ctx, subPool.getPool()), );

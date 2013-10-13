@@ -1250,12 +1250,26 @@ svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
   svn_xml_make_header2(str, NULL, pool);
 }
 
+
+/*** From utf.c ***/
 void
 svn_utf_initialize(apr_pool_t *pool)
 {
   svn_utf_initialize2(FALSE, pool);
 }
 
+svn_error_t *
+svn_utf_cstring_from_utf8_ex(const char **dest,
+                             const char *src,
+                             const char *topage,
+                             const char *convset_key,
+                             apr_pool_t *pool)
+{
+  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
+}
+
+
+/*** From subst.c ***/
 svn_error_t *
 svn_subst_build_keywords(svn_subst_keywords_t *kw,
                          const char *keywords_val,
@@ -1306,3 +1320,4 @@ svn_ver_check_list(const svn_version_t *my_version,
 {
   return svn_ver_check_list2(my_version, checklist, svn_ver_compatible);
 }
+

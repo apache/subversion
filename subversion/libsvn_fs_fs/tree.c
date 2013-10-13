@@ -2423,34 +2423,44 @@ is_changed_node(svn_boolean_t *changed,
   svn_fs_root_t *copy_from_root1, *copy_from_root2;
   const char *copy_from_path1, *copy_from_path2;
 
-  *changed = TRUE;
-
   SVN_ERR(svn_fs_fs__revision_root(&rev_root, root->fs, revision, pool));
 
   /* Get the NODE for FROM_PATH in FROM_ROOT.*/
   SVN_ERR(get_dag(&node, root, path, TRUE, pool));
   SVN_ERR(get_dag(&rev_node, rev_root, path, TRUE, pool));
 
-  /* different ID -> got changed*/
+  /* different ID -> got changed */
   if (!svn_fs_fs__id_eq(svn_fs_fs__dag_get_id(node),
                         svn_fs_fs__dag_get_id(rev_node)))
-    return SVN_NO_ERROR;
+    {
+      *changed = TRUE;
+       return SVN_NO_ERROR;
+    }
 
-  /* some node. might still be a lazy copy */
+  /* same node. might still be a lazy copy with separate history */
   SVN_ERR(fs_closest_copy(&copy_from_root1, &copy_from_path1, root,
                           path, pool));
   SVN_ERR(fs_closest_copy(&copy_from_root2, &copy_from_path2, rev_root,
                           path, pool));
 
-  if ((copy_from_root1 == NULL) != (copy_from_root2 == NULL))
-    return SVN_NO_ERROR;
+  if (copy_from_root1 == NULL && copy_from_root2 == NULL)
+    {
+      /* never copied -> same line of history */
+      *changed = FALSE;
+    }
+  else if (copy_from_root1 != NULL && copy_from_root2 != NULL)
+    {
+      /* both got copied. At the same time & location? */
+      *changed = (copy_from_root1->rev != copy_from_root2->rev)
+                 || strcmp(copy_from_path1, copy_from_path2);
+    }
+  else
+    {
+      /* one is a copy while the other one is not
+       * -> different lines of history */
+      *changed = TRUE;
+    }
 
-  if (copy_from_root1)
-    if (   copy_from_root1->rev != copy_from_root2->rev
-        || strcmp(copy_from_path1, copy_from_path2))
-      return SVN_NO_ERROR;
-
-  *changed = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -2503,6 +2513,13 @@ copy_helper(svn_fs_root_t *from_root,
           svn_error_t *err = is_changed_node(&changed, from_root,
                                              from_path, txn_id->revision,
                                              pool);
+
+          /* Only "not found" is considered to be caused by out-of-date-ness.
+             Everything else means something got very wrong ... */
+          if (err && err->apr_err != SVN_ERR_FS_NOT_FOUND)
+            return svn_error_trace(err);
+
+          /* here error means "out of data" */
           if (err || changed)
             {
               svn_error_clear(err);

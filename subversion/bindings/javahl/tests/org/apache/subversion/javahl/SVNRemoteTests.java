@@ -128,6 +128,43 @@ public class SVNRemoteTests extends SVNTests
         session.dispose();
     }
 
+    public void testSessionGC() throws Exception
+    {
+        int svnErrorCode = 0;
+        try {
+            try {
+                String prefix = getTestRepoUrl().substring(
+                    0, 1 + getTestRepoUrl().lastIndexOf("/"));
+                new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, PASSWORD,
+                    new DefaultPromptUserPassword(), null)
+                    .openRemoteSession(prefix + "repositorydoesnotexisthere");
+            }
+            finally
+            {
+                for(int i = 0; i < 100; i++)
+                {
+                    Runtime.getRuntime().gc(); // GC should run finalize
+
+                    // Do something
+                    byte[] memEater = new byte[1024 * 1024];
+                    Arrays.fill(memEater, (byte) i);
+
+                    // Do some more javahl activity (this url is OK)
+                    final ISVNRemote session = getSession();
+                    session.getLatestRevision();
+                    session.dispose();
+                }
+            }
+        }
+        catch (ClientException ex)
+        {
+            svnErrorCode = ex.getAllMessages().get(0).getCode();
+        }
+        assertEquals(180001, svnErrorCode);
+    }
+
     public void testDatedRev() throws Exception
     {
         ISVNRemote session = getSession();

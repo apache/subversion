@@ -934,18 +934,6 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
   return err;
 }
 
-
-svn_error_t *
-svn_utf_cstring_from_utf8_ex(const char **dest,
-                             const char *src,
-                             const char *topage,
-                             const char *convset_key,
-                             apr_pool_t *pool)
-{
-  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
-}
-
-
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                  apr_pool_t *pool,
