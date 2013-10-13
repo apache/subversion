@@ -1018,6 +1018,24 @@ typedef struct svn_client_ctx_t
    *
    * @Since New in 1.9. */
   apr_off_t progress;
+
+  /** Open-tunnel callback
+   * If not @c null, this callback will be invoked to create an ra_svn
+   * connection that needs a tunnel, overriding any tunnel definitions
+   * in the client config file. This callback is used only for ra_svn
+   * and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel_func;
+
+  /** Close-tunnel callback
+   * If not @c null, this callback will be invoked when the pool that
+   * owns the connection created by the open_tunnel callback is
+   * cleared or destroyed. This callback is used only for ra_svn and
+   * ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_close_tunnel_func_t close_tunnel_func;
 } svn_client_ctx_t;
 
 /** Initialize a client context.
