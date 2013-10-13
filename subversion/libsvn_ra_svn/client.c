@@ -629,11 +629,12 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
         SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
       else
         {
-          void *tunnel_baton = NULL;
-          SVN_ERR(callbacks->open_tunnel(&conn, &tunnel_baton,
-                                         callbacks_baton,
-                                         tunnel_name, uri->user,
-                                         uri->hostname, uri->port,
+          void *tunnel_baton;
+          apr_file_t *request;
+          apr_file_t *response;
+          SVN_ERR(callbacks->open_tunnel(&request, &response, &tunnel_baton,
+                                         callbacks_baton, tunnel_name,
+                                         uri->user, uri->hostname, uri->port,
                                          pool));
           if (callbacks->close_tunnel)
             {
@@ -648,6 +649,11 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
               apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
                                         apr_pool_cleanup_null);
             }
+
+          conn = svn_ra_svn_create_conn3(NULL, response, request,
+                                         SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                                         0, 0, pool);
+          SVN_ERR(svn_ra_svn__skip_leading_garbage(conn, pool));
         }
     }
   else

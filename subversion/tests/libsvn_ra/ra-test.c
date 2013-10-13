@@ -25,13 +25,13 @@
 
 #include <apr_general.h>
 #include <apr_pools.h>
+#include <apr_file_io.h>
 
 #define SVN_DEPRECATED
 
 #include "svn_error.h"
 #include "svn_delta.h"
 #include "svn_ra.h"
-#include "svn_ra_svn.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
@@ -97,8 +97,8 @@ commit_changes(svn_ra_session_t *session,
 static int tunnel_open_count;
 
 static svn_error_t *
-open_tunnel(svn_ra_svn_conn_t **conn, void **tunnel_baton,
-            void *callbacks_baton,
+open_tunnel(apr_file_t **request, apr_file_t **response,
+            void **tunnel_baton, void *callbacks_baton,
             const char *tunnel_name, const char *user,
             const char *hostname, int port,
             apr_pool_t *pool)
@@ -144,10 +144,8 @@ open_tunnel(svn_ra_svn_conn_t **conn, void **tunnel_baton,
   apr_file_inherit_unset(proc->in);
   apr_file_inherit_unset(proc->out);
 
-  *conn = svn_ra_svn_create_conn3(NULL, proc->out, proc->in,
-                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                  0, 0, pool);
-
+  *request = proc->in;
+  *response = proc->out;
   *tunnel_baton = NULL;
   ++tunnel_open_count;
   return SVN_NO_ERROR;
