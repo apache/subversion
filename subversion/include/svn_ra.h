@@ -272,17 +272,14 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
 
 
 /**
- * Forward-declared ra_svn connection type.
- * @see svn_ra_svn.h
- */
-struct svn_ra_svn_conn_st;
-
-/**
  * Callback function for opening a tunnel in ra_svn.
  *
  * Given the @a tunnel_name, tunnel @a user and server @a hostname and
  * @a port, return a new ra_svn connection in @a conn. The returned
  * connection must be allocated from @a pool.
+ *
+ * @a request and @a response are the standard input and output,
+ * respectively, of the process on the other end of the tunnel.
  *
  * @a tunnel_baton will be passed on to the close-unnel callback.
  *
@@ -291,7 +288,7 @@ struct svn_ra_svn_conn_st;
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
-    struct svn_ra_svn_conn_st **conn,
+    apr_file_t **request, apr_file_t **response,
     void **tunnel_baton, void *open_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port,
