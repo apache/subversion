@@ -3216,16 +3216,9 @@ commit_body(void *baton, apr_pool_t *pool)
     {
       /* Write the final line. */
 
-      svn_stringbuf_t *trailer;
-      apr_off_t root_offset;
-      SVN_ERR(svn_fs_fs__item_offset(&root_offset,
-                                     cb->fs,
-                                     svn_fs_fs__id_rev(new_root_id),
-                                     NULL,
-                                     svn_fs_fs__id_item(new_root_id),
-                                     pool));
-      trailer = svn_fs_fs__unparse_revision_trailer
-                  (root_offset,
+      svn_stringbuf_t *trailer
+        = svn_fs_fs__unparse_revision_trailer
+                  ((apr_off_t)svn_fs_fs__id_item(new_root_id),
                    changed_path_offset,
                    pool);
       SVN_ERR(svn_io_file_write_full(proto_file, trailer->data, trailer->len,
