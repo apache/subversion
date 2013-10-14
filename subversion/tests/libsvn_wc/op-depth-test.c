@@ -8396,6 +8396,7 @@ move_abspath_more_than_once(const svn_test_opts_t *opts, apr_pool_t *pool)
       {2, "C/A/A",      "base-deleted", NO_COPY_FROM},
       {2, "C/A/A/A",    "base-deleted", NO_COPY_FROM},
 
+      {0},
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
@@ -8443,6 +8444,7 @@ move_abspath_more_than_once(const svn_test_opts_t *opts, apr_pool_t *pool)
       {2, "C/A/A",      "base-deleted", NO_COPY_FROM, "AAA_3"},
       {2, "C/A/A/A",    "base-deleted", NO_COPY_FROM},
 
+      {0},
     };
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
