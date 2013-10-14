@@ -1036,6 +1036,11 @@ typedef struct svn_client_ctx_t
    * @since New in 1.9.
    */
   svn_ra_close_tunnel_func_t close_tunnel_func;
+
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_client_ctx_t;
 
 /** Initialize a client context.

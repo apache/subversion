@@ -98,7 +98,7 @@ static int tunnel_open_count;
 
 static svn_error_t *
 open_tunnel(apr_file_t **request, apr_file_t **response,
-            void **tunnel_baton, void *callbacks_baton,
+            void **tunnel_context, void *tunnel_baton,
             const char *tunnel_name, const char *user,
             const char *hostname, int port,
             apr_pool_t *pool)
@@ -146,13 +146,12 @@ open_tunnel(apr_file_t **request, apr_file_t **response,
 
   *request = proc->in;
   *response = proc->out;
-  *tunnel_baton = NULL;
   ++tunnel_open_count;
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-close_tunnel(void *tunnel_baton, void *callbacks_baton,
+close_tunnel(void *tunnel_context, void *tunnel_baton,
              const char *tunnel_name, const char *user,
              const char *hostname, int port)
 {
@@ -242,8 +241,8 @@ tunel_callback_test(const svn_test_opts_t *opts,
 
   url = apr_pstrcat(pool, "svn+test://localhost/", tunnel_repos_name, NULL);
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
-  cbtable->open_tunnel = open_tunnel;
-  cbtable->close_tunnel = close_tunnel;
+  cbtable->open_tunnel_func = open_tunnel;
+  cbtable->close_tunnel_func = close_tunnel;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,
                                         "jrandom", "rayjandom",
