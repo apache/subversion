@@ -625,7 +625,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   if (tunnel_name)
     {
-      if (!callbacks->open_tunnel_func)
+      if (tunnel_argv)
         SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
       else
         {
@@ -799,7 +799,14 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
 
   parse_tunnel(url, &tunnel, pool);
 
-  if (tunnel && !callbacks->open_tunnel_func)
+  /* Use the default tunnel implementation if we got a tunnel name,
+     but either do not have tunnel handler callbacks installed, or
+     the handlers don't like the tunnel name. */
+  if (tunnel
+      && (!callbacks->open_tunnel_func
+          || (callbacks->check_tunnel_func && callbacks->open_tunnel_func
+              && !callbacks->check_tunnel_func(callbacks->tunnel_baton,
+                                               tunnel))))
     SVN_ERR(find_tunnel_agent(tunnel, uri.hostinfo, &tunnel_argv, config,
                               pool));
   else
