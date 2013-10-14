@@ -158,6 +158,7 @@ class JNIUtil
   static JNIMutex *g_configMutex;
 
  private:
+  static void wrappedHandleSVNError(svn_error_t *err);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
   /**
