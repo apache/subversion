@@ -134,12 +134,20 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1524869
-   JavaHL: Canonicalize path for streamFileContent method.
+ * r1530763, r1530768, r1530922, r1530872, r1531002, r1531938
+   Resolve issue #4436, reverting a move leaves some move data.
    Justification:
-      JavaHL is designed around us doing the canoicalization.
+      Reverting a move shouldn't break the wc.db state.
    Votes:
-     +1: breser, stefan2
+     +1: rhuijben
+
+ * r1532023
+   Resolve possible segfault in the win32 crash handler.
+   Justification:
+      The crash handler shouldn't crash, but report the original
+      crash.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -147,3 +155,10 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1524869
+   JavaHL: Canonicalize path for streamFileContent method.
+   Justification:
+      JavaHL is designed around us doing the canoicalization.
+   Votes:
+     +1: breser, stefan2
+     +0: rhuijben
