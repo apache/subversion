@@ -1141,7 +1141,7 @@ pack_range(pack_context_t *context,
     {
       apr_off_t offset = 0;
       apr_finfo_t finfo;
-      apr_file_t *rev_file;
+      svn_fs_fs__revision_file_t *rev_file;
 
       /* Get the size of the file. */
       const char *path = svn_dirent_join(context->shard_dir,
@@ -1149,10 +1149,8 @@ pack_range(pack_context_t *context,
                                                       revision),
                                          revpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, revpool));
-
-      SVN_ERR(svn_io_file_open(&rev_file, path,
-                               APR_READ | APR_BUFFERED | APR_BINARY,
-                               APR_OS_DEFAULT, revpool));
+      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, context->fs,
+                                               revision, revpool));
 
       /* store the indirect array index */
       APR_ARRAY_PUSH(context->rev_offsets, int) = context->reps->nelts;
@@ -1182,34 +1180,37 @@ pack_range(pack_context_t *context,
               offset = entry->offset;
               if (offset < finfo.size)
                 {
-                  SVN_ERR(svn_io_file_seek(rev_file, SEEK_SET, &offset,
+                  SVN_ERR(svn_io_file_seek(rev_file->file, SEEK_SET, &offset,
                                            iterpool));
 
                   if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->changes,
                                               context->changes_file,
-                                              rev_file, entry, iterpool));
+                                              rev_file->file, entry,
+                                              iterpool));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->file_props,
                                               context->file_props_file,
-                                              rev_file, entry, iterpool));
+                                              rev_file->file, entry,
+                                              iterpool));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->dir_props,
                                               context->dir_props_file,
-                                              rev_file, entry, iterpool));
+                                              rev_file->file, entry,
+                                              iterpool));
                   else if (   entry->type == SVN_FS_FS__ITEM_TYPE_FILE_REP
                            || entry->type == SVN_FS_FS__ITEM_TYPE_DIR_REP)
-                    SVN_ERR(copy_rep_to_temp(context, rev_file, entry,
+                    SVN_ERR(copy_rep_to_temp(context, rev_file->file, entry,
                                              iterpool));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
-                    SVN_ERR(copy_node_to_temp(context, rev_file, entry,
+                    SVN_ERR(copy_node_to_temp(context, rev_file->file, entry,
                                               iterpool));
                   else
                     SVN_ERR_ASSERT(entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED);
-                    
+
                   offset += entry->size;
                 }
             }
@@ -1265,7 +1266,7 @@ append_revision(pack_context_t *context,
 {
   apr_off_t offset = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_file_t *rev_file;
+  svn_fs_fs__revision_file_t *rev_file;
   apr_finfo_t finfo;
 
   /* Get the size of the file. */
@@ -1276,11 +1277,10 @@ append_revision(pack_context_t *context,
   SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, pool));
 
   /* Copy all the bits from the rev file to the end of the pack file. */
-  SVN_ERR(svn_io_file_open(&rev_file, path,
-                           APR_READ | APR_BUFFERED | APR_BINARY,
-                           APR_OS_DEFAULT, pool));
-  SVN_ERR(copy_file_data(context, context->pack_file, rev_file, finfo.size, 
-                         iterpool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, context->fs,
+                                           context->start_rev, pool));
+  SVN_ERR(copy_file_data(context, context->pack_file, rev_file->file,
+                         finfo.size, iterpool));
 
   /* mark the start of a new revision */
   SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision(context->proto_l2p_index,
@@ -1293,7 +1293,7 @@ append_revision(pack_context_t *context,
       /* read one cluster */
       int i;
       apr_array_header_t *entries;
-      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs,
+      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs, rev_file,
                                           context->start_rev, offset,
                                           iterpool));
 
