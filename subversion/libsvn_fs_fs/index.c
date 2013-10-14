@@ -707,6 +707,7 @@ static svn_error_t *
 auto_open_l2p_index(svn_fs_fs__packed_number_stream_t **stream,
                     svn_fs_t *fs,
                     svn_revnum_t revision,
+                    svn_boolean_t packed,
                     apr_pool_t *pool)
 {
   if (*stream == NULL)
@@ -714,7 +715,7 @@ auto_open_l2p_index(svn_fs_fs__packed_number_stream_t **stream,
       fs_fs_data_t *ffd = fs->fsap_data;
       SVN_ERR(packed_stream_open(stream,
                                  svn_fs_fs__path_l2p_index(fs, revision,
-                                                           pool),
+                                                           packed, pool),
                                  ffd->block_size,
                                  pool));
     }
@@ -745,7 +746,7 @@ get_l2p_header_body(l2p_header_t **header,
   key.revision = base_revision(fs, revision);
   key.second = svn_fs_fs__is_packed_rev(fs, revision);
 
-  SVN_ERR(auto_open_l2p_index(stream, fs, revision, pool));
+  SVN_ERR(auto_open_l2p_index(stream, fs, revision, key.second, pool));
   packed_stream_seek(*stream, 0);
 
   /* read the table sizes */
@@ -1041,7 +1042,9 @@ get_l2p_page(l2p_page_t **page,
   apr_uint64_t last_value = 0;
 
   /* open index file and select page */
-  SVN_ERR(auto_open_l2p_index(stream, fs, start_revision, pool));
+  SVN_ERR(auto_open_l2p_index(stream, fs, start_revision,
+                              svn_fs_fs__is_packed_rev(fs, start_revision),
+                              pool));
   packed_stream_seek(*stream, table_entry->offset);
 
   /* initialize the page content */
@@ -1722,7 +1725,7 @@ get_p2l_header(p2l_header_t **header,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                svn_fs_fs__path_p2l_index(fs, key.revision,
-                                                         pool),
+                                                         key.second, pool),
                                ffd->block_size, stream_pool));
   else
     packed_stream_seek(*stream, 0);
@@ -1942,6 +1945,7 @@ get_p2l_page(apr_array_header_t **entries,
              svn_fs_fs__packed_number_stream_t **stream,
              svn_fs_t *fs,
              svn_revnum_t start_revision,
+             svn_boolean_t packed,
              apr_off_t start_offset,
              apr_off_t next_offset,
              apr_off_t page_start,
@@ -1962,7 +1966,7 @@ get_p2l_page(apr_array_header_t **entries,
   if (*stream == NULL)
     SVN_ERR(packed_stream_open(stream,
                                svn_fs_fs__path_p2l_index(fs, start_revision,
-                                                         pool),
+                                                         packed, pool),
                                ffd->block_size, stream_pool));
   packed_stream_seek(*stream, start_offset);
 
@@ -2060,6 +2064,7 @@ prefetch_p2l_page(svn_boolean_t *end,
   SVN_ERR(get_p2l_page(&page, stream, fs,
                        baton->first_revision,
                        baton->start_offset,
+                       key.is_packed,
                        baton->next_offset,
                        baton->page_start,
                        baton->page_size,
@@ -2178,6 +2183,7 @@ p2l_index_lookup(apr_array_header_t **entries,
       SVN_ERR(get_p2l_page(entries, stream, fs,
                            page_info.first_revision,
                            page_info.start_offset,
+                           key.is_packed,
                            page_info.next_offset,
                            page_info.page_start,
                            page_info.page_size, pool, pool));

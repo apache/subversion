@@ -131,22 +131,39 @@ svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                               apr_psprintf(pool, "%ld", rev), NULL);
 }
 
+/* Set *PATH to the path of REV in FS with PACKED selecting whether the
+   (potential) pack file or single revision file name is returned.
+   Allocate *PATH in POOL.
+*/
+static const char *
+path_rev_absolute_internal(svn_fs_t *fs,
+                           svn_revnum_t rev,
+                           svn_boolean_t packed,
+                           apr_pool_t *pool)
+{
+  return packed
+       ? svn_fs_fs__path_rev_packed(fs, rev, PATH_PACKED, pool)
+       : svn_fs_fs__path_rev(fs, rev, pool);
+}
+
 const char *
 svn_fs_fs__path_l2p_index(svn_fs_t *fs,
                           svn_revnum_t rev,
+                          svn_boolean_t packed,
                           apr_pool_t *pool)
 {
   return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
-                      svn_fs_fs__path_rev_absolute(fs, rev, pool));
+                      path_rev_absolute_internal(fs, rev, packed, pool));
 }
 
 const char *
 svn_fs_fs__path_p2l_index(svn_fs_t *fs,
                           svn_revnum_t rev,
+                          svn_boolean_t packed,
                           apr_pool_t *pool)
 {
   return apr_psprintf(pool, "%s" PATH_EXT_P2L_INDEX,
-                      svn_fs_fs__path_rev_absolute(fs, rev, pool));
+                      path_rev_absolute_internal(fs, rev, packed, pool));
 }
 
 const char *
@@ -155,11 +172,10 @@ svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t is_packed = ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT
+                         && svn_fs_fs__is_packed_rev(fs, rev);
 
-  return (   ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
-          || ! svn_fs_fs__is_packed_rev(fs, rev))
-       ? svn_fs_fs__path_rev(fs, rev, pool)
-       : svn_fs_fs__path_rev_packed(fs, rev, PATH_PACKED, pool);
+  return path_rev_absolute_internal(fs, rev, is_packed, pool);
 }
 
 const char *
