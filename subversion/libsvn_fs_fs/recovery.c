@@ -54,7 +54,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   while (1)
     {
       svn_error_t *err;
-      apr_file_t *file;
+      svn_fs_fs__revision_file_t *file;
 
       err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool);
       svn_pool_clear(iterpool);
@@ -78,7 +78,7 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
     {
       svn_revnum_t probe = left + ((right - left) / 2);
       svn_error_t *err;
-      apr_file_t *file;
+      svn_fs_fs__revision_file_t *file;
 
       err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool);
       svn_pool_clear(iterpool);
@@ -147,7 +147,7 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
 static svn_error_t *
 recover_find_max_ids(svn_fs_t *fs,
                      svn_revnum_t rev,
-                     apr_file_t *rev_file,
+                     svn_fs_fs__revision_file_t *rev_file,
                      apr_off_t offset,
                      apr_uint64_t *max_node_id,
                      apr_uint64_t *max_copy_id,
@@ -161,8 +161,8 @@ recover_find_max_ids(svn_fs_t *fs,
   apr_pool_t *iterpool;
   node_revision_t *noderev;
 
-  baton.stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  baton.stream = rev_file->stream;
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, baton.stream, pool));
 
   /* Check that this is a directory.  It should be. */
@@ -185,7 +185,7 @@ recover_find_max_ids(svn_fs_t *fs,
      rely on directory entries being stored as PLAIN reps, though. */
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, NULL,
                                  noderev->data_rep->item_index, pool));
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
   SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
   if (header->type != svn_fs_fs__rep_plain)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -286,7 +286,7 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t root_offset;
-  apr_file_t *rev_file;
+  svn_fs_fs__revision_file_t *rev_file;
   svn_fs_id_t *root_id;
 
   /* call this function for old repo formats only */
@@ -302,7 +302,7 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
                                max_node_id, max_copy_id, pool));
-  SVN_ERR(svn_io_file_close(rev_file, pool));
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
   return SVN_NO_ERROR;
 }

@@ -483,13 +483,13 @@ compare_p2l_to_rev(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_off_t max_offset;
   apr_off_t offset = 0;
-  apr_file_t *file;
+  svn_fs_fs__revision_file_t *rev_file;
 
   /* open the pack / rev file that is covered by the p2l index */
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&file, fs, start, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, start, pool));
 
   /* check file size vs. range covered by index */
-  SVN_ERR(svn_io_file_seek(file, APR_END, &offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &offset, pool));
   SVN_ERR(svn_fs_fs__p2l_get_max_offset(&max_offset, fs, start, pool));
 
   if (offset != max_offset)
@@ -499,7 +499,8 @@ compare_p2l_to_rev(svn_fs_t *fs,
                              apr_off_t_toa(pool, offset), start,
                              apr_off_t_toa(pool, max_offset));
 
-  SVN_ERR(svn_io_file_aligned_seek(file, ffd->block_size, NULL, 0, pool));
+  SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size, NULL, 0,
+                                   pool));
 
   /* for all offsets in the file, get the P2L index entries and check
      them against the L2P index */
@@ -542,14 +543,16 @@ compare_p2l_to_rev(svn_fs_t *fs,
             {
               /* skip filler entry at the end of the p2l index */
               if (entry->offset != max_offset)
-                SVN_ERR(read_all_nul(file, entry->size, pool));
+                SVN_ERR(read_all_nul(rev_file->file, entry->size, pool));
             }
           else if (entry->fnv1_checksum)
             {
               if (entry->size < STREAM_THRESHOLD)
-                SVN_ERR(expected_buffered_checksum(file, entry, pool));
+                SVN_ERR(expected_buffered_checksum(rev_file->file, entry,
+                                                   pool));
               else
-                SVN_ERR(expected_streamed_checksum(file, entry, pool));
+                SVN_ERR(expected_streamed_checksum(rev_file->file, entry,
+                                                   pool));
             }
 
           /* advance offset */

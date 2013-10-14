@@ -24,6 +24,7 @@
 #define SVN_LIBSVN_FS__INDEX_H
 
 #include "fs.h"
+#include "rev_file.h"
 
 /* Per-defined item index values.  They are used to identify empty or
  * mandatory items.
@@ -68,6 +69,10 @@ typedef struct svn_fs_fs__p2l_entry_t
   /* item in that block */
   svn_fs_fs__id_part_t item;
 } svn_fs_fs__p2l_entry_t;
+
+/* Close the index file STREAM and underlying file handle. */
+svn_error_t *
+svn_fs_fs__packed_stream_close(svn_fs_fs__packed_number_stream_t *stream);
 
 /* Open / create a log-to-phys index file with the full file path name
  * FILE_NAME.  Return the open file in *PROTO_INDEX and use POOL for
