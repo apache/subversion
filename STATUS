@@ -134,7 +134,7 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1530763, r1530768, r1530922, r1530872, r1531002, r1531938
+ * r1530763, r1530768, r1530922, r1530872, r1531002, r1531004, r1531938, r1532098
    Resolve issue #4436, reverting a move leaves some move data.
    Justification:
       Reverting a move shouldn't break the wc.db state.
