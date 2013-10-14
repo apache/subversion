@@ -281,15 +281,15 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
  * @a request and @a response are the standard input and output,
  * respectively, of the process on the other end of the tunnel.
  *
- * @a tunnel_baton will be passed on to the close-unnel callback.
+ * @a tunnel_context will be passed on to the close-unnel callback.
  *
- * @a open_baton is the baton as originally passed to ra_open.
+ * @a tunnel_baton is the baton as originally passed to ra_open.
  *
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
     apr_file_t **request, apr_file_t **response,
-    void **tunnel_baton, void *open_baton,
+    void **tunnel_context, void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port,
     apr_pool_t *pool);
@@ -309,7 +309,7 @@ typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_close_tunnel_func_t)(
-    void *tunnel_baton, void *open_baton,
+    void *tunnel_context, void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port);
 
@@ -588,7 +588,7 @@ typedef struct svn_ra_callbacks2_t
    * and ignored by the other RA modules.
    * @since New in 1.9.
    */
-  svn_ra_open_tunnel_func_t open_tunnel;
+  svn_ra_open_tunnel_func_t open_tunnel_func;
 
   /** Close-tunnel callback
    * If not @c null, this callback will be invoked when the pool that
@@ -597,8 +597,12 @@ typedef struct svn_ra_callbacks2_t
    * ignored by the other RA modules.
    * @since New in 1.9.
    */
-  svn_ra_close_tunnel_func_t close_tunnel;
+  svn_ra_close_tunnel_func_t close_tunnel_func;
 
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
