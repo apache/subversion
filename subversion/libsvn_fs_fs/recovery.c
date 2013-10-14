@@ -183,7 +183,7 @@ recover_find_max_ids(svn_fs_t *fs,
 
   /* We could use get_dir_contents(), but this is much cheaper.  It does
      rely on directory entries being stored as PLAIN reps, though. */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, NULL,
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rev, NULL,
                                  noderev->data_rep->item_index, pool));
   SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &offset, pool));
   SVN_ERR(svn_fs_fs__read_rep_header(&header, baton.stream, pool));
@@ -263,11 +263,8 @@ recover_find_max_ids(svn_fs_t *fs,
       if (kind == svn_node_file)
         continue;
 
-      SVN_ERR(svn_fs_fs__item_offset(&child_dir_offset,
-                                     fs,
-                                     rev_item->revision,
-                                     NULL,
-                                     rev_item->number,
+      SVN_ERR(svn_fs_fs__item_offset(&child_dir_offset, fs,
+                                     rev_file, rev, NULL, rev_item->number,
                                      iterpool));
       SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
                                    max_node_id, max_copy_id, iterpool));
@@ -293,11 +290,8 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs,
   SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
 
   SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, youngest, pool));
-  SVN_ERR(svn_fs_fs__item_offset(&root_offset, fs,
-                                 svn_fs_fs__id_rev(root_id),
-                                 NULL,
-                                 svn_fs_fs__id_item(root_id),
-                                 pool));
+  SVN_ERR(svn_fs_fs__item_offset(&root_offset, fs, rev_file, youngest, NULL,
+                                 svn_fs_fs__id_item(root_id), pool));
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,

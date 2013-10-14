@@ -1441,6 +1441,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_fs_t *fs,
+                       svn_fs_fs__revision_file_t *rev_file,
                        svn_revnum_t revision,
                        const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
@@ -2215,6 +2216,7 @@ p2l_index_lookup(apr_array_header_t **entries,
 svn_error_t *
 svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                             svn_fs_t *fs,
+                            svn_fs_fs__revision_file_t *rev_file,
                             svn_revnum_t revision,
                             apr_off_t offset,
                             apr_pool_t *pool)
@@ -2345,6 +2347,7 @@ p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
 svn_error_t *
 svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
                             svn_fs_t *fs,
+                            svn_fs_fs__revision_file_t *rev_file,
                             svn_revnum_t revision,
                             apr_off_t offset,
                             apr_pool_t *pool)
@@ -2380,6 +2383,7 @@ p2l_get_max_offset_func(void **out,
 svn_error_t *
 svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
                               svn_fs_t *fs,
+                              svn_fs_fs__revision_file_t *rev_file,
                               svn_revnum_t revision,
                               apr_pool_t *pool)
 {

@@ -209,7 +209,9 @@ open_and_seek_revision(svn_fs_fs__revision_file_t **file,
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, rev, pool));
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev, NULL, item, pool));
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, rev, NULL, item,
+                                 pool));
+
   SVN_ERR(aligned_seek(fs, rev_file->file, NULL, offset, pool));
 
   *file = rev_file;
@@ -230,7 +232,7 @@ open_and_seek_transaction(svn_fs_fs__revision_file_t **file,
 
   SVN_ERR(svn_fs_fs__open_proto_rev_file(file, fs, &rep->txn_id, pool));
 
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, SVN_INVALID_REVNUM,
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, NULL, SVN_INVALID_REVNUM,
                                  &rep->txn_id, rep->item_index, pool));
   SVN_ERR(aligned_seek(fs, (*file)->file, NULL, offset, pool));
 
@@ -643,7 +645,7 @@ auto_set_start_offset(rep_state_t *rs, apr_pool_t *pool)
   if (rs->start == -1)
     {
       SVN_ERR(svn_fs_fs__item_offset(&rs->start, rs->sfile->fs,
-                                     rs->revision, NULL,
+                                     rs->sfile->rfile, rs->revision, NULL,
                                      rs->item_index, pool));
       rs->start += rs->header_size;
     }
@@ -758,7 +760,7 @@ create_rep_state_body(rep_state_t **rep_state,
            */
           rs->sfile = *shared_file;
           SVN_ERR(auto_open_shared_file(rs->sfile));
-          SVN_ERR(svn_fs_fs__item_offset(&offset, fs,
+          SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rs->sfile->rfile,
                                          rep->revision, NULL, rep->item_index,
                                          pool));
           SVN_ERR(rs_aligned_seek(rs, NULL, offset, pool));
@@ -856,13 +858,30 @@ svn_fs_fs__check_rep(representation_t *rep,
 {
   if (svn_fs_fs__use_log_addressing(fs, rep->revision))
     {
+      svn_error_t *err;
       apr_off_t offset;
       svn_fs_fs__p2l_entry_t *entry;
+      svn_boolean_t is_packed;
 
-      SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rep->revision, NULL,
-                                     rep->item_index, pool));
-      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rep->revision,
-                                          offset, pool));
+      svn_fs_fs__revision_file_t rev_file;
+      svn_fs_fs__init_revision_file(&rev_file, fs, rep->revision, pool);
+      SVN_ERR(svn_fs_fs__item_offset(&offset, fs, &rev_file, rep->revision,
+                                     NULL, rep->item_index, pool));
+
+      is_packed = rev_file.is_packed;
+      err = svn_fs_fs__p2l_entry_lookup(&entry, fs, &rev_file, rep->revision,
+                                        offset, pool);
+
+      /* retry if the packing state has changed */
+      if (is_packed != rev_file.is_packed)
+        {
+          svn_error_clear(err);
+          return svn_error_trace(svn_fs_fs__check_rep(rep, fs, hint, pool));
+        }
+      else
+        {
+          SVN_ERR(err);
+        }
 
       if (   entry == NULL
           || entry->type < SVN_FS_FS__ITEM_TYPE_FILE_REP
@@ -2565,8 +2584,8 @@ block_read(void **result,
   
   /* index lookup: find the OFFSET of the item we *must* read plus (in the
    * "do-while" block) the list of items in the same block. */
-  SVN_ERR(svn_fs_fs__item_offset(&wanted_offset, fs, revision, NULL,
-                                 item_index, iterpool));
+  SVN_ERR(svn_fs_fs__item_offset(&wanted_offset, fs, revision_file,
+                                 revision, NULL, item_index, iterpool));
 
   offset = wanted_offset;
 
@@ -2580,8 +2599,24 @@ block_read(void **result,
    */
   do
     {
-      SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, revision, offset,
-                                          scratch_pool));
+      /* fetch list of items in the block surrounding OFFSET */
+      svn_error_t *err
+        = svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
+                                      revision, offset, scratch_pool);
+
+      /* if the revision got packed in the meantime and we still need need
+       * to actually read some item, we retry the whole process */
+      if (err &&
+          revision_file->is_packed != svn_fs_fs__is_packed_rev(fs, revision))
+        {
+          if (result && !*result)
+            SVN_ERR(block_read(result, fs, revision, item_index,
+                                revision_file, result_pool, scratch_pool));
+
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(err);
       SVN_ERR(aligned_seek(fs, revision_file->file, &block_start, offset,
                            iterpool));
 

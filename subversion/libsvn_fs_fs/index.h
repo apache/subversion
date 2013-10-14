@@ -151,7 +151,9 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
 /* Use the phys-to-log mapping files in FS to build a list of entries
  * that (partly) share in the same cluster as the item at global OFFSET
  * in the rep file containing REVISION.  Return the array in *ENTRIES,
- * elements being of type svn_fs_fs__p2l_entry_t.
+ * elements being of type svn_fs_fs__p2l_entry_t.  REV_FILE determines
+ * whether to access single rev or pack file data.  If that is not
+ * available anymore (neither in cache nor on disk), return an error.
  * Use POOL for allocations.
  *
  * Note that (only) the first and the last mapping may cross a cluster
@@ -160,6 +162,7 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
 svn_error_t *
 svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
                             svn_fs_t *fs,
+                            svn_fs_fs__revision_file_t *rev_file,
                             svn_revnum_t revision,
                             apr_off_t offset,
                             apr_pool_t *pool);
@@ -167,23 +170,33 @@ svn_fs_fs__p2l_index_lookup(apr_array_header_t **entries,
 /* Use the phys-to-log mapping files in FS to return the entry for the
  * item starting at global OFFSET in the rep file containing REVISION in
  * *ENTRY.  Sets *ENTRY to NULL if no item starts at exactly that offset.
- * Use POOL for allocations.
+ * REV_FILE determines whether to access single rev or pack file data.
+ * If that is not available anymore (neither in cache nor on disk),
+ * return an error.  Use POOL for allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry,
                             svn_fs_t *fs,
+                            svn_fs_fs__revision_file_t *rev_file,
                             svn_revnum_t revision,
                             apr_off_t offset,
                             apr_pool_t *pool);
 
 /* For ITEM_INDEX within REV in FS, return the position in the respective
-   rev or pack file in *ABSOLUTE_POSITION.  If TXN_ID is not NULL, return
-   the file offset within that transaction and REV should be given as
-   SVN_INVALID_REVNUM in that case.  Use POOL for allocations.
+ * rev or pack file in *ABSOLUTE_POSITION.  If TXN_ID is not NULL, return
+ * the file offset within that transaction and REV should be given as
+ * SVN_INVALID_REVNUM in that case.
+ *
+ * REV_FILE determines whether to access single rev or pack file data.
+ * If that is not available anymore (neither in cache nor on disk), re-open
+ * the rev / pack file and retry to open the index file.  For anything but
+ * committed log addressed revisions, REV_FILE may be NULL.
+ * Use POOL for allocations.
  */
 svn_error_t *
 svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        svn_fs_t *fs,
+                       svn_fs_fs__revision_file_t *rev_file,
                        svn_revnum_t revision,
                        const svn_fs_fs__id_part_t *txn_id,
                        apr_uint64_t item_index,
@@ -201,12 +214,16 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
                            apr_size_t count,
                            apr_pool_t *pool);
 
-/* In *OFFSET, return the first OFFSET in the pack / rev file containing.
+/* In *OFFSET, return the last OFFSET in the pack / rev file containing.
+ * REV_FILE determines whether to access single rev or pack file data.
+ * If that is not available anymore (neither in cache nor on disk), re-open
+ * the rev / pack file and retry to open the index file.
  * Use POOL for allocations.
  */
 svn_error_t *
 svn_fs_fs__p2l_get_max_offset(apr_off_t *offset,
                               svn_fs_t *fs,
+                              svn_fs_fs__revision_file_t *rev_file,
                               svn_revnum_t revision,
                               apr_pool_t *pool);
 

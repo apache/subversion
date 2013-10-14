@@ -1163,7 +1163,7 @@ pack_range(pack_context_t *context,
           int i;
           apr_array_header_t *entries;
           SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs,
-                                              revision, offset,
+                                              rev_file, revision, offset,
                                               iterpool));
 
           for (i = 0; i < entries->nelts; ++i)
