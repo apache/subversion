@@ -613,58 +613,6 @@ svn_fs_fs__move_into_place(const char *old_filename,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
-                                 svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  svn_error_t *err;
-  svn_boolean_t retry = FALSE;
-
-  do
-    {
-      const char *path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
-
-      /* open the revision file in buffered r/o mode */
-      err = svn_io_file_open(file, path,
-                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-            {
-              /* Could not open the file. This may happen if the
-               * file once existed but got packed later. */
-              svn_error_clear(err);
-
-              /* if that was our 2nd attempt, leave it at that. */
-              if (retry)
-                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                         _("No such revision %ld"), rev);
-
-              /* We failed for the first time. Refresh cache & retry. */
-              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
-
-              retry = TRUE;
-            }
-          else
-            {
-              svn_error_clear(err);
-              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                       _("No such revision %ld"), rev);
-            }
-        }
-      else
-        {
-          retry = FALSE;
-        }
-    }
-  while (retry);
-
-  return svn_error_trace(err);
-}
-
 svn_boolean_t
 svn_fs_fs__use_log_addressing(svn_fs_t *fs,
                               svn_revnum_t rev)

@@ -378,23 +378,6 @@ svn_fs_fs__move_into_place(const char *old_filename,
                            const char *perms_reference,
                            apr_pool_t *pool);
 
-/* Open the correct revision file for REV.  If the filesystem FS has
-   been packed, *FILE will be set to the packed file; otherwise, set *FILE
-   to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
-   file doesn't exist.
-
-   TODO: Consider returning an indication of whether this is a packed rev
-         file, so the caller need not rely on is_packed_rev() which in turn
-         relies on the cached FFD->min_unpacked_rev value not having changed
-         since the rev file was opened.
-
-   Use POOL for allocations. */
-svn_error_t *
-svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
-                                 svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *pool);
-
 /* Return TRUE, iff revision REV in FS requires logical addressing. */
 svn_boolean_t
 svn_fs_fs__use_log_addressing(svn_fs_t *fs,
