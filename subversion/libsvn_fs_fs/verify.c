@@ -621,21 +621,37 @@ verify_index_consistency(svn_fs_t *fs,
 
   for (revision = start; revision <= end; revision = pack_end)
     {
+      svn_error_t *err = SVN_NO_ERROR;
+
+      svn_revnum_t count = pack_size(fs, revision);
       pack_start = packed_base_rev(fs, revision);
-      pack_end = pack_start + pack_size(fs, revision);
+      pack_end = pack_start + count;
 
       if (notify_func && (pack_start % ffd->max_files_per_dir == 0))
         notify_func(pack_start, notify_baton, iterpool);
 
       /* two-way index check */
-      SVN_ERR(compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,
-                                       cancel_func, cancel_baton, iterpool));
-      SVN_ERR(compare_p2l_to_l2p_index(fs, pack_start, pack_end - pack_start,
-                                       cancel_func, cancel_baton, iterpool));
+      err = compare_l2p_to_p2l_index(fs, pack_start, pack_end - pack_start,
+                                     cancel_func, cancel_baton, iterpool);
+      if (!err)
+        err = compare_p2l_to_l2p_index(fs, pack_start, pack_end - pack_start,
+                                       cancel_func, cancel_baton, iterpool);
 
       /* verify in-index checksums and types vs. actual rev / pack files */
-      SVN_ERR(compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
-                                 cancel_func, cancel_baton, iterpool));
+      if (!err)
+        err = compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
+                                 cancel_func, cancel_baton, iterpool);
+
+      /* retry the whole shard if it got packed in the meantime */
+      if (err && count != pack_size(fs, revision))
+        {
+          svn_error_clear(err);
+          pack_end = pack_start;
+        }
+      else
+        {
+          SVN_ERR(err);
+        }
 
       svn_pool_clear(iterpool);
     }
