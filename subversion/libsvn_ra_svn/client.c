@@ -634,7 +634,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
           apr_file_t *response;
           SVN_ERR(callbacks->open_tunnel_func(
                       &request, &response, &tunnel_context,
-                      callbacks_baton, tunnel_name,
+                      callbacks->tunnel_baton, tunnel_name,
                       uri->user, uri->hostname, uri->port,
                       pool));
           if (callbacks->close_tunnel_func)
