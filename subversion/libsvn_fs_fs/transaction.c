@@ -3294,11 +3294,11 @@ commit_body(void *baton, apr_pool_t *pool)
       /* Convert the index files from the proto format into their form
          in their final location */
       SVN_ERR(svn_fs_fs__l2p_index_create(cb->fs,
-                      svn_fs_fs__path_l2p_index(cb->fs, new_rev, pool),
+                      svn_fs_fs__path_l2p_index(cb->fs, new_rev, FALSE, pool),
                       svn_fs_fs__path_l2p_proto_index(cb->fs, txn_id, pool),
                       new_rev, pool));
       SVN_ERR(svn_fs_fs__p2l_index_create(cb->fs,
-                      svn_fs_fs__path_p2l_index(cb->fs, new_rev, pool),
+                      svn_fs_fs__path_p2l_index(cb->fs, new_rev, FALSE, pool),
                       svn_fs_fs__path_p2l_proto_index(cb->fs, txn_id, pool),
                       new_rev, pool));
     }

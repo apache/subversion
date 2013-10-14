@@ -1119,7 +1119,7 @@ write_revision_zero(svn_fs_t *fs)
 
   if (svn_fs_fs__use_log_addressing(fs, 0))
     {
-      const char *path = svn_fs_fs__path_l2p_index(fs, 0, fs->pool);
+      const char *path = svn_fs_fs__path_l2p_index(fs, 0, FALSE, fs->pool);
       SVN_ERR(svn_io_file_create_binary
                  (path,
                   "\0\x80\x40"       /* rev 0, 8k entries per page */
@@ -1130,7 +1130,7 @@ write_revision_zero(svn_fs_t *fs)
                   fs->pool));
       SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
 
-      path = svn_fs_fs__path_p2l_index(fs, 0, fs->pool);
+      path = svn_fs_fs__path_p2l_index(fs, 0, FALSE, fs->pool);
       SVN_ERR(svn_io_file_create_binary
                  (path,
                   "\0\x6b"              /* start rev, rev file size */
