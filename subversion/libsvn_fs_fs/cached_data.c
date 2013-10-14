@@ -2610,8 +2610,12 @@ block_read(void **result,
           revision_file->is_packed != svn_fs_fs__is_packed_rev(fs, revision))
         {
           if (result && !*result)
-            SVN_ERR(block_read(result, fs, revision, item_index,
-                                revision_file, result_pool, scratch_pool));
+            {
+              SVN_ERR(svn_fs_fs__reopen_revision_file(revision_file, fs, 
+                                                      revision));
+              SVN_ERR(block_read(result, fs, revision, item_index,
+                                  revision_file, result_pool, scratch_pool));
+            }
 
           return SVN_NO_ERROR;
         }
