@@ -275,6 +275,21 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
 }
 
 JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setTunnelAgent
+(JNIEnv *env, jobject jthis, jobject jtunnelcb)
+{
+  JNIEntry(SVNClient, setPrompt);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setTunnelCallback(jtunnelcb);
+}
+
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,

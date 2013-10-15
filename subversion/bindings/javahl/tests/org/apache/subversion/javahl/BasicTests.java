@@ -33,6 +33,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Arrays;
@@ -3774,6 +3777,106 @@ public class BasicTests extends SVNTests
         assertEquals(2, ranges.getRanges().size());
         assertEquals(1, eraser.getRanges().size());
         assertEquals(1, result.size());
+    }
+
+    private class Tunnel extends Thread implements TunnelAgent
+    {
+        public boolean checkTunnel(String name)
+        {
+            return name.equals("test");
+        }
+
+        public void openTunnel(ReadableByteChannel request,
+                               WritableByteChannel response,
+                               String name, String user,
+                               String hostname, int port)
+        {
+            this.request = request;
+            this.response = response;
+            start();
+        }
+
+        public void closeTunnel(String name, String user,
+                                String hostname, int port)
+            throws Throwable
+        {
+            request.close();
+            join();
+            response.close();
+        }
+
+        private ReadableByteChannel request;
+        private WritableByteChannel response;
+
+        public void run()
+        {
+
+            int index = 0;
+            byte[] raw_data = new byte[1024];
+            ByteBuffer data = ByteBuffer.wrap(raw_data);
+            while(index < commands.length && request.isOpen()) {
+                try {
+                    byte[] command = commands[index++];
+                    response.write(ByteBuffer.wrap(command));
+                } catch (IOException ex) {
+                    break;
+                }
+
+                try {
+                    data.clear();
+                    request.read(data);
+                } catch (Throwable ex) {}
+            }
+
+            try {
+                response.close();
+                request.close();
+            } catch (Throwable t) {}
+        }
+
+        private final byte[][] commands = new byte[][]{
+            // Initial capabilities negotiation
+            ("( success ( 2 2 ( ) " +
+             "( edit-pipeline svndiff1 absent-entries commit-revprops " +
+             "depth log-revprops atomic-revprops partial-replay " +
+             "inherited-props ephemeral-txnprops file-revs-reverse " +
+             ") ) ) ").getBytes(),
+
+            // Response for successful connection
+            ("( success ( ( ANONYMOUS EXTERNAL ) " +
+             "36:e3c8c113-03ba-4ec5-a8e6-8fc555e57b91 ) ) ").getBytes(),
+
+            // Response to authentication request
+            ("( success ( ) ) ( success ( " +
+             "36:e3c8c113-03ba-4ec5-a8e6-8fc555e57b91 " +
+             "24:svn+test://localhost/foo ( mergeinfo ) ) ) ").getBytes(),
+
+            // Response to revprop request
+            ("( success ( ( ) 0: ) ) ( success ( ( 4:fake ) ) ) ").getBytes()
+        };
+    }
+
+    /**
+     * Test tunnel handling.
+     */
+    public void testTunnelAgent() throws Throwable
+    {
+        byte[] revprop;
+        SVNClient cl = new SVNClient();
+        try {
+            cl.notification2(new MyNotifier());
+            cl.setPrompt(new DefaultPromptUserPassword());
+            cl.username(USERNAME);
+            cl.setProgressCallback(new DefaultProgressListener());
+            cl.setConfigDirectory(conf.getAbsolutePath());
+
+            cl.setTunnelAgent(new Tunnel());
+            revprop = cl.revProperty("svn+test://localhost/foo", "svn:log",
+                                     Revision.getInstance(0L));
+        } finally {
+            cl.dispose();
+        }
+        assertEquals("fake", new String(revprop));
     }
 
     /**

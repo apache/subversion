@@ -19,32 +19,37 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file RemoteSessionContext.h
- * @brief Interface of the class RemoteSessionContext
  */
 
-#ifndef JAVAHL_REMOTE_SESSION_CONTEXT_H
-#define JAVAHL_REMOTE_SESSION_CONTEXT_H
+package org.apache.subversion.javahl.util;
 
-#include "svn_ra.h"
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 
-#include "OperationContext.h"
+/* The following channel subclasses are used by the native
+   implementation of the tunnel management code. */
 
-class RemoteSessionContext : public OperationContext
+abstract class TunnelChannel implements Channel
 {
-  public:
-    RemoteSessionContext(SVN::Pool &pool,
-                         const char* jconfigDirectory,
-                         const char* jusername, const char* jpassword,
-                         Prompter* prompter, jobject jtunnelcb);
-    virtual ~RemoteSessionContext();
-    void activate(jobject jremoteSession, jobject jprogress);
-    void * getCallbackBaton();
-    svn_ra_callbacks2_t* getCallbacks();
+    protected TunnelChannel(long nativeChannel)
+    {
+        this.nativeChannel = nativeChannel;
+    }
 
-  private:
-    svn_ra_callbacks2_t* m_raCallbacks;
-};
+    public boolean isOpen()
+    {
+        return (nativeChannel != 0);
+    }
 
-#endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */
+    public void close() throws IOException
+    {
+        nativeClose(nativeChannel);
+        nativeChannel = 0;
+    }
+
+    private native static void nativeClose(long nativeChannel)
+        throws IOException;
+
+    protected long nativeChannel;
+}

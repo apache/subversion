@@ -19,32 +19,31 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file RemoteSessionContext.h
- * @brief Interface of the class RemoteSessionContext
  */
 
-#ifndef JAVAHL_REMOTE_SESSION_CONTEXT_H
-#define JAVAHL_REMOTE_SESSION_CONTEXT_H
+package org.apache.subversion.javahl.util;
 
-#include "svn_ra.h"
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 
-#include "OperationContext.h"
+/* The following channel subclasses are used by the native
+   implementation of the tunnel management code. */
 
-class RemoteSessionContext : public OperationContext
+class RequestChannel
+    extends TunnelChannel
+    implements ReadableByteChannel
 {
-  public:
-    RemoteSessionContext(SVN::Pool &pool,
-                         const char* jconfigDirectory,
-                         const char* jusername, const char* jpassword,
-                         Prompter* prompter, jobject jtunnelcb);
-    virtual ~RemoteSessionContext();
-    void activate(jobject jremoteSession, jobject jprogress);
-    void * getCallbackBaton();
-    svn_ra_callbacks2_t* getCallbacks();
+    private RequestChannel(long nativeChannel)
+    {
+        super(nativeChannel);
+    }
 
-  private:
-    svn_ra_callbacks2_t* m_raCallbacks;
-};
+    public int read(ByteBuffer dst) throws IOException
+    {
+        return nativeRead(nativeChannel, dst);
+    }
 
-#endif /* JAVAHL_REMOTE_SESSION_CONTEXT_H */
+    private static native int nativeRead(long nativeChannel, ByteBuffer dst)
+        throws IOException;
+}
