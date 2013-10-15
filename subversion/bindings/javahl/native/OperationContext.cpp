@@ -28,6 +28,7 @@
 
 #include "svn_client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_dep_compat.h"
 #include "svn_private_config.h"
 
 #include "GlobalConfig.h"
@@ -476,11 +477,21 @@ public:
       response_in(NULL),
       response_out(NULL)
     {
+#if APR_VERSION_AT_LEAST(1, 3, 0)
       status = apr_file_pipe_create_ex(&request_in, &request_out,
                                        APR_FULL_BLOCK, pool);
       if (!status)
         status = apr_file_pipe_create_ex(&response_in, &response_out,
                                          APR_FULL_BLOCK, pool);
+#else
+      // XXX APR compatibility note:
+      // Versions of APR before 1.3 do not have the extended pipe
+      // API. Just create a default pipe and just hope that it returns
+      // a blocking handle.
+      status = apr_file_pipe_create(&request_in, &request_out, pool);
+      if (!status)
+        status = apr_file_pipe_create(&response_in, &response_out, pool);
+#endif
     }
 
   apr_file_t *request_in;
