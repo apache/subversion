@@ -463,47 +463,6 @@ svn_root_pools__release_pool(apr_pool_t *pool,
 
 /** @} */
 
-/**
- * @defgroup svn_config_pool Configuration object pool API
- * @{
- */
-
-/* Opaque thread-safe factory and container for configuration objects.
- *
- * Instances handed out are read-only and may be given to multiple callers
- * from multiple threads.  Configuration objects no longer referenced by
- * any user may linger for a while before being cleaned up.
- */
-typedef struct svn_config_pool__t svn_config_pool__t;
-
-/* Create a new configuration pool object with a minim lifetime determined
- * by POOL and return it in *CONFIG_POOL.  References to any configuration
- * in the *CONFIG_POOL will keep the latter alive beyond POOL cleanup.
- */
-svn_error_t *
-svn_config_pool__create(svn_config_pool__t **config_pool,
-                        apr_pool_t *pool);
-
-/* Set *CFG to a read-only reference to the current contents of the
- * configuration specified by PATH.  If the latter is a URL, we read the
- * data from a local repository.  REGISTRY: urls are not supported.
- * CONFIG_POOL will store the configuration and make further callers use
- * the same instance if the content matches.
- *
- * POOL determines the minimum lifetime of *CFG.
- *
- * Note: The read-only behavior is not enforced, yet. 
- */
-svn_error_t *
-svn_config_pool__get(svn_config_t **cfg,
-                     svn_config_pool__t *config_pool,
-                     const char *path,
-                     apr_pool_t *pool);
-
-/** @} */
-
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
