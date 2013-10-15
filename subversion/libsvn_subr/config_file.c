@@ -37,6 +37,7 @@
 #include "svn_ctype.h"
 
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 
 #ifdef __HAIKU__
 #  include <FindDirectory.h>
@@ -418,8 +419,47 @@ svn_config__sys_config_path(const char **path_p,
   return SVN_NO_ERROR;
 }
 
+/* Callback for svn_config_enumerate2: Continue to next value. */
+static svn_boolean_t
+expand_value(const char *name,
+             const char *value,
+             void *baton,
+             apr_pool_t *pool)
+{
+  return TRUE;
+}
+
+/* Callback for svn_config_enumerate_sections2:
+ * Enumerate and implicitly expand all values in this section.
+ */
+static svn_boolean_t
+expand_values_in_section(const char *name,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  svn_config_t *cfg = baton;
+  svn_config_enumerate2(cfg, name, expand_value, NULL, pool);
+
+  return TRUE;
+}
+
 
 /*** Exported interfaces. ***/
+
+void
+svn_config__set_read_only(svn_config_t *cfg,
+                          apr_pool_t *scratch_pool)
+{
+  /* expand all items such that later calls to getters won't need to
+   * change internal state */
+  svn_config_enumerate_sections2(cfg, expand_values_in_section,
+                                 cfg, scratch_pool);
+
+  /* now, any modification attempt will be ignored / trigger an assertion
+   * in debug mode */
+  cfg->read_only = TRUE;
+}
+
 
 
 svn_error_t *

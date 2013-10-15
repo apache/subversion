@@ -1644,6 +1644,8 @@ def revert_obstructing_wc(sbox):
                                      'revert', '-R', wc_dir)
 
 
+
+
 ########################################################################
 # Run the tests
 
@@ -1683,7 +1685,7 @@ test_list = [ None,
               revert_no_text_change_conflict_recursive,
               revert_with_unversioned_targets,
               revert_nonexistent,
-              revert_obstructing_wc
+              revert_obstructing_wc,
              ]
 
 if __name__ == '__main__':

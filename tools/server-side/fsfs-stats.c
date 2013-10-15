@@ -271,6 +271,12 @@ typedef struct fs_fs_t
   /* history of sizes of changed nodes */
   histogram_t node_size_histogram;
 
+  /* history of representation sizes */
+  histogram_t added_rep_size_histogram;
+
+  /* history of sizes of changed nodes */
+  histogram_t added_node_size_histogram;
+
   /* history of unused representations */
   histogram_t unused_rep_histogram;
 
@@ -487,6 +493,7 @@ add_to_histogram(histogram_t *histogram,
 
 /* Update data aggregators in FS with this representation of type KIND, on-
  * disk REP_SIZE and expanded node size EXPANDED_SIZE for PATH in REVSION.
+ * PLAIN_ADDED indicates whether the node has a deltification predecessor.
  */
 static void
 add_change(fs_fs_t *fs,
@@ -494,7 +501,8 @@ add_change(fs_fs_t *fs,
            apr_int64_t expanded_size,
            svn_revnum_t revision,
            const char *path,
-           rep_kind_t kind)
+           rep_kind_t kind,
+           svn_boolean_t plain_added)
 {
   /* identify largest reps */
   if (rep_size >= fs->largest_changes->min_size)
@@ -522,6 +530,12 @@ add_change(fs_fs_t *fs,
   /* global histograms */
   add_to_histogram(&fs->rep_size_histogram, rep_size);
   add_to_histogram(&fs->node_size_histogram, expanded_size);
+
+  if (plain_added)
+    {
+      add_to_histogram(&fs->added_rep_size_histogram, rep_size);
+      add_to_histogram(&fs->added_node_size_histogram, expanded_size);
+    }
 
   /* specific histograms by type */
   switch (kind)
@@ -1289,6 +1303,7 @@ read_noderev(fs_fs_t *fs,
   representation_t *props = NULL;
   apr_size_t start_offset = offset;
   svn_boolean_t is_dir = FALSE;
+  svn_boolean_t has_predecessor = FALSE;
   const char *path = "???";
 
   scratch_pool = svn_pool_create(scratch_pool);
@@ -1349,15 +1364,17 @@ read_noderev(fs_fs_t *fs,
         }
       else if (key_matches(&key, "cpath"))
         path = value.data;
+      else if (key_matches(&key, "pred"))
+        has_predecessor = TRUE;
     }
 
   /* record largest changes */
   if (text && text->ref_count == 1)
     add_change(fs, (apr_int64_t)text->size, (apr_int64_t)text->expanded_size,
-               text->revision, path, text->kind);
+               text->revision, path, text->kind, !has_predecessor);
   if (props && props->ref_count == 1)
     add_change(fs, (apr_int64_t)props->size, (apr_int64_t)props->expanded_size,
-               props->revision, path, props->kind);
+               props->revision, path, props->kind, !has_predecessor);
 
   /* if this is a directory and has not been processed, yet, read and
    * process it recursively */
@@ -2046,6 +2063,7 @@ print_stats(fs_fs_t *fs,
   printf(_("%20s bytes in %12s representations total\n"
            "%20s bytes in %12s directory representations\n"
            "%20s bytes in %12s file representations\n"
+           "%20s bytes in %12s representations of added file nodes\n"
            "%20s bytes in %12s directory property representations\n"
            "%20s bytes in %12s file property representations\n"
            "%20s bytes in header & footer overhead\n"),
@@ -2055,6 +2073,8 @@ print_stats(fs_fs_t *fs,
          svn__i64toa_sep(dir_rep_stats.total.count, ',', pool),
          svn__i64toa_sep(file_rep_stats.total.packed_size, ',', pool),
          svn__i64toa_sep(file_rep_stats.total.count, ',', pool),
+         svn__i64toa_sep(fs->added_rep_size_histogram.total.sum, ',', pool),
+         svn__i64toa_sep(fs->added_rep_size_histogram.total.count, ',', pool),
          svn__i64toa_sep(dir_prop_rep_stats.total.packed_size, ',', pool),
          svn__i64toa_sep(dir_prop_rep_stats.total.count, ',', pool),
          svn__i64toa_sep(file_prop_rep_stats.total.packed_size, ',', pool),

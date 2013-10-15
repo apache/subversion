@@ -219,7 +219,7 @@ svn_prefix_string__create(svn_prefix_tree__t *tree,
       new_node->sub_nodes = apr_palloc(tree->pool, sizeof(node_t *));
       new_node->sub_nodes[0] = sub_node;
 
-      memcpy(sub_node->key.data, sub_node->key.data + match, 8 - match);
+      memmove(sub_node->key.data, sub_node->key.data + match, 8 - match);
 
       /* replace old sub-node with new one and continue lookup */
       sub_node->key.prefix = new_node;

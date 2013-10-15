@@ -24,10 +24,14 @@
  * @brief Implementation of the class OperationContext
  */
 
+#include <apr_file_io.h>
+
 #include "svn_client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_dep_compat.h"
 #include "svn_private_config.h"
 
+#include "GlobalConfig.h"
 #include "OperationContext.h"
 #include "JNIUtil.h"
 #include "JNICriticalSection.h"
@@ -43,7 +47,8 @@ OperationContext::OperationContext(SVN::Pool &pool)
     m_cancelOperation(0),
     m_pool(&pool),
     m_jctx(NULL),
-    m_jcfgcb(NULL)
+    m_jcfgcb(NULL),
+    m_jtunnelcb(NULL)
 {}
 
 void
@@ -77,6 +82,10 @@ OperationContext::attachJavaObject(
     return;
 
   env->DeleteLocalRef(jctx);
+
+  m_jcfgcb = env->NewGlobalRef(GlobalConfig::getConfigCallback());
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 }
 
 OperationContext::~OperationContext()
@@ -87,6 +96,8 @@ OperationContext::~OperationContext()
   env->DeleteGlobalRef(m_jctx);
   if (m_jcfgcb)
     env->DeleteGlobalRef(m_jcfgcb);
+  if (m_jtunnelcb)
+    env->DeleteGlobalRef(m_jtunnelcb);
 }
 
 apr_hash_t *
@@ -123,65 +134,78 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
       return NULL;
     }
 
-  svn_config_t *config = reinterpret_cast<svn_config_t *>(apr_hash_get(configData,
+  svn_config_t *config = static_cast<svn_config_t *>(apr_hash_get(configData,
       SVN_CONFIG_CATEGORY_CONFIG, APR_HASH_KEY_STRING));
+
+  const bool use_native_store = GlobalConfig::useNativeCredentialsStore();
 
   /* The whole list of registered providers */
   apr_array_header_t *providers;
-
-  /* Populate the registered providers with the platform-specific providers */
-  SVN_JNI_ERR(
-      svn_auth_get_platform_specific_client_providers(&providers, config, pool),
-      NULL);
-
-  /* Use the prompter (if available) to prompt for password and cert
-   * caching. */
-  svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
-  void *plaintext_prompt_baton = NULL;
-  svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
-  void *plaintext_passphrase_prompt_baton = NULL;
-
-  if (m_prompter != NULL)
-    {
-      plaintext_prompt_func = Prompter::plaintext_prompt;
-      plaintext_prompt_baton = m_prompter;
-      plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
-      plaintext_passphrase_prompt_baton = m_prompter;
-    }
-
-  /* The main disk-caching auth providers, for both
-   * 'username/password' creds and 'username' creds.  */
   svn_auth_provider_object_t *provider;
 
-  svn_auth_get_simple_provider2(&provider, plaintext_prompt_func,
-      plaintext_prompt_baton, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  if (use_native_store)
+    {
+      /* Populate the registered providers with the platform-specific providers */
+      SVN_JNI_ERR(
+          svn_auth_get_platform_specific_client_providers(
+              &providers, config, pool),
+          NULL);
 
-  svn_auth_get_username_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      /* Use the prompter (if available) to prompt for password and cert
+       * caching. */
+      svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
+      void *plaintext_prompt_baton = NULL;
+      svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
+      void *plaintext_passphrase_prompt_baton = NULL;
 
-  /* The server-cert, client-cert, and client-cert-password providers. */
-  SVN_JNI_ERR(
-      svn_auth_get_platform_specific_provider(&provider, "windows", "ssl_server_trust", pool),
-      NULL);
+      if (m_prompter != NULL)
+        {
+          plaintext_prompt_func = Prompter::plaintext_prompt;
+          plaintext_prompt_baton = m_prompter;
+          plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
+          plaintext_passphrase_prompt_baton = m_prompter;
+        }
 
-  if (provider)
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      /* The main disk-caching auth providers, for both
+       * 'username/password' creds and 'username' creds.  */
 
-  svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  svn_auth_get_ssl_client_cert_pw_file_provider2(&provider,
-      plaintext_passphrase_prompt_func, plaintext_passphrase_prompt_baton,
-      pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_simple_provider2(&provider, plaintext_prompt_func,
+                                    plaintext_prompt_baton, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_username_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      /* The server-cert, client-cert, and client-cert-password providers. */
+      SVN_JNI_ERR(
+          svn_auth_get_platform_specific_provider(
+              &provider, "windows", "ssl_server_trust", pool),
+          NULL);
+
+      if (provider)
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_ssl_client_cert_pw_file_provider2(
+          &provider,
+          plaintext_passphrase_prompt_func, plaintext_passphrase_prompt_baton,
+          pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    }
+  else
+    {
+      // Not using hte native credentials store, start with an empty
+      // providers array.
+      providers = apr_array_make(pool, 0, sizeof(svn_auth_provider_object_t *));
+    }
 
   if (m_prompter != NULL)
     {
       /* Two basic prompt providers: username/password, and just username.*/
       provider = m_prompter->getProviderSimple(in_pool);
-
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
       provider = m_prompter->getProviderUsername(in_pool);
@@ -254,32 +278,10 @@ OperationContext::setConfigDirectory(const char *configDir)
   m_config = NULL;
 }
 
-void
-OperationContext::setConfigCallback(jobject configCallback)
-{
-  JNIEnv* env = JNIUtil::getEnv();
-
-  if (m_jcfgcb)
-    {
-      env->DeleteGlobalRef(m_jcfgcb);
-      m_jcfgcb = NULL;
-    }
-  if (configCallback)
-    {
-      m_jcfgcb = env->NewGlobalRef(configCallback);
-      env->DeleteLocalRef(configCallback);
-    }
-}
-
 const char *
 OperationContext::getConfigDirectory() const
 {
   return (m_configDir.empty() ? NULL : m_configDir.c_str());
-}
-
-jobject OperationContext::getConfigCallback() const
-{
-  return m_jcfgcb;
 }
 
 const char *
@@ -297,6 +299,26 @@ OperationContext::getPassword() const
 const Prompter& OperationContext::getPrompter() const
 {
   return *m_prompter;
+}
+
+void OperationContext::setTunnelCallback(jobject jtunnelcb)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  if (jtunnelcb)
+    {
+      jtunnelcb = env->NewGlobalRef(jtunnelcb);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+  if (m_jtunnelcb)
+    env->DeleteGlobalRef(m_jtunnelcb);
+  m_jtunnelcb = jtunnelcb;
+}
+
+jobject OperationContext::getTunnelCallback() const
+{
+  return m_jtunnelcb;
 }
 
 void
@@ -332,6 +354,9 @@ OperationContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
     apr_pool_t *pool)
 {
   jobject jctx = (jobject) baton;
+  if (!jctx)
+    return;
+
   JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references
@@ -411,7 +436,7 @@ OperationContext::notifyConfigLoad()
         return;
     }
 
-  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/ConfigImpl");
+  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/util/ConfigImpl");
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -440,4 +465,188 @@ OperationContext::notifyConfigLoad()
     return;
   env->CallVoidMethod(jcbimpl, dispose_mid);
   env->DeleteLocalRef(jcbimpl);
+}
+
+namespace {
+class TunnelContext
+{
+public:
+  explicit TunnelContext(apr_pool_t *pool)
+    : request_in(NULL),
+      request_out(NULL),
+      response_in(NULL),
+      response_out(NULL)
+    {
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+      status = apr_file_pipe_create_ex(&request_in, &request_out,
+                                       APR_FULL_BLOCK, pool);
+      if (!status)
+        status = apr_file_pipe_create_ex(&response_in, &response_out,
+                                         APR_FULL_BLOCK, pool);
+#else
+      // XXX APR compatibility note:
+      // Versions of APR before 1.3 do not have the extended pipe
+      // API. Just create a default pipe and just hope that it returns
+      // a blocking handle.
+      status = apr_file_pipe_create(&request_in, &request_out, pool);
+      if (!status)
+        status = apr_file_pipe_create(&response_in, &response_out, pool);
+#endif
+    }
+
+  apr_file_t *request_in;
+  apr_file_t *request_out;
+  apr_file_t *response_in;
+  apr_file_t *response_out;
+  apr_status_t status;
+};
+
+jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
+{
+  jclass cls = env->FindClass(class_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jmethodID ctor = env->GetMethodID(cls, "<init>", "(J)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return env->NewObject(cls, ctor, reinterpret_cast<jlong>(fd));
+}
+
+jobject create_RequestChannel(JNIEnv *env, apr_file_t *fd)
+{
+  return create_Channel(JAVA_PACKAGE"/util/RequestChannel", env, fd);
+}
+jobject create_ResponseChannel(JNIEnv *env, apr_file_t *fd)
+{
+  return create_Channel(JAVA_PACKAGE"/util/ResponseChannel", env, fd);
+}
+} // anonymous namespace
+
+svn_boolean_t
+OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      if (JNIUtil::isJavaExceptionThrown())
+        return false;
+      mid = env->GetMethodID(cls, "checkTunnel",
+                             "(Ljava/lang/String;)Z");
+        if (JNIUtil::isJavaExceptionThrown())
+          return false;
+    }
+
+  jobject jtunnelcb = jobject(tunnel_baton);
+  jboolean check = env->CallBooleanMethod(jtunnelcb, mid, jtunnel_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
+  return svn_boolean_t(check);
+}
+
+svn_error_t *
+OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
+                             void **tunnel_context, void *tunnel_baton,
+                             const char *tunnel_name, const char *user,
+                             const char *hostname, int port,
+                             apr_pool_t *pool)
+{
+  TunnelContext *tc = new TunnelContext(pool);
+  if (tc->status)
+    {
+      delete tc;
+      return svn_error_trace(
+          svn_error_wrap_apr(tc->status, _("Could not open tunnel streams")));
+    }
+
+  *request = tc->request_out;
+  *response = tc->response_in;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jobject jrequest = create_RequestChannel(env, tc->request_in);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jobject jresponse = create_ResponseChannel(env, tc->response_out);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring juser = JNIUtil::makeJString(user);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring jhostname = JNIUtil::makeJString(hostname);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+      SVN_JNI_CATCH(
+          mid = env->GetMethodID(cls, "openTunnel",
+                                 "(Ljava/nio/channels/ReadableByteChannel;"
+                                 "Ljava/nio/channels/WritableByteChannel;"
+                                 "Ljava/lang/String;"
+                                 "Ljava/lang/String;"
+                                 "Ljava/lang/String;I)V"),
+          SVN_ERR_BASE);
+    }
+
+  jobject jtunnelcb = jobject(tunnel_baton);
+  SVN_JNI_CATCH(
+      env->CallVoidMethod(jtunnelcb, mid, jrequest, jresponse,
+                          jtunnel_name, juser, jhostname, jint(port)),
+      SVN_ERR_BASE);
+
+  *tunnel_context = NULL;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+OperationContext::closeTunnel(void *tunnel_context, void *tunnel_baton,
+                              const char *tunnel_name, const char *user,
+                              const char *hostname, int port)
+{
+  delete static_cast<TunnelContext*>(tunnel_context);
+
+  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring juser = JNIUtil::makeJString(user);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring jhostname = JNIUtil::makeJString(hostname);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+      SVN_JNI_CATCH(
+          mid = env->GetMethodID(cls, "closeTunnel",
+                                 "(Ljava/lang/String;"
+                                 "Ljava/lang/String;"
+                                 "Ljava/lang/String;I)V"),
+          SVN_ERR_BASE);
+    }
+
+  jobject jtunnelcb = jobject(tunnel_baton);
+  SVN_JNI_CATCH(
+      env->CallVoidMethod(jtunnelcb, mid,
+                          jtunnel_name, juser, jhostname, jint(port)),
+      SVN_ERR_BASE);
+
+  return SVN_NO_ERROR;
 }

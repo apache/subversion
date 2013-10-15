@@ -741,6 +741,7 @@ $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 
 # install serf
 $(SERF_OBJDIR)/.installed: $(SERF_OBJDIR)/.compiled
+	rm -rf $(PREFIX)/serf # XXX scons cannot reinstall :(
 	cd $(SERF_SRCDIR) && \
 		scons install
 	touch $@

@@ -77,7 +77,8 @@ index_revision_adds(int *count, svn_fs_t *fs,
 
   *count = 0;
   SVN_ERR(svn_fs_revision_root(&root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&changes, root,
+                                svn_move_behavior_explicit_moves, pool));
 
   /* No paths changed in this revision?  Nothing to do.  */
   if (apr_hash_count(changes) == 0)
@@ -94,7 +95,9 @@ index_revision_adds(int *count, svn_fs_t *fs,
       apr_hash_this(hi, &path, NULL, &val);
       change = val;
       if ((change->change_kind == svn_fs_path_change_add)
-          || (change->change_kind == svn_fs_path_change_replace))
+          || (change->change_kind == svn_fs_path_change_replace)
+          || (change->change_kind == svn_fs_path_change_move)
+          || (change->change_kind == svn_fs_path_change_movereplace))
         {
           if (! (change->copyfrom_path
                             && SVN_IS_VALID_REVNUM(change->copyfrom_rev)))

@@ -70,8 +70,11 @@ struct svn_config_t
 
   /* Specifies whether option names are populated case sensitively. */
   svn_boolean_t option_names_case_sensitive;
-};
 
+  /* When set, all modification attempts will be ignored.
+   * In debug mode, we will trigger an assertion. */
+  svn_boolean_t read_only;
+};
 
 /* Read sections and options from a file. */
 svn_error_t *svn_config__parse_file(svn_config_t *cfg,

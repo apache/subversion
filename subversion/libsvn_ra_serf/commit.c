@@ -1933,7 +1933,18 @@ add_file(const char *path,
 
       if (handler->sline.code != 404)
         {
-          return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
+          if (handler->sline.code != 200)
+            {
+              svn_error_t *err;
+
+              err = svn_ra_serf__error_on_status(handler->sline,
+                                                 handler->path,
+                                                 handler->location);
+
+              SVN_ERR(err);
+            }
+
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"), path);
         }
     }
@@ -2168,8 +2179,8 @@ close_file(void *file_baton,
     {
       proppatch_context_t *proppatch;
 
-      proppatch = apr_pcalloc(ctx->pool, sizeof(*proppatch));
-      proppatch->pool = ctx->pool;
+      proppatch = apr_pcalloc(scratch_pool, sizeof(*proppatch));
+      proppatch->pool = scratch_pool;
       proppatch->relpath = ctx->relpath;
       proppatch->path = ctx->url;
       proppatch->commit = ctx->commit;
@@ -2177,7 +2188,7 @@ close_file(void *file_baton,
       proppatch->removed_props = ctx->removed_props;
       proppatch->base_revision = ctx->base_revision;
 
-      SVN_ERR(proppatch_resource(proppatch, ctx->commit, ctx->pool));
+      SVN_ERR(proppatch_resource(proppatch, ctx->commit, scratch_pool));
     }
 
   return SVN_NO_ERROR;

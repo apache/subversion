@@ -70,12 +70,38 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
     m_context->conflict_baton2 = m_jctx;
 
     m_context->client_name = getClientName();
+
+    if (m_jtunnelcb)
+      {
+        m_context->check_tunnel_func = checkTunnel;
+        m_context->open_tunnel_func = openTunnel;
+        m_context->close_tunnel_func = closeTunnel;
+        m_context->tunnel_baton = m_jtunnelcb;
+      }
 }
 
 ClientContext::~ClientContext()
 {
 }
 
+void ClientContext::setTunnelCallback(jobject jtunnelcb)
+{
+  OperationContext::setTunnelCallback(jtunnelcb);
+  if (m_jtunnelcb)
+    {
+      m_context->check_tunnel_func = checkTunnel;
+      m_context->open_tunnel_func = openTunnel;
+      m_context->close_tunnel_func = closeTunnel;
+      m_context->tunnel_baton = m_jtunnelcb;
+    }
+  else
+    {
+      m_context->check_tunnel_func = NULL;
+      m_context->open_tunnel_func = NULL;
+      m_context->close_tunnel_func = NULL;
+      m_context->tunnel_baton = NULL;
+    }
+}
 
 /* Helper function to make sure that we don't keep dangling pointers in ctx.
    Note that this function might be called multiple times if getContext()

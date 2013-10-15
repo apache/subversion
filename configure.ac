@@ -49,13 +49,11 @@ SVN_CONFIG_NICE(config.nice)
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
-CMAINTAINERFLAGS="$CUSERFLAGS"
 CUSERFLAGS="$CFLAGS"
 AC_PROG_CC
 SVN_CC_MODE_SETUP
 
 # Look for a C++ compiler (before anything can set CXXFLAGS)
-CXXMAINTAINERFLAGS="$CXXUSERFLAGS"
 CXXUSERFLAGS="$CXXFLAGS"
 AC_PROG_CXX
 SVN_CXX_MODE_SETUP
@@ -1030,7 +1028,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl ./configure CUSERFLAGS="-Wswitch-enum -Wswitch-default"
+        dnl ./configure CFLAGS="-Wswitch-enum -Wswitch-default"
 
         dnl Add each of the following flags only if the C compiler accepts it.
         CFLAGS_KEEP="$CFLAGS"
@@ -1046,7 +1044,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
         SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
 
-        CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
@@ -1064,7 +1062,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CXXFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
         SVN_CXXFLAGS_ADD_IFELSE([-Wno-system-headers])
 
-        CXXMAINTAINERFLAGS="$CXXFLAGS $CXXMAINTAINERFLAGS"
+        CXXMAINTAINERFLAGS="$CXXFLAGS"
         CXXFLAGS="$CXXFLAGS_KEEP"
 
         dnl Add flags that all versions of G++ (should) support

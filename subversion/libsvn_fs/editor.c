@@ -177,7 +177,7 @@ can_modify(svn_fs_root_t *txn_root,
   SVN_ERR(svn_fs_node_created_rev(&created_rev, txn_root, fspath,
                                   scratch_pool));
 
-  /* Uncommitted nodes (eg. a descendent of a copy/move/rotate destination)
+  /* Uncommitted nodes (eg. a descendent of a copy/move destination)
      have no (committed) revision number. Let the caller go ahead and
      modify these nodes.
 
@@ -195,7 +195,7 @@ can_modify(svn_fs_root_t *txn_root,
      have supplied a valid revision number [that they expect to change].
      The checks further below will determine the out-of-dateness of the
      specified revision.  */
-  /* ### ugh. descendents of copy/move/rotate destinations carry along
+  /* ### ugh. descendents of copy/move destinations carry along
      ### their original immutable state and (thus) a valid CREATED_REV.
      ### but they are logically uncommitted, so the caller will pass
      ### SVN_INVALID_REVNUM. (technically, the caller could provide
@@ -205,7 +205,7 @@ can_modify(svn_fs_root_t *txn_root,
      ### for now, we will assume the caller knows what they are doing
      ### and an invalid revision implies such a descendent. in the
      ### future, we could examine the ancestor chain looking for a
-     ### copy/move/rotate-here node and allow the modification (and the
+     ### copy/move-here node and allow the modification (and the
      ### converse: if no such ancestor, the caller must specify the
      ### correct/intended revision to modify).
   */
@@ -299,7 +299,7 @@ can_create(svn_fs_root_t *txn_root,
      ### test the ancestor to determine if it has been *-here in this
      ### txn, or just a simple modification.  */
 
-  /* Are any of the parents copied/moved/rotated-here?  */
+  /* Are any of the parents copied/moved-here?  */
   for (cur_fspath = fspath;
        strlen(cur_fspath) > 1;  /* not the root  */
        cur_fspath = svn_fspath__dirname(cur_fspath, scratch_pool))
@@ -633,19 +633,6 @@ move_cb(void *baton,
 }
 
 
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  struct edit_baton *eb = baton;
-
-  UNUSED(eb); SVN__NOT_IMPLEMENTED();
-}
-
-
 /* This implements svn_editor_cb_complete_t */
 static svn_error_t *
 complete_cb(void *baton,
@@ -714,7 +701,6 @@ make_editor(svn_editor_t **editor,
     delete_cb,
     copy_cb,
     move_cb,
-    rotate_cb,
     complete_cb,
     abort_cb
   };

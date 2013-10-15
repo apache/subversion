@@ -43,42 +43,10 @@ public class DiffLib
         NativeResources.loadNativeLibrary();
     }
 
-    /** @see ISVNUtil.FileDiff */
-    public void FileDiff(String originalFile,
-                         String modifiedFile,
-                         SVNUtil.DiffOptions diffOptions,
-
-                         String originalHeader,
-                         String modifiedHeader,
-                         String headerEncoding,
-                         String relativeToDir,
-
-                         OutputStream resultStream)
-        throws ClientException
-    {
-        nativeFileDiff(originalFile, modifiedFile,
-
-                       // Interpret the diff options
-                       (diffOptions == null
-                        ? SVNUtil.DiffOptions.IgnoreSpace.none.ordinal()
-                        : diffOptions.ignoreSpace.ordinal()),
-                       (diffOptions == null ? false
-                        : diffOptions.ignoreEolStyle),
-                       (diffOptions == null ? false
-                        : diffOptions.showCFunction),
-
-                       originalHeader, modifiedHeader, headerEncoding,
-                       relativeToDir, resultStream);
-    }
-
-    private native
-        void nativeFileDiff(String originalFile,
+    /** @see ISVNUtil.fileDiff */
+    public boolean fileDiff(String originalFile,
                             String modifiedFile,
-
-                            // Interpreted diff options
-                            int ignoreSpace,
-                            boolean ignoreEolStyle,
-                            boolean showCFunction,
+                            SVNUtil.DiffOptions diffOptions,
 
                             String originalHeader,
                             String modifiedHeader,
@@ -86,61 +54,93 @@ public class DiffLib
                             String relativeToDir,
 
                             OutputStream resultStream)
-        throws ClientException;
-
-    /** @see ISVNUtil.FileMerge */
-    public void FileMerge(String originalFile,
-                          String modifiedFile,
-                          String latestFile,
-                          SVNUtil.DiffOptions diffOptions,
-
-                          String conflictOriginal,
-                          String conflictModified,
-                          String conflictLatest,
-                          String conflistSeparator,
-                          SVNUtil.ConflictDisplayStyle conflictStyle,
-
-                          OutputStream resultStream)
         throws ClientException
     {
-        nativeFileMerge(originalFile, modifiedFile, latestFile,
+        return nativeFileDiff(originalFile, modifiedFile,
 
-                        // Interpret the diff options
-                        (diffOptions == null
-                         ? SVNUtil.DiffOptions.IgnoreSpace.none.ordinal()
-                         : diffOptions.ignoreSpace.ordinal()),
-                        (diffOptions == null ? false
-                         : diffOptions.ignoreEolStyle),
-                        (diffOptions == null ? false
-                         : diffOptions.showCFunction),
+                              // Interpret the diff options
+                              (diffOptions == null
+                               ? SVNUtil.DiffOptions.IgnoreSpace.none.ordinal()
+                               : diffOptions.ignoreSpace.ordinal()),
+                              (diffOptions == null ? false
+                               : diffOptions.ignoreEolStyle),
+                              (diffOptions == null ? false
+                               : diffOptions.showCFunction),
 
-                        conflictOriginal, conflictModified, conflictLatest,
-                        conflistSeparator,
-
-                        // Interpret the conflict style
-                        conflictStyle.ordinal(),
-
-                        resultStream);
+                              originalHeader, modifiedHeader, headerEncoding,
+                              relativeToDir, resultStream);
     }
 
     private native
-        void nativeFileMerge(String originalFile,
+        boolean nativeFileDiff(String originalFile,
+                               String modifiedFile,
+
+                               // Interpreted diff options
+                               int ignoreSpace,
+                               boolean ignoreEolStyle,
+                               boolean showCFunction,
+
+                               String originalHeader,
+                               String modifiedHeader,
+                               String headerEncoding,
+                               String relativeToDir,
+
+                               OutputStream resultStream)
+        throws ClientException;
+
+    /** @see ISVNUtil.fileMerge */
+    public boolean fileMerge(String originalFile,
                              String modifiedFile,
                              String latestFile,
-
-                             // Interpreted diff options
-                             int ignoreSpace,
-                             boolean ignoreEolStyle,
-                             boolean showCFunction,
+                             SVNUtil.DiffOptions diffOptions,
 
                              String conflictOriginal,
                              String conflictModified,
                              String conflictLatest,
                              String conflistSeparator,
-
-                             // Interpreted conflict display style
-                             int conflictStyle,
+                             SVNUtil.ConflictDisplayStyle conflictStyle,
 
                              OutputStream resultStream)
+        throws ClientException
+    {
+        return nativeFileMerge(originalFile, modifiedFile, latestFile,
+
+                               // Interpret the diff options
+                               (diffOptions == null
+                                ? SVNUtil.DiffOptions.IgnoreSpace.none.ordinal()
+                                : diffOptions.ignoreSpace.ordinal()),
+                               (diffOptions == null ? false
+                                : diffOptions.ignoreEolStyle),
+                               (diffOptions == null ? false
+                                : diffOptions.showCFunction),
+
+                               conflictOriginal, conflictModified,
+                               conflictLatest, conflistSeparator,
+
+                               // Interpret the conflict style
+                               conflictStyle.ordinal(),
+
+                               resultStream);
+    }
+
+    private native
+        boolean nativeFileMerge(String originalFile,
+                                String modifiedFile,
+                                String latestFile,
+
+                                // Interpreted diff options
+                                int ignoreSpace,
+                                boolean ignoreEolStyle,
+                                boolean showCFunction,
+
+                                String conflictOriginal,
+                                String conflictModified,
+                                String conflictLatest,
+                                String conflistSeparator,
+
+                                // Interpreted conflict display style
+                                int conflictStyle,
+
+                                OutputStream resultStream)
         throws ClientException;
 }

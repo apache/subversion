@@ -429,6 +429,10 @@ typedef struct svn_ra_serf__handler_t {
      enabled. */
   svn_boolean_t custom_accept_encoding;
 
+  /* If TRUE then default DAV: capabilities request headers is not configured
+     for request. */
+  svn_boolean_t no_dav_headers;
+
   /* Has the request/response been completed?  */
   svn_boolean_t done;
 
@@ -1494,6 +1498,7 @@ svn_ra_serf__get_log(svn_ra_session_t *session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
+                     svn_move_behavior_t move_behavior,
                      const apr_array_header_t *revprops,
                      svn_log_entry_receiver_t receiver,
                      void *receiver_baton,

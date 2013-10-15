@@ -313,7 +313,7 @@ get_node_revision_body(node_revision_t **noderev_p,
 
       /* noderevs in rev / pack files can be cached */
       const svn_fs_fs__id_part_t *rev_item = svn_fs_fs__id_rev_item(id);
-      pair_cache_key_t key;
+      pair_cache_key_t key = { 0 };
       key.revision = rev_item->revision;
       key.second = rev_item->number;
 
@@ -1899,12 +1899,12 @@ get_dir_contents(apr_hash_t *entries,
       apr_size_t len = noderev->data_rep->expanded_size
                      ? (apr_size_t)noderev->data_rep->expanded_size
                      : (apr_size_t)noderev->data_rep->size;
-      svn_stringbuf_t *text = svn_stringbuf_create_ensure(len, text_pool);
-      text->len = len;
+      svn_stringbuf_t *text;
 
       /* The representation is immutable.  Read it normally. */
-      SVN_ERR(svn_fs_fs__get_contents(&contents, fs, noderev->data_rep, text_pool));
-      SVN_ERR(svn_stream_read(contents, text->data, &text->len));
+      SVN_ERR(svn_fs_fs__get_contents(&contents, fs, noderev->data_rep,
+                                      text_pool));
+      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, text_pool));
       SVN_ERR(svn_stream_close(contents));
 
       /* de-serialize hash */

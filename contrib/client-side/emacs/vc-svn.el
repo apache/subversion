@@ -162,7 +162,7 @@ See `vc-svn-parse-status' for a description of the result."
     (let ((status (apply 'call-process vc-svn-program-name nil t nil
                          (append '("status" "-v")
                                  (if update '("-u") '())
-                                 (list file)))))
+                                 (list (concat file "@"))))))
       (goto-char (point-min))
       (if (not (equal 0 status)) ; not zerop; status can be a string
           ;; If you ask for the status of a file that isn't even in a
@@ -205,7 +205,8 @@ If the file is newly added, LOCAL is \"0\" and CHANGED is nil."
             (match-string 3)))
      ((looking-at "^I +") nil)       ;; An ignored file
      ((looking-at " \\{40\\}") nil)  ;; A file that is not in the wc nor svn?
-     (t (error "Couldn't parse output from `svn status -v'")))))
+     ;; Since svn status is run on every file, don't complain if it fails.
+     (t nil))))
 
 
 (defun vc-svn-parse-state-only ()

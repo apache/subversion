@@ -67,11 +67,17 @@
 
 #include "win32_crashrpt.h"
 
+#if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
+/* Before Visual Studio 2005, the C runtime didn't handle encodings for the
+   for the stdio output handling. */
+#define CMDLINE_USE_CUSTOM_ENCODING
+
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
 
 /* The stdout encoding. If null, it's the same as the native encoding. */
 static const char *output_encoding = NULL;
+#endif
 
 
 int
@@ -113,7 +119,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif
 
 #ifdef WIN32
-#if _MSC_VER < 1400
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
   /* Initialize the input and output encodings. */
   {
     static char input_encoding_buffer[16];
@@ -127,7 +133,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
                  "CP%u", (unsigned) GetConsoleOutputCP());
     output_encoding = output_encoding_buffer;
   }
-#endif /* _MSC_VER < 1400 */
+#endif /* CMDLINE_USE_CUSTOM_ENCODING */
 
 #ifdef SVN_USE_WIN32_CRASHHANDLER
   if (!getenv("SVN_CMDLINE_DISABLE_CRASH_HANDLER"))
@@ -257,10 +263,12 @@ svn_cmdline_cstring_from_utf8(const char **dest,
                               const char *src,
                               apr_pool_t *pool)
 {
-  if (output_encoding == NULL)
-    return svn_utf_cstring_from_utf8(dest, src, pool);
-  else
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
+  if (output_encoding != NULL)
     return svn_utf_cstring_from_utf8_ex2(dest, src, output_encoding, pool);
+#endif
+
+  return svn_utf_cstring_from_utf8(dest, src, pool);
 }
 
 
@@ -278,10 +286,12 @@ svn_cmdline_cstring_to_utf8(const char **dest,
                             const char *src,
                             apr_pool_t *pool)
 {
-  if (input_encoding == NULL)
-    return svn_utf_cstring_to_utf8(dest, src, pool);
-  else
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
+  if (input_encoding != NULL)
     return svn_utf_cstring_to_utf8_ex2(dest, src, input_encoding, pool);
+#endif
+
+  return svn_utf_cstring_to_utf8(dest, src, pool);
 }
 
 
@@ -357,7 +367,7 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
         {
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+          if (SVN__APR_STATUS_IS_EPIPE(apr_get_os_error()))
             return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
@@ -380,7 +390,7 @@ svn_cmdline_fflush(FILE *stream)
         {
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+          if (SVN__APR_STATUS_IS_EPIPE(apr_get_os_error()))
             return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
@@ -394,10 +404,12 @@ svn_cmdline_fflush(FILE *stream)
 
 const char *svn_cmdline_output_encoding(apr_pool_t *pool)
 {
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
   if (output_encoding)
     return apr_pstrdup(pool, output_encoding);
-  else
-    return SVN_APR_LOCALE_CHARSET;
+#endif
+
+  return SVN_APR_LOCALE_CHARSET;
 }
 
 int

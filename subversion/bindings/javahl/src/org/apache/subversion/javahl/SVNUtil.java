@@ -23,12 +23,97 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.util.*;
 
 import java.io.OutputStream;
 
 public class SVNUtil
 {
+    //
+    // Global configuration
+    //
+
+    /**
+     * Enable storing authentication credentials in Subversion's
+     * standard credentials store in the configuration directory and
+     * system-specific secure locations.
+     * <p>
+     * The standard credentials store is enabled by default.
+     * <p>
+     * This setting will be inherited by all ISVNClient and ISVNRemote
+     * objects. Changing the setting will not affect existing such
+     * objects.
+     * @throws ClientException
+     */
+    public static void enableNativeCredentialsStore()
+        throws ClientException
+      {
+          new ConfigLib().enableNativeCredentialsStore();
+      }
+
+    /**
+     * Disable storing authentication credentials in Subversion's
+     * standard credentials store in the configuration directory and
+     * system-specific secure locations. In this mode, the
+     * authentication (see {@link ISVNClient#setPrompt} and {@link
+     * remote.RemoteFactory#setPrompt}) will be called every time the
+     * underlying library needs access to the credentials.
+     * <p>
+     * This mode is intented to support client implementations that
+     * use their own credentials store.
+     * <p>
+     * The standard credentials store is enabled by default.
+     * <p>
+     * This setting will be inherited by all ISVNClient and ISVNRemote
+     * objects. Changing the setting will not affect existing such
+     * objects.
+     * @throws ClientException
+     */
+    public static void disableNativeCredentialsStore()
+        throws ClientException
+      {
+          new ConfigLib().disableNativeCredentialsStore();
+      }
+
+    /**
+     * Find out if the standard credentials store is enabled.
+     */
+    public static boolean isNativeCredentialsStoreEnabled()
+        throws ClientException
+      {
+          return new ConfigLib().isNativeCredentialsStoreEnabled();
+      }
+
+    /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded.
+     * <p>
+     * This setting will be inherited by all ISVNClient and ISVNRemote
+     * objects. Changing the setting will not affect existing such
+     * objects.
+     * @throws ClientException
+     */
+    public static void setConfigEventHandler(ConfigEvent configHandler)
+        throws ClientException
+      {
+          new ConfigLib().setConfigEventHandler(configHandler);
+      }
+
+    /**
+     * Return a reference to the installed configuration event
+     * handler. The returned value may be <code>null</code>.
+     */
+    public static ConfigEvent getConfigEventHandler()
+        throws ClientException
+      {
+          return new ConfigLib().getConfigEventHandler();
+      }
+
+    //
+    // Diff and Merge
+    //
+
     /**
      * Options to control the behaviour of the file diff routines.
      */
@@ -131,23 +216,25 @@ public class SVNUtil
      *        This path will be stripped from the beginning of those
      *        file names if they are used in the unidiff index header.
      * @param resultStream The stream that receives the merged output.
+     * @return <code>true</code> if there were differences between the files.
      * @throws ClientException
      */
-    public static void FileDiff(String originalFile,
-                                String modifiedFile,
-                                SVNUtil.DiffOptions diffOptions,
+    public static boolean fileDiff(String originalFile,
+                                   String modifiedFile,
+                                   SVNUtil.DiffOptions diffOptions,
 
-                                String originalHeader,
-                                String modifiedHeader,
-                                String headerEncoding,
-                                String relativeToDir,
+                                   String originalHeader,
+                                   String modifiedHeader,
+                                   String headerEncoding,
+                                   String relativeToDir,
 
-                                OutputStream resultStream)
+                                   OutputStream resultStream)
         throws ClientException
     {
-        new DiffLib().FileDiff(originalFile, modifiedFile, diffOptions,
-                               originalHeader, modifiedHeader, headerEncoding,
-                               relativeToDir, resultStream);
+        return new DiffLib().fileDiff(originalFile, modifiedFile, diffOptions,
+                                      originalHeader, modifiedHeader,
+                                      headerEncoding,
+                                      relativeToDir, resultStream);
     }
 
 
@@ -171,26 +258,27 @@ public class SVNUtil
      * @param conflictSeparator Optional custom conflict separator.
      * @param conflictStyle Determines how conflicts are displayed.
      * @param resultStream The stream that receives the merged output.
+     * @return <code>true</code> if there were any conflicts.
      * @throws ClientException
      */
-    public static void FileMerge(String originalFile,
-                                 String modifiedFile,
-                                 String latestFile,
-                                 DiffOptions diffOptions,
+    public static boolean fileMerge(String originalFile,
+                                    String modifiedFile,
+                                    String latestFile,
+                                    DiffOptions diffOptions,
 
-                                 String conflictOriginal,
-                                 String conflictModified,
-                                 String conflictLatest,
-                                 String conflictSeparator,
-                                 ConflictDisplayStyle conflictStyle,
+                                    String conflictOriginal,
+                                    String conflictModified,
+                                    String conflictLatest,
+                                    String conflictSeparator,
+                                    ConflictDisplayStyle conflictStyle,
 
-                                 OutputStream resultStream)
+                                    OutputStream resultStream)
         throws ClientException
     {
-        new DiffLib().FileMerge(originalFile, modifiedFile, latestFile,
-                                diffOptions,
-                                conflictOriginal, conflictModified,
-                                conflictLatest, conflictSeparator,
-                                conflictStyle, resultStream);
+        return new DiffLib().fileMerge(originalFile, modifiedFile, latestFile,
+                                       diffOptions,
+                                       conflictOriginal, conflictModified,
+                                       conflictLatest, conflictSeparator,
+                                       conflictStyle, resultStream);
     }
 }

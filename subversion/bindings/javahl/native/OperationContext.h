@@ -59,9 +59,27 @@ class OperationContext
 
   jobject m_jctx;
   jobject m_jcfgcb;
+  jobject m_jtunnelcb;
+
   static void progress(apr_off_t progressVal, apr_off_t total,
                        void *baton, apr_pool_t *pool);
   void notifyConfigLoad();
+
+  static svn_boolean_t checkTunnel(
+      void *tunnel_baton, const char *tunnel_name);
+
+  static svn_error_t *openTunnel(
+      apr_file_t **request, apr_file_t **response,
+      void **tunnel_context, void *tunnel_baton,
+      const char *tunnel_name, const char *user,
+      const char *hostname, int port,
+      apr_pool_t *pool);
+
+  static svn_error_t *closeTunnel(
+      void *tunnel_context, void *tunnel_baton,
+      const char *tunnel_name, const char *user,
+      const char *hostname, int port);
+
  public:
   OperationContext(SVN::Pool &pool);
   void attachJavaObject(jobject contextHolder, const char *contextClassType, const char *contextFieldName, jfieldID * ctxFieldID);
@@ -79,7 +97,6 @@ class OperationContext
   virtual bool isCancelledOperation();
   jobject getSelf() const;
   const char *getConfigDirectory() const;
-  jobject getConfigCallback() const;
   const char *getUsername() const;
   const char *getPassword() const;
   const Prompter& getPrompter() const;
@@ -92,12 +109,6 @@ class OperationContext
   void setConfigDirectory(const char *configDir);
 
   /**
-   * Set the config ConfigCallback instance to call when configuration
-   * is loaded..
-   */
-  void setConfigCallback(jobject configCallback);
-
-  /**
    * Return configuration data for the context.
    * Read it from config directory if necessary
    */
@@ -105,6 +116,9 @@ class OperationContext
 
   static svn_error_t * clientName(void *baton, const char **name, apr_pool_t *pool);
   virtual const char * getClientName() const;
+
+  virtual void setTunnelCallback(jobject jtunnelcb);
+  jobject getTunnelCallback() const;
 };
 
 #endif // JAVAHL_OPERATION_CONTEXT_H

@@ -32,6 +32,7 @@
 #include "svn_types.h"
 #include "svn_repos.h"
 #include "svn_editor.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,6 +124,66 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
                       svn_repos_authz_func_t authz_read_func,
                       void *authz_read_baton,
                       apr_pool_t *scratch_pool);
+
+/* Given a PATH which might be a relative repo URL (^/), an absolute
+ * local repo URL (file://), an absolute path outside of the repo
+ * or a location in the Windows registry.
+ *
+ * Retrieve the configuration data that PATH points at and parse it into
+ * CFG_P allocated in POOL.
+ *
+ * If PATH cannot be parsed as a config file then an error is returned.  The
+ * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
+ * authz file is also an error.
+ *
+ * REPOS_ROOT points at the root of the repos you are
+ * going to apply the authz against, can be NULL if you are sure that you
+ * don't have a repos relative URL in PATH. */
+svn_error_t *
+svn_repos__retrieve_config(svn_config_t **cfg_p,
+                           const char *path,
+                           svn_boolean_t must_exist,
+                           apr_pool_t *pool);
+
+/**
+ * @defgroup svn_config_pool Configuration object pool API
+ * @{
+ */
+
+/* Opaque thread-safe factory and container for configuration objects.
+ *
+ * Instances handed out are read-only and may be given to multiple callers
+ * from multiple threads.  Configuration objects no longer referenced by
+ * any user may linger for a while before being cleaned up.
+ */
+typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
+
+/* Create a new configuration pool object with a minim lifetime determined
+ * by POOL and return it in *CONFIG_POOL.  References to any configuration
+ * in the *CONFIG_POOL will keep the latter alive beyond POOL cleanup.
+ */
+svn_error_t *
+svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
+                              apr_pool_t *pool);
+
+/* Set *CFG to a read-only reference to the current contents of the
+ * configuration specified by PATH.  If the latter is a URL, we read the
+ * data from a local repository.  REGISTRY: urls are not supported.
+ * CONFIG_POOL will store the configuration and make further callers use
+ * the same instance if the content matches.
+ *
+ * POOL determines the minimum lifetime of *CFG.
+ *
+ * Note: The read-only behavior is not enforced, yet. 
+ */
+svn_error_t *
+svn_repos__config_pool_get(svn_config_t **cfg,
+                           svn_repos__config_pool_t *config_pool,
+                           const char *path,
+                           apr_pool_t *pool);
+
+/** @} */
+
 
 
 #ifdef __cplusplus
