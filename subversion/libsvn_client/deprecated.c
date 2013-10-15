@@ -1498,6 +1498,28 @@ svn_client_ls(apr_hash_t **dirents,
 }
 
 /*** From log.c ***/
+
+svn_error_t *
+svn_client_log5(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_log6(targets, peg_revision, revision_ranges, limit,
+                         discover_changed_paths, strict_node_history,
+                         include_merged_revisions,
+                         svn_move_behavior_no_moves, revprops, receiver,
+                         receiver_baton, ctx, pool);
+}
+
 svn_error_t *
 svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,

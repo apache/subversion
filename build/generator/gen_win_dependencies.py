@@ -123,6 +123,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'magic',
   ]
 
+  # When build.conf contains a 'when = SOMETHING' where SOMETHING is not in
+  # this list, then the project is not generated on Windows.
+  _windows_when = [
+     'INSTALL_APACHE_MODS',
+     # not 'SVN_USE_GMOCK',
+  ]
+
   def parse_options(self, options):
     self.apr_path = 'apr'
     self.apr_util_path = 'apr-util'
@@ -787,6 +794,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       defines.extend(["HAVE_RB_ERRINFO"])
 
     forced_includes = []
+
+    if ver >= (1, 8, 0):
+      # Swig redefines NUM2LL as NUM2LONG if it isn't defined, but on Windows
+      # ruby 1.8+ declares NUM2LL as a static inline function.
+      # (LL2NUM and NUM2ULL don't have these problems)
+      defines.extend(['NUM2LL=NUM2LL'])
+
     if ver >= (1, 9, 0):
       forced_includes.append('swigutil_rb__pre_ruby.h')
       defines.extend(["SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG"])
@@ -1033,10 +1047,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if version < (1, 3, 0):
         lib_dir = os.path.join(self.serf_path, 'Release')
         debug_lib_dir = os.path.join(self.serf_path, 'Debug')
+        is_src = True
       else:
         lib_dir = self.serf_path
         debug_lib_dir = None
-      is_src = True
+        inc_dir = self.serf_path
+        is_src = False
     elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-1/serf.h')):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-1')

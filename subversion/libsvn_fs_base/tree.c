@@ -3277,6 +3277,18 @@ base_revision_link(svn_fs_root_t *from_root,
 }
 
 
+static svn_error_t *
+base_move(svn_fs_root_t *from_root,
+          const char *from_path,
+          svn_fs_root_t *to_root,
+          const char *to_path,
+          apr_pool_t *pool)
+{
+  /* BDB supports MOVes only as backward compatible ADD-with-history */
+  return base_copy(from_root, from_path, to_root, to_path, pool);
+}
+
+
 struct copied_from_args
 {
   svn_fs_root_t *root;      /* Root for the node whose ancestry we seek. */
@@ -5395,6 +5407,9 @@ static root_vtable_t root_vtable = {
   base_node_origin_rev,
   base_node_created_path,
   base_delete_node,
+  base_copy,
+  base_revision_link,
+  base_move,
   base_copied_from,
   base_closest_copy,
   base_node_prop,
@@ -5404,8 +5419,6 @@ static root_vtable_t root_vtable = {
   base_dir_entries,
   base_dir_optimal_order,
   base_make_dir,
-  base_copy,
-  base_revision_link,
   base_file_length,
   base_file_checksum,
   base_file_contents,

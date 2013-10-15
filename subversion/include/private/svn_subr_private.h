@@ -26,6 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_io.h"
+#include "svn_config.h"
 
 
 #ifdef __cplusplus
@@ -481,6 +482,49 @@ svn__decompress(svn_stringbuf_t *in,
 
 /** @} */
 
+/**
+ * @defgroup svn_root_pools Recycle-able root pools API
+ * @{
+ */
+
+/* Opaque thread-safe container for unused / recylcleable root pools.
+ *
+ * Recyling root pools (actually, their allocators) circumvents a
+ * scalability bottleneck in the OS memory management when multi-threaded
+ * applications frequently create and destroy allocators.
+ */
+typedef struct svn_root_pools__t svn_root_pools__t;
+
+/* Create a new root pools container and return it in *POOLS.
+ */
+svn_error_t *
+svn_root_pools__create(svn_root_pools__t **pools);
+
+/* Return a currently unused pool from POOLS.  If POOLS is empty, create a
+ * new root pool and return that.  The pool returned is not thread-safe.
+ */
+apr_pool_t *
+svn_root_pools__acquire_pool(svn_root_pools__t *pools);
+
+/* Clear and release the given root POOL and put it back into POOLS.
+ * If that fails, destroy POOL.
+ */
+void
+svn_root_pools__release_pool(apr_pool_t *pool,
+                             svn_root_pools__t *pools);
+
+/** @} */
+
+/**
+ * @defgroup svn_config_private Private configuration handling API
+ * @{
+ */
+
+/* Future attempts to modify CFG will trigger an assertion. */
+void svn_config__set_read_only(svn_config_t *cfg,
+                               apr_pool_t *scratch_pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }

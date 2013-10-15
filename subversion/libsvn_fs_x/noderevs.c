@@ -1014,3 +1014,25 @@ svn_fs_x__noderevs_get_func(void **out,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_x__mergeinfo_count_get_func(void **out,
+                                   const void *data,
+                                   apr_size_t data_len,
+                                   void *baton,
+                                   apr_pool_t *pool)
+{
+  binary_noderev_t *binary_noderev;
+  apr_array_header_t noderevs;
+
+  apr_uint32_t idx = *(apr_uint32_t *)baton;
+  const svn_fs_x__noderevs_t *container = data;
+
+  /* Resolve all container pointers */
+  resolve_apr_array_header(&noderevs, container, &container->noderevs);
+  binary_noderev = &APR_ARRAY_IDX(&noderevs, idx, binary_noderev_t);
+  
+  *(apr_int64_t *)out = binary_noderev->mergeinfo_count;
+
+  return SVN_NO_ERROR;
+}

@@ -67,7 +67,8 @@ typedef enum svnauth__longopt_t {
 /** Subcommands. **/
 static svn_opt_subcommand_t
   subcommand_help,
-  subcommand_list;
+  subcommand_list,
+  subcommand_delete;
 
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
@@ -86,15 +87,35 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "\n"
     "  If PATTERN is specified, only list credentials with attributes matching\n"
     "  the pattern. All attributes except passwords can be matched. If more than\n"
-    "  one pattern is specified, credentials are shown if their attributes match\n"
-    "  any of the patterns. Patterns are matched case-sensitively, and may\n"
-    "  contain glob wildcards:\n"
+    "  one pattern is specified credentials are shown if their attributes match\n"
+    "  all patterns. Patterns are matched case-sensitively and may contain\n"
+    "  glob wildcards:\n"
     "    ?      matches any single character\n"
     "    *      matches a sequence of arbitrary characters\n"
     "    [abc]  matches any of the characters listed inside the brackets\n"
+    "  Note that wildcards will usually need to be quoted or escaped on the\n"
+    "  command line because many command shells will interfere by trying to\n"
+    "  expand them.\n"
     "\n"
     "  If no pattern is specified, all cached credentials are shown.\n"),
    {opt_config_dir, opt_show_passwords} },
+
+  {"delete", subcommand_delete, {"del", "remove", "rm"}, N_
+   ("usage: svnauth delete PATTERN ...\n"
+    "\n"
+    "  Delete cached authentication credentials matching a pattern.\n"
+    "\n"
+    "  All credential attributes except passwords can be matched. If more than \n"
+    "  one pattern is specified credentials are deleted only if their attributes\n"
+    "  match all patterns. Patterns are matched case-sensitively and may contain\n"
+    "  glob wildcards:\n"
+    "    ?      matches any single character\n"
+    "    *      matches a sequence of arbitrary characters\n"
+    "    [abc]  matches any of the characters listed inside the brackets\n"
+    "  Note that wildcards will usually need to be quoted or escaped on the\n"
+    "  command line because many command shells will interfere by trying to\n"
+    "  expand them.\n"),
+   {opt_config_dir} },
 
   {NULL}
 };
@@ -140,11 +161,10 @@ parse_args(apr_array_header_t **args,
     SVN_ERR_ASSERT(args);
 
   if ((min_expected >= 0) && (num_args < min_expected))
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
-                            "Not enough arguments");
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
   if ((max_expected >= 0) && (num_args > max_expected))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
-                            "Too many arguments");
+                            _("Too many arguments provided"));
   if (args)
     {
       *args = apr_array_make(pool, num_args, sizeof(const char *));
@@ -165,6 +185,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnauth_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnauth SUBCOMMAND [ARGS & OPTIONS ...]\n"
+      "Subversion authentication credentials management tool.\n"
       "Type 'svnauth help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnauth --version' to see the program version and available\n"
       "authentication credential caches.\n"
@@ -515,7 +536,9 @@ show_cert_failures(const char *failure_string,
 
 struct walk_credentials_baton_t
 {
+  int matches;
   svn_boolean_t list;
+  svn_boolean_t delete;
   svn_boolean_t show_passwords;
   apr_array_header_t *patterns;
 };
@@ -747,9 +770,18 @@ walk_credentials(svn_boolean_t *delete_cred,
         return SVN_NO_ERROR;
     }
 
+  b->matches++;
+
   if (b->list)
     SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
                             b->show_passwords, scratch_pool));
+  if (b->delete)
+    {
+      *delete_cred = TRUE;
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("Deleting %s credential for realm '%s'\n"),
+                                 cred_kind, realmstring));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -763,8 +795,10 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *config_path;
   struct walk_credentials_baton_t b;
 
+  b.matches = 0;
   b.show_passwords = opt_state->show_passwords;
   b.list = TRUE;
+  b.delete = FALSE;
   SVN_ERR(parse_args(&b.patterns, os, 0, -1, pool));
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,
@@ -773,6 +807,67 @@ subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b,
                                     pool));
+
+  if (b.matches == 0)
+    {
+      if (b.patterns->nelts == 0)
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Credentials cache in '%s' is empty\n"),
+                                   svn_dirent_local_style(config_path, pool)));
+      else 
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
+                                 _("Credentials cache in '%s' contains "
+                                   "no matching credentials"),
+                                 svn_dirent_local_style(config_path, pool));
+    }
+  else
+    {
+      if (b.patterns->nelts == 0)
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Credentials cache in '%s' contains %d "
+                                     "credentials\n"),
+                                   svn_dirent_local_style(config_path, pool),
+                                   b.matches));
+      else
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("Credentials cache in '%s' contains %d "
+                                     "matching credentials\n"),
+                                   svn_dirent_local_style(config_path, pool),
+                                   b.matches));
+    }
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnauth_opt_state *opt_state = baton;
+  const char *config_path;
+  struct walk_credentials_baton_t b;
+
+  b.matches = 0;
+  b.show_passwords = opt_state->show_passwords;
+  b.list = FALSE;
+  b.delete = TRUE;
+  SVN_ERR(parse_args(&b.patterns, os, 1, -1, pool));
+
+  SVN_ERR(svn_config_get_user_config_path(&config_path,
+                                          opt_state->config_dir, NULL,
+                                          pool));
+
+  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b, pool));
+
+  if (b.matches == 0)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
+                             _("Credentials cache in '%s' contains "
+                               "no matching credentials"),
+                             svn_dirent_local_style(config_path, pool));
+  else
+    SVN_ERR(svn_cmdline_printf(pool, _("Deleted %d matching credentials "
+                               "from '%s'\n"), b.matches,
+                               svn_dirent_local_style(config_path, pool)));
+
   return SVN_NO_ERROR;
 }
 

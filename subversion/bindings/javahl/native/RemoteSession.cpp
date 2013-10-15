@@ -36,6 +36,7 @@
 #include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
+#include "svn_delta.h"
 
 #include "CreateJ.h"
 #include "EnumMapper.h"
@@ -66,9 +67,8 @@ jobject
 RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
-                    jobject jconfigHandler,
                     jstring jusername, jstring jpassword,
-                    jobject jprompter, jobject jprogress)
+                    jobject jprompter, jobject jprogress, jobject jtunnelcb)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -111,7 +111,7 @@ RemoteSession::open(jint jretryAttempts,
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
-      jconfigHandler, usernameStr, passwordStr, prompter, jprogress);
+      usernameStr, passwordStr, prompter, jprogress, jtunnelcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
@@ -123,9 +123,9 @@ RemoteSession::open(jint jretryAttempts,
 jobject
 RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
-                    const char* configDirectory, jobject jconfigHandler,
+                    const char* configDirectory,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter*& prompter, jobject jprogress)
+                    Prompter*& prompter, jobject jprogress, jobject jtunnelcb)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -137,17 +137,51 @@ RemoteSession::open(jint jretryAttempts,
       initialized = true;
     }
 
-  jobject jthis_out = NULL;
   RemoteSession* session = new RemoteSession(
-      &jthis_out, jretryAttempts, url, uuid,
-      configDirectory, jconfigHandler,
-      usernameStr, passwordStr, prompter, jprogress);
+      jretryAttempts, url, uuid, configDirectory,
+      usernameStr, passwordStr, prompter, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
-      jthis_out = NULL;
+      return NULL;
     }
-  return jthis_out;
+
+  // Create java session object
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jclass clazz = env->FindClass(JAVA_CLASS_REMOTE_SESSION);
+  if (JNIUtil::isJavaExceptionThrown())
+    {
+      delete session;
+      return NULL;
+    }
+
+  static jmethodID ctor = 0;
+  if (ctor == 0)
+    {
+      ctor = env->GetMethodID(clazz, "<init>", "(J)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        {
+          delete session;
+          return NULL;
+        }
+    }
+
+  jobject jremoteSession = env->NewObject(clazz, ctor, session->getCppAddr());
+  if (JNIUtil::isJavaExceptionThrown())
+    {
+      delete session;
+      return NULL;
+    }
+
+  session->m_context->activate(jremoteSession, jprogress);
+  if (JNIUtil::isJavaExceptionThrown())
+    {
+      delete session;
+      jremoteSession = NULL;
+    }
+
+  return jremoteSession;
 }
 
 
@@ -163,38 +197,15 @@ namespace{
   typedef std::pair<attempt_set::iterator, bool> attempt_insert;
 } // anonymous namespace
 
-RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
+RemoteSession::RemoteSession(int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
-                             jobject jconfigHandler,
                              const char*  username, const char*  password,
-                             Prompter*& prompter, jobject jprogress)
+                             Prompter*& prompter, jobject jtunnelcb)
   : m_session(NULL), m_context(NULL)
 {
-  // Create java session object
-  JNIEnv *env = JNIUtil::getEnv();
-
-  jclass clazz = env->FindClass(JAVA_CLASS_REMOTE_SESSION);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
-  static jmethodID ctor = 0;
-  if (ctor == 0)
-    {
-      ctor = env->GetMethodID(clazz, "<init>", "(J)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return;
-    }
-
-  jlong cppAddr = this->getCppAddr();
-
-  jobject jremoteSession = env->NewObject(clazz, ctor, cppAddr);
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
   m_context = new RemoteSessionContext(
-      jremoteSession, pool, configDirectory, jconfigHandler,
-      username, password, prompter, jprogress);
+      pool, configDirectory, username, password, prompter, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -233,6 +244,8 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
 
   if (cycle_detected)
     {
+      JNIEnv *env = JNIUtil::getEnv();
+
       jstring exmsg = JNIUtil::makeJString(
           apr_psprintf(pool.getPool(),
                        _("Redirect cycle detected for URL '%s'"),
@@ -258,6 +271,8 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
 
   if (corrected_url)
     {
+      JNIEnv *env = JNIUtil::getEnv();
+
       jstring exmsg = JNIUtil::makeJString(_("Too many redirects"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
@@ -283,8 +298,6 @@ RemoteSession::RemoteSession(jobject* jthis_out, int retryAttempts,
       env->Throw(static_cast<jthrowable>(ex));
       return;
     }
-
-  *jthis_out = jremoteSession;
 }
 
 RemoteSession::~RemoteSession()
@@ -1173,10 +1186,16 @@ public:
                                // We ignore the deltas as they're not
                                // exposed in the JavaHL API.
                                svn_boolean_t result_of_merge,
-                               svn_txdelta_window_handler_t*, void**,
+                               svn_txdelta_window_handler_t* delta_handler,
+                               void** delta_handler_baton,
                                apr_array_header_t* prop_diffs,
                                apr_pool_t* scratch_pool)
     {
+      if (delta_handler)
+        *delta_handler = svn_delta_noop_window_handler;
+      if (delta_handler_baton)
+        *delta_handler_baton = NULL;
+
       FileRevisionHandler* const self =
         static_cast<FileRevisionHandler*>(baton);
       SVN_ERR_ASSERT(self->m_jcallback != NULL);

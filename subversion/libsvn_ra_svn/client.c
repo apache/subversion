@@ -561,14 +561,42 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
   return SVN_NO_ERROR;
 }
 
+/* This structure is used as a baton for the pool cleanup function to
+   store tunnel parameters used by the close-tunnel callback. */
+struct tunnel_data_t {
+  void *tunnel_context;
+  void *tunnel_baton;
+  const char *tunnel_name;
+  const char *user;
+  const char *hostname;
+  int port;
+  svn_ra_close_tunnel_func_t close_tunnel;
+};
+
+/* Pool cleanup function that invokes the close-tunel callback. */
+static apr_status_t close_tunnel_cleanup(void *baton)
+{
+  const struct tunnel_data_t *const td = baton;
+  svn_error_t *const err =
+    svn_error_root_cause(td->close_tunnel(td->tunnel_context, td->tunnel_baton,
+                                          td->tunnel_name, td->user,
+                                          td->hostname, td->port));
+  const apr_status_t ret = (err ? err->apr_err : 0);
+  svn_error_clear(err);
+  return ret;
+}
+
 /* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
    URI is a parsed version of URL.  CALLBACKS and CALLBACKS_BATON
-   are provided by the caller of ra_svn_open. If tunnel_argv is non-null,
-   it points to a program argument list to use when invoking the tunnel agent.
+   are provided by the caller of ra_svn_open. If TUNNEL_NAME is not NULL,
+   it is the name of the tunnel type parsed from the URL scheme.
+   If TUNNEL_ARGV is not NULL, it points to a program argument list to use
+   when invoking the tunnel agent.
 */
 static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  const char *url,
                                  const apr_uri_t *uri,
+                                 const char *tunnel_name,
                                  const char **tunnel_argv,
                                  const svn_ra_callbacks2_t *callbacks,
                                  void *callbacks_baton,
@@ -583,19 +611,52 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
-  sess->is_tunneled = (tunnel_argv != NULL);
+  sess->is_tunneled = (tunnel_name != NULL);
   sess->url = apr_pstrdup(pool, url);
   sess->user = uri->user;
   sess->hostname = uri->hostname;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
                                     uri->port);
+  sess->tunnel_name = tunnel_name;
   sess->tunnel_argv = tunnel_argv;
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
 
-  if (tunnel_argv)
-    SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
+  if (tunnel_name)
+    {
+      if (tunnel_argv)
+        SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
+      else
+        {
+          void *tunnel_context;
+          apr_file_t *request;
+          apr_file_t *response;
+          SVN_ERR(callbacks->open_tunnel_func(
+                      &request, &response, &tunnel_context,
+                      callbacks->tunnel_baton, tunnel_name,
+                      uri->user, uri->hostname, uri->port,
+                      pool));
+          if (callbacks->close_tunnel_func)
+            {
+              struct tunnel_data_t *const td = apr_palloc(pool, sizeof(*td));
+              td->tunnel_context = tunnel_context;
+              td->tunnel_baton = callbacks->tunnel_baton;
+              td->tunnel_name = apr_pstrdup(pool, tunnel_name);
+              td->user = apr_pstrdup(pool, uri->user);
+              td->hostname = apr_pstrdup(pool, uri->hostname);
+              td->port = uri->port;
+              td->close_tunnel = callbacks->close_tunnel_func;
+              apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
+                                        apr_pool_cleanup_null);
+            }
+
+          conn = svn_ra_svn_create_conn3(NULL, response, request,
+                                         SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                                         0, 0, pool);
+          SVN_ERR(svn_ra_svn__skip_leading_garbage(conn, pool));
+        }
+    }
   else
     {
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
@@ -738,7 +799,14 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
 
   parse_tunnel(url, &tunnel, pool);
 
-  if (tunnel)
+  /* Use the default tunnel implementation if we got a tunnel name,
+     but either do not have tunnel handler callbacks installed, or
+     the handlers don't like the tunnel name. */
+  if (tunnel
+      && (!callbacks->open_tunnel_func
+          || (callbacks->check_tunnel_func && callbacks->open_tunnel_func
+              && !callbacks->check_tunnel_func(callbacks->tunnel_baton,
+                                               tunnel))))
     SVN_ERR(find_tunnel_agent(tunnel, uri.hostinfo, &tunnel_argv, config,
                               pool));
   else
@@ -755,7 +823,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
 
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
-  SVN_ERR(open_session(&sess, url, &uri, tunnel_argv,
+  SVN_ERR(open_session(&sess, url, &uri, tunnel, tunnel_argv,
                        callbacks, callback_baton, sess_pool));
   session->priv = sess;
 
@@ -791,7 +859,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   sess_pool = svn_pool_create(ra_session->pool);
   err = parse_url(url, &uri, sess_pool);
   if (! err)
-    err = open_session(&new_sess, url, &uri, sess->tunnel_argv,
+    err = open_session(&new_sess, url, &uri, sess->tunnel_name, sess->tunnel_argv,
                        sess->callbacks, sess->callbacks_baton, sess_pool);
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
@@ -1487,6 +1555,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
                    svn_boolean_t discover_changed_paths,
                    svn_boolean_t strict_node_history,
                    svn_boolean_t include_merged_revisions,
+                   svn_move_behavior_t move_behavior,
                    const apr_array_header_t *revprops,
                    svn_log_entry_receiver_t receiver,
                    void *receiver_baton,
@@ -1536,11 +1605,13 @@ perform_ra_svn_log(svn_error_t **outer_error,
           else
             want_custom_revprops = TRUE;
         }
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)n)",
+                                      (apr_uint64_t) move_behavior));
     }
   else
     {
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w())", "all-revprops"));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w()n)", "all-revprops",
+                                      (apr_uint64_t) move_behavior));
 
       want_author = TRUE;
       want_date = TRUE;
@@ -1712,6 +1783,7 @@ ra_svn_log(svn_ra_session_t *session,
            svn_boolean_t discover_changed_paths,
            svn_boolean_t strict_node_history,
            svn_boolean_t include_merged_revisions,
+           svn_move_behavior_t move_behavior,
            const apr_array_header_t *revprops,
            svn_log_entry_receiver_t receiver,
            void *receiver_baton, apr_pool_t *pool)
@@ -1726,7 +1798,7 @@ ra_svn_log(svn_ra_session_t *session,
                                            discover_changed_paths,
                                            strict_node_history,
                                            include_merged_revisions,
-                                           revprops,
+                                           move_behavior, revprops,
                                            receiver, receiver_baton,
                                            pool));
   return svn_error_trace(

@@ -29,6 +29,7 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.ISVNEditor;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.NativeResources;
 
 import java.io.InputStream;
 import java.util.Map;
@@ -40,6 +41,14 @@ import java.util.Set;
  */
 public class CommitEditor extends JNIObject implements ISVNEditor
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
     public void dispose()
     {
         session.disposeEditor(this);
@@ -110,9 +119,6 @@ public class CommitEditor extends JNIObject implements ISVNEditor
                             String destinationRelativePath,
                             long replacesRevision)
             throws ClientException;
-
-//    public native void rotate(Iterable<RotatePair> elements)
-//            throws ClientException;
 
     public native void complete() throws ClientException;
 

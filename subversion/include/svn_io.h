@@ -1070,6 +1070,20 @@ svn_error_t *
 svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
 
+/** Set @a *str to a string buffer allocated in @a pool that contains all
+ * data from the current position in @a stream to its end.  @a len_hint
+ * specifies the initial capacity of the string buffer and may be 0.  The
+ * buffer gets automatically resized to fit the actual amount of data being
+ * read from @a stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stringbuf_from_stream(svn_stringbuf_t **str,
+                          svn_stream_t *stream,
+                          apr_size_t len_hint,
+                          apr_pool_t *pool);
+
 /** Return a generic stream connected to stringbuf @a str.  Allocate the
  * stream in @a pool.
  */

@@ -173,6 +173,17 @@ class SVNTests extends TestCase
 
     private void init()
     {
+        String disableCredStore = System.getProperty("test.disablecredstore");
+        if (disableCredStore != null)
+        {
+            try {
+                SVNUtil.disableNativeCredentialsStore();
+            } catch(Throwable ex) {
+                System.err.println("*** ERROR: Could not disable" +
+                                   " the native credentials store");
+            }
+        }
+
         // if not already set, get a usefull value for rootDir
         if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
@@ -344,7 +355,7 @@ class SVNTests extends TestCase
         }
     }
 
-    private static class DefaultProgressListener implements ProgressCallback
+    protected static class DefaultProgressListener implements ProgressCallback
     {
 
         public void onProgress(ProgressEvent event)

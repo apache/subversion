@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl.types;
 
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.NativeResources;
 
 import java.util.List;
 
@@ -38,6 +39,14 @@ public class RevisionRangeList implements java.io.Serializable
     // made to this class.  See any of the following, depending upon
     // the Java release.
     private static final long serialVersionUID = 1L;
+
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
 
     private List<RevisionRange> ranges;
 

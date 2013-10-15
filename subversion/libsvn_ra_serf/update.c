@@ -1574,6 +1574,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           handler->session = ctx->sess;
 
           handler->custom_accept_encoding = TRUE;
+          handler->no_dav_headers = TRUE;
           handler->header_delegate = headers_fetch;
           handler->header_delegate_baton = fetch_ctx;
 
@@ -3705,6 +3706,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           handler->session = session;
 
           handler->custom_accept_encoding = TRUE;
+          handler->no_dav_headers = TRUE;
           handler->header_delegate = headers_fetch;
           handler->header_delegate_baton = stream_ctx;
 

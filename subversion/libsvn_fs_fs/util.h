@@ -385,4 +385,8 @@ svn_boolean_t
 svn_fs_fs__use_log_addressing(svn_fs_t *fs,
                               svn_revnum_t rev);
 
+/* Return TRUE if FS's format supports moves to be recorded natively. */
+svn_boolean_t
+svn_fs_fs__supports_move(svn_fs_t *fs);
+
 #endif

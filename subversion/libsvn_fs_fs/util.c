@@ -637,3 +637,11 @@ svn_fs_fs__use_log_addressing(svn_fs_t *fs,
   return ffd->min_log_addressing_rev != SVN_INVALID_REVNUM
       && ffd->min_log_addressing_rev <= rev;
 }
+
+svn_boolean_t
+svn_fs_fs__supports_move(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  return ffd->format >= SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT;
+}

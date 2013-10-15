@@ -1862,6 +1862,9 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
 #endif /* SVN_USE_DOS_PATHS */
 
   /* Now validate the rest of the URI. */
+  seg = ptr;
+  while (*ptr && (*ptr != '/'))
+    ptr++;
   while(1)
     {
       apr_size_t seglen = ptr - seg;
@@ -1880,9 +1883,8 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
 
       if (*ptr == '/')
         ptr++;
+
       seg = ptr;
-
-
       while (*ptr && (*ptr != '/'))
         ptr++;
     }

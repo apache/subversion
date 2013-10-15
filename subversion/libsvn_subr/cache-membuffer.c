@@ -50,7 +50,8 @@
  * 2. A directory of cache entries. This is organized similar to CPU
  *    data caches: for every possible key, there is exactly one group
  *    of entries that may contain the header info for an item with
- *    that given key. The result is a GROUP_SIZE-way associative cache.
+ *    that given key.  The result is a GROUP_SIZE+-way associative cache
+ *    whose associativity can be dynamically increased.
  *
  * Only the start address of these two data parts are given as a native
  * pointer. All other references are expressed as offsets to these pointers.
@@ -96,6 +97,10 @@
  * about 50% of the content survives every 50% of the cache being re-written
  * with new entries. For details on the fine-tuning involved, see the
  * comments in ensure_data_insertable_l2().
+ * 
+ * Due to the randomized mapping of keys to entry groups, some groups may
+ * overflow.  In that case, there are spare groups that can be chained to
+ * an already used group to extend it.
  *
  * To limit the entry size and management overhead, not the actual item keys
  * but only their MD5-based hashes will be stored. This is reasonably safe
@@ -109,13 +114,6 @@
  * a number of independent caches (segments). Items will be multiplexed based
  * on their hash key.
  */
-
-/* A 16-way associative cache seems to be a good compromise between
- * performance (worst-case lookups) and efficiency-loss due to collisions.
- *
- * This value may be changed to any positive integer.
- */
-#define GROUP_SIZE 16
 
 /* For more efficient copy operations, let's align all data items properly.
  * Must be a power of 2.
@@ -297,17 +295,18 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 
 #define DEBUG_CACHE_MEMBUFFER_TAG tag,
 
-#define DEBUG_CACHE_MEMBUFFER_INIT_TAG                         \
-  entry_tag_t _tag;                                            \
-  entry_tag_t *tag = &_tag;                                    \
-  SVN_ERR(store_key_part(tag,                                  \
-                         cache->prefix,                        \
-                         cache->prefix_tail,                   \
-                         key,                                  \
-                         cache->key_len == APR_HASH_KEY_STRING \
-                             ? strlen((const char *) key)      \
-                             : cache->key_len,                 \
-                         cache->pool));
+#define DEBUG_CACHE_MEMBUFFER_INIT_TAG                           \
+  entry_tag_t _tag;                                              \
+  entry_tag_t *tag = &_tag;                                      \
+  if (key)                                                       \
+    SVN_ERR(store_key_part(tag,                                  \
+                           cache->prefix,                        \
+                           cache->prefix_tail,                   \
+                           key,                                  \
+                           cache->key_len == APR_HASH_KEY_STRING \
+                               ? strlen((const char *) key)      \
+                               : cache->key_len,                 \
+                           cache->pool));
 
 #else
 
@@ -335,10 +334,11 @@ typedef struct entry_t
    */
   apr_uint64_t offset;
 
-  /* Size of the serialized item data. May be 0.
+  /* Size of the serialized item data. May be 0.  The MAX_ITEM_SIZE macro
+   * above ensures that there will be no overflows.
    * Only valid for used entries.
    */
-  apr_size_t size;
+  apr_uint32_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
@@ -371,15 +371,60 @@ typedef struct entry_t
 #endif
 } entry_t;
 
-/* We group dictionary entries to make this GROUP-SIZE-way associative.
+/* Group header struct.
  */
-typedef struct entry_group_t
+typedef struct group_header_t
 {
   /* number of entries used [0 .. USED-1] */
   apr_uint32_t used;
 
+  /* next group in the chain or NO_INDEX for the last.
+   * For recycleable unused spare groups, this points to the next
+   * unused spare group */
+  apr_uint32_t next;
+
+  /* previously group in the chain or NO_INDEX for the first */
+  apr_uint32_t previous;
+
+  /* number of elements in the chain from start to here.
+   * >= 1 for used groups, 0 for unused spare groups */
+  apr_uint32_t chain_length;
+ 
+} group_header_t;
+
+/* The size of the group struct should be a power of two make sure it does
+ * not cross memory page boundaries.  Since we already access the cache
+ * randomly, having two page table lookups instead of one is bad.
+ */
+#define GROUP_BLOCK_SIZE 512
+
+/* A ~10-way associative cache seems to be a good compromise between
+ * performance (worst-case lookups) and efficiency-loss due to collisions.
+ *
+ * This value may be changed to any positive integer.
+ */
+#define GROUP_SIZE \
+          ((GROUP_BLOCK_SIZE - sizeof(group_header_t)) / sizeof(entry_t))
+
+/* Maximum number of groups in a chain, i.e. a cache index group can hold
+ * up to GROUP_SIZE * MAX_GROUP_CHAIN_LENGTH entries.
+ */
+#define MAX_GROUP_CHAIN_LENGTH 8
+
+/* We group dictionary entries to make this GROUP-SIZE-way associative.
+ */
+typedef struct entry_group_t
+{
+  /* group globals */
+  group_header_t header;
+  
+  /* padding and also room for future extensions */
+  char padding[GROUP_BLOCK_SIZE - sizeof(group_header_t)
+               - sizeof(entry_t) * GROUP_SIZE];
+
   /* the actual entries */
   entry_t entries[GROUP_SIZE];
+
 } entry_group_t;
 
 /* Per-cache level header structure.  Instances of this are members of
@@ -431,7 +476,8 @@ struct svn_membuffer_t
      and that all segments must / will report the same values here. */
   apr_uint32_t segment_count;
 
-  /* The dictionary, GROUP_SIZE * group_count entries long. Never NULL.
+  /* The dictionary, GROUP_SIZE * (group_count + spare_group_count)
+   * entries long.  Never NULL.
    */
   entry_group_t *directory;
 
@@ -443,6 +489,20 @@ struct svn_membuffer_t
   /* Size of dictionary in groups. Must be > 0.
    */
   apr_uint32_t group_count;
+
+  /* Total number of spare groups.
+   */
+  apr_uint32_t spare_group_count;
+
+  /* First recycleable spare group.
+   */
+  apr_uint32_t first_spare_group;
+
+  /* Maximum number of spare groups ever used.  I.e. group index
+   * group_count + max_spare_used is the first unused spare group
+   * if first_spare_group is NO_INDEX.
+   */
+  apr_uint32_t max_spare_used;
 
   /* Pointer to the data buffer, data_size bytes long. Never NULL.
    */
@@ -644,6 +704,132 @@ do {                                                            \
   SVN_ERR(unlock_cache(cache, (expr)));                         \
 } while (0)
 
+/* Returns 0 if the entry group identified by GROUP_INDEX in CACHE has not
+ * been initialized, yet. In that case, this group can not data. Otherwise,
+ * a non-zero value is returned.
+ */
+static APR_INLINE unsigned char
+is_group_initialized(svn_membuffer_t *cache, apr_uint32_t group_index)
+{
+  unsigned char flags
+    = cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)];
+  unsigned char bit_mask
+    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
+
+  return flags & bit_mask;
+}
+
+/* Initializes the section of the directory in CACHE that contains
+ * the entry group identified by GROUP_INDEX. */
+static void
+initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
+{
+  unsigned char bit_mask;
+  apr_uint32_t i;
+
+  /* range of groups to initialize due to GROUP_INIT_GRANULARITY */
+  apr_uint32_t first_index =
+      (group_index / GROUP_INIT_GRANULARITY) * GROUP_INIT_GRANULARITY;
+  apr_uint32_t last_index = first_index + GROUP_INIT_GRANULARITY;
+  if (last_index > cache->group_count)
+    last_index = cache->group_count;
+
+  for (i = first_index; i < last_index; ++i)
+    {
+      group_header_t *header = &cache->directory[i].header;
+      header->used = 0;
+      header->chain_length = 1;
+      header->next = NO_INDEX;
+      header->previous = NO_INDEX;
+    }
+
+  /* set the "initialized" bit for these groups */
+  bit_mask
+    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
+  cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)]
+    |= bit_mask;
+}
+
+/* Return the next available spare group from CACHE and mark it as used.
+ * May return NULL.
+ */
+static entry_group_t *
+allocate_spare_group(svn_membuffer_t *cache)
+{
+  entry_group_t *group = NULL;
+
+  /* is there some ready-to-use group? */
+  if (cache->first_spare_group != NO_INDEX)
+    {
+      group = &cache->directory[cache->first_spare_group];
+      cache->first_spare_group = group->header.next;
+    }
+
+  /* any so far untouched spares available? */
+  else if (cache->max_spare_used < cache->spare_group_count)
+    {
+      apr_uint32_t group_index = cache->group_count + cache->max_spare_used;
+      ++cache->max_spare_used;
+
+      if (!is_group_initialized(cache, group_index))
+        initialize_group(cache, group_index);
+
+      group = &cache->directory[group_index];
+    }
+
+  /* spare groups must be empty */
+  assert(!group || !group->header.used);
+  return group;
+}
+
+/* Mark previously allocated spare group GROUP in CACHE as "unused".
+ */
+static void
+free_spare_group(svn_membuffer_t *cache,
+                 entry_group_t *group)
+{
+  assert(group->header.used == 0);
+  assert(group->header.previous != NO_INDEX);
+  assert(group - cache->directory >= cache->group_count);
+
+  /* unchain */
+  cache->directory[group->header.previous].header.next = NO_INDEX;
+  group->header.chain_length = 0;
+  group->header.previous = NO_INDEX;
+
+  /* add to chain of spares */
+  group->header.next = cache->first_spare_group;
+  cache->first_spare_group = group - cache->directory;
+}
+
+/* Follow the group chain from GROUP in CACHE to its end and return the last
+ * group.  May return GROUP.
+ */
+static entry_group_t *
+last_group_in_chain(svn_membuffer_t *cache,
+                    entry_group_t *group)
+{
+  while (group->header.next != NO_INDEX)
+    group = &cache->directory[group->header.next];
+
+  return group;
+}
+
+/* Return the CHAIN_INDEX-th element in the group chain starting from group
+ * START_GROUP_INDEX in CACHE.
+ */
+static entry_group_t *
+get_group(svn_membuffer_t *cache,
+          apr_uint32_t start_group_index,
+          apr_uint32_t chain_index)
+{
+  entry_group_t *group = &cache->directory[start_group_index];
+  for (; chain_index; --chain_index)
+    group = &cache->directory[group->header.next];
+
+  return group;
+}
+
 /* Resolve a dictionary entry reference, i.e. return the entry
  * for the given IDX.
  */
@@ -765,13 +951,13 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
    */
   apr_uint32_t idx = get_index(cache, entry);
   apr_uint32_t group_index = idx / GROUP_SIZE;
-  entry_group_t *group = &cache->directory[group_index];
-  apr_uint32_t last_in_group = group_index * GROUP_SIZE + group->used - 1;
-  cache_level_t *level = get_cache_level(cache, entry);
+  entry_group_t *last_group
+    = last_group_in_chain(cache, &cache->directory[group_index]);
+  apr_uint32_t last_in_group
+    = (last_group - cache->directory) * GROUP_SIZE
+    + last_group->header.used - 1;
 
-  /* Only valid to be called for used entries.
-   */
-  assert(idx <= last_in_group);
+  cache_level_t *level = get_cache_level(cache, entry);
 
   /* update global cache usage counters
    */
@@ -805,16 +991,16 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* unlink it from the chain of used entries
    */
   unchain_entry(cache, level, entry, idx);
-  
+
   /* Move last entry into hole (if the removed one is not the last used).
    * We need to do this since all used entries are at the beginning of
    * the group's entries array.
    */
-  if (idx < last_in_group)
+  if (idx != last_in_group)
     {
       /* copy the last used entry to the removed entry's index
        */
-      *entry = group->entries[group->used-1];
+      *entry = last_group->entries[last_group->header.used-1];
 
       /* this ENTRY may belong to a different cache level than the entry
        * we have just removed */
@@ -838,7 +1024,12 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
 
   /* Update the number of used entries.
    */
-  group->used--;
+  last_group->header.used--;
+
+  /* Release the last group in the chain if it is a spare group
+   */
+  if (!last_group->header.used && last_group->header.previous != NO_INDEX)
+    free_spare_group(cache, last_group);
 }
 
 /* Insert ENTRY into the chain of used dictionary entries. The entry's
@@ -859,7 +1050,7 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
    * It must also be the first unused entry in the group.
    */
   assert(entry->offset == level->current_data);
-  assert(idx == group_index * GROUP_SIZE + group->used);
+  assert(idx == group_index * GROUP_SIZE + group->header.used);
   level->current_data = ALIGN_VALUE(entry->offset + entry->size);
 
   /* update usage counters
@@ -867,7 +1058,7 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
   cache->used_entries++;
   cache->data_used += entry->size;
   entry->hit_count = 0;
-  group->used++;
+  group->header.used++;
 
   /* update entry chain
    */
@@ -907,46 +1098,6 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 
   cache->hit_count -= hits_removed;
   entry->hit_count -= hits_removed;
-}
-
-/* Returns 0 if the entry group identified by GROUP_INDEX in CACHE has not
- * been initialized, yet. In that case, this group can not data. Otherwise,
- * a non-zero value is returned.
- */
-static APR_INLINE unsigned char
-is_group_initialized(svn_membuffer_t *cache, apr_uint32_t group_index)
-{
-  unsigned char flags
-    = cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)];
-  unsigned char bit_mask
-    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
-
-  return flags & bit_mask;
-}
-
-/* Initializes the section of the directory in CACHE that contains
- * the entry group identified by GROUP_INDEX. */
-static void
-initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
-{
-  unsigned char bit_mask;
-  apr_uint32_t i;
-
-  /* range of groups to initialize due to GROUP_INIT_GRANULARITY */
-  apr_uint32_t first_index =
-      (group_index / GROUP_INIT_GRANULARITY) * GROUP_INIT_GRANULARITY;
-  apr_uint32_t last_index = first_index + GROUP_INIT_GRANULARITY;
-  if (last_index > cache->group_count)
-    last_index = cache->group_count;
-
-  for (i = first_index; i < last_index; ++i)
-    cache->directory[i].used = 0;
-
-  /* set the "initialized" bit for these groups */
-  bit_mask
-    = (unsigned char)(1 << ((group_index / GROUP_INIT_GRANULARITY) % 8));
-  cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)]
-    |= bit_mask;
 }
 
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
@@ -994,45 +1145,98 @@ find_entry(svn_membuffer_t *cache,
 
   /* try to find the matching entry
    */
-  for (i = 0; i < group->used; ++i)
-    if (   to_find[0] == group->entries[i].key[0]
-        && to_find[1] == group->entries[i].key[1])
-      {
-        /* found it
-         */
-        entry = &group->entries[i];
-        if (find_empty)
-          drop_entry(cache, entry);
-        else
-          return entry;
-      }
+  while (1)
+    {
+      for (i = 0; i < group->header.used; ++i)
+        if (   to_find[0] == group->entries[i].key[0]
+            && to_find[1] == group->entries[i].key[1])
+          {
+            /* found it
+             */
+            entry = &group->entries[i];
+            if (!find_empty)
+              return entry;
+
+            /* need to empty that entry */
+            drop_entry(cache, entry);
+            if (group->header.used == GROUP_SIZE)
+              group = last_group_in_chain(cache, group);
+            else if (group->header.chain_length == 0)
+              group = last_group_in_chain(cache,
+                                          &cache->directory[group_index]);
+
+            break;
+          }
+
+      /* end of chain? */
+      if (group->header.next == NO_INDEX)
+        break;
+
+      /* only full groups may chain */
+      assert(group->header.used == GROUP_SIZE);
+      group = &cache->directory[group->header.next];
+    }
 
   /* None found. Are we looking for a free entry?
    */
   if (find_empty)
     {
-      /* if there is no empty entry, delete the oldest entry
+      /* There is no empty entry in the chain, try chaining a spare group.
        */
-      if (group->used == GROUP_SIZE)
+      if (   group->header.used == GROUP_SIZE
+          && group->header.chain_length < MAX_GROUP_CHAIN_LENGTH)
+        {
+          entry_group_t *new_group = allocate_spare_group(cache);
+          if (new_group)
+            {
+              /* chain groups
+               */
+              new_group->header.chain_length = group->header.chain_length + 1;
+              new_group->header.previous = group - cache->directory;
+              new_group->header.next = NO_INDEX;
+              group->header.next = new_group - cache->directory;
+              group = new_group;
+            }
+        }
+
+      /* if GROUP is still filled, we need to remove a random entry */
+      if (group->header.used == GROUP_SIZE)
         {
           /* every entry gets the same chance of being removed.
-           * Otherwise, we free the first entry, fill it and remove it
-           * again on the next occasion without considering the other
-           * entries in this group.  Also, apply priorities strictly.
+           * Otherwise, we free the first entry, fill it and
+           * remove it again on the next occasion without considering
+           * the other entries in this group.
+           *
+           * We hit only one random group instead of processing all
+           * groups in the chain.
            */
-          entry = &group->entries[rand() % GROUP_SIZE];
-          for (i = 1; i < GROUP_SIZE; ++i)
-            if (   (entry->priority > group->entries[i].priority)
-                || (   entry->priority == group->entries[i].priority
-                    && entry->hit_count > group->entries[i].hit_count))
-              entry = &group->entries[i];
+          cache_level_t *entry_level;
+          int to_remove = rand() % (GROUP_SIZE * group->header.chain_length);
+          entry_group_t *to_shrink
+            = get_group(cache, group_index, to_remove / GROUP_SIZE);
+
+          entry = &to_shrink->entries[to_remove % GROUP_SIZE];
+          entry_level = get_cache_level(cache, entry);
+          for (i = 0; i < GROUP_SIZE; ++i)
+            {
+              /* keep L1 entries whenever possible */
+
+              cache_level_t *level
+                = get_cache_level(cache, &to_shrink->entries[i]);
+              if (   (level != entry_level && entry_level == &cache->l1)
+                  || (entry->hit_count > to_shrink->entries[i].hit_count))
+                {
+                  entry_level = level;
+                  entry = &to_shrink->entries[i];
+                }
+            }
 
           /* for the entries that don't have been removed,
            * reduce their hit counts to put them at a relative
            * disadvantage the next time.
            */
           for (i = 0; i < GROUP_SIZE; ++i)
-            if (entry != &group->entries[i])
+            if (entry != &to_shrink->entries[i])
               let_entry_age(cache, entry);
 
           drop_entry(cache, entry);
@@ -1040,7 +1244,7 @@ find_entry(svn_membuffer_t *cache,
 
       /* initialize entry for the new key
        */
-      entry = &group->entries[group->used];
+      entry = &group->entries[group->header.used];
       entry->key[0] = to_find[0];
       entry->key[1] = to_find[1];
     }
@@ -1096,6 +1300,7 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
   apr_uint32_t idx = get_index(cache, entry);
   apr_size_t size = ALIGN_VALUE(entry->size);
   assert(get_cache_level(cache, entry) == &cache->l1);
+  assert(idx == cache->l1.next);
 
   /* copy item from the current location in L1 to the start of L2's
    * insertion window */
@@ -1126,8 +1331,7 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
  */
 static svn_boolean_t
 ensure_data_insertable_l2(svn_membuffer_t *cache,
-                          entry_t *to_fit_in,
-                          apr_uint32_t idx)
+                          entry_t *to_fit_in)
 {
   entry_t *entry;
   apr_uint64_t average_hit_value;
@@ -1145,9 +1349,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 
   /* accumulated "worth" of items dropped so far */
   apr_size_t drop_hits = 0;
-
-  /* verify parameters */
-  assert(idx == get_index(cache, to_fit_in));
 
   /* This loop will eventually terminate because every cache entry
    * would get dropped eventually:
@@ -1218,16 +1419,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
           if (   (apr_uint64_t)entry->size * cache->used_entries
                < cache->data_used / 8)
             {
-              keep = TRUE;
-            }
-          else if (cache->l2.next / GROUP_SIZE == idx / GROUP_SIZE)
-            {
-              /* Special case: we cannot drop entries that are in the same
-               * group as TO_FIT_IN because that might the latter to become
-               * invalidated it it happens to be the highest used entry in
-               * the group.  So, we must keep ENTRY unconditionally.
-               * (this is a very rare condition)
-               */
               keep = TRUE;
             }
           else if (   entry->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
@@ -1307,8 +1498,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 static svn_boolean_t
 ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
 {
-  entry_t *entry;
-
   /* Guarantees that the while loop will terminate. */
   if (size > cache->l1.size)
     return FALSE;
@@ -1320,9 +1509,11 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
     {
       /* first offset behind the insertion window
        */
+      apr_uint32_t entry_index = cache->l1.next;
+      entry_t *entry = get_entry(cache, entry_index);
       apr_uint64_t end = cache->l1.next == NO_INDEX
                        ? cache->l1.start_offset + cache->l1.size
-                       : get_entry(cache, cache->l1.next)->offset;
+                       : entry->offset;
 
       /* leave function as soon as the insertion window is large enough
        */
@@ -1346,12 +1537,16 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
           /* Remove the entry from the end of insertion window and promote
            * it to L2, if it is important enough.
            */
-          entry = get_entry(cache, cache->l1.next);
+          svn_boolean_t keep = ensure_data_insertable_l2(cache, entry);
 
-          if (ensure_data_insertable_l2(cache, entry, cache->l1.next))
-            promote_entry(cache, entry);
-          else
-            drop_entry(cache, entry);
+          /* We might have touched the group that contains ENTRY. Recheck. */
+          if (entry_index == cache->l1.next)
+            {
+              if (keep)
+                promote_entry(cache, entry);
+              else
+                drop_entry(cache, entry);
+            }
         }
     }
 
@@ -1394,6 +1589,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
   apr_uint32_t seg;
   apr_uint32_t group_count;
+  apr_uint32_t main_group_count;
+  apr_uint32_t spare_group_count;
   apr_uint32_t group_init_size;
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
@@ -1468,8 +1665,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
    */
   if (directory_size > total_size - sizeof(entry_group_t))
     directory_size = total_size - sizeof(entry_group_t);
-  if (directory_size < sizeof(entry_group_t))
-    directory_size = sizeof(entry_group_t);
+  if (directory_size < 2 * sizeof(entry_group_t))
+    directory_size = 2 * sizeof(entry_group_t);
 
   /* limit the data size to what we can address.
    * Note that this cannot overflow since all values are of size_t.
@@ -1497,6 +1694,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
               ? (APR_UINT32_MAX / GROUP_SIZE) - 1
               : (apr_uint32_t)(directory_size / sizeof(entry_group_t));
 
+  /* set some of the index directory aside as over-flow (spare) buffers */
+  spare_group_count = MAX(group_count / 4, 1);
+  main_group_count = group_count - spare_group_count;
+  assert(spare_group_count > 0 && main_group_count > 0);
+
   group_init_size = 1 + group_count / (8 * GROUP_INIT_GRANULARITY);
   for (seg = 0; seg < segment_count; ++seg)
     {
@@ -1504,7 +1706,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].segment_count = (apr_uint32_t)segment_count;
 
-      c[seg].group_count = group_count;
+      c[seg].group_count = main_group_count;
+      c[seg].spare_group_count = spare_group_count;
+      c[seg].first_spare_group = NO_INDEX;
+      c[seg].max_spare_used = 0;
+
       c[seg].directory = apr_pcalloc(pool,
                                      group_count * sizeof(entry_group_t));
 
@@ -1869,7 +2075,24 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
                                  entry_key_t to_find,
                                  svn_boolean_t *found)
 {
-  *found = find_entry(cache, group_index, to_find, FALSE) != NULL;
+  entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
+  if (entry)
+    {
+      /* This is often happen in "block read" where most data is already
+         in L2 and only a few previously evicted items are added to L1
+         again.  While items in L1 are well protected for a while, L2
+         items may get evicted soon.  Thus, mark all them as "hit" to give
+         them a higher chance for survival. */
+      entry->hit_count++;
+      cache->hit_count++;
+      cache->total_hits++;
+
+      *found = TRUE;
+    }
+  else
+    {
+      *found = FALSE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1887,6 +2110,8 @@ membuffer_cache_has_key(svn_membuffer_t *cache,
   /* find the entry group that will hold the key.
    */
   apr_uint32_t group_index = get_group_index(&cache, key);
+  cache->total_reads++;
+
   WITH_READ_LOCK(cache,
                  membuffer_cache_has_key_internal(cache,
                                                   group_index,
@@ -2572,8 +2797,10 @@ svn_membuffer_get_segment_info(svn_membuffer_t *segment,
   if (include_histogram)
     for (i = 0; i < segment->group_count; ++i)
       {
+        entry_group_t *chain_end
+          = last_group_in_chain(segment, &segment->directory[i]);
         apr_size_t use
-          = MIN(segment->directory[i].used,
+          = MIN(chain_end->header.used,
                 sizeof(info->histogram) / sizeof(info->histogram[0]) - 1);
         info->histogram[use]++;
       }
