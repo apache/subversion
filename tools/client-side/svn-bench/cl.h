@@ -90,6 +90,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_revprops;     /* retrieve no revprops */
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
+  svn_boolean_t auto_moves;      /* interpret unique DEL/ADD pairs as moves */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
 } svn_cl__opt_state_t;
