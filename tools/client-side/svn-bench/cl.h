@@ -107,7 +107,8 @@ svn_opt_subcommand_t
   svn_cl__help,
   svn_cl__null_export,
   svn_cl__null_list,
-  svn_cl__null_log;
+  svn_cl__null_log,
+  svn_cl__null_info;
 
 
 /* See definition in main.c for documentation. */
