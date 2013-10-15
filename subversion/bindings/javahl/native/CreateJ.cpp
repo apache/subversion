@@ -778,7 +778,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                "L"JAVA_PACKAGE"/types/NodeKind;"
                                "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/types/Lock;"
-                               "Ljava/lang/String;"
+                               "Ljava/lang/String;Ljava/util/List;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
@@ -811,7 +811,9 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jErr = JNIUtil::makeSVNErrorMessage(wcNotify->err);
+  jstring jErr;
+  jobject jErrStack;
+  JNIUtil::makeSVNErrorMessage(wcNotify->err, &jErr, &jErrStack);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -867,7 +869,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
-                                 jKind, jMimeType, jLock, jErr,
+                                 jKind, jMimeType, jLock, jErr, jErrStack,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
                                  jMergeRange, jpathPrefix, jpropName,

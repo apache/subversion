@@ -23,10 +23,12 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.callback.ClientNotifyCallback;
+
+import java.util.List;
 import java.util.Map;
 import java.util.EventObject;
-import org.apache.subversion.javahl.callback.ClientNotifyCallback;
-import org.apache.subversion.javahl.types.*;
 
 /**
  * The event passed to the {@link ClientNotifyCallback#onNotify}
@@ -41,7 +43,7 @@ public class ClientNotifyInformation extends EventObject
     // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
     // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
     // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * The {@link Action} which triggered this event.
@@ -67,6 +69,12 @@ public class ClientNotifyInformation extends EventObject
      * Any error message for the item.
      */
     private String errMsg;
+
+    /**
+     * A detailed stack of error messages for the item.
+     * @see ClientException
+     */
+    private List<ClientException.ErrorMessage> errMsgStack;
 
     /**
      * The {@link Status} of the content of the item.
@@ -157,6 +165,7 @@ public class ClientNotifyInformation extends EventObject
         this.mimeType = mimeType;
         this.lock = lock;
         this.errMsg = errMsg;
+        this.errMsgStack = null;
         this.contentState = contentState;
         this.propState = propState;
         this.lockState = lockState;
@@ -173,6 +182,34 @@ public class ClientNotifyInformation extends EventObject
         this.hunkModifiedLength = hunkModifiedLength;
         this.hunkMatchedLine = hunkMatchedLine;
         this.hunkFuzz = hunkFuzz;
+    }
+
+    /**
+     * This constructor will be called only by the native code.
+     *
+     * In addition to all the other parameters, sets the detailed
+     * message stack.
+     */
+    protected ClientNotifyInformation(String path, Action action, NodeKind kind,
+                             String mimeType, Lock lock, String errMsg,
+                             List<ClientException.ErrorMessage> errMsgStack,
+                             Status contentState, Status propState,
+                             LockStatus lockState, long revision,
+                             String changelistName, RevisionRange mergeRange,
+                             String pathPrefix, String propName,
+                             Map<String, String> revProps, long oldRevision,
+                             long hunkOriginalStart, long hunkOriginalLength,
+                             long hunkModifiedStart, long hunkModifiedLength,
+                             long hunkMatchedLine, int hunkFuzz)
+    {
+        this(path, action, kind, mimeType, lock, errMsg,
+             contentState, propState, lockState, revision,
+             changelistName, mergeRange, pathPrefix, propName,
+             revProps, oldRevision,
+             hunkOriginalStart, hunkOriginalLength,
+             hunkModifiedStart, hunkModifiedLength,
+             hunkMatchedLine, hunkFuzz);
+        this.errMsgStack = errMsgStack;
     }
 
     /**
@@ -221,6 +258,14 @@ public class ClientNotifyInformation extends EventObject
     public String getErrMsg()
     {
         return errMsg;
+    }
+
+    /**
+     * @return Details about the error message for the item.
+     */
+    public List<ClientException.ErrorMessage> getErrMsgDetails()
+    {
+        return errMsgStack;
     }
 
     /**
