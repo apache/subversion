@@ -66,6 +66,7 @@ typedef enum svn_cl__longopt_t {
   opt_with_revprop,
   opt_with_all_revprops,
   opt_with_no_revprops,
+  opt_auto_moves,
   opt_trust_server_cert,
   opt_changelist
 } svn_cl__longopt_t;
@@ -148,6 +149,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("set revision property ARG in new revision\n"
                        "                             "
                        "using the name[=value] format")},
+  {"auto-moves",    opt_auto_moves, 0,
+                    N_("attempt to interpret matching unique DEL+ADD\n"
+                       "                             "
+                       "pairs as moves")},
   {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge\n"
                        "                             "
@@ -256,7 +261,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  behavior, which can be useful for determining branchpoints.\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
      'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     'x',},
+     opt_auto_moves, 'x',},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -631,6 +636,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'g':
         opt_state.use_merge_history = TRUE;
+        break;
+      case opt_auto_moves:
+        opt_state.auto_moves = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
