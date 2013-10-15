@@ -55,9 +55,9 @@
    directory and pushing them at an info-receiver callback.
 
    DEPTH is the depth starting at DIR, even though RECEIVER is never
-   invoked on DIR: if DEPTH is svn_depth_immediates, then invoke
-   RECEIVER on all children of DIR, but none of their children; if
-   svn_depth_files, then invoke RECEIVER on file children of DIR but
+   invoked on DIR: if DEPTH is svn_depth_immediates, then increment
+   *COUNTER on all children of DIR, but none of their children; if
+   svn_depth_files, then increment *COUNTER on file children of DIR but
    not on subdirectories; if svn_depth_infinity, recurse fully.
    DIR is a relpath, relative to the root of RA_SESSION.
 */
@@ -106,6 +106,7 @@ push_dir_info(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Stripped-down version of svn_client_info3 */
 static svn_error_t *
 client_info(const char *abspath_or_url,
             const svn_opt_revision_t *peg_revision,
