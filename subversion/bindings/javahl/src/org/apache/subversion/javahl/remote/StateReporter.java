@@ -29,6 +29,7 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.ISVNReporter;
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.NativeResources;
 
 /**
  * Implementation of ISVNReporter.
@@ -36,6 +37,14 @@ import org.apache.subversion.javahl.ClientException;
  */
 public class StateReporter extends JNIObject implements ISVNReporter
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
     public void dispose()
     {
         session.disposeReporter(this);

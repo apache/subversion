@@ -23,6 +23,8 @@
 
 
 
+#include <assert.h>
+
 #define APR_WANT_STRFUNC
 #define APR_WANT_MEMFUNC
 #include <apr_want.h>
@@ -93,6 +95,7 @@ svn_config_create2(svn_config_t **cfgp,
   cfg->tmp_value = svn_stringbuf_create_empty(result_pool);
   cfg->section_names_case_sensitive = section_names_case_sensitive;
   cfg->option_names_case_sensitive = option_names_case_sensitive;
+  cfg->read_only = FALSE;
 
   *cfgp = cfg;
   return SVN_NO_ERROR;
@@ -484,7 +487,13 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
        */
       if (opt->value && strchr(opt->value, '%'))
         {
-          apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
+          apr_pool_t *tmp_pool;
+
+          /* setting read-only mode should have expanded all values
+           * automatically. */
+          assert(!cfg->read_only);
+
+          tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
 
           expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
           opt->expanded = TRUE;
@@ -686,6 +695,15 @@ svn_config_set(svn_config_t *cfg,
 {
   cfg_section_t *sec;
   cfg_option_t *opt;
+
+  /* Ignore write attempts to r/o configurations.
+   * 
+   * Since we should never try to modify r/o data, trigger an assertion
+   * in debug mode.
+   */
+  assert(!cfg->read_only);
+  if (cfg->read_only)
+    return;
 
   remove_expansions(cfg);
 

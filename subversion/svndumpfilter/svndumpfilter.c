@@ -1146,6 +1146,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svndumpfilter_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+      "Subversion repository dump filtering tool.\n"
       "Type 'svndumpfilter help <subcommand>' for help on a "
       "specific subcommand.\n"
       "Type 'svndumpfilter --version' to see the program version.\n"

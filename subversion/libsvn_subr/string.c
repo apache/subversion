@@ -53,9 +53,9 @@ membuf_create(void **data, apr_size_t *size,
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
    * smaller size. Note that this is safe even if apr_palloc would
-   * use some other aligment or none at all. */
+   * use some other alignment or none at all. */
   minimum_size = APR_ALIGN_DEFAULT(minimum_size);
-  *data = (!minimum_size ? NULL : apr_palloc(pool, minimum_size));
+  *data = apr_palloc(pool, minimum_size);
   *size = minimum_size;
 }
 
@@ -121,7 +121,10 @@ svn_membuf__resize(svn_membuf_t *membuf, apr_size_t size)
   const apr_size_t old_size = membuf->size;
 
   membuf_ensure(&membuf->data, &membuf->size, size, membuf->pool);
-  if (membuf->data && old_data && old_data != membuf->data)
+
+  /* If we re-allocated MEMBUF->DATA, it cannot be NULL.
+   * Statically initialized membuffers (OLD_DATA) may be NULL, though. */
+  if (old_data && old_data != membuf->data)
     memcpy(membuf->data, old_data, old_size);
 }
 

@@ -132,6 +132,8 @@ public class SVNClient implements ISVNClient
 
     public native void setPrompt(UserPasswordCallback prompt);
 
+    public native void setTunnelAgent(TunnelAgent tunnelAgent);
+
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
                                    boolean stopOnCopy, boolean discoverPath,
@@ -573,8 +575,6 @@ public class SVNClient implements ISVNClient
     public native void setConfigDirectory(String configDir)
             throws ClientException;
 
-    public native void setConfigEventHandler(ConfigEvent configHandler);
-
     public native String getConfigDirectory()
             throws ClientException;
 
@@ -664,9 +664,20 @@ public class SVNClient implements ISVNClient
 
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, Depth depth,
+                             boolean fetchExcluded, boolean fetchActualOnly,
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
+
+    public void info2(String pathOrUrl, Revision revision,
+                      Revision pegRevision, Depth depth,
+                      Collection<String> changelists,
+                      InfoCallback callback)
+            throws ClientException
+    {
+        info2(pathOrUrl, revision, pegRevision, depth,
+              false, true, changelists, callback);
+    }
 
     public native void patch(String patchPath, String targetPath,
                              boolean dryRun, int stripCount, boolean reverse,

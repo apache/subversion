@@ -1017,7 +1017,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* Given the first non-whitespace character FIRST_CHAR, read an item
  * into the already allocated structure ITEM.  LEVEL should be set
- * to 0 for the first call and is used to enforce a recurssion limit
+ * to 0 for the first call and is used to enforce a recursion limit
  * on the parser. */
 static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               svn_ra_svn_item_t *item, char first_char,

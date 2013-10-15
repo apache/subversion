@@ -367,13 +367,14 @@ sub parse_entry {
   # summary
   do {
     push @logsummary, shift
-  } until $_[0] =~ /^\s*\w+:/ or not defined $_[0];
+  } until $_[0] =~ /^\s*[][\w]+:/ or not defined $_[0];
 
   # votes
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
   pop;
 
   # depends, branch, notes
+  # Ignored headers: Changes[*]
   while (@_) {
     given (shift) {
       when (/^Depends:/) {

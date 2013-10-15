@@ -39,6 +39,14 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             const svn_fs_id_t *id,
                             apr_pool_t *pool);
 
+/* Set *COUNT to the value of the mergeinfo_count member of the node-
+   revision for the node ID in FS.  Do any allocations in POOL. */
+svn_error_t *
+svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
+                              svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              apr_pool_t *pool);
+
 /* Set *ROOT_ID to the node-id for the root of revision REV in
    filesystem FS.  Do any allocations in POOL. */
 svn_error_t *

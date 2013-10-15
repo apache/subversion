@@ -127,6 +127,7 @@ struct svn_ra_svn__session_baton_t {
   const char *user;
   const char *hostname; /* The remote hostname. */
   const char *realm_prefix;
+  const char *tunnel_name;
   const char **tunnel_argv;
   const svn_ra_callbacks2_t *callbacks;
   void *callbacks_baton;

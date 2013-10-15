@@ -1794,6 +1794,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
+ * @a move_behavior defines which changes are being reported as moves.
+ * See #svn_move_behavior_t for the various options.
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -1818,8 +1821,33 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  *
  * Use @a pool for temporary allocations.
  *
- * @since New in 1.5.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_get_logs5(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    svn_move_behavior_t move_behavior,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_entry_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_repos_get_logs5(), but with @a move_behavior being set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,

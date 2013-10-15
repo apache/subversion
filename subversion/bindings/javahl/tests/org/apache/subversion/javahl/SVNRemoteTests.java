@@ -68,14 +68,12 @@ public class SVNRemoteTests extends SVNTests
         thisTest = new OneTest();
     }
 
-    public static ISVNRemote getSession(String url, String configDirectory,
-                                        ConfigEvent configHandler)
+    public static ISVNRemote getSession(String url, String configDirectory)
     {
         try
         {
             RemoteFactory factory = new RemoteFactory();
             factory.setConfigDirectory(configDirectory);
-            factory.setConfigEventHandler(configHandler);
             factory.setUsername(USERNAME);
             factory.setPassword(PASSWORD);
             factory.setPrompt(new DefaultPromptUserPassword());
@@ -92,7 +90,7 @@ public class SVNRemoteTests extends SVNTests
 
     private ISVNRemote getSession()
     {
-        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath(), null);
+        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
     }
 
     /**
@@ -111,9 +109,10 @@ public class SVNRemoteTests extends SVNTests
         try
         {
             session = new RemoteFactory(
-                super.conf.getAbsolutePath(), null,
+                super.conf.getAbsolutePath(),
                 USERNAME, PASSWORD,
-                new DefaultPromptUserPassword(), null)
+                new DefaultPromptUserPassword(),
+                null, null)
                 .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)
@@ -128,6 +127,44 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
         session.dispose();
+    }
+
+    public void testSessionGC() throws Exception
+    {
+        int svnErrorCode = 0;
+        try {
+            try {
+                String prefix = getTestRepoUrl().substring(
+                    0, 1 + getTestRepoUrl().lastIndexOf("/"));
+                new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, PASSWORD,
+                    new DefaultPromptUserPassword(),
+                    null, null)
+                    .openRemoteSession(prefix + "repositorydoesnotexisthere");
+            }
+            finally
+            {
+                for(int i = 0; i < 100; i++)
+                {
+                    Runtime.getRuntime().gc(); // GC should run finalize
+
+                    // Do something
+                    byte[] memEater = new byte[1024 * 1024];
+                    Arrays.fill(memEater, (byte) i);
+
+                    // Do some more javahl activity (this url is OK)
+                    final ISVNRemote session = getSession();
+                    session.getLatestRevision();
+                    session.dispose();
+                }
+            }
+        }
+        catch (ClientException ex)
+        {
+            svnErrorCode = ex.getAllMessages().get(0).getCode();
+        }
+        assertEquals(180001, svnErrorCode);
     }
 
     public void testDatedRev() throws Exception
@@ -633,48 +670,6 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(contents, checkcontents.toByteArray()));
     }
 
-    // public void testEditorRotate() throws Exception
-    // {
-    //     ISVNRemote session = getSession();
-    //
-    //     ArrayList<ISVNEditor.RotatePair> rotation =
-    //         new ArrayList<ISVNEditor.RotatePair>(3);
-    //     rotation.add(new ISVNEditor.RotatePair("A/B", 1));
-    //     rotation.add(new ISVNEditor.RotatePair("A/C", 1));
-    //     rotation.add(new ISVNEditor.RotatePair("A/D", 1));
-    //
-    //     CommitContext cc =
-    //         new CommitContext(session, "Rotate A/B -> A/C -> A/D");
-    //     try {
-    //         // No alter-dir of A is needed, children remain the same.
-    //         cc.editor.rotate(rotation);
-    //         cc.editor.complete();
-    //     } finally {
-    //         cc.editor.dispose();
-    //     }
-    //
-    //     assertEquals(2, cc.getRevision());
-    //     assertEquals(2, session.getLatestRevision());
-    //
-    //     HashMap<String, DirEntry> dirents = new HashMap<String, DirEntry>();
-    //     HashMap<String, byte[]> properties = new HashMap<String, byte[]>();
-    //
-    //     // A/B is now what used to be A/D, so A/B/H must exist
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/B",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertEquals(dirents.get("H").getPath(), "H");
-    //
-    //     // A/C is now what used to be A/B, so A/C/F must exist
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/C",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertEquals(dirents.get("F").getPath(), "F");
-    //
-    //     // A/D is now what used to be A/C and must be empty
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/D",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertTrue(dirents.isEmpty());
-    // }
-
     // Sanity check so that we don't forget about unimplemented methods.
     public void testEditorNotImplemented() throws Exception
     {
@@ -704,13 +699,6 @@ public class SVNRemoteTests extends SVNTests
             }
             assertEquals("Not implemented: CommitEditor.alterSymlink", exmsg);
 
-            // try {
-            //     exmsg = "";
-            //     cc.editor.rotate(rotation);
-            // } catch (RuntimeException ex) {
-            //     exmsg = ex.getMessage();
-            // }
-            // assertEquals("Not implemented: CommitEditor.rotate", exmsg);
         } finally {
             cc.editor.dispose();
         }
@@ -810,10 +798,13 @@ public class SVNRemoteTests extends SVNTests
                 }
             };
 
-        ISVNRemote session = getSession(getTestRepoUrl(),
-                                        super.conf.getAbsolutePath(),
-                                        handler);
-        session.getLatestRevision(); // Make sure the configuration gets loaded
+        try {
+            SVNUtil.setConfigEventHandler(handler);
+            ISVNRemote session = getSession();
+            session.getLatestRevision();
+        } finally {
+            SVNUtil.setConfigEventHandler(null);
+        }
     }
 
     private static class RemoteStatusReceiver implements RemoteStatus

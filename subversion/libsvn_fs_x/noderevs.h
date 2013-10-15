@@ -127,4 +127,15 @@ svn_fs_x__noderevs_get_func(void **out,
                              void *baton,
                              apr_pool_t *pool);
 
+/* Implements svn_cache__partial_getter_func_t for the mergeinfo_count in
+ * the stored noderevs, setting *OUT to the apr_int64_t counter value of
+ * the noderev selected by the apr_uint32_t index passed in as *BATON.
+ */
+svn_error_t *
+svn_fs_x__mergeinfo_count_get_func(void **out,
+                                   const void *data,
+                                   apr_size_t data_len,
+                                   void *baton,
+                                   apr_pool_t *pool);
+
 #endif

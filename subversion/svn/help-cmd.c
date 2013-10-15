@@ -32,7 +32,6 @@
 #include "svn_string.h"
 #include "svn_config.h"
 #include "svn_error.h"
-#include "svn_version.h"
 #include "cl.h"
 
 
@@ -47,10 +46,9 @@ svn_cl__help(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = NULL;
   svn_stringbuf_t *version_footer = NULL;
 
-  /* xgettext: the %s is for SVN_VER_NUMBER. */
-  char help_header_template[] =
+  char help_header[] =
   N_("usage: svn <subcommand> [options] [args]\n"
-     "Subversion command-line client, version %s.\n"
+     "Subversion command-line client.\n"
      "Type 'svn help <subcommand>' for help on a specific subcommand.\n"
      "Type 'svn --version' to see the program version and RA modules\n"
      "  or 'svn --version --quiet' to see just the version number.\n"
@@ -64,9 +62,6 @@ svn_cl__help(apr_getopt_t *os,
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
      "For additional information, see http://subversion.apache.org/\n");
-
-  char *help_header =
-    apr_psprintf(pool, _(help_header_template), SVN_VER_NUMBER);
 
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");

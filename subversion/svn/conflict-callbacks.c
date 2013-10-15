@@ -399,31 +399,11 @@ launch_resolver(svn_boolean_t *performed_edit,
                 svn_cl__interactive_conflict_baton_t *b,
                 apr_pool_t *pool)
 {
-  svn_error_t *err;
-
-  err = svn_cl__merge_file_externally(desc->base_abspath, desc->their_abspath,
-                                      desc->my_abspath, desc->merged_file,
-                                      desc->local_abspath, b->config, NULL,
-                                      pool);
-  if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
-    {
-      SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                  err->message ? err->message :
-                                  _("No merge tool found, "
-                                    "try '(m) merge' instead.\n")));
-      svn_error_clear(err);
-    }
-  else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
-    {
-      SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                  err->message ? err->message :
-                             _("Error running merge tool, "
-                               "try '(m) merge' instead.")));
-      svn_error_clear(err);
-    }
-  else if (err)
-    return svn_error_trace(err);
-  else if (performed_edit)
+  SVN_ERR(svn_cl__merge_file_externally(desc->base_abspath, desc->their_abspath,
+                                        desc->my_abspath, desc->merged_file,
+                                        desc->local_abspath, b->config, NULL,
+                                        pool));
+  if (performed_edit)
     *performed_edit = TRUE;
 
   return SVN_NO_ERROR;
@@ -474,8 +454,8 @@ static const resolver_option_t text_conflict_options[] =
                                      "(same)  [theirs-full]"),
                                   svn_wc_conflict_choose_theirs_full },
   { "",   "",                     "", svn_wc_conflict_choose_unspecified },
-  { "m",  N_("merge"),            N_("use internal merge tool to resolve "
-                                     "conflict"), -1 },
+  { "m",  N_("merge"),            N_("use merge tool to resolve conflict"),
+                                     -1 },
   { "l",  N_("launch tool"),      N_("launch external tool to resolve "
                                      "conflict  [launch]"), -1 },
   { "p",  N_("postpone"),         N_("mark the conflict to be resolved later"
@@ -835,20 +815,35 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
       else if (strcmp(opt->code, "m") == 0 || strcmp(opt->code, ":-g") == 0 ||
                strcmp(opt->code, "=>-") == 0 || strcmp(opt->code, ":>.") == 0)
         {
-          if (desc->kind != svn_wc_conflict_kind_text)
+          svn_boolean_t remains_in_conflict;
+          svn_error_t *err;
+
+          err = launch_resolver(&performed_edit, desc, b, iterpool);
+          if (err)
             {
-              SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
-                                          _("Invalid option; can only "
-                                            "resolve text conflicts with "
-                                            "the internal merge tool."
-                                            "\n\n")));
-              continue;
+              if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
+                  err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+                {
+                  /* Try the internal merge tool. */
+                  svn_error_clear(err);
+                }
+              else
+                return svn_error_trace(err);
             }
 
-          if (desc->base_abspath && desc->their_abspath &&
+          if (!performed_edit &&
+              desc->base_abspath && desc->their_abspath &&
               desc->my_abspath && desc->merged_file)
             {
-              svn_boolean_t remains_in_conflict;
+              if (desc->kind != svn_wc_conflict_kind_text)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                                              _("Invalid option; can only "
+                                                "resolve text conflicts with "
+                                                "the internal merge tool."
+                                                "\n\n")));
+                  continue;
+                }
 
               SVN_ERR(svn_cl__merge_file(desc->base_abspath,
                                          desc->their_abspath,
@@ -860,11 +855,13 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
                                          b->config,
                                          &remains_in_conflict,
                                          iterpool));
-              knows_something = !remains_in_conflict;
             }
           else
             SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
                                         _("Invalid option.\n\n")));
+
+          if (performed_edit || !remains_in_conflict)
+            knows_something = TRUE;
         }
       else if (strcmp(opt->code, "l") == 0 || strcmp(opt->code, ":-l") == 0)
         {
@@ -875,7 +872,28 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           if (desc->base_abspath && desc->their_abspath &&
               desc->my_abspath && desc->merged_file)
             {
-              SVN_ERR(launch_resolver(&performed_edit, desc, b, iterpool));
+              svn_error_t *err;
+
+              err = launch_resolver(&performed_edit, desc, b, iterpool);
+              if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                                              err->message ? err->message :
+                                              _("No merge tool found, "
+                                                "try '(m) merge' instead.\n")));
+                  svn_error_clear(err);
+                }
+              else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                                              err->message ? err->message :
+                                         _("Error running merge tool, "
+                                           "try '(m) merge' instead.")));
+                  svn_error_clear(err);
+                }
+              else if (err)
+                return svn_error_trace(err);
+
               if (performed_edit)
                 knows_something = TRUE;
             }

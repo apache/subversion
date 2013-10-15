@@ -1405,17 +1405,21 @@ filter_log_entry_with_rangelist(void *baton,
              obviously back.  If it was added or replaced it's still around
              possibly it was replaced one or more times, but it's back now.
              Regardless, LOG_ENTRY->REVISION is *not* an eligible revision! */
-          if (ancestor_is_self /* Explicit mergeinfo on TARGET_PATH_AFFECTED */
+          if (nearest_ancestor_mergeinfo &&
+              ancestor_is_self /* Explicit mergeinfo on TARGET_PATH_AFFECTED */
               && (change->action != 'M'))
             {
               svn_rangelist_t *rangelist =
                   svn_hash_gets(nearest_ancestor_mergeinfo, path);
-              svn_merge_range_t *youngest_range = APR_ARRAY_IDX(
-                rangelist, rangelist->nelts - 1, svn_merge_range_t *);
+              if (rangelist)
+                {
+                  svn_merge_range_t *youngest_range = APR_ARRAY_IDX(
+                    rangelist, rangelist->nelts - 1, svn_merge_range_t *);
 
-              if (youngest_range
-                  && (youngest_range->end > log_entry->revision))
-                continue;
+                  if (youngest_range
+                      && (youngest_range->end > log_entry->revision))
+                    continue;
+                }
             }
 
           if (nearest_ancestor_mergeinfo)

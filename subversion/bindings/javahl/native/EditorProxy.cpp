@@ -55,7 +55,7 @@ EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
   static const svn_editor_cb_many_t editor_many_cb = {
     cb_add_directory, cb_add_file, cb_add_symlink, cb_add_absent,
     cb_alter_directory, cb_alter_file, cb_alter_symlink,
-    cb_delete, cb_copy, cb_move, cb_rotate,
+    cb_delete, cb_copy, cb_move,
     cb_complete, cb_abort
   };
 
@@ -470,15 +470,6 @@ EditorProxy::cb_move(void *baton,
                                         jdst_relpath, jlong(replaces_rev)),
       SVN_ERR_RA_SVN_EDIT_ABORTED);
   return SVN_NO_ERROR;
-}
-
-svn_error_t*
-EditorProxy::cb_rotate(void*,
-                       const apr_array_header_t*,
-                       const apr_array_header_t*,
-                       apr_pool_t*)
-{
-  return svn_error_create(APR_ENOTIMPL, NULL, "EditorProxy::cb_rotate");
 }
 
 svn_error_t*

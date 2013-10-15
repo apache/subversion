@@ -198,6 +198,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     install_targets = self.graph.get_all_sources(gen_base.DT_INSTALL) \
                       + self.projects
 
+    install_targets = [x for x in install_targets if not x.when or
+                                                     x.when in self._windows_when]
+
     # Don't create projects for scripts
     install_targets = [x for x in install_targets if not isinstance(x, gen_base.TargetScript)]
 
@@ -252,6 +255,21 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
 
+    # Fix up targets that can't be linked to libraries
+    if not self.disable_shared:
+      for target in install_targets:
+        if isinstance(target, gen_base.TargetExe) and target.msvc_force_static:
+
+          # Make direct dependencies of all the indirect dependencies
+          linked_deps = {}
+          self.get_linked_win_depends(target, linked_deps)
+
+          for lk in linked_deps.keys():
+            if not isinstance(lk, gen_base.TargetLib) or not lk.msvc_export:
+              self.graph.add(gen_base.DT_LINK, target.name, lk)
+            else:
+              self.graph.remove(gen_base.DT_LINK, target.name, lk)
+
     for target in install_targets:
       target.project_guid = self.makeguid(target.name)
 
@@ -302,9 +320,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       # against the static libraries because they sometimes access internal
       # library functions.
 
-      # ### The magic behavior for 'test' in a name and 'entries-dump' should
-      # ### move to another option in build.conf
-      if dep in deps[key] and key.find("test") == -1 and key != 'entries-dump':
+      if dep in deps[key]:
         deps[key].remove(dep)
         deps[key].append(target)
 

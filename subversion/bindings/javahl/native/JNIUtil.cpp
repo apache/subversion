@@ -24,6 +24,13 @@
  * @brief Implementation of the class JNIUtil
  */
 
+/* Include apr.h first, or INT64_C won't be defined properly on some C99
+   compilers, when other headers include <stdint.h> before defining some
+   macros.
+
+   See apr.h for the ugly details */
+#include <apr.h>
+
 #include "JNIUtil.h"
 #include "Array.h"
 
@@ -35,6 +42,8 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 #include <apr_lib.h>
+#include <apr_file_info.h>
+#include <apr_time.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -44,7 +53,7 @@
 #include "svn_dso.h"
 #include "svn_path.h"
 #include "svn_cache_config.h"
-#include <apr_file_info.h>
+#include "private/svn_atomic.h"
 #include "svn_private_config.h"
 #ifdef WIN32
 /* FIXME: We're using an internal APR header here, which means we
@@ -68,6 +77,7 @@ apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
 JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
+JNIMutex *JNIUtil::g_configMutex = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
@@ -104,6 +114,93 @@ bool JNIUtil::JNIInit(JNIEnv *env)
   return true;
 }
 
+namespace
+{
+struct GlobalInitGuard
+{
+  enum InitState
+    {
+      state_null,
+      state_init,
+      state_done,
+      state_error
+    };
+
+  GlobalInitGuard()
+    : m_finished(false),
+      m_state(InitState(svn_atomic_cas(&m_global_state,
+                                       state_init, state_null)))
+    {
+      switch (m_state)
+        {
+        case state_null:
+          // This thread won the initialization contest.
+          break;
+
+        case state_done:
+          // The library is already initialized.
+          break;
+
+        case state_init:
+          // Another thread is currently initializing the
+          // library. Spin and wait for it to finish, with exponential
+          // backoff, but no longer than half a second.
+          for (unsigned shift = 0;
+               m_state == state_init && shift < 8;
+               ++shift)
+            {
+              apr_sleep((APR_USEC_PER_SEC / 1000) << shift);
+              m_state = InitState(svn_atomic_cas(&m_global_state,
+                                                 state_null, state_null));
+            }
+          if (m_state == state_init)
+            // The initialization didn't complete in half a second,
+            // which probably implies a thread crash or a deadlock.
+            m_state = state_error;
+          break;
+
+        default:
+          // Error state, or unknown state. In any case, do not continue.
+          m_state = state_error;
+        }
+    }
+
+  ~GlobalInitGuard()
+    {
+      // Signal the end of the library intialization if we're the
+      // initializing thread.
+      if (m_finished && m_state == state_null)
+        {
+          SVN_ERR_ASSERT_NO_RETURN(
+              state_init == svn_atomic_cas(&m_global_state,
+                                           state_done, state_init));
+        }
+    }
+
+  bool done() const
+    {
+      return (m_state == state_done);
+    }
+
+  bool error() const
+    {
+      return (m_state == state_error);
+    }
+
+  void finish()
+    {
+      m_finished = true;
+    }
+
+private:
+  bool m_finished;
+  InitState m_state;
+  static volatile svn_atomic_t m_global_state;
+};
+volatile svn_atomic_t
+GlobalInitGuard::m_global_state = GlobalInitGuard::state_null;
+} // anonymous namespace
+
 /**
  * Initialize the environment for all requests.
  * @param env   the JNI environment for this request
@@ -111,25 +208,17 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
   // This method has to be run only once during the run a program.
-  static bool run = false;
-  svn_error_t *err;
-  if (run) // already run
+  GlobalInitGuard guard;
+  if (guard.done())
     return true;
-
-  run = true;
-
-  // Do not run this part more than one time.  This leaves a small
-  // time window when two threads create their first SVNClient and
-  // SVNAdmin at the same time, but I do not see a better option
-  // without APR already initialized
-  if (g_inInit)
+  else if (guard.error())
     return false;
 
   g_inInit = true;
   g_initEnv = env;
 
+  svn_error_t *err;
   apr_status_t status;
-
 
 
   /* Initialize the APR subsystem, and register an atexit() function
@@ -268,6 +357,10 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
+  g_configMutex = new JNIMutex(g_pool);
+  if (isExceptionThrown())
+    return false;
+
   // initialized the thread local storage
   if (!JNIThreadData::initThreadData())
     return false;
@@ -278,6 +371,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 
   g_initEnv = NULL;
   g_inInit = false;
+
+  guard.finish();
   return true;
 }
 
@@ -306,16 +401,6 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
   env->ThrowNew(clazz, message);
   setExceptionThrown();
   env->DeleteLocalRef(clazz);
-}
-
-jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
-{
-  if (err == NULL)
-    return NULL;
-  std::string buffer;
-  assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
-  jstring jmessage = makeJString(buffer.c_str());
-  return jmessage;
 }
 
 void
@@ -419,8 +504,91 @@ JNIUtil::putErrorsInTrace(svn_error_t *err,
 }
 
 namespace {
-jobject construct_Jmessage_stack(
-    const JNIUtil::error_message_stack_t& message_stack)
+struct MessageStackItem
+{
+  apr_status_t m_code;
+  std::string m_message;
+  bool m_generic;
+
+  MessageStackItem(apr_status_t code, const char* message,
+                   bool generic = false)
+    : m_code(code),
+      m_message(message),
+      m_generic(generic)
+    {}
+};
+typedef std::vector<MessageStackItem> ErrorMessageStack;
+
+/*
+ * Build the error message from the svn error into buffer.  This
+ * method iterates through all the chained errors
+ *
+ * @param err               the subversion error
+ * @param buffer            the buffer where the formated error message will
+ *                          be stored
+ * @return An array of error codes and messages
+ */
+ErrorMessageStack assemble_error_message(
+    svn_error_t *err, std::string &result)
+{
+  // buffer for a single error message
+  char errbuf[1024];
+  apr_status_t parent_apr_err = 0;
+  ErrorMessageStack message_stack;
+
+  /* Pretty-print the error */
+  /* Note: we can also log errors here someday. */
+
+  for (int depth = 0; err;
+       ++depth, parent_apr_err = err->apr_err, err = err->child)
+    {
+      /* When we're recursing, don't repeat the top-level message if its
+       * the same as before. */
+      if (depth == 0 || err->apr_err != parent_apr_err)
+        {
+          const char *message;
+          /* Is this a Subversion-specific error code? */
+          if ((err->apr_err > APR_OS_START_USEERR)
+              && (err->apr_err <= APR_OS_START_CANONERR))
+            message = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
+          /* Otherwise, this must be an APR error code. */
+          else
+            {
+              /* Messages coming from apr_strerror are in the native
+                 encoding, it's a good idea to convert them to UTF-8. */
+              apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
+              svn_error_t* utf8_err =
+                svn_utf_cstring_to_utf8(&message, errbuf, err->pool);
+              if (utf8_err)
+                {
+                  /* Use fuzzy transliteration instead. */
+                  svn_error_clear(utf8_err);
+                  message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
+                }
+            }
+
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, message, true));
+        }
+      if (err->message)
+        {
+          message_stack.push_back(
+              MessageStackItem(err->apr_err, err->message));
+        }
+    }
+
+  for (ErrorMessageStack::const_iterator it = message_stack.begin();
+       it != message_stack.end(); ++it)
+    {
+      if (!it->m_generic)
+        result += "svn: ";
+      result += it->m_message;
+      result += '\n';
+    }
+  return message_stack;
+}
+
+jobject construct_Jmessage_stack(const ErrorMessageStack& message_stack)
 {
   JNIEnv *env = JNIUtil::getEnv();
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
@@ -449,8 +617,7 @@ jobject construct_Jmessage_stack(
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  for (JNIUtil::error_message_stack_t::const_iterator
-         it = message_stack.begin();
+  for (ErrorMessageStack::const_iterator it = message_stack.begin();
        it != message_stack.end(); ++it)
     {
       jobject jmessage = JNIUtil::makeJString(it->m_message.c_str());
@@ -472,12 +639,37 @@ jobject construct_Jmessage_stack(
 }
 } // anonymous namespace
 
-void JNIUtil::handleSVNError(svn_error_t *err)
+std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
+                                         jstring *jerror_message,
+                                         jobject *jmessage_stack)
 {
-  std::string msg;
-  error_message_stack_t message_stack;
-  assembleErrorMessage(svn_error_purge_tracing(err),
-                       0, APR_SUCCESS, msg, &message_stack);
+  if (jerror_message)
+    *jerror_message = NULL;
+  if (jmessage_stack)
+    *jmessage_stack = NULL;
+
+  std::string buffer;
+  err = svn_error_purge_tracing(err);
+  if (err == NULL || err->apr_err == 0
+      || !(jerror_message || jmessage_stack))
+  return buffer;
+
+  ErrorMessageStack message_stack = assemble_error_message(err, buffer);
+  if (jerror_message)
+    *jerror_message = makeJString(buffer.c_str());
+  if (jmessage_stack)
+    *jmessage_stack = construct_Jmessage_stack(message_stack);
+  return buffer;
+}
+
+void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
+{
+  jstring jmessage;
+  jobject jstack;
+  std::string msg = makeSVNErrorMessage(err, &jmessage, &jstack);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   const char *source = NULL;
 #ifdef SVN_DEBUG
 #ifndef SVN_ERR__TRACING
@@ -521,14 +713,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
-  jstring jmessage = makeJString(msg.c_str());
-  if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
   jstring jsource = makeJString(source);
-  if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
-
-  jobject jmessageStack = construct_Jmessage_stack(message_stack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -539,7 +724,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           jint(err->apr_err), jmessageStack);
+                                           jint(err->apr_err), jstack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -575,7 +760,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     POP_AND_RETURN_NOTHING();
 
   const jsize stSize = static_cast<jsize>(newStackTrace.size());
-  if (stSize != newStackTrace.size())
+  if (stSize < 0 || stSize != newStackTrace.size())
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C size_t to JNI jsize");
@@ -608,7 +793,16 @@ void JNIUtil::handleSVNError(svn_error_t *err)
 #endif
 
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+}
 
+void JNIUtil::handleSVNError(svn_error_t *err)
+{
+  try {
+    wrappedHandleSVNError(err);
+  } catch (...) {
+    svn_error_clear(err);
+    throw;
+  }
   svn_error_clear(err);
 }
 
@@ -706,25 +900,45 @@ bool JNIUtil::isJavaExceptionThrown()
 }
 
 namespace {
+const char* known_exception_to_cstring(apr_pool_t* pool)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  jthrowable t = env->ExceptionOccurred();
+  jclass cls = env->GetObjectClass(t);
+
+  jstring jclass_name;
+  {
+    jmethodID mid = env->GetMethodID(cls, "getClass", "()Ljava/lang/Class;");
+    jobject clsobj = env->CallObjectMethod(t, mid);
+    jclass basecls = env->GetObjectClass(clsobj);
+    mid = env->GetMethodID(basecls, "getName", "()Ljava/lang/String;");
+    jclass_name = (jstring) env->CallObjectMethod(clsobj, mid);
+  }
+
+  jstring jmessage;
+  {
+    jmethodID mid = env->GetMethodID(cls, "getMessage",
+                                     "()Ljava/lang/String;");
+    jmessage = (jstring) env->CallObjectMethod(t, mid);
+  }
+
+  JNIStringHolder class_name(jclass_name);
+  if (jmessage)
+    {
+      JNIStringHolder message(jmessage);
+      return apr_pstrcat(pool, class_name.c_str(), ": ", message.c_str(), NULL);
+    }
+  else
+    return class_name.pstrdup(pool);
+  // ### Conditionally add t.printStackTrace() to msg?
+}
+
 const char* exception_to_cstring(apr_pool_t* pool)
 {
   const char *msg;
-  JNIEnv *env = JNIUtil::getEnv();
-  if (env->ExceptionCheck())
+  if (JNIUtil::getEnv()->ExceptionCheck())
     {
-      jthrowable t = env->ExceptionOccurred();
-      static jmethodID getMessage = 0;
-      if (getMessage == 0)
-        {
-          jclass clazz = env->FindClass("java/lang/Throwable");
-          getMessage = env->GetMethodID(clazz, "getMessage",
-                                        "()Ljava/lang/String;");
-          env->DeleteLocalRef(clazz);
-        }
-      jstring jmsg = (jstring) env->CallObjectMethod(t, getMessage);
-      JNIStringHolder tmp(jmsg);
-      msg = tmp.pstrdup(pool);
-      // ### Conditionally add t.printStackTrace() to msg?
+      msg = known_exception_to_cstring(pool);
     }
   else
     {
@@ -746,8 +960,11 @@ JNIUtil::checkJavaException(apr_status_t errorcode)
   if (!getEnv()->ExceptionCheck())
     return SVN_NO_ERROR;
   svn_error_t* err = svn_error_create(errorcode, NULL, NULL);
-  err->message = apr_psprintf(err->pool, _("Java exception: %s"),
-                              exception_to_cstring(err->pool));
+  const char* const msg = known_exception_to_cstring(err->pool);
+  if (msg)
+    err->message = apr_psprintf(err->pool, _("Java exception: %s"), msg);
+  else
+    err->message = _("Java exception");
   return err;
 }
 
@@ -946,71 +1163,6 @@ jbyteArray JNIUtil::makeJByteArray(const svn_string_t *str)
     return NULL;
 
   return JNIUtil::makeJByteArray(str->data, static_cast<int>(str->len));
-}
-
-/**
- * Build the error message from the svn error into buffer.  This
- * method calls itselft recursively for all the chained errors
- *
- * @param err               the subversion error
- * @param depth             the depth of the call, used for formating
- * @param parent_apr_err    the apr of the previous level, used for formating
- * @param buffer            the buffer where the formated error message will
- *                          be stored
- * @param message_stack     an array of error codes and messages
- */
-void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth,
-                                   apr_status_t parent_apr_err,
-                                   std::string &buffer,
-                                   error_message_stack_t* message_stack)
-{
-  // buffer for a single error message
-  char errbuf[1024];
-
-  /* Pretty-print the error */
-  /* Note: we can also log errors here someday. */
-
-  /* When we're recursing, don't repeat the top-level message if its
-   * the same as before. */
-  if (depth == 0 || err->apr_err != parent_apr_err)
-    {
-      const char *message;
-      /* Is this a Subversion-specific error code? */
-      if ((err->apr_err > APR_OS_START_USEERR)
-          && (err->apr_err <= APR_OS_START_CANONERR))
-        message = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
-      /* Otherwise, this must be an APR error code. */
-      else
-        {
-          /* Messages coming from apr_strerror are in the native
-             encoding, it's a good idea to convert them to UTF-8. */
-          apr_strerror(err->apr_err, errbuf, sizeof(errbuf));
-          svn_error_t* utf8_err =
-            svn_utf_cstring_to_utf8(&message, errbuf, err->pool);
-          if (utf8_err)
-            {
-              /* Use fuzzy transliteration instead. */
-              svn_error_clear(utf8_err);
-              message = svn_utf_cstring_from_utf8_fuzzy(errbuf, err->pool);
-            }
-        }
-
-      if (message_stack)
-        message_stack->push_back(
-            message_stack_item(err->apr_err, message, true));
-      buffer.append(message);
-      buffer.append("\n");
-    }
-  if (err->message)
-    {
-      if (message_stack)
-        message_stack->push_back(
-            message_stack_item(err->apr_err, err->message));
-      buffer.append(_("svn: ")).append(err->message).append("\n");
-    }
-
-  if (err->child)
-    assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);
 }
 
 /**
