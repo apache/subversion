@@ -147,39 +147,6 @@ struct svn_repos__config_pool_t
 };
 
 
-/* Callback for svn_config_enumerate2: Continue to next value. */
-static svn_boolean_t
-expand_value(const char *name,
-             const char *value,
-             void *baton,
-             apr_pool_t *pool)
-{
-  return TRUE;
-}
-
-/* Callback for svn_config_enumerate_sections2:
- * Enumerate and implicitly expand all values in this section.
- */
-static svn_boolean_t
-expand_values_in_section(const char *name,
-                         void *baton,
-                         apr_pool_t *pool)
-{
-  svn_config_t *cfg = baton;
-  svn_config_enumerate2(cfg, name, expand_value, NULL, pool);
-
-  return TRUE;
-}
-
-/* Expand all values in all sections of CONFIG.
- */
-static void
-expand_all_values(config_ref_t *config)
-{
-  svn_config_enumerate_sections2(config->cfg, expand_values_in_section,
-                                 config->cfg, config->pool);
-}
-
 /* Destructor function for the whole config pool.
  */
 static apr_status_t
@@ -401,8 +368,8 @@ auto_parse(svn_config_t **cfg,
                            svn_stream_from_stringbuf(contents, scratch_pool),
                            TRUE, TRUE, cfg_pool));
 
-  /* make sure r/o access to config data will not modify the internal state */
-  expand_all_values(config_ref);
+  /* switch config data to r/o mode to guarantee thread-safe access */
+  svn_config__set_read_only(config_ref->cfg, cfg_pool);
 
   /* add config in pool, handle loads races and return the right config */
   SVN_MUTEX__WITH_LOCK(config_pool->mutex,
