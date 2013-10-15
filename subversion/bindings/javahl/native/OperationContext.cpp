@@ -24,6 +24,8 @@
  * @brief Implementation of the class OperationContext
  */
 
+#include <apr_file_io.h>
+
 #include "svn_client.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
