@@ -232,6 +232,15 @@ svn_stringbuf_create_ensure(apr_size_t minimum_size, apr_pool_t *pool);
 svn_stringbuf_t *
 svn_stringbuf_create_from_string(const svn_string_t *str, apr_pool_t *pool);
 
+/** Create a new stringbuf using the given @a str as initial buffer.
+ * Allocate the result in @a pool.  In contrast to #svn_stringbuf_create,
+ * the contents of @a str may change when the stringbuf gets modified.
+ *
+ * @since New in 1.9
+ */
+svn_stringbuf_t *
+svn_stringbuf_create_wrap(char *str, apr_pool_t *pool);
+
 /** Create a new stringbuf by printf-style formatting using @a fmt and the
  * variable arguments, which are as appropriate for apr_psprintf().
  */
@@ -303,6 +312,16 @@ void
 svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
                           const char *bytes,
                           apr_size_t count);
+
+/** Append @a byte @a count times onto @a targetstr.
+ *
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * @since New in 1.9.
+ */
+void
+svn_stringbuf_appendfill(svn_stringbuf_t *targetstr,
+                         char byte,
+                         apr_size_t count);
 
 /** Append the stringbuf @c appendstr onto @a targetstr.
  *
@@ -407,9 +426,11 @@ svn_string_compare_stringbuf(const svn_string_t *str1,
  * @{
  */
 
-/** Divide @a input into substrings along @a sep_chars boundaries, return an
- * array of copies of those substrings (plain const char*), allocating both
- * the array and the copies in @a pool.
+/** Divide @a input into substrings, interpreting any char from @a sep
+ * as a token separator.  
+ *
+ * Return an array of copies of those substrings (plain const char*),
+ * allocating both the array and the copies in @a pool.
  *
  * None of the elements added to the array contain any of the
  * characters in @a sep_chars, and none of the new elements are empty

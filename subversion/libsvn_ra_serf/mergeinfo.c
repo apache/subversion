@@ -24,6 +24,7 @@
 #include <apr_tables.h>
 #include <apr_xml.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_mergeinfo.h"
 #include "svn_path.h"
@@ -33,7 +34,6 @@
 
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
-#include "svn_private_config.h"
 #include "ra_serf.h"
 
 
@@ -41,7 +41,7 @@
 
 /* The current state of our XML parsing. */
 typedef enum mergeinfo_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   MERGEINFO_REPORT,
   MERGEINFO_ITEM,
   MERGEINFO_PATH,
@@ -191,7 +191,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
-  svn_error_t *err, *err2;
+  svn_error_t *err;
   mergeinfo_context_t *mergeinfo_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
@@ -214,10 +214,10 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   mergeinfo_ctx->include_descendants = include_descendants;
 
   xmlctx = svn_ra_serf__xml_context_create(mergeinfo_ttable,
-                                           NULL, mergeinfo_closed, NULL,
+                                           NULL, mergeinfo_closed, NULL, NULL,
                                            mergeinfo_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = path;
@@ -229,15 +229,10 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_one(handler, pool);
 
-  err2 = svn_ra_serf__error_on_status(handler->sline.code, handler->path,
-                                      handler->location);
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
-
-  SVN_ERR(err);
+  SVN_ERR(svn_error_compose_create(
+                svn_ra_serf__error_on_status(handler->sline, handler->path,
+                                             handler->location),
+                err));
 
   if (handler->done && apr_hash_count(mergeinfo_ctx->result_catalog))
     *catalog = mergeinfo_ctx->result_catalog;

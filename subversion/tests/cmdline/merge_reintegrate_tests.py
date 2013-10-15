@@ -44,8 +44,8 @@ exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 def run_reintegrate(src_url, tgt_path):
@@ -2584,13 +2584,13 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c3')
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r3 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r3 from A to A_COPY')
 
   # r8 - Merge r4 from A to A_COPY
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c4')
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r4 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r4 from A to A_COPY')
 
   # r9 - Merge r5 from A to A_COPY. Make an additional edit to
   # A_COPY/B/E/beta.
@@ -2598,7 +2598,7 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path,
                        '-c5')
   svntest.main.file_write(beta_COPY_path, "Branch edit mistake.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Merge r5 from A to A_COPY', wc_dir)
+  sbox.simple_commit(message='Merge r5 from A to A_COPY')
 
   # r10 - Delete A_COPY and replace it with A_COPY@8. This removes the edit
   # we made above in r9 to A_COPY/B/E/beta.
@@ -2606,19 +2606,17 @@ def reintegrate_replaced_source(sbox):
   svntest.main.run_svn(None, 'delete', A_COPY_path)
   svntest.main.run_svn(None, 'copy', sbox.repo_url + '/A_COPY@8',
                        A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Replace A_COPY with A_COPY@8',
-                       wc_dir)
+  sbox.simple_commit(message='Replace A_COPY with A_COPY@8')
 
   # r11 - Make an edit on A_COPY/mu.
   svntest.main.file_write(mu_COPY_path, "Branch edit.\n")
-  svntest.main.run_svn(None, 'ci', '-m', 'Branch edit',
-                       wc_dir)
+  sbox.simple_commit(message='Branch edit')
 
   # r12 - Do a final sync merge of A to A_COPY in preparation for
   # reintegration.
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'Sycn A_COPY with A', wc_dir)
+  sbox.simple_commit(message='Sync A_COPY with A')
 
   # Reintegrate A_COPY to A.  The resulting mergeinfo should be
   # '/A_COPY:2-8,10-12' because of the replacement which removed /A_COPY:9

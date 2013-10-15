@@ -43,10 +43,10 @@ Wimp = svntest.testcase.Wimp_deco
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import set_up_branch
-from merge_tests import svn_copy
-from merge_tests import svn_merge
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import svn_copy
+from svntest.mergetrees import svn_merge
+from svntest.mergetrees import expected_merge_output
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)

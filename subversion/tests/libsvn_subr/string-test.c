@@ -38,6 +38,7 @@
 
 #include "svn_io.h"
 #include "svn_error.h"
+#include "svn_sorts.h"    /* MIN / MAX */
 #include "svn_string.h"   /* This includes <apr_*.h> */
 #include "private/svn_string_private.h"
 
@@ -537,7 +538,42 @@ test24(apr_pool_t *pool)
   SVN_TEST_ASSERT(length == 20);
   SVN_TEST_STRING_ASSERT(buffer, "18446744073709551615");
 
-  return test_stringbuf_unequal("abc", "abb", pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+sub_test_base36(apr_uint64_t value, const char *base36)
+{
+  char buffer[SVN_INT64_BUFFER_SIZE];
+  apr_size_t length;
+  apr_size_t expected_length = strlen(base36);
+  const char *end = buffer;
+  apr_uint64_t result;
+
+  length = svn__ui64tobase36(buffer, value);
+  SVN_TEST_ASSERT(length == expected_length);
+  SVN_TEST_STRING_ASSERT(buffer, base36);
+
+  result = svn__base36toui64(&end, buffer);
+  SVN_TEST_ASSERT(end - buffer == length);
+  SVN_TEST_ASSERT(result == value);
+
+  result = svn__base36toui64(NULL, buffer);
+  SVN_TEST_ASSERT(result == value);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_base36(apr_pool_t *pool)
+{
+  SVN_ERR(sub_test_base36(0, "0"));
+  SVN_ERR(sub_test_base36(1234567890ull, "kf12oi"));
+  SVN_ERR(sub_test_base36(0x7fffffffffffffffull, "1y2p0ij32e8e7"));
+  SVN_ERR(sub_test_base36(0x8000000000000000ull, "1y2p0ij32e8e8"));
+  SVN_ERR(sub_test_base36(0xffffffffffffffffull, "3w5e11264sgsf"));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -620,7 +656,7 @@ test_string_similarity(apr_pool_t *pool)
     const char *stra;
     const char *strb;
     apr_size_t lcs;
-    int score;
+    unsigned int score;
   } tests[] =
       {
 #define SCORE(lcs, len) ((2000 * (lcs) + (len)/2) / (len))
@@ -711,6 +747,85 @@ test_string_similarity(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_string_matching(apr_pool_t *pool)
+{
+  const struct test_data_t
+    {
+      const char *a;
+      const char *b;
+      apr_size_t match_len;
+      apr_size_t rmatch_len;
+    }
+  tests[] =
+    {
+      /* edge cases */
+      {"", "", 0, 0},
+      {"", "x", 0, 0},
+      {"x", "", 0, 0},
+      {"x", "x", 1, 1},
+      {"", "1234567890abcdef", 0, 0},
+      {"1234567890abcdef", "", 0, 0},
+      {"1234567890abcdef", "1234567890abcdef", 16, 16},
+
+      /* left-side matches */
+      {"x", "y", 0, 0},
+      {"ax", "ay", 1, 0},
+      {"ax", "a", 1, 0},
+      {"a", "ay", 1, 0},
+      {"1234567890abcdef", "1234567890abcdeg", 15, 0},
+      {"1234567890abcdef_", "1234567890abcdefg", 16, 0},
+      {"12345678_0abcdef", "1234567890abcdeg", 8, 0},
+      {"1234567890abcdef", "12345678", 8, 0},
+      {"12345678", "1234567890abcdef", 8, 0},
+      {"12345678_0ab", "1234567890abcdef", 8, 0},
+
+      /* right-side matches */
+      {"xa", "ya", 0, 1},
+      {"xa", "a", 0, 1},
+      {"a", "ya", 0, 1},
+      {"_234567890abcdef", "1234567890abcdef", 0, 15},
+      {"_1234567890abcdef", "x1234567890abcdef", 0, 16},
+      {"1234567_90abcdef", "_1234567890abcdef", 0, 8},
+      {"1234567890abcdef", "90abcdef", 0, 8},
+      {"90abcdef", "1234567890abcdef", 0, 8},
+      {"8_0abcdef", "7890abcdef", 0, 7},
+
+      /* two-side matches */
+      {"bxa", "bya", 1, 1},
+      {"bxa", "ba", 1, 1},
+      {"ba", "bya", 1, 1},
+      {"1234567_90abcdef", "1234567890abcdef", 7, 8},
+      {"12345678_90abcdef", "1234567890abcdef", 8, 8},
+      {"12345678_0abcdef", "1234567890abcdef", 8, 7},
+      {"123456_abcdef", "1234sdffdssdf567890abcdef", 4, 6},
+      {"1234567890abcdef", "12345678ef", 8, 2},
+      {"x_234567890abcdef", "x1234567890abcdef", 1, 15},
+      {"1234567890abcdefx", "1234567890abcdex", 15, 1},
+
+      /* list terminator */
+      {NULL}
+    };
+
+  const struct test_data_t *test;
+  for (test = tests; test->a != NULL; ++test)
+    {
+      apr_size_t a_len = strlen(test->a);
+      apr_size_t b_len = strlen(test->b);
+      apr_size_t max_match = MIN(a_len, b_len);
+      apr_size_t match_len
+        = svn_cstring__match_length(test->a, test->b, max_match);
+      apr_size_t rmatch_len
+        = svn_cstring__reverse_match_length(test->a + a_len, test->b + b_len,
+                                            max_match);
+
+      SVN_TEST_ASSERT(match_len == test->match_len);
+      SVN_TEST_ASSERT(rmatch_len == test->rmatch_len);
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -770,6 +885,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "compare stringbufs; same length, different content"),
     SVN_TEST_PASS2(test24,
                    "verify i64toa"),
+    SVN_TEST_PASS2(test_base36,
+                   "verify base36 conversion"),
     SVN_TEST_PASS2(test_stringbuf_insert,
                    "check inserting into svn_stringbuf_t"),
     SVN_TEST_PASS2(test_stringbuf_remove,
@@ -778,5 +895,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "check replacement in svn_stringbuf_t"),
     SVN_TEST_PASS2(test_string_similarity,
                    "test string similarity scores"),
+    SVN_TEST_PASS2(test_string_matching,
+                   "test string matching"),
     SVN_TEST_NULL
   };

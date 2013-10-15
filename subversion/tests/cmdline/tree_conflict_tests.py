@@ -1023,7 +1023,7 @@ def up_add_onto_add_revert(sbox):
   main.run_svn(None, 'cp', os.path.join(wc_dir, 'A/C'), dir1)
   main.run_svn(None, 'cp', os.path.join(wc2_dir, 'A/C'), dir2)
 
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Added file')
+  sbox.simple_commit(message='Added file')
 
   expected_disk = main.greek_state.copy()
   expected_disk.add({
@@ -1455,6 +1455,67 @@ def update_dir_with_not_present(sbox):
   run_and_verify_svn(None, None, [],
                      'ci', '-m', '', wc_dir)
 
+@XFail()
+def update_delete_mixed_rev(sbox):
+  "update that deletes mixed-rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_move('A/B/E/alpha', 'A/B/E/alpha2')
+  sbox.simple_commit()
+  sbox.simple_update()
+  sbox.simple_rm('A/B')
+  sbox.simple_commit()
+  sbox.simple_update(revision=1)
+  sbox.simple_update(target='A/B/E', revision=2)
+  sbox.simple_mkdir('A/B/E2')
+
+  # Update raises a tree conflict on A/B due to local mod A/B/E2
+  expected_output = wc.State(wc_dir, {
+      'A/B' : Item(status='  ', treeconflict='C'),
+      })
+  expected_disk = main.greek_state.copy()
+  expected_disk.add({
+      'A/B/E2'       : Item(),
+      'A/B/E/alpha2' : Item(contents='This is the file \'alpha\'.\n'),
+    })
+  expected_disk.remove('A/B/E/alpha')
+  expected_status = get_virginal_state(wc_dir, 3)
+  expected_status.remove('A/B/E/alpha')
+  expected_status.add({
+      'A/B/E2'       : Item(status='A ', wc_rev='-'),
+      'A/B/E/alpha2' : Item(status='  ', copied='+', wc_rev='-'),
+      })
+  expected_status.tweak('A/B',
+                        status='A ', copied='+', treeconflict='C', wc_rev='-')
+  expected_status.tweak('A/B/F', 'A/B/E', 'A/B/E/beta', 'A/B/lambda',
+                        copied='+', wc_rev='-')
+  run_and_verify_update(wc_dir,
+                        expected_output, expected_disk, expected_status,
+                        None, None, None, None, None, 1,
+                        wc_dir)
+
+  # Resolving to working state should give a mixed-revision copy that
+  # gets committed as multiple copies
+  run_and_verify_resolved([sbox.ospath('A/B')], sbox.ospath('A/B'))
+  expected_output = wc.State(wc_dir, {
+      'A/B'    : Item(verb='Adding'),
+      'A/B/E'  : Item(verb='Replacing'),
+      'A/B/E2' : Item(verb='Adding'),
+      })
+  expected_status.tweak('A/B', 'A/B/E', 'A/B/E2', 'A/B/F', 'A/B/E/alpha2',
+                        'A/B/E/beta', 'A/B/lambda',
+                        status='  ', wc_rev=4, copied=None, treeconflict=None)
+  run_and_verify_commit(wc_dir,
+                        expected_output, expected_status, None,
+                        wc_dir)
+
+  expected_info = {
+    'Name': 'alpha2',
+    'Node Kind': 'file',
+  }
+  run_and_verify_info([expected_info], sbox.repo_url + '/A/B/E/alpha2')
+
 #######################################################################
 # Run the tests
 
@@ -1485,6 +1546,7 @@ test_list = [ None,
               at_directory_external,
               actual_only_node_behaviour,
               update_dir_with_not_present,
+              update_delete_mixed_rev,
              ]
 
 if __name__ == '__main__':

@@ -69,6 +69,31 @@ public class Mergeinfo implements java.io.Serializable
     }
 
     /**
+     * The three ways to request mergeinfo affecting a given path
+     * in {@link org.apache.subversion.javahl.ISVNRemote#getMergeinfo}.
+     * @since 1.9
+     */
+    public static enum Inheritance
+    {
+        /** Explicit mergeinfo only. */
+        explicit,
+
+        /**
+         * Explicit mergeinfo, or if that doesn't exist, the inherited
+         * mergeinfo from a target's nearest (path-wise, not history-wise)
+         * ancestor.
+         */
+        inherited,
+
+        /**
+         * Mergeinfo inherited from a target's nearest (path-wise,
+         * not history-wise) ancestor, regardless of whether target
+         * has explicit mergeinfo.
+         */
+        nearest_ancestor;
+    }
+
+    /**
      * Add one or more RevisionRange objects to merge info. If the
      * merge source is already stored, the list of revisions is
      * replaced.
@@ -81,6 +106,11 @@ public class Mergeinfo implements java.io.Serializable
     {
         for (RevisionRange range : ranges)
             addRevisionRange(mergeSrc, range);
+    }
+
+    public void addRevisions(String mergeSrc, RevisionRangeList ranges)
+    {
+        addRevisions(mergeSrc, ranges.getRanges());
     }
 
     /**
@@ -128,6 +158,14 @@ public class Mergeinfo implements java.io.Serializable
     public List<RevisionRange> getRevisionRange(String mergeSrc)
     {
         return this.getRevisions(mergeSrc);
+    }
+
+    /**
+     * Like {@link #getReivsionRange}, but returns a {@link RevisionRangeList}.
+     */
+    public RevisionRangeList getRevisionRangeList(String mergeSrc)
+    {
+        return new RevisionRangeList(getRevisionRange(mergeSrc));
     }
 
     /**

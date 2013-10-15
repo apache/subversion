@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -48,7 +49,6 @@
 #include "workqueue.h"
 #include "token-map.h"
 
-#include "svn_private_config.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
@@ -1529,7 +1529,6 @@ svn_wc__db_init(svn_wc__db_t *db,
                         apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
-                        FALSE /* enforce_empty_wq */,
                         db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -2086,6 +2085,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                svn_wc__db_t *db, /* For checking conflicts */
                svn_boolean_t keep_as_working,
                svn_boolean_t queue_deletes,
+               svn_boolean_t remove_locks,
                svn_revnum_t not_present_revision,
                svn_skel_t *conflict,
                svn_skel_t *work_items,
@@ -2105,6 +2105,16 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
                                             NULL, NULL, NULL, NULL, NULL,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
+
+  if (remove_locks)
+    {
+      svn_sqlite__stmt_t *lock_stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
+                                        STMT_DELETE_LOCK_RECURSIVELY));
+      SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
+      SVN_ERR(svn_sqlite__step_done(lock_stmt));
+    }
 
   if (status == svn_wc__db_status_normal
       && keep_as_working)
@@ -2237,6 +2247,12 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
        * might introduce actual-only nodes without direct parents,
        * and we're not yet sure if other existing code is prepared
        * to handle such nodes. To be revisited post-1.8.
+       *
+       * ### In case of a conflict we are most likely creating WORKING nodes
+       *     describing a copy of what was in BASE. The move information
+       *     should be updated to describe a move from the WORKING layer.
+       *     When stored that way the resolver of the tree conflict still has
+       *     the knowledge of what was moved.
        */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_MOVED_OUTSIDE));
@@ -2333,6 +2349,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t keep_as_working,
                        svn_boolean_t queue_deletes,
+                       svn_boolean_t remove_locks,
                        svn_revnum_t not_present_revision,
                        svn_skel_t *conflict,
                        svn_skel_t *work_items,
@@ -2349,7 +2366,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(db_base_remove(wcroot, local_relpath,
                                      db, keep_as_working, queue_deletes,
-                                     not_present_revision,
+                                     remove_locks, not_present_revision,
                                      conflict, work_items, scratch_pool),
                       wcroot);
 
@@ -6376,6 +6393,7 @@ op_revert_txn(void *baton,
     {
       SVN_ERR(svn_wc__db_resolve_break_moved_away_internal(wcroot,
                                                            local_relpath,
+                                                           op_depth,
                                                            scratch_pool));
     }
   else
@@ -6542,10 +6560,12 @@ op_revert_recursive_txn(void *baton,
   while (have_row)
     {
       const char *move_src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      int move_op_depth = svn_sqlite__column_int(stmt, 2);
       svn_error_t *err;
 
       err = svn_wc__db_resolve_break_moved_away_internal(wcroot,
                                                          move_src_relpath,
+                                                         move_op_depth,
                                                          scratch_pool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
@@ -10814,7 +10834,7 @@ commit_node(svn_wc__db_wcroot_t *wcroot,
       svn_sqlite__stmt_t *lock_stmt;
 
       SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
-                                        STMT_DELETE_LOCK));
+                                        STMT_DELETE_LOCK_RECURSIVELY));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
     }
@@ -11058,7 +11078,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
               revision != new_rev)))
     {
       return svn_error_trace(db_base_remove(wcroot, local_relpath,
-                                            db, FALSE, FALSE,
+                                            db, FALSE, FALSE, FALSE,
                                             SVN_INVALID_REVNUM,
                                             NULL, NULL, scratch_pool));
     }
@@ -12117,38 +12137,6 @@ svn_wc__db_follow_moved_to(apr_array_header_t **moved_tos,
   return SVN_NO_ERROR;
 }
 
-/* Extract the moved-to information for LOCAL_RELPATH at OP-DEPTH by
-   examining the lowest working node above OP_DEPTH.  The output paths
-   are NULL if there is no move, otherwise:
-
-   *MOVE_DST_RELPATH: the moved-to destination of LOCAL_RELPATH.
-
-   *MOVE_DST_OP_ROOT_RELPATH: the moved-to destination of the root of
-   the move of LOCAL_RELPATH. This may be equal to *MOVE_DST_RELPATH
-   if LOCAL_RELPATH is the root of the move.
-
-   *MOVE_SRC_ROOT_RELPATH: the root of the move source.  For moves
-   inside a delete this will be different from *MOVE_SRC_OP_ROOT_RELPATH.
-
-   *MOVE_SRC_OP_ROOT_RELPATH: the root of the source layer that
-   contains the move.  For moves inside deletes this is the root of
-   the delete, for other moves this is the root of the move.
-
-   Given a path A/B/C with A/B moved to X then for A/B/C
-
-     MOVE_DST_RELPATH is X/C
-     MOVE_DST_OP_ROOT_RELPATH is X
-     MOVE_SRC_ROOT_RELPATH is A/B
-     MOVE_SRC_OP_ROOT_RELPATH is A/B
-
-   If A is then deleted the MOVE_DST_RELPATH, MOVE_DST_OP_ROOT_RELPATH
-   and MOVE_SRC_ROOT_RELPATH remain the same but MOVE_SRC_OP_ROOT_RELPATH
-   changes to A.
-
-   ### Think about combining with scan_deletion?  Also with
-   ### scan_addition to get moved-to for replaces?  Do we need to
-   ### return the op-root of the move source, i.e. A/B in the example
-   ### above?  */
 svn_error_t *
 svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
                              const char **move_dst_op_root_relpath,
@@ -12165,6 +12153,8 @@ svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
   int delete_op_depth;
   const char *relpath = local_relpath;
 
+  SVN_ERR_ASSERT(local_relpath[0]); /* Not valid on the WC root */
+
   *move_dst_relpath = *move_dst_op_root_relpath = NULL;
   *move_src_root_relpath = *move_src_op_root_relpath = NULL;
 
@@ -12180,14 +12170,17 @@ svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
           *move_dst_op_root_relpath = svn_sqlite__column_text(stmt, 3,
                                                               result_pool);
           if (*move_dst_op_root_relpath)
-            *move_src_root_relpath = apr_pstrdup(result_pool, relpath);
+            {
+              *move_src_root_relpath = apr_pstrdup(result_pool, relpath);
+              SVN_ERR(svn_sqlite__reset(stmt));
+
+              break;
+            }
         }
       SVN_ERR(svn_sqlite__reset(stmt));
-      if (!*move_dst_op_root_relpath)
-        relpath = svn_relpath_dirname(relpath, scratch_pool);
+      relpath = svn_relpath_dirname(relpath, scratch_pool);
     }
-  while (!*move_dst_op_root_relpath
-        && have_row && delete_op_depth <= relpath_depth(relpath));
+  while (have_row && delete_op_depth <= relpath_depth(relpath));
 
   if (*move_dst_op_root_relpath)
     {
@@ -12288,7 +12281,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                                    dir_abspath),
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
-                                       FALSE /* enforce_empty_wq */,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */
@@ -13493,6 +13485,7 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  int levels_to_lock,
                  svn_boolean_t steal_lock,
+                 svn_boolean_t enforce_empty_wq,
                  apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -13521,6 +13514,9 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
                                                         local_relpath,
                                                         scratch_pool));
     }
+
+  if (enforce_empty_wq)
+    SVN_ERR(svn_wc__db_verify_no_work(wcroot->sdb));
 
   /* Check if there are nodes locked below the new lock root */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
@@ -13696,7 +13692,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 
   SVN_WC__DB_WITH_TXN(
     wclock_obtain_cb(wcroot, local_relpath, levels_to_lock, steal_lock,
-                     scratch_pool),
+                     db->enforce_empty_wq, scratch_pool),
     wcroot);
   return SVN_NO_ERROR;
 }
@@ -14978,13 +14974,17 @@ svn_wc__db_verify(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_bump_format(int *result_format,
-                       const char *wcroot_abspath,
+                       svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
+                       const char *wcroot_abspath,
                        apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
   svn_error_t *err;
   int format;
+
+  if (bumped_format)
+    *bumped_format = FALSE;
 
   /* Do not scan upwards for a working copy root here to prevent accidental
    * upgrades of any working copies the WCROOT might be nested in.
@@ -15020,7 +15020,10 @@ svn_wc__db_bump_format(int *result_format,
 
   SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
   err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
-                                     sdb, format, scratch_pool);
+                            sdb, format, scratch_pool);
+
+  if (err == SVN_NO_ERROR && bumped_format)
+    *bumped_format = (*result_format > format);
 
   /* Make sure we return a different error than expected for upgrades from
      entries */

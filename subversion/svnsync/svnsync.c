@@ -19,6 +19,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
@@ -40,8 +41,6 @@
 #include "private/svn_cmdline_private.h"
 
 #include "sync.h"
-
-#include "svn_private_config.h"
 
 #include <apr_signal.h>
 #include <apr_uuid.h>
@@ -312,7 +311,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 
@@ -1297,7 +1296,7 @@ replay_rev_finished(svn_revnum_t revision,
   if (rb->sb->committed_rev != revision)
     return svn_error_createf
              (APR_EINVAL, NULL,
-              _("Commit created rev %ld but should have created %ld"),
+              _("Commit created r%ld but should have created r%ld"),
               rb->sb->committed_rev, revision);
 
   SVN_ERR(svn_ra_rev_proplist(rb->to_session, revision, &existing_props,
@@ -1847,6 +1846,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   const char *header =
     _("general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+      "Subversion repository replication tool.\n"
       "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnsync --version' to see the program version and RA modules.\n"
       "\n"

@@ -110,7 +110,8 @@ make_error_internal(apr_status_t apr_err,
     pool = child->pool;
   else
     {
-      if (apr_pool_create(&pool, NULL))
+      pool = svn_pool_create(NULL);
+      if (!pool)
         abort();
     }
 
@@ -339,7 +340,8 @@ svn_error_dup(svn_error_t *err)
   apr_pool_t *pool;
   svn_error_t *new_err = NULL, *tmp_err = NULL;
 
-  if (apr_pool_create(&pool, NULL))
+  pool = svn_pool_create(NULL);
+  if (!pool)
     abort();
 
   for (; err; err = err->child)
@@ -559,7 +561,7 @@ svn_handle_error2(svn_error_t *err,
      preferring apr_pool_*() instead.  I can't remember why -- it may
      be an artifact of r843793, or it may be for some deeper reason --
      but I'm playing it safe and using apr_pool_*() here too. */
-  apr_pool_create(&subpool, err->pool);
+  subpool = svn_pool_create(err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
   tmp_err = err;
@@ -679,7 +681,7 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 }
 
 #ifdef SVN_DEBUG
-/* Defines svn__errno */
+/* Defines svn__errno and svn__apr_errno */
 #include "errorcode.inc"
 #endif
 
@@ -705,6 +707,12 @@ svn_error_symbolic_name(apr_status_t statcode)
   for (i = 0; i < sizeof(svn__errno) / sizeof(svn__errno[0]); i++)
     if (svn__errno[i].errcode == (int)statcode)
       return svn__errno[i].errname;
+
+  /* Try APR errors. */
+  /* Linear search through a sorted array */
+  for (i = 0; i < sizeof(svn__apr_errno) / sizeof(svn__apr_errno[0]); i++)
+    if (svn__apr_errno[i].errcode == (int)statcode)
+      return svn__apr_errno[i].errname;
 #endif /* SVN_DEBUG */
 
   /* ### TODO: do we need APR_* error macros?  What about APR_TO_OS_ERROR()? */
@@ -763,6 +771,12 @@ svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func)
 
   malfunction_handler = func;
   return old_malfunction_handler;
+}
+
+svn_error_malfunction_handler_t
+svn_error_get_malfunction_handler(void)
+{
+  return malfunction_handler;
 }
 
 /* Note: Although this is a "__" function, it is in the public ABI, so

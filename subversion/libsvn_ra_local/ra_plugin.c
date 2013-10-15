@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "ra_local.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
@@ -35,7 +36,6 @@
 #include "svn_version.h"
 #include "svn_cache_config.h"
 
-#include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
@@ -502,7 +502,7 @@ apply_lock_tokens(svn_fs_t *fs,
         N_("Module for accessing a repository on local disk.")
 
 static const char *
-svn_ra_local__get_description(void)
+svn_ra_local__get_description(apr_pool_t *pool)
 {
   return _(RA_LOCAL_DESCRIPTION);
 }
@@ -535,10 +535,14 @@ ignore_warnings(void *baton,
                 svn_error_t *err)
 {
 #ifdef SVN_DEBUG
-  SVN_DBG(("Ignoring FS warning %d\n", err ? err->apr_err : 0));
+  SVN_DBG(("Ignoring FS warning %s\n",
+           svn_error_symbolic_name(err ? err->apr_err : 0)));
 #endif
   return;
 }
+
+#define USER_AGENT "SVN/" SVN_VER_NUMBER " (" SVN_BUILD_TARGET ")" \
+                   " ra_local"
 
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
@@ -549,6 +553,7 @@ svn_ra_local__open(svn_ra_session_t *session,
                    apr_hash_t *config,
                    apr_pool_t *pool)
 {
+  const char *client_string;
   svn_ra_local__session_baton_t *sess;
   const char *fs_path;
   static volatile svn_atomic_t cache_init_state = 0;
@@ -590,6 +595,18 @@ svn_ra_local__open(svn_ra_session_t *session,
 
   /* Be sure username is NULL so we know to look it up / ask for it */
   sess->username = NULL;
+
+  if (sess->callbacks->get_client_string != NULL)
+    SVN_ERR(sess->callbacks->get_client_string(sess->callback_baton,
+                                               &client_string, pool));
+  else
+    client_string = NULL;
+
+  if (client_string)
+    sess->useragent = apr_pstrcat(pool, USER_AGENT " ",
+                                  client_string, (char *)NULL);
+  else
+    sess->useragent = USER_AGENT;
 
   session->priv = sess;
   return SVN_NO_ERROR;
@@ -764,6 +781,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                 svn_string_create(sess->username, pool));
   svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
                 svn_string_create(SVN_VER_NUMBER, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_TXN_USER_AGENT,
+                svn_string_create(sess->useragent, pool));
 
   /* Get the repos commit-editor */
   return svn_repos_get_commit_editor5
@@ -970,6 +989,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
                       svn_boolean_t include_merged_revisions,
+                      svn_move_behavior_t move_behavior,
                       const apr_array_header_t *revprops,
                       svn_log_entry_receiver_t receiver,
                       void *receiver_baton,
@@ -998,7 +1018,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
   receiver = log_receiver_wrapper;
   receiver_baton = &lb;
 
-  return svn_repos_get_logs4(sess->repos,
+  return svn_repos_get_logs5(sess->repos,
                              abs_paths,
                              start,
                              end,
@@ -1006,6 +1026,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
+                             move_behavior,
                              revprops,
                              NULL, NULL,
                              receiver,
@@ -1745,7 +1766,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
                                "ra_local"),
                              loader_version->major);
 
-  SVN_ERR(svn_ver_check_list(ra_local_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
   /* This assumes that POOL was the pool used to load the dso. */

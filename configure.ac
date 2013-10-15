@@ -49,13 +49,11 @@ SVN_CONFIG_NICE(config.nice)
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
-CMAINTAINERFLAGS="$CUSERFLAGS"
 CUSERFLAGS="$CFLAGS"
 AC_PROG_CC
 SVN_CC_MODE_SETUP
 
 # Look for a C++ compiler (before anything can set CXXFLAGS)
-CXXMAINTAINERFLAGS="$CXXUSERFLAGS"
 CXXUSERFLAGS="$CXXFLAGS"
 AC_PROG_CXX
 SVN_CXX_MODE_SETUP
@@ -125,7 +123,7 @@ dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 dnl Search for serf
-SVN_LIB_SERF(1,2,0)
+SVN_LIB_SERF(1,2,1)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
@@ -167,7 +165,6 @@ if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
 fi
 
 SVN_CHECK_FOR_ATOMIC_BUILTINS
-
 if test "$svn_cv_atomic_builtins" = "yes"; then
     AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi
@@ -460,6 +457,7 @@ powerpc-apple-darwin*)
     SVN_FS_WANT_DB_PATCH=14
     ;;
 esac
+db_alt_version="5.x"
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
@@ -627,6 +625,28 @@ fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl Googlemock -----------------
+AC_ARG_ENABLE([gmock],
+  AS_HELP_STRING([--disable-gmock],
+                 [Do not use the Googlemock testing framework]),
+  [],
+  [enable_gmock=yes])
+
+AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_MSG_CHECKING([whether use Googlemock])
+if test "$enable_gmock" != "no"; then
+  if test -d "$GMOCK_SRCDIR"; then
+    AC_MSG_RESULT([yes])
+    SVN_USE_GMOCK=true
+  else
+    AC_MSG_RESULT([no])
+    SVN_USE_GMOCK=false
+  fi
+else
+  AC_MSG_RESULT([no])
+  SVN_USE_GMOCK_SOURCES=false
+fi
+AC_SUBST([SVN_USE_GMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -709,6 +729,26 @@ AH_BOTTOM([
 #define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
+#endif
+
+/* compiler hints */
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
+# define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+# define SVN__PREDICT_FALSE(x) (x)
+# define SVN__PREDICT_TRUE(x) (x)
+#endif
+
+#if defined(SVN_DEBUG)
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#elif defined(__GNUC__)
+# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__PREVENT_INLINE __attribute__ ((noinline))
+#else
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
 #endif
 ])
 
@@ -988,7 +1028,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl ./configure CUSERFLAGS="-Wswitch-enum -Wswitch-default"
+        dnl ./configure CFLAGS="-Wswitch-enum -Wswitch-default"
 
         dnl Add each of the following flags only if the C compiler accepts it.
         CFLAGS_KEEP="$CFLAGS"
@@ -1002,8 +1042,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
 
-        CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
@@ -1021,7 +1062,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CXXFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
         SVN_CXXFLAGS_ADD_IFELSE([-Wno-system-headers])
 
-        CXXMAINTAINERFLAGS="$CXXFLAGS $CXXMAINTAINERFLAGS"
+        CXXMAINTAINERFLAGS="$CXXFLAGS"
         CXXFLAGS="$CXXFLAGS_KEEP"
 
         dnl Add flags that all versions of G++ (should) support
@@ -1086,7 +1127,8 @@ if test "$enable_optimization" = "yes"; then
         SVN_CFLAGS_ADD_IFELSE([-O2],[],[
           SVN_CFLAGS_ADD_IFELSE([-O1],[],[
             SVN_CFLAGS_ADD_IFELSE([-O])])])])
-      SVN_CFLAGS_ADD_IFELSE([-flto -Wno-clobbered])
+      SVN_CFLAGS_ADD_IFELSE([-Wno-clobbered])
+      SVN_CFLAGS_ADD_IFELSE([-flto])
       SVN_CFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
@@ -1102,7 +1144,8 @@ if test "$enable_optimization" = "yes"; then
         SVN_CXXFLAGS_ADD_IFELSE([-O2],[],[
           SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
             SVN_CXXFLAGS_ADD_IFELSE([-O])])])])
-      SVN_CXXFLAGS_ADD_IFELSE([-flto -Wno-clobbered])
+      SVN_CXXFLAGS_ADD_IFELSE([-Wno-clobbered])
+      SVN_CXXFLAGS_ADD_IFELSE([-flto])
       SVN_CXXFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
@@ -1115,6 +1158,13 @@ elif test "$enable_optimization" = "no"; then
 #   # do nothing
 fi
 
+dnl Dump the current compiler options
+AC_MSG_NOTICE([C compiler flags: $CFLAGS])
+AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
+AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
+AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
+AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
+AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
 AC_ARG_ENABLE(full-version-match,
 AS_HELP_STRING([--disable-full-version-match],
@@ -1337,6 +1387,13 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   svn_fs_lib_install_deps="install-fsmod-lib"
   svn_fs_lib_link="\$(FS_FS_LINK)"
 
+  AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_X, 1,
+      [Defined if libsvn_fs should link against libsvn_fs_x])
+  svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_X_DEPS)"
+  svn_fs_lib_link="$svn_fs_lib_link \$(FS_X_LINK)"
+dnl  FSFS already installs fsmod
+dnl  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsmod-lib"
+
   if test "$svn_lib_berkeley_db" = "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
       [Defined if libsvn_fs should link against libsvn_fs_base])
@@ -1502,18 +1559,28 @@ dnl Configure is long - users tend to miss warnings printed during it.
 dnl Hence, print a warnings about what we did and didn't configure at the 
 dnl end, where people will actually see them.
 
-if test "$svn_lib_berkeley_db" = "no" && test "$with_berkeley_db" != "no"; then
-  db_version="$SVN_FS_WANT_DB_MAJOR.$SVN_FS_WANT_DB_MINOR.$SVN_FS_WANT_DB_PATCH"
-  AC_MSG_WARN([we have configured without BDB filesystem support
+if test "$svn_have_berkeley_db" = "no6" && test "$enable_bdb6" != "no"; then
+  AC_MSG_WARN([We have configured without BDB filesystem support
 
 
-You don't seem to have Berkeley DB version $db_version or newer
-installed and linked to APR-UTIL.  We have created a Makefile which will build
-Subversion without support for the Berkeley DB back-end.  You can find the
-latest version of Berkeley DB here:
+Berkeley DB 6 was found, but not used.  Please re-run configure (see
+./config.nice) with the '--enable-bdb6' flag to use it,
+or explicitly specify '--disable-bdb6' or '--without-berkeley-db'
+to silence this warning.
 
-  http://www.oracle.com/technetwork/products/berkeleydb/downloads/index.html
+Please note that some versions of Berkeley DB 6+ are under the GNU Affero
+General Public License, version 3:
+https://oss.oracle.com/pipermail/bdb/2013-June/000056.html
 
-or explicitly specify --without-berkeley-db to silence this warning.
+The AGPL-3.0 licence may impose special requirements for making available
+source code of server-side software.  The text of the licence is:
+https://www.gnu.org/licenses/agpl-3.0.html
+http://opensource.org/licenses/AGPL-3.0
+
+The Berkeley DB backend to Subversion is deprecated; see
+http://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
+
+The Subversion developers have not tested Subversion with Berkeley DB 6 for
+technical problems or bugs.
 ])
 fi

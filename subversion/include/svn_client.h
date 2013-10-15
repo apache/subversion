@@ -1014,6 +1014,46 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
+  /** Total number of bytes transferred over network.
+   *
+   * @Since New in 1.9. */
+  apr_off_t progress;
+
+  /** Check-tunnel callback
+   *
+   * If not @c NULL, and open_tunnel_func is also not @c NULL, this
+   * callback will be invoked to check if open_tunnel_func should be
+   * used to create a specific tunnel, or if the default tunnel
+   * implementation (either built-in or configured in the client
+   * configuration file) should be used instead.
+   * @since New in 1.9.
+   */
+  svn_ra_check_tunnel_func_t check_tunnel_func;
+
+  /** Open-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked to create a tunnel
+   * for a ra_svn connection that needs one, overriding any tunnel
+   * definitions in the client config file. This callback is used only
+   * for ra_svn and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel_func;
+
+  /** Close-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked when the pool that
+   * owns the connection created by the open_tunnel callback is
+   * cleared or destroyed. This callback is used only for ra_svn and
+   * ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_close_tunnel_func_t close_tunnel_func;
+
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_client_ctx_t;
 
 /** Initialize a client context.
@@ -2655,6 +2695,9 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
+ * 
+ * @a move_behavior will control which changes will be reported as moves
+ * instead of additions and vice versa.
  *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
@@ -2665,8 +2708,31 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_log6(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_move_behavior_t move_behavior,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log6(), but with @a move_behavior set to
+ * #svn_move_behavior_no_moves.
+ *
+ * @deprecated Provided for compatibility with the 1.8 API.
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -2813,6 +2879,11 @@ svn_client_log(const apr_array_header_t *targets,
  * #SVN_ERR_CLIENT_IS_BINARY_FILE, unless @a ignore_mime_type is TRUE,
  * in which case blame information will be generated regardless of the
  * MIME types of the revisions.
+ *
+ * @a start may resolve to a revision number greater (younger) than @a end
+ * only if the server is 1.8.0 or greater (supports
+ * #SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) and the client is 1.9.0 or
+ * newer.
  *
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
@@ -4020,12 +4091,41 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
+ * If @a include_externals is @c TRUE, recurse into externals and clean
+ * them up as well.
+ *
+ * If @a remove_unversioned_items is @c TRUE, remove unversioned items
+ * in @a dir after successfull working copy cleanup.
+ * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
+ * in @a dir after successfull working copy cleanup.
+ *
+ * When asked to remove unversioned or ignored items, and the working copy
+ * is already locked via a different client or WC context than @a ctx, return
+ * #SVN_ERR_WC_LOCKED. This prevents accidental working copy corruption in
+ * case users run the cleanup operation to remove unversioned items while
+ * another client is performing some other operation on the working copy.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
  * returns an error (typically #SVN_ERR_CANCELLED), return that error
  * immediately.
  *
  * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_cleanup2(const char *dir,
+                    svn_boolean_t include_externals,
+                    svn_boolean_t remove_unversioned_items,
+                    svn_boolean_t remove_ignored_items,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool);
+
+/* Like svn_client_cleanup2(), but no support for removing unversioned items
+ * and cleaning up externals.
+ *
+ * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */
 svn_error_t *
 svn_client_cleanup(const char *dir,
@@ -6457,7 +6557,7 @@ svn_client_open_ra_session2(svn_ra_session_t **session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_open_ra_session(), but with @ wri_abspath
+/** Similar to svn_client_open_ra_session2(), but with @ wri_abspath
  * always passed as NULL, and with the same pool used as both @a
  * result_pool and @a scratch_pool.
  *

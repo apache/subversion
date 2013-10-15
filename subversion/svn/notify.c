@@ -31,6 +31,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -40,8 +41,6 @@
 #include "cl.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
-
-#include "svn_private_config.h"
 
 
 /* Baton for notify and friends. */
@@ -1133,6 +1132,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                _("Breaking move with source path '%s'\n"),
                                path_local);
       if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_cleanup_external:
+      if ((err = svn_cmdline_printf
+           (pool, _("Performing cleanup on external item at '%s'.\n"),
+            path_local)))
         goto print_error;
       break;
 

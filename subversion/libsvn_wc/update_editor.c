@@ -32,6 +32,7 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -40,7 +41,6 @@
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_private_config.h"
 #include "svn_time.h"
 
 #include "wc.h"
@@ -1011,9 +1011,13 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
   if (err)
     {
-      /* We failed to apply the delta; clean up the temporary file.  */
-      svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath, TRUE,
-                                          hb->pool));
+      /* We failed to apply the delta; clean up the temporary file if it
+         already created by lazy_open_target(). */
+      if (hb->new_text_base_tmp_abspath)
+        {
+          svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath,
+                                              TRUE, hb->pool));
+        }
     }
   else
     {
@@ -1706,7 +1710,7 @@ delete_entry(const char *path,
   const char *base = svn_relpath_basename(path, NULL);
   const char *local_abspath;
   const char *repos_relpath;
-  svn_node_kind_t kind, base_kind;
+  svn_node_kind_t kind;
   svn_revnum_t old_revision;
   svn_boolean_t conflicted;
   svn_boolean_t have_work;
@@ -1735,6 +1739,7 @@ delete_entry(const char *path,
   {
     svn_boolean_t is_root;
 
+
     SVN_ERR(svn_wc__db_is_wcroot(&is_root, eb->db, local_abspath,
                                  scratch_pool));
 
@@ -1762,10 +1767,9 @@ delete_entry(const char *path,
   if (!have_work)
     {
       base_status = status;
-      base_kind = kind;
     }
   else
-    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, &old_revision,
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &old_revision,
                                      &repos_relpath,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL,
@@ -1813,6 +1817,7 @@ delete_entry(const char *path,
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
                                      FALSE /* keep_as_working */,
                                      FALSE /* queue_deletes */,
+                                     FALSE /* remove_locks */,
                                      SVN_INVALID_REVNUM /* not_present_rev */,
                                      NULL, NULL,
                                      scratch_pool));
@@ -1836,9 +1841,7 @@ delete_entry(const char *path,
     {
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, TRUE,
-                                  (kind == svn_node_dir)
-                                        ? svn_node_dir
-                                        : svn_node_file,
+                                  kind,
                                   svn_wc_conflict_action_delete,
                                   pb->pool, scratch_pool));
     }
@@ -1911,7 +1914,7 @@ delete_entry(const char *path,
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, queue_deletes,
+                                     keep_as_working, queue_deletes, FALSE,
                                      SVN_INVALID_REVNUM /* not_present_rev */,
                                      tree_conflict, NULL,
                                      scratch_pool));
@@ -1920,7 +1923,7 @@ delete_entry(const char *path,
     {
       /* Delete, leaving a not-present node.  */
       SVN_ERR(svn_wc__db_base_remove(eb->db, local_abspath,
-                                     keep_as_working, queue_deletes,
+                                     keep_as_working, queue_deletes, FALSE,
                                      *eb->target_revision,
                                      tree_conflict, NULL,
                                      scratch_pool));
@@ -1939,8 +1942,19 @@ delete_entry(const char *path,
 
   /* Notify. */
   if (tree_conflict)
-    do_notification(eb, local_abspath, svn_node_unknown,
-                    svn_wc_notify_tree_conflict, scratch_pool);
+    {
+      if (eb->conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                 tree_conflict,
+                                                 NULL /* merge_options */,
+                                                 eb->conflict_func,
+                                                 eb->conflict_baton,
+                                                 eb->cancel_func,
+                                                 eb->cancel_baton,
+                                                 scratch_pool));
+      do_notification(eb, local_abspath, svn_node_unknown,
+                      svn_wc_notify_tree_conflict, scratch_pool);
+    }
   else
     {
       svn_wc_notify_action_t action = svn_wc_notify_update_delete;
@@ -2289,6 +2303,16 @@ add_directory(const char *path,
 
   if (tree_conflict != NULL)
     {
+      if (eb->conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                                 tree_conflict,
+                                                 NULL /* merge_options */,
+                                                 eb->conflict_func,
+                                                 eb->conflict_baton,
+                                                 eb->cancel_func,
+                                                 eb->cancel_baton,
+                                                 pool));
+
       db->already_notified = TRUE;
       do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
@@ -2907,7 +2931,7 @@ close_directory(void *dir_baton,
                                              eb->conflict_func,
                                              eb->conflict_baton,
                                              eb->cancel_func,
-                                             eb->conflict_baton,
+                                             eb->cancel_baton,
                                              scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
@@ -2986,18 +3010,55 @@ absent_node(const char *path,
       kind = svn_node_unknown;
     }
 
-  if (status == svn_wc__db_status_normal
-      && kind == svn_node_dir)
+  if (status == svn_wc__db_status_normal)
     {
-      /* We found an obstructing working copy!
+      svn_boolean_t wcroot;
+      /* We found an obstructing working copy or a file external! */
 
-         We can do two things now:
-            1) notify the user, record a skip, etc.
-            2) Just record the absent node in BASE in the parent
-               working copy.
+      SVN_ERR(svn_wc__db_is_wcroot(&wcroot, eb->db, local_abspath,
+                                   scratch_pool));
 
-         As option 2 happens to be exactly what we do anyway, lets do that.
-      */
+      if (wcroot)
+        {
+          /*
+             We have an obstructing working copy; possibly a directory external
+
+             We can do two things now:
+             1) notify the user, record a skip, etc.
+             2) Just record the absent node in BASE in the parent
+                working copy.
+
+             As option 2 happens to be exactly what we do anyway, fall through.
+           */
+        }
+      else
+        {
+          /* The server asks us to replace a file external
+             (Existing BASE node; not reported by the working copy crawler or
+              there would have been a delete_entry() call.
+
+             There is no way we can store this state in the working copy as
+             the BASE layer is already filled.
+
+             We could error out, but that is not helping anybody; the user is not
+             even seeing with what the file external would be replaced, so let's
+             report a skip and continue the update.
+           */
+
+          if (eb->notify_func)
+            {
+              svn_wc_notify_t *notify;
+              notify = svn_wc_create_notify(
+                                    local_abspath,
+                                    svn_wc_notify_update_skip_obstruction,
+                                    scratch_pool);
+
+              eb->notify_func(eb->notify_baton, notify, scratch_pool);
+            }
+
+          svn_pool_destroy(scratch_pool);
+          return SVN_NO_ERROR;
+        }
     }
   else if (status == svn_wc__db_status_not_present
            || status == svn_wc__db_status_server_excluded
@@ -3379,6 +3440,16 @@ add_file(const char *path,
                                           fb->local_abspath,
                                           tree_conflict, NULL,
                                           scratch_pool));
+
+      if (eb->conflict_func)
+        SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
+                                                 tree_conflict,
+                                                 NULL /* merge_options */,
+                                                 eb->conflict_func,
+                                                 eb->conflict_baton,
+                                                 eb->cancel_func,
+                                                 eb->cancel_baton,
+                                                 scratch_pool));
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_file,
@@ -4703,6 +4774,7 @@ close_edit(void *edit_baton,
               SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
                                              FALSE /* keep_as_working */,
                                              FALSE /* queue_deletes */,
+                                             FALSE /* remove_locks */,
                                              SVN_INVALID_REVNUM,
                                              NULL, NULL, scratch_pool));
             }

@@ -56,10 +56,9 @@ svn_nls_init(void)
       char* utf8_path;
       const char* internal_path;
       apr_pool_t* pool;
-      apr_status_t apr_err;
       apr_size_t inwords, outbytes, outlength;
 
-      apr_pool_create(&pool, 0);
+      pool = svn_pool_create(0);
       /* get exe name - our locale info will be in '../share/locale' */
       inwords = GetModuleFileNameW(0, ucs2_path,
                                    sizeof(ucs2_path) / sizeof(ucs2_path[0]));
@@ -99,10 +98,10 @@ svn_nls_init(void)
 
           if (outbytes == 0)
             {
-              err = svn_error_createf(apr_err, NULL,
-                                      _("Can't convert module path "
-                                        "to UTF-8 from UCS-2: '%s'"),
-                                      ucs2_path);
+              err = svn_error_wrap_apr(apr_get_os_error(),
+                                       _("Can't convert module path "
+                                         "to UTF-8 from UCS-2: '%s'"),
+                                       ucs2_path);
             }
           else
             {

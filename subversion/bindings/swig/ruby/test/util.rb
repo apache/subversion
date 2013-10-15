@@ -1,4 +1,4 @@
-# ====================================================================
+# ==================================================================== 
 #    Licensed to the Apache Software Foundation (ASF) under one
 #    or more contributor license agreements.  See the NOTICE file
 #    distributed with this work for additional information
@@ -19,7 +19,41 @@
 
 require "fileutils"
 require "pathname"
-require "svn/util"
+
+# Tale of a hack...
+#
+# Here we are, %SVN-WC-ROOT%/subversion/bindings/swig/ruby/test/util.rb,
+# trying to require %SVN-WC-ROOT%/subversion/bindings/swig/ruby/svn/util.rb,
+# all the while supporting both Ruby 1.8 and 1.9.  Simply using this,
+#
+#   require "svn/util"
+#
+# works for Ruby 1.8 if the CWD is subversion/bindings/swig/ruby
+# when we are running the tests, e.g.:
+#
+#   %SVN-WC-ROOT%/subversion/bindings/swig/ruby>ruby test\run-test.rb
+#
+# This is because the CWD is included in the load path when Ruby 1.8
+# searches for required files.  But this doesn't work for Ruby 1.9,
+# which doesn't include the CWD this way, so instead we could use this:
+#
+#   require "./svn/util"
+#
+# But that only works if ./svn/util is relative to the CWD (again if the
+# CWD is %SVN-WC-ROOT%/subversion/bindings/swig/ruby).  However, if we run
+# the tests from a different CWD and specify
+# %SVN-WC-ROOT%/subversion/bindings/swig/ruby as an additional $LOAD_PATH
+# using the ruby -I option, then that fails on both 1.8 and 1.9 with a
+# LoadError.
+#
+# The usual solution in a case like this is to use require_relative,
+#
+#  require_relative "../svn/util"
+#
+# But that's only available in Ruby 1.9.  We could require the backports gem
+# but there is a simple workaround, just calculate the full path of util:
+require File.join(File.dirname(__FILE__), '../svn/util')
+
 require "tmpdir"
 
 require "my-assertions"
@@ -43,19 +77,21 @@ module SvnTestUtil
 
     @tmp_path = Dir.mktmpdir
     @wc_path = File.join(@tmp_path, "wc")
-    @full_wc_path = File.expand_path(@wc_path)
+    @import_path = File.join(@tmp_path, "import")
     @repos_path = File.join(@tmp_path, "repos")
+    @svnserve_pid_file = File.join(@tmp_path, "svnserve.pid")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
 
     @config_path = "config"
-    @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
+    @greek = Greek.new(@tmp_path, @import_path, @wc_path, @repos_uri)
   end
 
   def setup_basic(need_svnserve=false)
     @need_svnserve = need_svnserve
     setup_default_variables
     setup_tmp
+    setup_tmp(@import_path) 
     setup_repository
     add_hooks
     setup_svnserve if @need_svnserve

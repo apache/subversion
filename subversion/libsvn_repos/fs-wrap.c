@@ -24,6 +24,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -34,7 +35,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "repos.h"
-#include "svn_private_config.h"
+
 #include "private/svn_repos_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_fspath.h"
@@ -171,6 +172,10 @@ svn_repos__validate_prop(const char *name,
                          apr_pool_t *pool)
 {
   svn_prop_kind_t kind = svn_property_kind2(name);
+
+  /* Allow deleting any property, even a property we don't allow to set. */
+  if (value == NULL)
+    return SVN_NO_ERROR;
 
   /* Disallow setting non-regular properties. */
   if (kind != svn_prop_regular_kind)
@@ -409,10 +414,8 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
   else if (readability == svn_repos_revision_access_partial)
     {
       /* Only svn:author and svn:date are fetchable. */
-      if ((strncmp(propname, SVN_PROP_REVISION_AUTHOR,
-                   sizeof(SVN_PROP_REVISION_AUTHOR)-1) != 0)
-          && (strncmp(propname, SVN_PROP_REVISION_DATE,
-                      sizeof(SVN_PROP_REVISION_DATE)-1) != 0))
+      if ((strcmp(propname, SVN_PROP_REVISION_AUTHOR) != 0)
+          && (strcmp(propname, SVN_PROP_REVISION_DATE) != 0))
         *value_p = NULL;
 
       else

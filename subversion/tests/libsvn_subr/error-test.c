@@ -207,6 +207,7 @@ test_error_symbolic_name(apr_pool_t *pool)
     { SVN_ERR_BAD_CATEGORY_START, "SVN_ERR_BAD_CONTAINING_POOL" },
 #ifdef SVN_DEBUG
     { ENOENT, "ENOENT" },
+    { APR_ENOPOOL, "APR_ENOPOOL" },
 #endif
     /* Test non-errors. */
     { -1, NULL },

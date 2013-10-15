@@ -33,6 +33,7 @@
 #include <apr_hash.h>
 #include <apr_uri.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_types.h"
@@ -52,7 +53,6 @@
 #include "deprecated.h"
 
 #include "private/svn_ra_private.h"
-#include "svn_private_config.h"
 
 
 
@@ -877,7 +877,7 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                                   diff_baton, pool);
 }
 
-svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
+svn_error_t *svn_ra_get_log3(svn_ra_session_t *session,
                              const apr_array_header_t *paths,
                              svn_revnum_t start,
                              svn_revnum_t end,
@@ -885,6 +885,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
+                             svn_move_behavior_t move_behavior,
                              const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
@@ -905,8 +906,8 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
 
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
-                                  include_merged_revisions, revprops,
-                                  receiver, receiver_baton, pool);
+                                  include_merged_revisions, move_behavior,
+                                  revprops, receiver, receiver_baton, pool);
 }
 
 svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
@@ -1029,6 +1030,13 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
 
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
+
+  if (start > end)
+    SVN_ERR(
+     svn_ra__assert_capable_server(session,
+                                   SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                                   NULL,
+                                   pool));
 
   err = session->vtable->get_file_revs(session, path, start, end,
                                        include_merged_revisions,
@@ -1429,7 +1437,7 @@ svn_ra_print_modules(svn_stringbuf_t *output,
              built with SASL. */
           line = apr_psprintf(iterpool, "* ra_%s : %s\n",
                               defn->ra_name,
-                              vtable->get_description());
+                              vtable->get_description(iterpool));
           svn_stringbuf_appendcstr(output, line);
 
           for (schemes = vtable->get_schemes(iterpool); *schemes != NULL;

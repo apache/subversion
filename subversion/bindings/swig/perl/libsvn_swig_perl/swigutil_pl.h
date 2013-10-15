@@ -29,6 +29,10 @@
 #include <perl.h>
 #include <XSUB.h>
 
+/* Perl defines a _ macro, but SVN uses it for translations.
+ * So undefine _ after including the Perl headers. */
+#undef _
+
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
@@ -55,14 +59,14 @@ extern "C" {
 #endif
 
 
+typedef apr_pool_t *(*svn_swig_pl_get_current_pool_func_t)(void);
+typedef void (*svn_swig_pl_set_current_pool_func_t)(apr_pool_t *pool);
 
-#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
-typedef apr_pool_t *(*svn_swig_pl_get_current_pool_t)(void);
-typedef void (*svn_swig_pl_set_current_pool_t)(apr_pool_t *pool);
+void svn_swig_pl__bind_current_pool_fns(svn_swig_pl_get_current_pool_func_t get,
+                                       svn_swig_pl_set_current_pool_func_t set);
 
-void svn_swig_pl_bind_current_pool_fns(svn_swig_pl_get_current_pool_t get,
-                                       svn_swig_pl_set_current_pool_t set);
-#endif
+apr_pool_t * svn_swig_pl_get_current_pool();
+void svn_swig_pl_set_current_pool(apr_pool_t *pool);
 
 apr_pool_t *svn_swig_pl_make_pool(SV *obj);
 
@@ -79,9 +83,7 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 SV *svn_swig_pl_prophash_to_hash(apr_hash_t *hash);
 SV *svn_swig_pl_convert_hash(apr_hash_t *hash, swig_type_info *tinfo);
 
-SV *svn_swig_pl_convert_hash_of_revnum_t(apr_hash_t *hash);
-
-const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
+apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool);
 
 apr_hash_t *svn_swig_pl_strings_to_hash(SV *source,
@@ -93,20 +95,22 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              apr_pool_t *pool);
 apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
                                                  apr_pool_t *pool);
-const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
+apr_hash_t *svn_swig_pl_hash_to_prophash(SV *source, apr_pool_t *pool);
+apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     swig_type_info *tinfo,
                                                     apr_pool_t *pool);
+apr_array_header_t *svn_swig_pl_array_to_apr_array_revision_range(
+        SV *source, apr_pool_t *pool);
 
 SV *svn_swig_pl_array_to_list(const apr_array_header_t *array);
-/* Formerly used by pre-1.0 APIs. Now unused
-SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array);
-*/
 SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
                               swig_type_info *tinfo);
 
 SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array);
 
-svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, SV *source);
+svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
+                                             SV *source,
+                                             svn_boolean_t croak_on_error);
 
 /* thunked log_message receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *baton,
@@ -153,10 +157,10 @@ svn_error_t *svn_swig_pl_thunk_authz_func(svn_boolean_t *allowed,
                                           apr_pool_t *pool);
 
 /* ra callbacks. */
-svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
-				   void **c_baton,
-				   SV *perl_callbacks,
-				   apr_pool_t *pool);
+svn_error_t *svn_swig_pl_make_callbacks(svn_ra_callbacks_t **cb,
+                                        void **c_baton,
+                                        SV *perl_callbacks,
+                                        apr_pool_t *pool);
 
 /* thunked gnome_keyring_unlock_prompt callback function */
 svn_error_t *svn_swig_pl_thunk_gnome_keyring_unlock_prompt(char **keyring_password,
@@ -268,15 +272,15 @@ svn_error_t *svn_swig_pl_blame_func(void *baton,
 svn_boolean_t svn_swig_pl_thunk_config_enumerator(const char *name, const char *value, void *baton);
 
 /* helper for making the editor */
-void svn_delta_make_editor(svn_delta_editor_t **editor,
-                           void **edit_baton,
-                           SV *perl_editor,
-                           apr_pool_t *pool);
+void svn_swig_pl_make_editor(svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             SV *perl_editor,
+                             apr_pool_t *pool);
 
-void svn_delta_wrap_window_handler(svn_txdelta_window_handler_t *handler,
-                                   void **h_baton,
-                                   SV *callback,
-                                   apr_pool_t *pool);
+void svn_swig_pl_wrap_window_handler(svn_txdelta_window_handler_t *handler,
+                                     void **h_baton,
+                                     SV *callback,
+                                     apr_pool_t *pool);
 
 /* svn_stream_t helpers */
 svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj);

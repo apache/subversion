@@ -472,6 +472,10 @@ WHERE wc_id = ?1
 DELETE FROM lock
 WHERE repos_id = ?1 AND repos_relpath = ?2
 
+-- STMT_DELETE_LOCK_RECURSIVELY
+DELETE FROM lock
+WHERE repos_id = ?1 AND (repos_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(repos_relpath, ?2))
+
 -- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
 UPDATE nodes SET dav_cache = NULL
 WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
@@ -1567,7 +1571,7 @@ WHERE wc_id = ?1
   AND moved_to IS NOT NULL
 
 -- STMT_SELECT_MOVED_OUTSIDE
-SELECT local_relpath, moved_to FROM nodes
+SELECT local_relpath, moved_to, op_depth FROM nodes
 WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth >= ?3

@@ -50,7 +50,7 @@
 #include "ImportFilterCallback.h"
 #include "ChangelistCallback.h"
 #include "StringArray.h"
-#include "RevpropTable.h"
+#include "PropertyTable.h"
 #include "VersionExtended.h"
 #include "DiffOptions.h"
 #include "svn_version.h"
@@ -275,6 +275,21 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
 }
 
 JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setTunnelAgent
+(JNIEnv *env, jobject jthis, jobject jtunnelcb)
+{
+  JNIEntry(SVNClient, setPrompt);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setTunnelCallback(jtunnelcb);
+}
+
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,
@@ -384,7 +399,7 @@ Java_org_apache_subversion_javahl_SVNClient_remove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -498,7 +513,7 @@ Java_org_apache_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -539,7 +554,7 @@ Java_org_apache_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -577,7 +592,7 @@ Java_org_apache_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -610,7 +625,7 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -660,7 +675,8 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doExport
 (JNIEnv *env, jobject jthis, jstring jsrcPath, jstring jdestPath,
  jobject jrevision, jobject jpegRevision, jboolean jforce,
- jboolean jignoreExternals, jobject jdepth, jstring jnativeEOL)
+ jboolean jignoreExternals, jboolean jignoreKeywords,
+ jobject jdepth, jstring jnativeEOL)
 {
   JNIEntry(SVNClient, doExport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -690,7 +706,9 @@ Java_org_apache_subversion_javahl_SVNClient_doExport
     return -1;
 
   return cl->doExport(srcPath, destPath, revision, pegRevision,
-                      jforce ? true : false, jignoreExternals ? true : false,
+                      jforce ? true : false,
+                      jignoreExternals ? true : false,
+                      jignoreKeywords ? true : false,
                       EnumMapper::toDepth(jdepth), nativeEOL);
 }
 
@@ -758,7 +776,7 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1009,7 +1027,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1792,8 +1810,9 @@ Java_org_apache_subversion_javahl_SVNClient_unlock
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jobject jchangelists,
- jobject jinfoCallback)
+ jobject jpegRevision, jobject jdepth,
+ jboolean jfetchExcluded, jboolean jfetchActualOnly,
+ jobject jchangelists, jobject jinfoCallback)
 {
   JNIEntry(SVNClient, info2);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1820,6 +1839,7 @@ Java_org_apache_subversion_javahl_SVNClient_info2
 
   InfoCallback callback(jinfoCallback);
   cl->info2(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
+            svn_boolean_t(jfetchExcluded), svn_boolean_t(jfetchActualOnly),
             changelists, &callback);
 }
 
@@ -1850,4 +1870,23 @@ Java_org_apache_subversion_javahl_SVNClient_patch
             jdryRun ? true : false, static_cast<int>(jstripCount),
             jreverse ? true : false, jignoreWhitespace ? true : false,
             jremoveTempfiles ? true : false, &callback);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_nativeOpenRemoteSession
+(JNIEnv *env, jobject jthis, jstring jpath, jint jretryAttempts)
+{
+  JNIEntry(SVNClient, openRemoteSession);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError("bad C++ this");
+      return NULL;
+    }
+
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  return cl->openRemoteSession(path, jretryAttempts);
 }

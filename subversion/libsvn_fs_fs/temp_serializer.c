@@ -22,6 +22,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
 
@@ -33,6 +34,7 @@
 #include "private/svn_subr_private.h"
 
 #include "temp_serializer.h"
+#include "low_level.h"
 
 /* Utility to encode a signed NUMBER into a variable-length sequence of
  * 8-bit chars in KEY_BUFFER and return the last writen position.
@@ -106,12 +108,11 @@ serialize_svn_string(svn_temp_serializer__context_t *context,
 
   /* the "string" content may actually be arbitrary binary data.
    * Thus, we cannot use svn_temp_serializer__add_string. */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&string->data,
-                            string->len + 1);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&string->data,
+                                string->len + 1);
 
   /* back to the caller's nesting level */
-  svn_temp_serializer__pop(context);
   svn_temp_serializer__pop(context);
 }
 
@@ -127,44 +128,6 @@ deserialize_svn_string(void *buffer, svn_string_t **string)
   svn_temp_deserializer__resolve(*string, (void **)&(*string)->data);
 }
 
-/* Utility function to serialize checkum CS within the given serialization
- * CONTEXT.
- */
-static void
-serialize_checksum(svn_temp_serializer__context_t *context,
-                   svn_checksum_t * const *cs)
-{
-  const svn_checksum_t *checksum = *cs;
-  if (checksum == NULL)
-    return;
-
-  svn_temp_serializer__push(context,
-                            (const void * const *)cs,
-                            sizeof(*checksum));
-
-  /* The digest is arbitrary binary data.
-   * Thus, we cannot use svn_temp_serializer__add_string. */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&checksum->digest,
-                            svn_checksum_size(checksum));
-
-  /* return to the caller's nesting level */
-  svn_temp_serializer__pop(context);
-  svn_temp_serializer__pop(context);
-}
-
-/* Utility function to deserialize the checksum CS inside the BUFFER.
- */
-static void
-deserialize_checksum(void *buffer, svn_checksum_t **cs)
-{
-  svn_temp_deserializer__resolve(buffer, (void **)cs);
-  if (*cs == NULL)
-    return;
-
-  svn_temp_deserializer__resolve(*cs, (void **)&(*cs)->digest);
-}
-
 /* Utility function to serialize the REPRESENTATION within the given
  * serialization CONTEXT.
  */
@@ -177,41 +140,9 @@ serialize_representation(svn_temp_serializer__context_t *context,
     return;
 
   /* serialize the representation struct itself */
-  svn_temp_serializer__push(context,
-                            (const void * const *)representation,
-                            sizeof(*rep));
-
-  /* serialize sub-structures */
-  serialize_checksum(context, &rep->md5_checksum);
-  serialize_checksum(context, &rep->sha1_checksum);
-
-  svn_temp_serializer__add_string(context, &rep->txn_id);
-  svn_temp_serializer__add_string(context, &rep->uniquifier);
-
-  /* return to the caller's nesting level */
-  svn_temp_serializer__pop(context);
-}
-
-/* Utility function to deserialize the REPRESENTATIONS inside the BUFFER.
- */
-static void
-deserialize_representation(void *buffer,
-                           representation_t **representation)
-{
-  representation_t *rep;
-
-  /* fixup the reference to the representation itself */
-  svn_temp_deserializer__resolve(buffer, (void **)representation);
-  rep = *representation;
-  if (rep == NULL)
-    return;
-
-  /* fixup of sub-structures */
-  deserialize_checksum(rep, &rep->md5_checksum);
-  deserialize_checksum(rep, &rep->sha1_checksum);
-
-  svn_temp_deserializer__resolve(rep, (void **)&rep->txn_id);
-  svn_temp_deserializer__resolve(rep, (void **)&rep->uniquifier);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)representation,
+                                sizeof(*rep));
 }
 
 /* auxilliary structure representing the content of a directory hash */
@@ -413,8 +344,8 @@ svn_fs_fs__noderev_deserialize(void *buffer,
   /* fixup of sub-structures */
   svn_fs_fs__id_deserialize(noderev, (svn_fs_id_t **)&noderev->id);
   svn_fs_fs__id_deserialize(noderev, (svn_fs_id_t **)&noderev->predecessor_id);
-  deserialize_representation(noderev, &noderev->prop_rep);
-  deserialize_representation(noderev, &noderev->data_rep);
+  svn_temp_deserializer__resolve(noderev, (void **)&noderev->prop_rep);
+  svn_temp_deserializer__resolve(noderev, (void **)&noderev->data_rep);
 
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->copyfrom_path);
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->copyroot_path);
@@ -434,10 +365,9 @@ serialize_txdelta_ops(svn_temp_serializer__context_t *context,
     return;
 
   /* the ops form a contiguous chunk of memory with no further references */
-  svn_temp_serializer__push(context,
-                            (const void * const *)ops,
-                            count * sizeof(svn_txdelta_op_t));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)ops,
+                                count * sizeof(svn_txdelta_op_t));
 }
 
 /* Utility function to serialize W in the given serialization CONTEXT.
@@ -1059,6 +989,36 @@ svn_fs_fs__replace_dir_entry(void **data,
   return SVN_NO_ERROR;
 }
 
+svn_error_t  *
+svn_fs_fs__serialize_rep_header(void **data,
+                                apr_size_t *data_len,
+                                void *in,
+                                apr_pool_t *pool)
+{
+  svn_fs_fs__rep_header_t *copy = apr_palloc(pool, sizeof(*copy));
+  *copy = *(svn_fs_fs__rep_header_t *)in;
+
+  *data_len = sizeof(svn_fs_fs__rep_header_t);
+  *data = copy;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_rep_header(void **out,
+                                  void *data,
+                                  apr_size_t data_len,
+                                  apr_pool_t *pool)
+{
+  svn_fs_fs__rep_header_t *copy = apr_palloc(pool, sizeof(*copy));
+  SVN_ERR_ASSERT(data_len == sizeof(*copy));
+
+  *copy = *(svn_fs_fs__rep_header_t *)data;
+  *out = data;
+
+  return SVN_NO_ERROR;
+}
+
 /* Utility function to serialize change CHANGE_P in the given serialization
  * CONTEXT.
  */
@@ -1076,10 +1036,10 @@ serialize_change(svn_temp_serializer__context_t *context,
                             sizeof(*change));
 
   /* serialize sub-structures */
-  svn_fs_fs__id_serialize(context, &change->noderev_id);
+  svn_fs_fs__id_serialize(context, &change->info.node_rev_id);
 
-  svn_temp_serializer__add_string(context, &change->path);
-  svn_temp_serializer__add_string(context, &change->copyfrom_path);
+  svn_temp_serializer__add_string(context, &change->path.data);
+  svn_temp_serializer__add_string(context, &change->info.copyfrom_path);
 
   /* return to the caller's nesting level */
   svn_temp_serializer__pop(context);
@@ -1101,10 +1061,10 @@ deserialize_change(void *buffer, change_t **change_p)
     return;
 
   /* fix-up of sub-structures */
-  svn_fs_fs__id_deserialize(change, (svn_fs_id_t **)&change->noderev_id);
+  svn_fs_fs__id_deserialize(change, (svn_fs_id_t **)&change->info.node_rev_id);
 
-  svn_temp_deserializer__resolve(change, (void **)&change->path);
-  svn_temp_deserializer__resolve(change, (void **)&change->copyfrom_path);
+  svn_temp_deserializer__resolve(change, (void **)&change->path.data);
+  svn_temp_deserializer__resolve(change, (void **)&change->info.copyfrom_path);
 }
 
 /* Auxiliary structure representing the content of a change_t array.
@@ -1274,22 +1234,19 @@ svn_fs_fs__serialize_mergeinfo(void **data,
   svn_temp_serializer__pop(context);
 
   /* key lengths array */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&merges.key_lengths,
-                            merges.count * sizeof(*merges.key_lengths));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&merges.key_lengths,
+                                merges.count * sizeof(*merges.key_lengths));
 
   /* range counts array */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&merges.range_counts,
-                            merges.count * sizeof(*merges.range_counts));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&merges.range_counts,
+                                merges.count * sizeof(*merges.range_counts));
 
   /* ranges */
-  svn_temp_serializer__push(context,
-                            (const void * const *)&merges.ranges,
-                            range_count * sizeof(*merges.ranges));
-  svn_temp_serializer__pop(context);
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&merges.ranges,
+                                range_count * sizeof(*merges.ranges));
 
   /* return the serialized result */
   serialized = svn_temp_serializer__get(context);

@@ -69,8 +69,11 @@ enum svn_node_action
 /** The different policies for processing the UUID in the dumpfile. */
 enum svn_repos_load_uuid
 {
+  /** only update uuid if the repos has no revisions. */
   svn_repos_load_uuid_default,
+  /** never update uuid. */
   svn_repos_load_uuid_ignore,
+  /** always update uuid. */
   svn_repos_load_uuid_force
 };
 
@@ -248,8 +251,19 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_load_skipped_rev,
 
   /** The structure of a revision is being verified.  @since New in 1.8. */
-  svn_repos_notify_verify_rev_structure
+  svn_repos_notify_verify_rev_structure,
 
+  /** A revision is found with corruption/errors. @since New in 1.9. */
+  svn_repos_notify_failure,
+
+  /** A revprop shard got packed. @since New in 1.9. */
+  svn_repos_notify_pack_revprops,
+
+  /** A non-packed revprop shard got removed. @since New in 1.9. */
+  svn_repos_notify_cleanup_revprops,
+
+  /** The repository format got bumped. @since New in 1.9. */
+  svn_repos_notify_format_bumped
 } svn_repos_notify_action_t;
 
 /** The type of error occurring.
@@ -292,16 +306,18 @@ typedef struct svn_repos_notify_t
   svn_repos_notify_action_t action;
 
   /** For #svn_repos_notify_dump_rev_end and #svn_repos_notify_verify_rev_end,
-   * the revision which just completed. */
+   * the revision which just completed.
+   * For #svn_fs_upgrade_format_bumped, the new format version. */
   svn_revnum_t revision;
 
-  /** For #svn_repos_notify_warning, the warning object. Must be cleared
-      by the consumer of the notification. */
+  /** For #svn_repos_notify_warning, the warning object. */
   const char *warning_str;
   svn_repos_notify_warning_t warning;
 
   /** For #svn_repos_notify_pack_shard_start,
       #svn_repos_notify_pack_shard_end,
+      #svn_repos_notify_pack_revprops,
+      #svn_repos_notify_cleanup_revprops
       #svn_repos_notify_pack_shard_start_revprop, and
       #svn_repos_notify_pack_shard_end_revprop, the shard processed. */
   apr_int64_t shard;
@@ -320,6 +336,11 @@ typedef struct svn_repos_notify_t
 
   /** For #svn_repos_notify_load_node_start, the path of the node. */
   const char *path;
+
+  /** For #svn_repos_notify_failure, this error chain indicates what
+      went wrong during verification.
+      @since New in 1.9. */
+  svn_error_t *err;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
@@ -1773,6 +1794,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
+ * @a move_behavior defines which changes are being reported as moves.
+ * See #svn_move_behavior_t for the various options.
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -1797,8 +1821,33 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  *
  * Use @a pool for temporary allocations.
  *
- * @since New in 1.5.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_get_logs5(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    svn_move_behavior_t move_behavior,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_entry_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_repos_get_logs5(), but with @a move_behavior being set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -2590,12 +2639,39 @@ svn_repos_info_format(int *repos_format,
  * the verified revision and @a warning_text @c NULL. For warnings call @a
  * notify_func with @a warning_text set.
  *
+ * For every revision verification failure, if @a notify_func is not @c NULL,
+ * call @a notify_func with @a rev set to the corrupt revision and @err set to
+ * the corresponding error message.
+ *
  * If @a cancel_func is not @c NULL, call it periodically with @a
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
  *
- * @since New in 1.7.
+ * If @a keep_going is @c TRUE, the verify process notifies the error message
+ * and continues. If @a notify_func is @c NULL, the verification failure is
+ * not notified. Finally, return an error if there were any failures during
+ * verification, or SVN_NO_ERROR if there were no failures.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_verify_fs3(svn_repos_t *repos,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_boolean_t keep_going,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_verify_fs2(svn_repos_t *repos,
                      svn_revnum_t start_rev,
@@ -3348,8 +3424,14 @@ svn_repos_authz_check_access(svn_authz_t *authz,
  */
 typedef enum svn_repos_revision_access_level_t
 {
+  /** no access allowed to the revision properties and all changed-paths
+   * information. */ 
   svn_repos_revision_access_none,
+  /** access granted to some (svn:date and svn:author) revision properties and
+   * changed-paths information on paths the read has access to. */
   svn_repos_revision_access_partial,
+  /** access granted to all revision properites and changed-paths
+   * information. */
   svn_repos_revision_access_full
 }
 svn_repos_revision_access_level_t;

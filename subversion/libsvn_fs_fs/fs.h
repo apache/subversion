@@ -26,6 +26,8 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_network_io.h>
+#include <apr_md5.h>
+#include <apr_sha1.h>
 
 #include "svn_fs.h"
 #include "svn_config.h"
@@ -35,6 +37,8 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
 #include "private/svn_named_atomic.h"
+
+#include "id.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -144,6 +148,9 @@ extern "C" {
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
 
+/* Minimum format number that will record moves */
+#define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
+
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
 
@@ -157,13 +164,8 @@ typedef struct fs_fs_shared_txn_data_t
      transaction. */
   struct fs_fs_shared_txn_data_t *next;
 
-  /* This transaction's ID.  For repositories whose format is less
-     than SVN_FS_FS__MIN_TXN_CURRENT_FORMAT, the ID is in the form
-     <rev>-<uniqueifier>, where <uniqueifier> runs from 0-99999 (see
-     create_txn_dir_pre_1_5() in fs_fs.c).  For newer repositories,
-     the form is <rev>-<200 digit base 36 number> (see
-     create_txn_dir() in fs_fs.c). */
-  char txn_id[SVN_FS__TXN_MAX_LEN+1];
+  /* ID of this transaction. */
+  svn_fs_fs__id_part_t txn_id;
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current
@@ -221,13 +223,43 @@ typedef struct fs_fs_shared_data_t
 /* Data structure for the 1st level DAG node cache. */
 typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
 
-/* Key type for all caches that use revision + offset / counter as key. */
+/* Key type for all caches that use revision + offset / counter as key.
+
+   NOTE: always initialize this using calloc() or '= {0};'!  This is used
+   as a cache key and the padding bytes on 32 bit archs should be zero for
+   cache effectiveness. */
 typedef struct pair_cache_key_t
 {
   svn_revnum_t revision;
 
   apr_int64_t second;
 } pair_cache_key_t;
+
+/* Key type that identifies a representation / rep header. */
+typedef struct representation_cache_key_t
+{
+  /* Revision that contains the representation */
+  apr_uint32_t revision;
+
+  /* Packed or non-packed representation? */
+  svn_boolean_t is_packed;
+
+  /* Item offset of the representation */
+  apr_uint64_t offset;
+} representation_cache_key_t;
+
+/* Key type that identifies a txdelta window. */
+typedef struct window_cache_key_t
+{
+  /* Revision that contains the representation */
+  apr_uint32_t revision;
+
+  /* Window number within that representation */
+  apr_int32_t chunk_index;
+
+  /* Offset of the representation within REVISION */
+  apr_uint64_t offset;
+} window_cache_key_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
@@ -293,11 +325,11 @@ typedef struct fs_fs_data_t
      respective pack file. */
   svn_cache__t *packed_offset_cache;
 
-  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  /* Cache for txdelta_window_t objects; the key is window_cache_key_t */
   svn_cache__t *txdelta_window_cache;
 
   /* Cache for combined windows as svn_stringbuf_t objects;
-     the key is (revFilePath, offset) */
+     the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
   /* Cache for node_revision_t objects; the key is (revision, id offset) */
@@ -306,6 +338,10 @@ typedef struct fs_fs_data_t
   /* Cache for change lists as APR arrays of change_t * objects; the key
      is the revision */
   svn_cache__t *changes_cache;
+
+  /* Cache for svn_fs_fs__rep_header_t objects; the key is a
+     (revision, is_packed, offset) set */
+  svn_cache__t *rep_header_cache;
 
   /* Cache for svn_mergeinfo_t objects; the key is a combination of
      revision, inheritance flags and path. */
@@ -395,26 +431,26 @@ typedef struct transaction_t
  * svn_fs_fs__rep_copy. */
 typedef struct representation_t
 {
-  /* Checksums for the contents produced by this representation.
+  /* Checksums digests for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If checksum is NULL, then for compatibility behave as though this
+     If has_sha1 is FALSE, then for compatibility behave as though this
      checksum matches the expected checksum.
 
      The md5 checksum is always filled, unless this is rep which was
      retrieved from the rep-cache.  The sha1 checksum is only computed on
-     a write, for use with rep-sharing; it may be read from an existing
-     representation, but otherwise it is NULL. */
-  svn_checksum_t *md5_checksum;
-  svn_checksum_t *sha1_checksum;
+     a write, for use with rep-sharing. */
+  svn_boolean_t has_sha1;
+  unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
+  unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
   /* Offset into the revision file where it is located. */
-  apr_off_t offset;
+  svn_filesize_t offset;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -424,17 +460,21 @@ typedef struct representation_t
    * the fulltext size is equal to representation size in the rev file, */
   svn_filesize_t expanded_size;
 
-  /* Is this representation a transaction? */
-  const char *txn_id;
+  /* Is this a representation (still) within a transaction? */
+  svn_fs_fs__id_part_t txn_id;
 
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content.
+     intra-node uniqification content. */
+  struct
+    {
+      /* unique context, i.e. txn ID, in which the noderev (!) got created */
+      svn_fs_fs__id_part_t noderev_txn_id;
 
-     May be NULL, in which case, it is considered to match other NULL
-     values.*/
-  const char *uniquifier;
+      /* unique value within that txn */
+      apr_uint64_t number;
+    } uniquifier;
 } representation_t;
 
 
@@ -494,25 +534,10 @@ typedef struct node_revision_t
 typedef struct change_t
 {
   /* Path of the change. */
-  const char *path;
+  svn_string_t path;
 
-  /* Node revision ID of the change. */
-  const svn_fs_id_t *noderev_id;
-
-  /* The kind of change. */
-  svn_fs_path_change_kind_t kind;
-
-  /* Text or property mods? */
-  svn_boolean_t text_mod;
-  svn_boolean_t prop_mod;
-
-  /* Node kind (possibly svn_node_unknown). */
-  svn_node_kind_t node_kind;
-
-  /* Copyfrom revision and path. */
-  svn_revnum_t copyfrom_rev;
-  const char * copyfrom_path;
-
+  /* API compatible change description */
+  svn_fs_path_change2_t info;
 } change_t;
 
 

@@ -26,6 +26,7 @@
 
 #include "svn_types.h"
 #include "svn_io.h"
+#include "svn_config.h"
 
 
 #ifdef __cplusplus
@@ -94,11 +95,32 @@ svn_spillbuf__create(apr_size_t blocksize,
                      apr_size_t maxsize,
                      apr_pool_t *result_pool);
 
+/* Create a spill buffer, with extra parameters.  */
+svn_spillbuf_t *
+svn_spillbuf__create_extended(apr_size_t blocksize,
+                              apr_size_t maxsize,
+                              svn_boolean_t delete_on_close,
+                              svn_boolean_t spill_all_contents,
+                              const char* dirpath,
+                              apr_pool_t *result_pool);
 
 /* Determine how much content is stored in the spill buffer.  */
 svn_filesize_t
 svn_spillbuf__get_size(const svn_spillbuf_t *buf);
 
+/* Determine how much content the spill buffer is caching in memory.  */
+svn_filesize_t
+svn_spillbuf__get_memory_size(const svn_spillbuf_t *buf);
+
+/* Retreive the name of the spill file. The returned value can be NULL
+   if the file has not been created yet. */
+const char *
+svn_spillbuf__get_filename(const svn_spillbuf_t *buf);
+
+/* Retreive the handle of the spill file. The returned value can be
+   NULL if the file has not been created yet. */
+apr_file_t *
+svn_spillbuf__get_file(const svn_spillbuf_t *buf);
 
 /* Write some data into the spill buffer.  */
 svn_error_t *
@@ -158,7 +180,6 @@ svn_spillbuf__reader_create(apr_size_t blocksize,
                             apr_size_t maxsize,
                             apr_pool_t *result_pool);
 
-
 /* Read @a len bytes from @a reader into @a data. The number of bytes
    actually read is stored in @a amt. If the content is exhausted, then
    @a amt is set to zero. It will always be non-zero if the spill-buffer
@@ -195,8 +216,7 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
    but implements the same basic sematics of a spillbuf for the underlying
    storage. */
 svn_stream_t *
-svn_stream__from_spillbuf(apr_size_t blocksize,
-                          apr_size_t maxsize,
+svn_stream__from_spillbuf(svn_spillbuf_t *buf,
                           apr_pool_t *result_pool);
 
 /** @} */
@@ -330,6 +350,116 @@ svn_version__at_least(svn_version_t *version,
                       int major,
                       int minor,
                       int patch);
+
+/** @} */
+
+/**
+ * @defgroup svn_compress Data (de-)compression API
+ * @{
+ */
+
+/* This is at least as big as the largest size of an integer that
+   svn__encode_uint() can generate; it is sufficient for creating buffers
+   for it to write into.  This assumes that integers are at most 64 bits,
+   and so 10 bytes (with 7 bits of information each) are sufficient to
+   represent them. */
+#define SVN__MAX_ENCODED_UINT_LEN 10
+
+/* Compression method parameters for svn__encode_uint. */
+
+/* No compression (but a length prefix will still be added to the buffer) */
+#define SVN__COMPRESSION_NONE         0
+
+/* Fastest, least effective compression method & level provided by zlib. */
+#define SVN__COMPRESSION_ZLIB_MIN     1
+
+/* Default compression method & level provided by zlib. */
+#define SVN__COMPRESSION_ZLIB_DEFAULT 5
+
+/* Slowest, best compression method & level provided by zlib. */
+#define SVN__COMPRESSION_ZLIB_MAX     9
+
+/* Encode VAL into the buffer P using the variable-length 7b/8b unsigned
+   integer format.  Return the incremented value of P after the
+   encoded bytes have been written.  P must point to a buffer of size
+   at least SVN__MAX_ENCODED_UINT_LEN.
+
+   This encoding uses the high bit of each byte as a continuation bit
+   and the other seven bits as data bits.  High-order data bits are
+   encoded first, followed by lower-order bits, so the value can be
+   reconstructed by concatenating the data bits from left to right and
+   interpreting the result as a binary number.  Examples (brackets
+   denote byte boundaries, spaces are for clarity only):
+
+           1 encodes as [0 0000001]
+          33 encodes as [0 0100001]
+         129 encodes as [1 0000001] [0 0000001]
+        2000 encodes as [1 0001111] [0 1010000]
+*/
+unsigned char *
+svn__encode_uint(unsigned char *p, apr_uint64_t val);
+
+/* Decode an unsigned 7b/8b-encoded integer into *VAL and return a pointer
+   to the byte after the integer.  The bytes to be decoded live in the
+   range [P..END-1].  If these bytes do not contain a whole encoded
+   integer, return NULL; in this case *VAL is undefined.
+
+   See the comment for svn__encode_uint() earlier in this file for more
+   detail on the encoding format.  */
+const unsigned char *
+svn__decode_uint(apr_uint64_t *val,
+                 const unsigned char *p,
+                 const unsigned char *end);
+
+/* Get the data from IN, compress it according to the specified
+ * COMPRESSION_METHOD and write the result to OUT.
+ * SVN__COMPRESSION_NONE is valid for COMPRESSION_METHOD.
+ */
+svn_error_t *
+svn__compress(svn_stringbuf_t *in,
+              svn_stringbuf_t *out,
+              int compression_method);
+
+/* Get the compressed data from IN, decompress it and write the result to
+ * OUT.  Return an error if the decompressed size is larger than LIMIT.
+ */
+svn_error_t *
+svn__decompress(svn_stringbuf_t *in,
+                svn_stringbuf_t *out,
+                apr_size_t limit);
+
+/** @} */
+
+/**
+ * @defgroup svn_root_pools Recycle-able root pools API
+ * @{
+ */
+
+/* Opaque thread-safe container for unused / recylcleable root pools.
+ *
+ * Recyling root pools (actually, their allocators) circumvents a
+ * scalability bottleneck in the OS memory management when multi-threaded
+ * applications frequently create and destroy allocators.
+ */
+typedef struct svn_root_pools__t svn_root_pools__t;
+
+/* Create a new root pools container and return it in *POOLS.
+ */
+svn_error_t *
+svn_root_pools__create(svn_root_pools__t **pools);
+
+/* Return a currently unused pool from POOLS.  If POOLS is empty, create a
+ * new root pool and return that.  The pool returned is not thread-safe.
+ */
+apr_pool_t *
+svn_root_pools__acquire_pool(svn_root_pools__t *pools);
+
+/* Clear and release the given root POOL and put it back into POOLS.
+ * If that fails, destroy POOL.
+ */
+void
+svn_root_pools__release_pool(apr_pool_t *pool,
+                             svn_root_pools__t *pools);
 
 /** @} */
 

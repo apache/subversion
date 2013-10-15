@@ -71,8 +71,8 @@
 
 #ifdef SWIGPYTHON
 %typemap(argout) SWIGTYPE **OUTPARAM {
-  %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
-                                        _global_py_pool, args));
+  %append_output(svn_swig_py_new_pointer_obj(*$1, $*1_descriptor,
+                                             _global_py_pool, args));
 }
 #else
 %typemap(argout) SWIGTYPE **OUTPARAM {
@@ -508,15 +508,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 %typemap(in) POINTER_TYPES
 {
-  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum);
+  $1 = ($1_ltype)svn_swig_py_must_get_ptr($input, $descriptor, $svn_argnum);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
 }
 
 %typemap(out) POINTER_TYPES
-    "$result = svn_swig_NewPointerObj((void*)($1), $descriptor,
-                                      _global_py_pool, args);";
+    "$result = svn_swig_py_new_pointer_obj((void*)($1), $descriptor,
+                                           _global_py_pool, args);";
 
 %apply POINTER_TYPES { void *, SWIGTYPE *, SWIGTYPE [] };
 
@@ -635,8 +635,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
  */
 
 %typemap(argout) CALLABLE_CALLBACK * {
-  %append_output(svn_swig_NewPointerObj($1, $descriptor,
-                                        _global_py_pool, args));
+  %append_output(svn_swig_py_new_pointer_obj($1, $descriptor,
+                                             _global_py_pool, args));
 }
 
 /* Convert the pointer to a function pointer back into a regular
@@ -645,7 +645,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 %typemap(in) CALLABLE_CALLBACK {
   $&ltype tmp =
-    svn_swig_MustGetPtr($input, $&descriptor, $svn_argnum);
+    svn_swig_py_must_get_ptr($input, $&descriptor, $svn_argnum);
   if (tmp == NULL || PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -675,8 +675,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
       SWIG_fail;
     }
     *tmp = ($ltype) $1;
-    $result = svn_swig_NewPointerObj(tmp, $&1_descriptor,
-                                     py_pool, args);
+    $result = svn_swig_py_new_pointer_obj(tmp, $&1_descriptor,
+                                          py_pool, args);
   }
 }
 
@@ -694,7 +694,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   *tmp = ($ltype) $value;
 
   %set_constant("$symname",
-    svn_swig_NewPointerObj(tmp, $&descriptor, NULL, NULL)
+    svn_swig_py_new_pointer_obj(tmp, $&descriptor, NULL, NULL)
   );
 
 }
@@ -922,6 +922,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   $2 = (void *)baton;
 }
 #endif
+#ifdef SWIGPERL
+%ignore svn_fs_set_warning_func;
+#endif
+#ifdef SWIGPYTHON
+%ignore svn_fs_set_warning_func;
+#endif
 
 /* -----------------------------------------------------------------------
    svn_stream_t interoperability with language native io handles
@@ -997,8 +1003,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
       /* We don't know the type of this reference, so we'll have to
        * treat it as an opaque void pointer.
        */
-      $result = svn_swig_NewPointerObj($1, $descriptor,
-        _global_py_pool, args);
+      $result = svn_swig_py_new_pointer_obj($1, $descriptor,
+                                            _global_py_pool, args);
     }
   }
 
@@ -1173,7 +1179,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 */
 #ifdef SWIGPERL
 %typemap(in) svn_opt_revision_t * (svn_opt_revision_t rev) {
-    $1 = svn_swig_pl_set_revision(&rev, $input);
+  $1 = svn_swig_pl_set_revision(&rev, $input, TRUE);
 }
 #endif
 

@@ -20,5 +20,5 @@
  for ext in c h cpp java py pl rb hpp cmd bat; do
    find . -name "*.$ext" -exec \
      perl -pi -e 's/[ \t]*$//' {} + ;
-     # don't use \t to not strip ^L pagebreaks
+     # don't use \s to not strip ^L pagebreaks
  done                         

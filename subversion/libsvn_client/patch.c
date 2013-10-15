@@ -29,6 +29,8 @@
 
 #include <apr_hash.h>
 #include <apr_fnmatch.h>
+
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
@@ -42,7 +44,6 @@
 #include "svn_wc.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
@@ -2676,8 +2677,8 @@ install_patched_prop_targets(patch_target_t *target,
         {
           if (! dry_run)
             {
-              SVN_ERR(svn_io_file_create(target->local_abspath, "",
-                                         scratch_pool));
+              SVN_ERR(svn_io_file_create_empty(target->local_abspath,
+                                               scratch_pool));
               SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, target->local_abspath,
                                             NULL /*props*/,
                                             /* suppress notification */
@@ -2815,9 +2816,12 @@ check_ancestor_delete(const char *deleted_target,
 {
   struct can_delete_baton_t cb;
   svn_error_t *err;
+  apr_array_header_t *ignores;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   const char *dir_abspath = svn_dirent_dirname(deleted_target, scratch_pool);
+
+  SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
 
   while (svn_dirent_is_child(apply_root, dir_abspath, iterpool))
     {
@@ -2828,7 +2832,7 @@ check_ancestor_delete(const char *deleted_target,
       cb.targets_info = targets_info;
 
       err = svn_wc_walk_status(ctx->wc_ctx, dir_abspath, svn_depth_infinity,
-                               TRUE, FALSE, FALSE, NULL,
+                               TRUE, FALSE, FALSE, ignores,
                                can_delete_callback, &cb,
                                ctx->cancel_func, ctx->cancel_baton,
                                iterpool);

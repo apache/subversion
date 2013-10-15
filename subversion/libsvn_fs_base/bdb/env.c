@@ -31,6 +31,7 @@
 #include <apr_strings.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -227,7 +228,7 @@ bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 
   SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
 
-  new_err = svn_error_createf(APR_SUCCESS, NULL, "bdb: %s", msg);
+  new_err = svn_error_createf(SVN_ERR_FS_BERKELEY_DB, NULL, "bdb: %s", msg);
   if (error_info->pending_errors)
     svn_error_compose(error_info->pending_errors, new_err);
   else

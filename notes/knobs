@@ -68,6 +68,7 @@ SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
+SVN_FS_FS__LOG_ACCESS
 SVN_UTF_NO_UNINITIALISED_ACCESS
 
 2.4 Test-only
@@ -80,6 +81,7 @@ TEST16K_ADD
 
 SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO
 SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE
+SVN_CMDLINE_DISABLE_CRASH_HANDLER
 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
@@ -395,7 +397,17 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
-5.14 SVN_UTF_NO_UNINITIALISED_ACCESS
+5.14 SVN_FS_FS__LOG_ACCESS
+  
+  Scope:     libsvn_fs_fs/cached_data.c
+  Purpose:   logs type and location info for any fsfs data access above the
+             cache layer to console (i.e. what data gets requested from FSFS
+             rather than disk)
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.15 SVN_UTF_NO_UNINITIALISED_ACCESS
 
   Scope:     libsvn_subr
   Purpose:   Disables some code that triggers warnings in memory tools
@@ -448,34 +460,41 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Scope:     
   Purpose:   
 
-7.3 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
+7.3. SVN_CMDLINE_DISABLE_CRASH_HANDLER
+
+  Scope:     All command line executables. Windows specific.
+  Purpose:   Setting any value disables internal Subversion crash handler
+             for creating minidump and stack trace information on failure on
+             Windows.
+
+7.4 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
 
   Scope:     
   Purpose:   
 
-7.4 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
+7.5 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
 
   Scope:     
   Purpose:   
 
-7.5 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
+7.6 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
 
   Scope:     
   Purpose:   
 
-7.6 SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
+7.7 SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
   Scope:     libsvn_ra_neon and libsvn_ra_serf, if SVN_DEBUG
   Purpose:   A "yes" value causes the RA modules to ignore the server's
              advertisement of HTTPv2 protocol support (if any), effectively
              causing them to only speak our original HTTP protocol.
 
-7.7 SVN_SVNMUCC_IS_SVNSYITF
+7.8 SVN_SVNMUCC_IS_SVNSYITF
 
   Scope:     'make install-tools'
   Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
 
-7.8 SVN_X_DOES_NOT_MARK_THE_SPOT
+7.9 SVN_X_DOES_NOT_MARK_THE_SPOT
 
   Scope:     svn_cache__t subsystem (used by FSFS, svnserve, etc)
   Purpose:   Disable the subsystem.  Requires -D SVN_DEBUG.

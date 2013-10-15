@@ -266,6 +266,13 @@
 #endif
 
 #ifdef SWIGPERL
+%typemap(in) apr_hash_t *PROPHASH
+  (apr_pool_t *_global_pool = NULL)
+{
+  if (_global_pool == NULL)
+    _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+  $1 = svn_swig_pl_hash_to_prophash($input, _global_pool);  
+}
 %typemap(out) apr_hash_t *PROPHASH
 {
   %append_output(svn_swig_pl_prophash_to_hash($1));
@@ -593,11 +600,11 @@
 #endif
 #ifdef SWIGPERL
 %typemap(in) const apr_array_header_t *STRINGLIST {
-    $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
+    $1 = svn_swig_pl_strings_to_array($input,
                                                              _global_pool);
 }
 %typemap(in) const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
-    $1 = SvOK($input) ? (apr_array_header_t *) svn_swig_pl_strings_to_array(
+    $1 = SvOK($input) ? svn_swig_pl_strings_to_array(
         $input, _global_pool) : NULL;
 }
 #endif
@@ -639,7 +646,7 @@
 */
 #ifdef SWIGPERL
 %typemap(in) apr_array_header_t *providers {
-    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
+    $1 = svn_swig_pl_objs_to_array($input,
       $descriptor(svn_auth_provider_object_t *), _global_pool);
 }
 #endif
@@ -774,6 +781,12 @@
     if (PyErr_Occurred()) {
       SWIG_fail;
     }
+}
+#endif
+
+#ifdef SWIGPERL
+%typemap(in) apr_array_header_t *REVISION_RANGE_LIST {
+  $1 = svn_swig_pl_array_to_apr_array_revision_range($input, _global_pool);
 }
 #endif
 

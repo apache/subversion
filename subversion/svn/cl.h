@@ -223,6 +223,7 @@ typedef struct svn_cl__opt_state_t
                                     (not converted to UTF-8) */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
+  svn_boolean_t auto_moves;      /* interpret unique DEL/ADD pairs as moves */
   svn_cl__accept_t accept_which;   /* how to handle conflicts */
   svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
   svn_depth_t set_depth;           /* new sticky ambient depth value */
@@ -239,6 +240,10 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t include_externals; /* Recurses (in)to file & dir externals */
   svn_boolean_t show_inherited_props;  /* get inherited properties */
   apr_array_header_t* search_patterns; /* pattern arguments for --search */
+  svn_boolean_t mergeinfo_log;     /* show log message in mergeinfo command */
+  svn_boolean_t remove_unversioned;/* remove unversioned items */
+  svn_boolean_t remove_ignored;    /* remove ignored items */
+  svn_boolean_t no_newline;        /* do not output the trailing newline */
 } svn_cl__opt_state_t;
 
 
@@ -286,7 +291,8 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__upgrade;
+  svn_cl__upgrade,
+  svn_cl__youngest;
 
 
 /* See definition in svn.c for documentation. */
@@ -436,12 +442,12 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
 
-   Use CWD_ABSPATH -- the absolute path of the current working
-   directory -- to shorten PATH into something relative to that
-   directory as necessary.
+   Use TARGET_ABSPATH and TARGET_PATH to shorten PATH into something
+   relative to the target as necessary.
 */
 svn_error_t *
-svn_cl__print_status(const char *cwd_abspath,
+svn_cl__print_status(const char *target_abspath,
+                     const char *target_path,
                      const char *path,
                      const svn_client_status_t *status,
                      svn_boolean_t suppress_externals_placeholders,
@@ -459,12 +465,12 @@ svn_cl__print_status(const char *cwd_abspath,
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
    allocations.
 
-   Use CWD_ABSPATH -- the absolute path of the current working
-   directory -- to shorten PATH into something relative to that
-   directory as necessary.
+   Use TARGET_ABSPATH and TARGET_PATH to shorten PATH into something
+   relative to the target as necessary.
  */
 svn_error_t *
-svn_cl__print_status_xml(const char *cwd_abspath,
+svn_cl__print_status_xml(const char *target_abspath,
+                         const char *target_path,
                          const char *path,
                          const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,
@@ -819,23 +825,6 @@ const char *
 svn_cl__local_style_skip_ancestor(const char *parent_path,
                                   const char *path,
                                   apr_pool_t *pool);
-
-/* Check that PATH_OR_URL1@REVISION1 is related to PATH_OR_URL2@REVISION2.
- * Raise an error if not.
- *
- * ### Ideally we would also check that they are on different lines of
- * history.  That is easy in common cases, but to give a correct answer in
- * general we need to know the operative revision(s) as well.  For example,
- * when one location is the branch point from which the other branch was
- * copied.
- */
-svn_error_t *
-svn_cl__check_related_source_and_target(const char *path_or_url1,
-                                        const svn_opt_revision_t *revision1,
-                                        const char *path_or_url2,
-                                        const svn_opt_revision_t *revision2,
-                                        svn_client_ctx_t *ctx,
-                                        apr_pool_t *pool);
 
 /* If the user is setting a mime-type to mark one of the TARGETS as binary,
  * as determined by property name PROPNAME and value PROPVAL, then check

@@ -37,7 +37,10 @@ class SVNBase;
 #include <fstream>
 #include <apr_time.h>
 #include <string>
+#include <vector>
 struct svn_error_t;
+
+#include "svn_error.h"
 
 #define JAVA_PACKAGE "org/apache/subversion/javahl"
 
@@ -67,6 +70,7 @@ class JNIUtil
   static jbyteArray makeJByteArray(const void *data, int length);
   static jbyteArray makeJByteArray(const svn_string_t *str);
   static jobject createDate(apr_time_t time);
+  static apr_time_t getDate(jobject jdate);
   static void logMessage(const char *message);
   static int getLogLevel();
   static char *getFormatBuffer();
@@ -107,12 +111,20 @@ class JNIUtil
   static const char *thrownExceptionToCString(SVN::Pool &in_pool);
 
   /**
+   * Check if a Java exception was thrown and convert it to a
+   * Subversion error, using @a errorcode as the generic error code.
+   */
+  static svn_error_t* checkJavaException(apr_status_t errorcode);
+
+  /**
    * Throw a Java exception corresponding to err, and run
    * svn_error_clear() on err.
    */
   static void handleSVNError(svn_error_t *err);
 
-  static jstring makeSVNErrorMessage(svn_error_t *err);
+  static std::string makeSVNErrorMessage(svn_error_t *err,
+                                         jstring *jerror_message,
+                                         jobject *jmessage_stack);
 
   /**
    * Create and throw a java.lang.Throwable instance.
@@ -140,10 +152,13 @@ class JNIUtil
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
+  /**
+   * Mutex that secures the global configuration object.
+   */
+  static JNIMutex *g_configMutex;
+
  private:
-  static void assembleErrorMessage(svn_error_t *err, int depth,
-                                   apr_status_t parent_apr_err,
-                                   std::string &buffer);
+  static void wrappedHandleSVNError(svn_error_t *err);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
   /**
@@ -282,5 +297,11 @@ class JNIUtil
       return ret_val;                                   \
     }                                                   \
   } while (0)
+
+#define SVN_JNI_CATCH(statement, errorcode)             \
+  do {                                                  \
+    do { statement; } while(0);                         \
+    SVN_ERR(JNIUtil::checkJavaException((errorcode)));  \
+  } while(0)
 
 #endif  // JNIUTIL_H

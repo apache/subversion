@@ -132,6 +132,8 @@ public class SVNClient implements ISVNClient
 
     public native void setPrompt(UserPasswordCallback prompt);
 
+    public native void setTunnelAgent(TunnelAgent tunnelAgent);
+
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
                                    boolean stopOnCopy, boolean discoverPath,
@@ -151,14 +153,14 @@ public class SVNClient implements ISVNClient
         clientContext.notify = notify;
     }
 
-    public void setConflictResolver(ConflictResolverCallback listener)
+    public void setConflictResolver(ConflictResolverCallback resolver)
     {
-        clientContext.resolver = listener;
+        clientContext.resolver = resolver;
     }
 
-    public void setProgressCallback(ProgressCallback listener)
+    public void setProgressCallback(ProgressCallback progress)
     {
-        clientContext.listener = listener;
+        clientContext.setProgressCallback(progress);
     }
 
     public native void remove(Set<String> paths, boolean force,
@@ -239,8 +241,19 @@ public class SVNClient implements ISVNClient
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
                                 boolean force, boolean ignoreExternals,
+                                boolean ignorKeywords,
                                 Depth depth, String nativeEOL)
             throws ClientException;
+
+    public long doExport(String srcPath, String destPath,
+                                Revision revision, Revision pegRevision,
+                                boolean force, boolean ignoreExternals,
+                                Depth depth, String nativeEOL)
+            throws ClientException
+    {
+        return doExport(srcPath, destPath, revision, pegRevision,
+                        force, ignoreExternals, false, depth, nativeEOL);
+    }
 
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, Depth depth,
@@ -651,9 +664,20 @@ public class SVNClient implements ISVNClient
 
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, Depth depth,
+                             boolean fetchExcluded, boolean fetchActualOnly,
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
+
+    public void info2(String pathOrUrl, Revision revision,
+                      Revision pegRevision, Depth depth,
+                      Collection<String> changelists,
+                      InfoCallback callback)
+            throws ClientException
+    {
+        info2(pathOrUrl, revision, pegRevision, depth,
+              false, true, changelists, callback);
+    }
 
     public native void patch(String patchPath, String targetPath,
                              boolean dryRun, int stripCount, boolean reverse,
@@ -661,28 +685,39 @@ public class SVNClient implements ISVNClient
                              PatchCallback callback)
             throws ClientException;
 
+    public ISVNRemote openRemoteSession(String pathOrUrl)
+            throws ClientException, SubversionException
+    {
+        return nativeOpenRemoteSession(pathOrUrl, 1);
+    }
+
+    public ISVNRemote openRemoteSession(String pathOrUrl, int retryAttempts)
+            throws ClientException, SubversionException
+    {
+        if (retryAttempts <= 0)
+            throw new IllegalArgumentException(
+                "retryAttempts must be positive");
+        return nativeOpenRemoteSession(pathOrUrl, retryAttempts);
+    }
+
+    private native ISVNRemote nativeOpenRemoteSession(
+        String pathOrUrl, int retryAttempts)
+            throws ClientException, SubversionException;
+
     /**
      * A private class to hold the contextual information required to
      * persist in this object, such as notification handlers.
      */
-    private class ClientContext
-        implements ClientNotifyCallback, ProgressCallback,
-            ConflictResolverCallback
+    private class ClientContext extends OperationContext
+        implements ClientNotifyCallback, ConflictResolverCallback
     {
         public ClientNotifyCallback notify = null;
-        public ProgressCallback listener = null;
         public ConflictResolverCallback resolver = null;
 
         public void onNotify(ClientNotifyInformation notifyInfo)
         {
             if (notify != null)
                 notify.onNotify(notifyInfo);
-        }
-
-        public void onProgress(ProgressEvent event)
-        {
-            if (listener != null)
-                listener.onProgress(event);
         }
 
         public ConflictResult resolve(ConflictDescriptor conflict)

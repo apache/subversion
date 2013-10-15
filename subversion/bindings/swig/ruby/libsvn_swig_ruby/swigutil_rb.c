@@ -23,9 +23,16 @@
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
+/* Windows hack: Allow overriding some <ruby.h> defaults */
+#include "swigutil_rb__pre_ruby.h"
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
+
+#ifdef HAVE_RUBY_ST_H
+#include <ruby/st.h>
+#else
 #include <st.h>
+#endif
 
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -53,6 +60,7 @@
 #include <locale.h>
 #include <math.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_nls.h"
 #include "svn_pools.h"
@@ -735,7 +743,9 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
 static svn_boolean_t
 rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 {
-  VALUE targets[1] = {target};
+  VALUE targets[1];
+  
+  targets[0] = target;
 
   if (!NIL_P(find_swig_type_object(1, targets))) {
     rb_set_pool(target, pool);
@@ -1530,15 +1540,14 @@ r2c_hash(VALUE hash, r2c_func func, void *ctx, apr_pool_t *pool)
     return NULL;
   } else {
     apr_hash_t *apr_hash;
-    hash_to_apr_hash_data_t data = {
-      NULL,
-      func,
-      ctx,
-      pool
-    };
+    hash_to_apr_hash_data_t data;
 
     apr_hash = apr_hash_make(pool);
     data.apr_hash = apr_hash;
+    data.ctx = ctx;
+    data.func = func;
+    data.pool = pool;
+
     rb_hash_foreach(hash, r2c_hash_i, (VALUE)&data);
 
     return apr_hash;
@@ -1596,7 +1605,7 @@ typedef struct callback_handle_error_baton_t {
 } callback_handle_error_baton_t;
 
 static VALUE
-callback(VALUE baton)
+callback(VALUE baton, ...)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
   VALUE result;
@@ -1608,7 +1617,7 @@ callback(VALUE baton)
 }
 
 static VALUE
-callback_rescue(VALUE baton)
+callback_rescue(VALUE baton, ...)
 {
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
@@ -1625,7 +1634,7 @@ callback_rescue(VALUE baton)
 }
 
 static VALUE
-callback_ensure(VALUE pool)
+callback_ensure(VALUE pool, ...)
 {
   svn_swig_rb_pop_pool(pool);
 
@@ -1637,15 +1646,16 @@ invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
   VALUE sub_pool;
-  VALUE argv[] = {pool};
+  VALUE argv[1];
 
+  argv[0] = pool;
   svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
   cbb->pool = sub_pool;
   return rb_ensure(callback, baton, callback_ensure, sub_pool);
 }
 
 static VALUE
-callback_handle_error(VALUE baton)
+callback_handle_error(VALUE baton, ...)
 {
   callback_handle_error_baton_t *handle_error_baton;
   handle_error_baton = (callback_handle_error_baton_t *)baton;
@@ -4024,4 +4034,7 @@ static svn_ra_reporter3_t rb_ra_reporter3 = {
   svn_swig_rb_ra_reporter_abort_report
 };
 
-svn_ra_reporter3_t *svn_swig_rb_ra_reporter3 = &rb_ra_reporter3;
+svn_ra_reporter3_t *svn_swig_rb_get_ra_reporter3()
+{
+  return &rb_ra_reporter3;
+}

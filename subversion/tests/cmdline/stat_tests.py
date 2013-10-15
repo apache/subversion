@@ -1468,7 +1468,7 @@ def status_depth_update(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', A_path)
   svntest.main.run_svn(None, 'propset', '--force', 'svn:test', 'value', D_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log message', wc_dir)
+  sbox.simple_commit(message='log message')
 
   # update to r1
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
@@ -2092,6 +2092,33 @@ def move_update_timestamps(sbox):
   # beta is modified so timestamp is removed
   no_text_timestamp(sbox.ospath('A/B/E2/beta'))
 
+@Issue(4398)
+def status_path_handling(sbox):
+  "relative/absolute path handling"
+
+  sbox.build(read_only=True)
+
+  # target is a relative path to a subdir
+  wc_dir = sbox.wc_dir
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # target is an absolute path to a subdir
+  cwd = os.getcwd()
+  abs_wc_dir = os.path.join(cwd, wc_dir)
+  expected_status = svntest.actions.get_virginal_state(abs_wc_dir, 1)
+  svntest.actions.run_and_verify_status(abs_wc_dir, expected_status)
+
+  # target is an absolute path to a parent dir
+  os.chdir(sbox.ospath('A/B'))
+  expected_status = svntest.actions.get_virginal_state(abs_wc_dir, 1)
+  svntest.actions.run_and_verify_status(abs_wc_dir, expected_status)
+
+  # target is a relative path to a parent dir
+  rel_wc_dir = os.path.join('..', '..')
+  expected_status = svntest.actions.get_virginal_state(rel_wc_dir, 1)
+  svntest.actions.run_and_verify_status(rel_wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2139,6 +2166,7 @@ test_list = [ None,
               status_unversioned_dir,
               status_case_changed,
               move_update_timestamps,
+              status_path_handling,
              ]
 
 if __name__ == '__main__':

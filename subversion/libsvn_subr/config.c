@@ -29,12 +29,13 @@
 
 #include <apr_general.h>
 #include <apr_lib.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "config_impl.h"
 
-#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 
 
@@ -188,7 +189,8 @@ read_all(svn_config_t **cfgp,
 #ifdef WIN32
   if (sys_registry_path)
     {
-      SVN_ERR(svn_config_read2(cfgp, sys_registry_path, FALSE, FALSE, pool));
+      SVN_ERR(svn_config_read3(cfgp, sys_registry_path, FALSE, FALSE, FALSE,
+                               pool));
       red_config = TRUE;
     }
 #endif /* WIN32 */
@@ -214,8 +216,8 @@ read_all(svn_config_t **cfgp,
         SVN_ERR(svn_config_merge(*cfgp, usr_registry_path, FALSE));
       else
         {
-          SVN_ERR(svn_config_read2(cfgp, usr_registry_path,
-                                   FALSE, FALSE, pool));
+          SVN_ERR(svn_config_read3(cfgp, usr_registry_path,
+                                   FALSE, FALSE, FALSE, pool));
           red_config = TRUE;
         }
     }

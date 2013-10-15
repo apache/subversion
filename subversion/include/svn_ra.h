@@ -134,7 +134,10 @@ typedef svn_error_t *
                                  apr_pool_t *pool);
 
 
-/** A function type for retrieving the youngest revision from a repos. */
+/** A function type for retrieving the youngest revision from a repos.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+/* ### It seems this type was never used by the API, since 1.0.0. */
 typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)(
   void *session_baton,
   svn_revnum_t *latest_revnum);
@@ -266,6 +269,61 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
   void *edit_baton,
   apr_hash_t *rev_props,
   apr_pool_t *pool);
+
+
+/**
+ * Callback function that checks if an ra_svn tunnel called
+ * @a tunnel_name is handled by the callbakcs or the default
+ * implementation.
+ *
+ * @a tunnel_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
+    void *tunnel_baton, const char *tunnel_name);
+
+/**
+ * Callback function for opening a tunnel in ra_svn.
+ *
+ * Given the @a tunnel_name, tunnel @a user and server @a hostname and
+ * @a port, return a new ra_svn connection in @a conn. The returned
+ * connection must be allocated from @a pool.
+ *
+ * @a request and @a response are the standard input and output,
+ * respectively, of the process on the other end of the tunnel.
+ *
+ * @a tunnel_context will be passed on to the close-unnel callback.
+ *
+ * @a tunnel_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
+    apr_file_t **request, apr_file_t **response,
+    void **tunnel_context, void *tunnel_baton,
+    const char *tunnel_name, const char *user,
+    const char *hostname, int port,
+    apr_pool_t *pool);
+
+/**
+ * Callback function for closing a tunnel in ra_svn.
+ *
+ * This function will be called when the pool that owns the tunnel
+ * connection is cleared or destroyed. It receives the @a baton that
+ * was created by the open-tunnel callback, and the same
+ * @a tunnel_name, @a user, @a hostname and @a port parameters.
+ *
+ * @a tunel_baton was returned by the open-tunnel callback.
+ *
+ * @a open_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_ra_close_tunnel_func_t)(
+    void *tunnel_context, void *tunnel_baton,
+    const char *tunnel_name, const char *user,
+    const char *hostname, int port);
 
 
 /**
@@ -535,6 +593,41 @@ typedef struct svn_ra_callbacks2_t
    */
   svn_ra_get_wc_contents_func_t get_wc_contents;
 
+  /** Check-tunnel callback
+   *
+   * If not @c NULL, and open_tunnel_func is also not @c NULL, this
+   * callback will be invoked to check if open_tunnel_func should be
+   * used to create a specific tunnel, or if the default tunnel
+   * implementation (either built-in or configured in the client
+   * configuration file) should be used instead.
+   * @since New in 1.9.
+   */
+  svn_ra_check_tunnel_func_t check_tunnel_func;
+
+  /** Open-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked to create a tunnel
+   * for a ra_svn connection that needs one, overriding any tunnel
+   * definitions in the client config file. This callback is used only
+   * for ra_svn and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel_func;
+
+  /** Close-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked when the pool that
+   * owns the connection created by the open_tunnel callback is
+   * cleared or destroyed. This callback is used only for ra_svn and
+   * ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_close_tunnel_func_t close_tunnel_func;
+
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
@@ -1478,6 +1571,9 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
+ * @a move_behavior defines which changes are being reported as moves.
+ * See #svn_move_behavior_t for the various options.
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -1505,9 +1601,32 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
  *
- * @since New in 1.5.
+ * @since New in 1.9.
  */
 
+svn_error_t *
+svn_ra_get_log3(svn_ra_session_t *session,
+                const apr_array_header_t *paths,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_move_behavior_t move_behavior,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_log3(), but with @a move_behavior being set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_log2(svn_ra_session_t *session,
                 const apr_array_header_t *paths,

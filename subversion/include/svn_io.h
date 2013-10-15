@@ -182,9 +182,10 @@ svn_io_check_resolved_path(const char *path,
  * may be @c NULL.  If @a file is @c NULL, the file will be created but not
  * open.
  *
- * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
- * flag will be used when opening the file.  The @c APR_BUFFERED flag will
- * always be used.
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.
+ *
+ * The @c APR_BUFFERED flag will always be used when opening the file.
  *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
@@ -248,8 +249,9 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.  If @a delete_when
- * is @c svn_io_file_del_on_close and @a file is @c NULL, the file will be
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.  If it
+ * is #svn_io_file_del_on_close and @a file is @c NULL, the file will be
  * deleted before this function returns.
  *
  * When passing @c svn_io_file_del_none please don't forget to eventually
@@ -689,6 +691,27 @@ svn_io_file_create(const char *file,
                    const char *contents,
                    apr_pool_t *pool);
 
+/** Create file at utf8-encoded @a file with binary contents @a contents
+ * of @a length bytes.  @a file must not already exist.
+ * Use @a pool for memory allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_file_create_binary(const char *file,
+                          const char *contents,
+                          apr_size_t length,
+                          apr_pool_t *pool);
+
+/** Create empty file at utf8-encoded @a file, which must not already exist.
+ * Use @a pool for memory allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_file_create_empty(const char *file,
+                         apr_pool_t *pool);
+
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
@@ -972,7 +995,8 @@ svn_stream_open_writable(svn_stream_t **stream,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.
  *
  * Temporary allocations will be performed in @a scratch_pool.
  *
@@ -1045,6 +1069,20 @@ svn_stream_for_stderr(svn_stream_t **err,
 svn_error_t *
 svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
+
+/** Set @a *str to a string buffer allocated in @a pool that contains all
+ * data from the current position in @a stream to its end.  @a len_hint
+ * specifies the initial capacity of the string buffer and may be 0.  The
+ * buffer gets automatically resized to fit the actual amount of data being
+ * read from @a stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stringbuf_from_stream(svn_stringbuf_t **str,
+                          svn_stream_t *stream,
+                          apr_size_t len_hint,
+                          apr_pool_t *pool);
 
 /** Return a generic stream connected to stringbuf @a str.  Allocate the
  * stream in @a pool.
@@ -2062,6 +2100,28 @@ svn_io_file_seek(apr_file_t *file,
                  apr_off_t *offset,
                  apr_pool_t *pool);
 
+/** Set the file pointer of the #APR_BUFFERED @a file to @a offset.  In
+ * contrast to #svn_io_file_seek, this function will attempt to resize the
+ * internal data buffer to @a block_size bytes and to read data aligned to
+ * multiples of that value.  The beginning of the block will be returned
+ * in @a buffer_start, if that is not NULL.
+ * Uses @a pool for temporary allocations.
+ *
+ * @note Due to limitations of the APR API, in particular pre-1.3 APR,
+ * the alignment may not be successful.  If you never use any other seek
+ * function on @a file, you are, however, virtually guaranteed to get at
+ * least 4kByte alignments for all reads.
+ *
+ * @note Calling this for non-buffered files is legal but inefficient.
+ *
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_aligned_seek(apr_file_t *file,
+                         apr_off_t block_size,
+                         apr_off_t *buffer_start,
+                         apr_off_t offset,
+                         apr_pool_t *pool);
 
 /** Wrapper for apr_file_write(). */
 svn_error_t *
@@ -2069,6 +2129,14 @@ svn_io_file_write(apr_file_t *file,
                   const void *buf,
                   apr_size_t *nbytes,
                   apr_pool_t *pool);
+
+/** Wrapper for apr_file_flush().
+ * @since New in 1.9
+ */
+svn_error_t *
+svn_io_file_flush(apr_file_t *file,
+                  apr_pool_t *scratch_pool);
+
 
 
 /** Wrapper for apr_file_write_full(). */
@@ -2078,6 +2146,24 @@ svn_io_file_write_full(apr_file_t *file,
                        apr_size_t nbytes,
                        apr_size_t *bytes_written,
                        apr_pool_t *pool);
+
+/**
+ * Writes @a nbytes bytes from @a *buf to a temporary file inside the same
+ * directory as @a *final_path. Then syncs the temporary file to disk and
+ * closes the file. After this rename the temporary file to @a final_path,
+ * possibly replacing an existing file.
+ *
+ * If @a copy_perms_path is not NULL, copy the permissions applied on @a
+ * @a copy_perms_path on the temporary file before renaming.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char* copy_perms_path,
+                    apr_pool_t *scratch_pool);
 
 /**
  * Open a unique file in @a dirpath, and write @a nbytes from @a buf to

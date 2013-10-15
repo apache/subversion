@@ -131,6 +131,9 @@ APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 APACHE_LDFLAGS = @APACHE_LDFLAGS@
 
+SVN_USE_GMOCK = @SVN_USE_GMOCK@
+GMOCK_INCLUDES = -I@GMOCK_SRCDIR@
+
 SWIG = @SWIG@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@ -I$(SWIG_SRC_DIR)/python/libsvn_swig_py
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
@@ -164,11 +167,13 @@ MKDIR = @MKDIR@
 DOXYGEN = @DOXYGEN@
 
 # The EXTRA_ parameters can be used to pass extra flags at 'make' time.
-CFLAGS = @CFLAGS@ $(EXTRA_CFLAGS)
+CFLAGS = @CFLAGS@ @CUSERFLAGS@ $(EXTRA_CFLAGS)
 CMODEFLAGS = @CMODEFLAGS@
+CNOWARNFLAGS = @CNOWARNFLAGS@
 CMAINTAINERFLAGS = @CMAINTAINERFLAGS@
-CXXFLAGS = @CXXFLAGS@ $(EXTRA_CXXFLAGS)
+CXXFLAGS = @CXXFLAGS@ @CXXUSERFLAGS@ $(EXTRA_CXXFLAGS)
 CXXMODEFLAGS = @CXXMODEFLAGS@
+CXXNOWARNFLAGS = @CXXNOWARNFLAGS@
 CXXMAINTAINERFLAGS = @CXXMAINTAINERFLAGS@
 ### A few of the CFLAGS (e.g. -Wmissing-prototypes, -Wstrict-prototypes,
 ### -Wmissing-declarations) are not valid for C++, and should be somehow
@@ -178,10 +183,12 @@ LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 SWIG_LDFLAGS = @SWIG_LDFLAGS@ $(EXTRA_SWIG_LDFLAGS)
 
 COMPILE = $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CMAINTAINERFLAGS) $(CFLAGS) $(INCLUDES)
+COMPILE_NOWARN = $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CNOWARNFLAGS) $(CFLAGS) $(INCLUDES)
 COMPILE_CXX = $(CXX) $(CXXMODEFLAGS) $(CPPFLAGS) $(CXXMAINTAINERFLAGS) $(CXXFLAGS) $(INCLUDES)
+COMPILE_CXX_NOWARN = $(CXX) $(CXXMODEFLAGS) $(CPPFLAGS) $(CXXNOWARNFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE) $(LT_CFLAGS)
 LT_COMPILE_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS)
-
+LT_COMPILE_CXX_NOWARN = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX_NOWARN) $(LT_CFLAGS)
 # Execute a command that loads libraries from the build dir
 LT_EXECUTE = $(LIBTOOL) $(LTFLAGS) --mode=execute `for f in $(abs_builddir)/subversion/*/*.la; do echo -dlopen $$f; done`
 
@@ -199,7 +206,9 @@ COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
 
 # special compilation for files destined for cxxhl
-COMPILE_CXXHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS) $(CXXHL_INCLUDES) -o $@ -c
+COMPILE_CXXHL_CXX = $(LT_COMPILE_CXX) $(CXXHL_INCLUDES) -o $@ -c
+COMPILE_GMOCK_CXX = $(LT_COMPILE_CXX_NOWARN) $(GMOCK_INCLUDES) -o $@ -c
+COMPILE_CXXHL_GMOCK_CXX = $(LT_COMPILE_CXX) $(CXXHL_INCLUDES) $(GMOCK_INCLUDES) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_LIB = $(LINK) $(LT_SO_VERSION)
@@ -340,8 +349,8 @@ TEST_SHLIB_VAR_SWIG_RB=\
     done; \
     export @SVN_APR_SHLIB_PATH_VAR@; \
   fi;
- 
-APXS = @APXS@ 
+
+APXS = @APXS@
 
 PYTHON = @PYTHON@
 PERL = @PERL@
@@ -398,7 +407,6 @@ locale-gnu-po-update:
 fast-clean: doc-clean
 	@list='$(BUILD_DIRS)'; for i in $$list; do                   \
           if [ -d $$i ]; then                                        \
-            echo "Cleaning $$i ..." ;                                \
             (cd $$i && rm -f *.o *.lo *.la *.la-a *.spo *.mo &&      \
              rm -rf .libs);                                          \
           fi                                                         \
@@ -452,7 +460,7 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
-javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-types-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
+javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-remote-javah javahl-types-javah javahl-util-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
 install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
@@ -523,6 +531,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  fi;                                                                \
 	  if test "$(HTTP_PROXY)" != ""; then                                \
 	    flags="--http-proxy $(HTTP_PROXY) $$flags";                      \
+	  fi;                                                                \
+	  if test "$(EXCLUSIVE_WC_LOCKS)" != ""; then                        \
+	    flags="--exclusive-wc-locks $$flags";                            \
 	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
@@ -597,8 +608,10 @@ gcov-clean:
 	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
 
 check-clean: gcov-clean
-	find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
+	if [ -d subversion/tests/cmdline/svn-test-work ]; then \
+	  find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
                -print0 | xargs -0 rm -rf --;   \
+	fi
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
@@ -637,13 +650,15 @@ doc-api: mkdir-init
 
 # Generate API documentation for the JavaHL package.
 doc-javahl:
-	$(JAVADOC) -d $(top_srcdir)/doc/javadoc \
+	$(JAVADOC) -d $(abs_builddir)/doc/javadoc \
 	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl \
-      org.apache.subversion.javahl \
-      org.apache.subversion.javahl.callback \
-      org.apache.subversion.javahl.types
+	  org.apache.subversion.javahl \
+	  org.apache.subversion.javahl.callback \
+	  org.apache.subversion.javahl.remote \
+	  org.apache.subversion.javahl.types \
+	  org.apache.subversion.javahl.util
 
 doc-clean:
 	rm -rf $(top_srcdir)/doc/doxygen
@@ -889,10 +904,16 @@ check-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
 	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
 
+# If any of those files exists, run ctypes' 'setup.py clean'.  We don't run
+# it otherwise because it spams stdout+stderr; see r1479326.
 clean-ctypes-python:
-	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py clean --all
-
+	cd $(CTYPES_PYTHON_SRC_DIR);            \
+	  for b in build csvn/core/functions.py svn_all.py svn_all2.py ; do \
+	    if [ -e "$$b" ] ; then              \
+	      $(PYTHON) setup.py clean --all;   \
+	      break;                            \
+	    fi;                                 \
+	  done
 
 # manually describe a dependency, which we won't otherwise detect
 subversion/libsvn_wc/wc-queries.h: $(abs_srcdir)/subversion/libsvn_wc/wc-metadata.sql
@@ -905,5 +926,5 @@ INSTALL_EXTRA_TOOLS=\
   test -n "$$SVN_SVNMUCC_IS_SVNSYITF" && \
   ln -sf svnmucc$(EXEEXT) $(DESTDIR)$(bindir)/svnsyitf$(EXEEXT); \
   if test "$(DESTDIR)$(bindir)" != "$(DESTDIR)$(toolsdir)"; then \
-    ln -sf $(DESTDIR)$(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
+    ln -sf $(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
   fi

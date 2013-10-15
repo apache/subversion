@@ -58,18 +58,36 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
   CFLAGS_KEEP="$CFLAGS"
   CFLAGS=""
 
-  dnl Find flags to force C90 mode
-                dnl gcc and clang
-  SVN_CFLAGS_ADD_IFELSE([-std=c90],[],[
-    SVN_CFLAGS_ADD_IFELSE([-std=c89],[],[
-      SVN_CFLAGS_ADD_IFELSE([-ansi])
+  if test "$GCC" = "yes"; then
+    dnl Find flags to force C90 mode
+                  dnl gcc and clang
+    SVN_CFLAGS_ADD_IFELSE([-std=c90],[],[
+      SVN_CFLAGS_ADD_IFELSE([-std=c89],[],[
+        SVN_CFLAGS_ADD_IFELSE([-ansi])
+      ])
     ])
-  ])
+  fi
 
   CMODEFLAGS="$CFLAGS"
+  CFLAGS=""
+
+  if test "$GCC" = "yes"; then
+    dnl Find flags to silence all warnings
+    SVN_CFLAGS_ADD_IFELSE([-w])
+  fi
+
+  CNOWARNFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS_KEEP"
+
   AC_SUBST(CMODEFLAGS)
+  AC_SUBST(CNOWARNFLAGS)
   AC_SUBST(CMAINTAINERFLAGS)
+  AC_SUBST(CUSERFLAGS)
+
+  if test "$GCC" = "yes"; then
+    dnl Tell clang to not accept unknown warning flags
+    SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
+  fi
 ])
 
 
@@ -78,12 +96,30 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
   CXXFLAGS_KEEP="$CXXFLAGS"
   CXXFLAGS=""
 
-  dnl Find flags to force C++98 mode
-                dnl g++ and clang++
-  SVN_CXXFLAGS_ADD_IFELSE([-std=c++98])
+  if test "$GXX" = "yes"; then
+    dnl Find flags to force C++98 mode
+                  dnl g++ and clang++
+    SVN_CXXFLAGS_ADD_IFELSE([-std=c++98])
+  fi
 
-  CXXMODEFLAGS="$CXXFLAGS"
+  CXXMODEFLAGS="$CFLAGS"
+  CXXFLAGS=""
+
+  if test "$GXX" = "yes"; then
+    dnl Find flags to silence all warnings
+    SVN_CXXFLAGS_ADD_IFELSE([-w])
+  fi
+
+  CXXNOWARNFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS_KEEP"
+
   AC_SUBST(CXXMODEFLAGS)
+  AC_SUBST(CXXNOWARNFLAGS)
   AC_SUBST(CXXMAINTAINERFLAGS)
+  AC_SUBST(CXXUSERFLAGS)
+
+  if test "$GXX" = "yes"; then
+    dnl Tell clang++ to not accept unknown warning flags
+    SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
+  fi
 ])

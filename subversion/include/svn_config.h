@@ -95,6 +95,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_BULK_UPDATES         "http-bulk-updates"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS      "http-max-connections"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS     "http-chunked-requests"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
@@ -125,6 +127,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
 #define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE  "diff-ignore-content-type"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @since New in 1.8. */
@@ -168,10 +172,12 @@ typedef struct svn_config_t svn_config_t;
 /* We want this to be printed on two lines in the generated config file,
  * but we don't want the # character to end up in the variable.
  */
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
   "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
   "*.rej *~ #*# .#* .*.swp .DS_Store"
+#endif
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
@@ -247,7 +253,7 @@ svn_config_create(svn_config_t **cfgp,
  * otherwise return an empty @c svn_config_t.
  *
  * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
- * case sensitively, except for the default #SVN_CONFIG__DEFAULT_SECTION.
+ * case sensitively, except for the @c "DEFAULT" section.
  *
  * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
  * case sensitively.
@@ -292,7 +298,7 @@ svn_config_read(svn_config_t **cfgp,
  * @a result_pool.
  *
  * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
- * case sensitively, except for the default #SVN_CONFIG__DEFAULT_SECTION.
+ * case sensitively, except for the @c "DEFAULT" section.
  *
  * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
  * case sensitively.
@@ -721,7 +727,7 @@ svn_config_write_auth_data(apr_hash_t *hash,
  */
 typedef svn_error_t *
 (*svn_config_auth_walk_func_t)(svn_boolean_t *delete_cred,
-                               void *cleanup_baton,
+                               void *walk_baton,
                                const char *cred_kind,
                                const char *realmstring,
                                apr_hash_t *hash,
@@ -731,6 +737,12 @@ typedef svn_error_t *
  * each credential cached within the Subversion auth store located
  * under @a config_dir.  If the callback sets its delete_cred return
  * flag, delete the associated credential.
+ *
+ * If @a config_dir is not NULL, it must point to an alternative
+ * config directory location. If it is NULL, the default location
+ * is used.
+ *
+ * @note @a config_dir may only be NULL in 1.8.2 and later.
  *
  * @note Removing credentials from the config-based disk store will
  * not purge them from any open svn_auth_baton_t instance.  Consider

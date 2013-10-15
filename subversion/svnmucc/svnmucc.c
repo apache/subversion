@@ -40,6 +40,7 @@
 
 #include <apr_lib.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_cmdline.h"
@@ -57,8 +58,6 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
-
-#include "svn_private_config.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -85,7 +84,7 @@ init(const char *application)
   if (svn_cmdline_init(application, stderr))
     exit(EXIT_FAILURE);
 
-  err = svn_ver_check_list(&my_version, checklist);
+  err = svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
   if (err)
     handle_error(err, NULL);
 
@@ -923,8 +922,9 @@ usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
   svn_error_clear(svn_cmdline_fputs(
-    _("Subversion multiple URL command client\n"
-      "usage: svnmucc ACTION...\n"
+    _("usage: svnmucc ACTION...\n"
+      "Subversion multiple URL command client.\n"
+      "Type 'svnmucc --version' to see the program version.\n"
       "\n"
       "  Perform one or more Subversion repository URL-based ACTIONs, committing\n"
       "  the result as a (single) new revision.\n"
@@ -952,7 +952,7 @@ usage(apr_pool_t *pool, int exit_val)
       "                               NAME[=VALUE]\n"
       "  --non-interactive      : do no interactive prompting (default is to\n"
       "                           prompt only if standard input is a terminal)\n"
-      "  --force-interactive    : do interactive propmting even if standard\n"
+      "  --force-interactive    : do interactive prompting even if standard\n"
       "                           input is not a terminal\n"
       "  --trust-server-cert    : accept SSL server certificates from unknown\n"
       "                           certificate authorities without prompting (but\n"
@@ -1145,13 +1145,18 @@ main(int argc, const char **argv)
           break;
         case 'r':
           {
+            const char *saved_arg = arg;
             char *digits_end = NULL;
+            while (*arg == 'r')
+              arg++;
             base_revision = strtol(arg, &digits_end, 10);
             if ((! SVN_IS_VALID_REVNUM(base_revision))
                 || (! digits_end)
                 || *digits_end)
-              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                            NULL, "Invalid revision number"),
+              handle_error(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                             NULL,
+                                             _("Invalid revision number '%s'"),
+                                             saved_arg),
                            pool);
           }
           break;
@@ -1429,7 +1434,14 @@ main(int argc, const char **argv)
           if (! anchor)
             anchor = url;
           else
-            anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
+            {
+              anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
+              if (!anchor || !anchor[0])
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                               "URLs in the action list do not "
+                                               "share a common ancestor"),
+                             pool);
+            }
 
           if ((++i == action_args->nelts) && (j + 1 < num_url_args))
             insufficient(pool);

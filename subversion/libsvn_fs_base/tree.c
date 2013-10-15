@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -1561,6 +1562,23 @@ base_dir_entries(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+base_dir_optimal_order(apr_array_header_t **ordered_p,
+                       svn_fs_root_t *root,
+                       apr_hash_t *entries,
+                       apr_pool_t *pool)
+{
+  /* 1:1 copy of entries with no differnce in ordering */
+  apr_hash_index_t *hi;
+  apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
+                                              sizeof(svn_fs_dirent_t *));
+  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+    APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = svn__apr_hash_index_val(hi);
+
+  *ordered_p = result;
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Merges and commits. */
@@ -2560,6 +2578,7 @@ struct commit_args
 {
   svn_fs_txn_t *txn;
   svn_revnum_t new_rev;
+  svn_boolean_t set_timestamp;
 };
 
 
@@ -2619,7 +2638,7 @@ txn_body_commit(void *baton, trail_t *trail)
 
   /* Else, commit the txn. */
   return svn_fs_base__dag_commit_txn(&(args->new_rev), txn, trail,
-                                     trail->pool);
+                                     args->set_timestamp, trail->pool);
 }
 
 
@@ -2629,6 +2648,7 @@ svn_error_t *
 svn_fs_base__commit_txn(const char **conflict_p,
                         svn_revnum_t *new_rev,
                         svn_fs_txn_t *txn,
+                        svn_boolean_t set_timestamp,
                         apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
@@ -2732,6 +2752,7 @@ svn_fs_base__commit_txn(const char **conflict_p,
 
       /* Try to commit. */
       commit_args.txn = txn;
+      commit_args.set_timestamp = set_timestamp;
       err = svn_fs_base__retry_txn(fs, txn_body_commit, &commit_args,
                                    FALSE, subpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
@@ -3253,6 +3274,18 @@ base_revision_link(svn_fs_root_t *from_root,
                    apr_pool_t *pool)
 {
   return copy_helper(from_root, path, to_root, path, FALSE, pool);
+}
+
+
+static svn_error_t *
+base_move(svn_fs_root_t *from_root,
+          const char *from_path,
+          svn_fs_root_t *to_root,
+          const char *to_path,
+          apr_pool_t *pool)
+{
+  /* BDB supports MOVes only as backward compatible ADD-with-history */
+  return base_copy(from_root, from_path, to_root, to_path, pool);
 }
 
 
@@ -4811,6 +4844,13 @@ base_node_origin_rev(svn_revnum_t *revision,
      prev_location() does below will work. */
   path = svn_fs__canonicalize_abspath(path, pool);
 
+  /* Special-case the root node (for performance reasons) */
+  if (strcmp(path, "/") == 0)
+    {
+      *revision = 0;
+      return SVN_NO_ERROR;
+    }
+
   /* If we have support for the node-origins table, we'll try to use
      it. */
   if (bfd->format >= SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT)
@@ -5367,6 +5407,9 @@ static root_vtable_t root_vtable = {
   base_node_origin_rev,
   base_node_created_path,
   base_delete_node,
+  base_copy,
+  base_revision_link,
+  base_move,
   base_copied_from,
   base_closest_copy,
   base_node_prop,
@@ -5374,9 +5417,8 @@ static root_vtable_t root_vtable = {
   base_change_node_prop,
   base_props_changed,
   base_dir_entries,
+  base_dir_optimal_order,
   base_make_dir,
-  base_copy,
-  base_revision_link,
   base_file_length,
   base_file_checksum,
   base_file_contents,

@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -32,7 +33,6 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "repos.h"
-#include "svn_private_config.h"
 
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
@@ -499,7 +499,7 @@ get_revision_info(report_baton_t *b,
       info->author = author ? svn_string_dup(author, b->pool) : NULL;
 
       /* Cache it */
-      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);
     }
 
   *revision_info = info;
@@ -1140,12 +1140,11 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
            svn_boolean_t start_empty, svn_depth_t wc_depth,
            svn_depth_t requested_depth, apr_pool_t *pool)
 {
-  svn_fs_root_t *s_root;
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
-  const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
-  path_info_t *info;
+  apr_array_header_t *t_ordered_entries = NULL;
+  int i;
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
      source path so that we add all the properties.
@@ -1160,6 +1159,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* Get the list of entries in each of source and target. */
       if (s_path && !start_empty)
         {
+          svn_fs_root_t *s_root;
+
           SVN_ERR(get_source_root(b, &s_root, s_rev));
           SVN_ERR(svn_fs_dir_entries(&s_entries, s_root, s_path, pool));
         }
@@ -1170,6 +1171,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       while (1)
         {
+          path_info_t *info;
+          const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
           const svn_fs_dirent_t *s_entry, *t_entry;
 
           svn_pool_clear(subpool);
@@ -1197,10 +1200,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           t_fullpath = svn_fspath__join(t_path, name, subpool);
           t_entry = svn_hash_gets(t_entries, name);
           s_fullpath = s_path ? svn_fspath__join(s_path, name, subpool) : NULL;
-          s_entry = s_entries ?
-            svn_hash_gets(s_entries, name) : NULL;
+          s_entry = s_entries ? svn_hash_gets(s_entries, name) : NULL;
 
-          /* The only special cases here are
+          /* The only special cases where we don't process the entry are
 
              - When requested_depth is files but the reported path is
              a directory.  This is technically a client error, but we
@@ -1208,10 +1210,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
              - When the reported depth is svn_depth_exclude.
           */
-          if ((! info || info->depth != svn_depth_exclude)
-              && (requested_depth != svn_depth_files
-                  || ((! t_entry || t_entry->kind != svn_node_dir)
-                      && (! s_entry || s_entry->kind != svn_node_dir))))
+          if (! ((requested_depth == svn_depth_files
+                  && ((t_entry && t_entry->kind == svn_node_dir)
+                      || (s_entry && s_entry->kind == svn_node_dir)))
+                 || (info && info->depth == svn_depth_exclude)))
             SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                                  t_entry, dir_baton, e_fullpath, info,
                                  info ? info->depth
@@ -1240,13 +1242,13 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                hi;
                hi = apr_hash_next(hi))
             {
-              const svn_fs_dirent_t *s_entry;
+              const svn_fs_dirent_t *s_entry = svn__apr_hash_index_val(hi);
 
               svn_pool_clear(subpool);
-              s_entry = svn__apr_hash_index_val(hi);
 
               if (svn_hash_gets(t_entries, s_entry->name) == NULL)
                 {
+                  const char *e_fullpath;
                   svn_revnum_t deleted_rev;
 
                   if (s_entry->kind == svn_node_file
@@ -1275,12 +1277,16 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         }
 
       /* Loop over the dirents in the target. */
-      for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
+      SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
+                                       t_entries, pool));
+      for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
-          const svn_fs_dirent_t *s_entry, *t_entry;
+          const svn_fs_dirent_t *t_entry
+             = APR_ARRAY_IDX(t_ordered_entries, i, svn_fs_dirent_t *);
+          const svn_fs_dirent_t *s_entry;
+          const char *s_fullpath, *t_fullpath, *e_fullpath;
 
           svn_pool_clear(subpool);
-          t_entry = svn__apr_hash_index_val(hi);
 
           if (is_depth_upgrade(wc_depth, requested_depth, t_entry->kind))
             {
@@ -1301,11 +1307,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                       || requested_depth == svn_depth_files))
                 continue;
 
-              /* Look for an entry with the same name
-                 in the source dirents. */
+              /* Look for an entry with the same name in the source dirents. */
               s_entry = s_entries ?
-                  svn_hash_gets(s_entries, t_entry->name)
-                  : NULL;
+                  svn_hash_gets(s_entries, t_entry->name) : NULL;
               s_fullpath = s_entry ?
                   svn_fspath__join(s_path, t_entry->name, subpool) : NULL;
             }
@@ -1321,8 +1325,6 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                subpool));
         }
 
-
-      /* Destroy iteration subpool. */
       svn_pool_destroy(subpool);
     }
   return SVN_NO_ERROR;

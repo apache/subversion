@@ -51,7 +51,6 @@
 # Usage/help output from the usual flags/on error input.
 # Make SQLITE_VER friendly since we're using no dots right now.
 # Work out the fixes to the projects' sources and contribute them back.
-# Allow selection of Release/Debug builds.
 # Allow selection of Arch (x86 and x64)
 # ZLib support for OpenSSL (have to patch openssl)
 # Use CMake zlib build instead.
@@ -74,6 +73,8 @@ our $CMAKE = 'cmake';
 our $NMAKE = 'nmake';
 # Use the .com version so we get output, the .exe doesn't produce any output
 our $DEVENV = 'devenv.com';
+our $VCUPGRADE = 'vcupgrade';
+our $PYTHON = 'python';
 
 # Versions of the dependencies we will use
 # Change these if you want but these are known to work with
@@ -82,12 +83,13 @@ our $HTTPD_VER = '2.4.4';
 our $APR_VER = '1.4.6';
 our $APU_VER = '1.5.2'; # apr-util version
 our $API_VER = '1.2.1'; # arp-iconv version
-our $ZLIB_VER = '1.2.7';
+our $ZLIB_VER = '1.2.8';
 our $OPENSSL_VER = '1.0.1e';
 our $PCRE_VER = '8.32';
 our $BDB_VER = '5.3.21';
 our $SQLITE_VER = '3071602';
-our $SERF_VER = '1.2.0';
+our $SERF_VER = '1.2.1';
+our $NEON_VER = '0.29.6';
 
 # Sources for files to download
 our $AWK_URL = 'http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe';
@@ -101,6 +103,8 @@ our $PCRE_URL;
 our $BDB_URL;
 our $SQLITE_URL;
 our $SERF_URL;
+our $NEON_URL;
+our $PROJREF_URL = 'https://downloads.redhoundsoftware.com/blog/ProjRef.py';
 
 # Location of the already downloaded file.
 # by default these are undefined and set by the downloader.
@@ -118,12 +122,20 @@ our $PCRE_FILE;
 our $BDB_FILE;
 our $SQLITE_FILE;
 our $SERF_FILE;
+our $NEON_FILE;
+our $PROJREF_FILE;
 
 # Various directories we use
 our $TOPDIR = Cwd::cwd(); # top of our tree
 our $INSTDIR; # where we install to
 our $BLDDIR; # directory where we actually build
 our $SRCDIR; # directory where we store package files
+
+# Some other options
+our $VS_VER;
+our $NEON;
+our $SVN_VER = '1.9.x';
+our $DEBUG = 0;
 
 # Utility function to remove dots from a string
 sub remove_dots {
@@ -143,6 +155,16 @@ sub set_default {
   }
 }
 
+sub set_svn_ver_defaults {
+  my ($svn_major, $svn_minor, $svn_patch) = $SVN_VER =~ /^(\d+)\.(\d+)\.(.+)$/;
+
+  if ($svn_major > 1 or ($svn_major == 1 and $svn_minor >= 8)) {
+    $NEON=0 unless defined($NEON);
+  } else {
+    $NEON=1 unless defined($NEON);
+  }
+}
+
 # Any variables with defaults that reference other values
 # should be set here.  This defers setting of the default until runtime in these cases.
 sub set_defaults {
@@ -156,9 +178,11 @@ sub set_defaults {
   set_default(\$BDB_URL, "http://download.oracle.com/berkeley-db/db-5.3.21.zip");
   set_default(\$SQLITE_URL, "http://www.sqlite.org/2013/sqlite-amalgamation-$SQLITE_VER.zip");
   set_default(\$SERF_URL, "http://serf.googlecode.com/files/serf-$SERF_VER.zip");
+  set_default(\$NEON_URL, "http://www.webdav.org/neon/neon-$NEON_VER.tar.gz");
   set_default(\$INSTDIR, $TOPDIR);
   set_default(\$BLDDIR, "$TOPDIR\\build");
   set_default(\$SRCDIR, "$TOPDIR\\sources");
+  set_svn_ver_defaults();
 }
 
 #################################
@@ -277,6 +301,27 @@ sub modify_file_in_place {
   close(OUT);
 }
 
+sub check_vs_ver {
+  return if defined($VS_VER);
+
+  # using the vcupgrade command here because it has a consistent name and version
+  # numbering across versions including express versions.
+  my $help_output = `"$VCUPGRADE" /?`;
+  my ($major_version) = $help_output =~ /Version (\d+)\./s;
+
+  if (defined($major_version)) {
+    if ($major_version eq '11') {
+      $VS_VER = '2012';
+      return;
+    } elsif ($major_version eq '10') {
+      $VS_VER = '2010';
+      return;
+    }
+  }
+
+  die("Visual Studio Version Not Supported");
+}
+
 ##################
 # TREE STRUCTURE #
 ##################
@@ -306,6 +351,7 @@ sub clean_structure {
   rmtree($INCDIR);
   rmtree($LIBDIR);
   rmtree("$INSTDIR\\serf");
+  rmtree("$INSTDIR\\neon");
   rmtree("$INSTDIR\\sqlite-amalgamation");
 
   # Dirs created indirectly by the install targets
@@ -363,6 +409,10 @@ sub download_dependencies {
   unless(-x "$BINDIR\\awk.exe") { # skip the copy if it exists
     copy_or_die($AWK_FILE, "$BINDIR\\awk.exe");
   }
+  download_file($PROJREF_URL, "$SRCDIR\\ProjRef.py", \$PROJREF_FILE);
+  unless(-x "$BINDIR\\ProjRef.py") { # skip the copy if it exists
+    copy_or_die($PROJREF_FILE, $BINDIR);
+  }
   download_file($BDB_URL, "$SRCDIR\\db.zip", \$BDB_FILE);
   download_file($ZLIB_URL, "$SRCDIR\\zlib.zip", \$ZLIB_FILE);
   download_file($OPENSSL_URL, "$SRCDIR\\openssl.tar.gz", \$OPENSSL_FILE);
@@ -373,6 +423,7 @@ sub download_dependencies {
   download_file($PCRE_URL, "$SRCDIR\\pcre.zip", \$PCRE_FILE);
   download_file($SQLITE_URL, "$SRCDIR\\sqlite-amalgamation.zip", \$SQLITE_FILE);
   download_file($SERF_URL, "$SRCDIR\\serf.zip", \$SERF_FILE);
+  download_file($NEON_URL, "$SRCDIR\\neon.tar.gz", \$NEON_FILE) if $NEON;
 }
 
 ##############
@@ -437,6 +488,8 @@ sub extract_dependencies {
                "$INSTDIR\\sqlite-amalgamation");
   extract_file($SERF_FILE, $INSTDIR,
                "$INSTDIR\\serf-$SERF_VER", "$INSTDIR\\serf");
+  extract_file($NEON_FILE, $INSTDIR,
+               "$INSTDIR\\neon-$NEON_VER", "$INSTDIR\\neon") if $NEON;
 }
 
 #########
@@ -447,7 +500,7 @@ sub build_pcre {
   chdir_or_die("$SRCLIB\\pcre");
   my $pcre_generator = 'NMake Makefiles';
   # Have to use RelWithDebInfo since httpd looks for the pdb files
-  my $pcre_build_type = '-DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo';
+  my $pcre_build_type = '-DCMAKE_BUILD_TYPE:STRING=' . ($DEBUG ? 'Debug' : 'RelWithDebInfo');
   my $pcre_shared_libs = '-DBUILD_SHARED_LIBS:BOOL=ON';
   my $pcre_install_prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$INSTDIR";
   my $cmake_cmd = qq("$CMAKE" -G "$pcre_generator" "$pcre_build_type" "$pcre_shared_libs" "$pcre_install_prefix" .); 
@@ -462,7 +515,7 @@ sub build_pcre {
 # build generates, it it doesn't match that then Subversion will fail to build.
 sub build_zlib {
   chdir_or_die("$SRCLIB\\zlib");
-  $ENV{CC_OPTS} = '/MD /02 /Zi';
+  $ENV{CC_OPTS} = $DEBUG ? '/MDd /Gm /ZI /Od /GZ /D_DEBUG' : '/MD /02 /Zi';
   $ENV{COMMON_CC_OPTS} = '/nologo /W3 /DWIN32 /D_WINDOWS';
   
   system_or_die("Failure building zilb", qq("$NMAKE" /nologo -f win32\\Makefile.msc STATICLIB=zlibstat.lib all));
@@ -481,8 +534,8 @@ sub build_openssl {
   # remove the no-asm below and use ms\do_nasm.bat instead.
   
   # TODO: Enable openssl to use zlib.  openssl needs some patching to do
-	# this since it wants to look for zlib as zlib1.dll and as the httpd
-	# build instructions note you probably don't want to dynamic link zlib.
+  # this since it wants to look for zlib as zlib1.dll and as the httpd
+  # build instructions note you probably don't want to dynamic link zlib.
   
   # TODO: OpenSSL requires perl on the path since it uses perl without a full
   # path in the batch file and the makefiles.  Probably should determine
@@ -491,8 +544,9 @@ sub build_openssl {
   # The apache build docs suggest no-rc5 no-idea enable-mdc2 on top of what
   # is used below, the primary driver behind that is patents, but I believe
   # the rc5 and idea patents have expired.
+  my $platform = $DEBUG ? 'debug-VC-WIN32' : 'VC-WIN32';
   system_or_die("Failure configuring openssl",
-                qq("$PERL" Configure no-asm "--prefix=$INSTDIR" VC-WIN32));
+                qq("$PERL" Configure no-asm "--prefix=$INSTDIR" $platform));
   system_or_die("Failure building openssl (bat)", 'ms\do_ms.bat');
   system_or_die("Failure building openssl (nmake)", qq("$NMAKE" /f ms\\ntdll.mak));
   system_or_die("Failure testing openssl", qq("$NMAKE" /f ms\\ntdll.mak test));
@@ -507,6 +561,8 @@ sub build_openssl {
 # Visual Studio whining about its backup step.
 sub upgrade_solution {
   my $file = shift;
+  my $interactive = shift;
+  my $flags = "";
 
   my ($basename, $directories) = fileparse($file, qr/\.[^.]*$/);
   my $sln = $directories . $basename . '.sln';
@@ -519,7 +575,15 @@ sub upgrade_solution {
     close(SLN);
   }
   print "Upgrading $file (this may take a while)\n";
-  system_or_die("Failure upgrading $file", qq("$DEVENV" $file /Upgrade));
+  $flags = " /Upgrade" unless $interactive;
+  system_or_die("Failure upgrading $file", qq("$DEVENV" "$file"$flags));
+  if ($interactive) {
+    print "Can't do automatic upgrade, doing interactive upgrade\n";
+    print "IDE will load, choose to convert all projects, exit the IDE and\n";
+    print "save the resulting solution file\n\n";
+    print "Press Enter to Continue\n";
+    <>;
+  }
 }
 
 # Run the lineends.pl script
@@ -539,6 +603,9 @@ sub httpd_fix_makefile {
 
   modify_file_in_place($file, sub {
       s/\.vcproj/.vcxproj/i;
+      # below fixes that installd breaks when trying to install pcre because 
+      # dll is named pcred.dll when a Debug build. 
+      s/^(\s*copy srclib\\pcre\\pcre\.\$\(src_dll\)\s+"\$\(inst_dll\)"\s+<\s*\.y\s*)$/!IF EXISTS("srclib\\pcre\\pcre\.\$(src_dll)")\n$1!ENDIF\n!IF EXISTS("srclib\\pcre\\pcred\.\$(src_dll)")\n\tcopy srclib\\pcre\\pcred.\$(src_dll)\t\t\t"\$(inst_dll)" <.y\n!ENDIF\n/;
     });
 }
 
@@ -588,8 +655,9 @@ sub get_output_file {
 # Find the name of the bdb library we've installed in our LIBDIR.
 sub find_bdb_lib {
   my $result;
+  my $debug = $DEBUG ? 'd' : '';
   find(sub {
-         if (not defined($result) and /^libdb\d+\.lib$/) {
+         if (not defined($result) and /^libdb\d+$debug\.lib$/) {
            $result = $_;
          }
        }, $LIBDIR);
@@ -626,8 +694,24 @@ sub httpd_enable_bdb {
   insert_dependency_in_proj('support\htdbm.vcxproj', $bdb_lib, '.bdb');
 }
 
+# Apply the same fix as found in r1486937 on httpd 2.4.x branch.
+sub httpd_fix_debug {
+  my ($httpd_major, $httpd_minor, $httpd_patch) = $HTTPD_VER =~ /^(\d+)\.(\d+)\.(.+)$/;
+  return unless ($httpd_major <= 2 && $httpd_minor <= 4 && $httpd_patch < 5);
+
+  modify_file_in_place('libhttpd.dsp', sub {
+      s/^(!MESSAGE "libhttpd - Win32 Debug" \(based on "Win32 \(x86\) Dynamic-Link Library"\))$/$1\n!MESSAGE "libhttpd - Win32 Lexical" (based on "Win32 (x86) Dynamic-Link Library")/;
+      s/^(# Begin Group "headers")$/# Name "libhttpd - Win32 Lexical"\n$1/;
+    }, '.lexical');
+}
+
 sub build_httpd {
   chdir_or_die($HTTPD);
+
+  my $vs_2012 = $VS_VER eq '2012';
+  my $vs_2010 = $VS_VER eq '2010';
+
+  httpd_fix_debug();
 
   # I don't think cvtdsp.pl is necessary with Visual Studio 2012
   # but it shouldn't hurt anything either.  Including it allows
@@ -636,48 +720,54 @@ sub build_httpd {
   system_or_die("Failure converting DSP files",
                 qq("$PERL" srclib\\apr\\build\\cvtdsp.pl -2005));
 
-  upgrade_solution('Apache.dsw');
+  upgrade_solution('Apache.dsw', $vs_2010);
   httpd_enable_bdb();
   httpd_fix_makefile('Makefile.win');
 
-  # Turn off pre-compiled headers for apr-iconv to avoid:
-  # LNK2011: http://msdn.microsoft.com/en-us/library/3ay26wa2(v=vs.110).aspx
-  disable_pch('srclib\apr-iconv\build\modules.mk.win'); 
-
-  # ApacheMonitor build fails due a duplicate manifest, turn off
-  # GenerateManifest
-  insert_property_group('support\win32\ApacheMonitor.vcxproj',
-                        '<GenerateManifest>false</GenerateManifest>');
-
-  # Modules randomly fail due to an error about the CL.read.1.tlog file
-  # already existing.  This is really because of the intermediate dirs
-  # being shared between modules, but for the time being this works around
-  # it.
+  # Modules and support projects randomly fail due to an error about the
+  # CL.read.1.tlog file already existing.  This is really because of the
+  # intermediate dirs being shared between modules, but for the time being
+  # this works around it.
   find(sub {
          if (/\.vcxproj$/) {
            insert_property_group($_, '<TrackFileAccess>false</TrackFileAccess>')
          }
-       }, 'modules');
+       }, 'modules', 'support');
 
-  # The APR libraries have projects named libapr but produce output named libapr-1
-  # The problem with this is in newer versions of Visual Studio TargetName defaults
-  # to the project name and not the basename of the output.  Since the PDB file
-  # is named based on the TargetName the pdb file ends up being named libapr.pdb
-  # instead of libapr-1.pdb.  The below call fixes this by explicitly providing
-  # a TargetName definition and shuts up some warnings about this problem as well.
-  # Without this fix the install fails when it tries to copy libapr-1.pdb.
-  # See this thread for details of the changes:
-  # http://social.msdn.microsoft.com/Forums/en-US/vcprerelease/thread/3c03e730-6a0e-4ee4-a0d6-6a5c3ce4343c
-  find(sub {
-         return unless (/\.vcxproj$/);
-         my $output_file = get_output_file($_);
-         return unless (defined($output_file));
-         my ($project_name) = fileparse($_, qr/\.[^.]*$/);
-         my ($old_style_target_name) = fileparse($output_file, qr/\.[^.]*$/);
-         return if ($old_style_target_name eq $project_name);
-         insert_property_group($_,
-           "<TargetName>$old_style_target_name</TargetName>", '.torig');
-       }, "$SRCLIB\\apr", "$SRCLIB\\apr-util", "$SRCLIB\\apr-iconv");
+  if ($vs_2012) {
+    # Turn off pre-compiled headers for apr-iconv to avoid:
+    # LNK2011: http://msdn.microsoft.com/en-us/library/3ay26wa2(v=vs.110).aspx
+    disable_pch('srclib\apr-iconv\build\modules.mk.win');
+
+    # ApacheMonitor build fails due a duplicate manifest, turn off
+    # GenerateManifest
+    insert_property_group('support\win32\ApacheMonitor.vcxproj',
+                          '<GenerateManifest>false</GenerateManifest>',
+                          '.dupman');
+
+    # The APR libraries have projects named libapr but produce output named libapr-1
+    # The problem with this is in newer versions of Visual Studio TargetName defaults
+    # to the project name and not the basename of the output.  Since the PDB file
+    # is named based on the TargetName the pdb file ends up being named libapr.pdb
+    # instead of libapr-1.pdb.  The below call fixes this by explicitly providing
+    # a TargetName definition and shuts up some warnings about this problem as well.
+    # Without this fix the install fails when it tries to copy libapr-1.pdb.
+    # See this thread for details of the changes:
+    # http://social.msdn.microsoft.com/Forums/en-US/vcprerelease/thread/3c03e730-6a0e-4ee4-a0d6-6a5c3ce4343c
+    find(sub {
+           return unless (/\.vcxproj$/);
+           my $output_file = get_output_file($_);
+           return unless (defined($output_file));
+           my ($project_name) = fileparse($_, qr/\.[^.]*$/);
+           my ($old_style_target_name) = fileparse($output_file, qr/\.[^.]*$/);
+           return if ($old_style_target_name eq $project_name);
+           insert_property_group($_,
+             "<TargetName>$old_style_target_name</TargetName>", '.torig');
+         }, "$SRCLIB\\apr", "$SRCLIB\\apr-util", "$SRCLIB\\apr-iconv");
+  } elsif ($vs_2010) {
+    system_or_die("Failed fixing project guid references",
+      qq("$PYTHON" "$BINDIR\\ProjRef.py" -i Apache.sln"));
+  }
 
   # If you're looking here it's possible that something went
   # wrong with the httpd build.  Debugging it can be a bit of a pain
@@ -692,8 +782,9 @@ sub build_httpd {
   # configurations inside the project since we get them from the environment.
   # Once all that is done the BuildBin project should be buildable for you to
   # diagnose the problem.
+  my $target = $DEBUG ? "installd" : "installr";
   system_or_die("Failed building/installing httpd/apr/apu/api",
-    qq("$NMAKE" /f Makefile.win installr "DBM_LIST=db" "INSTDIR=$INSTDIR"));
+    qq("$NMAKE" /f Makefile.win $target "DBM_LIST=db" "INSTDIR=$INSTDIR"));
 
   chdir_or_die($TOPDIR);
 }
@@ -705,13 +796,15 @@ sub build_bdb {
   my $sln = 'build_windows\Berkeley_DB_vs2010.sln'; 
   upgrade_solution($sln);
 
+  my $platform = $DEBUG ? 'Debug|Win32' : 'Release|Win32';
+
   # Build the db Project first since the full solution fails due to a broken
   # dependency with the current version of BDB if we don't.
   system_or_die("Failed building DBD (Project db)",
-                qq("$DEVENV" "$sln" /Build "Release|Win32" /Project db));
+                qq("$DEVENV" "$sln" /Build "$platform" /Project db));
 
   system_or_die("Failed building DBD",
-                qq("$DEVENV" "$sln" /Build "Release|Win32"));
+                qq("$DEVENV" "$sln" /Build "$platform"));
 
   # BDB doesn't seem to have it's own install routines so we'll do it ourselves
   copy_or_die('build_windows\db.h', $INCDIR);
@@ -721,8 +814,22 @@ sub build_bdb {
      } elsif (/\.lib$/) {
        copy_or_die($_, $LIBDIR);
      }
-   }, 'build_windows\Win32\Release');
+   }, 'build_windows\\Win32\\' . ($DEBUG ? 'Debug' : 'Release'));
 
+  chdir_or_die($TOPDIR);
+}
+
+# Right now this doesn't actually build serf but just patches it so that it
+# can build against a debug build of OpenSSL.
+sub build_serf {
+  chdir_or_die("$TOPDIR\\serf");
+
+  modify_file_in_place('serf.mak', sub {
+      s/^(INTDIR = Release)$/$1\nOPENSSL_OUT_SUFFIX =/;
+      s/^(INTDIR = Debug)$/$1\nOPENSSL_OUT_SUFFIX = .dbg/;
+      s/(\$\(OPENSSL_SRC\)\\out32(?:dll)?)/$1\$(OPENSSL_OUT_SUFFIX)/g;
+    }, '.debug');
+  
   chdir_or_die($TOPDIR);
 }
 
@@ -731,6 +838,7 @@ sub build_dependencies {
   build_zlib();
   build_pcre();
   build_openssl();
+  build_serf();
   build_httpd();
 }
 
@@ -772,6 +880,9 @@ sub main {
   # on other variables.
   Vars::set_defaults();
   set_paths();
+
+  # Determine the Visual Studio Version and die if not supported.
+  check_vs_ver();
 
   # change directory to our TOPDIR before running any commands
   # the variable assignment might have changed it.

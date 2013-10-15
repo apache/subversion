@@ -1000,7 +1000,7 @@ def revert_add_over_not_present_dir(sbox):
   wc_dir = sbox.wc_dir
 
   main.run_svn(None, 'rm', os.path.join(wc_dir, 'A/C'))
-  main.run_svn(None, 'ci', wc_dir, '-m', 'Deleted dir')
+  sbox.simple_commit(message='Deleted dir')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/C')
@@ -1644,6 +1644,8 @@ def revert_obstructing_wc(sbox):
                                      'revert', '-R', wc_dir)
 
 
+
+
 ########################################################################
 # Run the tests
 
@@ -1683,7 +1685,7 @@ test_list = [ None,
               revert_no_text_change_conflict_recursive,
               revert_with_unversioned_targets,
               revert_nonexistent,
-              revert_obstructing_wc
+              revert_obstructing_wc,
              ]
 
 if __name__ == '__main__':

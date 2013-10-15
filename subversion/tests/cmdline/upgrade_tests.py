@@ -430,7 +430,10 @@ def basic_upgrade_1_0(sbox):
 
   url = sbox.repo_url
 
-  xml_entries_relocate(sbox.wc_dir, 'file:///1.0.0/repos', url)
+  # This is non-canonical by the rules of svn_uri_canonicalize, it gets
+  # written into the entries file and upgrade has to canonicalize.
+  non_canonical_url = url[:-1] + '%%%02x' % ord(url[-1])
+  xml_entries_relocate(sbox.wc_dir, 'file:///1.0.0/repos', non_canonical_url)
 
   # Attempt to use the working copy, this should give an error
   expected_stderr = wc_is_too_old_regex
@@ -1408,6 +1411,23 @@ def iprops_upgrade1_6(sbox):
                     'iprops_upgrade_root1_6.tar.bz2',
                     sbox)
 
+def changelist_upgrade_1_6(sbox):
+  "upgrade from 1.6 with changelist"
+
+  sbox.build(create_wc = False)
+  svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
+                            'aa4c97bd-2e1a-4e55-a1e5-3db22cff2673')
+  replace_sbox_with_tarfile(sbox, 'changelist_upgrade_1_6.tar.bz2')
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  exit_code, output, errput = svntest.main.run_svn(None, 'info', sbox.wc_dir,
+                                                   '--depth', 'infinity',
+                                                   '--changelist', 'foo')
+  paths = [x for x in output if x[:6] == 'Path: ']
+  expected_paths = ['Path: %s\n' % sbox.ospath('A/D/gamma')]
+  if paths != expected_paths:
+    raise svntest.Failure("changelist not matched")
+
 ########################################################################
 # Run the tests
 
@@ -1462,6 +1482,7 @@ test_list = [ None,
               upgrade_from_1_7_conflict,
               iprops_upgrade,
               iprops_upgrade1_6,
+              changelist_upgrade_1_6,
              ]
 
 

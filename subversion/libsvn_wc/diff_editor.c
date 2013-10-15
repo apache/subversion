@@ -57,6 +57,7 @@
 
 #include <assert.h>
 
+#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -74,8 +75,6 @@
 #include "adm_files.h"
 #include "translate.h"
 #include "diff.h"
-
-#include "svn_private_config.h"
 
 /*-------------------------------------------------------------------------*/
 
@@ -474,14 +473,18 @@ svn_wc__diff_base_working_diff(svn_wc__db_t *db,
     {
       const svn_io_dirent2_t *dirent;
 
+      /* Verify truename to mimic status for iota/IOTA difference on Windows */
       SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath,
-                                  FALSE /* verify truename */,
+                                  TRUE /* verify truename */,
                                   TRUE /* ingore_enoent */,
                                   scratch_pool, scratch_pool));
 
-      if (dirent->kind == svn_node_file
-          && dirent->filesize == recorded_size
-          && dirent->mtime == recorded_time)
+      /* If a file does not exist on disk (missing/obstructed) then we
+         can't provide a text diff */
+      if (dirent->kind != svn_node_file
+          || (dirent->kind == svn_node_file
+              && dirent->filesize == recorded_size
+              && dirent->mtime == recorded_time))
         {
           files_same = TRUE;
         }
@@ -2362,9 +2365,9 @@ wrap_ensure_empty_file(wc_diff_wrap_baton_t *wb,
     return SVN_NO_ERROR;
 
   /* Create a unique file in the tempdir */
-  SVN_ERR(svn_io_open_uniquely_named(NULL, &wb->empty_file, NULL, NULL, NULL,
-                                     svn_io_file_del_on_pool_cleanup,
-                                     wb->result_pool, scratch_pool));
+  SVN_ERR(svn_io_open_unique_file3(NULL, &wb->empty_file, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   wb->result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2431,8 +2434,8 @@ wrap_dir_opened(void **new_dir_baton,
 /* svn_diff_tree_processor_t function */
 static svn_error_t *
 wrap_dir_added(const char *relpath,
-               const svn_diff_source_t *right_source,
                const svn_diff_source_t *copyfrom_source,
+               const svn_diff_source_t *right_source,
                /*const*/ apr_hash_t *copyfrom_props,
                /*const*/ apr_hash_t *right_props,
                void *dir_baton,

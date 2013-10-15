@@ -32,6 +32,17 @@
 #ifdef SVN_SQLITE_INLINE
 /* Include sqlite3 inline, making all symbols private. */
   #define SQLITE_API static
+  #ifdef __APPLE__
+    #include <Availability.h>
+    #if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
+      /* <libkern/OSAtomic.h> is included on OS X by sqlite3.c, and
+         on old systems (Leopard or older), it cannot be compiled
+         with -std=c89 because it uses inline. This is a work-around. */
+      #define inline __inline__
+      #include <libkern/OSAtomic.h>
+      #undef inline
+    #endif
+  #endif
   #include <sqlite3.c>
 #else
   #include <sqlite3.h>
@@ -154,7 +165,7 @@ test_sqlite_version(apr_pool_t *scratch_pool)
   printf("DBG: Using Sqlite %s\n", sqlite3_version);
 
   if (sqlite3_libversion_number() != SQLITE_VERSION_NUMBER)
-    printf("DBG: Compiled against Sqlite %s", SQLITE_VERSION);
+    printf("DBG: Compiled against Sqlite %s\n", SQLITE_VERSION);
 
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,

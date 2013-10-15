@@ -66,7 +66,9 @@ typedef enum svn_cl__longopt_t {
   opt_with_revprop,
   opt_with_all_revprops,
   opt_with_no_revprops,
-  opt_trust_server_cert
+  opt_auto_moves,
+  opt_trust_server_cert,
+  opt_changelist
 } svn_cl__longopt_t;
 
 
@@ -147,6 +149,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("set revision property ARG in new revision\n"
                        "                             "
                        "using the name[=value] format")},
+  {"auto-moves",    opt_auto_moves, 0,
+                    N_("attempt to interpret matching unique DEL+ADD\n"
+                       "                             "
+                       "pairs as moves")},
   {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge\n"
                        "                             "
@@ -255,9 +261,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  behavior, which can be useful for determining branchpoints.\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
      'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     'x',},
+     opt_auto_moves, 'x',},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
+
+  { "null-info", svn_cl__null_info, {0}, N_
+    ("Display information about a local or remote item.\n"
+     "usage: info [TARGET[@REV]...]\n"
+     "\n"
+     "  Print information about each TARGET (default: '.').\n"
+     "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+     "  determines in which revision the target is first looked up.\n"),
+    {'r', 'R', opt_depth, opt_targets, opt_changelist}
+  },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -278,7 +294,7 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_ver_check_list(&my_version, checklist);
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 
@@ -534,6 +550,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                                 TRUE, pool);
         }
         break;
+      case 'R':
+        opt_state.depth = svn_depth_infinity;
+        break;
       case 'N':
         descend = FALSE;
         break;
@@ -617,6 +636,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'g':
         opt_state.use_merge_history = TRUE;
+        break;
+      case opt_auto_moves:
+        opt_state.auto_moves = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

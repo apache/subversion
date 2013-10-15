@@ -1234,6 +1234,295 @@ def move_missing(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def nested_replaces(sbox):
+  "nested replaces"
+
+  repo_dir, repo_url = sbox.add_repo_path('blank')
+  wc_dir = sbox.add_wc_path('blank')
+  svntest.main.create_repos(repo_dir)
+  ospath = lambda dirent: sbox.ospath(dirent, wc_dir)
+
+  ## r1: setup
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                           '-U', repo_url,
+                           '-m', 'r1: create tree',
+                           'mkdir', 'A', 'mkdir', 'A/B', 'mkdir', 'A/B/C',
+                           'mkdir', 'X', 'mkdir', 'X/Y', 'mkdir', 'X/Y/Z',
+                           # sentinel files
+                           'put', os.devnull, 'A/a',
+                           'put', os.devnull, 'A/B/b',
+                           'put', os.devnull, 'A/B/C/c',
+                           'put', os.devnull, 'X/x',
+                           'put', os.devnull, 'X/Y/y',
+                           'put', os.devnull, 'X/Y/Z/z')
+
+  svntest.main.run_svn(None, 'checkout', '-q', repo_url, wc_dir)
+  r1_status = svntest.wc.State(wc_dir, {
+    ''            : Item(status='  ', wc_rev='1'),
+    'A'           : Item(status='  ', wc_rev='1'),
+    'A/B'         : Item(status='  ', wc_rev='1'),
+    'A/B/C'       : Item(status='  ', wc_rev='1'),
+    'X'           : Item(status='  ', wc_rev='1'),
+    'X/Y'         : Item(status='  ', wc_rev='1'),
+    'X/Y/Z'       : Item(status='  ', wc_rev='1'),
+    'A/a'         : Item(status='  ', wc_rev='1'),
+    'A/B/b'       : Item(status='  ', wc_rev='1'),
+    'A/B/C/c'     : Item(status='  ', wc_rev='1'),
+    'X/x'         : Item(status='  ', wc_rev='1'),
+    'X/Y/y'       : Item(status='  ', wc_rev='1'),
+    'X/Y/Z/z'     : Item(status='  ', wc_rev='1'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, r1_status)
+
+  ## r2: juggling
+  moves = [
+    ('A', 'A2'),
+    ('X', 'X2'),
+    ('A2/B/C', 'X'),
+    ('X2/Y/Z', 'A'),
+    ('A2/B', 'A/B'),
+    ('X2/Y', 'X/Y'),
+    ('A2', 'X/Y/Z'),
+    ('X2', 'A/B/C'),
+  ]
+  for src, dst in moves:
+    svntest.main.run_svn(None, 'mv', ospath(src), ospath(dst))
+  r2_status = svntest.wc.State(wc_dir, {
+    ''          : Item(status='  ', wc_rev='1'),
+    'A'         : Item(status='R ', copied='+', moved_from='X/Y/Z', moved_to='X/Y/Z', wc_rev='-'),
+    'A/B'       : Item(status='A ', copied='+', moved_from='X/Y/Z/B', wc_rev='-', entry_status='R '),
+    'A/B/C'     : Item(status='R ', copied='+', moved_from='X', moved_to='X', wc_rev='-'),
+    'A/B/C/Y'   : Item(status='D ', copied='+', wc_rev='-', moved_to='X/Y'),
+    'A/B/C/Y/y' : Item(status='D ', copied='+', wc_rev='-'),
+    'A/B/C/Y/Z' : Item(status='D ', copied='+', wc_rev='-'),
+    'A/B/C/Y/Z/z':Item(status='D ', copied='+', wc_rev='-'),
+    'X'         : Item(status='R ', copied='+', moved_from='A/B/C', moved_to='A/B/C', wc_rev='-'),
+    'X/Y'       : Item(status='A ', copied='+', moved_from='A/B/C/Y', wc_rev='-', entry_status='R '),
+    'X/Y/Z'     : Item(status='R ', copied='+', moved_from='A', moved_to='A', wc_rev='-'),
+    'X/Y/Z/B'   : Item(status='D ', copied='+', wc_rev='-', moved_to='A/B'),
+    'X/Y/Z/B/b' : Item(status='D ', copied='+', wc_rev='-'),
+    'X/Y/Z/B/C' : Item(status='D ', copied='+', wc_rev='-'),
+    'X/Y/Z/B/C/c':Item(status='D ', copied='+', wc_rev='-'),
+    'A/a'       : Item(status='D ', wc_rev='1'),
+    'A/B/b'     : Item(status='D ', wc_rev='1'),
+    'A/B/C/c'   : Item(status='D ', copied='+', wc_rev='-'),
+    'X/x'       : Item(status='D ', wc_rev='1'),
+    'X/Y/y'     : Item(status='D ', wc_rev='1'),
+    'X/Y/Z/z'   : Item(status='D ', copied='+', wc_rev='-'),
+    'X/c'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/z'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/b'     : Item(status='  ', copied='+', wc_rev='-'),
+    'X/Y/y'     : Item(status='  ', copied='+', wc_rev='-'),
+    'X/Y/Z/a'   : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/C/x'   : Item(status='  ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, r2_status)
+
+  svntest.main.run_svn(None, 'commit', '-m', 'r2: juggle the tree', wc_dir)
+  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+    '   R /A (from /X/Y/Z:1)',
+    '   A /A/B (from /A/B:1)',
+    '   R /A/B/C (from /X:1)',
+    '   R /X (from /A/B/C:1)',
+    '   A /X/Y (from /X/Y:1)',
+    '   R /X/Y/Z (from /A:1)',
+    '   D /X/Y/Z/B',
+    '   D /A/B/C/Y',
+  ]) + [
+    '^-', '^r2', '^-', '^Changed paths:',
+  ])
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'log', '-qvr2', repo_url)
+
+  ## Test updating to r1.
+  svntest.main.run_svn(None, 'update', '-r1', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, r1_status)
+
+def setup_move_many(sbox):
+  "helper function which creates a wc with node A/A/A which is moved 3 times"
+
+  sbox.simple_rm('A', 'iota')
+  sbox.simple_mkdir('A',
+                    'A/A',
+                    'A/A/A',
+                    'A/A/A/A',
+                    'B',
+                    'B/A',
+                    'B/A/A',
+                    'B/A/A/A',
+                    'C',
+                    'C/A',
+                    'C/A/A',
+                    'C/A/A/A')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  sbox.simple_move('A/A/A', 'AAA_1')
+
+  sbox.simple_rm('A')
+  sbox.simple_move('B', 'A')
+
+  sbox.simple_move('A/A/A', 'AAA_2')
+
+  sbox.simple_rm('A/A')
+  sbox.simple_move('C/A', 'A/A')
+
+  sbox.simple_move('A/A/A', 'AAA_3')
+
+def move_many_status(wc_dir):
+  "obtain standard status after setup_move_many"
+
+  return svntest.wc.State(wc_dir, {
+      ''                  : Item(status='  ', wc_rev='2'),
+
+      'AAA_1'             : Item(status='A ', copied='+', moved_from='A/A/A', wc_rev='-'),
+      'AAA_1/A'           : Item(status='  ', copied='+', wc_rev='-'),
+
+      'AAA_2'             : Item(status='A ', copied='+', moved_from='A/A/A', wc_rev='-'),
+      'AAA_2/A'           : Item(status='  ', copied='+', wc_rev='-'),
+
+      'AAA_3'             : Item(status='A ', copied='+', moved_from='A/A/A', wc_rev='-'),
+      'AAA_3/A'           : Item(status='  ', copied='+', wc_rev='-'),
+
+      'A'                 : Item(status='R ', copied='+', moved_from='B', wc_rev='-'),
+      'A/A'               : Item(status='R ', copied='+', moved_from='C/A', wc_rev='-'),
+      'A/A/A'             : Item(status='D ', copied='+', wc_rev='-', moved_to='AAA_3'),
+      'A/A/A/A'           : Item(status='D ', copied='+', wc_rev='-'),
+
+      'B'                 : Item(status='D ', wc_rev='2', moved_to='A'),
+      'B/A'               : Item(status='D ', wc_rev='2'),
+      'B/A/A'             : Item(status='D ', wc_rev='2'),
+      'B/A/A/A'           : Item(status='D ', wc_rev='2'),
+
+      'C'                 : Item(status='  ', wc_rev='2'),
+      'C/A'               : Item(status='D ', wc_rev='2', moved_to='A/A'),
+      'C/A/A'             : Item(status='D ', wc_rev='2'),
+      'C/A/A/A'           : Item(status='D ', wc_rev='2'),
+    })
+
+def move_many_update_delete(sbox):
+  "move many and delete-on-update"
+
+  sbox.build()
+  setup_move_many(sbox)
+
+  wc_dir = sbox.wc_dir
+
+  # Verify start situation
+  expected_status = move_many_status(wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # And now create a tree conflict
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', sbox.repo_url + '/B',
+                                     '-m', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+     'B'                 : Item(status='  ', treeconflict='C'),
+    })
+
+
+  expected_status.tweak('', 'C', 'C/A', 'C/A/A', 'C/A/A/A', wc_rev='3')
+  expected_status.tweak('A', moved_from=None)
+  expected_status.remove('B/A', 'B/A/A', 'B/A/A/A')
+  expected_status.tweak('B', status='! ', treeconflict='C', wc_rev=None, moved_to=None)
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status)
+
+  # Would be nice if we could run the resolver as a separate step, 
+  # but 'svn resolve' just fails for any value but working
+
+@XFail()
+def move_many_update_add(sbox):
+  "move many and add-on-update"
+
+  sbox.build()
+  setup_move_many(sbox)
+
+  wc_dir = sbox.wc_dir
+
+  # Verify start situation
+  expected_status = move_many_status(wc_dir)
+  #svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # And now create a tree conflict
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.repo_url + '/B/A/A/BB',
+                                     '-m', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+     'B'                 : Item(status='  ', treeconflict='C'),
+     'B/A'               : Item(status='  ', treeconflict='U'),
+     'B/A/A'             : Item(status='  ', treeconflict='U'),
+     'B/A/A/BB'          : Item(status='  ', treeconflict='A'),
+     # And while resolving
+     'A/A/'              : Item(status='  ', treeconflict='C')
+    })
+
+  expected_status.tweak('',
+                        'B', 'B/A', 'B/A/A', 'B/A/A/A',
+                        'C', 'C/A', 'C/A/A', 'C/A/A/A',
+                        wc_rev='3')
+
+  expected_status.tweak('A/A', treeconflict='C')
+  expected_status.add({
+        'A/A/A/BB'          : Item(status='D ', copied='+', wc_rev='-'),
+        'B/A/A/BB'          : Item(status='D ', wc_rev='3'),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        wc_dir, '--accept', 'mine-conflict')
+
+  # And another one
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.repo_url + '/C/A/A/BB',
+                                     '-m', '')
+
+  expected_status.tweak('',
+                        'B', 'B/A', 'B/A/A', 'B/A/A/A',
+                        'C', 'C/A', 'C/A/A', 'C/A/A/A',
+                        wc_rev='4')
+
+  expected_output = svntest.wc.State(wc_dir, {
+     'C/A'               : Item(status='  ', treeconflict='C'),
+     'C/A/A'             : Item(status='  ', treeconflict='U'),
+     'C/A/A/BB'          : Item(status='  ', treeconflict='A'),
+    })
+
+  # This currently triggers an assertion failure
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        wc_dir, '--accept', 'mine-conflict')
+
+@Issue(4437)
+@XFail()
+def move_del_moved(sbox):
+  "delete moved node, still a move"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('A/NEW')
+  sbox.simple_move('A/mu', 'A/NEW/mu')
+  sbox.simple_rm('A/NEW/mu')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  expected_status.add({
+      'A/NEW' : Item(status='A ', wc_rev='-')
+    })
+
+  # A/mu still reports that it is moved to A/NEW/mu, while it is already
+  # deleted there.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 #######################################################################
 # Run the tests
 
@@ -1245,6 +1534,10 @@ test_list = [ None,
               deeper_move_file_test,
               property_merge,
               move_missing,
+              nested_replaces,
+              move_many_update_delete,
+              move_many_update_add,
+              move_del_moved,
             ]
 
 if __name__ == '__main__':

@@ -576,7 +576,8 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: E220001: Item is not readable.*"
+    expected_err2 = ".*svn: E220001: Unreadable path encountered; " \
+                    "access denied.*"
 
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
@@ -1550,6 +1551,44 @@ def log_diff_dontdothat(sbox):
                                       'log', ddt_url,
                                       '-c', 1, '--diff')
 
+@Issue(4422)
+@Skip(svntest.main.is_ra_type_file)
+def authz_file_external_to_authz(sbox):
+  "replace file external with authz node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  write_authz_file(sbox, {"/": "* = rw"})
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  sbox.simple_propset('svn:externals', 'Z ' + repo_url + '/iota', '')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+  expected_status.add({
+    'Z' : Item(status='  ', wc_rev='1', switched='X'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', repo_url + '/A',
+                                           repo_url + '/Z',
+                                      '-m', 'Add Z')
+
+  write_authz_file(sbox, {"/": "* = rw", "/Z": "* = "})
+
+  expected_status.tweak(wc_rev=2)
+
+  # ### This used to assert with
+  # ### svn: E235000: In file 'update_editor.c' line 3043: assertion failed
+  # ###               (status != svn_wc__db_status_normal)
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        None, None, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -1584,6 +1623,7 @@ test_list = [ None,
               authz_svnserve_groups,
               authz_del_from_subdir,
               log_diff_dontdothat,
+              authz_file_external_to_authz,
              ]
 serial_only = True
 

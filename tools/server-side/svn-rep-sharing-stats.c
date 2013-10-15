@@ -33,6 +33,7 @@
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
 /* for svn_fs_fs__id_* (used in assertions only) */
 #include "../../subversion/libsvn_fs_fs/id.h"
+#include "../../subversion/libsvn_fs_fs/cached_data.h"
 
 #include "private/svn_cmdline_private.h"
 
@@ -95,7 +96,8 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_error_trace(svn_ver_check_list(&my_version, checklist));
+  return svn_error_trace(svn_ver_check_list2(&my_version, checklist,
+                                             svn_ver_equal));
 }
 
 
@@ -182,7 +184,8 @@ struct key_t
 /* What we need to know about a rep. */
 struct value_t
 {
-  svn_checksum_t *sha1_checksum;
+  svn_checksum_t checksum;
+  unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   apr_uint64_t refcount;
 };
 
@@ -200,7 +203,7 @@ static svn_error_t *record(apr_hash_t *records,
    * exist or doesn't have the checksum we are after.  (The latter case
    * often corresponds to node_rev->kind == svn_node_dir.)
    */
-  if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
+  if (records == NULL || rep == NULL || !rep->has_sha1)
     return SVN_NO_ERROR;
 
   /* Construct the key.
@@ -215,17 +218,19 @@ static svn_error_t *record(apr_hash_t *records,
   if ((value = apr_hash_get(records, key, sizeof(*key))))
     {
       /* Paranoia. */
-      SVN_ERR_ASSERT(value->sha1_checksum != NULL);
-      SVN_ERR_ASSERT(svn_checksum_match(value->sha1_checksum,
-                                        rep->sha1_checksum));
+      SVN_ERR_ASSERT(memcmp(value->sha1_digest,
+                            rep->sha1_digest,
+                            sizeof(value->sha1_digest)));
       /* Real work. */
       value->refcount++;
     }
   else
     {
       value = apr_palloc(result_pool, sizeof(*value));
-      value->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, result_pool);
+      value->checksum.digest = value->sha1_digest;
+      value->checksum.kind = svn_checksum_sha1;
       value->refcount = 1;
+      memcpy(value->sha1_digest, rep->sha1_digest, sizeof(value->sha1_digest));
     }
 
   /* Store them. */
@@ -264,7 +269,9 @@ process_one_revision(svn_fs_t *fs,
 
   /* Get the changed paths. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revnum, scratch_pool));
-  SVN_ERR(svn_fs_paths_changed2(&paths_changed, rev_root, scratch_pool));
+  SVN_ERR(svn_fs_paths_changed3(&paths_changed, rev_root,
+                                svn_move_behavior_explicit_moves,
+                                scratch_pool));
 
   /* Iterate them. */
   /* ### use iterpool? */
@@ -340,7 +347,7 @@ pretty_print(const char *name,
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,
                                  svn_checksum_to_cstring_display(
-                                   value->sha1_checksum,
+                                   &value->checksum,
                                    scratch_pool)));
     }
 

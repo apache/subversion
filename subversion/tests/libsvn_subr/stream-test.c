@@ -727,6 +727,50 @@ test_stream_base64_2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stringbuf_from_stream(apr_pool_t *pool)
+{
+  const char *test_cases[] =
+    {
+      "",
+      "x",
+      "this string is longer than the default 64 minimum block size used"
+      "by the function under test",
+      NULL
+    };
+
+  const char **test_case;
+  for (test_case = test_cases; *test_case; ++test_case)
+    {
+      svn_stringbuf_t *result1, *result2, *result3, *result4;
+      svn_stringbuf_t *original = svn_stringbuf_create(*test_case, pool);
+
+      svn_stream_t *stream1 = svn_stream_from_stringbuf(original, pool);
+      svn_stream_t *stream2 = svn_stream_from_stringbuf(original, pool);
+
+      SVN_ERR(svn_stringbuf_from_stream(&result1, stream1, 0, pool));
+      SVN_ERR(svn_stringbuf_from_stream(&result2, stream1, 0, pool));
+      SVN_ERR(svn_stringbuf_from_stream(&result3, stream2, original->len,
+                                        pool));
+      SVN_ERR(svn_stringbuf_from_stream(&result4, stream2, original->len,
+                                        pool));
+
+      /* C-string contents must match */
+      SVN_TEST_STRING_ASSERT(result1->data, original->data);
+      SVN_TEST_STRING_ASSERT(result2->data, "");
+      SVN_TEST_STRING_ASSERT(result3->data, original->data);
+      SVN_TEST_STRING_ASSERT(result4->data, "");
+
+      /* assumed length must match */
+      SVN_TEST_ASSERT(result1->len == original->len);
+      SVN_TEST_ASSERT(result2->len == 0);
+      SVN_TEST_ASSERT(result3->len == original->len);
+      SVN_TEST_ASSERT(result4->len == 0);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -752,5 +796,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test base64 encoding/decoding streams"),
     SVN_TEST_PASS2(test_stream_base64_2,
                    "base64 decoding allocation problem"),
+    SVN_TEST_PASS2(test_stringbuf_from_stream,
+                   "test svn_stringbuf_from_stream"),
     SVN_TEST_NULL
   };

@@ -137,7 +137,7 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 
   /* This returns void, so we can't check for error. */
   conf = ap_get_module_config(s->module_config, &dav_svn_module);
-  svn_utf_initialize2(p, conf->use_utf8);
+  svn_utf_initialize2(conf->use_utf8, p);
 
   return OK;
 }
@@ -217,6 +217,7 @@ create_dir_config(apr_pool_t *p, char *dir)
   conf->bulk_updates = CONF_BULKUPD_ON;
   conf->v2_protocol = CONF_FLAG_ON;
   conf->hooks_env = NULL;
+  conf->txdelta_cache = CONF_FLAG_ON;
 
   return conf;
 }
@@ -979,7 +980,6 @@ merge_xml_filter_insert(request_rec *r)
 typedef struct merge_ctx_t {
   apr_bucket_brigade *bb;
   apr_xml_parser *parser;
-  apr_pool_t *pool;
 } merge_ctx_t;
 
 
@@ -1009,7 +1009,6 @@ merge_xml_in_filter(ap_filter_t *f,
       f->ctx = ctx = apr_palloc(r->pool, sizeof(*ctx));
       ctx->parser = apr_xml_parser_create(r->pool);
       ctx->bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
-      apr_pool_create(&ctx->pool, r->pool);
     }
 
   rv = ap_get_brigade(f->next, ctx->bb, mode, block, readbytes);
@@ -1094,7 +1093,41 @@ static int dav_svn__handler(request_rec *r)
   return DECLINED;
 }
 
+#define NO_MAP_TO_STORAGE_NOTE "dav_svn-no-map-to-storage"
 
+/* Prevent filename on the request from being set since we aren't serving a
+ * file off the disk.  This means that <Directory> blocks will not match and
+ * that * %f in logging formats will show as "-". */
+static int dav_svn__translate_name(request_rec *r)
+{
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+  /* module is not configured, bail out early */
+  if (!conf->fs_path && !conf->fs_parent_path)
+    return DECLINED;
+
+  /* Be paranoid and set it to NULL just in case some other module set it
+   * before we got called. */ 
+  r->filename = NULL;
+
+  /* Leave a note to ourselves so that we know not to decline in the 
+   * map_to_storage hook. */
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1); 
+  return OK;
+}
+
+/* Prevent core_map_to_storage from running if we prevented the r->filename
+ * from being set since core_map_to_storage doesn't like r->filename being
+ * NULL. */
+static int dav_svn__map_to_storage(request_rec *r)
+{
+  /* Check a note we left in translate_name since map_to_storage doesn't
+   * have access to our configuration. */
+  if (apr_table_get(r->notes, NO_MAP_TO_STORAGE_NOTE))
+    return OK;
+
+  return DECLINED;
+}
 
 
 
@@ -1175,7 +1208,7 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "speeds up data access to older revisions by caching "
                "delta information if sufficient in-memory cache is "
-               "available (default is Off)."),
+               "available (default is On)."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNCacheFullTexts", SVNCacheFullTexts_cmd, NULL,
@@ -1268,6 +1301,12 @@ register_hooks(apr_pool_t *pconf)
   ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
                            NULL, AP_FTYPE_CONTENT_SET);
   ap_hook_fixups(dav_svn__proxy_request_fixup, NULL, NULL, APR_HOOK_MIDDLE);
+  /* translate_name hook is LAST so that it doesn't interfere with modules
+   * like mod_alias that are MIDDLE. */
+  ap_hook_translate_name(dav_svn__translate_name, NULL, NULL, APR_HOOK_LAST);
+  /* map_to_storage hook is LAST to avoid interferring with mod_http's
+   * handling of OPTIONS and TRACE. */
+  ap_hook_map_to_storage(dav_svn__map_to_storage, NULL, NULL, APR_HOOK_LAST);
 }
 
 

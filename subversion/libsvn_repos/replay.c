@@ -25,6 +25,7 @@
 
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_hash.h"
@@ -35,7 +36,7 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
+
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_delta_private.h"
@@ -704,31 +705,45 @@ path_driver_cb_func(void **dir_baton,
       /* Handle property modifications. */
       if (change->prop_mod || downgraded_copy)
         {
-          apr_array_header_t *prop_diffs;
-          apr_hash_t *old_props;
-          apr_hash_t *new_props;
-          int i;
-
-          if (source_root)
-            SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
-                                         source_fspath, pool));
-          else
-            old_props = apr_hash_make(pool);
-
-          SVN_ERR(svn_fs_node_proplist(&new_props, root, edit_path, pool));
-
-          SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
-                                 pool));
-
-          for (i = 0; i < prop_diffs->nelts; ++i)
+          if (cb->compare_root)
             {
-              svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-               if (change->node_kind == svn_node_dir)
-                 SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
-                                                 pc->value, pool));
-               else if (change->node_kind == svn_node_file)
-                 SVN_ERR(editor->change_file_prop(file_baton, pc->name,
-                                                  pc->value, pool));
+              apr_array_header_t *prop_diffs;
+              apr_hash_t *old_props;
+              apr_hash_t *new_props;
+              int i;
+
+              if (source_root)
+                SVN_ERR(svn_fs_node_proplist(&old_props, source_root,
+                                             source_fspath, pool));
+              else
+                old_props = apr_hash_make(pool);
+
+              SVN_ERR(svn_fs_node_proplist(&new_props, root, edit_path, pool));
+
+              SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, old_props,
+                                     pool));
+
+              for (i = 0; i < prop_diffs->nelts; ++i)
+                {
+                  svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+                   if (change->node_kind == svn_node_dir)
+                     SVN_ERR(editor->change_dir_prop(*dir_baton, pc->name,
+                                                     pc->value, pool));
+                   else if (change->node_kind == svn_node_file)
+                     SVN_ERR(editor->change_file_prop(file_baton, pc->name,
+                                                      pc->value, pool));
+                }
+            }
+          else
+            {
+              /* Just do a dummy prop change to signal that there are *any*
+                 propmods. */
+              if (change->node_kind == svn_node_dir)
+                SVN_ERR(editor->change_dir_prop(*dir_baton, "", NULL,
+                                                pool));
+              else if (change->node_kind == svn_node_file)
+                SVN_ERR(editor->change_file_prop(file_baton, "", NULL,
+                                                 pool));
             }
         }
 
@@ -1443,8 +1458,8 @@ replay_node(svn_fs_root_t *root,
             }
 
           SVN_ERR(svn_editor_alter_file(editor, repos_relpath,
-                                        SVN_INVALID_REVNUM, props, checksum,
-                                        contents));
+                                        SVN_INVALID_REVNUM,
+                                        checksum, contents, props));
         }
 
       if (change->node_kind == svn_node_dir

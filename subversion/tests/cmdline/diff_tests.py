@@ -32,7 +32,7 @@ logger = logging.getLogger()
 
 # Our testing module
 import svntest
-from svntest import err
+from svntest import err, wc
 
 from prop_tests import binary_mime_type_on_text_file_warning
 
@@ -1899,7 +1899,7 @@ def diff_keywords(sbox):
 
 
 def diff_force(sbox):
-  "show diffs for binary files with --force"
+  "show diffs for binary files"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1943,34 +1943,20 @@ def diff_force(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Check that we get diff when the first, the second and both files are
-  # marked as binary.
+  # Check that we get diff when the first, the second and both files
+  # are marked as binary.  First we'll use --force.  Then we'll use
+  # the configuration option 'diff-ignore-content-type'.
 
   re_nodisplay = re.compile('^Cannot display:')
 
-  exit_code, stdout, stderr = svntest.main.run_svn(None,
-                                                   'diff', '-r1:2', iota_path,
-                                                   '--force')
-
-  for line in stdout:
-    if (re_nodisplay.match(line)):
-      raise svntest.Failure
-
-  exit_code, stdout, stderr = svntest.main.run_svn(None,
-                                                   'diff', '-r2:1', iota_path,
-                                                   '--force')
-
-  for line in stdout:
-    if (re_nodisplay.match(line)):
-      raise svntest.Failure
-
-  exit_code, stdout, stderr = svntest.main.run_svn(None,
-                                                   'diff', '-r2:3', iota_path,
-                                                   '--force')
-
-  for line in stdout:
-    if (re_nodisplay.match(line)):
-      raise svntest.Failure
+  for opt in ['--force',
+              '--config-option=config:miscellany:diff-ignore-content-type=yes']:
+    for range in ['-r1:2', '-r2:1', '-r2:3']:
+      exit_code, stdout, stderr = svntest.main.run_svn(None, 'diff', range,
+                                                       iota_path, opt)
+      for line in stdout:
+        if (re_nodisplay.match(line)):
+          raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #2333: Renaming a directory should produce
@@ -4520,6 +4506,134 @@ def diff_dir_replaced_by_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--summarize', wc_dir)
 
+
+@Issue(4366)
+def diff_repos_empty_file_addition(sbox):
+  "repos diff of rev which adds empty file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add and commit an empty file.
+  svntest.main.file_append(sbox.ospath('newfile'), "")
+  svntest.main.run_svn(None, 'add', sbox.ospath('newfile'))
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'newfile': Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
+                                        expected_status, None, sbox.wc_dir)
+
+  # Now diff the revision that added the empty file.
+  expected_output = [
+    'Index: newfile\n',
+    '===================================================================\n',
+    ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-c', '2', sbox.repo_url)
+
+def diff_missing_tree_conflict_victim(sbox):
+  "diff with missing tree-conflict victim in wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Produce an 'incoming edit vs. local missing' tree conflict:
+  # r2: edit iota and commit the change
+  svntest.main.file_append(sbox.ospath('iota'), "This is a change to iota.\n")
+  sbox.simple_propset('k', 'v', 'A/C')
+  sbox.simple_commit()
+  # now remove iota
+  sbox.simple_rm('iota', 'A/C')
+  sbox.simple_commit()
+  # update to avoid mixed-rev wc warning
+  sbox.simple_update()
+  # merge r2 into wc and verify that a tree conflict is flagged on iota
+  expected_output = wc.State(wc_dir, {
+      'iota' : Item(status='  ', treeconflict='C'),
+      'A/C' : Item(status='  ', treeconflict='C')
+  })
+  expected_mergeinfo_output = wc.State(wc_dir, {})
+  expected_elision_output = wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota','A/C')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('iota', 'A/C',
+                        status='! ', treeconflict='C', wc_rev=None)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
+                                       sbox.repo_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, None,
+                                       False, '--ignore-ancestry', wc_dir)
+
+  # 'svn diff' should show no change for the working copy
+  # This currently fails because svn errors out with a 'node not found' error
+  expected_output = [ ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
+
+@Issue(4396)
+def diff_local_missing_obstruction(sbox):
+  "diff local missing and obstructed files"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  os.unlink(sbox.ospath('iota'))
+  os.unlink(sbox.ospath('A/mu'))
+  os.mkdir(sbox.ospath('A/mu'))
+
+  # Expect no output for missing and obstructed files
+  expected_output = [
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
+
+  sbox.simple_propset('K', 'V', 'iota', 'A/mu')
+  sbox.simple_append('IotA', 'Content')
+
+  # But do expect a proper property diff
+  expected_output = [
+    'Index: %s\n' % (sbox.path('A/mu'),),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % (sbox.path('A/mu'),),
+    '+++ %s\t(working copy)\n' % (sbox.path('A/mu'),),
+    '\n',
+    'Property changes on: %s\n' % (sbox.path('A/mu'),),
+    '___________________________________________________________________\n',
+    'Added: K\n',
+    '## -0,0 +1 ##\n',
+    '+V\n',
+    '\ No newline at end of property\n',
+    'Index: %s\n' % (sbox.path('iota'),),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % (sbox.path('iota'),),
+    '+++ %s\t(working copy)\n' % (sbox.path('iota'),),
+    '\n',
+    'Property changes on: %s\n' % (sbox.path('iota'),),
+    '___________________________________________________________________\n',
+    'Added: K\n',
+    '## -0,0 +1 ##\n',
+    '+V\n',
+    '\ No newline at end of property\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
+
+  # Create an external. This produces an error in 1.8.0.
+  sbox.simple_propset('svn:externals', 'AA/BB ' + sbox.repo_url + '/A', '.')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'diff', wc_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -4598,6 +4712,9 @@ test_list = [ None,
               local_tree_replace,
               diff_dir_replaced_by_file,
               diff_dir_replaced_by_dir,
+              diff_repos_empty_file_addition,
+              diff_missing_tree_conflict_victim,
+              diff_local_missing_obstruction,
               ]
 
 if __name__ == '__main__':

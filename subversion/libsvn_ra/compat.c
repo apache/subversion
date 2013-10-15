@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -36,7 +37,6 @@
 
 #include "private/svn_fspath.h"
 #include "ra_loader.h"
-#include "svn_private_config.h"
 
 
 
@@ -363,8 +363,9 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
      Notice that we always run on the youngest rev of the 3 inputs. */
   targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(targets, const char *) = path;
-  SVN_ERR(svn_ra_get_log2(session, targets, youngest, oldest, 0,
+  SVN_ERR(svn_ra_get_log3(session, targets, youngest, oldest, 0,
                           TRUE, FALSE, FALSE,
+                          svn_move_behavior_explicit_moves,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           log_receiver, &lrb, pool));
 
@@ -585,8 +586,9 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
      Notice that we always run on the youngest rev of the 3 inputs. */
   targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(targets, const char *) = path;
-  SVN_ERR(svn_ra_get_log2(session, targets, peg_revision, end_rev, 0,
+  SVN_ERR(svn_ra_get_log3(session, targets, peg_revision, end_rev, 0,
                           TRUE, FALSE, FALSE,
+                          svn_move_behavior_explicit_moves,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           gls_log_receiver, &lrb, pool));
 
@@ -684,10 +686,11 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   /* Accumulate revision metadata by walking the revisions
      backwards; this allows us to follow moves/copies
      correctly. */
-  SVN_ERR(svn_ra_get_log2(ra_session,
+  SVN_ERR(svn_ra_get_log3(ra_session,
                           condensed_targets,
                           end, start, 0, /* no limit */
                           TRUE, FALSE, FALSE,
+                          svn_move_behavior_explicit_moves,
                           NULL, fr_log_message_receiver, &lmb,
                           pool));
 
@@ -853,8 +856,9 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
 
   /* Examine the logs of SESSION's URL to find when DELETED_PATH was first
      deleted or replaced. */
-  SVN_ERR(svn_ra_get_log2(session, NULL, peg_revision, end_revision, 0,
+  SVN_ERR(svn_ra_get_log3(session, NULL, peg_revision, end_revision, 0,
                           TRUE, TRUE, FALSE,
+                          svn_move_behavior_explicit_moves,
                           apr_array_make(pool, 0, sizeof(char *)),
                           log_path_del_receiver, &log_path_deleted_baton,
                           pool));

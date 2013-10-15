@@ -20,110 +20,114 @@
  */
 
 #include <algorithm>
+#include <cstdio>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 
 #include "svncxxhl.hpp"
+#include "../src/private.hpp"
 
 #include <apr.h>
 #include "svn_error.h"
+#undef TRUE
+#undef FALSE
+
+#include <gmock/gmock.h>
 
 namespace {
-void trace(const svn::error::message& msg)
+svn_error_t* make_error_test_error()
 {
-  std::cout << "    ";
-  if (msg.first)
-    std::cout << "test_exception: E"
-              << std::setw(6) << std::setfill('0') << std::right
-              << msg.first << ':' << ' ';
-  std::cout << msg.second << std::endl;
-}
-
-void traceall(const char *message, const svn::error& err)
-{
-  typedef svn::error::message_list message_list;
-  std::cout << message << std::endl;
-  std::cout << "Traced Messages:" << std::endl;
-  message_list ml = err.traced_messages();
-  std::for_each(ml.begin(), ml.end(), trace);
-  std::cout << "Just Messages:" << std::endl;
-  ml = err.messages();
-  std::for_each(ml.begin(), ml.end(), trace);
+  svn_error_t* err;
+  err = svn_error_create(SVN_ERR_TEST_FAILED, NULL, "original message");
+  err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
+  err = svn_error_trace(err);
+  err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
+  err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
+  err = svn_error_trace(err);
+  return err;
 }
 } // anonymous namespace
 
-
-bool test_cancel()
+TEST(Exceptions, CatchError)
 {
   try
     {
-      svn_error_t* err;
-      err = svn_error_create(SVN_ERR_TEST_FAILED, NULL, "original message");
-      err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_trace(err);
-      svn::error::throw_svn_error(err);
+      SVN::detail::checked_call(make_error_test_error());
     }
-  catch (const svn::cancelled& err)
+  catch (const SVN::Error& err)
     {
-      traceall("Caught: CANCEL", err);
-      return true;
+      SVN::Error::MessageList ml = err.messages();
+      EXPECT_EQ(3, ml.size());
+      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, ml[0].code());
+      EXPECT_EQ(SVN_ERR_BASE, ml[1].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, ml[2].code());
+
+      SVN::Error::MessageList tml = err.traced_messages();
+#ifdef SVN_DEBUG
+      EXPECT_EQ(8, tml.size());
+      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[0].code());
+      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[1].code());
+      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[2].code());
+      EXPECT_EQ(SVN_ERR_BASE, tml[3].code());
+      EXPECT_EQ(SVN_ERR_BASE, tml[4].code());
+      EXPECT_EQ(SVN_ERR_BASE, tml[5].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[6].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[7].code());
+#else  // !SVN_DEBUG
+      EXPECT_EQ(3, tml.size());
+      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[0].code());
+      EXPECT_EQ(SVN_ERR_BASE, tml[1].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[2].code());
+#endif // SVN_DEBUG
     }
-  catch (const svn::error& err)
-    {
-      traceall("Caught: ERROR", err);
-      return false;
-    }
-  catch (...)
-    {
-      return false;
-    }
-  return false;
 }
 
-int test_error()
+
+namespace {
+svn_error_t* make_cancel_test_error()
+{
+  svn_error_t* err;
+  err = svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+  err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
+  err = svn_error_trace(err);
+  err = svn_error_create(SVN_ERR_TEST_FAILED, err, "original message");
+  err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
+  err = svn_error_trace(err);
+  return err;
+}
+} // anonymous namespace
+
+TEST(Exceptions, CatchCancelled)
 {
   try
     {
-      svn_error_t* err;
-      err = svn_error_create(SVN_ERR_TEST_FAILED, NULL, "original message");
-      err = svn_error_create(SVN_ERR_BASE, err, "wrapper message");
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_create(SVN_ERR_CANCELLED, err, NULL);
-      err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
-      err = svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, err, NULL);
-      err = svn_error_trace(err);
-      svn::error::throw_svn_error(err);
+      SVN::detail::checked_call(make_cancel_test_error());
     }
-  catch (const svn::cancelled& err)
+  catch (const SVN::Cancelled& err)
     {
-      traceall("Caught: CANCEL", err);
-      return false;
+      SVN::Error::MessageList ml = err.messages();
+      EXPECT_EQ(3, ml.size());
+      EXPECT_EQ(SVN_ERR_BASE, ml[0].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, ml[1].code());
+      EXPECT_EQ(SVN_ERR_CANCELLED, ml[2].code());
+
+      SVN::Error::MessageList tml = err.traced_messages();
+#ifdef SVN_DEBUG
+      EXPECT_EQ(8, tml.size());
+      EXPECT_EQ(SVN_ERR_BASE, tml[0].code());
+      EXPECT_EQ(SVN_ERR_BASE, tml[1].code());
+      EXPECT_EQ(SVN_ERR_BASE, tml[2].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[3].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[4].code());
+      EXPECT_EQ(SVN_ERR_CANCELLED, tml[5].code());
+      EXPECT_EQ(SVN_ERR_CANCELLED, tml[6].code());
+      EXPECT_EQ(SVN_ERR_CANCELLED, tml[7].code());
+#else  // !SVN_DEBUG
+      EXPECT_EQ(3, tml.size());
+      EXPECT_EQ(SVN_ERR_BASE, tml[0].code());
+      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[1].code());
+      EXPECT_EQ(SVN_ERR_CANCELLED, tml[2].code());
+#endif // SVN_DEBUG
     }
-  catch (const svn::error& err)
-    {
-      traceall("Caught: ERROR", err);
-      return true;
-    }
-  catch (...)
-    {
-      return false;
-    }
-  return false;
-}
-
-int main()
-{
-  apr_initialize();
-
-  const char *stat  = (test_cancel() ? "OK" : "ERROR");
-  std::cerr << "test_cancel .... " << stat << std::endl;
-
-  stat = (test_error() ? "OK" : "ERROR");
-  std::cerr << "test_error ..... " << stat << std::endl;
-
-  apr_terminate();
-  return 0;
 }

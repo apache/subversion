@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_compat.h"
 #include "svn_pools.h"
@@ -39,7 +40,6 @@
 #include "svn_ctype.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
-#include "svn_private_config.h"
 
 #include "repos.h"
 
@@ -259,79 +259,6 @@ make_dir_baton(struct edit_baton *edit_baton,
   return db;
 }
 
-/* Return a copy of PATH, allocated from POOL, for which control
-   characters have been escaped using the form \NNN (where NNN is the
-   octal representation of the byte's ordinal value).  */
-static const char *
-illegal_path_escape(const char *path, apr_pool_t *pool)
-{
-  svn_stringbuf_t *retstr;
-  apr_size_t i, copied = 0;
-  int c;
-
-  /* At least one control character:
-      strlen - 1 (control) + \ + N + N + N + null . */
-  retstr = svn_stringbuf_create_ensure(strlen(path) + 4, pool);
-  for (i = 0; path[i]; i++)
-    {
-      c = (unsigned char)path[i];
-      if (! svn_ctype_iscntrl(c))
-        continue;
-
-      /* If we got here, we're looking at a character that isn't
-         supported by the (or at least, our) URI encoding scheme.  We
-         need to escape this character.  */
-
-      /* First things first, copy all the good stuff that we haven't
-         yet copied into our output buffer. */
-      if (i - copied)
-        svn_stringbuf_appendbytes(retstr, path + copied,
-                                  i - copied);
-
-      /* Make sure buffer is big enough for '\' 'N' 'N' 'N' (and NUL) */
-      svn_stringbuf_ensure(retstr, retstr->len + 4);
-      /*### The backslash separator doesn't work too great with Windows,
-         but it's what we'll use for consistency with invalid utf8
-         formatting (until someone has a better idea) */
-      apr_snprintf(retstr->data + retstr->len, 5, "\\%03o", (unsigned char)c);
-      retstr->len += 4;
-
-      /* Finally, update our copy counter. */
-      copied = i + 1;
-    }
-
-  /* If we didn't encode anything, we don't need to duplicate the string. */
-  if (retstr->len == 0)
-    return path;
-
-  /* Anything left to copy? */
-  if (i - copied)
-    svn_stringbuf_appendbytes(retstr, path + copied, i - copied);
-
-  /* retstr is null-terminated either by apr_snprintf or the svn_stringbuf
-     functions. */
-
-  return retstr->data;
-}
-
-/* Reject paths which contain control characters (related to issue #4340). */
-static svn_error_t *
-check_valid_path(const char *path,
-                 apr_pool_t *pool)
-{
-  const char *c;
-
-  for (c = path; *c; c++)
-    {
-      if (svn_ctype_iscntrl(*c))
-        return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
-           _("Invalid control character '0x%02x' in path '%s'"),
-           (unsigned char)*c, illegal_path_escape(path, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
    parameter here is IS_DIR, which is TRUE when adding a directory,
@@ -351,7 +278,8 @@ add_file_or_directory(const char *path,
   svn_boolean_t was_copied = FALSE;
   const char *full_path;
 
-  SVN_ERR(check_valid_path(path, pool));
+  /* Reject paths which contain control characters (related to issue #4340). */
+  SVN_ERR(svn_path_check_valid(path, pool));
 
   full_path = svn_fspath__join(eb->base_path,
                                svn_relpath_canonicalize(path, pool), pool);
@@ -1192,15 +1120,15 @@ static svn_error_t *
 alter_file_cb(void *baton,
               const char *relpath,
               svn_revnum_t revision,
-              apr_hash_t *props,
               const svn_checksum_t *checksum,
               svn_stream_t *contents,
+              apr_hash_t *props,
               apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision, props,
-                                checksum, contents));
+  SVN_ERR(svn_editor_alter_file(eb->inner, relpath, revision,
+                                checksum, contents, props));
   return SVN_NO_ERROR;
 }
 
@@ -1210,14 +1138,14 @@ static svn_error_t *
 alter_symlink_cb(void *baton,
                  const char *relpath,
                  svn_revnum_t revision,
-                 apr_hash_t *props,
                  const char *target,
+                 apr_hash_t *props,
                  apr_pool_t *scratch_pool)
 {
   struct ev2_baton *eb = baton;
 
-  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision, props,
-                                   target));
+  SVN_ERR(svn_editor_alter_symlink(eb->inner, relpath, revision,
+                                   target, props));
   return SVN_NO_ERROR;
 }
 
@@ -1266,20 +1194,6 @@ move_cb(void *baton,
 
   SVN_ERR(svn_editor_move(eb->inner, src_relpath, src_revision, dst_relpath,
                           replaces_rev));
-  return SVN_NO_ERROR;
-}
-
-
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  struct ev2_baton *eb = baton;
-
-  SVN_ERR(svn_editor_rotate(eb->inner, relpaths, revisions));
   return SVN_NO_ERROR;
 }
 
@@ -1405,7 +1319,6 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
     delete_cb,
     copy_cb,
     move_cb,
-    rotate_cb,
     complete_cb,
     abort_cb
   };

@@ -660,8 +660,13 @@ def checkout_peg_rev_date(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # note the current time to use it as peg revision date.
-  current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
+  exit_code, output, errput = svntest.main.run_svn(None, 'propget', 'svn:date',
+                                                   '--revprop', '-r1',
+                                                   '--strict',
+                                                   sbox.repo_url)
+  if exit_code or errput != [] or len(output) != 1:
+    raise svntest.Failure("svn:date propget failed")
+  r1_time = output[0]
 
   # sleep till the next second.
   time.sleep(1.1)
@@ -686,7 +691,7 @@ def checkout_peg_rev_date(sbox):
 
   # use an old date to checkout, that way we're sure we get the first revision
   svntest.actions.run_and_verify_checkout(sbox.repo_url +
-                                          '@{' + current_time + '}',
+                                          '@{' + r1_time + '}',
                                           checkout_target,
                                           expected_output,
                                           expected_wc)
@@ -1052,7 +1057,7 @@ def checkout_wc_from_drive(sbox):
   svntest.main.safe_rmtree(sbox.wc_dir)
   os.mkdir(sbox.wc_dir)
 
-  # create a virtual drive to the working copy folder
+  # create a virtual drive to the repository folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
     raise svntest.Skip
@@ -1088,8 +1093,49 @@ def checkout_wc_from_drive(sbox):
     })
     svntest.actions.run_and_verify_checkout(repo_url, wc_dir,
                                             expected_output, expected_wc,
-                                            None, None, None, None,
-                                            '--force')
+                                            None, None, None, None)
+
+    wc2_dir = sbox.add_wc_path('2')
+    expected_output = wc.State(wc2_dir, {
+      'D'                 : Item(status='A '),
+      'D/H'               : Item(status='A '),
+      'D/H/psi'           : Item(status='A '),
+      'D/H/chi'           : Item(status='A '),
+      'D/H/omega'         : Item(status='A '),
+      'D/G'               : Item(status='A '),
+      'D/G/tau'           : Item(status='A '),
+      'D/G/pi'            : Item(status='A '),
+      'D/G/rho'           : Item(status='A '),
+      'D/gamma'           : Item(status='A '),
+      'C'                 : Item(status='A '),
+      'mu'                : Item(status='A '),
+      'B'                 : Item(status='A '),
+      'B/E'               : Item(status='A '),
+      'B/E/alpha'         : Item(status='A '),
+      'B/E/beta'          : Item(status='A '),
+      'B/F'               : Item(status='A '),
+      'B/lambda'          : Item(status='A '),
+    })
+    svntest.actions.run_and_verify_checkout(repo_url + '/A', wc2_dir,
+                                            expected_output, None,
+                                            None, None, None, None)
+
+    wc3_dir = sbox.add_wc_path('3')
+    expected_output = wc.State(wc3_dir, {
+      'H'                 : Item(status='A '),
+      'H/psi'             : Item(status='A '),
+      'H/chi'             : Item(status='A '),
+      'H/omega'           : Item(status='A '),
+      'G'                 : Item(status='A '),
+      'G/tau'             : Item(status='A '),
+      'G/pi'              : Item(status='A '),
+      'G/rho'             : Item(status='A '),
+      'gamma'             : Item(status='A '),
+    })
+
+    svntest.actions.run_and_verify_checkout(repo_url + '/A/D', wc3_dir,
+                                            expected_output, None,
+                                            None, None, None, None)
 
   finally:
     os.chdir(was_cwd)
