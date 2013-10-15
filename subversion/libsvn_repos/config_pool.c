@@ -47,7 +47,7 @@
 typedef struct config_ref_t
 {
   /* reference to the parent container */
-  svn_config_pool__t *config_pool;
+  svn_repos__config_pool_t *config_pool;
 
   /* UUID of the configuration contents.
    * This is a SHA1 checksum of the parsed textual representation of CFG. */
@@ -116,7 +116,7 @@ typedef struct in_repo_config_t
  * and the last reference being returned will actually trigger the
  * destruction.
  */
-struct svn_config_pool__t
+struct svn_repos__config_pool_t
 {
   /* serialization object for all non-atomic data in this struct */
   svn_mutex__t *mutex;
@@ -183,7 +183,7 @@ expand_all_values(config_ref_t *config)
 /* Destructor function for the whole config pool.
  */
 static apr_status_t
-destroy_config_pool(svn_config_pool__t *config_pool)
+destroy_config_pool(svn_repos__config_pool_t *config_pool)
 {
   svn_mutex__lock(config_pool->mutex);
 
@@ -207,7 +207,7 @@ destroy_config_pool(svn_config_pool__t *config_pool)
 static apr_status_t
 config_pool_cleanup(void *baton)
 {
-  svn_config_pool__t *config_pool = baton;
+  svn_repos__config_pool_t *config_pool = baton;
 
   svn_atomic_set(&config_pool->ready_for_cleanup, TRUE);
   if (svn_atomic_read(&config_pool->used_config_count) == 0)
@@ -228,7 +228,7 @@ static apr_status_t
 config_ref_cleanup(void *baton)
 {
   config_ref_t *config = baton;
-  svn_config_pool__t *config_pool = config->config_pool;
+  svn_repos__config_pool_t *config_pool = config->config_pool;
 
   /* Maintain reference counters and handle object cleanup */
   if (   svn_atomic_dec(&config->ref_count) == 1
@@ -267,7 +267,7 @@ return_config_ref(config_ref_t *config,
  */
 static svn_error_t *
 config_by_checksum(svn_config_t **cfg,
-                   svn_config_pool__t *config_pool,
+                   svn_repos__config_pool_t *config_pool,
                    svn_checksum_t *checksum,
                    apr_pool_t *result_pool)
 {
@@ -285,7 +285,7 @@ config_by_checksum(svn_config_t **cfg,
  * Requires external serialization on CONFIG_POOL.
  */
 static void
-remove_unused_configs(svn_config_pool__t *config_pool)
+remove_unused_configs(svn_repos__config_pool_t *config_pool)
 {
   apr_pool_t *new_pool = svn_pool_create(config_pool->root_pool);
   apr_hash_t *new_hash = svn_hash__make(new_pool);
@@ -316,7 +316,7 @@ remove_unused_configs(svn_config_pool__t *config_pool)
  */
 static svn_error_t *
 config_add(svn_config_t **cfg,
-           svn_config_pool__t *config_pool,
+           svn_repos__config_pool_t *config_pool,
            config_ref_t *config_ref,
            apr_pool_t *result_pool)
 {
@@ -362,7 +362,7 @@ config_add(svn_config_t **cfg,
  */
 static svn_error_t *
 auto_parse(svn_config_t **cfg,
-           svn_config_pool__t *config_pool,
+           svn_repos__config_pool_t *config_pool,
            svn_stringbuf_t *contents,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -420,7 +420,7 @@ auto_parse(svn_config_t **cfg,
  * Requires external serialization on CONFIG_POOL.
  */
 static svn_error_t *
-add_checksum(svn_config_pool__t *config_pool,
+add_checksum(svn_repos__config_pool_t *config_pool,
              const char *url,
              const char *repos_root,
              svn_revnum_t revision,
@@ -474,7 +474,7 @@ add_checksum(svn_config_pool__t *config_pool,
  */
 static svn_error_t *
 find_repos_config(svn_config_t **cfg,
-                  svn_config_pool__t *config_pool,
+                  svn_repos__config_pool_t *config_pool,
                   const char *url,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
@@ -558,7 +558,7 @@ find_repos_config(svn_config_t **cfg,
  */
 static svn_error_t *
 config_by_url(svn_config_t **cfg,
-              svn_config_pool__t *config_pool,
+              svn_repos__config_pool_t *config_pool,
               const char *url,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
@@ -599,8 +599,8 @@ config_by_url(svn_config_t **cfg,
 /* API implementation */
 
 svn_error_t *
-svn_config_pool__create(svn_config_pool__t **config_pool,
-                        apr_pool_t *pool)
+svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
+                              apr_pool_t *pool)
 {
   /* our allocator must be thread-safe */
   apr_pool_t *root_pool
@@ -608,7 +608,7 @@ svn_config_pool__create(svn_config_pool__t **config_pool,
 
   /* construct the config pool in our private ROOT_POOL to survive POOL
    * cleanup and to prevent threading issues with the allocator */
-  svn_config_pool__t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_repos__config_pool_t *result = apr_pcalloc(pool, sizeof(*result));
   SVN_ERR(svn_mutex__init(&result->mutex, TRUE, root_pool));
 
   result->root_pool = root_pool;
@@ -627,10 +627,10 @@ svn_config_pool__create(svn_config_pool__t **config_pool,
 }
 
 svn_error_t *
-svn_config_pool__get(svn_config_t **cfg,
-                     svn_config_pool__t *config_pool,
-                     const char *path,
-                     apr_pool_t *pool)
+svn_repos__config_pool_get(svn_config_t **cfg,
+                           svn_repos__config_pool_t *config_pool,
+                           const char *path,
+                           apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
