@@ -463,6 +463,17 @@ svn_root_pools__release_pool(apr_pool_t *pool,
 
 /** @} */
 
+/**
+ * @defgroup svn_config_private Private configuration handling API
+ * @{
+ */
+
+/* Future attempts to modify CFG will trigger an assertion. */
+void svn_config__set_read_only(svn_config_t *cfg,
+                               apr_pool_t *scratch_pool);
+
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
