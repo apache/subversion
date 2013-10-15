@@ -854,23 +854,9 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
   return SVN_NO_ERROR;
 }
 
-/* Given a PATH which might be a relative repo URL (^/), an absolute
- * local repo URL (file://), an absolute path outside of the repo
- * or a location in the Windows registry.
- *
- * Retrieve the configuration data that PATH points at and parse it into
- * CFG_P allocated in POOL.
- *
- * If PATH cannot be parsed as a config file then an error is returned.  The
- * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
- * authz file is also an error.
- *
- * REPOS_ROOT points at the root of the repos you are
- * going to apply the authz against, can be NULL if you are sure that you
- * don't have a repos relative URL in PATH. */
-static svn_error_t *
-authz_retrieve_config(svn_config_t **cfg_p, const char *path,
-                      svn_boolean_t must_exist, apr_pool_t *pool)
+svn_error_t *
+svn_repos__retrieve_config(svn_config_t **cfg_p, const char *path,
+                           svn_boolean_t must_exist, apr_pool_t *pool)
 {
   if (svn_path_is_url(path))
     {
@@ -943,7 +929,7 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
 
   /* Load the authz file */
   if (accept_urls)
-    SVN_ERR(authz_retrieve_config(&authz->cfg, path, must_exist, pool));
+    SVN_ERR(svn_repos__retrieve_config(&authz->cfg, path, must_exist, pool));
   else
     SVN_ERR(svn_config_read3(&authz->cfg, path, must_exist, TRUE, TRUE, pool));
 
@@ -954,8 +940,8 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
 
       /* Load the groups file */
       if (accept_urls)
-        SVN_ERR(authz_retrieve_config(&groups_cfg, groups_path, must_exist,
-                                      pool));
+        SVN_ERR(svn_repos__retrieve_config(&groups_cfg, groups_path,
+                                           must_exist, pool));
       else
         SVN_ERR(svn_config_read3(&groups_cfg, groups_path, must_exist,
                                  TRUE, TRUE, pool));

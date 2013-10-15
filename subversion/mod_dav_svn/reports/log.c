@@ -301,6 +301,9 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t discover_changed_paths = FALSE;      /* off by default */
   svn_boolean_t strict_node_history = FALSE;         /* off by default */
   svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
+  svn_move_behavior_t move_behavior = svn_move_behavior_no_moves;
+                                             /* no moves by default */
+  
   apr_array_header_t *revprops = apr_array_make(resource->pool, 3,
                                                 sizeof(const char *));
   apr_array_header_t *paths
@@ -395,6 +398,24 @@ dav_svn__log_report(const dav_resource *resource,
                                     resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
+      else if (strcmp(child->name, "move-behavior") == 0)
+        {
+          int move_behavior_param;
+          serr = svn_cstring_atoi(&move_behavior_param,
+                                  dav_xml_get_cdata(child, resource->pool, 1));
+          if (serr)
+            return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                        "Malformed CDATA in element "
+                                        "\"move-behavior\"", resource->pool);
+
+          if (   move_behavior_param < 0
+              || move_behavior_param > svn_move_behavior_auto_moves)
+            return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                        "Invalid CDATA in element "
+                                        "\"move-behavior\"", resource->pool);
+
+          move_behavior = (svn_move_behavior_t) move_behavior_param;
+        }
       /* else unknown element; skip it */
     }
 
@@ -424,7 +445,7 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs4(repos->repos,
+  serr = svn_repos_get_logs5(repos->repos,
                              paths,
                              start,
                              end,
@@ -432,6 +453,7 @@ dav_svn__log_report(const dav_resource *resource,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
+                             move_behavior,
                              revprops,
                              dav_svn__authz_read_func(&arb),
                              &arb,

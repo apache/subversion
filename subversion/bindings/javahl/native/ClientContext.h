@@ -64,6 +64,7 @@ class ClientContext : public OperationContext
  public:
   ClientContext(jobject jsvnclient, SVN::Pool &pool);
   virtual ~ClientContext();
+  virtual void setTunnelCallback(jobject jtunnelcb);
 
   svn_client_ctx_t *getContext(CommitMessage *message, SVN::Pool &in_pool);
 };

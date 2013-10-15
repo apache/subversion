@@ -787,9 +787,9 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Accept-Encoding", accept_encoding);
     }
 
-  /* These headers need to be sent with every request; see issue #3255
-     ("mod_dav_svn does not pass client capabilities to start-commit
-     hooks") for why. */
+  /* These headers need to be sent with every request except GET; see
+     issue #3255 ("mod_dav_svn does not pass client capabilities to
+     start-commit hooks") for why. */
   if (dav_headers)
     {
       serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
@@ -2259,7 +2259,7 @@ setup_request(serf_request_t *request,
                                        request_pool));
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 /* Implements the serf_request_setup_t interface (which sets up both a

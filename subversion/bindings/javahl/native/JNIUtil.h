@@ -122,7 +122,9 @@ class JNIUtil
    */
   static void handleSVNError(svn_error_t *err);
 
-  static jstring makeSVNErrorMessage(svn_error_t *err);
+  static std::string makeSVNErrorMessage(svn_error_t *err,
+                                         jstring *jerror_message,
+                                         jobject *jmessage_stack);
 
   /**
    * Create and throw a java.lang.Throwable instance.
@@ -150,26 +152,13 @@ class JNIUtil
   enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
-  struct message_stack_item
-  {
-    apr_status_t m_code;
-    std::string m_message;
-    bool m_generic;
-
-    message_stack_item(apr_status_t code, const char* message,
-                       bool generic = false)
-      : m_code(code),
-        m_message(message),
-        m_generic(generic)
-      {}
-  };
-  typedef std::vector<message_stack_item> error_message_stack_t;
+  /**
+   * Mutex that secures the global configuration object.
+   */
+  static JNIMutex *g_configMutex;
 
  private:
-  static void assembleErrorMessage(svn_error_t *err, int depth,
-                                   apr_status_t parent_apr_err,
-                                   std::string &buffer,
-                                   error_message_stack_t* message_stack = NULL);
+  static void wrappedHandleSVNError(svn_error_t *err);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
   /**

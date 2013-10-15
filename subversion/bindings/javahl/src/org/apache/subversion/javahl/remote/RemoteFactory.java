@@ -57,17 +57,17 @@ public class RemoteFactory
      * Initializing constructor. Any or all of its arguments may be null.
      */
     public RemoteFactory(String configDirectory,
-                         ConfigEvent configHandler,
                          String username, String password,
                          UserPasswordCallback prompt,
-                         ProgressCallback progress)
+                         ProgressCallback progress,
+                         TunnelAgent tunnelAgent)
     {
         setConfigDirectory(configDirectory);
-        setConfigEventHandler(configHandler);
         setUsername(username);
         setPassword(password);
         setPrompt(prompt);
         setProgressCallback(progress);
+        setTunnelAgent(tunnelAgent);
     }
 
     /**
@@ -127,14 +127,12 @@ public class RemoteFactory
     }
 
     /**
-     * Set an event handler that will be called every time the
-     * configuration is loaded.
+     * Set callbacks for ra_svn tunnel handling.
      */
-    public void setConfigEventHandler(ConfigEvent configHandler)
+    public void setTunnelAgent(TunnelAgent tunnelAgent)
     {
-        this.configHandler = configHandler;
+        this.tunnelAgent = tunnelAgent;
     }
-
 
     /**
      * Open a persistent session to a repository.
@@ -152,9 +150,8 @@ public class RemoteFactory
     public ISVNRemote openRemoteSession(String url)
             throws ClientException, SubversionException
     {
-        return open(1, url, null,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(1, url, null, configDirectory,
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     /**
@@ -180,9 +177,8 @@ public class RemoteFactory
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return open(retryAttempts, url, null,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(retryAttempts, url, null, configDirectory,
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     /**
@@ -208,9 +204,8 @@ public class RemoteFactory
     {
         if (reposUUID == null)
             throw new IllegalArgumentException("reposUUID may not be null");
-        return open(1, url, reposUUID,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(1, url, reposUUID, configDirectory,
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     /**
@@ -243,25 +238,24 @@ public class RemoteFactory
         if (retryAttempts <= 0)
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
-        return open(retryAttempts, url, reposUUID,
-                    configDirectory, configHandler,
-                    username, password, prompt, progress);
+        return open(retryAttempts, url, reposUUID, configDirectory,
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     private String configDirectory;
-    private ConfigEvent configHandler;
     private String username;
     private String password;
     private UserPasswordCallback prompt;
     private ProgressCallback progress;
+    private TunnelAgent tunnelAgent;
 
     /* Native factory implementation. */
     private static native ISVNRemote open(int retryAttempts,
                                           String url, String reposUUID,
                                           String configDirectory,
-                                          ConfigEvent configHandler,
                                           String username, String password,
                                           UserPasswordCallback prompt,
-                                          ProgressCallback progress)
+                                          ProgressCallback progress,
+                                          TunnelAgent tunnelAgent)
             throws ClientException, SubversionException;
 }

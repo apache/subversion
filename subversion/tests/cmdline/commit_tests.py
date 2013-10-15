@@ -1250,7 +1250,7 @@ def commit_add_file_twice(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        "already exists",
+                                        "E160020: File.*already exists",
                                         wc_dir)
 
 #----------------------------------------------------------------------

@@ -413,6 +413,57 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
 
 
 svn_error_t *
+svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
+                              svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              apr_pool_t *pool)
+{
+  node_revision_t *noderev;
+
+  /* If we want a full acccess log, we need to provide full data and
+     cannot take shortcuts here. */
+#if !defined(SVN_FS_X__LOG_ACCESS)
+
+  /* First, try a noderevs container cache lookup. */
+  if (! svn_fs_x__id_is_txn(id))
+    {
+      /* noderevs in rev / pack files can be cached */
+      const svn_fs_x__id_part_t *rev_item = svn_fs_x__id_rev_item(id);
+      fs_x_data_t *ffd = fs->fsap_data;
+
+      if (   svn_fs_x__is_packed_rev(fs, rev_item->revision)
+          && ffd->noderevs_container_cache)
+        {
+          pair_cache_key_t key;
+          apr_off_t offset;
+          apr_uint32_t sub_item;
+          svn_boolean_t is_cached;
+
+          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs,
+                                        rev_item->revision, NULL,
+                                        rev_item->number, pool));
+          key.revision = svn_fs_x__packed_base_rev(fs, rev_item->revision);
+          key.second = offset;
+
+          SVN_ERR(svn_cache__get_partial((void **)count, &is_cached,
+                                         ffd->noderevs_container_cache, &key,
+                                         svn_fs_x__mergeinfo_count_get_func,
+                                         &sub_item, pool));
+          if (is_cached)
+            return SVN_NO_ERROR;
+        }
+    }
+#endif
+
+  /* fallback to the naive implementation handling all edge cases */
+  SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, id, pool));
+  *count = noderev->mergeinfo_count;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs_x__rev_get_root(svn_fs_id_t **root_id_p,
                        svn_fs_t *fs,
                        svn_revnum_t rev,

@@ -361,4 +361,8 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
                        apr_off_t offset,
                        apr_pool_t *pool);
 
+/* Return TRUE if FS's format supports moves to be recorded natively. */
+svn_boolean_t
+svn_fs_fs__supports_move(svn_fs_t *fs);
+
 #endif

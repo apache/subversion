@@ -1120,7 +1120,7 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
         return;
 
     SVN_JNI_ERR(svn_client_cat2(outputStream.getStream(subPool),
-                                path, pegRevision.revision(),
+                                intPath.c_str(), pegRevision.revision(),
                                 revision.revision(), ctx, subPool.getPool()),
                 );
 }
@@ -1419,16 +1419,11 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
     return CreateJ::PropertyMap(props, subPool.getPool());
 }
 
-struct info_baton
-{
-    std::vector<info_entry> infoVect;
-    apr_pool_t *pool;
-};
-
 void
-SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
-                 svn_depth_t depth, StringArray &changelists,
-                 InfoCallback *callback)
+SVNClient::info2(const char *path,
+                 Revision &revision, Revision &pegRevision, svn_depth_t depth,
+                 svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
+                 StringArray &changelists, InfoCallback *callback)
 {
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
@@ -1443,7 +1438,7 @@ SVNClient::info2(const char *path, Revision &revision, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_info3(checkedPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
-                                 depth, FALSE, TRUE,
+                                 depth, fetchExcluded, fetchActualOnly,
                                  changelists.array(subPool),
                                  InfoCallback::callback, callback,
                                  ctx, subPool.getPool()), );
@@ -1516,10 +1511,6 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
                     ctx, subPool.getPool()),
                 NULL);
 
-    jobject jctx = context.getSelf();
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
     /* Decouple the RemoteSession's context from SVNClient's context
        by creating a copy of the prompter here. */
     Prompter* prompter = new Prompter(context.getPrompter());
@@ -1529,9 +1520,8 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
     jobject jremoteSession = RemoteSession::open(
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
-        context.getConfigCallback(),
         context.getUsername(), context.getPassword(),
-        prompter, jctx);
+        prompter, context.getSelf(), context.getTunnelCallback());
     if (JNIUtil::isJavaExceptionThrown())
       delete prompter;
 

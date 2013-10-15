@@ -194,6 +194,7 @@ typedef struct svn_ra__vtable_t {
                           svn_boolean_t discover_changed_paths,
                           svn_boolean_t strict_node_history,
                           svn_boolean_t include_merged_revisions,
+                          svn_move_behavior_t move_behavior,
                           const apr_array_header_t *revprops,
                           svn_log_entry_receiver_t receiver,
                           void *receiver_baton,

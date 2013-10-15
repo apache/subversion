@@ -681,6 +681,9 @@ svn_cl__log(apr_getopt_t *os,
   const char *target;
   int i;
   apr_array_header_t *revprops;
+  svn_move_behavior_t move_behavior = opt_state->auto_moves
+                                    ? svn_move_behavior_auto_moves
+                                    : svn_move_behavior_explicit_moves;
 
   if (!opt_state->xml)
     {
@@ -831,13 +834,14 @@ svn_cl__log(apr_getopt_t *os,
           if (!opt_state->quiet)
             APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
         }
-      SVN_ERR(svn_client_log5(targets,
+      SVN_ERR(svn_client_log6(targets,
                               &lb.target_peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              move_behavior,
                               revprops,
                               log_entry_receiver_xml,
                               &lb,
@@ -854,13 +858,14 @@ svn_cl__log(apr_getopt_t *os,
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
       if (!opt_state->quiet)
         APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
-      SVN_ERR(svn_client_log5(targets,
+      SVN_ERR(svn_client_log6(targets,
                               &lb.target_peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              move_behavior,
                               revprops,
                               log_entry_receiver,
                               &lb,

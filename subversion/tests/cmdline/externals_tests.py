@@ -3264,6 +3264,89 @@ def switch_parent_relative_file_external(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'update', branch_wc)
 
+@Issue(4420)
+def file_external_unversioned_obstruction(sbox):
+  """file externals unversioned obstruction"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = verify.RegexOutput('r2 committed .*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                           '-U', sbox.repo_url, '-m', 'r2: set external',
+                           'propset', 'svn:externals', '^/A/mu mu-ext', 'A')
+
+  sbox.simple_append('A/mu-ext', 'unversioned obstruction')
+
+  # Update reports a tree-conflict but status doesn't show any such
+  # conflict.  I'm no sure whether this is correct.
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'        : Item(status=' U'),
+      'A/mu-ext' : Item(status='  ', treeconflict='A'),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/mu-ext' : Item('unversioned obstruction'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+      'A/mu-ext' : Item(status='M ', wc_rev='2', switched='X'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status)
+
+@Issue(4001)
+@XFail()
+def file_external_versioned_obstruction(sbox):
+  """file externals versioned obstruction"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = verify.RegexOutput('r2 committed .*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                           '-U', sbox.repo_url, '-m', 'r2: set external',
+                           'propset', 'svn:externals', '^/A/mu mu-ext', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'        : Item(status=' U'),
+      'A/mu-ext' : Item(status='A '),
+      })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/mu-ext' : Item('This is the file \'mu\'.\n'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+      'A/mu-ext' : Item(status='  ', wc_rev='2', switched='X'),
+      })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status)
+
+  # Update skips adding the versioned node because of the file
+  # external obstruction then when the external is deleted the
+  # versioned node is missing from disk and wc.db.  Not really sure
+  # what should happen, perhaps a not-present node?
+  expected_output = verify.RegexOutput('r3 committed .*')
+  svntest.actions.run_and_verify_svnmucc(None, expected_output, [],
+                           '-U', sbox.repo_url, '-m', 'r3: copy file',
+                           'cp', 'head', 'A/mu', 'A/mu-ext',
+                           'propdel', 'svn:externals', 'A')
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'        : Item(status=' U'),
+      'A/mu-ext' : Item(verb='Removed external', prev_verb='Skipped'),
+      })
+  expected_disk.tweak('A/mu-ext', content='This is the file \'mu\'.\n')
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('A/mu-ext', switched=None)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -3317,6 +3400,8 @@ test_list = [ None,
               pinned_externals,
               update_dir_external_shallow,
               switch_parent_relative_file_external,
+              file_external_unversioned_obstruction,
+              file_external_versioned_obstruction,
              ]
 
 if __name__ == '__main__':

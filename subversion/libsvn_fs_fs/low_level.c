@@ -50,6 +50,8 @@
 #define ACTION_DELETE      "delete"
 #define ACTION_REPLACE     "replace"
 #define ACTION_RESET       "reset"
+#define ACTION_MOVE        "move"
+#define ACTION_MOVEREPLACE "movereplace"
 
 /* True and False flags. */
 #define FLAG_TRUE          "true"
@@ -239,6 +241,14 @@ read_change(change_t **change_p,
     {
       info->change_kind = svn_fs_path_change_reset;
     }
+  else if (strcmp(str, ACTION_MOVE) == 0)
+    {
+      info->change_kind = svn_fs_path_change_move;
+    }
+  else if (strcmp(str, ACTION_MOVEREPLACE) == 0)
+    {
+      info->change_kind = svn_fs_path_change_movereplace;
+    }
   else
     {
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -350,9 +360,11 @@ write_change_entry(svn_stream_t *stream,
                    svn_boolean_t include_node_kind,
                    apr_pool_t *pool)
 {
-  const char *idstr, *buf;
+  const char *idstr;
   const char *change_string = NULL;
   const char *kind_string = "";
+  svn_stringbuf_t *buf;
+  apr_size_t len;
 
   switch (change->change_kind)
     {
@@ -370,6 +382,12 @@ write_change_entry(svn_stream_t *stream,
       break;
     case svn_fs_path_change_reset:
       change_string = ACTION_RESET;
+      break;
+    case svn_fs_path_change_move:
+      change_string = ACTION_MOVE;
+      break;
+    case svn_fs_path_change_movereplace:
+      change_string = ACTION_MOVEREPLACE;
       break;
     default:
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -391,22 +409,24 @@ write_change_entry(svn_stream_t *stream,
                                  ? SVN_FS_FS__KIND_DIR
                                   : SVN_FS_FS__KIND_FILE);
     }
-  buf = apr_psprintf(pool, "%s %s%s %s %s %s\n",
-                     idstr, change_string, kind_string,
-                     change->text_mod ? FLAG_TRUE : FLAG_FALSE,
-                     change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
-                     path);
-
-  SVN_ERR(svn_stream_puts(stream, buf));
+  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s %s\n",
+                              idstr, change_string, kind_string,
+                              change->text_mod ? FLAG_TRUE : FLAG_FALSE,
+                              change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
+                              path);
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
     {
-      buf = apr_psprintf(pool, "%ld %s", change->copyfrom_rev,
-                         change->copyfrom_path);
-      SVN_ERR(svn_stream_puts(stream, buf));
+      svn_stringbuf_appendcstr(buf, apr_psprintf(pool, "%ld %s",
+                                                 change->copyfrom_rev,
+                                                 change->copyfrom_path));
     }
 
-  return svn_error_trace(svn_stream_puts(stream, "\n"));
+   svn_stringbuf_appendbyte(buf, '\n');
+
+   /* Write all change info in one write call. */
+   len = buf->len;
+   return svn_error_trace(svn_stream_write(stream, buf->data, &len));
 }
 
 svn_error_t *

@@ -76,6 +76,7 @@ typedef struct log_context_t {
   svn_boolean_t changed_paths;
   svn_boolean_t strict_node_history;
   svn_boolean_t include_merged_revisions;
+  svn_move_behavior_t move_behavior;
   const apr_array_header_t *revprops;
   int nest_level; /* used to track mergeinfo nesting levels */
   int count; /* only incremented when nest_level == 0 */
@@ -451,6 +452,14 @@ create_log_body(serf_bucket_t **body_bkt,
                                    alloc);
     }
 
+  if (log_ctx->move_behavior != svn_move_behavior_no_moves)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:move-behavior",
+                                   apr_ltoa(pool, log_ctx->move_behavior),
+                                   alloc);
+    }
+
   if (log_ctx->revprops)
     {
       int i;
@@ -507,6 +516,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
+                     svn_move_behavior_t move_behavior,
                      const apr_array_header_t *revprops,
                      svn_log_entry_receiver_t receiver,
                      void *receiver_baton,
@@ -532,6 +542,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->changed_paths = discover_changed_paths;
   log_ctx->strict_node_history = strict_node_history;
   log_ctx->include_merged_revisions = include_merged_revisions;
+  log_ctx->move_behavior = move_behavior;
   log_ctx->revprops = revprops;
   log_ctx->nest_level = 0;
 

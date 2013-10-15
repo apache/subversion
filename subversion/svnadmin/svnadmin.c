@@ -1180,6 +1180,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   const char *header =
     _("general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+      "Subversion repository administration tool.\n"
       "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
       "Type 'svnadmin --version' to see the program version and FS modules.\n"
       "\n"
