@@ -134,6 +134,12 @@ public interface ISVNClient
     void setPrompt(UserPasswordCallback prompt);
 
     /**
+     * Set callbacks for ra_svn tunnel handling.
+     * @since 1.9
+     */
+    void setTunnelAgent(TunnelAgent tunnelAgent);
+
+    /**
      * Retrieve the log messages for an item.
      * @param path          path or url to get the log message for.
      * @param pegRevision   revision to interpret path

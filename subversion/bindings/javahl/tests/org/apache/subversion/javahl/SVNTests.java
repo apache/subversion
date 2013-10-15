@@ -355,7 +355,7 @@ class SVNTests extends TestCase
         }
     }
 
-    private static class DefaultProgressListener implements ProgressCallback
+    protected static class DefaultProgressListener implements ProgressCallback
     {
 
         public void onProgress(ProgressEvent event)

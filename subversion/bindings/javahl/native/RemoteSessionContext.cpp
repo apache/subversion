@@ -33,7 +33,7 @@
 RemoteSessionContext::RemoteSessionContext(
     SVN::Pool &pool, const char* configDirectory,
     const char* usernameStr, const char* passwordStr,
-    Prompter* prompter)
+    Prompter* prompter, jobject jtunnelcb)
   : OperationContext(pool), m_raCallbacks(NULL)
 {
   setConfigDirectory(configDirectory);
@@ -44,6 +44,7 @@ RemoteSessionContext::RemoteSessionContext(
     password(passwordStr);
 
   setPrompt(prompter);
+  setTunnelCallback(jtunnelcb);
 
   /*
    * Setup callbacks
@@ -68,6 +69,14 @@ RemoteSessionContext::RemoteSessionContext(
    * Don't set deprecated callback
    */
   m_raCallbacks->open_tmp_file = NULL;
+
+  if (m_jtunnelcb)
+    {
+      m_raCallbacks->check_tunnel_func = checkTunnel;
+      m_raCallbacks->open_tunnel_func = openTunnel;
+      m_raCallbacks->close_tunnel_func = closeTunnel;
+      m_raCallbacks->tunnel_baton = m_jtunnelcb;
+    }
 }
 
 RemoteSessionContext::~RemoteSessionContext()
