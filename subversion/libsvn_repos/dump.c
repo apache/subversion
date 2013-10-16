@@ -1313,7 +1313,7 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
      type defined in the DIRENT. */
   if (db->edit_baton->verified_dirents_cache)
     {
-      svn_node_kind_t kind;
+      svn_node_kind_t *kind;
       svn_boolean_t found;
       unparsed_id = svn_fs_unparse_id(dirent->id, pool);
 
@@ -1323,7 +1323,7 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
 
       if (found)
         {
-          if (kind == dirent->kind)
+          if (*kind == dirent->kind)
             return SVN_NO_ERROR;
           else
             {
