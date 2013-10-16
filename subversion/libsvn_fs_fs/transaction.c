@@ -2707,15 +2707,18 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
   /* all moves specify the "copy-from-rev" as REV-1 */
   if (svn_fs_fs__supports_move(fs))
-    for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-      {
-        svn_fs_path_change2_t *change;
-        apr_hash_this(hi, NULL, NULL, (void **)&change);
+    {
+      for (hi = apr_hash_first(pool, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
 
-        if (   (change->change_kind == svn_fs_path_change_move)
-            || (change->change_kind == svn_fs_path_change_movereplace))
-          change->copyfrom_rev = new_rev - 1;
-      }
+          if (   (change->change_kind == svn_fs_path_change_move)
+              || (change->change_kind == svn_fs_path_change_movereplace))
+            change->copyfrom_rev = new_rev - 1;
+        }
+    }
 
   SVN_ERR(svn_fs_fs__write_changes(svn_stream_from_aprfile2(file, TRUE, pool),
                                    fs, changed_paths, TRUE, pool));
