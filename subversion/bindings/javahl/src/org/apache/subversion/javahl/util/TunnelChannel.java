@@ -44,8 +44,10 @@ abstract class TunnelChannel implements Channel
 
     public void close() throws IOException
     {
-        nativeClose(nativeChannel);
-        nativeChannel = 0;
+        /* Avoid closing twice on error: explicit and via gc */
+        long channel = this.nativeChannel;
+        this.nativeChannel = 0;
+        nativeClose(channel);
     }
 
     private native static void nativeClose(long nativeChannel)
