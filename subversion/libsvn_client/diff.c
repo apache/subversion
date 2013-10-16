@@ -833,7 +833,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                          svn_io_file_del_on_pool_cleanup,
                                          scratch_pool, scratch_pool));
 
-        /* "." is a non-canonical path for the diff process's working directory. */
+      /* "." is a non-canonical path for the diff process's working directory. */
       if (diff_cmd_baton->diff_cmd) 
         SVN_ERR(svn_io_run_diff2(".",
                                  diff_cmd_baton->options.for_external.argv,

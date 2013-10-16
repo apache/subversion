@@ -19,7 +19,7 @@ which are passed as the diff program via the svn config file.
 
 
 What --invoke-diff-cmd and --invoke-diff3-cmd provide
-------------------------------------------------------
+=====================================================
 
 Users can type 'free-style' command lines for their selected
 diff/merge program, from 'svn help diff':
@@ -39,8 +39,9 @@ diff/merge program, from 'svn help diff':
 
    The delimiter ';' can be escaped by adding a ';', which will be
    consumed in the process.  The delimiter can appear anywhere in the
-   string, ie, file=;f1 will expand as expected and file=;;f1 will be
-   rendered as file=;f1.
+   string, ie, file=;f1 will expand as expected and file=;;f1+ will be
+   rendered as file=;f1+.
+
 
 Structure of the feature:
 =========================
@@ -51,18 +52,17 @@ API components
    ./subversion/libsvn_subr/io.c:3030 __create_custom_diff_cmd()
  
    transforms the user input 'invoke-diff-cmd' into a command line
-   call by substitution the file names, whilst leaving everything else
-   untouched.  This is more of an internal routine and probably not
-   well placed in the API.  It will be reused for the merge part of
-   this project.
+   call by substitution the labels and file names(where defined),
+   whilst leaving everything else untouched.  This is more of an
+   internal routine and probably not well placed in the public API.
+   It will be reused for the merge part of this project.
 
-   NOTE:  
 
    ./subversion/libsvn_subr/io.c:3108 svn_io_run_external_diff()
 
-   calls svn_io_create_custom_diff_cmd() and does all the error
-   checking required, before routing the result to the actual call to
-   the APR routine that makes it.
+   calls __create_custom_diff_cmd() and does all the error checking
+   required, before routing the result to the actual call to the APR
+   routine that makes it.
  
 
 UI components
@@ -87,23 +87,22 @@ UI components
 Changes to the existing code structure:
 =======================================
 
-the original --diff-cmd parsing and routing code has been deprecated
+The original --diff-cmd parsing and routing code has been refactored
 and the call to --diff-cmd is now handled by the
-svn_io_create_custom_diff_cmd() and svn_io_run_external_diff()
-routines.  All the original functionality and user syntax has been
-retained.
+__create_custom_diff_cmd() and svn_io_run_external_diff() routines.
+All the original functionality and user syntax has been retained.
 
-TESTS
+
+Tests
 =====
 
-The test for this feature is
+The test for the 'invoke-diff-cmd' feature is
 
-/subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
-
+  /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
 
 The test for the updated --diff-cmd is 
 
-/subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
+  /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
 
 
 TODO:
@@ -124,8 +123,27 @@ TODO:
        http://subversion.tigris.org/issues/show_bug.cgi?id=3836
 
 
-Log messages of Salient Code changes with minor fixes and reverts omitted:
-==========================================================================
+Review tools
+============
+
+The entire code of the branch can be obtained thus:
+
+svn diff ^/subversion/trunk@1531612\
+ ^/subversion/branches/invoke-diff-cmd-feature
+
+To obtain a visitable list of files with line numbers in the Emacs
+compilation buffer:
+
+M-x cd /branches/invoke-diff-cmd-feature/
+M-x compile 
+svn diff ^/subversion/trunk@1531612\
+ ^/subversion/branches/invoke-diff-cmd-feature |\
+ perl -ne '/Index: (.*)$/ && ($name = $1);
+ /^@@.*\+(\d+),/ && print "./$name:$1:diff\n";'
+
+
+Log messages of salient code changes 
+====================================
 
 * subversion/include/svn_client.h 
 

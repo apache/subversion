@@ -3071,7 +3071,6 @@ __create_custom_diff_cmd(const char *label1,
 
       word = svn_stringbuf_create_empty(scratch_pool);
       svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, item, char *));
-      
 
       if ( (word->data[0] == '"') && (word->data[word->len-1] != '"') )
         {
@@ -3108,8 +3107,7 @@ __create_custom_diff_cmd(const char *label1,
           len = word->len - strlen(found) - 1;
             
           /* if we find a protective semi-colon in front of this, consume it */
-          if ( (len >= 0) 
-               && (word->data[len] == ';') )
+          if ( (len >= 0) && (word->data[len] == ';') )
             svn_stringbuf_remove(word, len, 1);
           else
             {
@@ -3123,7 +3121,6 @@ __create_custom_diff_cmd(const char *label1,
       result[argv] = word->data;
     }  
   result[argv] = NULL;
-
   svn_pool_destroy(scratch_pool);
   return result;
 }
@@ -3155,6 +3152,16 @@ svn_io_run_external_diff(const char *dir,
   SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, pexitcode, NULL, TRUE,
                          NULL, outfile, errfile, pool));
   
+  /* The man page for (GNU) diff describes the return value as:
+
+      "An exit status of 0 means no differences were found, 1 means
+      some differences were found, and 2 means trouble."
+     
+     A return value of 2 typically occurs when diff cannot read its input
+     or write to its output, but in any case we probably ought to return an
+     error for anything other than 0 or 1 as the output is likely to be
+     corrupt.
+   */
   if (*pexitcode != 0 && *pexitcode != 1)
     {
       int i;

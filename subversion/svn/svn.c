@@ -370,7 +370,9 @@ const apr_getopt_option_t svn_cl__options[] =
                       "                             "
                       "appear anywhere in the string, ie, file=;f1 will expand\n"
                       "                             "
-                      "as expected and file=;;f1 will be rendered as file=;f1.\n"
+                      "as expected and file=;;f1+ will be rendered as         \n"
+                      "                             "
+                      "file=;f1+.\n"
      )},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
@@ -2584,8 +2586,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
-  /* Disallow simultaneous use of both --diff-cmd, --invoke-diff-cmd
-     and --internal-diff.  */
+  /* Disallow simultaneous use of --diff-cmd, --invoke-diff-cmd and
+     --internal-diff.  */
   if (opt_state.diff.diff_cmd && opt_state.diff.internal_diff)
     {
       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -2826,8 +2828,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff.diff_cmd);
   if (opt_state.diff.invoke_diff_cmd)
-        svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
-                       SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
+    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
   if (opt_state.merge_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
