@@ -1333,7 +1333,7 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
                   svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                     _("Unexpected node kind %d for '%s'. "
                                       "Expected kind was %d."),
-                                    dirent->kind, path, kind);
+                                    dirent->kind, path, *kind);
             }
         }
     }
