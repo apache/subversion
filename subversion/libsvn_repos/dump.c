@@ -1494,7 +1494,7 @@ deserialize_node_kind(void **out,
                       apr_size_t data_len,
                       apr_pool_t *pool)
 {
-  *(svn_node_kind_t **)out = (svn_node_kind_t *)data;
+  *out = data;
 
   return SVN_NO_ERROR;
 }
