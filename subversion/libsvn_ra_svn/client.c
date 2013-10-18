@@ -1340,7 +1340,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn__parse_tuple(elt->u.list, pool, "cwnbr(?c)(?c)",
                                       &name, &kind, &size, &has_props,
                                       &crev, &cdate, &cauthor));
-      name = svn_relpath_canonicalize(name, pool);
+
       dirent = svn_dirent_create(pool);
       dirent->kind = svn_node_kind_from_word(kind);
       dirent->size = size;/* FIXME: svn_filesize_t */
