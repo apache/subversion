@@ -119,6 +119,16 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
             && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
         conn->remote_ip = NULL;
       svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
+
+      /* We are using large r/w buffers already.
+       * So, once we decide to actually send data, we want it to go over
+       * the wire a.s.a.p..  So disable Nagle's algorithm.
+       *
+       * We ignore the result of this call since it safe to continue even
+       * if we keep delaying.  The only negative effect is increased
+       * latency (can be additional 5 .. 10ms depending on circumstances).
+       */
+      apr_socket_opt_set(sock, APR_TCP_NODELAY, 1);
     }
   else
     {
