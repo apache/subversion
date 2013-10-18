@@ -27,6 +27,7 @@
 #include "private/svn_temp_serializer.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_io_private.h"
 
 #include "fs_fs.h"
 #include "pack.h"
@@ -877,7 +878,9 @@ store_items(pack_context_t *context,
          Take special care of textual noderevs since their parsers may
          prefetch up to 80 bytes and we don't want them to cross block
          boundaries. */
-      safety_margin = entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV ? 80 : 0;
+      safety_margin = entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV
+                    ? SVN__LINE_CHUNK_SIZE
+                    : 0;
       SVN_ERR(auto_pad_block(context, entry->size + safety_margin, iterpool));
 
       /* select the item in the source file and copy it into the target

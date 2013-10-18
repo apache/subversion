@@ -26,6 +26,7 @@
 
 #include "svn_hash.h"
 #include "svn_ctype.h"
+#include "private/svn_io_private.h"
 #include "private/svn_temp_serializer.h"
 
 #include "fs_fs.h"
@@ -2439,7 +2440,8 @@ auto_select_stream(svn_stream_t **stream,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Item parser might be crossing block boundaries? */
-  if (((entry->offset + entry->size + 80) ^ entry->offset) >= ffd->block_size)
+  if (((entry->offset + entry->size + SVN__LINE_CHUNK_SIZE) ^ entry->offset)
+      >= ffd->block_size)
     {
       /* Parsing items that cross block boundaries will cause the file
          buffer to be re-read and misaligned.  So, read the whole block
