@@ -34,6 +34,8 @@
 #include "svn_error.h"
 #include "svn_private_config.h"
 
+#include "private/svn_string_private.h"
+
 
 
 /*** Code. ***/
@@ -135,24 +137,24 @@ svn_time_from_cstring(apr_time_t *when, const char *data, apr_pool_t *pool)
   apr_time_exp_t exploded_time;
   apr_status_t apr_err;
   char wday[4], month[4];
-  char *c;
+  const char *c;
 
   /* Open-code parsing of the new timestamp format, as this
      is a hot path for reading the entries file.  This format looks
      like:  "2001-08-31T04:24:14.966996Z"  */
-  exploded_time.tm_year = (apr_int32_t) strtol(data, &c, 10);
+  exploded_time.tm_year = (apr_int32_t) svn__strtoul(data, &c);
   if (*c++ != '-') goto fail;
-  exploded_time.tm_mon = (apr_int32_t) strtol(c, &c, 10);
+  exploded_time.tm_mon = (apr_int32_t) svn__strtoul(c, &c);
   if (*c++ != '-') goto fail;
-  exploded_time.tm_mday = (apr_int32_t) strtol(c, &c, 10);
+  exploded_time.tm_mday = (apr_int32_t) svn__strtoul(c, &c);
   if (*c++ != 'T') goto fail;
-  exploded_time.tm_hour = (apr_int32_t) strtol(c, &c, 10);
+  exploded_time.tm_hour = (apr_int32_t) svn__strtoul(c, &c);
   if (*c++ != ':') goto fail;
-  exploded_time.tm_min = (apr_int32_t) strtol(c, &c, 10);
+  exploded_time.tm_min = (apr_int32_t) svn__strtoul(c, &c);
   if (*c++ != ':') goto fail;
-  exploded_time.tm_sec = (apr_int32_t) strtol(c, &c, 10);
+  exploded_time.tm_sec = (apr_int32_t) svn__strtoul(c, &c);
   if (*c++ != '.') goto fail;
-  exploded_time.tm_usec = (apr_int32_t) strtol(c, &c, 10);
+  exploded_time.tm_usec = (apr_int32_t) svn__strtoul(c, &c);
   if (*c++ != 'Z') goto fail;
 
   exploded_time.tm_year  -= 1900;
