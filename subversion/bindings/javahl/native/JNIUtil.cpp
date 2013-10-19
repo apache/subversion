@@ -68,9 +68,9 @@ extern "C" {
 #include "SVNBase.h"
 #include "JNIMutex.h"
 #include "JNICriticalSection.h"
-#include "JNIThreadData.h"
 #include "JNIStringHolder.h"
 #include "Pool.h"
+
 
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
@@ -81,9 +81,38 @@ JNIMutex *JNIUtil::g_configMutex = NULL;
 bool JNIUtil::g_initException;
 bool JNIUtil::g_inInit;
 JNIEnv *JNIUtil::g_initEnv;
-char JNIUtil::g_initFormatBuffer[formatBufferSize];
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
+
+namespace {
+JavaVM *g_jvm = NULL;
+} // anonymous namespace
+
+extern "C" JNIEXPORT jint JNICALL
+JNI_OnLoad(JavaVM *jvm, void*)
+{
+  g_jvm = jvm;
+  return JNI_VERSION_1_2;
+}
+
+extern "C" JNIEXPORT void JNICALL
+JNI_OnUnload(JavaVM*, void*)
+{}
+
+/**
+ * Return the JNI environment to use
+ * @return the JNI environment
+ */
+JNIEnv *JNIUtil::getEnv()
+{
+  // During init -> look into the global variable.
+  if (g_inInit)
+    return g_initEnv;
+
+  void* penv;
+  g_jvm->GetEnv(&penv, JNI_VERSION_1_2);
+  return static_cast<JNIEnv*>(penv);
+}
 
 /**
  * Initialize the environment for all requests.
@@ -93,9 +122,6 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 {
   // Clear all standing exceptions.
   env->ExceptionClear();
-
-  // Remember the env parameter for the remainder of the request.
-  setEnv(env);
 
   // Lock the list of finalized objects.
   JNICriticalSection cs(*g_finalizedObjectsMutex) ;
@@ -361,14 +387,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
-  // initialized the thread local storage
-  if (!JNIThreadData::initThreadData())
-    return false;
-
-  setEnv(env);
-  if (isExceptionThrown())
-    return false;
-
   g_initEnv = NULL;
   g_inInit = false;
 
@@ -399,8 +417,6 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
     return;
 
   env->ThrowNew(clazz, message);
-  setExceptionThrown();
-  env->DeleteLocalRef(clazz);
 }
 
 void
@@ -825,78 +841,13 @@ void JNIUtil::enqueueForDeletion(SVNBase *object)
  */
 void JNIUtil::handleAPRError(int error, const char *op)
 {
-  char *buffer = getFormatBuffer();
-  if (buffer == NULL)
-    return;
+  char buffer[2048];
 
-  apr_snprintf(buffer, formatBufferSize,
+  apr_snprintf(buffer, sizeof(buffer),
                _("an error occurred in function %s with return value %d"),
                op, error);
 
   throwError(buffer);
-}
-
-/**
- * Return if an exception has been detected.
- * @return a exception has been detected
- */
-bool JNIUtil::isExceptionThrown()
-{
-  // During init -> look in the global member.
-  if (g_inInit)
-    return g_initException;
-
-  // Look in the thread local storage.
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  return data == NULL || data->m_exceptionThrown;
-}
-
-/**
- * Store the JNI environment for this request in the thread local
- * storage.
- * @param env   the JNI environment
- */
-void JNIUtil::setEnv(JNIEnv *env)
-{
-  JNIThreadData::pushNewThreadData();
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  data->m_env = env;
-  data->m_exceptionThrown = false;
-}
-
-/**
- * Return the JNI environment to use
- * @return the JNI environment
- */
-JNIEnv *JNIUtil::getEnv()
-{
-  // During init -> look into the global variable.
-  if (g_inInit)
-    return g_initEnv;
-
-  // Look in the thread local storage.
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  return data->m_env;
-}
-
-/**
- * Check if a Java exception has been thrown.
- * @return is a Java exception has been thrown
- */
-bool JNIUtil::isJavaExceptionThrown()
-{
-  JNIEnv *env = getEnv();
-  if (env->ExceptionCheck())
-    {
-      // Retrieving the exception removes it so we rethrow it here.
-      jthrowable exp = env->ExceptionOccurred();
-      env->ExceptionDescribe();
-      env->Throw(exp);
-      env->DeleteLocalRef(exp);
-      setExceptionThrown();
-      return true;
-    }
-  return false;
 }
 
 namespace {
@@ -984,25 +935,6 @@ jstring JNIUtil::makeJString(const char *txt)
   return env->NewStringUTF(txt);
 }
 
-void
-JNIUtil::setExceptionThrown(bool flag)
-{
-  if (g_inInit)
-    {
-      // During global initialization, store any errors that occur
-      // in a global variable (since thread-local storage may not
-      // yet be available).
-      g_initException = flag;
-    }
-  else
-    {
-      // When global initialization is complete, thread-local
-      // storage should be available, so store the error there.
-      JNIThreadData *data = JNIThreadData::getThreadData();
-      data->m_exceptionThrown = flag;
-    }
-}
-
 /**
  * Initialite the log file.
  * @param level the log level
@@ -1023,23 +955,6 @@ void JNIUtil::initLogFile(int level, jstring path)
       // open it
       g_logStream.open(myPath, std::ios::app);
     }
-}
-
-/**
- * Returns a buffer to format error messages.
- * @return a buffer for formating error messages
- */
-char *JNIUtil::getFormatBuffer()
-{
-  if (g_inInit) // during init -> use the global buffer
-    return g_initFormatBuffer;
-
-  // use the buffer in the thread local storage
-  JNIThreadData *data = JNIThreadData::getThreadData();
-  if (data == NULL) // if that does not exists -> use the global buffer
-    return g_initFormatBuffer;
-
-  return data->m_formatBuffer;
 }
 
 /**
@@ -1182,8 +1097,6 @@ void JNIUtil::throwNullPointerException(const char *message)
     return;
 
   env->ThrowNew(clazz, message);
-  setExceptionThrown();
-  env->DeleteLocalRef(clazz);
 }
 
 svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
