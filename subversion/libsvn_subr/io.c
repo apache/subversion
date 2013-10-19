@@ -3050,15 +3050,23 @@ __create_custom_diff_cmd(const char *label1,
   {
     const char *delimiter;
     const char *replace;
-  } tokens_tab[] = { 
-    { ";l1", label1 },
-    { ";l2", label2 },
-    { ";l3", label3 },
-    { ";f1", from },  
-    { ";f2", to },    
-    { ";f3", base },    
+  } tokens_tab[] = {  /* Diff terminology */
+    { "%svn_old_label%", label1 },
+    { "%svn_new_label%", label2 },
+    { "%svn_base_label%", label3 },
+    { "%svn_old%", from },  
+    { "%svn_new%", to },    
+    { "%svn_base%", base },    
     { NULL, NULL }
   };
+ 
+  if (label3) /* Merge terminology */
+    {
+      tokens_tab[0].delimiter = "%svn_from_label%";
+      tokens_tab[1].delimiter = "%svn_to_label%";
+      tokens_tab[3].delimiter = "%svn_from%";
+      tokens_tab[4].delimiter = "%svn_to%";
+    }
 
   words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
 
@@ -3099,24 +3107,15 @@ __create_custom_diff_cmd(const char *label1,
       for (i = 0; i < delimiters; i++)
         {
           char *found = strstr(word->data, tokens_tab[i].delimiter);
-          int len;
 
           if (!found)
             continue;
             
-          len = word->len - strlen(found) - 1;
-            
-          /* if we find a protective semi-colon in front of this, consume it */
-          if ( (len >= 0) && (word->data[len] == ';') )
-            svn_stringbuf_remove(word, len, 1);
-          else
-            {
-              svn_stringbuf_replace(word, found - word->data,
-                                    strlen(tokens_tab[i].delimiter),
-                                    tokens_tab[i].replace,
-                                    strlen(tokens_tab[i].replace));
-              i = delimiters;
-            }
+          svn_stringbuf_replace(word, found - word->data,
+                                strlen(tokens_tab[i].delimiter),
+                                tokens_tab[i].replace,
+                                strlen(tokens_tab[i].replace));
+          i = delimiters;
         }
       result[argv] = word->data;
     }  
@@ -3140,17 +3139,19 @@ svn_io_run_external_diff(const char *dir,
   int exitcode;
   const char ** cmd;
 
+  apr_pool_t *scratch_pool = svn_pool_create(pool); 
+
   if (0 == strlen(external_diff_cmd)) 
      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
 
   cmd = __create_custom_diff_cmd(label1, label2, NULL, 
                                  tmpfile1, tmpfile2, NULL, 
-                                 external_diff_cmd, pool);
+                                 external_diff_cmd, scratch_pool);
   if (pexitcode == NULL)
      pexitcode = &exitcode;
   
   SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, pexitcode, NULL, TRUE,
-                         NULL, outfile, errfile, pool));
+                         NULL, outfile, errfile, scratch_pool));
   
   /* The man page for (GNU) diff describes the return value as:
 
@@ -3170,13 +3171,15 @@ svn_io_run_external_diff(const char *dir,
       for (i = 0; cmd[i]; ++i)
           failed_command = apr_pstrcat(pool, failed_command, 
                                        cmd[i], " ", (char*) NULL);
-
+      svn_pool_destroy(scratch_pool);
       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                                _("'%s' was expanded to '%s' and returned %d"),
                                external_diff_cmd,
                                failed_command,
                                *pexitcode);
     }
+  else
+    svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3186,8 +3189,8 @@ svn_io_run_diff2(const char *dir,
                  int num_user_args,
                  const char *label1,
                  const char *label2,
-                 const char *from,
-                 const char *to,
+                 const char *old,
+                 const char *new,
                  int *pexitcode,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -3216,18 +3219,18 @@ svn_io_run_diff2(const char *dir,
     svn_stringbuf_appendcstr(com, "-u "); 
 
   if (label1 != NULL)
-    svn_stringbuf_appendcstr(com,"-L ;l1 ");
+    svn_stringbuf_appendcstr(com,"-L %svn_old_label% ");
 
   if (label2 != NULL)
-    svn_stringbuf_appendcstr(com,"-L ;l2 ");
+    svn_stringbuf_appendcstr(com,"-L %svn_new_label% ");
 
-  svn_stringbuf_appendcstr(com,";f1 ;f2 "); 
+  svn_stringbuf_appendcstr(com,"%svn_old% %svn_new%"); 
 
   return svn_io_run_external_diff(dir,
                                   label1,
                                   label2,
-                                  from,
-                                  to,
+                                  old,
+                                  new,
                                   pexitcode,
                                   outfile,
                                   errfile,

@@ -345,34 +345,32 @@ const apr_getopt_option_t svn_cl__options[] =
   {"diff", opt_diff, 0, N_("produce diff output")}, /* maps to show_diff */
   /* diff options */
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
-  {"invoke-diff-cmd",      opt_invoke_diff_cmd, 1, 
-                   N_("use ARG as format string for external diff command\n"
+  {"invoke-diff-cmd", opt_invoke_diff_cmd, 1, 
+                   N_("use ARG as format string for external diff command     \n"
                       "                             "
                       "invocation. \n                                         \n" 
                       "                             "
-                      "Substitutions: ;f1 original file                       \n"
+                      "Substitutions: %svn_new% new file                      \n"
                       "                             "
-                      "               ;f2 changed file                        \n"
+                      "               %svn_old% old file                      \n"
                       "                             "
-                      "               ;l1 label of the original file          \n"
+                      "               %svn_new_label%  label of the new file  \n"
                       "                             "
-                      "               ;l2 label of the changed file           \n"
+                      "               %svn_old_label%  label of the old file  \n"
                       "                             "
-                      "Examples: --invoke-diff-cmd=\"diff -y ;f1 ;f2\"        \n"          
+                      "Examples:                                              \n"
                       "                             "
-                      "   --invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\  \n"
+                      "--invoke-diff-cmd=\'diff -y %svn_new% %svn_old%\'      \n"          
                       "                             "
-                      "     +;f1 ;l2 --L1 ;l1 --L2 \"Custom Label\" \"        \n"
+                      "--invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\     \n"
                       "                             "
-                      "The delimiter ';' can be escaped by adding a ';', which\n"
+                      "      %svn_new% %svn_old% --L1 %svn_new_label% \\      \n"
                       "                             "
-                      "will be consumed in the process.  The delimiter can    \n"
+                      "     --L2 \"Custom Label\" \'                          \n"
                       "                             "
-                      "appear anywhere in the string, ie, file=;f1 will expand\n"
+                      "Other constructs possible are:                         \n"
                       "                             "
-                      "as expected and file=;;f1+ will be rendered as         \n"
-                      "                             "
-                      "file=;f1+.\n"
+                      "+%svn_new%, %svn_new%- and +++%svn_new_label%+++       \n"
      )},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},

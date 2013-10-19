@@ -26,21 +26,20 @@ diff/merge program, from 'svn help diff':
 
   --invoke-diff-cmd ARG:
 
-   use ARG as format string for external diff command
-   invocation. 
-               
-   Substitutions: ;f1 original file                       
-                  ;f2 changed file                        
-                  ;l1 label of the original file          
-                  ;l2 label of the changed file           
-   Examples: --invoke-diff-cmd="diff -y ;f1 ;f2"        
-      --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \  
-        +;f1 ;l2 --L1 ;l1 --L2 "Custom Label" "        
-
-   The delimiter ';' can be escaped by adding a ';', which will be
-   consumed in the process.  The delimiter can appear anywhere in the
-   string, ie, file=;f1 will expand as expected and file=;;f1+ will be
-   rendered as file=;f1+.
+       use ARG as format string for external diff command     
+        invocation. 
+                    
+        Substitutions: %svn_new% new file                      
+                       %svn_old% old file                      
+                       %svn_new_label%  label of the new file  
+                       %svn_old_label%  label of the old file  
+        Examples:                                              
+        --invoke-diff-cmd='diff -y %svn_new% %svn_old%'      
+        --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \     
+              %svn_new% %svn_old% --L1 %svn_new_label% \      
+             --L2 "Custom Label" '                          
+        Other constructs possible are:                         
+        +%svn_new%, %svn_new%- and +++%svn_new_label%+++       
 
 
 Structure of the feature:
