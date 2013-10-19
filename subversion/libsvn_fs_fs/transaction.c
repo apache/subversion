@@ -781,6 +781,9 @@ process_changes(apr_hash_t *changed_paths,
 
   for (i = 0; i < changes->nelts; ++i)
     {
+      /* The ITERPOOL will be cleared at the end of this function
+       * since it is only used rarely and for a single hash iterator.
+       */
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
 
       SVN_ERR(fold_change(changed_paths, change));
@@ -3212,7 +3215,7 @@ verify_moves(svn_fs_t *fs,
 {
   apr_hash_t *source_paths = apr_hash_make(pool);
   svn_revnum_t revision;
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
   apr_array_header_t *moves
@@ -3296,8 +3299,8 @@ verify_moves(svn_fs_t *fs,
       apr_array_header_t *changes;
       change_t **changes_p;
 
-      svn_pool_clear(iter_pool);
-      svn_fs_fs__get_changes(&changes, fs, revision, iter_pool);
+      svn_pool_clear(iterpool);
+      svn_fs_fs__get_changes(&changes, fs, revision, iterpool);
 
       changes_p = (change_t **)&changes->elts;
       for (i = 0; i < changes->nelts; ++i)
@@ -3329,7 +3332,7 @@ verify_moves(svn_fs_t *fs,
         }
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
