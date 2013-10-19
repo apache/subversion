@@ -111,7 +111,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.8\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2013-10-19 21:47+0200\n"
-"PO-Revision-Date: 2013-07-19 14:25+0200\n"
+"PO-Revision-Date: 2013-10-19 22:28+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Swedish <dev@subversion.apache.org>\n"
 "Language: sv\n"
@@ -2389,7 +2389,7 @@ msgstr "Oväntat slut på svndiff"
 #: ../libsvn_diff/diff_file.c:184
 #, c-format
 msgid "File '%s' is too large to be read in to memory"
-msgstr ""
+msgstr "Filen \"%s\" är för stor för att kunna läsas in i minnet"
 
 #: ../libsvn_diff/diff_file.c:1106
 #, c-format
@@ -3679,19 +3679,19 @@ msgid "Final line in revision file r%ld missing space"
 msgstr "Den sista raden i revisionsfilen r%ld saknar mellanslag"
 
 #: ../libsvn_fs_fs/fs_fs.c:3685
-#, fuzzy, c-format
+#, c-format
 msgid "Packed revprop manifest for r%ld too small"
-msgstr "Den packade innehållsförteckningen för revisionsegenskaper för revision %ld är för liten"
+msgstr "Packad innehållsförteckning för revisionsegenskaper för r%ld är för liten"
 
 #: ../libsvn_fs_fs/fs_fs.c:3742
 #, c-format
 msgid "Revprop pack for revision r%ld contains revprops for r%ld .. r%ld"
-msgstr ""
+msgstr "Packade revisionsegenskaper för r%ld innehåller egenskaper för r%ld .. r%ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:3753
-#, fuzzy, c-format
+#, c-format
 msgid "Revprop pack for revision r%ld starts at non-packed revisions r%ld"
-msgstr "Startrevisionen %ld är större än slutrevisionen %ld"
+msgstr "Packade revisionsegenskaper för r%ld börjar vid icke-packade r%ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:3762
 msgid "Header end not found"
@@ -3707,14 +3707,14 @@ msgid "No such packed revision %ld"
 msgstr "Packade revisionen %ld finns inte"
 
 #: ../libsvn_fs_fs/fs_fs.c:3889
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to read revprop pack file for r%ld"
-msgstr "Kunde inte läsa packfilen för revisionsegenskaper för revision %ld"
+msgstr "Kunde inte läsa packfilen för revisionsegenskaper för r%ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:3896
-#, fuzzy, c-format
+#, c-format
 msgid "Revprop pack file for r%ld is corrupt"
-msgstr "Trasig packfil för revisionsegenskaper för revision %ld"
+msgstr "Trasig packfil för revisionsegenskaper för r%ld"
 
 #: ../libsvn_fs_fs/fs_fs.c:3969
 #, c-format
@@ -4376,11 +4376,13 @@ msgid "Module for accessing a repository via WebDAV protocol using serf."
 msgstr "Modul för åtkomst av arkiv via protokollet WebDAV med hjälp av serf."
 
 #: ../libsvn_ra_serf/serf.c:65
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Module for accessing a repository via WebDAV protocol using serf.\n"
 "  - using serf %d.%d.%d"
-msgstr "Modul för åtkomst av arkiv via protokollet WebDAV med hjälp av serf."
+msgstr ""
+"Modul för åtkomst av arkiv via protokollet WebDAV med hjälp av serf.\n"
+"  - använder serf %d.%d.%d"
 
 #: ../libsvn_ra_serf/serf.c:129
 #, c-format
@@ -4483,39 +4485,35 @@ msgstr "Kan inte läsa en katalogs textinnehåll"
 
 #: ../libsvn_ra_serf/util.c:248
 msgid ": "
-msgstr ""
+msgstr ": "
 
 #: ../libsvn_ra_serf/util.c:250
 msgid ", "
-msgstr ""
+msgstr ", "
 
 #: ../libsvn_ra_serf/util.c:362
-#, fuzzy
 msgid "Server SSL certificate verification failed"
-msgstr "Ej betrott SSL-certifikat för server"
+msgstr "Kontroll av SSL-certifikat för server misslyckades"
 
 #: ../libsvn_ra_serf/util.c:367
-#, fuzzy
 msgid "certificate is not yet valid"
-msgstr " - Certifikatet är inte giltigt ännu.\n"
+msgstr "certifikatet är inte giltigt ännu"
 
 #: ../libsvn_ra_serf/util.c:370
-#, fuzzy
 msgid "certificate has expired"
-msgstr " - Certifikatet har gått ut.\n"
+msgstr "certifikatet har gått ut"
 
 #: ../libsvn_ra_serf/util.c:374
 msgid "certificate issued for a different hostname"
-msgstr ""
+msgstr "certifikatet utfärdat för ett annat datornamn"
 
 #: ../libsvn_ra_serf/util.c:378
-#, fuzzy
 msgid "issuer is not trusted"
-msgstr "Filsystemsuppgradering stöds ej"
+msgstr "utfärdaren är inte betrodd"
 
 #: ../libsvn_ra_serf/util.c:381
 msgid "and other reason(s)"
-msgstr ""
+msgstr "och andra orsaker"
 
 #: ../libsvn_ra_serf/util.c:428
 #, c-format
@@ -4554,9 +4552,9 @@ msgid "Proxy authentication failed"
 msgstr "Proxy-autentisering misslyckades"
 
 #: ../libsvn_ra_serf/util.c:1901
-#, fuzzy, c-format
+#, c-format
 msgid "%s request on '%s' failed"
-msgstr "%s-förfrågan på \"%s\" misslyckades: %d %s"
+msgstr "%s-förfrågan på \"%s\" misslyckades"
 
 #: ../libsvn_ra_serf/util.c:1973
 #, c-format
@@ -4593,9 +4591,9 @@ msgid "DAV request failed: 411 Content length required. The server or an interme
 msgstr "DAV-begäran misslyckades: 411, innehållslängd krävs. Servern eller en mellanliggande proxy godtar inte styckvis kodning. Försök med att sätta \"http-chunked-requests\" till \"auto\" eller \"no\" i klientinställningarna."
 
 #: ../libsvn_ra_serf/util.c:2489
-#, fuzzy, c-format
+#, c-format
 msgid "The requested feature is not supported by '%s'"
-msgstr "Funktionen \"%s\" stöds inte av \"%s\""
+msgstr "Den begärda funktionen stöds inte av \"%s\""
 
 #: ../libsvn_ra_serf/util.c:2495
 #, c-format
@@ -6845,17 +6843,17 @@ msgid "MIME type '%s' contains invalid character '0x%02x' in postfix"
 msgstr "MIME-typen \"%s\" innehåller det ogiltiga tecknet \"0x%02x\" i postfix"
 
 #: ../libsvn_subr/version.c:91
-#, fuzzy, c-format
+#, c-format
 msgid "Version mismatch in '%s'%s: found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr "Versioner stämmer ej i \"%s\": hittade %d.%d.%d%s, väntade %d.%d.%d%s"
+msgstr "Versioner stämmer ej i \"%s\"%s: hittade %d.%d.%d%s, väntade %d.%d.%d%s"
 
 #: ../libsvn_subr/version.c:96
 msgid " (expecting equality)"
-msgstr ""
+msgstr " (likhet förväntad)"
 
 #: ../libsvn_subr/version.c:98
 msgid " (expecting compatibility)"
-msgstr ""
+msgstr " (kompatibilitet förväntad)"
 
 #: ../libsvn_subr/version.c:139
 msgid ""
@@ -15433,9 +15431,9 @@ msgid "Destination repository has not been initialized"
 msgstr "Destinationsarkivet har ej initierats"
 
 #: ../svnsync/svnsync.c:1301
-#, fuzzy, c-format
+#, c-format
 msgid "Commit created r%ld but should have created r%ld"
-msgstr "Arkiveringen skapade revision %ld, men den borde ha skapat %ld"
+msgstr "Arkiveringen skapade r%ld, men den borde ha skapat r%ld"
 
 #: ../svnsync/svnsync.c:1416
 #, c-format
