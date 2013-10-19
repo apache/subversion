@@ -26,6 +26,7 @@ package org.apache.subversion.javahl.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.util.concurrent.atomic.AtomicLong;
 
 /* The following channel subclasses are used by the native
    implementation of the tunnel management code. */
@@ -34,24 +35,23 @@ abstract class TunnelChannel implements Channel
 {
     protected TunnelChannel(long nativeChannel)
     {
-        this.nativeChannel = nativeChannel;
+        this.nativeChannel = new AtomicLong(nativeChannel);
     }
 
     public boolean isOpen()
     {
-        return (nativeChannel != 0);
+        return (nativeChannel.get() != 0);
     }
 
     public void close() throws IOException
     {
-        /* Avoid closing twice on error: explicit and via gc */
-        long channel = this.nativeChannel;
-        this.nativeChannel = 0;
-        nativeClose(channel);
+        long channel = nativeChannel.getAndSet(0);
+        if (channel != 0)
+            nativeClose(channel);
     }
 
     private native static void nativeClose(long nativeChannel)
         throws IOException;
 
-    protected long nativeChannel;
+    protected AtomicLong nativeChannel;
 }
