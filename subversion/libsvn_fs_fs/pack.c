@@ -874,6 +874,8 @@ store_items(pack_context_t *context,
       if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
         continue;
 
+      svn_pool_clear(iterpool);
+
       /* If the next item does not fit into the current block, auto-pad it.
          Take special care of textual noderevs since their parsers may
          prefetch up to 80 bytes and we don't want them to cross block
@@ -898,7 +900,6 @@ store_items(pack_context_t *context,
                   (context->proto_p2l_index, entry, iterpool));
 
       APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *) = entry;
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -1034,6 +1035,8 @@ copy_reps_from_temp(pack_context_t *context,
       if (APR_ARRAY_IDX(path_order, i, path_order_t *) == NULL)
         continue;
 
+      svn_pool_clear(iterpool);
+
       /* Collect reps to combine and all noderevs referencing them */
       SVN_ERR(select_reps(context, i, node_parts, rep_parts));
 
@@ -1044,8 +1047,6 @@ copy_reps_from_temp(pack_context_t *context,
       /* processed all items */
       apr_array_clear(node_parts);
       apr_array_clear(rep_parts);
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -1145,12 +1146,14 @@ pack_range(pack_context_t *context,
       apr_off_t offset = 0;
       apr_finfo_t finfo;
       svn_fs_fs__revision_file_t *rev_file;
+      const char *path;
+
+      svn_pool_clear(revpool);
 
       /* Get the size of the file. */
-      const char *path = svn_dirent_join(context->shard_dir,
-                                         apr_psprintf(revpool, "%ld",
-                                                      revision),
-                                         revpool);
+      path = svn_dirent_join(context->shard_dir,
+                             apr_psprintf(revpool, "%ld", revision),
+                             revpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, revpool));
       SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, context->fs,
                                                revision, revpool));
@@ -1173,6 +1176,8 @@ pack_range(pack_context_t *context,
             {
               svn_fs_fs__p2l_entry_t *entry
                 = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
+
+              svn_pool_clear(iterpool);
 
               /* skip first entry if that was duplicated due crossing a
                  cluster boundary */
@@ -1220,11 +1225,7 @@ pack_range(pack_context_t *context,
 
           if (context->cancel_func)
             SVN_ERR(context->cancel_func(context->cancel_baton));
-
-          svn_pool_clear(iterpool);
         }
-
-      svn_pool_clear(revpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -1296,6 +1297,8 @@ append_revision(pack_context_t *context,
       /* read one cluster */
       int i;
       apr_array_header_t *entries;
+
+      svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs, rev_file,
                                           context->start_rev, offset,
                                           iterpool));
@@ -1323,8 +1326,6 @@ append_revision(pack_context_t *context,
                         (context->proto_p2l_index, entry, iterpool));
             }
         }
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -1386,6 +1387,8 @@ pack_log_addressed(svn_fs_t *fs,
       }
     else
       {
+        svn_pool_clear(iterpool);
+
         /* some unpacked revisions before this one? */
         if (context.start_rev < context.end_rev)
           {
@@ -1407,8 +1410,6 @@ pack_log_addressed(svn_fs_t *fs,
           }
         else
           item_count += (apr_size_t)APR_ARRAY_IDX(max_ids, i, apr_uint64_t);
-
-        svn_pool_clear(iterpool);
       }
 
   /* non-empty revision range at the end? */
