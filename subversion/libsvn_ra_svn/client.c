@@ -1341,6 +1341,13 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
                                       &name, &kind, &size, &has_props,
                                       &crev, &cdate, &cauthor));
 
+      /* Nothing to sanitize here.  Any multi-segment path is simply
+         illegal in the hash returned by svn_ra_get_dir2. */
+      if (strchr(name, '/'))
+        return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                 _("Invalid directory entry name '%s'"),
+                                 name);
+
       dirent = svn_dirent_create(pool);
       dirent->kind = svn_node_kind_from_word(kind);
       dirent->size = size;/* FIXME: svn_filesize_t */
