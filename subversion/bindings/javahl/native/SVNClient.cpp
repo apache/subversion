@@ -1343,10 +1343,10 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
         }
         else
         {
-            char *message = JNIUtil::getFormatBuffer();
-            apr_snprintf(message, JNIUtil::formatBufferSize,
+            char buffer[2048];
+            apr_snprintf(buffer, sizeof(buffer),
                          _("'%s' not versioned, and not exported\n"), path);
-            return JNIUtil::makeJString(message);
+            return JNIUtil::makeJString(buffer);
         }
     }
 
