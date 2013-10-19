@@ -2631,13 +2631,12 @@ block_read(void **result,
         {
           svn_boolean_t is_result;
           apr_pool_t *pool;
+          svn_fs_fs__p2l_entry_t* entry;
 
           svn_pool_clear(iterpool);
 
-          svn_fs_fs__p2l_entry_t* entry
-            = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
-
           /* skip empty sections */
+          entry = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
           if (entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED)
             continue;
 
