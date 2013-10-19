@@ -26,6 +26,7 @@ package org.apache.subversion.javahl.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ClosedChannelException;
 
 /* The following channel subclasses are used by the native
    implementation of the tunnel management code. */
@@ -41,7 +42,15 @@ class RequestChannel
 
     public int read(ByteBuffer dst) throws IOException
     {
-        return nativeRead(nativeChannel, dst);
+        long channel = nativeChannel.get();
+        if (channel != 0)
+            try {
+                return nativeRead(channel, dst);
+            } catch (IOException ex) {
+                nativeChannel.set(0); // Close the channel
+                throw ex;
+            }
+        throw new ClosedChannelException();
     }
 
     private static native int nativeRead(long nativeChannel, ByteBuffer dst)
