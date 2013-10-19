@@ -597,16 +597,16 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
             {
               /* 1 page with up to 8k entries */
               apr_size_t last_buffer_size = svn_spillbuf__get_size(buffer);
-              entry_count = MIN(entries->nelts - i, ffd->l2p_page_size);
 
+              svn_pool_clear(iterpool);
+
+              entry_count = MIN(entries->nelts - i, ffd->l2p_page_size);
               SVN_ERR(encode_l2p_page(entries, i, i + entry_count,
                                       buffer, iterpool));
 
               APR_ARRAY_PUSH(entry_counts, apr_uint64_t) = entry_count;
               APR_ARRAY_PUSH(page_sizes, apr_uint64_t)
                 = svn_spillbuf__get_size(buffer) - last_buffer_size;
-
-              svn_pool_clear(iterpool);
             }
 
           apr_array_clear(entries);
@@ -1121,6 +1121,8 @@ prefetch_l2p_pages(svn_boolean_t *end,
     {
       l2p_page_table_entry_t *entry
         = &APR_ARRAY_IDX(pages, i, l2p_page_table_entry_t);
+      svn_pool_clear(iterpool);
+
       if (i == exlcuded_page_no)
         continue;
 
@@ -1147,8 +1149,6 @@ prefetch_l2p_pages(svn_boolean_t *end,
           SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page,
                                  iterpool));
         }
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -1290,12 +1290,13 @@ l2p_index_lookup(apr_off_t *offset,
           int excluded_page_no = prefetch_revision == revision
                                ? info_baton.page_no
                                : -1;
+          svn_pool_clear(iterpool);
+
           SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
                                      info_baton.first_revision,
                                      prefetch_revision, pages,
                                      excluded_page_no, min_offset,
                                      max_offset, iterpool));
-          svn_pool_clear(iterpool);
         }
 
       end = FALSE;
@@ -1303,11 +1304,12 @@ l2p_index_lookup(apr_off_t *offset,
            prefetch_revision >= info_baton.first_revision && !end;
            --prefetch_revision)
         {
+          svn_pool_clear(iterpool);
+
           SVN_ERR(prefetch_l2p_pages(&end, fs, rev_file,
                                      info_baton.first_revision,
                                      prefetch_revision, pages, -1,
                                      min_offset, max_offset, iterpool));
-          svn_pool_clear(iterpool);
         }
 
       svn_pool_destroy(iterpool);
@@ -1584,6 +1586,8 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
       apr_uint64_t compound;
       apr_int64_t rev_diff, compound_diff;
 
+      svn_pool_clear(iter_pool);
+
       /* (attempt to) read the next entry from the source */
       SVN_ERR(svn_io_file_read_full2(proto_index, &entry, sizeof(entry),
                                      &read, &eof, iter_pool));
@@ -1653,10 +1657,8 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_uint(encoded, entry.fnv1_checksum),
                                   iter_pool));
-     
-      last_entry_end = entry_end;
 
-      svn_pool_clear(iter_pool);
+      last_entry_end = entry_end;
     }
 
   /* store length of last table */
@@ -2210,11 +2212,12 @@ p2l_index_lookup(apr_array_header_t **entries,
       prefetch_info.offset = original_page_start;
       while (prefetch_info.offset >= prefetch_info.page_size && !end)
         {
+          svn_pool_clear(iterpool);
+
           prefetch_info.offset -= prefetch_info.page_size;
           SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
                                     &prefetch_info, min_offset,
                                     iterpool));
-          svn_pool_clear(iterpool);
         }
 
       /* fetch page from disk and put it into the cache */
@@ -2236,11 +2239,12 @@ p2l_index_lookup(apr_array_header_t **entries,
              && prefetch_info.page_no + 1 < prefetch_info.page_count
              && !end)
         {
+          svn_pool_clear(iterpool);
+
           prefetch_info.offset += prefetch_info.page_size;
           SVN_ERR(prefetch_p2l_page(&end, &leaking_bucket, fs, rev_file,
                                     &prefetch_info, min_offset,
                                     iterpool));
-          svn_pool_clear(iterpool);
         }
 
       svn_pool_destroy(iterpool);

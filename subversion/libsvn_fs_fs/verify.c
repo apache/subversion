@@ -194,6 +194,7 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
         {
           apr_off_t offset;
           svn_fs_fs__p2l_entry_t *p2l_entry;
+          svn_pool_clear(iterpool);
 
           /* get L2P entry.  Ignore unused entries. */
           SVN_ERR(svn_fs_fs__item_offset(&offset, fs, &rev_file, revision,
@@ -224,8 +225,6 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                      p2l_entry->item.revision,
                                      (long)p2l_entry->item.number,
                                      revision, (long)k);
-
-          svn_pool_clear(iterpool);
         }
 
       if (cancel_func)
@@ -273,6 +272,8 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       svn_fs_fs__p2l_entry_t *last_entry;
       int i;
 
+      svn_pool_clear(iterpool);
+
       /* get all entries for the current block */
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, &rev_file, start,
                                           offset, iterpool));
@@ -287,7 +288,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
       last_entry
         = &APR_ARRAY_IDX(entries, entries->nelts-1, svn_fs_fs__p2l_entry_t);
       offset = last_entry->offset + last_entry->size;
-      
+
       for (i = 0; i < entries->nelts; ++i)
         {
           svn_fs_fs__p2l_entry_t *entry
@@ -313,8 +314,6 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                                          apr_off_t_toa(pool, entry->offset));
             }
         }
-
-      svn_pool_clear(iterpool);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
@@ -519,6 +518,8 @@ compare_p2l_to_rev(svn_fs_t *fs,
       apr_array_header_t *entries;
       int i;
 
+      svn_pool_clear(iterpool);
+
       /* get all entries for the current block */
       SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, fs, rev_file, start,
                                           offset, iterpool));
@@ -568,8 +569,6 @@ compare_p2l_to_rev(svn_fs_t *fs,
           /* advance offset */
           offset += entry->size;
         }
-
-      svn_pool_clear(iterpool);
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
@@ -627,6 +626,8 @@ verify_index_consistency(svn_fs_t *fs,
       pack_start = packed_base_rev(fs, revision);
       pack_end = pack_start + count;
 
+      svn_pool_clear(iterpool);
+
       if (notify_func && (pack_start % ffd->max_files_per_dir == 0))
         notify_func(pack_start, notify_baton, iterpool);
 
@@ -652,8 +653,6 @@ verify_index_consistency(svn_fs_t *fs,
         {
           SVN_ERR(err);
         }
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);

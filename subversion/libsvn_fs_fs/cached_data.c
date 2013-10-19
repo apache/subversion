@@ -2632,6 +2632,8 @@ block_read(void **result,
           svn_boolean_t is_result;
           apr_pool_t *pool;
 
+          svn_pool_clear(iterpool);
+
           svn_fs_fs__p2l_entry_t* entry
             = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
 
@@ -2692,8 +2694,6 @@ block_read(void **result,
               offset = entry->offset + entry->size;
               if (offset > block_start + ffd->block_size)
                 ++run_count;
-
-              svn_pool_clear(iterpool);
             }
         }
 

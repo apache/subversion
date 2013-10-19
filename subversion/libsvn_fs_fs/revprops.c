@@ -72,6 +72,8 @@ svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
   /* first, pack all revprops shards to match the packed revision shards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
+      svn_pool_clear(iterpool);
+
       revprops_pack_file_dir = svn_dirent_join(revsprops_dir,
                    apr_psprintf(iterpool,
                                 "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
@@ -91,8 +93,6 @@ svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
       if (notify_func)
         SVN_ERR(notify_func(notify_baton, shard,
                             svn_fs_upgrade_pack_revprops, iterpool));
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -121,6 +121,8 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
   /* delete the non-packed revprops shards afterwards */
   for (shard = 0; shard < first_unpacked_shard; ++shard)
     {
+      svn_pool_clear(iterpool);
+
       revprops_shard_path = svn_dirent_join(revsprops_dir,
                        apr_psprintf(iterpool, "%" APR_INT64_T_FMT, shard),
                        iterpool);
@@ -132,8 +134,6 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
       if (notify_func)
         SVN_ERR(notify_func(notify_baton, shard,
                             svn_fs_upgrade_cleanup_revprops, iterpool));
-
-      svn_pool_clear(iterpool);
     }
 
   svn_pool_destroy(iterpool);
@@ -819,6 +819,7 @@ parse_packed_revprops(svn_fs_t *fs,
       svn_string_t serialized;
       apr_hash_t *properties;
       svn_revnum_t revision = (svn_revnum_t)(first_rev + i);
+      svn_pool_clear(iterpool);
 
       /* read & check the serialized size */
       SVN_ERR(svn_fs_fs__read_number_from_stream(&size, NULL, stream,
@@ -854,8 +855,6 @@ parse_packed_revprops(svn_fs_t *fs,
       revprops->total_size += serialized.len;
 
       offset += serialized.len;
-
-      svn_pool_clear(iterpool);
     }
 
   return SVN_NO_ERROR;
@@ -898,6 +897,7 @@ read_pack_revprop(packed_revprops_t **revprops,
        ++i)
     {
       const char *file_path;
+      svn_pool_clear(iterpool);
 
       /* there might have been concurrent writes.
        * Re-read the manifest and the pack file.
@@ -919,8 +919,6 @@ read_pack_revprop(packed_revprops_t **revprops,
        */
       if (missing && has_revprop_cache(fs, pool))
         SVN_ERR(read_revprop_generation(&result->generation, fs, pool));
-
-      svn_pool_clear(iterpool);
     }
 
   /* the file content should be available now */
@@ -1081,8 +1079,9 @@ switch_to_new_revprop(svn_fs_t *fs,
       for (i = 0; i < files_to_delete->nelts; ++i)
         {
           const char *path = APR_ARRAY_IDX(files_to_delete, i, const char*);
-          SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
+
           svn_pool_clear(iterpool);
+          SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
         }
 
       svn_pool_destroy(iterpool);
@@ -1121,7 +1120,7 @@ serialize_revprops_header(svn_stream_t *stream,
   /* the double newline char indicates the end of the header */
   SVN_ERR(svn_stream_printf(stream, iterpool, "\n"));
 
-  svn_pool_clear(iterpool);
+##  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -1739,14 +1738,16 @@ svn_fs_fs__delete_revprops_shard(const char *shard_path,
       /* delete all files except the one for revision 0 */
       for (i = 1; i < max_files_per_dir; ++i)
         {
-          const char *path = svn_dirent_join(shard_path,
-                                       apr_psprintf(iterpool, "%d", i),
-                                       iterpool);
+          const char *path;
+          svn_pool_clear(iterpool);
+
+          path = svn_dirent_join(shard_path,
+                                 apr_psprintf(iterpool, "%d", i),
+                                 iterpool);
           if (cancel_func)
             SVN_ERR((*cancel_func)(cancel_baton));
 
           SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
-          svn_pool_clear(iterpool);
         }
 
       svn_pool_destroy(iterpool);
