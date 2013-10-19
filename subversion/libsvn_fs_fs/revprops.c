@@ -1112,6 +1112,11 @@ serialize_revprops_header(svn_stream_t *stream,
   /* the sizes array */
   for (i = start; i < end; ++i)
     {
+      /* Non-standard pool usage.
+       *
+       * We only allocate a few bytes each iteration -- even with a
+       * million iterations we would still be in good shape memory-wise.
+       */
       apr_off_t size = APR_ARRAY_IDX(sizes, i, apr_off_t);
       SVN_ERR(svn_stream_printf(stream, iterpool, "%" APR_OFF_T_FMT "\n",
                                 size));
@@ -1120,7 +1125,7 @@ serialize_revprops_header(svn_stream_t *stream,
   /* the double newline char indicates the end of the header */
   SVN_ERR(svn_stream_printf(stream, iterpool, "\n"));
 
-##  svn_pool_destroy(iterpool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
