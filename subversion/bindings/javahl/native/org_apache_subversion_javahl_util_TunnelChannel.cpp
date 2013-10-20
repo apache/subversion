@@ -210,7 +210,6 @@ Java_org_apache_subversion_javahl_util_RequestChannel_nativeRead(
   apr_file_t* fd = get_file_descriptor(nativeChannel);
   if (fd)
     return ByteBufferProxy(dst, env).read(fd, env);
-  throw_IOException(_("Invalid native file hanlde"), 0);
   return -1;
 }
 
@@ -222,6 +221,5 @@ Java_org_apache_subversion_javahl_util_ResponseChannel_nativeWrite(
   apr_file_t* fd = get_file_descriptor(nativeChannel);
   if (fd)
     return ByteBufferProxy(src, env).write(fd, env);
-  throw_IOException(_("Invalid native file hanlde"), 0);
   return -1;
 }

@@ -572,6 +572,7 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
           svn_error_wrap_apr(tc->status, _("Could not open tunnel streams")));
     }
 
+  *tunnel_context = tc;
   *request = tc->request_out;
   *response = tc->response_in;
 
@@ -613,7 +614,6 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
                           jtunnel_name, juser, jhostname, jint(port)),
       SVN_ERR_BASE);
 
-  *tunnel_context = NULL;
   return SVN_NO_ERROR;
 }
 
