@@ -1343,10 +1343,10 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
         }
         else
         {
-            char *message = JNIUtil::getFormatBuffer();
-            apr_snprintf(message, JNIUtil::formatBufferSize,
+            char buffer[2048];
+            apr_snprintf(buffer, sizeof(buffer),
                          _("'%s' not versioned, and not exported\n"), path);
-            return JNIUtil::makeJString(message);
+            return JNIUtil::makeJString(buffer);
         }
     }
 
@@ -1511,10 +1511,6 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
                     ctx, subPool.getPool()),
                 NULL);
 
-    jobject jctx = context.getSelf();
-    if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-
     /* Decouple the RemoteSession's context from SVNClient's context
        by creating a copy of the prompter here. */
     Prompter* prompter = new Prompter(context.getPrompter());
@@ -1525,7 +1521,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
         context.getUsername(), context.getPassword(),
-        prompter, jctx);
+        prompter, context.getSelf(), context.getTunnelCallback());
     if (JNIUtil::isJavaExceptionThrown())
       delete prompter;
 

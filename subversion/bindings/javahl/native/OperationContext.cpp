@@ -24,8 +24,11 @@
  * @brief Implementation of the class OperationContext
  */
 
+#include <apr_file_io.h>
+
 #include "svn_client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_dep_compat.h"
 #include "svn_private_config.h"
 
 #include "GlobalConfig.h"
@@ -44,7 +47,8 @@ OperationContext::OperationContext(SVN::Pool &pool)
     m_cancelOperation(0),
     m_pool(&pool),
     m_jctx(NULL),
-    m_jcfgcb(NULL)
+    m_jcfgcb(NULL),
+    m_jtunnelcb(NULL)
 {}
 
 void
@@ -92,6 +96,8 @@ OperationContext::~OperationContext()
   env->DeleteGlobalRef(m_jctx);
   if (m_jcfgcb)
     env->DeleteGlobalRef(m_jcfgcb);
+  if (m_jtunnelcb)
+    env->DeleteGlobalRef(m_jtunnelcb);
 }
 
 apr_hash_t *
@@ -295,6 +301,26 @@ const Prompter& OperationContext::getPrompter() const
   return *m_prompter;
 }
 
+void OperationContext::setTunnelCallback(jobject jtunnelcb)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  if (jtunnelcb)
+    {
+      jtunnelcb = env->NewGlobalRef(jtunnelcb);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+  if (m_jtunnelcb)
+    env->DeleteGlobalRef(m_jtunnelcb);
+  m_jtunnelcb = jtunnelcb;
+}
+
+jobject OperationContext::getTunnelCallback() const
+{
+  return m_jtunnelcb;
+}
+
 void
 OperationContext::cancelOperation()
 {
@@ -439,4 +465,194 @@ OperationContext::notifyConfigLoad()
     return;
   env->CallVoidMethod(jcbimpl, dispose_mid);
   env->DeleteLocalRef(jcbimpl);
+}
+
+namespace {
+class TunnelContext
+{
+public:
+  explicit TunnelContext(apr_pool_t *pool)
+    : request_in(NULL),
+      request_out(NULL),
+      response_in(NULL),
+      response_out(NULL)
+    {
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+      status = apr_file_pipe_create_ex(&request_in, &request_out,
+                                       APR_FULL_BLOCK, pool);
+      if (!status)
+        status = apr_file_pipe_create_ex(&response_in, &response_out,
+                                         APR_FULL_BLOCK, pool);
+#else
+      // XXX APR compatibility note:
+      // Versions of APR before 1.3 do not have the extended pipe
+      // API. Just create a default pipe and just hope that it returns
+      // a blocking handle.
+      status = apr_file_pipe_create(&request_in, &request_out, pool);
+      if (!status)
+        status = apr_file_pipe_create(&response_in, &response_out, pool);
+#endif
+    }
+
+  ~TunnelContext()
+    {
+      apr_file_close(request_out);
+      apr_file_close(response_in);
+    }
+
+  apr_file_t *request_in;
+  apr_file_t *request_out;
+  apr_file_t *response_in;
+  apr_file_t *response_out;
+  apr_status_t status;
+};
+
+jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
+{
+  jclass cls = env->FindClass(class_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  jmethodID ctor = env->GetMethodID(cls, "<init>", "(J)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+  return env->NewObject(cls, ctor, reinterpret_cast<jlong>(fd));
+}
+
+jobject create_RequestChannel(JNIEnv *env, apr_file_t *fd)
+{
+  return create_Channel(JAVA_PACKAGE"/util/RequestChannel", env, fd);
+}
+jobject create_ResponseChannel(JNIEnv *env, apr_file_t *fd)
+{
+  return create_Channel(JAVA_PACKAGE"/util/ResponseChannel", env, fd);
+}
+} // anonymous namespace
+
+svn_boolean_t
+OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      if (JNIUtil::isJavaExceptionThrown())
+        return false;
+      mid = env->GetMethodID(cls, "checkTunnel",
+                             "(Ljava/lang/String;)Z");
+        if (JNIUtil::isJavaExceptionThrown())
+          return false;
+    }
+
+  jobject jtunnelcb = jobject(tunnel_baton);
+  jboolean check = env->CallBooleanMethod(jtunnelcb, mid, jtunnel_name);
+  if (JNIUtil::isJavaExceptionThrown())
+    return false;
+
+  return svn_boolean_t(check);
+}
+
+svn_error_t *
+OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
+                             void **tunnel_context, void *tunnel_baton,
+                             const char *tunnel_name, const char *user,
+                             const char *hostname, int port,
+                             apr_pool_t *pool)
+{
+  TunnelContext *tc = new TunnelContext(pool);
+  if (tc->status)
+    {
+      delete tc;
+      return svn_error_trace(
+          svn_error_wrap_apr(tc->status, _("Could not open tunnel streams")));
+    }
+
+  *tunnel_context = tc;
+  *request = tc->request_out;
+  *response = tc->response_in;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  jobject jrequest = create_RequestChannel(env, tc->request_in);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jobject jresponse = create_ResponseChannel(env, tc->response_out);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring juser = JNIUtil::makeJString(user);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring jhostname = JNIUtil::makeJString(hostname);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+      SVN_JNI_CATCH(
+          mid = env->GetMethodID(cls, "openTunnel",
+                                 "(Ljava/nio/channels/ReadableByteChannel;"
+                                 "Ljava/nio/channels/WritableByteChannel;"
+                                 "Ljava/lang/String;"
+                                 "Ljava/lang/String;"
+                                 "Ljava/lang/String;I)V"),
+          SVN_ERR_BASE);
+    }
+
+  jobject jtunnelcb = jobject(tunnel_baton);
+  SVN_JNI_CATCH(
+      env->CallVoidMethod(jtunnelcb, mid, jrequest, jresponse,
+                          jtunnel_name, juser, jhostname, jint(port)),
+      SVN_ERR_BASE);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+OperationContext::closeTunnel(void *tunnel_context, void *tunnel_baton,
+                              const char *tunnel_name, const char *user,
+                              const char *hostname, int port)
+{
+  delete static_cast<TunnelContext*>(tunnel_context);
+
+  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring juser = JNIUtil::makeJString(user);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  jstring jhostname = JNIUtil::makeJString(hostname);
+  SVN_JNI_CATCH(, SVN_ERR_BASE);
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  static jmethodID mid = 0;
+  if (0 == mid)
+    {
+      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+      SVN_JNI_CATCH(
+          mid = env->GetMethodID(cls, "closeTunnel",
+                                 "(Ljava/lang/String;"
+                                 "Ljava/lang/String;"
+                                 "Ljava/lang/String;I)V"),
+          SVN_ERR_BASE);
+    }
+
+  jobject jtunnelcb = jobject(tunnel_baton);
+  SVN_JNI_CATCH(
+      env->CallVoidMethod(jtunnelcb, mid,
+                          jtunnel_name, juser, jhostname, jint(port)),
+      SVN_ERR_BASE);
+
+  return SVN_NO_ERROR;
 }

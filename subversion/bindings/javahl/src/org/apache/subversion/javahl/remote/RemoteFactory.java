@@ -59,13 +59,15 @@ public class RemoteFactory
     public RemoteFactory(String configDirectory,
                          String username, String password,
                          UserPasswordCallback prompt,
-                         ProgressCallback progress)
+                         ProgressCallback progress,
+                         TunnelAgent tunnelAgent)
     {
         setConfigDirectory(configDirectory);
         setUsername(username);
         setPassword(password);
         setPrompt(prompt);
         setProgressCallback(progress);
+        setTunnelAgent(tunnelAgent);
     }
 
     /**
@@ -125,6 +127,14 @@ public class RemoteFactory
     }
 
     /**
+     * Set callbacks for ra_svn tunnel handling.
+     */
+    public void setTunnelAgent(TunnelAgent tunnelAgent)
+    {
+        this.tunnelAgent = tunnelAgent;
+    }
+
+    /**
      * Open a persistent session to a repository.
      * <p>
      * <b>Note:</b> The URL can point to a subtree of the repository.
@@ -141,7 +151,7 @@ public class RemoteFactory
             throws ClientException, SubversionException
     {
         return open(1, url, null, configDirectory,
-                    username, password, prompt, progress);
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     /**
@@ -168,7 +178,7 @@ public class RemoteFactory
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
         return open(retryAttempts, url, null, configDirectory,
-                    username, password, prompt, progress);
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     /**
@@ -195,7 +205,7 @@ public class RemoteFactory
         if (reposUUID == null)
             throw new IllegalArgumentException("reposUUID may not be null");
         return open(1, url, reposUUID, configDirectory,
-                    username, password, prompt, progress);
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     /**
@@ -229,7 +239,7 @@ public class RemoteFactory
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
         return open(retryAttempts, url, reposUUID, configDirectory,
-                    username, password, prompt, progress);
+                    username, password, prompt, progress, tunnelAgent);
     }
 
     private String configDirectory;
@@ -237,6 +247,7 @@ public class RemoteFactory
     private String password;
     private UserPasswordCallback prompt;
     private ProgressCallback progress;
+    private TunnelAgent tunnelAgent;
 
     /* Native factory implementation. */
     private static native ISVNRemote open(int retryAttempts,
@@ -244,6 +255,7 @@ public class RemoteFactory
                                           String configDirectory,
                                           String username, String password,
                                           UserPasswordCallback prompt,
-                                          ProgressCallback progress)
+                                          ProgressCallback progress,
+                                          TunnelAgent tunnelAgent)
             throws ClientException, SubversionException;
 }

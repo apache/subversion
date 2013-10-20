@@ -119,6 +119,16 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
             && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
         conn->remote_ip = NULL;
       svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
+
+      /* We are using large r/w buffers already.
+       * So, once we decide to actually send data, we want it to go over
+       * the wire a.s.a.p..  So disable Nagle's algorithm.
+       *
+       * We ignore the result of this call since it safe to continue even
+       * if we keep delaying.  The only negative effect is increased
+       * latency (can be additional 5 .. 10ms depending on circumstances).
+       */
+      apr_socket_opt_set(sock, APR_TCP_NODELAY, 1);
     }
   else
     {
@@ -1017,7 +1027,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* Given the first non-whitespace character FIRST_CHAR, read an item
  * into the already allocated structure ITEM.  LEVEL should be set
- * to 0 for the first call and is used to enforce a recurssion limit
+ * to 0 for the first call and is used to enforce a recursion limit
  * on the parser. */
 static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               svn_ra_svn_item_t *item, char first_char,

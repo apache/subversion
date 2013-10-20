@@ -12301,7 +12301,16 @@ find_base_on_target(svn_client__pathrev_t **base_p,
   return SVN_NO_ERROR;
 }
 
-/* The body of client_find_automatic_merge(), which see.
+/* Find the last point at which the branch at S_T->source was completely
+ * merged to the branch at S_T->target or vice-versa.
+ *
+ * Fill in S_T->source_branch and S_T->target_branch and S_T->yca.
+ * Set *BASE_P to the merge base.  Set *IS_REINTEGRATE_LIKE to true if
+ * an automatic merge from source to target would be a reintegration
+ * merge: that is, if the last automatic merge was in the opposite
+ * direction; or to false otherwise.
+ *
+ * If there is no youngest common ancestor, throw an error.
  */
 static svn_error_t *
 find_automatic_merge(svn_client__pathrev_t **base_p,
@@ -12371,6 +12380,9 @@ find_automatic_merge(svn_client__pathrev_t **base_p,
  * Like find_automatic_merge() except that the target is
  * specified by @a target_path_or_url at @a target_revision, which must
  * refer to a repository location, instead of by a WC path argument.
+ *
+ * Set *MERGE_P to a new structure with all fields filled in except the
+ * 'allow_*' flags.
  */
 static svn_error_t *
 find_automatic_merge_no_wc(automatic_merge_t **merge_p,
@@ -12446,6 +12458,8 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
   source_and_target_t *s_t = apr_palloc(result_pool, sizeof(*s_t));
   automatic_merge_t *merge = apr_palloc(result_pool, sizeof(*merge));
 
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
+
   /* "Open" the target WC.  Check the target WC for mixed-rev, local mods and
    * switched subtrees yet to faster exit and notify user before contacting
    * with server.  After we find out what kind of merge is required, then if a
@@ -12477,6 +12491,7 @@ client_find_automatic_merge(automatic_merge_t **merge_p,
                                ctx, result_pool, scratch_pool));
   merge->yca = s_t->yca;
   merge->right = s_t->source;
+  merge->target = &s_t->target->loc;
   merge->allow_mixed_rev = allow_mixed_rev;
   merge->allow_local_mods = allow_local_mods;
   merge->allow_switched_subtrees = allow_switched_subtrees;
@@ -12667,12 +12682,18 @@ svn_client_get_merging_summary(svn_boolean_t *needs_reintegration,
                  && (target_revision->kind == svn_opt_revision_unspecified
                      || target_revision->kind == svn_opt_revision_working);
   if (target_is_wc)
-    SVN_ERR(client_find_automatic_merge(
-              &merge,
-              source_path_or_url, source_revision,
-              target_path_or_url,
-              TRUE, TRUE, TRUE,  /* allow_* */
-              ctx, scratch_pool, scratch_pool));
+    {
+      const char *target_abspath;
+
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_path_or_url,
+                                      scratch_pool));
+      SVN_ERR(client_find_automatic_merge(
+                &merge,
+                source_path_or_url, source_revision,
+                target_abspath,
+                TRUE, TRUE, TRUE,  /* allow_* */
+                ctx, scratch_pool, scratch_pool));
+    }
   else
     SVN_ERR(find_automatic_merge_no_wc(
               &merge,

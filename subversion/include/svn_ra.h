@@ -272,6 +272,18 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
 
 
 /**
+ * Callback function that checks if an ra_svn tunnel called
+ * @a tunnel_name is handled by the callbakcs or the default
+ * implementation.
+ *
+ * @a tunnel_baton is the baton as originally passed to ra_open.
+ *
+ * @since New in 1.9.
+ */
+typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
+    void *tunnel_baton, const char *tunnel_name);
+
+/**
  * Callback function for opening a tunnel in ra_svn.
  *
  * Given the @a tunnel_name, tunnel @a user and server @a hostname and
@@ -281,15 +293,15 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
  * @a request and @a response are the standard input and output,
  * respectively, of the process on the other end of the tunnel.
  *
- * @a tunnel_baton will be passed on to the close-unnel callback.
+ * @a tunnel_context will be passed on to the close-unnel callback.
  *
- * @a open_baton is the baton as originally passed to ra_open.
+ * @a tunnel_baton is the baton as originally passed to ra_open.
  *
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
     apr_file_t **request, apr_file_t **response,
-    void **tunnel_baton, void *open_baton,
+    void **tunnel_context, void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port,
     apr_pool_t *pool);
@@ -309,7 +321,7 @@ typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_close_tunnel_func_t)(
-    void *tunnel_baton, void *open_baton,
+    void *tunnel_context, void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port);
 
@@ -581,24 +593,41 @@ typedef struct svn_ra_callbacks2_t
    */
   svn_ra_get_wc_contents_func_t get_wc_contents;
 
-  /** Open-tunnel callback
-   * If not @c null, this callback will be invoked to create an ra_svn
-   * connection that needs a tunnel, overriding any tunnel definitions
-   * in the client config file. This callback is used only for ra_svn
-   * and ignored by the other RA modules.
+  /** Check-tunnel callback
+   *
+   * If not @c NULL, and open_tunnel_func is also not @c NULL, this
+   * callback will be invoked to check if open_tunnel_func should be
+   * used to create a specific tunnel, or if the default tunnel
+   * implementation (either built-in or configured in the client
+   * configuration file) should be used instead.
    * @since New in 1.9.
    */
-  svn_ra_open_tunnel_func_t open_tunnel;
+  svn_ra_check_tunnel_func_t check_tunnel_func;
+
+  /** Open-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked to create a tunnel
+   * for a ra_svn connection that needs one, overriding any tunnel
+   * definitions in the client config file. This callback is used only
+   * for ra_svn and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel_func;
 
   /** Close-tunnel callback
-   * If not @c null, this callback will be invoked when the pool that
+   *
+   * If not @c NULL, this callback will be invoked when the pool that
    * owns the connection created by the open_tunnel callback is
    * cleared or destroyed. This callback is used only for ra_svn and
    * ignored by the other RA modules.
    * @since New in 1.9.
    */
-  svn_ra_close_tunnel_func_t close_tunnel;
+  svn_ra_close_tunnel_func_t close_tunnel_func;
 
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress

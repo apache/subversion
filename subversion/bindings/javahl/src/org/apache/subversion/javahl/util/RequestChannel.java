@@ -19,19 +19,40 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file libsvnjavahl.c
- * @brief mandatory file for building with libtool
  */
-#include <jni.h>
 
-JNIEXPORT jint JNICALL
-JNI_OnLoad(JavaVM *vm, void *reserved)
-{
-    return JNI_VERSION_1_2;
-}
+package org.apache.subversion.javahl.util;
 
-JNIEXPORT void JNICALL
-JNI_OnUnload(JavaVM *vm, void *reserved)
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ClosedChannelException;
+
+/* The following channel subclasses are used by the native
+   implementation of the tunnel management code. */
+
+class RequestChannel
+    extends TunnelChannel
+    implements ReadableByteChannel
 {
+    private RequestChannel(long nativeChannel)
+    {
+        super(nativeChannel);
+    }
+
+    public int read(ByteBuffer dst) throws IOException
+    {
+        long channel = nativeChannel.get();
+        if (channel != 0)
+            try {
+                return nativeRead(channel, dst);
+            } catch (IOException ex) {
+                nativeChannel.set(0); // Close the channel
+                throw ex;
+            }
+        throw new ClosedChannelException();
+    }
+
+    private static native int nativeRead(long nativeChannel, ByteBuffer dst)
+        throws IOException;
 }

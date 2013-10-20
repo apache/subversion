@@ -1379,6 +1379,36 @@ svn_stream_checksummed(svn_stream_t *stream,
 
 
 /* Miscellaneous stream functions. */
+
+svn_error_t *
+svn_stringbuf_from_stream(svn_stringbuf_t **str,
+                          svn_stream_t *stream,
+                          apr_size_t len_hint,
+                          apr_pool_t *pool)
+{
+#define MIN_READ_SIZE 64
+
+  apr_size_t to_read = 0;
+  svn_stringbuf_t *text
+    = svn_stringbuf_create_ensure(len_hint ? len_hint : MIN_READ_SIZE, pool);
+
+  do
+    {
+      to_read = text->blocksize - 1 - text->len;
+      SVN_ERR(svn_stream_read(stream, text->data + text->len, &to_read));
+      text->len += to_read;
+
+      if (to_read && text->blocksize < text->len + MIN_READ_SIZE)
+        svn_stringbuf_ensure(text, text->blocksize * 2);
+    }
+  while (to_read);
+
+  text->data[text->len] = '\0';
+  *str = text;
+
+  return SVN_NO_ERROR;
+}
+
 struct stringbuf_stream_baton
 {
   svn_stringbuf_t *str;

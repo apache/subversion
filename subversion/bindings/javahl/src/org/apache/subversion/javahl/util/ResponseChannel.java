@@ -19,59 +19,40 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file JNIThreadData.h
- * @brief Interface of the class JNIThreadData
  */
 
-#ifndef JNITHREADDATA_H
-#define JNITHREADDATA_H
+package org.apache.subversion.javahl.util;
 
-#include <jni.h>
-#include "JNIUtil.h"
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.WritableByteChannel;
+import java.nio.channels.ClosedChannelException;
 
-struct apr_threadkey_t;
+/* The following channel subclasses are used by the native
+   implementation of the tunnel management code. */
 
-/**
- * This class implements thread local storage for JNIUtil.
- */
-class JNIThreadData
+class ResponseChannel
+    extends TunnelChannel
+    implements WritableByteChannel
 {
- public:
-  static void del(void *);
-  static JNIThreadData *getThreadData();
-  static bool initThreadData();
-  static void pushNewThreadData();
-  static void popThreadData();
-  JNIThreadData();
-  ~JNIThreadData();
+    private ResponseChannel(long nativeChannel)
+    {
+        super(nativeChannel);
+    }
 
-  /**
-   * The current JNI environment.
-   */
-  JNIEnv *m_env;
+    public int write(ByteBuffer src) throws IOException
+    {
+        long channel = this.nativeChannel.get();
+        if (channel != 0)
+            try {
+                return nativeWrite(channel, src);
+            } catch (IOException ex) {
+                nativeChannel.set(0); // Close the channel
+                throw ex;
+            }
+        throw new ClosedChannelException();
+    }
 
-  /**
-   * Flag that a Java execption has been detected.
-   */
-  bool m_exceptionThrown;
-
-  /**
-   * A buffer used for formating messages.
-   */
-  char m_formatBuffer[JNIUtil::formatBufferSize];
-
- private:
-  /**
-   * Pointer to previous thread information to enable reentrent
-   * calls.
-   */
-  JNIThreadData *m_previous;
-
-  /**
-   * The key to address this thread local storage.
-   */
-  static apr_threadkey_t *g_key;
-};
-
-#endif  // JNITHREADDATA_H
+    private static native int nativeWrite(long nativeChannel, ByteBuffer src)
+        throws IOException;
+}

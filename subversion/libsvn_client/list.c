@@ -128,6 +128,10 @@ get_dir_contents(apr_uint32_t dirent_fields,
     }
   SVN_ERR(err);
 
+ /* Locks will often be empty.  Prevent pointless lookups in that case. */
+ if (locks && apr_hash_count(locks) == 0)
+   locks = NULL;
+
  /* Filter out svn:externals from all properties hash. */
   if (prop_hash)
     prop_val = svn_hash_gets(prop_hash, SVN_PROP_EXTERNALS);

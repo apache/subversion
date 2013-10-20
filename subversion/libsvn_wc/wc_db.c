@@ -6560,12 +6560,12 @@ op_revert_recursive_txn(void *baton,
   while (have_row)
     {
       const char *move_src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      int op_depth = svn_sqlite__column_int(stmt, 2);
+      int move_op_depth = svn_sqlite__column_int(stmt, 2);
       svn_error_t *err;
 
       err = svn_wc__db_resolve_break_moved_away_internal(wcroot,
                                                          move_src_relpath,
-                                                         op_depth,
+                                                         move_op_depth,
                                                          scratch_pool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
