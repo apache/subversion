@@ -249,8 +249,10 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
   /* validate index */
   if (idx + 1 >= (apr_size_t)changes->offsets->nelts)
     return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
-                             _("Changes list index %" APR_SIZE_T_FMT
-                               " exceeds container size %d"),
+                             apr_psprintf(pool,
+                                          _("Changes list index %%%s"
+                                            " exceeds container size %%d"),
+                                          APR_SIZE_T_FMT),
                              idx, changes->offsets->nelts - 1);
 
   /* range of changes to return */
