@@ -494,6 +494,12 @@ public:
 #endif
     }
 
+  ~TunnelContext()
+    {
+      apr_file_close(request_out);
+      apr_file_close(response_in);
+    }
+
   apr_file_t *request_in;
   apr_file_t *request_out;
   apr_file_t *response_in;
