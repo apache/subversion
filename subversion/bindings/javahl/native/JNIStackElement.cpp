@@ -27,7 +27,6 @@
 #include "JNIStackElement.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
-#include "JNIThreadData.h"
 #include <apr_strings.h>
 
 /**
@@ -74,7 +73,7 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
 
           // Copy the result to a buffer.
           JNIStringHolder name(reinterpret_cast<jstring>(oStr));
-          strncat(m_objectID, name, JNIUtil::formatBufferSize -1);
+          strncat(m_objectID, name, sizeof(m_objectID) - 1);
           env->DeleteLocalRef(oStr);
         }
 
@@ -86,8 +85,8 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
       m_method = method;
 
       // Generate the log message.
-      char *buffer = JNIUtil::getFormatBuffer();
-      apr_snprintf(buffer, JNIUtil::formatBufferSize,
+      char buffer[2048];
+      apr_snprintf(buffer, sizeof(buffer),
                    "entry class %s method %s object %s", m_clazz, m_method,
                    m_objectID);
       JNIUtil::logMessage(buffer);
@@ -110,11 +109,10 @@ JNIStackElement::~JNIStackElement()
   if (m_clazz != NULL)
     {
       // Generate a log message.
-      char *buffer = JNIUtil::getFormatBuffer();
-      apr_snprintf(buffer, JNIUtil::formatBufferSize,
+      char buffer[2048];
+      apr_snprintf(buffer, sizeof(buffer),
                    "exit class %s method %s object %s", m_clazz,
                    m_method, m_objectID);
       JNIUtil::logMessage(buffer);
     }
-  JNIThreadData::popThreadData();
 }
