@@ -468,8 +468,10 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
   /* validate index */
   if (idx >= (apr_size_t)container->noderevs->nelts)
     return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
-                             _("Node revision index %" APR_SIZE_T_FMT
-                               " exceeds container size %d"),
+                             apr_psprintf(pool,
+                                          _("Node revision index %%%s"
+                                            " exceeds container size %%d"),
+                                          APR_SIZE_T_FMT),
                              idx, container->noderevs->nelts);
 
   /* allocate result struct and fill it field by field */
@@ -720,9 +722,11 @@ read_reps(apr_array_header_t **reps_p,
       bytes = svn_packed__get_bytes(digest_stream, &len);
       if (len != sizeof(rep.md5_digest))
         return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
-                                _("Unexpected MD5 digest size %"
-                                  APR_SIZE_T_FMT),
-                                len);
+                                 apr_psprintf(pool,
+                                              _("Unexpected MD5"
+                                                " digest size %%%s"),
+                                              APR_SIZE_T_FMT),
+                                 len);
 
       memcpy(rep.md5_digest, bytes, sizeof(rep.md5_digest));
       if (rep.has_sha1)
@@ -730,9 +734,11 @@ read_reps(apr_array_header_t **reps_p,
           bytes = svn_packed__get_bytes(digest_stream, &len);
           if (len != sizeof(rep.sha1_digest))
             return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
-                                    _("Unexpected SHA1 digest size %"
-                                      APR_SIZE_T_FMT),
-                                    len);
+                                     apr_psprintf(pool,
+                                                  _("Unexpected SHA1"
+                                                    " digest size %%%s"),
+                                                  APR_SIZE_T_FMT),
+                                     len);
 
           memcpy(rep.sha1_digest, bytes, sizeof(rep.sha1_digest));
         }

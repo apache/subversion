@@ -2232,8 +2232,10 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     move_behavior = (svn_move_behavior_t) move_behavior_param;
   else
     return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                             _("Invalid move_behavior value %"
-                               APR_UINT64_T_FMT " in log command"),
+                             apr_psprintf(pool,
+                                          _("Invalid move_behavior value"
+                                            " %%%s in log command"),
+                                          APR_UINT64_T_FMT),
                              move_behavior_param);
 
   /* If we got an unspecified number then the user didn't send us anything,
