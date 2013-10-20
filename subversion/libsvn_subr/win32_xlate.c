@@ -50,6 +50,8 @@ typedef int win32_xlate__dummy;
 
 #include "win32_xlate.h"
 
+#include "svn_private_config.h"
+
 static svn_atomic_t com_initialized = 0;
 
 /* Initializes COM and keeps COM available until process exit.
@@ -234,5 +236,35 @@ svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
   (*dest)->len = retval;
   return APR_SUCCESS;
 }
+
+svn_error_t *
+svn_subr__win32_utf8_to_utf16(const WCHAR **result,
+                              const char *src,
+                              apr_pool_t *result_pool)
+{
+  WCHAR * wide_str;
+  int retval, wide_count;
+
+  retval = MultiByteToWideChar(CP_UTF8, 0, src, -1, NULL, 0);
+
+  if (retval == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_count = retval + 1;
+  wide_str = apr_palloc(result_pool, wide_count * sizeof(WCHAR));
+  wide_str[wide_count] = 0;
+
+  retval = MultiByteToWideChar(CP_UTF8, 0, src, -1, wide_str, wide_count);
+
+  if (retval == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  *result = wide_str;
+
+  return SVN_NO_ERROR;
+}
+
 
 #endif /* WIN32 */

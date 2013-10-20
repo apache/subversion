@@ -47,6 +47,12 @@ apr_status_t svn_subr__win32_xlate_to_stringbuf(win32_xlate_t *handle,
                                                 svn_stringbuf_t **dest,
                                                 apr_pool_t *pool);
 
+/* On Windows: Convert the utf-8 string SRC to utf-16/ucs2. */
+svn_error_t *
+svn_subr__win32_utf8_to_utf16(const WCHAR **result,
+                              const char *src,
+                              apr_pool_t *result_pool);
+
 #endif /* WIN32 */
 
 #endif /* SVN_LIBSVN_SUBR_WIN32_XLATE_H */

@@ -34,6 +34,7 @@
 #else
 #include <crtdbg.h>
 #include <io.h>
+#include <conio.h>
 #endif
 
 #include <apr.h>                /* for STDIN_FILENO */
@@ -66,6 +67,7 @@
 #include "private/svn_string_private.h"
 
 #include "win32_crashrpt.h"
+#include "win32_xlate.h"
 
 #if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
 /* Before Visual Studio 2005, the C runtime didn't handle encodings for the
@@ -77,6 +79,14 @@ static const char *input_encoding = NULL;
 
 /* The stdout encoding. If null, it's the same as the native encoding. */
 static const char *output_encoding = NULL;
+#elif defined(WIN32) && defined(_MSC_VER)
+/* For now limit this code to Visual C++, as the result is highly dependent
+   on the CRT implementation */
+#define USE_WIN32_CONSOLE_SHORTCUT
+
+/* When TRUE, stdout/stderr is directly connected to a console */
+static svn_boolean_t shortcut_stdout_to_console = FALSE;
+static svn_boolean_t shortcut_stderr_to_console = FALSE;
 #endif
 
 
@@ -254,6 +264,31 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       return EXIT_FAILURE;
     }
 
+#ifdef USE_WIN32_CONSOLE_SHORTCUT
+  if (_isatty(STDOUT_FILENO))
+    {
+      DWORD ignored;
+      HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+       /* stdout is a char device handle, but is it the console? */
+       if (GetConsoleMode(stdout_handle, &ignored))
+        shortcut_stdout_to_console = TRUE;
+
+       /* Don't close stdout_handle */
+    }
+  if (_isatty(STDERR_FILENO))
+    {
+      DWORD ignored;
+      HANDLE stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+
+       /* stderr is a char device handle, but is it the console? */
+      if (GetConsoleMode(stderr_handle, &ignored))
+          shortcut_stderr_to_console = TRUE;
+
+      /* Don't close stderr_handle */
+    }
+#endif
+
   return EXIT_SUCCESS;
 }
 
@@ -346,6 +381,45 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *out;
+
+#ifdef USE_WIN32_CONSOLE_SHORTCUT
+  /* For legacy reasons the Visual C++ runtime converts output to the console
+     from the native 'ansi' encoding, to unicode, then back to 'ansi' and then
+     onwards to the console which is implemented as unicode.
+
+     For operations like 'svn status -v' this may cause about 70% of the total
+     processing time, with absolutely no gain.
+
+     For this specific scenario this shortcut exists. It has the nice side
+     effect of allowing full unicode output to the console.
+
+     Note that this shortcut is not used when the output is redirected, as in
+     that case the data is put on the pipe/file after the first conversion to
+     ansi. In this case the most expensive conversion is already avoided.
+   */
+  if ((stream == stdout && shortcut_stdout_to_console)
+      || (stream == stderr && shortcut_stderr_to_console))
+    {
+      WCHAR *result;
+
+      if (string[0] == '\0')
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_cmdline_fflush(stream)); /* Flush existing output */
+
+      SVN_ERR(svn_subr__win32_utf8_to_utf16(&result, string, pool));
+
+      if (_cputws(result))
+        {
+          if (apr_get_os_error())
+          {
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
+          }
+        }
+
+      return SVN_NO_ERROR;
+    }
+#endif
 
   err = svn_cmdline_cstring_from_utf8(&out, string, pool);
 
