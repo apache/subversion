@@ -121,6 +121,27 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1534102
+   On Windows: stop linking agains psapi.dll.
+   Justification:
+     Removes a 100% dependency on Windows components that are usually not loaded.
+     Affects initial performance of svn.exe invocations.
+   Votes:
+     +1: rhuijben
+     
+ * r1534149
+   In the windows CryptoAPI ssl certificate verification, properly handle
+   certificates that are only trusted via intermediate authorities.
+   Justification:
+      While not strictly a bug, intermediate authorities are getting more
+      common since recent Certificate Authority incidents.
+   Notes:
+      rhuijben: This introduces a new credential type as private API.
+      Not sure about our strict ABI guarantees here, but this affects
+      usability of users migrating to cloud platforms, etc.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
