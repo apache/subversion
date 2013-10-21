@@ -665,6 +665,7 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
                                                   "windows",
                                                   "ssl_server_trust",
                                                   pool));
+  SVN__MAYBE_ADD_PROVIDER(*providers, provider);
 
   /* The windows ssl authority certificate CRYPTOAPI provider. */
   SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
