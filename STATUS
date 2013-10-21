@@ -121,14 +121,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1532023
-   Resolve possible segfault in the win32 crash handler.
-   Justification:
-      The crash handler shouldn't crash, but report the original
-      crash.
-   Votes:
-     +1: rhuijben, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -142,5 +134,13 @@ Approved changes:
      While in general we can just rely on the parsed result being incomplete,
      this makes many network (and server implementation) problems easier to
      diagnose.
+   Votes:
+     +1: rhuijben, stefan2, ivan
+
+ * r1532023
+   Resolve possible segfault in the win32 crash handler.
+   Justification:
+      The crash handler shouldn't crash, but report the original
+      crash.
    Votes:
      +1: rhuijben, stefan2, ivan
