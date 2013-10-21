@@ -71,15 +71,6 @@ Candidate changes:
                    detection of BDB (via db.h) and even while debugging a
                    maintainer build of Subversion a release BDB works fine)
 
- * r1518184
-   Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
-   for the specific case where a repository is placed in a Windows drive
-   root.
-   Justification:
-     Improves correctness. Resolves user reported problem.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1520065, r1520745
    Resolve a user triggerable assertion when during an update a file external
    is being replaced by a server excluded (aka absent) node.
@@ -173,3 +164,12 @@ Approved changes:
       servers only.  Apache will just respawn a new worker process.
    Votes:
      +1: stefan2, ivan, rhuijben
+
+ * r1518184
+   Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
+   for the specific case where a repository is placed in a Windows drive
+   root.
+   Justification:
+     Improves correctness. Resolves user reported problem.
+   Votes:
+     +1: rhuijben, stefan2, ivan
