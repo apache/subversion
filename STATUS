@@ -96,8 +96,8 @@ Candidate changes:
       breser: Added r1530967 because the comment in wc_db.h mentions the test
       added by that revision.
    Votes:
-     +1: breser
-     +1 (without r1530967): rhuijben, philip
+     +1: breser, rhuijben
+     +1 (without r1530967): philip
 
  * r1534149
    In the windows CryptoAPI ssl certificate verification, properly handle
