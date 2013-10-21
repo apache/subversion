@@ -108,14 +108,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1534158
-   Correct error message when FSFS detects unsupported future formats.
-   Justification:
-      The admin should see a "format number error" instead of "unknown
-      format option error" for format bumps that also add new options.
-   Votes:
-     +1: stefan2, breser
-
 Veto-blocked changes:
 =====================
 
@@ -173,3 +165,11 @@ Approved changes:
       probably have been diagnosed months ago.
    Votes:
      +1: rhuijben, ivan, breser
+
+ * r1534158
+   Correct error message when FSFS detects unsupported future formats.
+   Justification:
+      The admin should see a "format number error" instead of "unknown
+      format option error" for format bumps that also add new options.
+   Votes:
+     +1: stefan2, breser, rhuijben
