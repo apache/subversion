@@ -591,24 +591,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-  /* The windows ssl server certificate CRYPTOAPI provider. */
-  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                  "windows",
-                                                  "ssl_server_trust",
-                                                  pool));
-
-  if (provider)
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-  /* The windows ssl authority certificate CRYPTOAPI provider. */
-  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                  "windows",
-                                                  "ssl_server_authority",
-                                                  pool));
-
-  if (provider)
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
   svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
