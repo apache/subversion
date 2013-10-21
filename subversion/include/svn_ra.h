@@ -1621,7 +1621,7 @@ svn_ra_get_log3(svn_ra_session_t *session,
 
 /**
  * Similar to svn_ra_get_log3(), but with @a move_behavior being set to
- * #svn_fs_move_behavior_no_moves.
+ * #svn_move_behavior_no_moves.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.8 API.
