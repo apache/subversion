@@ -23,14 +23,6 @@
 
 
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#define PSAPI_VERSION 1
-#include <windows.h>
-#include <psapi.h>
-#include <Ws2tcpip.h>
-#endif
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
