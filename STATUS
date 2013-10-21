@@ -44,16 +44,6 @@ Candidate changes:
      stsp: where exactly is the alternative patch?
      danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
 
- * r1501199, r1501207, r1502777
-   Verify the result of the xml parser in ra serf, instead of assuming the
-   parsing always succeeds.
-   Justification:
-     While in general we can just rely on the parsed result being incomplete,
-     this makes many network (and server implementation) problems easier to
-     diagnose.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
    Justification:
@@ -144,3 +134,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1501199, r1501207, r1502777
+   Verify the result of the xml parser in ra serf, instead of assuming the
+   parsing always succeeds.
+   Justification:
+     While in general we can just rely on the parsed result being incomplete,
+     this makes many network (and server implementation) problems easier to
+     diagnose.
+   Votes:
+     +1: rhuijben, stefan2, ivan
