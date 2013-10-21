@@ -77,7 +77,7 @@ Candidate changes:
    Justification:
      Quite a few reports of this assertion on the users@s.a.o list since 1.7.0.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, breser
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
