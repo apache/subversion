@@ -1020,3 +1020,74 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
   return err;
 }
+
+
+#ifdef WIN32
+
+
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             apr_pool_t *result_pool)
+{
+  const int utf8_count = strlen(src);
+  WCHAR *wide_str;
+  int wide_count;
+
+  if (!utf8_count)
+    {
+      *result = L"";
+      return SVN_NO_ERROR;
+    }
+
+  wide_count = MultiByteToWideChar(CP_UTF8, 0, src, utf8_count, NULL, 0);
+  if (wide_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str = apr_palloc(result_pool, (wide_count + 1) * sizeof(*wide_str));
+  if (0 == MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
+                               wide_str, wide_count))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str[wide_count] = 0;
+  *result = wide_str;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             apr_pool_t *result_pool)
+{
+  const int wide_count = lstrlenW(src);
+  char *utf8_str;
+  int utf8_count;
+
+  if (!wide_count)
+    {
+      *result = "";
+      return SVN_NO_ERROR;
+    }
+
+  utf8_count = WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                                   NULL, 0, NULL, FALSE);
+  if (utf8_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str = apr_palloc(result_pool, (utf8_count + 1) * sizeof(*utf8_str));
+  if (0 == WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                               utf8_str, utf8_count, NULL, FALSE))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str[utf8_count] = 0;
+  *result = utf8_str;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* WIN32 */

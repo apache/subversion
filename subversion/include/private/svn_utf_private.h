@@ -93,6 +93,22 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+
+#if defined(WIN32)
+/* On Windows: Convert the UTF-8 string SRC to UTF-16. */
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             apr_pool_t *result_pool);
+
+/* On Windows: Convert the UTF-18 string SRC to UTF-8. */
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             apr_pool_t *result_pool);
+#endif /* WIN32*/
+
+
 /* A constant used for many length parameters in the utf8proc wrappers
  * to indicate that the length of a string is unknonw. */
 #define SVN_UTF__UNKNOWN_LENGTH ((apr_size_t) -1)

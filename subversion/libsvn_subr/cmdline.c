@@ -65,7 +65,6 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_string_private.h"
-#include "private/svn_subr_private.h"
 
 #include "win32_crashrpt.h"
 
@@ -407,7 +406,7 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
 
       SVN_ERR(svn_cmdline_fflush(stream)); /* Flush existing output */
 
-      SVN_ERR(svn_subr__win32_utf8_to_utf16(&result, string, pool));
+      SVN_ERR(svn_utf__win32_utf8_to_utf16(&result, string, pool));
 
       if (_cputws(result))
         {
