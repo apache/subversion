@@ -299,7 +299,7 @@ svn_subr__win32_utf16_to_utf8(const char **result,
 
   if (retval == 0)
     return svn_error_wrap_apr(apr_get_os_error(),
-                              _("Conversion to UTF-16 failed"));
+                              _("Conversion from UTF-16 failed"));
 
   utf8_count = retval;
   utf8_str = apr_palloc(result_pool, (utf8_count + 1) * sizeof(*utf8_str));
