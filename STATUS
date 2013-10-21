@@ -121,14 +121,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1534102
-   On Windows: stop linking agains psapi.dll.
-   Justification:
-     Removes a 100% dependency on Windows components that are usually not loaded.
-     Affects initial performance of svn.exe invocations.
-   Votes:
-     +1: rhuijben, ivan
-     
  * r1534149
    In the windows CryptoAPI ssl certificate verification, properly handle
    certificates that are only trusted via intermediate authorities.
@@ -173,3 +165,12 @@ Approved changes:
       crash.
    Votes:
      +1: rhuijben, stefan2, ivan
+
+ * r1534102
+   On Windows: stop linking agains psapi.dll.
+   Justification:
+     Removes a 100% dependency on Windows components that are usually not loaded.
+     Affects initial performance of svn.exe invocations.
+   Votes:
+     +1: rhuijben, ivan, stefan2     
+
