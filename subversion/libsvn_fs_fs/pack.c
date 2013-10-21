@@ -1138,6 +1138,7 @@ pack_range(pack_context_t *context,
 {
   apr_pool_t *revpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool2 = svn_pool_create(pool);
 
   /* Phase 2: Copy items into various buckets and build tracking info */
   svn_revnum_t revision;
@@ -1168,6 +1169,9 @@ pack_range(pack_context_t *context,
           /* read one cluster */
           int i;
           apr_array_header_t *entries;
+
+          svn_pool_clear(iterpool);
+
           SVN_ERR(svn_fs_fs__p2l_index_lookup(&entries, context->fs,
                                               rev_file, revision, offset,
                                               iterpool));
@@ -1177,45 +1181,45 @@ pack_range(pack_context_t *context,
               svn_fs_fs__p2l_entry_t *entry
                 = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
 
-              svn_pool_clear(iterpool);
-
               /* skip first entry if that was duplicated due crossing a
                  cluster boundary */
               if (offset > entry->offset)
                 continue;
+
+              svn_pool_clear(iterpool2);
 
               /* process entry while inside the rev file */
               offset = entry->offset;
               if (offset < finfo.size)
                 {
                   SVN_ERR(svn_io_file_seek(rev_file->file, SEEK_SET, &offset,
-                                           iterpool));
+                                           iterpool2));
 
                   if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->changes,
                                               context->changes_file,
                                               rev_file->file, entry,
-                                              iterpool));
+                                              iterpool2));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->file_props,
                                               context->file_props_file,
                                               rev_file->file, entry,
-                                              iterpool));
+                                              iterpool2));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS)
                     SVN_ERR(copy_item_to_temp(context,
                                               context->dir_props,
                                               context->dir_props_file,
                                               rev_file->file, entry,
-                                              iterpool));
+                                              iterpool2));
                   else if (   entry->type == SVN_FS_FS__ITEM_TYPE_FILE_REP
                            || entry->type == SVN_FS_FS__ITEM_TYPE_DIR_REP)
                     SVN_ERR(copy_rep_to_temp(context, rev_file->file, entry,
-                                             iterpool));
+                                             iterpool2));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
                     SVN_ERR(copy_node_to_temp(context, rev_file->file, entry,
-                                              iterpool));
+                                              iterpool2));
                   else
                     SVN_ERR_ASSERT(entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED);
 
@@ -1228,6 +1232,7 @@ pack_range(pack_context_t *context,
         }
     }
 
+  svn_pool_destroy(iterpool2);
   svn_pool_destroy(iterpool);
 
   /* phase 3: placement.
