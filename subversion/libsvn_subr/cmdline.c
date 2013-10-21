@@ -65,9 +65,9 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_subr_private.h"
 
 #include "win32_crashrpt.h"
-#include "win32_xlate.h"
 
 #if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
 /* Before Visual Studio 2005, the C runtime didn't handle encodings for the
