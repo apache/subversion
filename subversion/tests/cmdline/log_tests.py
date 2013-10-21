@@ -2361,6 +2361,49 @@ def merge_sensitive_log_with_search(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
+# Helper function for a few tests
+def create_renaming_history_repos(sbox):
+  "create a repository containing renames and a suitable working copy"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  msg_file=os.path.join(sbox.repo_dir, 'log-msg')
+  msg_file=os.path.abspath(msg_file)
+  mu_path1 = os.path.join(wc_dir, 'A', 'mu')
+  mu_path2 = os.path.join(wc_dir, 'trunk', 'mu')
+
+  # r2 - Change a file.
+  msg=""" Log message for revision 2
+  but with multiple lines
+  to test the code"""
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(mu_path1, "2")
+  svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
+
+  # r3 - Rename that file's parent.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  sbox.simple_move('A', 'trunk')
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 3",
+                       wc_dir)
+
+  # r4 - Change the file again.
+  msg=""" Log message for revision 4
+  but with multiple lines
+  to test the code"""
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(mu_path2, "4")
+  svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # r5 - Cyclic exchange.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  sbox.simple_move(os.path.join('trunk', 'D'), os.path.join('trunk', 'X'))
+  sbox.simple_move(os.path.join('trunk', 'C'), os.path.join('trunk', 'D'))
+  sbox.simple_move(os.path.join('trunk', 'X'), os.path.join('trunk', 'C'))
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 5",
+                       wc_dir)
+
+
 #----------------------------------------------------------------------
 # Test for issue #4355 'svn_client_log5 broken with multiple revisions
 # which span a rename'.
@@ -2371,7 +2414,7 @@ def log_multiple_revs_spanning_rename(sbox):
 
   trunk_path = sbox.ospath('trunk')
 
-  renaming_history_repos(sbox)
+  create_renaming_history_repos(sbox)
 
   # Check that log can handle a revision range that spans a rename.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
@@ -2506,50 +2549,10 @@ def verify_move_log(sbox, flag, has_moves):
 def log_auto_move(sbox):
   "test --auto-moves flag"
 
-  renaming_history_repos(sbox)
+  create_renaming_history_repos(sbox)
   verify_move_log(sbox, '--auto-moves', server_has_auto_move())
   verify_move_log(sbox, '-v', 0)
 
-def renaming_history_repos(sbox):
-  "create a repository containing renames and a suitable working copy"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  msg_file=os.path.join(sbox.repo_dir, 'log-msg')
-  msg_file=os.path.abspath(msg_file)
-  mu_path1 = os.path.join(wc_dir, 'A', 'mu')
-  mu_path2 = os.path.join(wc_dir, 'trunk', 'mu')
-
-  # r2 - Change a file.
-  msg=""" Log message for revision 2
-  but with multiple lines
-  to test the code"""
-  svntest.main.file_write(msg_file, msg)
-  svntest.main.file_append(mu_path1, "2")
-  svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
-
-  # r3 - Rename that file's parent.
-  svntest.main.run_svn(None, 'up', wc_dir)
-  sbox.simple_move('A', 'trunk')
-  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 3",
-                       wc_dir)
-
-  # r4 - Change the file again.
-  msg=""" Log message for revision 4
-  but with multiple lines
-  to test the code"""
-  svntest.main.file_write(msg_file, msg)
-  svntest.main.file_append(mu_path2, "4")
-  svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
-  svntest.main.run_svn(None, 'up', wc_dir)
-
-  # r5 - Cyclic exchange.
-  svntest.main.run_svn(None, 'up', wc_dir)
-  sbox.simple_move(os.path.join('trunk', 'D'), os.path.join('trunk', 'X'))
-  sbox.simple_move(os.path.join('trunk', 'C'), os.path.join('trunk', 'D'))
-  sbox.simple_move(os.path.join('trunk', 'X'), os.path.join('trunk', 'C'))
-  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 5",
-                       wc_dir)
 
 
 ########################################################################
@@ -2599,7 +2602,6 @@ test_list = [ None,
               merge_sensitive_log_with_search,
               log_multiple_revs_spanning_rename,
               log_auto_move,
-              renaming_history_repos
              ]
 
 if __name__ == '__main__':
