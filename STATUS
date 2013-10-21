@@ -88,12 +88,16 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1530763, r1530768, r1530922, r1530872, r1531002, r1531004, r1531938, r1532098
+ * r1530763, r1530768, r1530922, r1530872, r1531002, r1531004, r1531938, r1532098, r1530967
    Resolve issue #4436, reverting a move leaves some move data.
    Justification:
       Reverting a move shouldn't break the wc.db state.
+   Notes:
+      breser: Added r1530967 because the comment in wc_db.h mentions the test
+      added by that revision.
    Votes:
-     +1: rhuijben, philip
+     +1: breser
+     +1 (without r1530967): rhuijben, philip
 
  * r1534149
    In the windows CryptoAPI ssl certificate verification, properly handle
