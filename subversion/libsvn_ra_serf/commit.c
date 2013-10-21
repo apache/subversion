@@ -1933,18 +1933,11 @@ add_file(const char *path,
 
       if (handler->sline.code != 404)
         {
-          if (handler->sline.code != 200)
-            {
-              svn_error_t *err;
+          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                               handler->path,
+                                               handler->location));
 
-              err = svn_ra_serf__error_on_status(handler->sline,
-                                                 handler->path,
-                                                 handler->location);
-
-              SVN_ERR(err);
-            }
-
-          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"), path);
         }
     }
