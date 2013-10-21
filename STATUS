@@ -93,7 +93,7 @@ Candidate changes:
    Justification:
       Reverting a move shouldn't break the wc.db state.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1534149
    In the windows CryptoAPI ssl certificate verification, properly handle
