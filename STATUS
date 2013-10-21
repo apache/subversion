@@ -127,7 +127,7 @@ Candidate changes:
      Removes a 100% dependency on Windows components that are usually not loaded.
      Affects initial performance of svn.exe invocations.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
      
  * r1534149
    In the windows CryptoAPI ssl certificate verification, properly handle
