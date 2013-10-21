@@ -114,7 +114,7 @@ Candidate changes:
       The admin should see a "format number error" instead of "unknown
       format option error" for format bumps that also add new options.
    Votes:
-     +1: stefan2
+     +1: stefan2, breser
 
 Veto-blocked changes:
 =====================
