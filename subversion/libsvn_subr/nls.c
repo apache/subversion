@@ -37,7 +37,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 
-#include "private/svn_subr_private.h"
+#include "private/svn_utf_private.h"
 
 #include "svn_private_config.h"
 
@@ -70,8 +70,8 @@ svn_nls_init(void)
         }
 
       if (! err)
-        err = svn_subr__win32_utf16_to_utf8(&utf8_path, ucs2_path,
-                                            scratch_pool);
+        err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path,
+                                           scratch_pool);
 
       if (! err)
         {

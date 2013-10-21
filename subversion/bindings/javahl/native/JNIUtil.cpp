@@ -54,6 +54,7 @@
 #include "svn_path.h"
 #include "svn_cache_config.h"
 #include "private/svn_atomic.h"
+#include "private/svn_utf_private.h"
 #include "svn_private_config.h"
 
 #include "SVNBase.h"
@@ -312,7 +313,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
     GetModuleFileNameW(moduleHandle, ucs2_path,
                        sizeof(ucs2_path) / sizeof(ucs2_path[0]));
-    err = svn_subr__win32_utf16_to_utf8(&utf8_path, ucs2_path, pool);
+    err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path, pool);
     if (err)
       {
         if (stderr)
