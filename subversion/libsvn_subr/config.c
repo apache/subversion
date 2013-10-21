@@ -701,7 +701,9 @@ svn_config_set(svn_config_t *cfg,
    * Since we should never try to modify r/o data, trigger an assertion
    * in debug mode.
    */
-  assert(!cfg->read_only);
+#ifdef SVN_DEBUG
+  SVN_ERR_ASSERT_NO_RETURN(!cfg->read_only);
+#endif
   if (cfg->read_only)
     return;
 
