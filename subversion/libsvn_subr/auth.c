@@ -544,7 +544,7 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
           svn_auth_get_windows_ssl_server_trust_provider(provider, pool);
         }
       else if (strcmp(provider_name, "windows") == 0 &&
-          strcmp(provider_type, "ssl_server_authority") == 0)
+               strcmp(provider_type, "ssl_server_authority") == 0)
         {
           svn_auth__get_windows_ssl_server_authority_provider(provider, pool);
         }
