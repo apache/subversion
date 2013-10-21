@@ -101,7 +101,7 @@ svn_utf__win32_utf8_to_utf16(const WCHAR **result,
                              const char *src,
                              apr_pool_t *result_pool);
 
-/* On Windows: Convert the UTF-18 string SRC to UTF-8. */
+/* On Windows: Convert the UTF-16 string SRC to UTF-8. */
 svn_error_t *
 svn_utf__win32_utf16_to_utf8(const char **result,
                              const WCHAR *src,
