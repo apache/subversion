@@ -254,7 +254,7 @@ svn_subr__win32_utf8_to_utf16(const WCHAR **result,
                               _("Conversion to UTF-16 failed"));
 
   wide_count = retval + 1;
-  wide_str = apr_palloc(result_pool, wide_count * sizeof(WCHAR));
+  wide_str = apr_palloc(result_pool, wide_count * sizeof(*wide_str));
 
   retval = MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
                                wide_str, wide_count);
@@ -286,7 +286,7 @@ svn_subr__win32_utf16_to_utf8(const char **result,
                               _("Conversion to UTF-16 failed"));
 
   utf8_count = retval + 1;
-  utf8_str = apr_palloc(result_pool, utf8_count * sizeof(WCHAR));
+  utf8_str = apr_palloc(result_pool, utf8_count * sizeof(*utf8_str));
 
   retval = WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
                                utf8_str, utf8_count, NULL, FALSE);
