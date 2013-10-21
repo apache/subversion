@@ -263,7 +263,7 @@ svn_subr__win32_utf8_to_utf16(const WCHAR **result,
     return svn_error_wrap_apr(apr_get_os_error(),
                               _("Conversion to UTF-16 failed"));
 
-  wide_str[wide_count] = 0;
+  wide_str[wide_count-1] = 0;
   *result = wide_str;
 
   return SVN_NO_ERROR;
@@ -295,7 +295,7 @@ svn_subr__win32_utf16_to_utf8(const char **result,
     return svn_error_wrap_apr(apr_get_os_error(),
                               _("Conversion from UTF-16 failed"));
 
-  utf8_str[utf8_count] = 0;
+  utf8_str[utf8_count-1] = 0;
   *result = utf8_str;
 
   return SVN_NO_ERROR;
