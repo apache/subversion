@@ -106,14 +106,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1527103, r1527105
-   Fix OOM with concurrent requests right after threaded server start.
-   Justification:
-      This was a common condition in my load tests.  Affects threaded
-      servers only.  Apache will just respawn a new worker process.
-   Votes:
-     +1: stefan2, ivan
-
  * r1530763, r1530768, r1530922, r1530872, r1531002, r1531004, r1531938, r1532098
    Resolve issue #4436, reverting a move leaves some move data.
    Justification:
@@ -174,3 +166,10 @@ Approved changes:
    Votes:
      +1: rhuijben, ivan, stefan2     
 
+ * r1527103, r1527105
+   Fix OOM with concurrent requests right after threaded server start.
+   Justification:
+      This was a common condition in my load tests.  Affects threaded
+      servers only.  Apache will just respawn a new worker process.
+   Votes:
+     +1: stefan2, ivan, rhuijben
