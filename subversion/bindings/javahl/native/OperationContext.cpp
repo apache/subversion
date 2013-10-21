@@ -176,15 +176,6 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
       svn_auth_get_username_provider(&provider, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
-      /* The server-cert, client-cert, and client-cert-password providers. */
-      SVN_JNI_ERR(
-          svn_auth_get_platform_specific_provider(
-              &provider, "windows", "ssl_server_trust", pool),
-          NULL);
-
-      if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
       svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
