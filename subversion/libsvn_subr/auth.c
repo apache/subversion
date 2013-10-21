@@ -658,5 +658,21 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
         }
     }
 
+  /* Windows has two providers without a store to allow easy access to
+     SSL servers. We enable these unconditionally.
+     (This behavior was moved here from svn_cmdline_create_auth_baton()) */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "windows",
+                                                  "ssl_server_trust",
+                                                  pool));
+
+  /* The windows ssl authority certificate CRYPTOAPI provider. */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "windows",
+                                                  "ssl_server_authority",
+                                                  pool));
+
+  SVN__MAYBE_ADD_PROVIDER(*providers, provider);
+
   return SVN_NO_ERROR;
 }
