@@ -104,7 +104,7 @@ Candidate changes:
       With this patch the problem described as issue #4431, would
       probably have been diagnosed months ago.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1527103, r1527105
    Fix OOM with concurrent requests right after threaded server start.
