@@ -88,15 +88,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1526439
-   Improve http status processing during commit using ra_serf to improve
-   diagnostics.
-   Justification:
-      With this patch the problem described as issue #4431, would
-      probably have been diagnosed months ago.
-   Votes:
-     +1: rhuijben, ivan, breser
-
  * r1530763, r1530768, r1530922, r1530872, r1531002, r1531004, r1531938, r1532098
    Resolve issue #4436, reverting a move leaves some move data.
    Justification:
@@ -173,3 +164,12 @@ Approved changes:
      Improves correctness. Resolves user reported problem.
    Votes:
      +1: rhuijben, stefan2, ivan
+
+ * r1526439
+   Improve http status processing during commit using ra_serf to improve
+   diagnostics.
+   Justification:
+      With this patch the problem described as issue #4431, would
+      probably have been diagnosed months ago.
+   Votes:
+     +1: rhuijben, ivan, breser
