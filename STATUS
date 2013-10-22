@@ -71,14 +71,6 @@ Candidate changes:
                    detection of BDB (via db.h) and even while debugging a
                    maintainer build of Subversion a release BDB works fine)
 
- * r1520065, r1520745
-   Resolve a user triggerable assertion when during an update a file external
-   is being replaced by a server excluded (aka absent) node.
-   Justification:
-     Quite a few reports of this assertion on the users@s.a.o list since 1.7.0.
-   Votes:
-     +1: rhuijben, breser
-
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
    Justification:
@@ -124,3 +116,11 @@ Approved changes:
       added by that revision.
    Votes:
      +1: breser, rhuijben, philip
+
+ * r1520065, r1520745
+   Resolve a user triggerable assertion when during an update a file external
+   is being replaced by a server excluded (aka absent) node.  Issue 4422.
+   Justification:
+     Quite a few reports of this assertion on the users@s.a.o list since 1.7.0.
+   Votes:
+     +1: rhuijben, breser, philip
