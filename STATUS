@@ -118,14 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1534102
-   On Windows: stop linking agains psapi.dll.
-   Justification:
-     Removes a 100% dependency on Windows components that are usually not loaded.
-     Affects initial performance of svn.exe invocations.
-   Votes:
-     +1: rhuijben, ivan, stefan2     
-
  * r1527103, r1527105
    Fix OOM with concurrent requests right after threaded server start.
    Justification:
