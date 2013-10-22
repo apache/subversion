@@ -107,16 +107,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1530763, r1530768, r1530922, r1530872, r1531002, r1531004, r1531938, r1532098, r1530967
-   Resolve issue #4436, reverting a move leaves some move data.
-   Justification:
-      Reverting a move shouldn't break the wc.db state.
-   Notes:
-      breser: Added r1530967 because the comment in wc_db.h mentions the test
-      added by that revision.
-   Votes:
-     +1: breser, rhuijben, philip
-
  * r1520065, r1520745
    Resolve a user triggerable assertion when during an update a file external
    is being replaced by a server excluded (aka absent) node.  Issue 4422.
