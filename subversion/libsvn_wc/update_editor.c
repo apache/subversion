@@ -3013,18 +3013,55 @@ absent_node(const char *path,
       kind = svn_node_unknown;
     }
 
-  if (status == svn_wc__db_status_normal
-      && kind == svn_node_dir)
+  if (status == svn_wc__db_status_normal)
     {
-      /* We found an obstructing working copy!
+      svn_boolean_t wcroot;
+      /* We found an obstructing working copy or a file external! */
 
-         We can do two things now:
-            1) notify the user, record a skip, etc.
-            2) Just record the absent node in BASE in the parent
-               working copy.
+      SVN_ERR(svn_wc__db_is_wcroot(&wcroot, eb->db, local_abspath,
+                                   scratch_pool));
 
-         As option 2 happens to be exactly what we do anyway, lets do that.
-      */
+      if (wcroot)
+        {
+          /*
+             We have an obstructing working copy; possibly a directory external
+
+             We can do two things now:
+             1) notify the user, record a skip, etc.
+             2) Just record the absent node in BASE in the parent
+                working copy.
+
+             As option 2 happens to be exactly what we do anyway, fall through.
+           */
+        }
+      else
+        {
+          /* The server asks us to replace a file external
+             (Existing BASE node; not reported by the working copy crawler or
+              there would have been a delete_entry() call.
+
+             There is no way we can store this state in the working copy as
+             the BASE layer is already filled.
+
+             We could error out, but that is not helping anybody; the user is not
+             even seeing with what the file external would be replaced, so let's
+             report a skip and continue the update.
+           */
+
+          if (eb->notify_func)
+            {
+              svn_wc_notify_t *notify;
+              notify = svn_wc_create_notify(
+                                    local_abspath,
+                                    svn_wc_notify_update_skip_obstruction,
+                                    scratch_pool);
+
+              eb->notify_func(eb->notify_baton, notify, scratch_pool);
+            }
+
+          svn_pool_destroy(scratch_pool);
+          return SVN_NO_ERROR;
+        }
     }
   else if (status == svn_wc__db_status_not_present
            || status == svn_wc__db_status_server_excluded
