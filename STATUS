@@ -118,14 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1532023
-   Resolve possible segfault in the win32 crash handler.
-   Justification:
-      The crash handler shouldn't crash, but report the original
-      crash.
-   Votes:
-     +1: rhuijben, stefan2, ivan
-
  * r1534102
    On Windows: stop linking agains psapi.dll.
    Justification:
