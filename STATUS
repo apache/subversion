@@ -118,15 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1526439
-   Improve http status processing during commit using ra_serf to improve
-   diagnostics.
-   Justification:
-      With this patch the problem described as issue #4431, would
-      probably have been diagnosed months ago.
-   Votes:
-     +1: rhuijben, ivan, breser
-
  * r1534158
    Correct error message when FSFS detects unsupported future formats.
    Justification:
