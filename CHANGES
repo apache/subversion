@@ -26,6 +26,43 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Bindings:
 
 
+Version 1.8.4
+(29 October 2013, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.4
+
+ User-visible changes:
+  - Client- and server-side bugfixes:
+    * fix assertion on urls of the form 'file://./' (r1516806)
+    * stop linking against psapi.dll on Windows (r1534102)
+    * translation updates for Swedish
+
+  - Client-side bugfixes:
+    * revert: fix problems reverting moves (issue #4436)
+    * update: fix assertion when file external access is denied (issue #4422)
+    * merge: reduce network connections for automatic merge (r1468980 et al)
+    * merge: fix path corruption during reintegration (r1523666)
+    * mergeinfo: fix crash (r1519955)
+    * ra_serf: verify the result of xml parsing (r1501199 et al)
+    * ra_serf: improve error messages during commit (r1526439)
+    * ra_local: fix error with repository in Windows drive root (r1518184)
+    * fix crash on windows when piped command is interrupted (r1522892)
+    * fix crash in the crash handler on windows (r1532023)
+    * fix assertion when upgrading old working copies (r1520529)
+
+  - Server-side bugfixes:
+    * hotcopy: cleanup unpacked revprops with '--incremental' (r1512300 et al)
+    * fix OOM on concurrent requests at threaded server start (r1527103 et al)
+    * fsfs: improve error message when unsupported fsfs format found (r1534158)
+    * fix memory problem in 3rd party FS module loader (r1519615 et al)
+
+ Developer-visible changes:
+  - General:
+    * allow compiling against serf 1.3 and later on Windows (r1517123)
+
+  - Bindings:
+    * javahl: canonicalize path for streaFileContent method (r1524869)
+
+
 Version 1.8.3
 (29 August 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.3
