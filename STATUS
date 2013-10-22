@@ -118,14 +118,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1527103, r1527105
-   Fix OOM with concurrent requests right after threaded server start.
-   Justification:
-      This was a common condition in my load tests.  Affects threaded
-      servers only.  Apache will just respawn a new worker process.
-   Votes:
-     +1: stefan2, ivan, rhuijben
-
  * r1518184
    Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
    for the specific case where a repository is placed in a Windows drive
