@@ -112,6 +112,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1533530
+   Fix latency issue when reusing svnserve connections.
+   Justification:
+      This simple patch affects all operations that run multiple requests
+      over the same connection.  It should improve things like e.g. merge.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
