@@ -982,6 +982,31 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
   return check_file_buffer_numeric(buf, offset, path, "Format", pool);
 }
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as a format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format(int format)
+{
+  /* Blacklist.  These formats may be either younger or older than
+     SVN_FS_FS__FORMAT_NUMBER, but we don't support them. */
+  if (format == SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT)
+    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                             _("Found format '%d', only created by "
+                               "unreleased dev builds; see "
+                               "http://subversion.apache.org"
+                               "/docs/release-notes/1.7#revprop-packing"),
+                             format);
+
+  /* We support all formats from 1-current simultaneously */
+  if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+     _("Expected FS format between '1' and '%d'; found format '%d'"),
+     SVN_FS_FS__FORMAT_NUMBER, format);
+}
+
 /* Read the format number and maximum number of files per directory
    from PATH and return them in *PFORMAT and *MAX_FILES_PER_DIR
    respectively.
@@ -1031,6 +1056,9 @@ read_format(int *pformat, int *max_files_per_dir,
   /* Check that the first line contains only digits. */
   SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
   SVN_ERR(svn_cstring_atoi(pformat, buf->data));
+
+  /* Check that we support this format at all */
+  SVN_ERR(check_format(*pformat));
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
@@ -1115,31 +1143,6 @@ write_format(const char *path, int format, int max_files_per_dir,
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);
-}
-
-/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
-   number is not the same as a format number supported by this
-   Subversion. */
-static svn_error_t *
-check_format(int format)
-{
-  /* Blacklist.  These formats may be either younger or older than
-     SVN_FS_FS__FORMAT_NUMBER, but we don't support them. */
-  if (format == SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT)
-    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                             _("Found format '%d', only created by "
-                               "unreleased dev builds; see "
-                               "http://subversion.apache.org"
-                               "/docs/release-notes/1.7#revprop-packing"),
-                             format);
-
-  /* We support all formats from 1-current simultaneously */
-  if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
-    return SVN_NO_ERROR;
-
-  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-     _("Expected FS format between '1' and '%d'; found format '%d'"),
-     SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
 svn_boolean_t
@@ -1404,7 +1407,6 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       path_format(fs, pool), pool));
-  SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
   ffd->format = format;
@@ -1564,7 +1566,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, format_path, pool));
-  SVN_ERR(check_format(format));
 
   /* If the config file does not exist, create one. */
   SVN_ERR(svn_io_check_path(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -10928,6 +10929,55 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
 }
 
 
+/* Remove revision or revprop files between START_REV (inclusive) and
+ * END_REV (non-inclusive) from folder DST_SUBDIR in DST_FS.  Assume
+ * sharding as per MAX_FILES_PER_DIR.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+hotcopy_remove_files(svn_fs_t *dst_fs,
+                     const char *dst_subdir,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     int max_files_per_dir,
+                     apr_pool_t *scratch_pool)
+{
+  const char *shard;
+  const char *dst_subdir_shard;
+  svn_revnum_t rev;
+  apr_pool_t *iterpool;
+
+  /* Pre-compute paths for initial shard. */
+  shard = apr_psprintf(scratch_pool, "%ld", start_rev / max_files_per_dir);
+  dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (rev = start_rev; rev < end_rev; rev++)
+    {
+      const char *path;
+      svn_pool_clear(iterpool);
+
+      /* If necessary, update paths for shard. */
+      if (rev != start_rev && rev % max_files_per_dir == 0)
+        {
+          shard = apr_psprintf(iterpool, "%ld", rev / max_files_per_dir);
+          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
+        }
+
+      /* remove files for REV */
+      path = svn_dirent_join(dst_subdir_shard,
+                             apr_psprintf(iterpool, "%ld", rev),
+                             iterpool);
+
+      /* Make the rev file writable and remove it. */
+      SVN_ERR(svn_io_set_file_read_write(path, TRUE, iterpool));
+      SVN_ERR(svn_io_remove_file2(path, TRUE, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Remove revisions between START_REV (inclusive) and END_REV (non-inclusive)
  * from DST_FS. Assume sharding as per MAX_FILES_PER_DIR.
  * Use SCRATCH_POOL for temporary allocations. */
@@ -10938,43 +10988,37 @@ hotcopy_remove_rev_files(svn_fs_t *dst_fs,
                          int max_files_per_dir,
                          apr_pool_t *scratch_pool)
 {
-  const char *dst_subdir;
-  const char *shard;
-  const char *dst_subdir_shard;
-  svn_revnum_t rev;
-  apr_pool_t *iterpool;
+  SVN_ERR_ASSERT(start_rev <= end_rev);
+  SVN_ERR(hotcopy_remove_files(dst_fs,
+                               svn_dirent_join(dst_fs->path,
+                                               PATH_REVS_DIR,
+                                               scratch_pool),
+                               start_rev, end_rev,
+                               max_files_per_dir, scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Remove revision properties between START_REV (inclusive) and END_REV
+ * (non-inclusive) from DST_FS. Assume sharding as per MAX_FILES_PER_DIR.
+ * Use SCRATCH_POOL for temporary allocations.  Revision 0 revprops will
+ * not be deleted. */
+static svn_error_t *
+hotcopy_remove_revprop_files(svn_fs_t *dst_fs,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             int max_files_per_dir,
+                             apr_pool_t *scratch_pool)
+{
   SVN_ERR_ASSERT(start_rev <= end_rev);
 
-  dst_subdir = svn_dirent_join(dst_fs->path, PATH_REVS_DIR, scratch_pool);
-
-  /* Pre-compute paths for initial shard. */
-  shard = apr_psprintf(scratch_pool, "%ld", start_rev / max_files_per_dir);
-  dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
-
-  iterpool = svn_pool_create(scratch_pool);
-  for (rev = start_rev; rev < end_rev; rev++)
-    {
-      const char *rev_path;
-
-      svn_pool_clear(iterpool);
-
-      /* If necessary, update paths for shard. */
-      if (rev != start_rev && rev % max_files_per_dir == 0)
-        {
-          shard = apr_psprintf(iterpool, "%ld", rev / max_files_per_dir);
-          dst_subdir_shard = svn_dirent_join(dst_subdir, shard, scratch_pool);
-        }
-
-      rev_path = svn_dirent_join(dst_subdir_shard,
-                                 apr_psprintf(iterpool, "%ld", rev),
-                                 iterpool);
-
-      /* Make the rev file writable and remove it. */
-      SVN_ERR(svn_io_set_file_read_write(rev_path, TRUE, iterpool));
-      SVN_ERR(svn_io_remove_file2(rev_path, TRUE, iterpool));
-    }
-  svn_pool_destroy(iterpool);
+  /* don't delete rev 0 props */
+  SVN_ERR(hotcopy_remove_files(dst_fs,
+                               svn_dirent_join(dst_fs->path,
+                                               PATH_REVPROPS_DIR,
+                                               scratch_pool),
+                               start_rev ? start_rev : 1, end_rev,
+                               max_files_per_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -11015,6 +11059,27 @@ hotcopy_incremental_check_preconditions(svn_fs_t *src_fs,
   return SVN_NO_ERROR;
 }
 
+/* Remove folder PATH.  Ignore errors due to the sub-tree not being empty.
+ * CANCEL_FUNC and CANCEL_BATON do the usual thing.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+remove_folder(const char *path,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_remove_dir2(path, TRUE,
+                                        cancel_func, cancel_baton, pool);
+
+  if (err && APR_STATUS_IS_ENOTEMPTY(err->apr_err))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(err);
+}
 
 /* Baton for hotcopy_body(). */
 struct hotcopy_body_baton {
@@ -11205,8 +11270,6 @@ hotcopy_body(void *baton, apr_pool_t *pool)
   /* First, copy packed shards. */
   for (rev = 0; rev < src_min_unpacked_rev; rev += max_files_per_dir)
     {
-      svn_error_t *err;
-
       svn_pool_clear(iterpool);
 
       if (cancel_func)
@@ -11226,20 +11289,22 @@ hotcopy_body(void *baton, apr_pool_t *pool)
 
       /* Remove revision files which are now packed. */
       if (incremental)
-        SVN_ERR(hotcopy_remove_rev_files(dst_fs, rev, rev + max_files_per_dir,
-                                         max_files_per_dir, iterpool));
+        {
+          SVN_ERR(hotcopy_remove_rev_files(dst_fs, rev,
+                                           rev + max_files_per_dir,
+                                           max_files_per_dir, iterpool));
+          SVN_ERR(hotcopy_remove_revprop_files(dst_fs, rev,
+                                               rev + max_files_per_dir,
+                                               max_files_per_dir, iterpool));
+        }
 
       /* Now that all revisions have moved into the pack, the original
        * rev dir can be removed. */
-      err = svn_io_remove_dir2(path_rev_shard(dst_fs, rev, iterpool),
-                               TRUE, cancel_func, cancel_baton, iterpool);
-      if (err)
-        {
-          if (APR_STATUS_IS_ENOTEMPTY(err->apr_err))
-            svn_error_clear(err);
-          else
-            return svn_error_trace(err);
-        }
+      SVN_ERR(remove_folder(path_rev_shard(dst_fs, rev, iterpool),
+                            cancel_func, cancel_baton, iterpool));
+      if (rev > 0)
+        SVN_ERR(remove_folder(path_revprops_shard(dst_fs, rev, iterpool),
+                              cancel_func, cancel_baton, iterpool));
     }
 
   if (cancel_func)
