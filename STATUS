@@ -101,6 +101,17 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1534860
+   Remove -fwhole_program flag from optimized GCC builds.
+   Justification:
+     As described in http://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html,
+     -flto is superior and should not be combined with -fwhole-program.
+     As it turns out, -fwhole_program causes issues with llvm and other
+     sources indicated that the flag might not be particularly useful to
+     begin with.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
