@@ -116,6 +116,23 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1535139
+   Make openssl lib and include directory available when using --with-openssl
+   on Windows.
+   Justification:
+     Serf 1.2 simply included the openssl static library in its own static
+     library, which made it very easy for Subversion to consume, but added the
+     risk of linking to many different openssl versions (both static and
+     shared builds) at once. This bug in serf was fixed for 1.3 and we
+     updated Subversion to use 1.3 for Subversion 1.8.4, but without this
+     patch we added the assumption that ssleay32.lib and libeay32.lib are
+     within some existing referenced library directory.
+     This patch fixes that assumption by adding the right libdir to our build,
+     by borrowing some code from trunk.
+   Branch: ^/subversion/branches/1.8.x-openssl-dirs
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
