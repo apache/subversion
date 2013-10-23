@@ -147,7 +147,7 @@ static volatile svn_atomic_t win_dynamic_imports_state = 0;
 /* Pointer to GetFinalPathNameByHandleW function from kernel32.dll. */
 typedef DWORD (WINAPI *GETFINALPATHNAMEBYHANDLE)(
                HANDLE hFile,
-               apr_wchar_t *lpszFilePath,
+               WCHAR *lpszFilePath,
                DWORD cchFilePath,
                DWORD dwFlags);
 
@@ -1751,7 +1751,7 @@ io_utf8_to_unicode_path(const WCHAR **result,
    function, but reimplemented here because APR does not export it. */
 static svn_error_t *
 io_unicode_to_utf8_path(const char **result,
-                        const apr_wchar_t *source,
+                        const WCHAR *source,
                         apr_pool_t *result_pool)
 {
     const char *utf8_buffer;
@@ -1848,7 +1848,7 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
         apr_status_t status;
         apr_file_t *file;
         apr_os_file_t filehand;
-        apr_wchar_t wdest[APR_PATH_MAX];
+        WCHAR wdest[APR_PATH_MAX];
         const char *data;
 
         /* reserve one char for terminating zero. */
