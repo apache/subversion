@@ -71,7 +71,7 @@ svn_nls_init(void)
 
       if (! err)
         err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path,
-                                           scratch_pool);
+                                           NULL, scratch_pool);
 
       if (! err)
         {

@@ -95,16 +95,22 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
 
 
 #if defined(WIN32)
-/* On Windows: Convert the UTF-8 string SRC to UTF-16. */
+/* On Windows: Convert the UTF-8 string SRC to UTF-16.
+   If PREFIX is not NULL, prepend it to the converted result.
+   The result, if not empty, will be allocated in RESULT_POOL. */
 svn_error_t *
 svn_utf__win32_utf8_to_utf16(const WCHAR **result,
                              const char *src,
+                             const WCHAR *prefix,
                              apr_pool_t *result_pool);
 
-/* On Windows: Convert the UTF-16 string SRC to UTF-8. */
+/* On Windows: Convert the UTF-16 string SRC to UTF-8.
+   If PREFIX is not NULL, prepend it to the converted result.
+   The result, if not empty, will be allocated in RESULT_POOL. */
 svn_error_t *
 svn_utf__win32_utf16_to_utf8(const char **result,
                              const WCHAR *src,
+                             cosnt char *prefix,
                              apr_pool_t *result_pool);
 #endif /* WIN32*/
 
