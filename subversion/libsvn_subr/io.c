@@ -47,10 +47,6 @@
 #include <apr_portable.h>
 #include <apr_md5.h>
 
-#ifdef WIN32
-#include <arch/win32/apr_arch_file_io.h>
-#endif
-
 #if APR_HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -1694,7 +1690,6 @@ io_set_file_perms(const char *path,
 #endif /* !WIN32 && !__OS2__ */
 
 #ifdef WIN32
-#if APR_HAS_UNICODE_FS
 /* This is semantically the same as the APR utf8_to_unicode_path
    function, but reimplemented here because APR does not export it. */
 static svn_error_t*
@@ -1798,7 +1793,6 @@ io_unicode_to_utf8_path(const char **result,
     }
     return SVN_NO_ERROR;
 }
-#endif /* APR_HAS_UNICODE_FS */
 
 static svn_error_t *
 io_win_file_attrs_set(const char *fname,
@@ -1811,25 +1805,11 @@ io_win_file_attrs_set(const char *fname,
        attributes. This way, we can apply any Windows file and
        folder attributes even if apr doesn't implement them */
     DWORD flags;
-    BOOL rc;
-#if APR_HAS_UNICODE_FS
     const WCHAR *wfname;
-#endif
 
-#if APR_HAS_UNICODE_FS
-    IF_WIN_OS_IS_UNICODE
-    {
-        SVN_ERR(io_utf8_to_unicode_path(&wfname, fname, pool));
-        flags = GetFileAttributesW(wfname);
-    }
-#endif
-#if APR_HAS_ANSI_FS
-    ELSE_WIN_OS_IS_ANSI
-    {
-        flags = GetFileAttributesA(fname);
-    }
-#endif
+    SVN_ERR(io_utf8_to_unicode_path(&wfname, fname, pool));
 
+    flags = GetFileAttributesW(wfname);
     if (flags == 0xFFFFFFFF)
         return svn_error_wrap_apr(apr_get_os_error(),
                                   _("Can't get attributes of file '%s'"),
@@ -1838,20 +1818,7 @@ io_win_file_attrs_set(const char *fname,
     flags &= ~attr_mask;
     flags |= (attributes & attr_mask);
 
-#if APR_HAS_UNICODE_FS
-    IF_WIN_OS_IS_UNICODE
-    {
-        rc = SetFileAttributesW(wfname, flags);
-    }
-#endif
-#if APR_HAS_ANSI_FS
-    ELSE_WIN_OS_IS_ANSI
-    {
-        rc = SetFileAttributesA(fname, flags);
-    }
-#endif
-
-    if (!rc)
+    if (!SetFileAttributesW(wfname, flags))
         return svn_error_wrap_apr(apr_get_os_error(),
                                   _("Can't set attributes of file '%s'"),
                                   svn_dirent_local_style(fname, pool));
@@ -1872,7 +1839,6 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
                                       const char *path,
                                       apr_pool_t *pool)
 {
-#if APR_HAS_UNICODE_FS
     SVN_ERR(svn_atomic__init_once(&win_dynamic_imports_state,
                                   win_init_dynamic_imports, NULL, pool));
 
@@ -1931,7 +1897,6 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
         return SVN_NO_ERROR;
       }
     else
-#endif /* APR_HAS_UNICODE_FS */
       {
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 _("Symbolic links are not supported on this "
