@@ -110,7 +110,7 @@ svn_utf__win32_utf8_to_utf16(const WCHAR **result,
 svn_error_t *
 svn_utf__win32_utf16_to_utf8(const char **result,
                              const WCHAR *src,
-                             cosnt char *prefix,
+                             const char *prefix,
                              apr_pool_t *result_pool);
 #endif /* WIN32*/
 
