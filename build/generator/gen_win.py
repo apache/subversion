@@ -943,6 +943,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.serf_lib:
       fakeincludes.append(self.apath(self.serf_path))
+      
+      if self.openssl_path and self.openssl_inc_dir:
+        fakeincludes.append(self.apath(self.openssl_inc_dir))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -1002,6 +1005,9 @@ class WinGeneratorBase(GeneratorBase):
     if self.serf_lib:
       if (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
         fakelibdirs.append(self.apath(self.serf_path))
+        
+        if self.openssl_path and self.openssl_lib_dir:
+          fakelibdirs.append(self.apath(self.openssl_lib_dir))
       else:
         fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
 
@@ -1465,6 +1471,24 @@ class WinGeneratorBase(GeneratorBase):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 2, 1)
+    
+    if self.openssl_path and os.path.exists(self.openssl_path):
+      version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
+      if os.path.isfile(version_path):
+        # We have an OpenSSL Source location (legacy handling)
+        self.openssl_inc_dir = os.path.join(self.openssl_path, 'inc32')
+        if self.static_openssl:
+          self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32')
+        else:
+          self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32dll')
+      elif os.path.isfile(os.path.join(self.openssl_path,
+                          'include/openssl/opensslv.h')):
+        self.openssl_inc_dir = os.path.join(self.openssl_path, 'include')
+        self.openssl_lib_dir = os.path.join(self.openssl_path, 'lib')
+      else:
+        print('WARNING: \'opensslv.h\' not found')
+        self.openssl_path = None
+    
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):
