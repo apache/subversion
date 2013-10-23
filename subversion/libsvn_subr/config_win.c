@@ -66,7 +66,7 @@ svn_config__win_config_path(const char **folder, int system_path,
                            : "Can't determine the user's config path"));
 
   return svn_error_trace(svn_utf__win32_utf16_to_utf8(folder, folder_ucs2,
-                                                      result_pool));
+                                                      NULL, result_pool));
 }
 
 

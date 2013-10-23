@@ -313,7 +313,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
     GetModuleFileNameW(moduleHandle, ucs2_path,
                        sizeof(ucs2_path) / sizeof(ucs2_path[0]));
-    err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path, pool);
+    err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path, NULL, pool);
     if (err)
       {
         if (stderr)

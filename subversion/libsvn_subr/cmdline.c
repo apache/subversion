@@ -406,7 +406,7 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
 
       SVN_ERR(svn_cmdline_fflush(stream)); /* Flush existing output */
 
-      SVN_ERR(svn_utf__win32_utf8_to_utf16(&result, string, pool));
+      SVN_ERR(svn_utf__win32_utf8_to_utf16(&result, string, NULL, pool));
 
       if (_cputws(result))
         {

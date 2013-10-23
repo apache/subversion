@@ -1028,13 +1028,15 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 svn_error_t *
 svn_utf__win32_utf8_to_utf16(const WCHAR **result,
                              const char *src,
+                             const WCHAR *prefix,
                              apr_pool_t *result_pool)
 {
   const int utf8_count = strlen(src);
+  const int prefix_len = (prefix ? lstrlenW(prefix) : 0);
   WCHAR *wide_str;
   int wide_count;
 
-  if (!utf8_count)
+  if (0 == prefix_len + utf8_count)
     {
       *result = L"";
       return SVN_NO_ERROR;
@@ -1045,13 +1047,16 @@ svn_utf__win32_utf8_to_utf16(const WCHAR **result,
     return svn_error_wrap_apr(apr_get_os_error(),
                               _("Conversion to UTF-16 failed"));
 
-  wide_str = apr_palloc(result_pool, (wide_count + 1) * sizeof(*wide_str));
+  wide_str = apr_palloc(result_pool,
+                        (prefix_len + wide_count + 1) * sizeof(*wide_str));
+  if (prefix_len)
+    memcpy(wide_str, prefix, prefix_len * sizeof(*wide_str));
   if (0 == MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
-                               wide_str, wide_count))
+                               wide_str + prefix_len, wide_count))
     return svn_error_wrap_apr(apr_get_os_error(),
                               _("Conversion to UTF-16 failed"));
 
-  wide_str[wide_count] = 0;
+  wide_str[prefix_len + wide_count] = 0;
   *result = wide_str;
 
   return SVN_NO_ERROR;
@@ -1060,13 +1065,15 @@ svn_utf__win32_utf8_to_utf16(const WCHAR **result,
 svn_error_t *
 svn_utf__win32_utf16_to_utf8(const char **result,
                              const WCHAR *src,
+                             const char *prefix,
                              apr_pool_t *result_pool)
 {
   const int wide_count = lstrlenW(src);
+  const int prefix_len = (prefix ? strlen(prefix) : 0);
   char *utf8_str;
   int utf8_count;
 
-  if (!wide_count)
+  if (0 == prefix_len + wide_count)
     {
       *result = "";
       return SVN_NO_ERROR;
@@ -1078,13 +1085,17 @@ svn_utf__win32_utf16_to_utf8(const char **result,
     return svn_error_wrap_apr(apr_get_os_error(),
                               _("Conversion from UTF-16 failed"));
 
-  utf8_str = apr_palloc(result_pool, (utf8_count + 1) * sizeof(*utf8_str));
+  utf8_str = apr_palloc(result_pool,
+                        (prefix_len + utf8_count + 1) * sizeof(*utf8_str));
+  if (prefix_len)
+    memcpy(utf8_str, prefix, prefix_len * sizeof(*utf8_str));
   if (0 == WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
-                               utf8_str, utf8_count, NULL, FALSE))
+                               utf8_str + prefix_len, utf8_count,
+                               NULL, FALSE))
     return svn_error_wrap_apr(apr_get_os_error(),
                               _("Conversion from UTF-16 failed"));
 
-  utf8_str[utf8_count] = 0;
+  utf8_str[prefix_len + utf8_count] = 0;
   *result = utf8_str;
 
   return SVN_NO_ERROR;
