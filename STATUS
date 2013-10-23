@@ -101,6 +101,14 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1499470
+   Flush stdout before exiting svn with an error.
+   Justification:
+      Without this patch merge_tests.py 135 may fail to output its required
+      output.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
