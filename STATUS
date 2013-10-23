@@ -101,6 +101,12 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1534860
    Remove -fwhole_program flag from optimized GCC builds.
    Justification:
@@ -110,11 +116,4 @@ Candidate changes:
      sources indicated that the flag might not be particularly useful to
      begin with.
    Votes:
-     +1: stefan2, breser
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
+     +1: stefan2, breser, brane
