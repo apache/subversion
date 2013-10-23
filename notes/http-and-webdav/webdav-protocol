@@ -374,6 +374,8 @@ Response:
       <S:has-children/> (optional)
       <S:added-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:added-path>... (optional)
       <S:replaced-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:replaced-path>... (optional)
+      <S:moved-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:moved-path>... (optional)
+      <S:replaced-by-moved-path( copyfrom-path="PATH" copyfrom-rev="REVNUM">PATH</S:replaced-by-moved-path>... (optional)
       <S:deleted-path>PATH</S:deleted-path>... (optional)
       <S:modified-path>PATH</S:modified-path>... (optional)
     </S:log-item>
