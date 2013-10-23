@@ -2398,7 +2398,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                                      "no path"), url);
 
         /* We still know that the path starts with a slash. */
-        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, NULL);
+        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, (char *)NULL);
       }
     else
       *dirent = dup_path;
@@ -2438,11 +2438,11 @@ svn_uri_get_file_url_from_dirent(const char **url,
       /* Handle UNC paths //server/share -> file://server/share */
       assert(dirent[1] == '/'); /* Expect UNC, not non-absolute */
 
-      *url = apr_pstrcat(pool, "file:", dirent, NULL);
+      *url = apr_pstrcat(pool, "file:", dirent, (char *)NULL);
     }
   else
     {
-      char *uri = apr_pstrcat(pool, "file:///", dirent, NULL);
+      char *uri = apr_pstrcat(pool, "file:///", dirent, (char *)NULL);
       apr_size_t len = 8 /* strlen("file:///") */ + strlen(dirent);
 
       /* "C:/" is a canonical dirent on Windows,

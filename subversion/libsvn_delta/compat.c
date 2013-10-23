@@ -1628,7 +1628,7 @@ apply_change(void **dir_baton,
               /* Make this an FS path by prepending "/" */
               if (copyfrom_url[0] != '/')
                 copyfrom_url = apr_pstrcat(scratch_pool, "/",
-                                           copyfrom_url, NULL);
+                                           copyfrom_url, (char *)NULL);
             }
 
           copyfrom_rev = change->copyfrom_rev;
