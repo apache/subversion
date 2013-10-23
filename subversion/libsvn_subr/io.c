@@ -70,6 +70,7 @@
 
 #include "private/svn_atomic.h"
 #include "private/svn_io_private.h"
+#include "private/svn_utf_private.h"
 
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
@@ -1694,26 +1695,13 @@ io_set_file_perms(const char *path,
 
 #ifdef WIN32
 #if APR_HAS_UNICODE_FS
-/* copy of the apr function utf8_to_unicode_path since apr doesn't export this one */
-static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen,
-                                            const char* srcstr)
+/* This is semantically the same as the APR utf8_to_unicode_path
+   function, but reimplemented here because APR does not export it. */
+static svn_error_t*
+io_utf8_to_unicode_path(const WCHAR **result,
+                        const char *source,
+                        apr_pool_t *result_pool)
 {
-    /* TODO: The computations could preconvert the string to determine
-     * the true size of the retstr, but that's a memory over speed
-     * tradeoff that isn't appropriate this early in development.
-     *
-     * Allocate the maximum string length based on leading 4
-     * characters of \\?\ (allowing nearly unlimited path lengths)
-     * plus the trailing null, then transform /'s into \\'s since
-     * the \\?\ form doesn't allow '/' path separators.
-     *
-     * Note that the \\?\ form only works for local drive paths, and
-     * \\?\UNC\ is needed UNC paths.
-     */
-    apr_size_t srcremains = strlen(srcstr) + 1;
-    apr_wchar_t *t = retstr;
-    apr_status_t rv;
-
     /* This is correct, we don't twist the filename if it will
      * definitely be shorter than 248 characters.  It merits some
      * performance testing to see if this has any effect, but there
@@ -1728,99 +1716,110 @@ static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retl
      * Note that a utf-8 name can never result in more wide chars
      * than the original number of utf-8 narrow chars.
      */
-    if (srcremains > 248) {
-        if (srcstr[1] == ':' && (srcstr[2] == '/' || srcstr[2] == '\\')) {
-            wcscpy (retstr, L"\\\\?\\");
-            retlen -= 4;
-            t += 4;
+    const WCHAR *prefix = NULL;
+    const int srclen = strlen(source);
+    WCHAR *buffer;
+
+    if (srclen > 248)
+    {
+        if (svn_ctype_isalpha(source[0]) && source[1] == ':'
+            && (source[2] == '/' || source[2] == '\\'))
+        {
+            /* This is an ordinary absolute path. */
+            prefix = L"\\\\?\\";
         }
-        else if ((srcstr[0] == '/' || srcstr[0] == '\\')
-              && (srcstr[1] == '/' || srcstr[1] == '\\')
-              && (srcstr[2] != '?')) {
-            /* Skip the slashes */
-            srcstr += 2;
-            srcremains -= 2;
-            wcscpy (retstr, L"\\\\?\\UNC\\");
-            retlen -= 8;
-            t += 8;
+        else if ((source[0] == '/' || source[0] == '\\')
+                 && (source[1] == '/' || source[1] == '\\')
+                 && source[2] != '?')
+        {
+            /* This is a UNC path */
+            source += 2;        /* Skip the leading slashes */
+            prefix = L"\\\\?\\UNC\\";
         }
     }
 
-    if (rv = apr_conv_utf8_to_ucs2(srcstr, &srcremains, t, &retlen)) {
-        return (rv == APR_INCOMPLETE) ? APR_EINVAL : rv;
+    SVN_ERR(svn_utf__win32_utf8_to_utf16(&(const WCHAR*)buffer, source,
+                                         prefix, result_pool));
+
+    /* Convert slashes to backslashes because the \\?\ path format
+       does not allow backslashes as path separators. */
+    *result = buffer;
+    for (; *buffer; ++buffer)
+    {
+        if (*buffer == '/')
+            *buffer = '\\';
     }
-    if (srcremains) {
-        return APR_ENAMETOOLONG;
-    }
-    for (; *t; ++t)
-        if (*t == L'/')
-            *t = L'\\';
-    return APR_SUCCESS;
+    return SVN_NO_ERROR;
 }
 
-/* copy of the apr function unicode_to_utf8_path since apr doesn't export this
- * one */
-static apr_status_t io_unicode_to_utf8_path(char* retstr, apr_size_t retlen,
-                                            const apr_wchar_t* srcstr)
+/* This is semantically the same as the APR unicode_to_utf8_path
+   function, but reimplemented here because APR does not export it. */
+static svn_error_t *
+io_unicode_to_utf8_path(const char **result,
+                        const apr_wchar_t *source,
+                        apr_pool_t *result_pool)
 {
+    const char *utf8_buffer;
+    char *buffer;
+
+    SVN_ERR(svn_utf__win32_utf16_to_utf8(&utf8_buffer, source,
+                                         NULL, result_pool));
+    if (!*utf8_buffer)
+      {
+        *result = utf8_buffer;
+        return SVN_NO_ERROR;
+      }
+
+    /* We know that the non-empty buffer returned from the UTF-16 to
+       UTF-8 conversion function is in fact writable. */
+    buffer = (char*)utf8_buffer;
+
     /* Skip the leading 4 characters if the path begins \\?\, or substitute
      * // for the \\?\UNC\ path prefix, allocating the maximum string
      * length based on the remaining string, plus the trailing null.
      * then transform \\'s back into /'s since the \\?\ form never
      * allows '/' path seperators, and APR always uses '/'s.
      */
-    apr_size_t srcremains = wcslen(srcstr) + 1;
-    apr_status_t rv;
-    char *t = retstr;
-    if (srcstr[0] == L'\\' && srcstr[1] == L'\\' && 
-        srcstr[2] == L'?'  && srcstr[3] == L'\\') {
-        if (srcstr[4] == L'U' && srcstr[5] == L'N' && 
-            srcstr[6] == L'C' && srcstr[7] == L'\\') {
-            srcremains -= 8;
-            srcstr += 8;
-            retstr[0] = '\\';
-            retstr[1] = '\\';
-            retlen -= 2;
-            t += 2;
-        }
-        else {
-            srcremains -= 4;
-            srcstr += 4;
+    if (0 == strncmp(buffer, "\\\\?\\", 4))
+    {
+        buffer += 4;
+        if (0 == strncmp(buffer, "UNC\\", 4))
+        {
+            buffer += 2;
+            *buffer = '/';
         }
     }
-        
-    if ((rv = apr_conv_ucs2_to_utf8(srcstr, &srcremains, t, &retlen))) {
-        return rv;
-    }
-    if (srcremains) {
-        return APR_ENAMETOOLONG;
-    }
-    return APR_SUCCESS;
-}
-#endif
 
-static apr_status_t io_win_file_attrs_set(const char *fname,
-                                          DWORD attributes,
-                                          DWORD attr_mask,
-                                          apr_pool_t *pool)
+    *result = buffer;
+    for (; *buffer; ++buffer)
+    {
+        if (*buffer == '\\')
+            *buffer = '/';
+    }
+    return SVN_NO_ERROR;
+}
+#endif /* APR_HAS_UNICODE_FS */
+
+static svn_error_t *
+io_win_file_attrs_set(const char *fname,
+                      DWORD attributes,
+                      DWORD attr_mask,
+                      apr_pool_t *pool)
 {
     /* this is an implementation of apr_file_attrs_set() but one
        that uses the proper Windows attributes instead of the apr
        attributes. This way, we can apply any Windows file and
        folder attributes even if apr doesn't implement them */
     DWORD flags;
-    apr_status_t rv;
+    BOOL rc;
 #if APR_HAS_UNICODE_FS
-    apr_wchar_t wfname[APR_PATH_MAX];
+    const WCHAR *wfname;
 #endif
 
 #if APR_HAS_UNICODE_FS
     IF_WIN_OS_IS_UNICODE
     {
-        if (rv = io_utf8_to_unicode_path(wfname,
-                                         sizeof(wfname) / sizeof(wfname[0]),
-                                         fname))
-            return rv;
+        SVN_ERR(io_utf8_to_unicode_path(&wfname, fname, pool));
         flags = GetFileAttributesW(wfname);
     }
 #endif
@@ -1832,7 +1831,9 @@ static apr_status_t io_win_file_attrs_set(const char *fname,
 #endif
 
     if (flags == 0xFFFFFFFF)
-        return apr_get_os_error();
+        return svn_error_wrap_apr(apr_get_os_error(),
+                                  _("Can't get attributes of file '%s'"),
+                                  svn_dirent_local_style(fname, pool));
 
     flags &= ~attr_mask;
     flags |= (attributes & attr_mask);
@@ -1840,20 +1841,22 @@ static apr_status_t io_win_file_attrs_set(const char *fname,
 #if APR_HAS_UNICODE_FS
     IF_WIN_OS_IS_UNICODE
     {
-        rv = SetFileAttributesW(wfname, flags);
+        rc = SetFileAttributesW(wfname, flags);
     }
 #endif
 #if APR_HAS_ANSI_FS
     ELSE_WIN_OS_IS_ANSI
     {
-        rv = SetFileAttributesA(fname, flags);
+        rc = SetFileAttributesA(fname, flags);
     }
 #endif
 
-    if (rv == 0)
-        return apr_get_os_error();
+    if (!rc)
+        return svn_error_wrap_apr(apr_get_os_error(),
+                                  _("Can't set attributes of file '%s'"),
+                                  svn_dirent_local_style(fname, pool));
 
-    return APR_SUCCESS;
+    return SVN_NO_ERROR;;
 }
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
@@ -1880,7 +1883,7 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
         apr_file_t *file;
         apr_os_file_t filehand;
         apr_wchar_t wdest[APR_PATH_MAX];
-        char buf[APR_PATH_MAX];
+        const char *data;
 
         /* reserve one char for terminating zero. */
         DWORD wdest_len = sizeof(wdest)/sizeof(wdest[0]) - 1;
@@ -1914,18 +1917,21 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
 
         /* GetFinaPathNameByHandleW doesn't add terminating NUL. */
         wdest[rv] = 0;
+        SVN_ERR(io_unicode_to_utf8_path(&data, wdest, pool));
 
-        status = io_unicode_to_utf8_path(buf, sizeof(buf), wdest);
-        if (status)
-          return svn_error_wrap_apr(status,
-                                    _("Can't read contents of link"));
-
-        *dest = svn_string_create(buf, pool);
+        /* The result is already in the correct pool, so avoid copying
+           it to create the string. */
+        *dest = svn_string_create_empty(pool);
+        if (*data)
+          {
+            (*dest)->data = data;
+            (*dest)->len = strlen(data);
+          }
 
         return SVN_NO_ERROR;
       }
     else
-#endif
+#endif /* APR_HAS_UNICODE_FS */
       {
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 _("Symbolic links are not supported on this "
@@ -1933,7 +1939,7 @@ static svn_error_t * io_win_read_link(svn_string_t **dest,
       }
 }
 
-#endif
+#endif /* WIN32 */
 
 svn_error_t *
 svn_io_set_file_read_write_carefully(const char *path,
@@ -4081,22 +4087,26 @@ dir_make(const char *path, apr_fileperms_t perm,
                                   APR_FILE_ATTR_HIDDEN,
                                   APR_FILE_ATTR_HIDDEN,
                                   pool);
-#else
-    /* on Windows, use our wrapper so we can also set the
-       FILE_ATTRIBUTE_NOT_CONTENT_INDEXED attribute */
-    status = io_win_file_attrs_set(path_apr,
-                                   FILE_ATTRIBUTE_HIDDEN |
-                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
-                                   FILE_ATTRIBUTE_HIDDEN |
-                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
-                                   pool);
-
-#endif
       if (status)
         return svn_error_wrap_apr(status, _("Can't hide directory '%s'"),
                                   svn_dirent_local_style(path, pool));
+#else
+    /* on Windows, use our wrapper so we can also set the
+       FILE_ATTRIBUTE_NOT_CONTENT_INDEXED attribute */
+      svn_error_t *err =
+          io_win_file_attrs_set(path_apr,
+                                FILE_ATTRIBUTE_HIDDEN |
+                                FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+                                FILE_ATTRIBUTE_HIDDEN |
+                                FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+                                pool);
+      if (err)
+        return svn_error_createf(err->apr_err, err,
+                                 _("Can't hide directory '%s'"),
+                                 svn_dirent_local_style(path, pool));
+#endif /* WIN32 */
     }
-#endif
+#endif /* APR_FILE_ATTR_HIDDEN */
 
 /* Windows does not implement sgid. Skip here because retrieving
    the file permissions via APR_FINFO_PROT | APR_FINFO_OWNER is documented
