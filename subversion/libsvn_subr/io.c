@@ -3171,7 +3171,8 @@ svn_io_run_diff3_3(int *exitcode,
         svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
                        SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
         SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool));
-        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8, NULL);
+        args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8,
+                                (char *)NULL);
 #ifndef NDEBUG
         ++nargs;
 #endif

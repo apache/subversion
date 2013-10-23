@@ -115,7 +115,7 @@ print_info_xml(void *baton,
                                                    info->repos_root_URL,
                                                    info->URL, pool),
                                                pool),
-                                           NULL));
+                                           (char *)NULL));
     }
 
   if (info->repos_root_URL || info->repos_UUID)
