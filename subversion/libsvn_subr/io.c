@@ -38,6 +38,14 @@
 #endif
 #endif
 
+/* This symbol is defined in APR's private header apr_arch_file_io.h.
+   It should really be public, but ... there it is. */
+#if defined(WIN32) || defined(__OS2__) || !defined(APR_HAS_USER)
+#ifndef APR_FREADONLY
+#define APR_FREADONLY 0x10000000
+#endif
+#endif
+
 #include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
