@@ -133,6 +133,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1535161
+   Make swig-rb tests run without installing on OS X.
+   Justification:
+     Shouldn't need to install code to test it.  The existing Makefile target
+     is just downright wrong.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
