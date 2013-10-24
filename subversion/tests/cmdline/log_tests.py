@@ -2199,7 +2199,6 @@ def log_diff_moved(sbox):
   compare_diff_output(r3diff, log_chain[0]['diff_lines'])
   compare_diff_output(r2diff, log_chain[1]['diff_lines'])
 
-  # XFAIL mu3 not found at revisions 0 and 1
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '--diff',
                                                               mu3_at_3)
