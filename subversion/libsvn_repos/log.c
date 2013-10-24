@@ -180,7 +180,7 @@ turn_moves_into_copies(apr_hash_t *changes,
 
       switch (change->action)
         {
-          case 'M':
+          case 'V':
             change->action = 'A';
             break;
 
