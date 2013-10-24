@@ -489,7 +489,7 @@ test_path_join(apr_pool_t *pool)
       if (svn_path_is_url(base))
         continue;
 
-      result = svn_path_join_many(pool, base, comp, NULL);
+      result = svn_path_join_many(pool, base, comp, (char *)NULL);
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_join_many(\"%s\", \"%s\") returned "

@@ -363,7 +363,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
         {
           access_file = svn_dirent_join_many(scratch_pool, repos_path, "conf",
                                              conf->repo_relative_access_file,
-                                             NULL);
+                                             (char *)NULL);
         }
     }
   else
