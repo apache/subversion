@@ -400,7 +400,7 @@ build_lockfile_path(const char *local_dir_abspath,
                               local_dir_abspath,
                               svn_wc_get_adm_dir(result_pool),
                               ADM_LOCK,
-                              NULL);
+                              (char *)NULL);
 }
 
 
@@ -1349,7 +1349,8 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* Rename all pristine files, adding a ".svn-base" suffix. */
   pristine_dir_abspath = svn_dirent_join_many(scratch_pool, wcroot_abspath,
                                               svn_wc_get_adm_dir(scratch_pool),
-                                              PRISTINE_STORAGE_RELPATH, NULL);
+                                              PRISTINE_STORAGE_RELPATH,
+                                              (char *)NULL);
   SVN_ERR(svn_io_dir_walk2(pristine_dir_abspath, APR_FINFO_MIN,
                            rename_pristine_file, NULL, scratch_pool));
 

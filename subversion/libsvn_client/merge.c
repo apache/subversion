@@ -6729,7 +6729,7 @@ merge_range_find_extremes(svn_revnum_t *min_rev_p,
     }
 }
 
-/* Wrapper around svn_ra_get_log2(). Invoke RECEIVER with RECEIVER_BATON
+/* Wrapper around svn_ra_get_log3(). Invoke RECEIVER with RECEIVER_BATON
  * on each commit from YOUNGEST_REV to OLDEST_REV in which TARGET_RELPATH
  * changed.  TARGET_RELPATH is relative to RA_SESSION's URL.
  * Important: Revision properties are not retrieved by this function for
@@ -6753,10 +6753,11 @@ get_log(svn_ra_session_t *ra_session,
 
   revprops = apr_array_make(pool, 0, sizeof(const char *));
 
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
+  SVN_ERR(svn_ra_get_log3(ra_session, log_targets, youngest_rev,
                           oldest_rev, 0 /* limit */, discover_changed_paths,
                           FALSE /* strict_node_history */,
                           FALSE /* include_merged_revisions */,
+                          svn_move_behavior_no_moves, /* ### really? */
                           revprops, receiver, receiver_baton, pool));
 
   return SVN_NO_ERROR;

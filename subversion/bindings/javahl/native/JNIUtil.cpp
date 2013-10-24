@@ -54,16 +54,8 @@
 #include "svn_path.h"
 #include "svn_cache_config.h"
 #include "private/svn_atomic.h"
+#include "private/svn_utf_private.h"
 #include "svn_private_config.h"
-#ifdef WIN32
-/* FIXME: We're using an internal APR header here, which means we
-   have to build Subversion with APR sources. This being Win32-only,
-   that should be fine for now, but a better solution must be found in
-   combination with issue #850. */
-extern "C" {
-#include <arch/win32/apr_arch_utf8.h>
-};
-#endif
 
 #include "SVNBase.h"
 #include "JNIMutex.h"
@@ -314,30 +306,22 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     WCHAR ucs2_path[MAX_PATH];
     char *utf8_path;
     const char *internal_path;
-    apr_pool_t *pool;
-    apr_status_t apr_err;
-    apr_size_t inwords, outbytes;
-    unsigned int outlength;
+    svn_error_t *err;
+    apr_pool_t *pool = svn_pool_create(g_pool);
 
-    pool = svn_pool_create(g_pool);
     /* get dll name - our locale info will be in '../share/locale' */
-    inwords = sizeof(ucs2_path) / sizeof(ucs2_path[0]);
     HINSTANCE moduleHandle = GetModuleHandle("libsvnjavahl-1");
-    GetModuleFileNameW(moduleHandle, ucs2_path, inwords);
-    inwords = lstrlenW(ucs2_path);
-    outbytes = outlength = 3 * (inwords + 1);
-    utf8_path = reinterpret_cast<char *>(apr_palloc(pool, outlength));
-    apr_err = apr_conv_ucs2_to_utf8((const apr_wchar_t *) ucs2_path,
-                                    &inwords, utf8_path, &outbytes);
-    if (!apr_err && (inwords > 0 || outbytes == 0))
-      apr_err = APR_INCOMPLETE;
-    if (apr_err)
+    GetModuleFileNameW(moduleHandle, ucs2_path,
+                       sizeof(ucs2_path) / sizeof(ucs2_path[0]));
+    err = svn_utf__win32_utf16_to_utf8(&utf8_path, ucs2_path, NULL, pool);
+    if (err)
       {
         if (stderr)
-          fprintf(stderr, "Can't convert module path to UTF-8");
-        return FALSE;
+          svn_handle_error2(err, stderr, false, "svn: ");
+        svn_error_clear(err);
+        return false;
       }
-    utf8_path[outlength - outbytes] = '\0';
+
     internal_path = svn_dirent_internal_style(utf8_path, pool);
     /* get base path name */
     internal_path = svn_dirent_dirname(internal_path, pool);

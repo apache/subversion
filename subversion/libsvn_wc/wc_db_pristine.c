@@ -67,7 +67,7 @@ get_pristine_fname(const char **pristine_abspath,
                                           wcroot_abspath,
                                           svn_wc_get_adm_dir(scratch_pool),
                                           PRISTINE_STORAGE_RELPATH,
-                                          NULL);
+                                          (char *)NULL);
 
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
@@ -85,7 +85,7 @@ get_pristine_fname(const char **pristine_abspath,
                                            base_dir_abspath,
                                            subdir,
                                            hexdigest,
-                                           NULL);
+                                           (char *)NULL);
   return SVN_NO_ERROR;
 }
 

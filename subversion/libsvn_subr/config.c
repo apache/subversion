@@ -264,9 +264,9 @@ get_category_config(svn_config_t **cfg,
     {
 #ifdef WIN32
       sys_reg_path = apr_pstrcat(pool, SVN_REGISTRY_SYS_CONFIG_PATH,
-                                 category, NULL);
+                                 category, (char *)NULL);
       usr_reg_path = apr_pstrcat(pool, SVN_REGISTRY_USR_CONFIG_PATH,
-                                 category, NULL);
+                                 category, (char *)NULL);
 #endif /* WIN32 */
 
       err = svn_config__sys_config_path(&sys_cfg_path, category, pool);
@@ -701,7 +701,9 @@ svn_config_set(svn_config_t *cfg,
    * Since we should never try to modify r/o data, trigger an assertion
    * in debug mode.
    */
-  assert(!cfg->read_only);
+#ifdef SVN_DEBUG
+  SVN_ERR_ASSERT_NO_RETURN(!cfg->read_only);
+#endif
   if (cfg->read_only)
     return;
 

@@ -3618,11 +3618,11 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                     resource->info->repos->base_url,
                                     ap_escape_uri(resource->pool,
                                                   resource->info->r->uri),
-                                    NULL);
+                                    (char *)NULL);
               str_root = apr_pstrcat(resource->pool,
                                      resource->info->repos->base_url,
                                      resource->info->repos->root_path,
-                                     NULL);
+                                     (char *)NULL);
 
               serr = svn_subst_build_keywords3(&kw, keywords->data,
                                                str_cmt_rev, str_uri, str_root,

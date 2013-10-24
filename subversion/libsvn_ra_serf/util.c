@@ -48,6 +48,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_auth_private.h"
 
 #include "ra_serf.h"
 
@@ -275,13 +276,8 @@ ssl_server_cert(void *baton, int failures,
   void *creds;
   int found_matching_hostname = 0;
 
-  /* Implicitly approve any non-server certs. */
-  if (serf_ssl_cert_depth(cert) > 0)
-    {
-      if (failures)
-        conn->server_cert_failures |= ssl_convert_serf_failures(failures);
-      return APR_SUCCESS;
-    }
+  if (!failures && ! conn->server_cert_failures)
+    return SVN_NO_ERROR;
 
   /* Extract the info from the certificate */
   subject = serf_ssl_cert_subject(cert, scratch_pool);
@@ -304,6 +300,58 @@ ssl_server_cert(void *baton, int failures,
 
   svn_failures = (ssl_convert_serf_failures(failures)
                   | conn->server_cert_failures);
+
+  /* Handle any non-server certs. */
+  if (serf_ssl_cert_depth(cert) > 0)
+    {
+      svn_error_t *err;
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                             &cert_info);
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                             &svn_failures);
+
+      realmstring = apr_psprintf(scratch_pool, "AUTHORITY:%s",
+                                 cert_info.fingerprint);
+
+      err = svn_auth_first_credentials(&creds, &state,
+                                       SVN_AUTH_CRED_SSL_SERVER_AUTHORITY,
+                                       realmstring,
+                                       conn->session->wc_callbacks->auth_baton,
+                                       scratch_pool);
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_FAILURES, NULL);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_AUTHN_NO_PROVIDER)
+            return svn_error_trace(err);
+
+          /* No provider registered that handles server authorities */
+          svn_error_clear(err);
+          creds = NULL;
+        }
+
+      if (creds)
+        {
+          server_creds = creds;
+          SVN_ERR(svn_auth_save_credentials(state, scratch_pool));
+
+          svn_failures &= ~server_creds->accepted_failures;
+        }
+
+      if (svn_failures)
+        conn->server_cert_failures |= svn_failures;
+
+      return APR_SUCCESS;
+    }
 
   /* Try to find matching server name via subjectAltName first... */
   if (san) {

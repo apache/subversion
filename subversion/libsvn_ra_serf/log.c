@@ -60,6 +60,8 @@ enum log_state_e {
   HAS_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
+  MOVED_PATH,
+  MOVE_REPLACED_PATH,
   DELETED_PATH,
   MODIFIED_PATH,
   SUBTRACTIVE_MERGE
@@ -134,6 +136,14 @@ static const svn_ra_serf__xml_transition_t log_ttable[] = {
             "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ITEM, S_, "replaced-path", REPLACED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ITEM, S_, "moved-path", MOVED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ITEM, S_, "replaced-by-moved-path", MOVE_REPLACED_PATH,
     TRUE, { "?node-kind", "?text-mods", "?prop-mods",
             "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
@@ -384,6 +394,10 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
         action = 'A';
       else if (leaving_state == REPLACED_PATH)
         action = 'R';
+      else if (leaving_state == MOVED_PATH)
+        action = 'V';
+      else if (leaving_state == MOVE_REPLACED_PATH)
+        action = 'E';
       else if (leaving_state == DELETED_PATH)
         action = 'D';
       else

@@ -32,6 +32,7 @@ import svntest
 from svntest import wc
 
 from svntest.main import server_has_mergeinfo
+from svntest.main import server_has_auto_move
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.mergetrees import set_up_branch
 from diff_tests import make_diff_header, make_no_diff_deleted_header
@@ -406,7 +407,6 @@ def merge_history_repos(sbox):
 
   # Restore working directory
   os.chdir(was_cwd)
-
 
 # For errors seen while parsing log data.
 class SVNLogParseError(Exception):
@@ -2361,13 +2361,9 @@ def merge_sensitive_log_with_search(sbox):
   }
   check_merge_results(log_chain, expected_merges)
 
-#----------------------------------------------------------------------
-# Test for issue #4355 'svn_client_log5 broken with multiple revisions
-# which span a rename'.
-@Issue(4355)
-@SkipUnless(server_has_mergeinfo)
-def log_multiple_revs_spanning_rename(sbox):
-  "log for multiple revs which span a rename"
+# Helper function for a few tests
+def create_renaming_history_repos(sbox):
+  "create a repository containing renames and a suitable working copy"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2375,7 +2371,6 @@ def log_multiple_revs_spanning_rename(sbox):
   msg_file=os.path.abspath(msg_file)
   mu_path1 = os.path.join(wc_dir, 'A', 'mu')
   mu_path2 = os.path.join(wc_dir, 'trunk', 'mu')
-  trunk_path = os.path.join(wc_dir, 'trunk')
 
   # r2 - Change a file.
   msg=""" Log message for revision 2
@@ -2399,6 +2394,27 @@ def log_multiple_revs_spanning_rename(sbox):
   svntest.main.file_append(mu_path2, "4")
   svntest.main.run_svn(None, 'ci', '-F', msg_file, wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
+
+  # r5 - Cyclic exchange.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  sbox.simple_move(os.path.join('trunk', 'D'), os.path.join('trunk', 'X'))
+  sbox.simple_move(os.path.join('trunk', 'C'), os.path.join('trunk', 'D'))
+  sbox.simple_move(os.path.join('trunk', 'X'), os.path.join('trunk', 'C'))
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 5",
+                       wc_dir)
+
+
+#----------------------------------------------------------------------
+# Test for issue #4355 'svn_client_log5 broken with multiple revisions
+# which span a rename'.
+@Issue(4355)
+@SkipUnless(server_has_mergeinfo)
+def log_multiple_revs_spanning_rename(sbox):
+  "log for multiple revs which span a rename"
+
+  trunk_path = sbox.ospath('trunk')
+
+  create_renaming_history_repos(sbox)
 
   # Check that log can handle a revision range that spans a rename.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
@@ -2439,6 +2455,8 @@ def log_multiple_revs_spanning_rename(sbox):
     None, None, [], 'log', '-c2,3,1', sbox.repo_url + '/trunk/mu')
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2,3,1])
+
+  mu_path2 = sbox.ospath('trunk/mu')
 
   # Should work with a WC target too.
   exit_code, output, err = svntest.actions.run_and_verify_svn(
@@ -2489,6 +2507,54 @@ def log_multiple_revs_spanning_rename(sbox):
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [1,4])
 
+#----------------------------------------------------------------------
+def verify_move_log(sbox, flag, has_moves):
+  "result checker for log_auto_move"
+
+  trunk_path = os.path.join(sbox.wc_dir, 'trunk')
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r3', '-v', trunk_path, flag)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [3], [2])
+
+  paths = log_chain[0]['paths']
+  if paths[0][0] != 'D' or paths[0][1] != '/A':
+    raise SVNLogParseError("Deletion of '/A' expected, %s of %s found" % paths[0])
+  if has_moves:
+    if paths[1][0] != 'V' or paths[1][1] != '/trunk (from /A:2)':
+      raise SVNLogParseError("Move of '/A' to '/trunk' expected, %s of %s found" % paths[1])
+  else:
+    if paths[1][0] != 'A' or paths[1][1] != '/trunk (from /A:2)':
+      raise SVNLogParseError("Addition of '/A' to '/trunk' expected, %s of %s found" % paths[1])
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(
+    None, None, [], 'log', '-r5', '-v', trunk_path, flag)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [5], [2])
+
+  paths = log_chain[0]['paths']
+  if has_moves:
+    if paths[0][0] != 'E' or paths[0][1] != '/trunk/C (from /trunk/D:4)':
+      raise SVNLogParseError("Replacing move of '/trunk/C' with '/trunk/D' expected, %s of %s found" % paths[0])
+    if paths[1][0] != 'E' or paths[1][1] != '/trunk/D (from /trunk/C:4)':
+      raise SVNLogParseError("Replacing move of '/trunk/D' with '/trunk/C' expected, %s of %s found" % paths[1])
+  else:
+    if paths[0][0] != 'R' or paths[0][1] != '/trunk/C (from /trunk/D:4)':
+      raise SVNLogParseError("Replace of '/trunk/C' with '/trunk/D' expected, %s of %s found" % paths[0])
+    if paths[1][0] != 'R' or paths[1][1] != '/trunk/D (from /trunk/C:4)':
+      raise SVNLogParseError("Replace of '/trunk/D' with '/trunk/C' expected, %s of %s found" % paths[1])
+
+@Issue(4355)
+def log_auto_move(sbox):
+  "test --auto-moves flag"
+
+  create_renaming_history_repos(sbox)
+  verify_move_log(sbox, '--auto-moves', server_has_auto_move())
+  verify_move_log(sbox, '-v', 0)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2535,6 +2601,7 @@ test_list = [ None,
               log_search,
               merge_sensitive_log_with_search,
               log_multiple_revs_spanning_rename,
+              log_auto_move,
              ]
 
 if __name__ == '__main__':
