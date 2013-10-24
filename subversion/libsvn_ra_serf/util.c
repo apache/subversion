@@ -396,13 +396,27 @@ ssl_server_cert(void *baton, int failures,
   if (creds)
     {
       server_creds = creds;
+      svn_failures &= ~server_creds->accepted_failures;
       SVN_ERR(svn_auth_save_credentials(state, scratch_pool));
+    }
+
+  while (svn_failures && creds)
+    {
+      SVN_ERR(svn_auth_next_credentials(&creds, state, scratch_pool));
+
+      if (creds)
+        {
+          server_creds = creds;
+          svn_failures &= ~server_creds->accepted_failures;
+          SVN_ERR(svn_auth_save_credentials(state, scratch_pool));
+        }
     }
 
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
-  if (!server_creds)
+  /* Are there non accepted failures left? */
+  if (svn_failures)
     {
       svn_stringbuf_t *errmsg;
       int reasons = 0;
