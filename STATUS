@@ -131,7 +131,7 @@ Candidate changes:
      by borrowing some code from trunk.
    Branch: ^/subversion/branches/1.8.x-openssl-dirs
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1535161
    Make swig-rb tests run without installing on OS X.
