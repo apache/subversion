@@ -134,7 +134,7 @@ digest_path_from_digest(const char *fs_path,
 {
   return svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                               apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
-                              digest, NULL);
+                              digest, (char *)NULL);
 }
 
 
@@ -152,7 +152,7 @@ digest_path_from_path(const char **digest_path,
   *digest_path = svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                                       apr_pstrmemdup(pool, digest,
                                                      DIGEST_SUBDIR_LEN),
-                                      digest, NULL);
+                                      digest, (char *)NULL);
   return SVN_NO_ERROR;
 }
 

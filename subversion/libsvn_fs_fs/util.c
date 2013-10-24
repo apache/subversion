@@ -98,7 +98,7 @@ svn_fs_fs__path_rev_packed(svn_fs_t *fs,
                               apr_psprintf(pool,
                                            "%ld" PATH_EXT_PACKED_SHARD,
                                            rev / ffd->max_files_per_dir),
-                              kind, NULL);
+                              kind, (char *)NULL);
 }
 
 const char *
@@ -110,7 +110,7 @@ svn_fs_fs__path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
                               apr_psprintf(pool, "%ld",
                                                  rev / ffd->max_files_per_dir),
-                              NULL);
+                              (char *)NULL);
 }
 
 const char *
@@ -128,7 +128,7 @@ svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
     }
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVS_DIR,
-                              apr_psprintf(pool, "%ld", rev), NULL);
+                              apr_psprintf(pool, "%ld", rev), (char *)NULL);
 }
 
 const char *
@@ -155,7 +155,7 @@ svn_fs_fs__path_revprops_shard(svn_fs_t *fs,
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld",
                                            rev / ffd->max_files_per_dir),
-                              NULL);
+                              (char *)NULL);
 }
 
 const char *
@@ -169,7 +169,7 @@ svn_fs_fs__path_revprops_pack_shard(svn_fs_t *fs,
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
                               apr_psprintf(pool, "%ld" PATH_EXT_PACKED_SHARD,
                                            rev / ffd->max_files_per_dir),
-                              NULL);
+                              (char *)NULL);
 }
 
 const char *
@@ -187,7 +187,7 @@ svn_fs_fs__path_revprops(svn_fs_t *fs,
     }
 
   return svn_dirent_join_many(pool, fs->path, PATH_REVPROPS_DIR,
-                              apr_psprintf(pool, "%ld", rev), NULL);
+                              apr_psprintf(pool, "%ld", rev), (char *)NULL);
 }
 
 /* Return TO_ADD appended to the C string representation of TXN_ID.
@@ -211,7 +211,7 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
   return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
                               combine_txn_id_string(txn_id, PATH_EXT_TXN,
                                                     pool),
-                              NULL);
+                              (char *)NULL);
 }
 
 const char *
@@ -224,7 +224,7 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
     return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
                                 combine_txn_id_string(txn_id, PATH_EXT_REV,
                                                       pool),
-                                NULL);
+                                (char *)NULL);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV, pool);
@@ -241,7 +241,7 @@ svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
                                 combine_txn_id_string(txn_id,
                                                       PATH_EXT_REV_LOCK,
                                                       pool),
-                                NULL);
+                                (char *)NULL);
   else
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV_LOCK, pool);
@@ -292,7 +292,7 @@ svn_fs_fs__path_node_origin(svn_fs_t *fs,
     buffer[len - 1] = '\0';
 
   return svn_dirent_join_many(pool, fs->path, PATH_NODE_ORIGINS_DIR,
-                              buffer, NULL);
+                              buffer, (char *)NULL);
 }
 
 const char *

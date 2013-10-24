@@ -269,7 +269,7 @@ test_dirent_join(apr_pool_t *pool)
                                  "\"%s\". expected \"%s\"",
                                  base, comp, result, expect);
 
-      result = svn_dirent_join_many(pool, base, comp, NULL);
+      result = svn_dirent_join_many(pool, base, comp, (char *)NULL);
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_join_many(\"%s\", \"%s\") returned "
