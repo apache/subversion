@@ -803,7 +803,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops,
      opt_with_revprop, opt_auto_moves, opt_depth, opt_diff, opt_diff_cmd,
-     opt_internal_diff, 'x', opt_search, opt_search_and },
+     opt_internal_diff, 'x', opt_invoke_diff_cmd, opt_search, opt_search_and },
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
