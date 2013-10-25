@@ -846,11 +846,6 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 60,
              "Move without a suitable deletion")
 
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_FS_TXN_ADDRESSING_MODE_OUT_OF_DATE,
-             SVN_ERR_FS_CATEGORY_START + 61,
-             "Transaction addressing mode is out of date")
-
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
