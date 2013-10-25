@@ -102,7 +102,7 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
     SVN_CXXFLAGS_ADD_IFELSE([-std=c++98])
   fi
 
-  CXXMODEFLAGS="$CFLAGS"
+  CXXMODEFLAGS="$CXXFLAGS"
   CXXFLAGS=""
 
   if test "$GXX" = "yes"; then
