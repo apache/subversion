@@ -898,7 +898,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
       && max_files_per_dir > 0)
     {
       min_log_addressing_rev
-        = (ffd->youngest_rev_cache % max_files_per_dir + 1)
+        = (ffd->youngest_rev_cache / max_files_per_dir + 1)
         * max_files_per_dir;
     }
 
