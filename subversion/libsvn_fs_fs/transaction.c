@@ -3486,7 +3486,7 @@ upgrade_transaction(svn_fs_t *fs,
 
   /* scan the txn directory for noderev files and patch them up */
 
-  SVN_ERR(svn_io_get_dirents3(&dirents, txn_dir, TRUE, subpool, subpool));
+  SVN_ERR(svn_io_get_dirents3(&dirents, txn_dir, TRUE, subpool, iterpool));
   for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
     {
       apr_file_t *file;
