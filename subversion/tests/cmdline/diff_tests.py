@@ -2722,30 +2722,6 @@ def basic_diff_summarize(sbox):
   svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
                                                 wc_dir, '-c-3')
 
-  # Get the differences between a newly added file 
-  expected_diff = svntest.wc.State(wc_dir, {
-    'newfile': Item(status='A '),
-    })
-  expected_reverse_diff = svntest.wc.State(wc_dir, {
-    'newfile': Item(status='D '),
-    })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                p('newfile'), '-c3')
-  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
-                                                p('newfile'), '-c-3')
-
-  # Get the differences between a newly added dir 
-  expected_diff = svntest.wc.State(wc_dir, {
-    'P': Item(status='A '),
-    })
-  expected_reverse_diff = svntest.wc.State(wc_dir, {
-    'P': Item(status='D '),
-    })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                p('P'), '-c3')
-  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
-                                                p('P'), '-c-3')
-
 #----------------------------------------------------------------------
 def diff_weird_author(sbox):
   "diff with svn:author that has < in it"
