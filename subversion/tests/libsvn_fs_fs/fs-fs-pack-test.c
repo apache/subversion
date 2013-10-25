@@ -55,18 +55,35 @@ write_format(const char *path,
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
-      if (max_files_per_dir)
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout sharded %d\n"
-                                "addressing logical 0\n",
-                                format, max_files_per_dir);
+      if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+        {
+          if (max_files_per_dir)
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout sharded %d\n"
+                                    "addressing logical 0\n",
+                                    format, max_files_per_dir);
+          else
+            /* linear layouts never use logical addressing */
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout linear\n"
+                                    "addressing physical\n",
+                                    format);
+        }
       else
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout linear\n"
-                                "addressing physical\n",
-                                format);
+        {
+          if (max_files_per_dir)
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout sharded %d\n",
+                                    format, max_files_per_dir);
+          else
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout linear\n",
+                                    format);
+        }
     }
   else
     {
