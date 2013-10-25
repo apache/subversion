@@ -933,6 +933,124 @@ get_set_multiple_huge_revprops_packed_fs(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
+#define REPO_NAME "upgrade_txn_to_log_addressing"
+#define SHARD_SIZE 4
+#define MAX_REV 8
+static svn_error_t *
+upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+  const char *repo_path;
+  apr_array_header_t *txns;
+  int i, k;
+  svn_test_opts_t temp_opts;
+  svn_fs_root_t *root;
+
+  static const char * const paths[SHARD_SIZE][2]
+    = {
+        { "A/mu",        "A/B/lambda" },
+        { "A/B/E/alpha", "A/D/H/psi"  },
+        { "A/D/gamma",   "A/B/E/beta" },
+        { "A/D/G/pi",    "A/D/G/rho"  }
+      };
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
+    return SVN_NO_ERROR;
+
+  /* Create the packed FS in phys addressing format and open it. */
+  temp_opts = *opts;
+  temp_opts.server_minor_version = 8;
+  SVN_ERR(prepare_revprop_repo(&fs, REPO_NAME, MAX_REV, SHARD_SIZE,
+                               &temp_opts, pool));
+
+  /* upgrade to final repo format (using log addressing) and re-open */
+  repo_path = svn_fs_path(fs, pool);
+  SVN_ERR(svn_fs_upgrade2(repo_path, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_fs_open(&fs, repo_path, svn_fs_config(fs, pool), pool));
+ 
+  /* Create 4 concurrent transactions */
+  txns = apr_array_make(pool, 4, sizeof(svn_fs_txn_t *));
+  for (i = 0; i < SHARD_SIZE; ++i)
+    {
+      svn_fs_txn_t *txn;
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, pool));
+      APR_ARRAY_PUSH(txns, svn_fs_txn_t *) = txn;
+    }
+
+  /* Let all txns touch at least 2 files.
+   * Thus, the addressing data of at least one representation in the txn
+   * will differ between addressing modes. */
+  for (i = 0; i < SHARD_SIZE; ++i)
+    {
+      svn_fs_txn_t *txn = APR_ARRAY_IDX(txns, i, svn_fs_txn_t *);
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+
+      for (k = 0; k < 2; ++k)
+        {
+          svn_stream_t *stream;
+          const char *file_path = paths[i][k];
+
+          SVN_ERR(svn_fs_apply_text(&stream, root, file_path, NULL, pool));
+          SVN_ERR(svn_stream_printf(stream, pool,
+                                    "This is file %s in txn %d",
+                                    file_path, i));
+          SVN_ERR(svn_stream_close(stream));
+        }
+    }
+
+  /* Commit all transactions
+   * (in reverse order to make things more interesting) */
+  for (i = SHARD_SIZE - 1; i >= 0; --i)
+    {
+      svn_fs_txn_t *txn = APR_ARRAY_IDX(txns, i, svn_fs_txn_t *);
+      SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+    }
+
+  /* verify that our changes got in */
+  SVN_ERR(svn_fs_youngest_rev(&rev, fs, pool));
+  SVN_TEST_ASSERT(rev == SHARD_SIZE + MAX_REV + 1);
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  for (i = 0; i < SHARD_SIZE; ++i)
+    {
+      for (k = 0; k < 2; ++k)
+        {
+          svn_stream_t *stream;
+          const char *file_path = paths[i][k];
+          svn_string_t *string;
+          const char *expected;
+
+          SVN_ERR(svn_fs_file_contents(&stream, root, file_path, pool));
+          SVN_ERR(svn_string_from_stream(&string, stream, pool, pool));
+
+          expected = apr_psprintf(pool,"This is file %s in txn %d",
+                                  file_path, i);
+          SVN_TEST_STRING_ASSERT(string->data, expected);
+        }
+    }
+
+  /* verify that the indexes are consistent, we calculated the correct
+     low-level checksums etc. */
+  SVN_ERR(svn_fs_verify(REPO_NAME, NULL,
+                        SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                        NULL, NULL, NULL, NULL, pool));
+  for (; rev >= 0; --rev)
+    {
+      SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+      SVN_ERR(svn_fs_verify_root(root, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -963,5 +1081,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test packing with shard size = 1"),
     SVN_TEST_OPTS_PASS(get_set_multiple_huge_revprops_packed_fs,
                        "set multiple huge revprops in packed FSFS"),
+    SVN_TEST_OPTS_PASS(upgrade_txn_to_log_addressing,
+                       "upgrade txns to log addressing in shared FSFS"),
     SVN_TEST_NULL
   };
