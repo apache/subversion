@@ -933,21 +933,21 @@ get_set_multiple_huge_revprops_packed_fs(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "upgrade_txn_to_log_addressing"
 #define SHARD_SIZE 4
-#define MAX_REV 8
 static svn_error_t *
-upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
-                              apr_pool_t *pool)
+upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
+                               const char *repo_name,
+                               svn_revnum_t max_rev,
+                               svn_boolean_t upgrade_before_txns,
+                               apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_revnum_t rev;
-  const char *repo_path;
   apr_array_header_t *txns;
+  apr_array_header_t *txn_names;
   int i, k;
   svn_test_opts_t temp_opts;
   svn_fs_root_t *root;
-
   static const char * const paths[SHARD_SIZE][2]
     = {
         { "A/mu",        "A/B/lambda" },
@@ -964,21 +964,29 @@ upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
   /* Create the packed FS in phys addressing format and open it. */
   temp_opts = *opts;
   temp_opts.server_minor_version = 8;
-  SVN_ERR(prepare_revprop_repo(&fs, REPO_NAME, MAX_REV, SHARD_SIZE,
+  SVN_ERR(prepare_revprop_repo(&fs, repo_name, max_rev, SHARD_SIZE,
                                &temp_opts, pool));
 
-  /* upgrade to final repo format (using log addressing) and re-open */
-  repo_path = svn_fs_path(fs, pool);
-  SVN_ERR(svn_fs_upgrade2(repo_path, NULL, NULL, NULL, NULL, pool));
-  SVN_ERR(svn_fs_open(&fs, repo_path, svn_fs_config(fs, pool), pool));
- 
+  if (upgrade_before_txns)
+    {
+      /* upgrade to final repo format (using log addressing) and re-open */
+      SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
+      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+    }
+
   /* Create 4 concurrent transactions */
-  txns = apr_array_make(pool, 4, sizeof(svn_fs_txn_t *));
+  txns = apr_array_make(pool, SHARD_SIZE, sizeof(svn_fs_txn_t *));
+  txn_names = apr_array_make(pool, SHARD_SIZE, sizeof(const char *));
   for (i = 0; i < SHARD_SIZE; ++i)
     {
       svn_fs_txn_t *txn;
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, pool));
+      const char *txn_name;
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, max_rev, pool));
       APR_ARRAY_PUSH(txns, svn_fs_txn_t *) = txn;
+
+      SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
+      APR_ARRAY_PUSH(txn_names, const char *) = txn_name;
     }
 
   /* Let all txns touch at least 2 files.
@@ -1002,18 +1010,27 @@ upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
         }
     }
 
+  if (!upgrade_before_txns)
+    {
+      /* upgrade to final repo format (using log addressing) and re-open */
+      SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
+      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+    }
+
   /* Commit all transactions
    * (in reverse order to make things more interesting) */
   for (i = SHARD_SIZE - 1; i >= 0; --i)
     {
-      svn_fs_txn_t *txn = APR_ARRAY_IDX(txns, i, svn_fs_txn_t *);
+      svn_fs_txn_t *txn;
+      const char *txn_name = APR_ARRAY_IDX(txn_names, i, const char *);
+      SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
       SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
     }
 
   /* Further changes to fill the shard */
 
   SVN_ERR(svn_fs_youngest_rev(&rev, fs, pool));
-  SVN_TEST_ASSERT(rev == SHARD_SIZE + MAX_REV + 1);
+  SVN_TEST_ASSERT(rev == SHARD_SIZE + max_rev + 1);
 
   while ((rev + 1) % SHARD_SIZE)
     {
@@ -1032,7 +1049,7 @@ upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
   /* Pack repo to verify that old and new shard get packed according to
      their respective addressing mode */
 
-  SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_fs_pack(repo_name, NULL, NULL, NULL, NULL, pool));
 
   /* verify that our changes got in */
 
@@ -1057,7 +1074,7 @@ upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
 
   /* verify that the indexes are consistent, we calculated the correct
      low-level checksums etc. */
-  SVN_ERR(svn_fs_verify(REPO_NAME, NULL,
+  SVN_ERR(svn_fs_verify(repo_name, NULL,
                         SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                         NULL, NULL, NULL, NULL, pool));
   for (; rev >= 0; --rev)
@@ -1068,9 +1085,37 @@ upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
 
   return SVN_NO_ERROR;
 }
+#undef SHARD_SIZE
+
+#define REPO_NAME "upgrade_new_txns_to_log_addressing"
+#define MAX_REV 8
+static svn_error_t *
+upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
+{
+  SVN_ERR(upgrade_txns_to_log_addressing(opts, REPO_NAME, MAX_REV, TRUE,
+                                         pool));
+
+  return SVN_NO_ERROR;
+}
 #undef REPO_NAME
 #undef MAX_REV
-#undef SHARD_SIZE
+
+/* ------------------------------------------------------------------------ */
+#define REPO_NAME "upgrade_old_txns_to_log_addressing"
+#define MAX_REV 8
+static svn_error_t *
+upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
+{
+  SVN_ERR(upgrade_txns_to_log_addressing(opts, REPO_NAME, MAX_REV, FALSE,
+                                         pool));
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+#undef MAX_REV
 
 /* ------------------------------------------------------------------------ */
 
@@ -1103,7 +1148,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test packing with shard size = 1"),
     SVN_TEST_OPTS_PASS(get_set_multiple_huge_revprops_packed_fs,
                        "set multiple huge revprops in packed FSFS"),
-    SVN_TEST_OPTS_PASS(upgrade_txn_to_log_addressing,
+    SVN_TEST_OPTS_PASS(upgrade_new_txns_to_log_addressing,
                        "upgrade txns to log addressing in shared FSFS"),
+    SVN_TEST_OPTS_PASS(upgrade_old_txns_to_log_addressing,
+                       "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_NULL
   };
