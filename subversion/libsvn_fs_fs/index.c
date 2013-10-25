@@ -1611,7 +1611,7 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
           if (entry.item.revision == SVN_INVALID_REVNUM)
             entry.item.revision = revision;
         }
-      
+
       /* end pages if entry is extending beyond their boundaries */
       entry_end = entry.offset + entry.size;
       while (entry_end - last_page_end > page_size)
@@ -1647,7 +1647,7 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
       compound = entry.item.number * 8 + entry.type;
       compound_diff = compound - last_compound;
       last_compound = compound;
-      
+
       SVN_ERR(svn_spillbuf__write(buffer, (const char *)encoded,
                                   encode_int(encoded, compound_diff),
                                   iter_pool));
