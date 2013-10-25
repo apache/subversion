@@ -74,6 +74,7 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
         {
           file->file = apr_file;
           file->stream = svn_stream_from_aprfile2(apr_file, TRUE, pool);
+          file->is_packed = svn_fs_fs__is_packed_rev(fs, rev);
 
           return SVN_NO_ERROR;
         }
