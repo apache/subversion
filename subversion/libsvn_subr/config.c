@@ -39,6 +39,7 @@
 #include "config_impl.h"
 
 #include "private/svn_dep_compat.h"
+#include "private/svn_subr_private.h"
 
 
 
@@ -650,6 +651,33 @@ svn_config_create_option(cfg_option_t **opt,
   o->expanded = FALSE;
 
   *opt = o;
+}
+
+svn_boolean_t
+svn_config__is_expanded(svn_config_t *cfg,
+                        const char *section,
+                        const char *option)
+{
+  cfg_option_t *opt;
+
+  if (cfg == NULL)
+    return FALSE;
+
+  /* does the option even exist? */
+  opt = find_option(cfg, section, option, NULL);
+  if (opt == NULL)
+    return FALSE;
+
+  /* already expanded? */
+  if (opt->expanded)
+    return TRUE;
+
+  /* needs expansion? */
+  if (opt->value && strchr(opt->value, '%'))
+    return FALSE;
+
+  /* no expansion necessary */
+  return TRUE;
 }
 
 
