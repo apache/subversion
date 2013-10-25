@@ -325,7 +325,7 @@ For performance reasons we use a modified version:
 * combine the big endian representation of these checksums plus the
   remnant of the original stream into a 12 to 15 byte long intermediate
 
-  [i0 .. iK], 12 <= K <= 15
+  [i0 .. iK], 12 <= K+1 <= 15
 
 * FNV checksum = fnv_1a([i0 .. iK]) in big endian representation
 
