@@ -80,7 +80,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1534149
+ * r1534149, r1535676
    In the windows CryptoAPI ssl certificate verification, properly handle
    certificates that are only trusted via intermediate authorities.
    Justification:
