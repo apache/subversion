@@ -83,6 +83,8 @@ make_fs_config(const char *fs_type,
                fs_type);
   if (server_minor_version)
     {
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION,
+                    apr_psprintf(pool, "1.%d.0", server_minor_version));
       if (server_minor_version == 6 || server_minor_version == 7)
         svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
       else if (server_minor_version == 5)
