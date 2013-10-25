@@ -463,6 +463,12 @@ svn_config__set_read_only(svn_config_t *cfg,
   cfg->read_only = TRUE;
 }
 
+svn_boolean_t
+svn_config__is_read_only(svn_config_t *cfg)
+{
+  return cfg->read_only;
+}
+
 
 
 svn_error_t *
