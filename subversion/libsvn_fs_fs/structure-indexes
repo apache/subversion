@@ -303,7 +303,7 @@ are not allowed; zero-length items are.
 In transactions, the final revision number may not be known when writing
 the proto index file (e.g. while still writing the proto rev file).  Items
 with revision set to SVN_INVALID_REVNUM will therefore be automatically
-updated when creating the index file.  This is not possible in conjunction
+updated when creating the index file.  This is possible in conjunction
 with rev files but not for pack files.
 
 
