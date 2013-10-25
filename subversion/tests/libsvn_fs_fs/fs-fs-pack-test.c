@@ -1010,9 +1010,31 @@ upgrade_txn_to_log_addressing(const svn_test_opts_t *opts,
       SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
     }
 
-  /* verify that our changes got in */
+  /* Further changes to fill the shard */
+
   SVN_ERR(svn_fs_youngest_rev(&rev, fs, pool));
   SVN_TEST_ASSERT(rev == SHARD_SIZE + MAX_REV + 1);
+
+  while ((rev + 1) % SHARD_SIZE)
+    {
+      svn_fs_txn_t *txn;
+      if (rev % SHARD_SIZE == 0)
+        break;
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      SVN_ERR(svn_test__set_file_contents(root, "iota",
+                                          get_rev_contents(rev + 1, pool),
+                                          pool));
+      SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+    }
+
+  /* Pack repo to verify that old and new shard get packed according to
+     their respective addressing mode */
+
+  SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
+
+  /* verify that our changes got in */
 
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
   for (i = 0; i < SHARD_SIZE; ++i)
