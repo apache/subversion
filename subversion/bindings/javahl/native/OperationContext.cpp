@@ -153,10 +153,10 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
 
       /* Use the prompter (if available) to prompt for password and cert
        * caching. */
-      svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
-      void *plaintext_prompt_baton = NULL;
+      svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
+      void *plaintext_prompt_baton;
       svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
-      void *plaintext_passphrase_prompt_baton = NULL;
+      void *plaintext_passphrase_prompt_baton;
 
       if (m_prompter != NULL)
         {
@@ -164,6 +164,13 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
           plaintext_prompt_baton = m_prompter;
           plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
           plaintext_passphrase_prompt_baton = m_prompter;
+        }
+      else
+        {
+          plaintext_prompt_func = NULL;
+          plaintext_prompt_baton = NULL;
+          plaintext_passphrase_prompt_func = NULL;
+          plaintext_passphrase_prompt_baton = NULL;
         }
 
       /* The main disk-caching auth providers, for both
