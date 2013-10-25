@@ -28,10 +28,13 @@ Candidate changes:
    Notes:
      Please read the branch and related trunk log messages for detailed notes
      about these changes.
+     breser: Not so found of the temp file use but 1.8.x is out with a much
+     implementation anyway.
    Branch:
      ^/subversion/branches/1.7.x-issue4153
    Votes:
-     +1: stsp
+     +1: breser
+     +1 (without r1535554, r1535590, 1535592 commits on branch): stsp
 
  * r1426762
    Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
@@ -122,19 +125,6 @@ Candidate changes:
      Improves correctness. Resolves user reported problem.
    Votes:
      +1: rhuijben, stefan2
-
- * ^/subversion/branches/1.7.x-issue4421
-   Fix Issue #4421
-   Justification:
-     Segfaults are bad.
-   Changes: diff: Fix crash with diff --summarize (issue #4421)
-   Notes:
-     This is straight to 1.7.x change since 1.8.x has a different diff
-     implementation without this problem.  It's not reasonable to backport
-     that to 1.7.x.
-   Votes:
-     +1: breser
-     -0: stsp (see r1306275 group for a more complete fix)
 
  * r1522892
    Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
