@@ -3089,11 +3089,69 @@ __create_custom_diff_cmd(const char *label1,
                                 strlen(tokens_tab[i].replace));
           i = delimiters;
         }
-      result[argv] = word->data;
+      result[argv] = apr_pstrdup(scratch_pool, word->data); 
     }  
   result[argv] = NULL;
   svn_pool_destroy(scratch_pool);
   return result;
+}
+
+/* Copy pasta from svn_io_parse_mimetypes_file below.  Should really
+refactor this as a generalised wrap that calls any given file and just
+hands back a stuffed array_header_t of the contents and lets the
+caller deal with the result.  (but that's for another patch)
+*/
+svn_error_t *
+svn_io_parse_diff_cmd_file(const char *diff_cmd_file,
+                           apr_array_header_t *diff_file_data,
+                           apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t eof = FALSE;
+  svn_stringbuf_t *buf;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_file_t *types_file;
+  svn_stream_t *mimetypes_stream;
+
+  SVN_ERR(svn_io_file_open(&types_file, diff_cmd_file,
+                           APR_READ, APR_OS_DEFAULT, pool));
+  mimetypes_stream = svn_stream_from_aprfile2(types_file, FALSE, pool);
+
+  while (1)
+    {
+      svn_pool_clear(subpool);
+
+      /* Read a line. */
+      if ((err = svn_stream_readline(mimetypes_stream, &buf,
+                                     APR_EOL_STR, &eof, subpool)))
+        break;
+
+      /* Only pay attention to non-empty, non-comment lines. */
+      if (buf->len)
+        {
+          if (buf->data[0] == '#')
+            continue;
+
+          APR_ARRAY_PUSH(diff_file_data,  char*)
+            = apr_pstrdup(pool, buf->data);
+        }
+      if (eof)
+        break;
+    }
+  svn_pool_destroy(subpool);
+
+  /* If there was an error above, close the file (ignoring any error
+     from *that*) and return the originally error. */
+  if (err)
+    {
+      svn_error_clear(svn_stream_close(mimetypes_stream));
+      return err;
+    }
+
+  /* Close the stream (which closes the underlying file, too). */
+  SVN_ERR(svn_stream_close(mimetypes_stream));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -3108,17 +3166,88 @@ svn_io_run_external_diff(const char *dir,
                          const char *external_diff_cmd,
                          apr_pool_t *pool)
 {
-  int exitcode;
+  int exitcode, file_in_list = 0, has_switch = 0;
   const char ** cmd;
-
+  char *diff_cmd, *the_config;
+  apr_array_header_t *diff_file_data;
+  svn_stringbuf_t *the_cmd;
+  apr_array_header_t *words;
   apr_pool_t *scratch_pool = svn_pool_create(pool); 
 
   if (0 == strlen(external_diff_cmd)) 
      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
 
+  diff_cmd = apr_palloc(pool, 
+                        ( (sizeof(external_diff_cmd)+1) *sizeof(char *) ) );
+
+  if (strstr(external_diff_cmd, "--svn-cfg-file-query") ) 
+    has_switch = 2; 
+  else if (strstr(external_diff_cmd, "--svn-cfg-file"))
+    has_switch = 1;
+  
+  the_cmd = svn_stringbuf_create_empty(scratch_pool); 
+  
+  if (has_switch)
+    {
+      int i;
+
+      diff_file_data = apr_array_make(scratch_pool, 0, sizeof(char*));
+
+      words = apr_array_make(scratch_pool, 0, sizeof(char **));
+      words = svn_cstring_split(external_diff_cmd, " ", TRUE, scratch_pool);
+
+      the_config = apr_palloc(pool, sizeof(APR_ARRAY_IDX(words, 1, char*)) );       
+      the_config = APR_ARRAY_IDX(words, 1, char*); 
+      
+      SVN_ERR(svn_io_parse_diff_cmd_file(the_config,
+                                         diff_file_data,
+                                         scratch_pool));
+
+      for (i = 0; i < diff_file_data->nelts;  i++)
+        {
+          apr_array_header_t *tokens;
+
+          tokens = svn_cstring_split(APR_ARRAY_IDX(diff_file_data, 
+                                                   i, char *), 
+                                     "=", TRUE, scratch_pool);
+
+          if (strstr(label1, APR_ARRAY_IDX(tokens, 0, char *)) )
+            {
+              diff_cmd = APR_ARRAY_IDX(tokens, 1, char *);
+              i = diff_file_data->nelts; /* found, so we're done here */
+              file_in_list = 1;
+            }
+        }
+
+      if (file_in_list)
+        {
+
+          if (2 == has_switch)
+            {
+              /* here we'd show the user the two different cmds and
+                 let them choose which one.  Not built yet, b/c I've
+                 not worked out yet how to make a hook for a client
+                 here.
+              */
+              ;
+            }
+        }
+      else  
+        { /* build the command from what's in the external_diff_cmd */
+          for (i = 2; i < words->nelts;  i++) 
+            {
+              svn_stringbuf_appendcstr(the_cmd, APR_ARRAY_IDX(words, i, char *));
+              svn_stringbuf_appendcstr(the_cmd, " ");
+            }
+          diff_cmd = apr_pstrdup(scratch_pool, the_cmd->data); 
+        }
+    } /* close has_switch */
+  else /* no switch found, just a diff cmd */
+    diff_cmd = apr_pstrdup(scratch_pool, external_diff_cmd);
+
   cmd = __create_custom_diff_cmd(label1, label2, NULL, 
                                  tmpfile1, tmpfile2, NULL, 
-                                 external_diff_cmd, scratch_pool);
+                                 diff_cmd, scratch_pool);
   if (pexitcode == NULL)
      pexitcode = &exitcode;
   

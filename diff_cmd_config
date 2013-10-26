@@ -1,0 +1,6 @@
+# this is to demonstrate the --svn-cfg-file feature.
+subversion/svn/svn.c = diff -L "test1" %svn_old% %svn_new%
+#
+subversion/libsvn_subr/io.c = diff -L "test2"  %svn_old% %svn_new%
+#
+subversion/include/svn_io.h = diff -u -L "test3" %svn_old% %svn_new%
