@@ -58,19 +58,6 @@ Candidate changes:
      +1: stsp, rhuijben
      -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
 
- * r1501656, r1501702
-   Fix the ability to build Debug Build with BDB FS on Windows.
-   Justification:
-     Our build system should work properly.
-   Votes:
-     +1: breser, stefan2
-     -0: rhuijben (Not a regression and I don't think we should encourage
-                   building with just a debug BDB (even for release mode)
-                   by backporting this change. That would require using the
-                   non-distributable debug CRT. Trunk has a cleaner
-                   detection of BDB (via db.h) and even while debugging a
-                   maintainer build of Subversion a release BDB works fine)
-
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
    Justification:
@@ -157,3 +144,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1501656, r1501702
+   Fix the ability to build Debug Build with BDB FS on Windows.
+   Justification:
+     Our build system should work properly.
+   Votes:
+     +1: breser, stefan2
+     +1: rhuijben (I prefer the trunk code that performs a real bdb install
+                   check, but it might help in some dev environments)
