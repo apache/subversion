@@ -144,12 +144,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1501656, r1501702
-   Fix the ability to build Debug Build with BDB FS on Windows.
-   Justification:
-     Our build system should work properly.
-   Votes:
-     +1: breser, stefan2
-     +1: rhuijben (I prefer the trunk code that performs a real bdb install
-                   check, but it might help in some dev environments)
