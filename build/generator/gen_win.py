@@ -220,6 +220,9 @@ class GeneratorBase(gen_base.GeneratorBase):
       if os.path.exists(os.path.join(path, lib + ".lib")):
         self.bdb_lib = lib
         break
+      elif os.path.exists(os.path.join(path, lib + "d.lib")):
+        self.bdb_lib = lib
+        break
     else:
       self.bdb_lib = None
 
@@ -238,7 +241,8 @@ class WinGeneratorBase(GeneratorBase):
     GeneratorBase.__init__(self, fname, verfname, options)
 
     if self.bdb_lib is not None:
-      print("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
+      print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
+                                                 self.bdb_path))
     else:
       print("BDB not found, BDB fs will not be built\n")
 
