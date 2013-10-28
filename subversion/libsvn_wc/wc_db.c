@@ -7591,14 +7591,6 @@ delete_node(void *baton,
                                              b->moved_to_relpath));
       SVN_ERR(svn_sqlite__update(NULL, stmt));
     }
-  else
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_CLEAR_MOVED_TO_DESCENDANTS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                            local_relpath));
-      SVN_ERR(svn_sqlite__update(NULL, stmt));
-    }
 
   /* Find children that were moved out of the subtree rooted at this node.
    * We'll need to update their op-depth columns because their deletion
@@ -7618,42 +7610,74 @@ delete_node(void *baton,
           const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
           const char *mv_to_relpath = svn_sqlite__column_text(stmt, 1, NULL);
           int child_op_depth = svn_sqlite__column_int(stmt, 2);
+          svn_boolean_t child_moved_here = !svn_sqlite__column_is_null(stmt, 3);
+          
           svn_boolean_t fixup = FALSE;
 
-          if (!b->moved_to_relpath
-              && ! svn_relpath_skip_ancestor(local_relpath, mv_to_relpath))
+          if (! b->moved_to_relpath)
             {
-              /* Update the op-depth of an moved node below this tree */
-              fixup = TRUE;
-              child_op_depth = delete_depth;
-            }
-          else if (b->moved_to_relpath
-                   && delete_depth == child_op_depth)
-            {
-              /* Update the op-depth of a tree shadowed by this tree */
-              fixup = TRUE;
-              child_op_depth = delete_depth;
-            }
-          else if (b->moved_to_relpath
-                   && child_op_depth >= delete_depth
-                   && !svn_relpath_skip_ancestor(local_relpath, mv_to_relpath))
-            {
-              /* Update the move destination of something that is now moved
-                 away further */
+              int moved_here_depth;
 
-              child_relpath = svn_relpath_skip_ancestor(local_relpath, child_relpath);
+              /* Plain delete. Fixup move information of descendants that were
+                 moved here, or that were moved out */
 
-              if (child_relpath)
+              if (child_moved_here
+                  && (moved_here_depth = svn_sqlite__column_int(stmt, 3)) 
+                               >= delete_depth)
                 {
-                  child_relpath = svn_relpath_join(b->moved_to_relpath, child_relpath, scratch_pool);
+                  /* The move we recorded here must be moved to the location
+                     this node had before it was moved here.
 
-                  if (child_op_depth > delete_depth
-                      && svn_relpath_skip_ancestor(local_relpath, child_relpath))
-                    child_op_depth = delete_depth;
-                  else
-                    child_op_depth = relpath_depth(child_relpath);
+                     This might contain multiple steps when the node was moved
+                     in several places within the to be deleted tree */
 
+                  /* ### TODO: Add logic */
+                }
+              else
+                {
+                  if (!svn_relpath_skip_ancestor(local_relpath, mv_to_relpath))
+                    {
+                      /* Update the op-depth of an moved node below this tree */
+                      fixup = TRUE;
+                      child_op_depth = delete_depth;
+                    }
+                }
+            }
+          else
+            {
+              /* The node is moved to a new location */
+
+              if (delete_depth == child_op_depth)
+                {
+                  /* Update the op-depth of a tree shadowed by this tree */
                   fixup = TRUE;
+                  child_op_depth = delete_depth;
+                }
+              else if (child_op_depth >= delete_depth
+                       && !svn_relpath_skip_ancestor(local_relpath,
+                                                     mv_to_relpath))
+                {
+                  /* Update the move destination of something that is now moved
+                     away further */
+
+                  child_relpath = svn_relpath_skip_ancestor(local_relpath,
+                                                            child_relpath);
+
+                  if (child_relpath)
+                    {
+                      child_relpath = svn_relpath_join(b->moved_to_relpath,
+                                                       child_relpath,
+                                                       scratch_pool);
+
+                      if (child_op_depth > delete_depth
+                           && svn_relpath_skip_ancestor(local_relpath,
+                                                        child_relpath))
+                        child_op_depth = delete_depth;
+                      else
+                        child_op_depth = relpath_depth(child_relpath);
+
+                      fixup = TRUE;
+                    }
                 }
             }
 
@@ -7675,6 +7699,15 @@ delete_node(void *baton,
         }
       svn_pool_destroy(iterpool);
       SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
+  if (!b->moved_to_relpath)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+          STMT_CLEAR_MOVED_TO_DESCENDANTS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+          local_relpath));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
     }
 
   if (op_root)
