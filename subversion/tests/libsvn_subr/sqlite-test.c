@@ -98,7 +98,9 @@ test_sqlite_reset(apr_pool_t *pool)
   SVN_TEST_ASSERT_ERROR(svn_sqlite__step(&have_row, stmt),
                         SVN_ERR_SQLITE_ERROR);
 
-  /* Reset and then the first step can be repeated. */
+  /* The svn_sqlite__step wrapper calls svn_sqlite__reset when step
+     fails so the reset call here is a no-op.  The first step can be
+     repeated. */ 
   SVN_ERR(svn_sqlite__reset(stmt));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_TEST_ASSERT(have_row);
