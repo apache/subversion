@@ -485,19 +485,19 @@ print_chrevs(const apr_array_header_t *revs_got,
           outstr = apr_pstrcat(pool,
                                outstr,
                                apr_psprintf(pool, "%ld ", rev),
-                               (char *)NULL);
+                               SVN_VA_NULL);
         }
     }
-  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", (char *)NULL);
+  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", SVN_VA_NULL);
   for (i = 0; i < num_revs_expected; i++)
     {
       outstr = apr_pstrcat(pool,
                            outstr,
                            apr_psprintf(pool, "%ld ",
                                         revs_expected[i]),
-                           (char *)NULL);
+                           SVN_VA_NULL);
     }
-  return apr_pstrcat(pool, outstr, "}", (char *)NULL);
+  return apr_pstrcat(pool, outstr, "}", SVN_VA_NULL);
 }
 
 
@@ -1455,8 +1455,8 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   repos_root = svn_repos_path(repos, pool);
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
-  authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
+  authz_url = apr_pstrcat(pool, repos_url, "/authz", SVN_VA_NULL);
+  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", SVN_VA_NULL);
 
   /* absolute file URL. */
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
@@ -1594,11 +1594,11 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   /* Calculate URLs */
   repos_root = svn_repos_path(repos, pool);
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
-  authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  empty_authz_url = apr_pstrcat(pool, repos_url, "/empty-authz", (char *)NULL);
-  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
-  groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
-  noent_groups_url = apr_pstrcat(pool, repos_url, "/A/groups", (char *)NULL);
+  authz_url = apr_pstrcat(pool, repos_url, "/authz", SVN_VA_NULL);
+  empty_authz_url = apr_pstrcat(pool, repos_url, "/empty-authz", SVN_VA_NULL);
+  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", SVN_VA_NULL);
+  groups_url = apr_pstrcat(pool, repos_url, "/groups", SVN_VA_NULL);
+  noent_groups_url = apr_pstrcat(pool, repos_url, "/A/groups", SVN_VA_NULL);
 
 
   /* absolute file URLs. */

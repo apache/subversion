@@ -67,7 +67,7 @@ get_pristine_fname(const char **pristine_abspath,
                                           wcroot_abspath,
                                           svn_wc_get_adm_dir(scratch_pool),
                                           PRISTINE_STORAGE_RELPATH,
-                                          (char *)NULL);
+                                          SVN_VA_NULL);
 
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
@@ -78,14 +78,14 @@ get_pristine_fname(const char **pristine_abspath,
   subdir[2] = '\0';
 
   hexdigest = apr_pstrcat(scratch_pool, hexdigest, PRISTINE_STORAGE_EXT,
-                          (char *)NULL);
+                          SVN_VA_NULL);
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ...svn-base */
   *pristine_abspath = svn_dirent_join_many(result_pool,
                                            base_dir_abspath,
                                            subdir,
                                            hexdigest,
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 
@@ -253,7 +253,7 @@ pristine_get_tempdir(svn_wc__db_wcroot_t *wcroot,
 {
   return svn_dirent_join_many(result_pool, wcroot->abspath,
                               svn_wc_get_adm_dir(scratch_pool),
-                              PRISTINE_TEMPDIR_RELPATH, (char *)NULL);
+                              PRISTINE_TEMPDIR_RELPATH, SVN_VA_NULL);
 }
 
 svn_error_t *

@@ -413,8 +413,8 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
 
   /* construct the names of the system objects that we need
    */
-  shm_name = apr_pstrcat(subpool, name, SHM_NAME_SUFFIX, (char *)NULL);
-  lock_name = apr_pstrcat(subpool, name, MUTEX_NAME_SUFFIX, (char *)NULL);
+  shm_name = apr_pstrcat(subpool, name, SHM_NAME_SUFFIX, SVN_VA_NULL);
+  lock_name = apr_pstrcat(subpool, name, MUTEX_NAME_SUFFIX, SVN_VA_NULL);
 
   /* initialize the lock objects
    */
@@ -508,8 +508,8 @@ svn_atomic_namespace__cleanup(const char *name,
   const char *shm_name, *lock_name;
 
   /* file names used for the specified namespace */
-  shm_name = apr_pstrcat(pool, name, SHM_NAME_SUFFIX, (char *)NULL);
-  lock_name = apr_pstrcat(pool, name, MUTEX_NAME_SUFFIX, (char *)NULL);
+  shm_name = apr_pstrcat(pool, name, SHM_NAME_SUFFIX, SVN_VA_NULL);
+  lock_name = apr_pstrcat(pool, name, MUTEX_NAME_SUFFIX, SVN_VA_NULL);
 
   /* remove these files if they exist */
   SVN_ERR(svn_io_remove_file2(shm_name, TRUE, pool));

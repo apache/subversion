@@ -202,7 +202,7 @@ svn_dirent_join(const char *base,
                 apr_pool_t *result_pool);
 
 /** Join multiple components onto a @a base dirent. The components are
- * terminated by a @c NULL.
+ * terminated by a @c SVN_VA_NULL.
  *
  * If any component is the empty string, it will be ignored.
  *

@@ -114,7 +114,7 @@ char *
 svn_path_join(const char *base, const char *component, apr_pool_t *pool);
 
 /** Join multiple components onto a @a base path, allocated in @a pool. The
- * components are terminated by a @c NULL.
+ * components are terminated by a @c SVN_VA_NULL.
  *
  * If any component is the empty string, it will be ignored.
  *

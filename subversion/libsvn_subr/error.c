@@ -203,7 +203,7 @@ svn_error_wrap_apr(apr_status_t status,
       if (msg_apr)
         {
           err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr,
-                                     (char *)NULL);
+                                     SVN_VA_NULL);
         }
       else
         {

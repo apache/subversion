@@ -726,9 +726,9 @@ proppatch_walker(void *baton,
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "S:", name, (char *)NULL);
+    prop_name = apr_pstrcat(wb->body_pool, "S:", name, SVN_VA_NULL);
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "C:", name, (char *)NULL);
+    prop_name = apr_pstrcat(wb->body_pool, "C:", name, SVN_VA_NULL);
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
@@ -824,7 +824,7 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
           token_uri = apr_uri_unparse(pool, &uri, 0);
 
           token_header = apr_pstrcat(pool, "<", token_uri, "> (<", token, ">)",
-                                     (char *)NULL);
+                                     SVN_VA_NULL);
           serf_bucket_headers_set(headers, "If", token_header);
         }
     }
@@ -1132,7 +1132,7 @@ setup_delete_headers(serf_bucket_t *headers,
           const char *token_header;
 
           token_header = apr_pstrcat(pool, "<", ctx->path, "> (<",
-                                     ctx->lock_token, ">)", (char *)NULL);
+                                     ctx->lock_token, ">)", SVN_VA_NULL);
 
           serf_bucket_headers_set(headers, "If", token_header);
 

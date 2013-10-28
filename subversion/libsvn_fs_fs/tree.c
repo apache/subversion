@@ -4369,7 +4369,7 @@ make_txn_root(svn_fs_root_t **root_p,
                                       APR_HASH_KEY_STRING,
                                       32, 20, FALSE,
                                       apr_pstrcat(pool, txn, ":TXN",
-                                                  (char *)NULL),
+                                                  SVN_VA_NULL),
                                       root->pool));
 
   /* Initialize transaction-local caches in FS.

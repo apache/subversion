@@ -298,25 +298,25 @@ get_option(const dav_resource *resource,
       apr_table_set(r->headers_out, SVN_DAV_ROOT_URI_HEADER, repos_root_uri);
       apr_table_set(r->headers_out, SVN_DAV_ME_RESOURCE_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_me_resource_uri(r), (char *)NULL));
+                                dav_svn__get_me_resource_uri(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_REV_ROOT_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_rev_root_stub(r), (char *)NULL));
+                                dav_svn__get_rev_root_stub(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_REV_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_rev_stub(r), (char *)NULL));
+                                dav_svn__get_rev_stub(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_TXN_ROOT_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_txn_root_stub(r), (char *)NULL));
+                                dav_svn__get_txn_root_stub(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_txn_stub(r), (char *)NULL));
+                                dav_svn__get_txn_stub(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_VTXN_ROOT_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_vtxn_root_stub(r), (char *)NULL));
+                                dav_svn__get_vtxn_root_stub(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_VTXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
-                                dav_svn__get_vtxn_stub(r), (char *)NULL));
+                                dav_svn__get_vtxn_stub(r), SVN_VA_NULL));
       apr_table_set(r->headers_out, SVN_DAV_ALLOW_BULK_UPDATES,
                     bulk_upd_conf == CONF_BULKUPD_ON ? "On" :
                       bulk_upd_conf == CONF_BULKUPD_OFF ? "Off" : "Prefer");

@@ -1013,7 +1013,7 @@ ev2_check_authz(const struct ev2_baton *eb,
     return SVN_NO_ERROR;
 
   if (relpath)
-    fspath = apr_pstrcat(scratch_pool, "/", relpath, (char *)NULL);
+    fspath = apr_pstrcat(scratch_pool, "/", relpath, SVN_VA_NULL);
   else
     fspath = NULL;
 
