@@ -8658,7 +8658,7 @@ move_replace_ancestor_with_child(const svn_test_opts_t *opts, apr_pool_t *pool)
         { 0, "A/A",         "normal",       1, "A/A" },
 
         { 1, "A",           "normal",       1, "A/A", MOVED_HERE },
-        { 1, "A/A",         "base-deleted", NO_COPY_FROM, "A/A" },
+        { 1, "A/A",         "base-deleted", NO_COPY_FROM, "A" },
 
         { 0 },
       };
@@ -8910,9 +8910,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move more than once, delete intermediate"),
     SVN_TEST_OPTS_XFAIL(move_revert_intermediate,
                        "move more than once, revert intermediate"),
-    SVN_TEST_OPTS_XFAIL(move_replace_ancestor_with_child,
-                        "move replace ancestor with child"),
-    SVN_TEST_OPTS_XFAIL(move_twice_within_delete,
-                        "move twice and then delete"),
+    SVN_TEST_OPTS_PASS(move_replace_ancestor_with_child,
+                       "move replace ancestor with child"),
+    SVN_TEST_OPTS_PASS(move_twice_within_delete,
+                       "move twice and then delete"),
     SVN_TEST_NULL
   };
