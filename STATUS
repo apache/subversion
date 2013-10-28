@@ -139,7 +139,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1531014, r1536350, r1536383, r1536464
+ * r1531014, r1536350, r1536383, r1536464, r1536488
    Fix working copy database inconsistency on certain move scenarios,
    including those described in issue #4437 "Deleting a moved file can maintain a
    half move"
