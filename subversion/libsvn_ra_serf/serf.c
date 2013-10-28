@@ -511,7 +511,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   if (client_string)
     serf_sess->useragent = apr_pstrcat(pool, get_user_agent_string(pool), " ",
-                                       client_string, (char *)NULL);
+                                       client_string, SVN_VA_NULL);
   else
     serf_sess->useragent = get_user_agent_string(pool);
 

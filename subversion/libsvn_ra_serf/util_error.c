@@ -89,7 +89,7 @@ svn_ra_serf__wrap_err(apr_status_t status,
       if (err_msg)
         {
           err->message = apr_pstrcat(err->pool, msg, ": ", err_msg,
-                                     (char *)NULL);
+                                     SVN_VA_NULL);
         }
       else
         {

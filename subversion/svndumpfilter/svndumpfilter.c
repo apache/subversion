@@ -550,9 +550,9 @@ new_node_record(void **node_baton,
 
   /* Ensure that paths start with a leading '/'. */
   if (node_path[0] != '/')
-    node_path = apr_pstrcat(pool, "/", node_path, (char *)NULL);
+    node_path = apr_pstrcat(pool, "/", node_path, SVN_VA_NULL);
   if (copyfrom_path && copyfrom_path[0] != '/')
-    copyfrom_path = apr_pstrcat(pool, "/", copyfrom_path, (char *)NULL);
+    copyfrom_path = apr_pstrcat(pool, "/", copyfrom_path, SVN_VA_NULL);
 
   nb->do_skip = skip_path(node_path, pb->prefixes,
                           pb->do_exclude, pb->glob);
@@ -1554,7 +1554,7 @@ main(int argc, const char *argv[])
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
           prefix = svn_relpath__internal_style(prefix, pool);
           if (prefix[0] != '/')
-            prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
+            prefix = apr_pstrcat(pool, "/", prefix, SVN_VA_NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
         }
 
@@ -1585,7 +1585,7 @@ main(int argc, const char *argv[])
             {
               const char *prefix = APR_ARRAY_IDX(targets, i, const char *);
               if (prefix[0] != '/')
-                prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
+                prefix = apr_pstrcat(pool, "/", prefix, SVN_VA_NULL);
               APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
             }
         }

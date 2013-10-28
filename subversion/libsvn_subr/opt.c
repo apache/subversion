@@ -186,7 +186,7 @@ format_option(const char **string,
     opts = apr_psprintf(pool, "--%s", opt->name);
 
   if (opt->has_arg)
-    opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
+    opts = apr_pstrcat(pool, opts, _(" ARG"), SVN_VA_NULL);
 
   if (doc)
     opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
@@ -933,7 +933,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
             }
         }
 
-      target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
+      target = apr_pstrcat(pool, true_target, peg_rev, SVN_VA_NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }

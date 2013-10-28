@@ -265,9 +265,9 @@ get_category_config(svn_config_t **cfg,
     {
 #ifdef WIN32
       sys_reg_path = apr_pstrcat(pool, SVN_REGISTRY_SYS_CONFIG_PATH,
-                                 category, (char *)NULL);
+                                 category, SVN_VA_NULL);
       usr_reg_path = apr_pstrcat(pool, SVN_REGISTRY_USR_CONFIG_PATH,
-                                 category, (char *)NULL);
+                                 category, SVN_VA_NULL);
 #endif /* WIN32 */
 
       err = svn_config__sys_config_path(&sys_cfg_path, category, pool);

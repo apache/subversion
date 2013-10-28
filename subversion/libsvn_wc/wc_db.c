@@ -13456,7 +13456,7 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                            wcroot->abspath,
                                            svn_wc_get_adm_dir(scratch_pool),
                                            WCROOT_TEMPDIR_RELPATH,
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 

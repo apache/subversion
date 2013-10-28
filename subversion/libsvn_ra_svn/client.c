@@ -678,7 +678,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                                &client_string, pool));
   if (client_string)
     sess->useragent = apr_pstrcat(pool, SVN_RA_SVN__DEFAULT_USERAGENT " ",
-                                  client_string, (char *)NULL);
+                                  client_string, SVN_VA_NULL);
   else
     sess->useragent = SVN_RA_SVN__DEFAULT_USERAGENT;
 

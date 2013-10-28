@@ -1556,7 +1556,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
                         apr_pstrndup(scratch_pool, url, num_leading_slashes),
                         svn_relpath_canonicalize(url + num_leading_slashes,
                                                  scratch_pool),
-                        (char*)NULL);
+                        SVN_VA_NULL);
     }
   else
     {
@@ -1663,7 +1663,7 @@ svn_wc__resolve_relative_external_url(const char **resolved_url,
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, scratch_pool));
       *resolved_url = svn_uri_canonicalize(apr_pstrcat(scratch_pool, scheme,
-                                                       ":", url, (char *)NULL),
+                                                       ":", url, SVN_VA_NULL),
                                            result_pool);
       return SVN_NO_ERROR;
     }

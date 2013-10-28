@@ -396,7 +396,7 @@ svn_config__sys_config_path(const char **path_p,
     SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
     *path_p = svn_dirent_join_many(pool, folder,
                                    SVN_CONFIG__SUBDIRECTORY, fname,
-                                   (char *)NULL);
+                                   SVN_VA_NULL);
   }
 
 #elif defined(__HAIKU__)
@@ -410,12 +410,12 @@ svn_config__sys_config_path(const char **path_p,
 
     *path_p = svn_dirent_join_many(pool, folder,
                                    SVN_CONFIG__SYS_DIRECTORY, fname,
-                                   (char *)NULL);
+                                   SVN_VA_NULL);
   }
 #else  /* ! WIN32 && !__HAIKU__ */
 
   *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname,
-                                 (char *) NULL);
+                                 SVN_VA_NULL);
 
 #endif /* WIN32 */
 
@@ -1312,7 +1312,7 @@ svn_config_get_user_config_path(const char **path,
 
   if (config_dir)
     {
-      *path = svn_dirent_join_many(pool, config_dir, fname, (char *)NULL);
+      *path = svn_dirent_join_many(pool, config_dir, fname, SVN_VA_NULL);
       return SVN_NO_ERROR;
     }
 
@@ -1321,7 +1321,7 @@ svn_config_get_user_config_path(const char **path,
     const char *folder;
     SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
     *path = svn_dirent_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, (char *)NULL);
+                                 SVN_CONFIG__SUBDIRECTORY, fname, SVN_VA_NULL);
   }
 
 #elif defined(__HAIKU__)
@@ -1335,7 +1335,7 @@ svn_config_get_user_config_path(const char **path,
 
     *path = svn_dirent_join_many(pool, folder,
                                  SVN_CONFIG__USR_DIRECTORY, fname,
-                                 (char *)NULL);
+                                 SVN_VA_NULL);
   }
 #else  /* ! WIN32 && !__HAIKU__ */
 
@@ -1345,7 +1345,7 @@ svn_config_get_user_config_path(const char **path,
       return SVN_NO_ERROR;
     *path = svn_dirent_join_many(pool,
                                svn_dirent_canonicalize(homedir, pool),
-                               SVN_CONFIG__USR_DIRECTORY, fname, (char*)NULL);
+                               SVN_CONFIG__USR_DIRECTORY, fname, SVN_VA_NULL);
   }
 #endif /* WIN32 */
 

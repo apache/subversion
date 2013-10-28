@@ -240,7 +240,7 @@ reporter_link_path(void *reporter_baton,
   if (relpath[0] == '\0')
     fs_path = "/";
   else
-    fs_path = apr_pstrcat(pool, "/", relpath, (char *)NULL);
+    fs_path = apr_pstrcat(pool, "/", relpath, SVN_VA_NULL);
 
   return svn_repos_link_path3(rbaton->report_baton, path, fs_path, revision,
                               depth, start_empty, lock_token, pool);
@@ -327,7 +327,7 @@ make_reporter(svn_ra_session_t *session,
              "'%s'"), other_url, sess->repos_url);
 
       other_fs_path = apr_pstrcat(scratch_pool, "/", other_relpath,
-                                  (char *)NULL);
+                                  SVN_VA_NULL);
     }
 
   /* Pass back our reporter */
@@ -604,7 +604,7 @@ svn_ra_local__open(svn_ra_session_t *session,
 
   if (client_string)
     sess->useragent = apr_pstrcat(pool, USER_AGENT " ",
-                                  client_string, (char *)NULL);
+                                  client_string, SVN_VA_NULL);
   else
     sess->useragent = USER_AGENT;
 
