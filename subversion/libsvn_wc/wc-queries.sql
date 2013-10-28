@@ -1530,8 +1530,17 @@ SELECT moved_to, local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth > 0
   AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
+/* If the node is moved here (r.moved_here = 1) we are really interested in
+   where the node was moved from. To obtain that we need the op_depth, but
+   this form of select only allows a single return value */
 -- STMT_SELECT_MOVED_FOR_DELETE
-SELECT local_relpath, moved_to, op_depth FROM nodes
+SELECT local_relpath, moved_to, op_depth,
+       (SELECT CASE WHEN r.moved_here THEN r.op_depth END FROM nodes r
+        WHERE r.wc_id = ?1
+          AND r.local_relpath = n.local_relpath
+          AND r.op_depth < n.op_depth
+        ORDER BY r.op_depth DESC LIMIT 1) AS moved_here_op_depth
+ FROM nodes n
 WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND moved_to IS NOT NULL
