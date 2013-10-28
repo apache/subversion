@@ -1437,3 +1437,9 @@ svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val)
 {
   sqlite3_result_int64(sctx->context, val);
 }
+
+void
+svn_sqlite__result_error(svn_sqlite__context_t *sctx, const char *msg, int num)
+{
+  sqlite3_result_error(sctx->context, msg, num);
+}
