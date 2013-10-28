@@ -1503,7 +1503,6 @@ WHERE wc_id = ?1
   AND presence=MAP_NORMAL
   AND file_external IS NULL
 
-/* ### FIXME: op-depth?  What about multiple moves? */
 -- STMT_SELECT_MOVED_FROM_RELPATH
 SELECT local_relpath, op_depth FROM nodes
 WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0
@@ -1547,6 +1546,16 @@ WHERE wc_id = ?1
   AND op_depth >= (SELECT MAX(op_depth) FROM nodes o
                     WHERE o.wc_id = ?1
                       AND o.local_relpath = ?2)
+
+-- STMT_SELECT_MOVED_FROM_FOR_DELETE
+SELECT local_relpath, op_depth,
+       (SELECT CASE WHEN r.moved_here THEN r.op_depth END FROM nodes r
+        WHERE r.wc_id = ?1
+          AND r.local_relpath = n.local_relpath
+          AND r.op_depth < n.op_depth
+        ORDER BY r.op_depth DESC LIMIT 1) AS moved_here_op_depth
+ FROM nodes n
+WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0
 
 -- STMT_UPDATE_MOVED_TO_DESCENDANTS
 UPDATE nodes SET moved_to = RELPATH_SKIP_JOIN(?2, ?3, moved_to)
