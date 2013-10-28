@@ -148,6 +148,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1536537
+   Fix build of ctypes-python on newer OS X versions.
+   Justificaton:
+     Build system should work.  We shouldn't be trying to use the CPP from the
+     APR build anyway.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
