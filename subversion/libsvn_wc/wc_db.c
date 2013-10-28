@@ -23,6 +23,7 @@
 
 #define SVN_WC__I_AM_WC_DB
 
+#include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 
@@ -729,9 +730,9 @@ insert_base_node(const insert_base_baton_t *pibb,
     }
 
   /* Set properties.  Must be null if presence not normal or incomplete. */
-  SVN_ERR_ASSERT(pibb->status == svn_wc__db_status_normal
-                 || pibb->status == svn_wc__db_status_incomplete
-                 || pibb->props == NULL);
+  assert(pibb->status == svn_wc__db_status_normal
+         || pibb->status == svn_wc__db_status_incomplete
+         || pibb->props == NULL);
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
                                       scratch_pool));
 
@@ -997,9 +998,9 @@ insert_working_node(const insert_working_baton_t *piwb,
     }
 
   /* Set properties.  Must be null if presence not normal or incomplete. */
-  SVN_ERR_ASSERT(piwb->presence == svn_wc__db_status_normal
-                 || piwb->presence == svn_wc__db_status_incomplete
-                 || piwb->props == NULL);
+  assert(piwb->presence == svn_wc__db_status_normal
+         || piwb->presence == svn_wc__db_status_incomplete
+         || piwb->props == NULL);
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, piwb->props, scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -2497,7 +2498,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
             }
           else
             {
-              SVN_ERR_ASSERT(svn_sqlite__column_is_null(stmt, 13));
+              assert(svn_sqlite__column_is_null(stmt, 13));
               *props = NULL;
             }
         }
@@ -2878,7 +2879,7 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
             }
           else
             {
-              SVN_ERR_ASSERT(svn_sqlite__column_is_null(stmt, 13));
+              assert(svn_sqlite__column_is_null(stmt, 13));
               *props = NULL;
             }
         }
@@ -7416,7 +7417,7 @@ delete_update_movedto(svn_wc__db_wcroot_t *wcroot,
                             op_depth,
                             new_moved_to_relpath));
   SVN_ERR(svn_sqlite__update(&affected, stmt));
-  SVN_ERR_ASSERT(affected == 1);
+  assert(affected == 1);
 
   return SVN_NO_ERROR;
 }
@@ -8925,7 +8926,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
         }
       else
         {
-          SVN_ERR_ASSERT(svn_sqlite__column_is_null(stmt, 14));
+          assert(svn_sqlite__column_is_null(stmt, 14));
           *props = NULL;
         }
     }
