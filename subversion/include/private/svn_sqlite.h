@@ -372,6 +372,9 @@ svn_sqlite__result_null(svn_sqlite__context_t *sctx);
 void
 svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val);
 
+void
+svn_sqlite__result_error(svn_sqlite__context_t *sctx, const char *msg, int num);
+
 
 /* --------------------------------------------------------------------- */
 
