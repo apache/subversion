@@ -131,6 +131,9 @@ typedef int svn_boolean_t;
 
 
 
+/** Declaration of the null pointer constant type. */
+struct svn_null_pointer_constant_stdarg_sentinel_t;
+
 /** Null pointer constant used as a sentinel in variable argument lists. */
 #define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
 /* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
