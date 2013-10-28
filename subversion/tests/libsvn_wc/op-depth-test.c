@@ -8591,6 +8591,84 @@ move_revert_intermediate(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+move_replace_ancestor_with_child(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+    svn_test__sandbox_t b;
+
+    SVN_ERR(svn_test__sandbox_create(&b, "move_replace_ancestor_with_child", opts,
+        pool));
+
+    SVN_ERR(sbox_wc_mkdir(&b, "A"));
+    SVN_ERR(sbox_wc_mkdir(&b, "A/A"));
+
+    SVN_ERR(sbox_wc_commit(&b, ""));
+    SVN_ERR(sbox_wc_update(&b, "", 1));
+
+    SVN_ERR(sbox_wc_move(&b, "A", "A2"));
+
+    {
+      nodes_row_t nodes[] = {
+
+        { 0, "",            "normal",       1, "" },
+
+        { 0, "A",           "normal",       1, "A"},
+        { 0, "A/A",         "normal",       1, "A/A" },
+
+        { 1, "A",           "base-deleted", NO_COPY_FROM , "A2"},
+        { 1, "A/A",         "base-deleted", NO_COPY_FROM },
+
+        { 1, "A2",          "normal",       1, "A",     MOVED_HERE },
+        { 1, "A2/A",        "normal",       1, "A/A",   MOVED_HERE },
+
+        { 0 },
+      };
+      SVN_ERR(check_db_rows(&b, "", nodes));
+    }
+
+    SVN_ERR(sbox_wc_move(&b, "A2/A", "A"));
+
+    {
+      nodes_row_t nodes[] = {
+        { 0, "",            "normal",       1, "" },
+
+        { 0, "A",           "normal",       1, "A"},
+        { 0, "A/A",         "normal",       1, "A/A" },
+
+        { 1, "A",           "normal",       1, "A/A", FALSE, "A2", TRUE },
+        { 1, "A/A",         "base-deleted", NO_COPY_FROM },
+
+        { 1, "A2",          "normal",       1, "A",     MOVED_HERE },
+        { 1, "A2/A",        "normal",       1, "A/A",   MOVED_HERE },
+
+        { 2, "A2/A",        "base-deleted", NO_COPY_FROM, "A" },
+        { 0 },
+      };
+      SVN_ERR(check_db_rows(&b, "", nodes));
+    }
+
+    /* ### This currently fails with an assertion in maintainer mode */
+    SVN_ERR(sbox_wc_delete(&b, "A2"));
+
+    {
+      nodes_row_t nodes[] = {
+        { 0, "",            "normal",       1, "" },
+
+        { 0, "A",           "normal",       1, "A"},
+        { 0, "A/A",         "normal",       1, "A/A" },
+
+        { 1, "A",           "normal",       1, "A/A", MOVED_HERE },
+        { 1, "A/A",         "base-deleted", NO_COPY_FROM, "A/A" },
+
+        { 0 },
+      };
+      SVN_ERR(check_db_rows(&b, "", nodes));
+    }
+
+    SVN_ERR(sbox_wc_commit(&b, "A"));
+
+    return SVN_NO_ERROR;
+}
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -8755,5 +8833,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move more than once, delete intermediate"),
     SVN_TEST_OPTS_XFAIL(move_revert_intermediate,
                        "move more than once, revert intermediate"),
+    SVN_TEST_OPTS_XFAIL(move_replace_ancestor_with_child,
+                        "move replace ancestor with child"),
     SVN_TEST_NULL
   };
