@@ -8406,17 +8406,18 @@ move_delete_intermediate(const svn_test_opts_t *opts, apr_pool_t *pool)
   /* Let's delete A */
   SVN_ERR(sbox_wc_delete(&b, "A"));
 
-  /* AAA_1 should now be a copy, but AAA_2 and AAA_3 should still be moves,
-     but now from the original location instead of from "A/A/A" */
+  /* AAA_1, AAA_2 and AAA_3 should still be moves after deleting A */
   {
     nodes_row_t nodes[] = {
 
       {0, "",           "normal",       0, ""},
 
-      {1, "AAA_1",      "normal",       1, "A/A/A",},
-      {1, "AAA_1/A",    "normal",       1, "A/A/A/A"},
+      {1, "AAA_1",      "normal",       1, "A/A/A",             MOVED_HERE},
+      {1, "AAA_1/A",    "normal",       1, "A/A/A/A",           MOVED_HERE},
+
       {1, "AAA_2",      "normal",       1, "B/A/A",             MOVED_HERE},
       {1, "AAA_2/A",    "normal",       1, "B/A/A/A",           MOVED_HERE},
+
       {1, "AAA_3",      "normal",       1, "C/A/A",             MOVED_HERE},
       {1, "AAA_3/A",    "normal",       1, "C/A/A/A",           MOVED_HERE},
 
@@ -8424,6 +8425,11 @@ move_delete_intermediate(const svn_test_opts_t *opts, apr_pool_t *pool)
       {0, "A/A",        "normal",       1, "A/A"},
       {0, "A/A/A",      "normal",       1, "A/A/A"},
       {0, "A/A/A/A",    "normal",       1, "A/A/A/A"},
+
+      {1, "A",          "base-deleted", NO_COPY_FROM},
+      {1, "A/A",        "base-deleted", NO_COPY_FROM},
+      {1, "A/A/A",      "base-deleted", NO_COPY_FROM, "AAA_1"},
+      {1, "A/A/A/A",    "base-deleted", NO_COPY_FROM},
 
       {0, "B",          "normal",       1, "B"},
       {0, "B/A",        "normal",       1, "B/A"},
@@ -8906,7 +8912,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "copy mixed-rev with mods"),
     SVN_TEST_OPTS_PASS(move_child_to_parent_revert,
                        "move child to parent and revert (issue 4436)"),
-    SVN_TEST_OPTS_XFAIL(move_delete_intermediate,
+    SVN_TEST_OPTS_PASS(move_delete_intermediate,
                        "move more than once, delete intermediate"),
     SVN_TEST_OPTS_XFAIL(move_revert_intermediate,
                        "move more than once, revert intermediate"),
