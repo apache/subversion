@@ -8908,7 +8908,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "update with tree conflict (issue 4347)"),
     SVN_TEST_OPTS_PASS(move_update_parent_replace,
                        "move update with replaced parent (issue 4388)"),
-    SVN_TEST_OPTS_XFAIL(copy_mixed_rev_mods,
+    SVN_TEST_OPTS_PASS(copy_mixed_rev_mods,
                        "copy mixed-rev with mods"),
     SVN_TEST_OPTS_PASS(move_child_to_parent_revert,
                        "move child to parent and revert (issue 4436)"),
