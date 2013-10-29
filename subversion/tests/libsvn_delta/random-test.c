@@ -109,12 +109,9 @@ open_tempfile(const char *name_template, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *fp = NULL;
-  char *templ;
-
-  if (!name_template)
-    templ = apr_pstrdup(pool, "tempfile_XXXXXX");
-  else
-    templ = apr_pstrdup(pool, name_template);
+  char *templ = (char *)apr_pstrdup(
+      pool, svn_test_data_path(
+          name_template ? name_template : "tempfile_XXXXXX", pool));
 
   apr_err = apr_file_mktemp(&fp, templ, 0, pool);
   assert(apr_err == 0);
