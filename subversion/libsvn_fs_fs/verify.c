@@ -615,16 +615,16 @@ verify_index_consistency(svn_fs_t *fs,
                          apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_revnum_t revision, pack_start, pack_end;
+  svn_revnum_t revision, next_revision;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  for (revision = start; revision <= end; revision = pack_end)
+  for (revision = start; revision <= end; revision = next_revision)
     {
       svn_error_t *err = SVN_NO_ERROR;
 
       svn_revnum_t count = pack_size(fs, revision);
-      pack_start = packed_base_rev(fs, revision);
-      pack_end = pack_start + count;
+      svn_revnum_t pack_start = packed_base_rev(fs, revision);
+      svn_revnum_t pack_end = pack_start + count;
 
       svn_pool_clear(iterpool);
 
@@ -653,11 +653,12 @@ verify_index_consistency(svn_fs_t *fs,
       if (err && count != pack_size(fs, revision))
         {
           svn_error_clear(err);
-          pack_end = pack_start;
+          next_revision = pack_start;
         }
       else
         {
           SVN_ERR(err);
+          next_revision = pack_end;
         }
     }
 
