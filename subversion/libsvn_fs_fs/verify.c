@@ -653,7 +653,10 @@ verify_index_consistency(svn_fs_t *fs,
       if (err && count != pack_size(fs, revision))
         {
           svn_error_clear(err);
-          next_revision = pack_start;
+
+          /* We could simply assign revision here but the code below is
+             more intuitive to maintainers. */
+          next_revision = packed_base_rev(fs, revision);
         }
       else
         {
