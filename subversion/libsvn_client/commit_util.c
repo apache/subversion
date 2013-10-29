@@ -1005,17 +1005,63 @@ handle_descendants(void *baton,
       for (j = 0; j < absent_descendants->nelts; j++)
         {
           svn_node_kind_t kind;
+          svn_client_commit_item3_t *desc_item;
           const char *relpath = APR_ARRAY_IDX(absent_descendants, j,
                                               const char *);
           const char *local_abspath = svn_dirent_join(item->path, relpath,
                                                       iterpool);
 
-          /* If the path has a commit operation, we do nothing.
-             (It will be deleted by the operation) */
-          if (svn_hash_gets(hdb->committables->by_path, local_abspath))
-            continue; /* We have an explicit delete or replace for this path */
-
           /* ### Need a sub-iterpool? */
+
+
+          /* We found a 'not present' descendant during a copy (at op_depth>0),
+             this is most commonly caused by copying some mixed revision tree.
+
+             In this case not present can imply that the node does not exist
+             in the parent revision, or that the node does. But we want to copy
+             the working copy state in which it does not exist, but might be
+             replaced. */
+
+          desc_item = svn_hash_gets(hdb->committables->by_path, local_abspath);
+
+          /* If the path has a commit operation (possibly at an higher
+             op_depth, we might want to turn an add in a replace. */
+          if (desc_item)
+            {
+              const char *dir;
+              svn_boolean_t found_intermediate = FALSE;
+
+              if (desc_item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+                continue; /* We already have a delete or replace */
+              else if (!(desc_item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+                continue; /* Not a copy/add, just a modification */
+
+              dir = svn_dirent_dirname(local_abspath, iterpool);
+
+              while (strcmp(dir, item->path))
+                {
+                  svn_client_commit_item3_t *i_item;
+
+                  i_item = svn_hash_gets(hdb->committables->by_path, dir);
+
+                  if (i_item)
+                    {
+                      if ((i_item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+                          || (i_item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
+                        {
+                          found_intermediate = TRUE;
+                          break;
+                        }
+                    }
+                  dir = svn_dirent_dirname(dir, iterpool);
+                }
+
+              if (found_intermediate)
+                continue; /* Some intermediate ancestor is an add or delete */
+
+              /* Fall through to detect if we need to turn the add in a
+                 replace. */
+            }
 
           if (hdb->check_url_func)
             {
@@ -1032,6 +1078,13 @@ handle_descendants(void *baton,
             }
           else
             kind = svn_node_unknown; /* 'Ok' for a delete of something */
+
+          if (desc_item)
+            {
+              /* Extend the existing add/copy item to create a replace */
+              desc_item->state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
+              continue;
+            }
 
           /* Add a new commit item that describes the delete */
 
