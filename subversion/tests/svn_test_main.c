@@ -395,7 +395,7 @@ static svn_error_t *init_test_data(const char *argv0, apr_pool_t *pool)
   /* temp_path should now point to the root of the test
      builddir. Construct the path to the transient dir.  Note that we
      put the path insinde the cmdline/svn-test-work area. This is
-     becasue trying to get the cmdline tests to use a different work
+     because trying to get the cmdline tests to use a different work
      area is unprintable; so we put the C test transient dir in the
      cmdline tests area, as the lesser of evils ... */
   temp_path = svn_dirent_join_many(pool, temp_path,
