@@ -643,6 +643,12 @@ verify_index_consistency(svn_fs_t *fs,
         err = compare_p2l_to_rev(fs, pack_start, pack_end - pack_start,
                                  cancel_func, cancel_baton, iterpool);
 
+      /* concurrent packing is one of the reasons why verification may fail.
+         Make sure, we operate on up-to-date information. */
+      if (err)
+        SVN_ERR(svn_fs_fs__read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                                                 fs, pool));
+
       /* retry the whole shard if it got packed in the meantime */
       if (err && count != pack_size(fs, revision))
         {
