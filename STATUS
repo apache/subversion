@@ -156,6 +156,17 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1518942, r1536914, r1536931
+   Fix commit of a specific mixed revision copy with non copy descendants that
+   shadow not present nodes. This problem manifests itself as a copy of a tree
+   that can't be committed because it is reported out of date.
+   Justification:
+     'svn cp TREE NEW-TREE; svn ci NEW-TREE' should never report out of date
+     on some random descendant.
+   Branch: ^/subversion/branches/1.8.x-r1536931
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
