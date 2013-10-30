@@ -40,42 +40,6 @@
 #include "../svn_test.h"
 
 
-/* Initialize parameters for the tests. */
-extern int test_argc;
-extern const char **test_argv;
-
-static const apr_getopt_option_t opt_def[] =
-  {
-    {"srcdir", 'S', 1, "the source directory for VPATH test runs"},
-    {0, 0, 0, 0}
-  };
-static const char *srcdir = NULL;
-
-static svn_error_t *init_params(apr_pool_t *pool)
-{
-  apr_getopt_t *opt;
-  int optch;
-  const char *opt_arg;
-  apr_status_t status;
-
-  apr_getopt_init(&opt, pool, test_argc, test_argv);
-  while (!(status = apr_getopt_long(opt, opt_def, &optch, &opt_arg)))
-    {
-      switch (optch)
-        {
-        case 'S':
-          srcdir = opt_arg;
-          break;
-        }
-    }
-
-  if (!srcdir)
-    return svn_error_create(SVN_ERR_TEST_FAILED, 0,
-                            "missing required parameter '--srcdir'");
-
-  return SVN_NO_ERROR;
-}
-
 /* A quick way to create error messages.  */
 static svn_error_t *
 fail(apr_pool_t *pool, const char *fmt, ...)
@@ -100,16 +64,15 @@ static const char *config_values[] = { "bar", "Aa", "100", "bar",
                                        "Aa 100", NULL };
 
 static svn_error_t *
-test_text_retrieval(apr_pool_t *pool)
+test_text_retrieval(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
   const char *cfg_file;
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
@@ -151,16 +114,15 @@ static const char *false_keys[] = {"false1", "false2", "false3", "false4",
                                    NULL};
 
 static svn_error_t *
-test_boolean_retrieval(apr_pool_t *pool)
+test_boolean_retrieval(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
 {
   svn_config_t *cfg;
   int i;
   const char *cfg_file;
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   for (i = 0; true_keys[i] != NULL; i++)
@@ -212,15 +174,14 @@ test_boolean_retrieval(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_has_section_case_insensitive(apr_pool_t *pool)
+test_has_section_case_insensitive(const svn_test_opts_t *opts,
+                                  apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *cfg_file;
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
@@ -242,15 +203,14 @@ test_has_section_case_insensitive(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_has_section_case_sensitive(apr_pool_t *pool)
+test_has_section_case_sensitive(const svn_test_opts_t *opts,
+                                apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *cfg_file;
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
@@ -272,7 +232,8 @@ test_has_section_case_sensitive(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_has_option_case_sensitive(apr_pool_t *pool)
+test_has_option_case_sensitive(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *cfg_file;
@@ -290,10 +251,8 @@ test_has_option_case_sensitive(apr_pool_t *pool)
   };
   static const int test_data_size = sizeof(test_data)/sizeof(*test_data);
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, TRUE, pool));
 
   for (i = 0; i < test_data_size; ++i)
@@ -314,16 +273,15 @@ test_has_option_case_sensitive(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_stream_interface(apr_pool_t *pool)
+test_stream_interface(const svn_test_opts_t *opts,
+                      apr_pool_t *pool)
 {
   svn_config_t *cfg;
   const char *cfg_file;
   svn_stream_t *stream;
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_stream_open_readonly(&stream, cfg_file, pool, pool));
 
   SVN_ERR(svn_config_parse(&cfg, stream, TRUE, TRUE, pool));
@@ -354,16 +312,15 @@ test_ignore_bom(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_read_only_mode(apr_pool_t *pool)
+test_read_only_mode(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   svn_config_t *cfg;
   svn_config_t *cfg2;
   const char *cfg_file;
 
-  if (!srcdir)
-    SVN_ERR(init_params(pool));
-
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
+                         SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
 
   /* setting CFG to r/o mode shall toggle the r/o mode and expand values */
@@ -395,21 +352,21 @@ test_read_only_mode(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS2(test_text_retrieval,
-                   "test svn_config"),
-    SVN_TEST_PASS2(test_boolean_retrieval,
-                   "test svn_config boolean conversion"),
-    SVN_TEST_PASS2(test_has_section_case_insensitive,
-                   "test svn_config_has_section (case insensitive)"),
-    SVN_TEST_PASS2(test_has_section_case_sensitive,
-                   "test svn_config_has_section (case sensitive)"),
-    SVN_TEST_PASS2(test_has_option_case_sensitive,
-                   "test case-sensitive option name lookup"),
-    SVN_TEST_PASS2(test_stream_interface,
-                   "test svn_config_parse"),
+    SVN_TEST_OPTS_PASS(test_text_retrieval,
+                       "test svn_config"),
+    SVN_TEST_OPTS_PASS(test_boolean_retrieval,
+                       "test svn_config boolean conversion"),
+    SVN_TEST_OPTS_PASS(test_has_section_case_insensitive,
+                       "test svn_config_has_section (case insensitive)"),
+    SVN_TEST_OPTS_PASS(test_has_section_case_sensitive,
+                       "test svn_config_has_section (case sensitive)"),
+    SVN_TEST_OPTS_PASS(test_has_option_case_sensitive,
+                       "test case-sensitive option name lookup"),
+    SVN_TEST_OPTS_PASS(test_stream_interface,
+                       "test svn_config_parse"),
     SVN_TEST_PASS2(test_ignore_bom,
                    "test parsing config file with BOM"),
-    SVN_TEST_PASS2(test_read_only_mode,
-                   "test r/o mode"),
+    SVN_TEST_OPTS_PASS(test_read_only_mode,
+                       "test r/o mode"),
     SVN_TEST_NULL
   };
