@@ -2324,7 +2324,6 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
   fs_fs_data_t *ffd = fs->fsap_data;
   rep_state_t rs = { 0 };
   apr_off_t offset;
-  svn_boolean_t is_cached = FALSE;
   window_cache_key_t key = { 0 };
 
   if (   (rep_header->type != svn_fs_fs__rep_plain
@@ -2341,6 +2340,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
   if (rep_header->type == svn_fs_fs__rep_plain)
     {
       svn_stringbuf_t *plaintext;
+      svn_boolean_t is_cached;
 
       /* already in cache? */
       SVN_ERR(svn_cache__has_key(&is_cached, rs.combined_cache,
@@ -2472,7 +2472,7 @@ static svn_error_t *
 block_read_changes(apr_array_header_t **changes,
                    svn_fs_t *fs,
                    svn_fs_fs__revision_file_t *rev_file,
-                   svn_fs_fs__p2l_entry_t* entry,
+                   svn_fs_fs__p2l_entry_t *entry,
                    svn_boolean_t must_read,
                    apr_pool_t *pool)
 {
@@ -2484,7 +2484,7 @@ block_read_changes(apr_array_header_t **changes,
   /* already in cache? */
   if (!must_read && ffd->changes_cache)
     {
-      svn_boolean_t is_cached = FALSE;
+      svn_boolean_t is_cached;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_cache,
                                  &entry->item.revision, pool));
       if (is_cached)
@@ -2515,7 +2515,7 @@ static svn_error_t *
 block_read_noderev(node_revision_t **noderev_p,
                    svn_fs_t *fs,
                    svn_fs_fs__revision_file_t *rev_file,
-                   svn_fs_fs__p2l_entry_t* entry,
+                   svn_fs_fs__p2l_entry_t *entry,
                    svn_boolean_t must_read,
                    apr_pool_t *pool)
 {
@@ -2532,7 +2532,7 @@ block_read_noderev(node_revision_t **noderev_p,
   /* already in cache? */
   if (!must_read && ffd->node_revision_cache)
     {
-      svn_boolean_t is_cached = FALSE;
+      svn_boolean_t is_cached;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->node_revision_cache,
                                  &key, pool));
       if (is_cached)

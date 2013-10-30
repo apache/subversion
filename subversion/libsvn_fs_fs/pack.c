@@ -272,14 +272,14 @@ initialize_pack_context(pack_context_t *context,
                              | APR_CREATE, APR_OS_DEFAULT, pool));
 
   /* Proto index files */
-  SVN_ERR(svn_fs_fs__l2p_proto_index_open
-            (&context->proto_l2p_index,
+  SVN_ERR(svn_fs_fs__l2p_proto_index_open(
+             &context->proto_l2p_index,
              svn_dirent_join(pack_file_dir,
                              PATH_INDEX PATH_EXT_L2P_INDEX,
                              pool),
              pool));
-  SVN_ERR(svn_fs_fs__p2l_proto_index_open
-            (&context->proto_p2l_index,
+  SVN_ERR(svn_fs_fs__p2l_proto_index_open(
+             &context->proto_p2l_index,
              svn_dirent_join(pack_file_dir,
                              PATH_INDEX PATH_EXT_P2L_INDEX,
                              pool),
@@ -843,8 +843,8 @@ auto_pad_block(pack_context_t *context,
       null_entry.fnv1_checksum = 0;
 
       SVN_ERR(write_null_bytes(context->pack_file, padding, pool));
-      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
-                  (context->proto_p2l_index, &null_entry, pool));
+      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(
+                   context->proto_p2l_index, &null_entry, pool));
       context->pack_offset += padding;
     }
 
@@ -896,8 +896,8 @@ store_items(pack_context_t *context,
       entry->offset = context->pack_offset;
       context->pack_offset += entry->size;
 
-      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
-                  (context->proto_p2l_index, entry, iterpool));
+      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(
+                   context->proto_p2l_index, entry, iterpool));
 
       APR_ARRAY_PUSH(context->reps, svn_fs_fs__p2l_entry_t *) = entry;
     }
@@ -1109,8 +1109,8 @@ write_l2p_index(pack_context_t *context,
       if (prev_rev != p2l_entry->item.revision)
         {
           prev_rev = p2l_entry->item.revision;
-          SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision
-                      (context->proto_l2p_index, iterpool));
+          SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision(
+                       context->proto_l2p_index, iterpool));
         }
 
       /* add entry */
@@ -1324,11 +1324,11 @@ append_revision(pack_context_t *context,
             {
               entry->offset += context->pack_offset;
               offset += entry->size;
-              SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry
-                        (context->proto_l2p_index, entry->offset,
+              SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(
+                         context->proto_l2p_index, entry->offset,
                          entry->item.number, iterpool));
-              SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry
-                        (context->proto_p2l_index, entry, iterpool));
+              SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(
+                         context->proto_p2l_index, entry, iterpool));
             }
         }
     }
