@@ -147,12 +147,12 @@ Index file format
 
   header := u(<header>.<first revision>) \
             u(<header>.<page size>) \
-            u(<header>.<revision_count>) \
+            u(<header>.<revision count>) \
             u(s(<header>.<page table>))
 
   revisions := u(  <header>.<page table index>[k+1]
                  - <header>.<page table index>[k]),
-               for k in 0 .. <header>.<revision_count>
+               for k in 0 .. <header>.<revision count>-1
 
   pages := u(<header>.<page table>[k].<size>) \
            u(<header>.<page table>[k].<entry count>),
