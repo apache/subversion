@@ -11185,6 +11185,9 @@ db_op_set_rev_repos_relpath_iprops(svn_wc__db_wcroot_t *wcroot,
  * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
  * NEW_REPOS_ID.  If NEW_REV is valid, make this the node's working revision.
  *
+ * NODE_STATUS, NODE_KIND, NODE_REVISION and NODE_REPOS_RELPATH represent the
+ * values as stored currently in WCROOT for LOCAL_RELPATH.
+ *
  * If WCROOT_IPROPS is not NULL it is a hash mapping const char * absolute
  * working copy paths to depth-first ordered arrays of
  * svn_prop_inherited_item_t * structures.  If the absolute path equivalent
@@ -11197,6 +11200,10 @@ db_op_set_rev_repos_relpath_iprops(svn_wc__db_wcroot_t *wcroot,
 static svn_error_t *
 bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath,
+                   svn_wc__db_status_t node_status,
+                   svn_node_kind_t node_kind,
+                   svn_revnum_t node_revision,
+                   const char *node_repos_relpath,
                    apr_int64_t new_repos_id,
                    const char *new_repos_relpath,
                    svn_revnum_t new_rev,
@@ -11211,28 +11218,12 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   apr_pool_t *iterpool;
   apr_hash_t *children;
   apr_hash_index_t *hi;
-  svn_wc__db_status_t status;
-  svn_node_kind_t db_kind;
-  svn_revnum_t revision;
-  const char *repos_relpath;
-  apr_int64_t repos_id;
   svn_boolean_t set_repos_relpath = FALSE;
-  svn_boolean_t update_root;
   svn_depth_t depth_below_here = depth;
   apr_array_header_t *iprops = NULL;
 
-  /* Skip an excluded path and its descendants. */
-  if (svn_hash_gets(exclude_relpaths, local_relpath))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__db_base_get_info_internal(&status, &db_kind, &revision,
-                                            &repos_relpath, &repos_id,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, &update_root,
-                                            wcroot, local_relpath,
-                                            scratch_pool, scratch_pool));
-
-  if (new_repos_relpath != NULL && strcmp(repos_relpath, new_repos_relpath))
+  if (new_repos_relpath != NULL
+      && strcmp(node_repos_relpath, new_repos_relpath))
     set_repos_relpath = TRUE;
 
   if (wcroot_iprops)
@@ -11242,7 +11233,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
 
   if (iprops
       || set_repos_relpath
-      || (SVN_IS_VALID_REVNUM(new_rev) && new_rev != revision))
+      || (SVN_IS_VALID_REVNUM(new_rev) && new_rev != node_revision))
     {
       SVN_ERR(db_op_set_rev_repos_relpath_iprops(wcroot, local_relpath,
                                                  iprops, new_rev,
@@ -11254,10 +11245,10 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
 
   /* Early out */
   if (depth <= svn_depth_empty
-      || db_kind != svn_node_dir
-      || status == svn_wc__db_status_server_excluded
-      || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_not_present)
+      || node_kind != svn_node_dir
+      || node_status == svn_wc__db_status_server_excluded
+      || node_status == svn_wc__db_status_excluded
+      || node_status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
   /* And now recurse over the children */
@@ -11291,6 +11282,10 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
       child_local_relpath = svn_relpath_join(local_relpath, child_basename,
                                              iterpool);
 
+      /* Don't touch nodes that can't be touched via the exclude list */
+      if (svn_hash_gets(exclude_relpaths, child_local_relpath))
+          continue;
+
       /* If the node is still marked 'not-present', then the server did not
           re-add it.  So it's really gone in this revision, thus we remove the
           node.
@@ -11315,7 +11310,12 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
         child_repos_relpath = svn_relpath_join(new_repos_relpath,
                                                child_basename, iterpool);
 
-      SVN_ERR(bump_node_revision(wcroot, child_local_relpath, new_repos_id,
+      SVN_ERR(bump_node_revision(wcroot, child_local_relpath,
+                                 child_info->status,
+                                 child_info->kind,
+                                 child_info->revnum,
+                                 child_info->repos_relpath,
+                                 new_repos_id,
                                  child_repos_relpath, new_rev,
                                  depth_below_here,
                                  exclude_relpaths, wcroot_iprops,
@@ -11351,8 +11351,11 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_int64_t new_repos_id = INVALID_REPOS_ID;
+  svn_revnum_t revision;
+  const char *repos_relpath;
 
-  err = svn_wc__db_base_get_info_internal(&status, &kind, NULL, NULL, NULL,
+  err = svn_wc__db_base_get_info_internal(&status, &kind, &revision,
+                                          &repos_relpath, NULL,
                                           NULL, NULL, NULL, NULL, NULL, NULL,
                                           NULL, NULL, NULL, NULL,
                                           wcroot, local_relpath,
@@ -11382,7 +11385,9 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                             new_repos_uuid,
                             wcroot->sdb, scratch_pool));
 
-  SVN_ERR(bump_node_revision(wcroot, local_relpath, new_repos_id,
+  SVN_ERR(bump_node_revision(wcroot, local_relpath,
+                             status, kind,  revision, repos_relpath,
+                             new_repos_id,
                              new_repos_relpath, new_revision,
                              depth, exclude_relpaths,
                              wcroot_iprops,
