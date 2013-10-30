@@ -173,10 +173,6 @@ zlib_expansion_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_stringbuf_from_file2(&deflated, data_path, pool));
   src_buffer = (Byte*)deflated->data;
 
-  z_stream stream;
-  memset(&stream, 0, sizeof(stream));
-  inflateInit2(&stream, -15 /* DEFLATE_WINDOW_SIZE */);
-
   /* Try to decompress the same data with different blocksizes */
   for (sz = 1; sz < 256; sz++)
     {
