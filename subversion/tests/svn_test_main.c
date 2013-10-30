@@ -539,7 +539,8 @@ main(int argc, const char *argv[])
           opts.fs_type = apr_pstrdup(pool, opt_arg);
           break;
         case srcdir_opt:
-          opts.srcdir = apr_pstrdup(pool, opt_arg);
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.srcdir, opt_arg, pool));
+          opts.srcdir = svn_dirent_internal_style(opts.srcdir, pool);
           break;
         case list_opt:
           list_mode = TRUE;
