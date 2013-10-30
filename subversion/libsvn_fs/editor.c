@@ -62,7 +62,7 @@ struct edit_baton {
   svn_fs_root_t *root;
 };
 
-#define FSPATH(relpath, pool) apr_pstrcat(pool, "/", relpath, NULL)
+#define FSPATH(relpath, pool) apr_pstrcat(pool, "/", relpath, SVN_VA_NULL)
 #define UNUSED(x) ((void)(x))
 
 

@@ -172,7 +172,7 @@ get_xlate_key(const char *topage,
     topage = "APR_DEFAULT_CHARSET";
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
-                     "-xlate-handle", (char *)NULL);
+                     "-xlate-handle", SVN_VA_NULL);
 }
 
 /* Atomically replace the content in *MEM with NEW_VALUE and return
@@ -639,7 +639,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     valid_txt = apr_pstrcat(pool, valid_txt,
                             apr_psprintf(pool, " %02x",
                                          (unsigned char)last[i-valid]),
-                                         (char *)NULL);
+                                         SVN_VA_NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -649,7 +649,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     invalid_txt = apr_pstrcat(pool, invalid_txt,
                               apr_psprintf(pool, " %02x",
                                            (unsigned char)last[i]),
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Valid UTF-8 data\n(hex:%s)\n"
@@ -1020,3 +1020,85 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
   return err;
 }
+
+
+#ifdef WIN32
+
+
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             const WCHAR *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int utf8_count = strlen(src);
+  const int prefix_len = (prefix ? lstrlenW(prefix) : 0);
+  WCHAR *wide_str;
+  int wide_count;
+
+  if (0 == prefix_len + utf8_count)
+    {
+      *result = L"";
+      return SVN_NO_ERROR;
+    }
+
+  wide_count = MultiByteToWideChar(CP_UTF8, 0, src, utf8_count, NULL, 0);
+  if (wide_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str = apr_palloc(result_pool,
+                        (prefix_len + wide_count + 1) * sizeof(*wide_str));
+  if (prefix_len)
+    memcpy(wide_str, prefix, prefix_len * sizeof(*wide_str));
+  if (0 == MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
+                               wide_str + prefix_len, wide_count))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str[prefix_len + wide_count] = 0;
+  *result = wide_str;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             const char *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int wide_count = lstrlenW(src);
+  const int prefix_len = (prefix ? strlen(prefix) : 0);
+  char *utf8_str;
+  int utf8_count;
+
+  if (0 == prefix_len + wide_count)
+    {
+      *result = "";
+      return SVN_NO_ERROR;
+    }
+
+  utf8_count = WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                                   NULL, 0, NULL, FALSE);
+  if (utf8_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str = apr_palloc(result_pool,
+                        (prefix_len + utf8_count + 1) * sizeof(*utf8_str));
+  if (prefix_len)
+    memcpy(utf8_str, prefix, prefix_len * sizeof(*utf8_str));
+  if (0 == WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                               utf8_str + prefix_len, utf8_count,
+                               NULL, FALSE))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str[prefix_len + utf8_count] = 0;
+  *result = utf8_str;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* WIN32 */

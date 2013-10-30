@@ -1241,15 +1241,14 @@ get_dag(dag_node_t **dag_node_p,
 
   if (! node)
     {
-      /* Canonicalize the input PATH. */
-      if (! svn_fs__is_canonical_abspath(path))
-        {
-          path = svn_fs__canonicalize_abspath(path, pool);
-
-          /* Try again with the corrected path. */
-          SVN_ERR(dag_node_cache_get(&node, root, path, needs_lock_cache,
-                                     pool));
-        }
+      /* Canonicalize the input PATH.  As it turns out, >95% of all paths
+       * seen here during e.g. svnadmin verify are non-canonical, i.e.
+       * miss the leading '/'.  Unconditional canonicalization has a net
+       * performance benefit over previously checking path for being
+       * canonical. */
+      path = svn_fs__canonicalize_abspath(path, pool);
+      SVN_ERR(dag_node_cache_get(&node, root, path, needs_lock_cache,
+                                 pool));
 
       if (! node)
         {
@@ -4370,7 +4369,7 @@ make_txn_root(svn_fs_root_t **root_p,
                                       APR_HASH_KEY_STRING,
                                       32, 20, FALSE,
                                       apr_pstrcat(pool, txn, ":TXN",
-                                                  (char *)NULL),
+                                                  SVN_VA_NULL),
                                       root->pool));
 
   /* Initialize transaction-local caches in FS.

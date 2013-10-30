@@ -35,6 +35,7 @@
 
 #include "svn_error.h"
 #include "svn_config.h"
+#include "private/svn_subr_private.h"
 
 #include "../svn_test.h"
 
@@ -108,7 +109,7 @@ test_text_retrieval(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
@@ -159,7 +160,7 @@ test_boolean_retrieval(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   for (i = 0; true_keys[i] != NULL; i++)
@@ -219,7 +220,7 @@ test_has_section_case_insensitive(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
@@ -249,7 +250,7 @@ test_has_section_case_sensitive(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
@@ -292,7 +293,7 @@ test_has_option_case_sensitive(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, TRUE, pool));
 
   for (i = 0; i < test_data_size; ++i)
@@ -322,7 +323,7 @@ test_stream_interface(apr_pool_t *pool)
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", (char *)NULL);
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
   SVN_ERR(svn_stream_open_readonly(&stream, cfg_file, pool, pool));
 
   SVN_ERR(svn_config_parse(&cfg, stream, TRUE, TRUE, pool));
@@ -352,6 +353,37 @@ test_ignore_bom(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_read_only_mode(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  svn_config_t *cfg2;
+  const char *cfg_file;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  cfg_file = apr_pstrcat(pool, srcdir, "/", "config-test.cfg", SVN_VA_NULL);
+  SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
+
+  /* setting CFG to r/o mode shall toggle the r/o mode and expand values */
+
+  SVN_TEST_ASSERT(!svn_config__is_read_only(cfg));
+  SVN_TEST_ASSERT(!svn_config__is_expanded(cfg, "section1", "i"));
+
+  svn_config__set_read_only(cfg, pool);
+
+  SVN_TEST_ASSERT(svn_config__is_read_only(cfg));
+  SVN_TEST_ASSERT(svn_config__is_expanded(cfg, "section1", "i"));
+
+  /* copies should be r/w with values */
+
+  SVN_ERR(svn_config_dup(&cfg2, cfg, pool));
+  SVN_TEST_ASSERT(!svn_config__is_read_only(cfg2));
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -375,6 +407,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test case-sensitive option name lookup"),
     SVN_TEST_PASS2(test_stream_interface,
                    "test svn_config_parse"),
-    SVN_TEST_PASS2(test_ignore_bom, "test parsing config file with BOM"),
+    SVN_TEST_PASS2(test_ignore_bom,
+                   "test parsing config file with BOM"),
+    SVN_TEST_PASS2(test_read_only_mode,
+                   "test r/o mode"),
     SVN_TEST_NULL
   };

@@ -1381,6 +1381,9 @@ def server_has_atomic_revprop():
 def server_has_reverse_get_file_revs():
   return options.server_minor_version >= 8
 
+def server_has_auto_move():
+  return options.server_minor_version >= 9
+
 def is_plaintext_password_storage_disabled():
   try:
     predicate = re.compile("^WARNING: Plaintext password storage is enabled!")

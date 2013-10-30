@@ -81,6 +81,7 @@ public class Revision implements java.io.Serializable
             case head : return "HEAD";
             case previous : return "PREV";
             case working : return "WORKING";
+            case unspecified: return "UNSPECIFIED";
         }
         return super.toString();
     }
@@ -153,6 +154,11 @@ public class Revision implements java.io.Serializable
      * first existing revision
      */
     public static final Revision START = new Revision(Kind.unspecified);
+
+    /**
+     * unspecified revision
+     */
+    public static final Revision UNSPECIFIED = START;
 
     /**
      * last committed revision, needs working copy

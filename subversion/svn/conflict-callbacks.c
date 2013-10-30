@@ -599,21 +599,21 @@ prompt_string(const resolver_option_t *options,
         }
 
       if (! first)
-        result = apr_pstrcat(pool, result, ",", (char *)NULL);
+        result = apr_pstrcat(pool, result, ",", SVN_VA_NULL);
       s = apr_psprintf(pool, _(" (%s) %s"),
                        opt->code, _(opt->short_desc));
       slen = svn_utf_cstring_utf8_width(s);
       /* Break the line if adding the next option would make it too long */
       if (this_line_len + slen > MAX_PROMPT_WIDTH)
         {
-          result = apr_pstrcat(pool, result, line_sep, (char *)NULL);
+          result = apr_pstrcat(pool, result, line_sep, SVN_VA_NULL);
           this_line_len = left_margin;
         }
-      result = apr_pstrcat(pool, result, s, (char *)NULL);
+      result = apr_pstrcat(pool, result, s, SVN_VA_NULL);
       this_line_len += slen;
       first = FALSE;
     }
-  return apr_pstrcat(pool, result, ": ", (char *)NULL);
+  return apr_pstrcat(pool, result, ": ", SVN_VA_NULL);
 }
 
 /* Return a help string listing the OPTIONS. */
@@ -636,13 +636,13 @@ help_string(const resolver_option_t *options,
         }
       else
         {
-          result = apr_pstrcat(pool, result, "\n", (char *)NULL);
+          result = apr_pstrcat(pool, result, "\n", SVN_VA_NULL);
         }
     }
   result = apr_pstrcat(pool, result,
                        _("Words in square brackets are the corresponding "
                          "--accept option arguments.\n"),
-                       (char *)NULL);
+                       SVN_VA_NULL);
   return result;
 }
 

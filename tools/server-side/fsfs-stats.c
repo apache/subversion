@@ -1135,8 +1135,8 @@ get_combined_window(svn_stringbuf_t **content,
   apr_array_header_t *windows;
   svn_stringbuf_t *base_content, *result;
   const char *source;
-  apr_pool_t *sub_pool;
-  apr_pool_t *iter_pool;
+  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   /* special case: no un-deltification necessary */
   if (representation->is_plain)
@@ -1153,16 +1153,16 @@ get_combined_window(svn_stringbuf_t **content,
     return SVN_NO_ERROR;
 
   /* read the delta windows for this representation */
-  sub_pool = svn_pool_create(pool);
-  iter_pool = svn_pool_create(pool);
-  SVN_ERR(read_windows(&windows, fs, representation, file_content, sub_pool));
+  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
+  SVN_ERR(read_windows(&windows, fs, representation, file_content, subpool));
 
   /* fetch the / create a base content */
   if (representation->delta_base && representation->delta_base->revision)
     SVN_ERR(get_combined_window(&base_content, fs,
-                                representation->delta_base, NULL, sub_pool));
+                                representation->delta_base, NULL, subpool));
   else
-    base_content = svn_stringbuf_create_empty(sub_pool);
+    base_content = svn_stringbuf_create_empty(subpool);
 
   /* apply deltas */
   result = svn_stringbuf_create_empty(pool);
@@ -1173,7 +1173,7 @@ get_combined_window(svn_stringbuf_t **content,
       svn_txdelta_window_t *window
         = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
       svn_stringbuf_t *buf
-        = svn_stringbuf_create_ensure(window->tview_len, iter_pool);
+        = svn_stringbuf_create_ensure(window->tview_len, iterpool);
 
       buf->len = window->tview_len;
       svn_txdelta_apply_instructions(window, window->src_ops ? source : NULL,
@@ -1182,15 +1182,15 @@ get_combined_window(svn_stringbuf_t **content,
       svn_stringbuf_appendbytes(result, buf->data, buf->len);
       source += window->sview_len;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
     }
 
   /* cache result and return it */
-  SVN_ERR(set_cached_window(fs, representation, result, sub_pool));
+  SVN_ERR(set_cached_window(fs, representation, result, subpool));
   *content = result;
 
-  svn_pool_destroy(iter_pool);
-  svn_pool_destroy(sub_pool);
+  svn_pool_destroy(iterpool);
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1219,7 +1219,7 @@ parse_dir(fs_fs_t *fs,
           apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *text;
-  apr_pool_t *iter_pool;
+  apr_pool_t *iterpool;
   apr_pool_t *text_pool;
   const char *current;
   const char *revision_key;
@@ -1230,7 +1230,7 @@ parse_dir(fs_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* get the directory as unparsed string */
-  iter_pool = svn_pool_create(scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
   text_pool = svn_pool_create(scratch_pool);
 
   SVN_ERR(get_combined_window(&text, fs, representation, file_content,
@@ -1271,14 +1271,14 @@ parse_dir(fs_fs_t *fs,
           SVN_ERR(svn_cstring_strtoui64(&offset, current + key_len, 0,
                                         APR_SIZE_MAX, 10));
           SVN_ERR(read_noderev(fs, file_content, (apr_size_t)offset,
-                               revision_info, pool, iter_pool));
+                               revision_info, pool, iterpool));
 
-          svn_pool_clear(iter_pool);
+          svn_pool_clear(iterpool);
         }
       current = next+1;
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(text_pool);
   return SVN_NO_ERROR;
 }

@@ -115,6 +115,19 @@ typedef apr_uint32_t apr_uintptr_t;
 #endif
 
 /**
+ * APR keeps a few interesting defines hidden away in its private
+ * headers apr_arch_file_io.h, so we redefined them here.
+ *
+ * @since New in 1.9
+ */
+#ifndef APR_FREADONLY
+#define APR_FREADONLY 0x10000000
+#endif
+#ifndef APR_OPENINFO
+#define APR_OPENINFO  0x00100000
+#endif
+
+/**
  * Check at compile time if the Serf version is at least a certain
  * level.
  * @param major The major version component of the version checked

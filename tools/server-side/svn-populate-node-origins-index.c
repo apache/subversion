@@ -77,8 +77,7 @@ index_revision_adds(int *count, svn_fs_t *fs,
 
   *count = 0;
   SVN_ERR(svn_fs_revision_root(&root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed3(&changes, root,
-                                svn_move_behavior_explicit_moves, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
 
   /* No paths changed in this revision?  Nothing to do.  */
   if (apr_hash_count(changes) == 0)
