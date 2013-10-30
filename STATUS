@@ -186,7 +186,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1537193
+ * r1537193, r1537221
    Add test to verify if the used ZLib is affected by some block size bugs that
    affect our usage of serf.
    Justification:
