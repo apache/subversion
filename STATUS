@@ -167,6 +167,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1536854
+   Make 'svnadmin verify' detect inconsistencies that will prevent loading
+   dump files.
+   Justification:
+     Some users rely on dump files as a means of repository backup.  Without
+     this patch, there is no way except of 'svnadmin load' to know that these
+     dump files will load at all.  With this patch, a successful verify run
+     should guarantee loadable dump files.
+   Branch: ^/subversion/branches/1.8.x-r1536854
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
