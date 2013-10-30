@@ -33,6 +33,7 @@
 #include <apr_getopt.h>
 #include <apr_pools.h>
 
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_config.h"
 #include "private/svn_subr_private.h"
@@ -71,8 +72,7 @@ test_text_retrieval(const svn_test_opts_t *opts,
   int i;
   const char *cfg_file;
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   /* Test values retrieved from our ConfigParser instance against
@@ -121,8 +121,7 @@ test_boolean_retrieval(const svn_test_opts_t *opts,
   int i;
   const char *cfg_file;
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   for (i = 0; true_keys[i] != NULL; i++)
@@ -180,8 +179,7 @@ test_has_section_case_insensitive(const svn_test_opts_t *opts,
   svn_config_t *cfg;
   const char *cfg_file;
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, FALSE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
@@ -209,8 +207,7 @@ test_has_section_case_sensitive(const svn_test_opts_t *opts,
   svn_config_t *cfg;
   const char *cfg_file;
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
 
   if (! svn_config_has_section(cfg, "section1"))
@@ -251,8 +248,7 @@ test_has_option_case_sensitive(const svn_test_opts_t *opts,
   };
   static const int test_data_size = sizeof(test_data)/sizeof(*test_data);
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, TRUE, pool));
 
   for (i = 0; i < test_data_size; ++i)
@@ -280,8 +276,7 @@ test_stream_interface(const svn_test_opts_t *opts,
   const char *cfg_file;
   svn_stream_t *stream;
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_stream_open_readonly(&stream, cfg_file, pool, pool));
 
   SVN_ERR(svn_config_parse(&cfg, stream, TRUE, TRUE, pool));
@@ -319,8 +314,7 @@ test_read_only_mode(const svn_test_opts_t *opts,
   svn_config_t *cfg2;
   const char *cfg_file;
 
-  cfg_file = apr_pstrcat(pool, opts->srcdir, "/", "config-test.cfg",
-                         SVN_VA_NULL);
+  cfg_file = svn_dirent_join(opts->srcdir, "config-test.cfg", pool);
   SVN_ERR(svn_config_read3(&cfg, cfg_file, TRUE, TRUE, FALSE, pool));
 
   /* setting CFG to r/o mode shall toggle the r/o mode and expand values */
