@@ -269,9 +269,7 @@ process_one_revision(svn_fs_t *fs,
 
   /* Get the changed paths. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revnum, scratch_pool));
-  SVN_ERR(svn_fs_paths_changed3(&paths_changed, rev_root,
-                                svn_move_behavior_explicit_moves,
-                                scratch_pool));
+  SVN_ERR(svn_fs_paths_changed2(&paths_changed, rev_root, scratch_pool));
 
   /* Iterate them. */
   /* ### use iterpool? */

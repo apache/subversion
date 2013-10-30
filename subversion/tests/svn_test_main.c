@@ -44,6 +44,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
+#include "svn_utf.h"
 
 #include "private/svn_cmdline_private.h"
 
@@ -54,6 +55,10 @@
 int test_argc;
 const char **test_argv;
 
+/* Many tests write to disk. Instead of writing to the current
+   directory, they should use this path as the root of the test data
+   area. */
+static const char *data_path;
 
 /* Test option: Print more output */
 static svn_boolean_t verbose_mode = FALSE;
@@ -365,6 +370,51 @@ static void help(const char *progname, apr_pool_t *pool)
   svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
 }
 
+static svn_error_t *init_test_data(const char *argv0, apr_pool_t *pool)
+{
+  const char *temp_path;
+  const char *base_name;
+
+  /* Convert the program path to an absolute path. */
+  SVN_ERR(svn_utf_cstring_to_utf8(&temp_path, argv0, pool));
+  temp_path = svn_dirent_internal_style(temp_path, pool);
+  SVN_ERR(svn_dirent_get_absolute(&temp_path, temp_path, pool));
+  SVN_ERR_ASSERT(!svn_dirent_is_root(temp_path, strlen(temp_path)));
+
+  /* Extract the interesting bits of the path. */
+  temp_path = svn_dirent_dirname(temp_path, pool);
+  base_name = svn_dirent_basename(temp_path, pool);
+  if (0 == strcmp(base_name, ".libs"))
+    {
+      /* This is a libtoolized binary, skip the .libs directory. */
+      temp_path = svn_dirent_dirname(temp_path, pool);
+      base_name = svn_dirent_basename(temp_path, pool);
+    }
+  temp_path = svn_dirent_dirname(temp_path, pool);
+
+  /* temp_path should now point to the root of the test
+     builddir. Construct the path to the transient dir.  Note that we
+     put the path insinde the cmdline/svn-test-work area. This is
+     because trying to get the cmdline tests to use a different work
+     area is unprintable; so we put the C test transient dir in the
+     cmdline tests area, as the lesser of evils ... */
+  temp_path = svn_dirent_join_many(pool, temp_path,
+                                   "cmdline", "svn-test-work",
+                                   base_name, SVN_VA_NULL);
+
+  /* Finally, create the transient directory. */
+  SVN_ERR(svn_io_make_dir_recursively(temp_path, pool));
+
+  data_path = temp_path;
+  return SVN_NO_ERROR;
+}
+
+const char *
+svn_test_data_path(const char *basename, apr_pool_t *result_pool)
+{
+  return svn_dirent_join(data_path, basename, result_pool);
+}
+
 
 /* Standard svn test program */
 int
@@ -404,7 +454,20 @@ main(int argc, const char *argv[])
   test_argc = argc;
   test_argv = argv;
 
+  err = init_test_data(argv[0], pool);
+  if (err)
+    {
+      svn_handle_error2(err, stderr, TRUE, "svn_tests: ");
+      svn_error_clear(err);
+    }
+
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
+  if (err)
+    {
+      svn_handle_error2(err, stderr, TRUE, "svn_tests: ");
+      svn_error_clear(err);
+    }
+
 
   os->interleave = TRUE; /* Let options and arguments be interleaved */
 

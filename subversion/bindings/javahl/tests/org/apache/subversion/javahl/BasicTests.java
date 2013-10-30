@@ -1058,6 +1058,37 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Check that half a move cannot be committed.
+     * @since 1.9
+     */
+    public void testCommitPartialMove() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        String root = thisTest.getWorkingCopy().getAbsolutePath();
+        ClientException caught = null;
+
+        Set<String> srcPaths = new HashSet<String>(1);
+        srcPaths.add(root + "/A/B/E/alpha");
+        client.move(srcPaths, root + "/moved-alpha",
+                    false, false, false, false, false, null, null, null);
+
+        try {
+            client.commit(srcPaths, Depth.infinity, false, false, null, null,
+                          new ConstMsg("Commit half of a move"), null);
+        } catch (ClientException ex) {
+            caught = ex;
+        }
+
+        assertNotNull("Commit of partial move did not fail", caught);
+
+        List<ClientException.ErrorMessage> msgs = caught.getAllMessages();
+        assertTrue(msgs.size() >= 3);
+        assertTrue(msgs.get(0).getMessage().startsWith("Illegal target"));
+        assertTrue(msgs.get(1).getMessage().startsWith("Commit failed"));
+        assertTrue(msgs.get(2).getMessage().startsWith("Cannot commit"));
+    }
+
+    /**
      * Assert that the first merge source suggested for
      * <code>destPath</code> at {@link Revision#WORKING} and {@link
      * Revision#HEAD} is equivalent to <code>expectedSrc</code>.

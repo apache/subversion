@@ -1044,8 +1044,8 @@ create_txn_dir(const char **id_p,
                                  fs->path,
                                  PATH_TXNS_DIR,
                                  apr_pstrcat(pool, *id_p, PATH_EXT_TXN,
-                                             (char *)NULL),
-                                 NULL);
+                                             SVN_VA_NULL),
+                                 SVN_VA_NULL);
 
   return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
 }

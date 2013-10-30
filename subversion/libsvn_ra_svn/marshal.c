@@ -119,6 +119,16 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
             && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
         conn->remote_ip = NULL;
       svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
+
+      /* We are using large r/w buffers already.
+       * So, once we decide to actually send data, we want it to go over
+       * the wire a.s.a.p..  So disable Nagle's algorithm.
+       *
+       * We ignore the result of this call since it safe to continue even
+       * if we keep delaying.  The only negative effect is increased
+       * latency (can be additional 5 .. 10ms depending on circumstances).
+       */
+      apr_socket_opt_set(sock, APR_TCP_NODELAY, 1);
     }
   else
     {
@@ -127,27 +137,6 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
     }
 
   return conn;
-}
-
-svn_ra_svn_conn_t *svn_ra_svn_create_conn2(apr_socket_t *sock,
-                                           apr_file_t *in_file,
-                                           apr_file_t *out_file,
-                                           int compression_level,
-                                           apr_pool_t *pool)
-{
-  return svn_ra_svn_create_conn3(sock, in_file, out_file,
-                                 compression_level, 0, 0, pool);
-}
-
-/* backward-compatible implementation using the default compression level */
-svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
-                                          apr_file_t *in_file,
-                                          apr_file_t *out_file,
-                                          apr_pool_t *pool)
-{
-  return svn_ra_svn_create_conn3(sock, in_file, out_file,
-                                 SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0, 0,
-                                 pool);
 }
 
 svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,

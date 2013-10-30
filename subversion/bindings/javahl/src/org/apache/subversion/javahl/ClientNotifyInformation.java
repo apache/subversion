@@ -612,7 +612,16 @@ public class ClientNotifyInformation extends EventObject
 
         /** A move in the working copy has been broken
          * @since New in 1.8. */
-        move_broken ("move broken");
+        move_broken ("move broken"),
+
+        /** Running cleanup on an external module.
+         * @since New in 1.9. */
+        cleanup_external ("cleanup external"),
+
+        /** The operation failed because the operation (E.g. commit)
+         * is only valid if the operation includes this path.
+         * @since New in 1.9. */
+        failed_requires_target ("failed requires target");
 
         /**
          * The description of the action.

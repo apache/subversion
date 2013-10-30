@@ -202,7 +202,8 @@ svn_error_wrap_apr(apr_status_t status,
       va_end(ap);
       if (msg_apr)
         {
-          err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr, NULL);
+          err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr,
+                                     SVN_VA_NULL);
         }
       else
         {

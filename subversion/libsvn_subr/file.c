@@ -184,7 +184,7 @@ reclaim_shared_handle(shared_handle_pool_t *handle_pool)
                 shared_handle_t *) = NULL;
 
   /* implicitly closes the file */
-  apr_pool_clear(result->pool);
+  svn_pool_clear(result->pool);
 
   return result;
 }
@@ -331,7 +331,7 @@ close_handle(shared_handle_pool_t *handle_pool,
              shared_handle_t *handle)
 {
   /* implicitly closes the file */
-  apr_pool_clear(handle->pool);
+  svn_pool_clear(handle->pool);
 
   handle_pool->last_open = handle->previous;
   handle->next = handle_pool->first_unused;

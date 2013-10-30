@@ -1726,7 +1726,7 @@ copy_lines_to_target(target_content_t *content, svn_linenum_t line,
       SVN_ERR(readline(content, &target_line, iterpool, iterpool));
       if (! content->eof)
         target_line = apr_pstrcat(iterpool, target_line, content->eol_str,
-                                  (char *)NULL);
+                                  SVN_VA_NULL);
       len = strlen(target_line);
       SVN_ERR(content->write(content->write_baton, target_line,
                              len, iterpool));

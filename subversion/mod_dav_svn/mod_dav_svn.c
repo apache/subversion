@@ -746,7 +746,7 @@ const char *
 dav_svn__get_me_resource_uri(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/me",
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
@@ -754,7 +754,7 @@ const char *
 dav_svn__get_rev_stub(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rev",
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
@@ -762,7 +762,7 @@ const char *
 dav_svn__get_rev_root_stub(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/rvr",
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
@@ -770,14 +770,14 @@ const char *
 dav_svn__get_txn_stub(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txn",
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
 const char *
 dav_svn__get_txn_root_stub(request_rec *r)
 {
-  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txr", (char *)NULL);
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/txr", SVN_VA_NULL);
 }
 
 
@@ -785,7 +785,7 @@ const char *
 dav_svn__get_vtxn_stub(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/vtxn",
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
@@ -793,7 +793,7 @@ const char *
 dav_svn__get_vtxn_root_stub(request_rec *r)
 {
   return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/vtxr",
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 

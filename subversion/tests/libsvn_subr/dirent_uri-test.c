@@ -269,7 +269,7 @@ test_dirent_join(apr_pool_t *pool)
                                  "\"%s\". expected \"%s\"",
                                  base, comp, result, expect);
 
-      result = svn_dirent_join_many(pool, base, comp, NULL);
+      result = svn_dirent_join_many(pool, base, comp, SVN_VA_NULL);
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_join_many(\"%s\", \"%s\") returned "
@@ -1936,7 +1936,7 @@ test_dirent_get_absolute(apr_pool_t *pool)
 
       expect_abs = expect;
       if (*expect == '%')
-        expect_abs = apr_pstrcat(pool, curdir, expect + 1, (char *)NULL);
+        expect_abs = apr_pstrcat(pool, curdir, expect + 1, SVN_VA_NULL);
 #ifdef SVN_USE_DOS_PATHS
       if (*expect == '@')
         expect_abs = apr_pstrcat(pool, curdironc, expect + 1, NULL);

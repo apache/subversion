@@ -489,7 +489,7 @@ test_path_join(apr_pool_t *pool)
       if (svn_path_is_url(base))
         continue;
 
-      result = svn_path_join_many(pool, base, comp, NULL);
+      result = svn_path_join_many(pool, base, comp, SVN_VA_NULL);
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_join_many(\"%s\", \"%s\") returned "
@@ -1527,7 +1527,7 @@ condense_targets_tests_helper(const char* title,
 
   /* Verify the common part with the expected (prefix with cwd). */
   if (*exp_common == '%')
-    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, (char *)NULL);
+    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, SVN_VA_NULL);
 
   if (strcmp(common_path, exp_common_abs) != 0)
     {
@@ -1544,7 +1544,7 @@ condense_targets_tests_helper(const char* title,
     {
       const char * target = APR_ARRAY_IDX(condensed_targets, i, const char*);
       if (token && (*token == '%'))
-        token = apr_pstrcat(pool, curdir, token + 1, (char *)NULL);
+        token = apr_pstrcat(pool, curdir, token + 1, SVN_VA_NULL);
       if (! token ||
           (target && (strcmp(target, token) != 0)))
         {
