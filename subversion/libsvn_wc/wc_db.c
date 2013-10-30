@@ -11232,23 +11232,6 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
 
-  /* If the node is still marked 'not-present', then the server did not
-     re-add it.  So it's really gone in this revision, thus we remove the node.
-
-     If the node is still marked 'server-excluded' and yet is not the same
-     revision as new_rev, then the server did not re-add it, nor
-     re-server-exclude it, so we can remove the node. */
-  if (!is_root
-      && (status == svn_wc__db_status_not_present
-          || (status == svn_wc__db_status_server_excluded &&
-              revision != new_rev)))
-    {
-      return svn_error_trace(db_base_remove(wcroot, local_relpath,
-                                            db, FALSE, FALSE, FALSE,
-                                            SVN_INVALID_REVNUM,
-                                            NULL, NULL, scratch_pool));
-    }
-
   if (new_repos_relpath != NULL && strcmp(repos_relpath, new_repos_relpath))
     set_repos_relpath = TRUE;
 
