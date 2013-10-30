@@ -44,6 +44,269 @@
 /*----------------------------------------------------------------------*/
 
 
+/* To be able to check whether a path exists in the current revision
+   (as changes come in), we need to track the relevant tree changes.
+
+   In particular, we remember deletions, additions and copies including
+   their copy-from info.  Since the dump performs a pre-order tree walk,
+   we only need to store the data for the stack of parent folders.
+
+   The problem that we are trying to solve is that the dump receives
+   transforming operations whose validity depends on previous operations
+   in the same revision but cannot be checked against the final state
+   as stored in the repository as that is the state *after* we applied
+   the respective tree changes.
+
+   Note that the tracker functions don't perform any sanity or validity
+   checks.  Those higher-level tests have to be done in the calling code.
+   However, there is no way to corrupt the data structure using the
+   provided functions.
+ */
+
+/* Single entry in the path tracker.  Not all levels along the path
+   hierarchy do need to have an instance of this struct but only those
+   that got changed by a tree modification.
+
+   Please note that the path info in this struct is stored in re-usable
+   stringbuf objects such that we don't need to allocate more memory than
+   the longest path we encounter.
+ */
+typedef struct path_tracker_entry_t
+{
+  /* path in the current tree */
+  svn_stringbuf_t *path;
+
+  /* copy-from path (must be empty if COPYFROM_REV is SVN_INVALID_REVNUM) */
+  svn_stringbuf_t *copyfrom_path;
+
+  /* copy-from revision (SVN_INVALID_REVNUM for additions / replacements
+     that don't copy history, i.e. with no sub-tree) */
+  svn_revnum_t copyfrom_rev;
+
+  /* if FALSE, PATH has been deleted */
+  svn_boolean_t exists;
+} path_tracker_entry_t;
+
+/* Tracks all tree modifications above the current path.
+ */
+typedef struct path_tracker_t
+{
+  /* Container for all relevant tree changes in depth order.
+     May contain more entries than DEPTH to allow for reusing memory.
+     Only entries 0 .. DEPTH-1 are valid.
+   */
+  apr_array_header_t *stack;
+
+  /* Number of relevant entries in STACK.  May be 0 */
+  int depth;
+
+  /* Revision that we current track.  If DEPTH is 0, paths are exist in
+     REVISION exactly when they exist in REVISION-1.  This applies only
+     to the current state of our tree walk.
+   */
+  svn_revnum_t revision;
+
+  /* Allocate container entries here. */
+  apr_pool_t *pool;
+} path_tracker_t;
+
+/* Return a new path tracker object for REVISION, allocated in POOL.
+ */
+static path_tracker_t *
+tracker_create(svn_revnum_t revision,
+               apr_pool_t *pool)
+{
+  path_tracker_t *result = apr_pcalloc(pool, sizeof(*result));
+  result->stack = apr_array_make(pool, 16, sizeof(path_tracker_entry_t));
+  result->revision = revision;
+  result->pool = pool;
+
+  return result;
+}
+
+/* Remove all entries from TRACKER that are not relevant to PATH anymore.
+ * If ALLOW_EXACT_MATCH is FALSE, keep only entries that pertain to
+ * parent folders but not to PATH itself.
+ *
+ * This internal function implicitly updates the tracker state during the
+ * tree by removing "past" entries.  Other functions will add entries when
+ * we encounter a new tree change.
+ */
+static void
+tracker__trim(path_tracker_t *tracker,
+              const char *path,
+              svn_boolean_t allow_exact_match)
+{
+  /* remove everything that is unrelated to PATH.
+     Note that TRACKER->STACK is depth-ordered,
+     i.e. stack[N] is a (maybe indirect) parent of stack[N+1]
+     for N+1 < DEPTH.
+   */
+  for (; tracker->depth; --tracker->depth)
+    {
+      path_tracker_entry_t *parent = &APR_ARRAY_IDX(tracker->stack,
+                                                    tracker->depth - 1,
+                                                    path_tracker_entry_t);
+      const char *rel_path
+        = svn_dirent_skip_ancestor(parent->path->data, path);
+
+      /* always keep parents.  Keep exact matches when allowed. */
+      if (rel_path && (allow_exact_match || *rel_path != '\0'))
+        break;
+    }
+}
+
+/* Using TRACKER, check what path at what revision in the repository must
+   be checked to decide that whether PATH exists.  Return the info in
+   *ORIG_PATH and *ORIG_REV, respectively.
+
+   If the path is known to not exist, *ORIG_PATH will be NULL and *ORIG_REV
+   will be SVN_INVALID_REVNUM.  If *ORIG_REV is SVN_INVALID_REVNUM, PATH
+   has just been added in the revision currently being tracked.
+
+   Use POOL for allocations.  Note that *ORIG_PATH may be allocated in POOL,
+   a reference to internal data with the same lifetime as TRACKER or just
+   PATH.
+ */
+static void
+tracker_lookup(const char **orig_path,
+               svn_revnum_t *orig_rev,
+               path_tracker_t *tracker,
+               const char *path,
+               apr_pool_t *pool)
+{
+  tracker__trim(tracker, path, TRUE);
+  if (tracker->depth == 0)
+    {
+      /* no tree changes -> paths are the same as in the previous rev. */
+      *orig_path = path;
+      *orig_rev = tracker->revision - 1;
+    }
+  else
+    {
+      path_tracker_entry_t *parent = &APR_ARRAY_IDX(tracker->stack,
+                                                    tracker->depth - 1,
+                                                    path_tracker_entry_t);
+      if (parent->exists)
+        {
+          const char *rel_path
+            = svn_dirent_skip_ancestor(parent->path->data, path);
+
+          if (parent->copyfrom_rev != SVN_INVALID_REVNUM)
+            {
+              /* parent is a copy with history. Translate path. */
+              *orig_path = svn_dirent_join(parent->copyfrom_path->data,
+                                           rel_path, pool);
+              *orig_rev = parent->copyfrom_rev;
+            }
+          else if (*rel_path == '\0')
+            {
+              /* added in this revision with no history */
+              *orig_path = path;
+              *orig_rev = tracker->revision;
+            }
+          else
+            {
+              /* parent got added but not this path */
+              *orig_path = NULL;
+              *orig_rev = SVN_INVALID_REVNUM;
+            }
+        }
+      else
+        {
+          /* (maybe parent) path has been deleted */
+          *orig_path = NULL;
+          *orig_rev = SVN_INVALID_REVNUM;
+        }
+    }
+}
+
+/* Return a reference to the stack entry in TRACKER for PATH.  If no
+   suitable entry exists, add one.  Implicitly updates the tracked tree
+   location.
+
+   Only the PATH member of the result is being updated.  All other members
+   will have undefined values.
+ */
+static path_tracker_entry_t *
+tracker__add_entry(path_tracker_t *tracker,
+                   const char *path)
+{
+  path_tracker_entry_t *entry;
+  tracker__trim(tracker, path, FALSE);
+
+  if (tracker->depth == tracker->stack->nelts)
+    {
+      entry = apr_array_push(tracker->stack);
+      entry->path = svn_stringbuf_create_empty(tracker->pool);
+      entry->copyfrom_path = svn_stringbuf_create_empty(tracker->pool);
+    }
+  else
+    {
+      entry = &APR_ARRAY_IDX(tracker->stack, tracker->depth,
+                             path_tracker_entry_t);
+    }
+
+  svn_stringbuf_set(entry->path, path);
+  ++tracker->depth;
+
+  return entry;
+}
+
+/* Update the TRACKER with a copy from COPYFROM_PATH@COPYFROM_REV to
+   PATH in the tracked revision.
+ */
+static void
+tracker_path_copy(path_tracker_t *tracker,
+                  const char *path,
+                  const char *copyfrom_path,
+                  svn_revnum_t copyfrom_rev)
+{
+  path_tracker_entry_t *entry = tracker__add_entry(tracker, path);
+
+  svn_stringbuf_set(entry->copyfrom_path, copyfrom_path);
+  entry->copyfrom_rev = copyfrom_rev;
+  entry->exists = TRUE;
+}
+
+/* Update the TRACKER with a plain addition of PATH (without history).
+ */
+static void
+tracker_path_add(path_tracker_t *tracker,
+                 const char *path)
+{
+  path_tracker_entry_t *entry = tracker__add_entry(tracker, path);
+
+  svn_stringbuf_setempty(entry->copyfrom_path);
+  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  entry->exists = TRUE;
+}
+
+/* Update the TRACKER with a replacement of PATH with a plain addition
+   (without history).
+ */
+static void
+tracker_path_replace(path_tracker_t *tracker,
+                     const char *path)
+{
+  /* this will implicitly purge all previous sub-tree info from STACK.
+     Thus, no need to tack the deletion explicitly. */
+  tracker_path_add(tracker, path);
+}
+
+/* Update the TRACKER with a deletion of PATH.
+ */
+static void
+tracker_path_delete(path_tracker_t *tracker,
+                    const char *path)
+{
+  path_tracker_entry_t *entry = tracker__add_entry(tracker, path);
+
+  svn_stringbuf_setempty(entry->copyfrom_path);
+  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  entry->exists = FALSE;
+}
+
 
 /* Compute the delta between OLDROOT/OLDPATH and NEWROOT/NEWPATH and
    store it into a new temporary file *TEMPFILE.  OLDROOT may be NULL,
@@ -130,6 +393,10 @@ struct edit_baton
   /* reusable buffer for writing file contents */
   char buffer[SVN__STREAM_CHUNK_SIZE];
   apr_size_t bufsize;
+
+  /* Structure allows us to verify the paths currently being dumped.
+     If NULL, validity checks are being skipped. */
+  path_tracker_t *path_tracker;
 };
 
 struct dir_baton
@@ -216,6 +483,95 @@ make_dir_baton(const char *path,
   return new_db;
 }
 
+static svn_error_t *
+fetch_kind_func(svn_node_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool);
+
+/* Return an error when PATH in REVISION does not exist or is of a
+   different kind than EXPECTED_KIND.  If the latter is svn_node_unknown,
+   skip that check.  Use EB for context information.  If REVISION is the
+   current revision, use EB's path tracker to follow renames, deletions,
+   etc.
+
+   Use SCRATCH_POOL for temporary allocations.
+   No-op if EB's path tracker has not been initialized.
+ */
+static svn_error_t *
+node_must_exist(struct edit_baton *eb,
+                const char *path,
+                svn_revnum_t revision,
+                svn_node_kind_t expected_kind,
+                apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind = svn_node_none;
+
+  /* in case the caller is trying something stupid ... */
+  if (eb->path_tracker == NULL)
+    return SVN_NO_ERROR;
+
+  /* paths pertaining to the revision currently being processed must
+     be translated / checked using our path tracker. */
+  if (revision == eb->path_tracker->revision)
+    tracker_lookup(&path, &revision, eb->path_tracker, path, scratch_pool);
+
+  /* determine the node type (default: no such node) */
+  if (path)
+    SVN_ERR(fetch_kind_func(&kind, eb, path, revision, scratch_pool));
+
+  /* check results */
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                             _("Path '%s' not found in r%ld."),
+                             path, revision);
+
+  if (expected_kind != kind && expected_kind != svn_node_unknown)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Unexpected node kind %d for '%s' at r%ld. "
+                               "Expected kind was %d."),
+                             kind, path, revision, expected_kind);
+
+  return SVN_NO_ERROR;
+}
+
+/* Return an error when PATH exists in REVISION.  Use EB for context
+   information.  If REVISION is the current revision, use EB's path
+   tracker to follow renames, deletions, etc.
+
+   Use SCRATCH_POOL for temporary allocations.
+   No-op if EB's path tracker has not been initialized.
+ */
+static svn_error_t *
+node_must_not_exist(struct edit_baton *eb,
+                    const char *path,
+                    svn_revnum_t revision,
+                    apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind = svn_node_none;
+
+  /* in case the caller is trying something stupid ... */
+  if (eb->path_tracker == NULL)
+    return SVN_NO_ERROR;
+
+  /* paths pertaining to the revision currently being processed must
+     be translated / checked using our path tracker. */
+  if (revision == eb->path_tracker->revision)
+    tracker_lookup(&path, &revision, eb->path_tracker, path, scratch_pool);
+
+  /* determine the node type (default: no such node) */
+  if (path)
+    SVN_ERR(fetch_kind_func(&kind, eb, path, revision, scratch_pool));
+
+  /* check results */
+  if (kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                             _("Path '%s' exists in r%ld."),
+                             path, revision);
+
+  return SVN_NO_ERROR;
+}
 
 /* This helper is the main "meat" of the editor -- it does all the
    work of writing a node record.
@@ -303,6 +659,11 @@ dump_node(struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
+      if (eb->path_tracker)
+        SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
+                  apr_psprintf(pool, _("Change invalid path '%s' in r%ld"),
+                               path, eb->current_rev));
+
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
 
@@ -321,8 +682,18 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_replace)
     {
+      if (eb->path_tracker)
+        SVN_ERR_W(node_must_exist(eb, path, eb->current_rev,
+                                  svn_node_unknown, pool),
+                  apr_psprintf(pool,
+                               _("Replacing non-existent path '%s' in r%ld"),
+                               path, eb->current_rev));
+
       if (! is_copy)
         {
+          if (eb->path_tracker)
+            tracker_path_replace(eb->path_tracker, path);
+
           /* a simple delete+add, implied by a single 'replace' action. */
           SVN_ERR(svn_stream_puts(eb->stream,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
@@ -335,6 +706,20 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
+          if (eb->path_tracker)
+            {
+              SVN_ERR_W(node_must_exist(eb, compare_path, compare_rev,
+                                        kind, pool),
+                        apr_psprintf(pool,
+                                     _("Replacing path '%s' in r%ld "
+                                       "with invalid path"),
+                                     path, eb->current_rev));
+
+              /* we will call dump_node again with an addition further
+                 down the road */
+              tracker_path_delete(eb->path_tracker, path);
+            }
+
           /* more complex:  delete original, then add-with-history.  */
 
           /* the path & kind headers have already been printed;  just
@@ -355,6 +740,14 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_delete)
     {
+      if (eb->path_tracker)
+        {
+          SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
+                    apr_psprintf(pool, _("Deleting invalid path '%s' in r%ld"),
+                                 path, eb->current_rev));
+          tracker_path_delete(eb->path_tracker, path);
+        }
+
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
@@ -365,11 +758,20 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_add)
     {
+      if (eb->path_tracker)
+        SVN_ERR_W(node_must_not_exist(eb, path, eb->current_rev, pool),
+                  apr_psprintf(pool,
+                               _("Adding already existing path '%s' in r%ld"),
+                               path, eb->current_rev));
+
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (! is_copy)
         {
+          if (eb->path_tracker)
+            tracker_path_add(eb->path_tracker, path);
+
           /* Dump all contents for a simple 'add'. */
           if (kind == svn_node_file)
             must_dump_text = TRUE;
@@ -377,6 +779,18 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
+          if (eb->path_tracker)
+            {
+              SVN_ERR_W(node_must_exist(eb, compare_path, compare_rev,
+                                        kind, pool),
+                        apr_psprintf(pool,
+                                     _("Copying from invalid path to "
+                                       "'%s' in r%ld"),
+                                     path, eb->current_rev));
+              tracker_path_copy(eb->path_tracker, path, compare_path,
+                                compare_rev);
+            }
+
           if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
               && eb->notify_func)
             {
@@ -984,6 +1398,14 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->verify = verify;
   eb->found_old_reference = found_old_reference;
   eb->found_old_mergeinfo = found_old_mergeinfo;
+
+  /* In non-verification mode, we will allow anything to be dumped because
+     it might be an incremental dump with possible manual intervention.
+     Also, this might be the last resort when it comes to data recovery.
+
+     Else, make sure that all paths exists at their respective revisions.
+  */
+  eb->path_tracker = verify ? tracker_create(to_rev, pool) : NULL;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
