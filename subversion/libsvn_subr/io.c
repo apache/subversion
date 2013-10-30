@@ -1591,14 +1591,9 @@ io_set_file_perms(const char *path,
     {
       if (enable_write) /* Make read-write. */
         {
-          apr_file_t *fd;
-
-          /* Get the perms for the original file so we'll have any other bits
-           * that were already set (like the execute bits, for example). */
-          SVN_ERR(svn_io_file_open(&fd, path, APR_READ,
-                                   APR_OS_DEFAULT, pool));
-          SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
-          SVN_ERR(svn_io_file_close(fd, pool));
+          /* Tweak the owner bits only. The group/other bits aren't safe to
+           * touch because we may end up setting them in undesired ways. */
+          perms_to_set |= (APR_UREAD|APR_UWRITE);
         }
       else
         {
