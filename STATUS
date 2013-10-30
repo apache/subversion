@@ -179,6 +179,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1537018
+   Fix issue #4440, "Subversion sets permissions on files, when it shouldn't"
+   Justification:
+     Bug introduced by me. Unreasonable behaviour. User complained.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
