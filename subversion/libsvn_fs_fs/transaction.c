@@ -1004,8 +1004,8 @@ create_txn_dir(const char **id_p,
                                  fs->path,
                                  PATH_TXNS_DIR,
                                  apr_pstrcat(pool, *id_p, PATH_EXT_TXN,
-                                             (char *)NULL),
-                                 NULL);
+                                             SVN_VA_NULL),
+                                 SVN_VA_NULL);
 
   return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
 }
@@ -1029,7 +1029,7 @@ create_txn_dir_pre_1_5(const char **id_p,
 
   /* Try to create directories named "<txndir>/<rev>-<uniqueifier>.txn". */
   prefix = svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
-                                apr_psprintf(pool, "%ld", rev), NULL);
+                                apr_psprintf(pool, "%ld", rev), SVN_VA_NULL);
 
   subpool = svn_pool_create(pool);
   for (i = 1; i <= 99999; i++)
@@ -3010,15 +3010,18 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
   /* all moves specify the "copy-from-rev" as REV-1 */
   if (svn_fs_fs__supports_move(fs))
-    for (hi = apr_hash_first(pool, changed_paths); hi; hi = apr_hash_next(hi))
-      {
-        svn_fs_path_change2_t *change;
-        apr_hash_this(hi, NULL, NULL, (void **)&change);
+    {
+      for (hi = apr_hash_first(pool, changed_paths);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
 
-        if (   (change->change_kind == svn_fs_path_change_move)
-            || (change->change_kind == svn_fs_path_change_movereplace))
-          change->copyfrom_rev = new_rev - 1;
-      }
+          if (   (change->change_kind == svn_fs_path_change_move)
+              || (change->change_kind == svn_fs_path_change_movereplace))
+            change->copyfrom_rev = new_rev - 1;
+        }
+    }
 
   /* write to target file & calculate checksum */
   stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
@@ -3206,23 +3209,23 @@ verify_locks(svn_fs_t *fs,
    Allocate the hashed strings in POOL. */
 static svn_error_t *
 check_for_duplicate_move_source(apr_hash_t *source_paths,
-                                change_t *change,
+                                svn_fs_path_change2_t *change,
                                 apr_pool_t *pool)
 {
-  if (   change->info.change_kind == svn_fs_path_change_move
-      || change->info.change_kind == svn_fs_path_change_movereplace)
-    if (change->info.copyfrom_path)
+  if (   change->change_kind == svn_fs_path_change_move
+      || change->change_kind == svn_fs_path_change_movereplace)
+    if (change->copyfrom_path)
       {
-        apr_size_t len = strlen(change->info.copyfrom_path);
-        if (apr_hash_get(source_paths, change->info.copyfrom_path, len))
+        apr_size_t len = strlen(change->copyfrom_path);
+        if (apr_hash_get(source_paths, change->copyfrom_path, len))
           return svn_error_createf(SVN_ERR_FS_AMBIGUOUS_MOVE, NULL,
                       _("Path '%s' has been moved to more than one target"),
-                                   change->info.copyfrom_path);
+                                   change->copyfrom_path);
 
         apr_hash_set(source_paths,
-                     apr_pstrmemdup(pool, change->info.copyfrom_path, len),
+                     apr_pstrmemdup(pool, change->copyfrom_path, len),
                      len,
-                     change->info.copyfrom_path);
+                     change->copyfrom_path);
       }
 
   return SVN_NO_ERROR;
@@ -3255,12 +3258,12 @@ verify_moves(svn_fs_t *fs,
     {
       const char *path;
       apr_ssize_t len;
-      change_t *change;
+      svn_fs_path_change2_t *change;
       apr_hash_this(hi, (const void**)&path, &len, (void**)&change);
 
-      if (   change->info.copyfrom_path
-          && (   change->info.change_kind == svn_fs_path_change_move
-              || change->info.change_kind == svn_fs_path_change_movereplace))
+      if (   change->copyfrom_path
+          && (   change->change_kind == svn_fs_path_change_move
+              || change->change_kind == svn_fs_path_change_movereplace))
         {
           svn_sort__item_t *item = apr_array_push(moves);
           item->key = path;
@@ -3268,9 +3271,9 @@ verify_moves(svn_fs_t *fs,
           item->value = change;
         }
 
-      if (   change->info.change_kind == svn_fs_path_change_delete
-          || change->info.change_kind == svn_fs_path_change_replace
-          || change->info.change_kind == svn_fs_path_change_movereplace)
+      if (   change->change_kind == svn_fs_path_change_delete
+          || change->change_kind == svn_fs_path_change_replace
+          || change->change_kind == svn_fs_path_change_movereplace)
         APR_ARRAY_PUSH(deletions, const char *) = path;
     }
 
@@ -3301,10 +3304,9 @@ verify_moves(svn_fs_t *fs,
                                        deleted_path);
           if (relpath)
             {
-              change_t *closed_move = closest_move_item->value;
+              svn_fs_path_change2_t *closed_move = closest_move_item->value;
               APR_ARRAY_IDX(deletions, i, const char*)
-                = svn_dirent_join(closed_move->info.copyfrom_path, relpath,
-                                  pool);
+                = svn_dirent_join(closed_move->copyfrom_path, relpath, pool);
             }
         }
     }
@@ -3330,7 +3332,8 @@ verify_moves(svn_fs_t *fs,
 
       changes_p = (change_t **)&changes->elts;
       for (i = 0; i < changes->nelts; ++i)
-        SVN_ERR(check_for_duplicate_move_source(source_paths, changes_p[i],
+        SVN_ERR(check_for_duplicate_move_source(source_paths,
+                                                &changes_p[i]->info,
                                                 pool));
     }
 
@@ -3338,23 +3341,24 @@ verify_moves(svn_fs_t *fs,
 
   for (i = 0; i < moves->nelts; ++i)
     {
-      change_t *change = APR_ARRAY_IDX(moves, i, svn_sort__item_t).value;
+      svn_fs_path_change2_t *change
+        = APR_ARRAY_IDX(moves, i, svn_sort__item_t).value;
 
       /* there must be a deletion of move's copy-from path
          (or any of its parents) */
 
       int closest_deletion_idx
-        = svn_sort__bsearch_lower_bound(change->info.copyfrom_path, deletions,
+        = svn_sort__bsearch_lower_bound(change->copyfrom_path, deletions,
                                         svn_sort_compare_paths);
       if (closest_deletion_idx < deletions->nelts)
         {
           const char *closest_deleted_path
             = APR_ARRAY_IDX(deletions, closest_deletion_idx, const char *);
           if (!svn_dirent_is_ancestor(closest_deleted_path,
-                                      change->info.copyfrom_path))
+                                      change->copyfrom_path))
             return svn_error_createf(SVN_ERR_FS_INCOMPLETE_MOVE, NULL,
                         _("Path '%s' has been moved without being deleted"),
-                                     change->info.copyfrom_path);
+                                     change->copyfrom_path);
         }
     }
 

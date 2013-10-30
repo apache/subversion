@@ -1566,13 +1566,14 @@ logs_for_mergeinfo_rangelist(const char *source_url,
     target = apr_array_make(scratch_pool, 1, sizeof(const char *));
     APR_ARRAY_PUSH(target, const char *) = "";
 
-    SVN_ERR(svn_ra_get_log2(ra_session, target,
+    SVN_ERR(svn_ra_get_log3(ra_session, target,
                             oldest_revs_first ? oldest_rev : youngest_rev,
                             oldest_revs_first ? youngest_rev : oldest_rev,
                             0 /* limit */,
                             discover_changed_paths,
                             FALSE /* strict_node_history */,
                             FALSE /* include_merged_revisions */,
+                            svn_move_behavior_no_moves, /* ### really? */
                             revprops,
                             filter_log_entry_with_rangelist, &fleb,
                             scratch_pool));

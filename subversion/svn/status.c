@@ -319,7 +319,7 @@ print_status(const char *target_abspath,
                                     apr_psprintf(pool,
                                                  _("swapped places with %s"),
                                                  relpath),
-                                    (char *)NULL);
+                                    SVN_VA_NULL);
     }
   else if (status->moved_from_abspath || status->moved_to_abspath)
     {
@@ -334,7 +334,7 @@ print_status(const char *target_abspath,
           moved_from_line = apr_pstrcat(pool, "\n        > ",
                                         apr_psprintf(pool, _("moved from %s"),
                                                      relpath),
-                                        (char *)NULL);
+                                        SVN_VA_NULL);
         }
 
       if (status->moved_to_abspath)
@@ -346,7 +346,7 @@ print_status(const char *target_abspath,
           moved_to_line = apr_pstrcat(pool, "\n        > ",
                                       apr_psprintf(pool, _("moved to %s"),
                                                    relpath),
-                                      (char *)NULL);
+                                      SVN_VA_NULL);
         }
     }
 

@@ -137,9 +137,9 @@ make_file(const char *filename,
    "merge-FILENAME1-FILENAME2-FILENAME3".  The conflict style STYLE is
    used. */
 static svn_error_t *
-three_way_merge(const char *filename1,
-                const char *filename2,
-                const char *filename3,
+three_way_merge(const char *base_filename1,
+                const char *base_filename2,
+                const char *base_filename3,
                 const char *contents1,
                 const char *contents2,
                 const char *contents3,
@@ -152,8 +152,12 @@ three_way_merge(const char *filename1,
   apr_file_t *output;
   svn_stream_t *ostream;
   svn_stringbuf_t *actual;
-  char *merge_name = apr_psprintf(pool, "merge-%s-%s-%s",
-                                  filename1, filename2, filename3);
+  char *merge_name = apr_psprintf(
+      pool, "merge-%s-%s-%s", base_filename1, base_filename2, base_filename3);
+
+  const char *filename1 = svn_test_data_path(base_filename1, pool);
+  const char *filename2 = svn_test_data_path(base_filename2, pool);
+  const char *filename3 = svn_test_data_path(base_filename3, pool);
 
   /* We have an EXPECTED string we can match, because we don't support
      any other combinations (yet) than the ones above. */
@@ -171,9 +175,9 @@ three_way_merge(const char *filename1,
 
   SVN_ERR(svn_diff_mem_string_output_merge2
           (ostream, diff, original, modified, latest,
-           apr_psprintf(pool, "||||||| %s", filename1),
-           apr_psprintf(pool, "<<<<<<< %s", filename2),
-           apr_psprintf(pool, ">>>>>>> %s", filename3),
+           apr_psprintf(pool, "||||||| %s", base_filename1),
+           apr_psprintf(pool, "<<<<<<< %s", base_filename2),
+           apr_psprintf(pool, ">>>>>>> %s", base_filename3),
            NULL, /* separator */
            style, pool));
 
@@ -195,17 +199,20 @@ three_way_merge(const char *filename1,
                            APR_OS_DEFAULT, pool));
 
   ostream = svn_stream_from_aprfile2(output, FALSE, pool);
-  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
-                                      filename1, filename2, filename3,
-                                      NULL, NULL, NULL, NULL,
-                                      style,
-                                      pool));
+  SVN_ERR(svn_diff_file_output_merge2(
+              ostream, diff,
+              filename1, filename2, filename3,
+              apr_psprintf(pool, "||||||| %s", base_filename1),
+              apr_psprintf(pool, "<<<<<<< %s", base_filename2),
+              apr_psprintf(pool, ">>>>>>> %s", base_filename3),
+              NULL, /* separator */
+              style, pool));
   SVN_ERR(svn_stream_close(ostream));
   SVN_ERR(svn_stringbuf_from_file2(&actual, merge_name, pool));
   if (strcmp(actual->data, expected))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "failed merging diff '%s' to '%s' into '%s'",
-                             filename1, filename2, filename3);
+                             base_filename1, base_filename2, base_filename3);
 
   SVN_ERR(svn_io_remove_file2(filename1, TRUE, pool));
   if (strcmp(filename1, filename2))
@@ -227,8 +234,8 @@ three_way_merge(const char *filename1,
    preserved otherwise.  If the diff fails the diff output will be in
    a file called "diff-FILENAME1-FILENAME2".  */
 static svn_error_t *
-two_way_diff(const char *filename1,
-             const char *filename2,
+two_way_diff(const char *base_filename1,
+             const char *base_filename2,
              const char *contents1,
              const char *contents2,
              const char *expected,
@@ -239,7 +246,13 @@ two_way_diff(const char *filename1,
   apr_file_t *output;
   svn_stream_t *ostream;
   svn_stringbuf_t *actual;
-  char *diff_name = apr_psprintf(pool, "diff-%s-%s", filename1, filename2);
+  char *diff_name = (char *)apr_pstrdup(
+      pool, svn_test_data_path(
+          apr_psprintf(pool, "diff-%s-%s", base_filename1, base_filename2),
+          pool));
+
+  const char *filename1 = svn_test_data_path(base_filename1, pool);
+  const char *filename2 = svn_test_data_path(base_filename2, pool);
 
   /* Some of the tests have lots of lines, although not much data as
      the lines are short, and the in-memory diffs allocate a lot of
@@ -261,7 +274,7 @@ two_way_diff(const char *filename1,
   ostream = svn_stream_from_stringbuf(actual, pool);
 
   SVN_ERR(svn_diff_mem_string_output_unified(ostream, diff,
-                                             filename1, filename2,
+                                             base_filename1, base_filename2,
                                              SVN_APR_LOCALE_CHARSET,
                                              original, modified, subpool));
   svn_pool_clear(subpool);
@@ -286,7 +299,7 @@ two_way_diff(const char *filename1,
   ostream = svn_stream_from_aprfile2(output, FALSE, pool);
   SVN_ERR(svn_diff_file_output_unified2(ostream, diff,
                                         filename1, filename2,
-                                        filename1, filename2,
+                                        base_filename1, base_filename2,
                                         SVN_APR_LOCALE_CHARSET, pool));
   SVN_ERR(svn_stream_close(ostream));
 
@@ -312,16 +325,16 @@ two_way_diff(const char *filename1,
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "failed comparing '%s' and '%s'"
                                " (memory and file results are different)",
-                               filename1, filename2);
+                               base_filename1, base_filename2);
     }
 
   /* May as well do the trivial merges while we are here */
-  SVN_ERR(three_way_merge(filename1, filename2, filename1,
+  SVN_ERR(three_way_merge(base_filename1, base_filename2, base_filename1,
                           contents1, contents2, contents1, contents2, NULL,
                           svn_diff_conflict_display_modified_latest,
                           subpool));
   svn_pool_clear(subpool);
-  SVN_ERR(three_way_merge(filename2, filename1, filename2,
+  SVN_ERR(three_way_merge(base_filename2, base_filename1, base_filename2,
                           contents2, contents1, contents2, contents1, NULL,
                           svn_diff_conflict_display_modified_latest,
                           subpool));
@@ -2141,14 +2154,20 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  SVN_ERR(make_file("B2", B2.data, pool));
-  SVN_ERR(make_file("T1", T1.data, pool));
-  SVN_ERR(make_file("T2", T2.data, pool));
-  SVN_ERR(make_file("T3", T3.data, pool));
+
+  const char *B2_path = svn_test_data_path("B2", pool);
+  const char *T1_path = svn_test_data_path("T1", pool);
+  const char *T2_path = svn_test_data_path("T2", pool);
+  const char *T3_path = svn_test_data_path("T3", pool);
+
+  SVN_ERR(make_file(B2_path, B2.data, pool));
+  SVN_ERR(make_file(T1_path, T1.data, pool));
+  SVN_ERR(make_file(T2_path, T2.data, pool));
+  SVN_ERR(make_file(T3_path, T3.data, pool));
 
   /* Usage: tools/diff/diff4 <mine> <older> <yours> <ancestor> */
   /* tools/diff/diff4 B2 T2 T3 T1 > B2new */
-  SVN_ERR(svn_diff_file_diff4(&diff, "T2", "B2", "T3", "T1", pool));
+  SVN_ERR(svn_diff_file_diff4(&diff, T2_path, B2_path, T3_path, T1_path, pool));
 
   /* Sanity. */
   SVN_TEST_ASSERT(! svn_diff_contains_conflicts(diff));
@@ -2161,7 +2180,7 @@ test_diff4(apr_pool_t *pool)
              svn_stringbuf_create_ensure(417, pool), /* 417 == wc -c < B2new */
              pool);
   SVN_ERR(svn_diff_file_output_merge(actual, diff,
-                                     "T2", "B2", "T3",
+                                     T2_path, B2_path, T3_path,
                                      NULL, NULL, NULL, NULL,
                                      FALSE,
                                      FALSE,
@@ -2179,12 +2198,16 @@ random_trivial_merge(apr_pool_t *pool)
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  const char *base_filename1 = "trivial1";
+  const char *base_filename2 = "trivial2";
+
+  const char *filename1 = svn_test_data_path(base_filename1, pool);
+  const char *filename2 = svn_test_data_path(base_filename2, pool);
+
   seed_val();
 
   for (i = 0; i < 5; ++i)
     {
-      const char *filename1 = "trivial1";
-      const char *filename2 = "trivial2";
       int min_lines = 1000;
       int max_lines = 1100;
       int var_lines = 50;
@@ -2201,12 +2224,12 @@ random_trivial_merge(apr_pool_t *pool)
       SVN_ERR(svn_stringbuf_from_file2(&contents1, filename1, subpool));
       SVN_ERR(svn_stringbuf_from_file2(&contents2, filename2, subpool));
 
-      SVN_ERR(three_way_merge(filename1, filename2, filename1,
+      SVN_ERR(three_way_merge(base_filename1, base_filename2, base_filename1,
                               contents1->data, contents2->data,
                               contents1->data, contents2->data, NULL,
                               svn_diff_conflict_display_modified_latest,
                               subpool));
-      SVN_ERR(three_way_merge(filename2, filename1, filename2,
+      SVN_ERR(three_way_merge(base_filename2, base_filename1, base_filename2,
                               contents2->data, contents1->data,
                               contents2->data, contents1->data, NULL,
                               svn_diff_conflict_display_modified_latest,
@@ -2231,14 +2254,20 @@ random_three_way_merge(apr_pool_t *pool)
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  const char *base_filename1 = "original";
+  const char *base_filename2 = "modified1";
+  const char *base_filename3 = "modified2";
+  const char *base_filename4 = "combined";
+
+  const char *filename1 = svn_test_data_path(base_filename1, pool);
+  const char *filename2 = svn_test_data_path(base_filename2, pool);
+  const char *filename3 = svn_test_data_path(base_filename3, pool);
+  const char *filename4 = svn_test_data_path(base_filename4, pool);
+
   seed_val();
 
   for (i = 0; i < 20; ++i)
     {
-      const char *filename1 = "original";
-      const char *filename2 = "modified1";
-      const char *filename3 = "modified2";
-      const char *filename4 = "combined";
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       /* Pick NUM_LINES large enough so that the 'strip identical suffix' code
          gets triggered with reasonable probability.  (Currently it ignores
@@ -2272,12 +2301,12 @@ random_three_way_merge(apr_pool_t *pool)
       SVN_ERR(svn_stringbuf_from_file2(&modified2, filename3, pool));
       SVN_ERR(svn_stringbuf_from_file2(&combined, filename4, pool));
 
-      SVN_ERR(three_way_merge(filename1, filename2, filename3,
+      SVN_ERR(three_way_merge(base_filename1, base_filename2, base_filename3,
                               original->data, modified1->data,
                               modified2->data, combined->data, NULL,
                               svn_diff_conflict_display_modified_latest,
                               subpool));
-      SVN_ERR(three_way_merge(filename1, filename3, filename2,
+      SVN_ERR(three_way_merge(base_filename1, base_filename3, base_filename2,
                               original->data, modified2->data,
                               modified1->data, combined->data, NULL,
                               svn_diff_conflict_display_modified_latest,
@@ -2303,14 +2332,20 @@ merge_with_part_already_present(apr_pool_t *pool)
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  const char *base_filename1 = "pap-original";
+  const char *base_filename2 = "pap-modified1";
+  const char *base_filename3 = "pap-modified2";
+  const char *base_filename4 = "pap-combined";
+
+  const char *filename1 = svn_test_data_path(base_filename1, pool);
+  const char *filename2 = svn_test_data_path(base_filename2, pool);
+  const char *filename3 = svn_test_data_path(base_filename3, pool);
+  const char *filename4 = svn_test_data_path(base_filename4, pool);
+
   seed_val();
 
   for (i = 0; i < 20; ++i)
     {
-      const char *filename1 = "pap-original";
-      const char *filename2 = "pap-modified1";
-      const char *filename3 = "pap-modified2";
-      const char *filename4 = "pap-combined";
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       int num_lines = 200, num_src = 20, num_dst = 20;
       svn_boolean_t *lines = apr_pcalloc(subpool, sizeof(*lines) * num_lines);
@@ -2345,12 +2380,12 @@ merge_with_part_already_present(apr_pool_t *pool)
       SVN_ERR(svn_stringbuf_from_file2(&modified2, filename3, pool));
       SVN_ERR(svn_stringbuf_from_file2(&combined, filename4, pool));
 
-      SVN_ERR(three_way_merge(filename1, filename2, filename3,
+      SVN_ERR(three_way_merge(base_filename1, base_filename2, base_filename3,
                               original->data, modified1->data,
                               modified2->data, combined->data, NULL,
                               svn_diff_conflict_display_modified_latest,
                               subpool));
-      SVN_ERR(three_way_merge(filename1, filename3, filename2,
+      SVN_ERR(three_way_merge(base_filename1, base_filename3, base_filename2,
                               original->data, modified2->data,
                               modified1->data, combined->data, NULL,
                               svn_diff_conflict_display_modified_latest,

@@ -354,7 +354,7 @@ sbox_wc_switch(svn_test__sandbox_t *b,
   svn_revnum_t result_rev;
   svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
 
-  url = apr_pstrcat(b->pool, b->repos_url, url, (char*)NULL);
+  url = apr_pstrcat(b->pool, b->repos_url, url, SVN_VA_NULL);
   SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
   ctx->wc_ctx = b->wc_ctx;
   return svn_client_switch3(&result_rev, sbox_wc_path(b, path), url,

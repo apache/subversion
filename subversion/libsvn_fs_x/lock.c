@@ -134,7 +134,7 @@ digest_path_from_digest(const char *fs_path,
 {
   return svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                               apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
-                              digest, NULL);
+                              digest, SVN_VA_NULL);
 }
 
 
@@ -152,7 +152,7 @@ digest_path_from_path(const char **digest_path,
   *digest_path = svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                                       apr_pstrmemdup(pool, digest,
                                                      DIGEST_SUBDIR_LEN),
-                                      digest, NULL);
+                                      digest, SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 
@@ -959,7 +959,7 @@ svn_fs_x__generate_lock_token(const char **token,
      generate a URI that matches the DAV RFC.  We could change this to
      some other URI scheme someday, if we wish. */
   *token = apr_pstrcat(pool, "opaquelocktoken:",
-                       svn_uuid_generate(pool), (char *)NULL);
+                       svn_uuid_generate(pool), SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 

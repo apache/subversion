@@ -55,12 +55,14 @@ apr_file_t* get_file_descriptor(jlong jfd)
 
 void throw_IOException(const char* message, apr_status_t status)
 {
-  char buf[1024];
-  apr_strerror(status, buf, sizeof(buf) - 1);
-
   std::string msg(message);
-  msg += ": ";
-  msg += buf;
+  if (status)
+    {
+      char buf[1024];
+      apr_strerror(status, buf, sizeof(buf) - 1);
+      msg += ": ";
+      msg += buf;
+    }
   JNIUtil::raiseThrowable("java/io/IOException", msg.c_str());
 }
 

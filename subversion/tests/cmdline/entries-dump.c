@@ -105,7 +105,7 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath, pool, pool));
       lockfile_path = svn_dirent_join_many(pool, dir_path,
                                            svn_wc_get_adm_dir(pool),
-                                           "lock", NULL);
+                                           "lock", SVN_VA_NULL);
       SVN_ERR(svn_io_check_path(lockfile_path, &kind, pool));
       locked = (kind == svn_node_file);
     }

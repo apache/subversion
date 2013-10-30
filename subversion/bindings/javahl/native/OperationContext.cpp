@@ -153,10 +153,10 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
 
       /* Use the prompter (if available) to prompt for password and cert
        * caching. */
-      svn_auth_plaintext_prompt_func_t plaintext_prompt_func = NULL;
-      void *plaintext_prompt_baton = NULL;
+      svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
+      void *plaintext_prompt_baton;
       svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func;
-      void *plaintext_passphrase_prompt_baton = NULL;
+      void *plaintext_passphrase_prompt_baton;
 
       if (m_prompter != NULL)
         {
@@ -164,6 +164,13 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
           plaintext_prompt_baton = m_prompter;
           plaintext_passphrase_prompt_func = Prompter::plaintext_passphrase_prompt;
           plaintext_passphrase_prompt_baton = m_prompter;
+        }
+      else
+        {
+          plaintext_prompt_func = NULL;
+          plaintext_prompt_baton = NULL;
+          plaintext_passphrase_prompt_func = NULL;
+          plaintext_passphrase_prompt_baton = NULL;
         }
 
       /* The main disk-caching auth providers, for both
@@ -175,15 +182,6 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
 
       svn_auth_get_username_provider(&provider, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-      /* The server-cert, client-cert, and client-cert-password providers. */
-      SVN_JNI_ERR(
-          svn_auth_get_platform_specific_provider(
-              &provider, "windows", "ssl_server_trust", pool),
-          NULL);
-
-      if (provider)
-        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
       svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -494,6 +492,12 @@ public:
 #endif
     }
 
+  ~TunnelContext()
+    {
+      apr_file_close(request_out);
+      apr_file_close(response_in);
+    }
+
   apr_file_t *request_in;
   apr_file_t *request_out;
   apr_file_t *response_in;
@@ -566,6 +570,7 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
           svn_error_wrap_apr(tc->status, _("Could not open tunnel streams")));
     }
 
+  *tunnel_context = tc;
   *request = tc->request_out;
   *response = tc->response_in;
 
@@ -607,7 +612,6 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
                           jtunnel_name, juser, jhostname, jint(port)),
       SVN_ERR_BASE);
 
-  *tunnel_context = NULL;
   return SVN_NO_ERROR;
 }
 

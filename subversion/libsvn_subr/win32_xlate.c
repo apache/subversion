@@ -47,8 +47,11 @@ typedef int win32_xlate__dummy;
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "private/svn_atomic.h"
+#include "private/svn_subr_private.h"
 
 #include "win32_xlate.h"
+
+#include "svn_private_config.h"
 
 static svn_atomic_t com_initialized = 0;
 

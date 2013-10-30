@@ -434,7 +434,7 @@ add_checksum(svn_repos__config_pool_t *config_pool,
 }
 
 /* Set *CFG to the configuration stored in URL@HEAD and cache it in 
- * CONFIG_POOL.
+ * CONFIG_POOL. ### Always returns a NULL CFG.
  * 
  * RESULT_POOL determines the lifetime of the returned reference and 
  * SCRATCH_POOL is being used for temporary allocations.
@@ -463,7 +463,6 @@ find_repos_config(svn_config_t **cfg,
 
   /* Search for a repository in the full path. */
   repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
-    return SVN_NO_ERROR;
 
   /* Attempt to open a repository at repos_root_dirent. */
   SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));

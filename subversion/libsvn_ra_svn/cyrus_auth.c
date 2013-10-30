@@ -488,7 +488,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
                                               pmech - mechstring);
               const char *tail = pmech + strlen(mech);
 
-              mechstring = apr_pstrcat(pool, head, tail, (char *)NULL);
+              mechstring = apr_pstrcat(pool, head, tail, SVN_VA_NULL);
               again = TRUE;
             }
         }
@@ -807,10 +807,10 @@ svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
       /* Format the IP address and port number like this: a.b.c.d;port */
       *local_addrport = apr_pstrcat(pool, local_addr, ";",
                                     apr_itoa(pool, (int)local_sa->port),
-                                    (char *)NULL);
+                                    SVN_VA_NULL);
       *remote_addrport = apr_pstrcat(pool, remote_addr, ";",
                                      apr_itoa(pool, (int)remote_sa->port),
-                                     (char *)NULL);
+                                     SVN_VA_NULL);
     }
   return SVN_NO_ERROR;
 }
@@ -849,7 +849,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
           mechstring = apr_pstrcat(pool,
                                    mechstring,
                                    i == 0 ? "" : " ",
-                                   elt->u.word, (char *)NULL);
+                                   elt->u.word, SVN_VA_NULL);
         }
     }
 

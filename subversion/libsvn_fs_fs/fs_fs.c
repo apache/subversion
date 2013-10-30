@@ -244,6 +244,31 @@ check_format_file_buffer_numeric(const char *buf, apr_off_t offset,
                                               pool);
 }
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as a format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format(int format)
+{
+  /* Blacklist.  These formats may be either younger or older than
+     SVN_FS_FS__FORMAT_NUMBER, but we don't support them. */
+  if (format == SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT)
+    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                             _("Found format '%d', only created by "
+                               "unreleased dev builds; see "
+                               "http://subversion.apache.org"
+                               "/docs/release-notes/1.7#revprop-packing"),
+                             format);
+
+  /* We support all formats from 1-current simultaneously */
+  if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
+    return SVN_NO_ERROR;
+
+  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+     _("Expected FS format between '1' and '%d'; found format '%d'"),
+     SVN_FS_FS__FORMAT_NUMBER, format);
+}
+
 /* Read the format number and maximum number of files per directory
    from PATH and return them in *PFORMAT, *MAX_FILES_PER_DIR and
    MIN_LOG_ADDRESSING_REV respectively.
@@ -298,6 +323,9 @@ read_format(int *pformat,
   /* Check that the first line contains only digits. */
   SVN_ERR(check_format_file_buffer_numeric(buf->data, 0, path, pool));
   SVN_ERR(svn_cstring_atoi(pformat, buf->data));
+
+  /* Check that we support this format at all */
+  SVN_ERR(check_format(*pformat));
 
   /* Set the default values for anything that can be set via an option. */
   *max_files_per_dir = 0;
@@ -421,31 +449,6 @@ svn_fs_fs__write_format(svn_fs_t *fs,
 
   /* And set the perms to make it read only */
   return svn_io_set_file_read_only(path, FALSE, pool);
-}
-
-/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
-   number is not the same as a format number supported by this
-   Subversion. */
-static svn_error_t *
-check_format(int format)
-{
-  /* Blacklist.  These formats may be either younger or older than
-     SVN_FS_FS__FORMAT_NUMBER, but we don't support them. */
-  if (format == SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT)
-    return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                             _("Found format '%d', only created by "
-                               "unreleased dev builds; see "
-                               "http://subversion.apache.org"
-                               "/docs/release-notes/1.7#revprop-packing"),
-                             format);
-
-  /* We support all formats from 1-current simultaneously */
-  if (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER)
-    return SVN_NO_ERROR;
-
-  return svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-     _("Expected FS format between '1' and '%d'; found format '%d'"),
-     SVN_FS_FS__FORMAT_NUMBER, format);
 }
 
 svn_boolean_t
@@ -758,7 +761,6 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
                       path_format(fs, pool), pool));
-  SVN_ERR(check_format(format));
 
   /* Now we've got a format number no matter what. */
   ffd->format = format;
@@ -826,7 +828,6 @@ upgrade_body(void *baton, apr_pool_t *pool)
   /* Read the FS format number and max-files-per-dir setting. */
   SVN_ERR(read_format(&format, &max_files_per_dir, &min_log_addressing_rev,
                       format_path, pool));
-  SVN_ERR(check_format(format));
 
   /* If the config file does not exist, create one. */
   SVN_ERR(svn_io_check_path(svn_dirent_join(fs->path, PATH_CONFIG, pool),
@@ -1291,7 +1292,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
     uuid = svn_uuid_generate(pool);
 
   /* Make sure we have a copy in FS->POOL, and append a newline. */
-  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
+  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", SVN_VA_NULL);
   my_uuid_len = strlen(my_uuid);
 
   /* We use the permissions of the 'current' file, because the 'uuid'

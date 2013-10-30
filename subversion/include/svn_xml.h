@@ -312,7 +312,7 @@ svn_xml_make_header(svn_stringbuf_t **str,
  * If @a *str is @c NULL, set @a *str to a new stringbuf allocated
  * in @a pool, else append to the existing stringbuf there.
  *
- * Take the tag's attributes from varargs, a NULL-terminated list of
+ * Take the tag's attributes from varargs, a SVN_VA_NULL-terminated list of
  * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
  * on each val.
  *

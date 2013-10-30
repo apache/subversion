@@ -521,8 +521,21 @@ svn_root_pools__release_pool(apr_pool_t *pool,
  */
 
 /* Future attempts to modify CFG will trigger an assertion. */
-void svn_config__set_read_only(svn_config_t *cfg,
-                               apr_pool_t *scratch_pool);
+void
+svn_config__set_read_only(svn_config_t *cfg,
+                          apr_pool_t *scratch_pool);
+
+/* Return TRUE, if CFG cannot be modified. */
+svn_boolean_t
+svn_config__is_read_only(svn_config_t *cfg);
+
+/* Return TRUE, if OPTION in SECTION in CFG exists and does not require
+ * further expansion (due to either containing no placeholders or already
+ * having been expanded). */
+svn_boolean_t
+svn_config__is_expanded(svn_config_t *cfg,
+                        const char *section,
+                        const char *option);
 
 /** @} */
 

@@ -1220,13 +1220,16 @@ static svn_error_t *
 l2p_page_get_offset(l2p_page_baton_t *baton,
                     const l2p_page_t *page,
                     const apr_off_t *offsets,
-                    const apr_uint32_t *sub_items)
+                    const apr_uint32_t *sub_items,
+                    apr_pool_t *pool)
 {
   /* overflow check */
   if (page->entry_count <= baton->page_offset)
     return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
-                             _("Item index %" APR_UINT64_T_FMT
-                               " too large in revision %ld"),
+                             apr_psprintf(pool,
+                                          _("Item index %%%s too large in"
+                                            " revision %%ld"),
+                                          APR_UINT64_T_FMT),
                              baton->item_index, baton->revision);
 
   /* return the result */
@@ -1254,7 +1257,7 @@ l2p_page_access_func(void **out,
     = svn_temp_deserializer__ptr(page, (const void *const *)&page->sub_items);
 
   /* return the requested data */
-  return l2p_page_get_offset(baton, page, offsets, sub_items);
+  return l2p_page_get_offset(baton, page, offsets, sub_items, result_pool);
 }
 
 /* Data request structure used by l2p_page_table_access_func.
@@ -1484,7 +1487,7 @@ l2p_index_lookup(apr_off_t *offset,
       /* cache the page and extract the result we need */
       SVN_ERR(svn_cache__set(ffd->l2p_page_cache, &key, page, pool));
       SVN_ERR(l2p_page_get_offset(&page_baton, page, page->offsets,
-                                  page->sub_items));
+                                  page->sub_items, pool));
 
       /* prefetch pages from following and preceding revisions */
       pages = apr_array_make(pool, 16, sizeof(l2p_page_table_entry_t));

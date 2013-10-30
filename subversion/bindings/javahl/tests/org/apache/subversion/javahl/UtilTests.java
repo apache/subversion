@@ -28,8 +28,6 @@ import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-import org.junit.Assert;
-
 /**
  * Tests the JavaHL SVNUtil APIs.
  */
@@ -100,7 +98,7 @@ public class UtilTests extends SVNTests
                                  "-original\n" +
                                  "+modified\n" +
                                  " \n N-3\n N-2\n").getBytes();
-        Assert.assertArrayEquals(expected, result.toByteArray());
+        assertTrue(Arrays.equals(expected, result.toByteArray()));
     }
 
     public void testFileMerge() throws Throwable
@@ -135,6 +133,6 @@ public class UtilTests extends SVNTests
                                  "latest\n" +
                                  ">>>>>>> local\n" +
                                  "\nN-3\nN-2\nN-1\nN\n").getBytes();
-        Assert.assertArrayEquals(expected, result.toByteArray());
+        assertTrue(Arrays.equals(expected, result.toByteArray()));
     }
 }
