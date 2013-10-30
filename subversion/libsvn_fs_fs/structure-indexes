@@ -114,7 +114,7 @@ header:
   <revision count>   ... number of revision covered by this index file
   <page size>        ... maximum number of entries per page
   <page table index> ... array, for each revision containing the index in
-                         <page table> of the first of page that belongs to
+                         <page table> of the first page that belongs to
                          this revision.  This has <revision count>+1
                          entries to terminate the last revision.
   <page table>       ... array of page headers.  It has
@@ -147,12 +147,12 @@ Index file format
 
   header := u(<header>.<first revision>) \
             u(<header>.<page size>) \
-            u(s(<header>.<page table index>)) \
+            u(<header>.<revision_count>) \
             u(s(<header>.<page table>))
 
   revisions := u(  <header>.<page table index>[k+1]
                  - <header>.<page table index>[k]),
-               for k in 0 .. s(<header>.<page table index>)-1
+               for k in 0 .. <header>.<revision_count>
 
   pages := u(<header>.<page table>[k].<size>) \
            u(<header>.<page table>[k].<entry count>),
