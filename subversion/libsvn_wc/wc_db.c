@@ -2568,28 +2568,26 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__db_base_get_children_info(apr_hash_t **nodes,
-                                  svn_wc__db_t *db,
-                                  const char *dir_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+/* The implementation of svn_wc__db_base_get_children_info */
+static svn_error_t *
+base_get_children_info(apr_hash_t **nodes,
+                       svn_wc__db_wcroot_t *wcroot,
+                       const char *local_relpath,
+                       svn_boolean_t obtain_locks,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              dir_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
+  apr_int64_t last_repos_id = INVALID_REPOS_ID;
+  const char *last_repos_root_url = NULL;
 
   *nodes = apr_hash_make(result_pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_BASE_CHILDREN_INFO));
+                                    obtain_locks
+                                      ? STMT_SELECT_BASE_CHILDREN_INFO_LOCK
+                                      : STMT_SELECT_BASE_CHILDREN_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -2597,7 +2595,6 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
   while (have_row)
     {
       struct svn_wc__db_base_info_t *info;
-      svn_error_t *err;
       apr_int64_t repos_id;
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *name = svn_relpath_basename(child_relpath, result_pool);
@@ -2615,16 +2612,26 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
 
       info->update_root = svn_sqlite__column_boolean(stmt, 7);
 
-      info->lock = lock_from_columns(stmt, 8, 9, 10, 11, result_pool);
+      if (obtain_locks)
+        info->lock = lock_from_columns(stmt, 8, 9, 10, 11, result_pool);
 
-      err = svn_wc__db_fetch_repos_info(&info->repos_root_url, NULL,
-                                        wcroot->sdb, repos_id, result_pool);
+      if (repos_id != last_repos_id)
+        {
+          svn_error_t *err;
 
-      if (err)
-        return svn_error_trace(
-                 svn_error_compose_create(err,
-                                          svn_sqlite__reset(stmt)));
+          err = svn_wc__db_fetch_repos_info(&last_repos_root_url, NULL,
+                                            wcroot->sdb, repos_id,
+                                            result_pool);
 
+          if (err)
+            return svn_error_trace(
+                     svn_error_compose_create(err,
+                                              svn_sqlite__reset(stmt)));
+
+          last_repos_id = repos_id;
+        }
+
+      info->repos_root_url = last_repos_root_url;
 
       svn_hash_sets(*nodes, name, info);
 
@@ -2634,6 +2641,30 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_base_get_children_info(apr_hash_t **nodes,
+                                  svn_wc__db_t *db,
+                                  const char *dir_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              dir_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_trace(base_get_children_info(nodes,
+                                                wcroot,
+                                                local_relpath,
+                                                TRUE /* obtain_locks */,
+                                                result_pool,
+                                                scratch_pool));
 }
 
 
@@ -11178,8 +11209,8 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                    apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  const apr_array_header_t *children;
-  int i;
+  apr_hash_t *children;
+  apr_hash_index_t *hi;
   svn_wc__db_status_t status;
   svn_node_kind_t db_kind;
   svn_revnum_t revision;
@@ -11200,15 +11231,6 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                                             NULL, NULL, NULL, NULL, &update_root,
                                             wcroot, local_relpath,
                                             scratch_pool, scratch_pool));
-
-  /* Skip file externals */
-  if (update_root
-      && db_kind == svn_node_file
-      && !is_root)
-    return SVN_NO_ERROR;
-
-  if (skip_when_dir && db_kind == svn_node_dir)
-    return SVN_NO_ERROR;
 
   /* If the node is still marked 'not-present', then the server did not
      re-add it.  So it's really gone in this revision, thus we remove the node.
@@ -11264,23 +11286,51 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(gather_repo_children(&children, wcroot, local_relpath, 0,
-                               scratch_pool, iterpool));
-  for (i = 0; i < children->nelts; i++)
+  SVN_ERR(base_get_children_info(&children, wcroot, local_relpath, 0,
+                                 scratch_pool, iterpool));
+  for (hi = apr_hash_first(scratch_pool, children); hi; hi = apr_hash_next(hi))
     {
-      const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
+      const char *child_basename = svn__apr_hash_index_key(hi);
+      const struct svn_wc__db_base_info_t *child_info;
       const char *child_local_relpath;
       const char *child_repos_relpath = NULL;
 
       svn_pool_clear(iterpool);
 
+      child_info = svn__apr_hash_index_val(hi);
+
+      if (child_info->update_root && child_info->kind == svn_node_file)
+        continue; /* Skip file externals */
+
+      if (depth < svn_depth_immediates && child_info->kind == svn_node_dir)
+          continue; /* Skip directories */
+
+      child_local_relpath = svn_relpath_join(local_relpath, child_basename,
+                                             iterpool);
+
+      /* If the node is still marked 'not-present', then the server did not
+          re-add it.  So it's really gone in this revision, thus we remove the
+          node.
+
+          If the node is still marked 'server-excluded' and yet is not the same
+          revision as new_rev, then the server did not re-add it, nor
+          re-server-exclude it, so we can remove the node. */
+      if (child_info->status == svn_wc__db_status_not_present
+          || (child_info->status == svn_wc__db_status_server_excluded &&
+              child_info->revnum != new_rev))
+        {
+          SVN_ERR(db_base_remove(wcroot,
+                                 child_local_relpath,
+                                 db, FALSE, FALSE, FALSE,
+                                 SVN_INVALID_REVNUM,
+                                 NULL, NULL, scratch_pool));
+          continue;
+        }
+
       /* Derive the new URL for the current (child) entry */
       if (new_repos_relpath)
         child_repos_relpath = svn_relpath_join(new_repos_relpath,
                                                child_basename, iterpool);
-
-      child_local_relpath = svn_relpath_join(local_relpath, child_basename,
-                                             iterpool);
 
       SVN_ERR(bump_node_revision(wcroot, child_local_relpath, new_repos_id,
                                  child_repos_relpath, new_rev,
