@@ -1645,13 +1645,13 @@ static VALUE
 invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
-  VALUE sub_pool;
+  VALUE subpool;
   VALUE argv[1];
 
   argv[0] = pool;
-  svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
-  cbb->pool = sub_pool;
-  return rb_ensure(callback, baton, callback_ensure, sub_pool);
+  svn_swig_rb_get_pool(1, argv, Qnil, &subpool, NULL);
+  cbb->pool = subpool;
+  return rb_ensure(callback, baton, callback_ensure, subpool);
 }
 
 static VALUE

@@ -363,7 +363,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
         {
           access_file = svn_dirent_join_many(scratch_pool, repos_path, "conf",
                                              conf->repo_relative_access_file,
-                                             NULL);
+                                             SVN_VA_NULL);
         }
     }
   else
@@ -404,7 +404,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
     }
 
   cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
-                          access_file, groups_file, (char *)NULL);
+                          access_file, groups_file, SVN_VA_NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
   if (access_conf == NULL)
@@ -572,7 +572,7 @@ req_check_access(request_rec *r,
     repos_path = svn_fspath__canonicalize(repos_path, r->pool);
 
   *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path,
-                                (char *)NULL);
+                                SVN_VA_NULL);
 
   if (r->method_number == M_MOVE || r->method_number == M_COPY)
     {
@@ -620,7 +620,7 @@ req_check_access(request_rec *r,
         dest_repos_path = svn_fspath__canonicalize(dest_repos_path, r->pool);
 
       *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
-                                         dest_repos_path, (char *)NULL);
+                                         dest_repos_path, SVN_VA_NULL);
     }
 
   /* Retrieve/cache authorization file */

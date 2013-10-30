@@ -70,7 +70,13 @@ extern "C" {
  */
 #ifndef SVN_EXPERIMENTAL
 # if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
-#  if !defined(__clang__) && defined(__GNUC__) \
+#  if defined(__has_attribute)
+#    if __has_attribute(__warning__)
+#      define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
+#    else
+#      define SVN_EXPERIMENTAL
+#    endif
+#  elif !defined(__llvm__) && defined(__GNUC__) \
       && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
 #   define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
 #  elif defined(_MSC_VER) && _MSC_VER >= 1300
@@ -122,6 +128,15 @@ typedef int svn_boolean_t;
 /** uhh... false */
 #define FALSE 0
 #endif /* FALSE */
+
+
+
+/** Declaration of the null pointer constant type. */
+struct svn_null_pointer_constant_stdarg_sentinel_t;
+
+/** Null pointer constant used as a sentinel in variable argument lists. */
+#define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
+/* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
 
 
 

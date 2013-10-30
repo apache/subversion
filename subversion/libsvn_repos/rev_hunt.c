@@ -661,7 +661,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   /* Ensure that FS_PATH is absolute, because our path-math below will
      depend on that being the case.  */
   if (*fs_path != '/')
-    fs_path = apr_pstrcat(pool, "/", fs_path, (char *)NULL);
+    fs_path = apr_pstrcat(pool, "/", fs_path, SVN_VA_NULL);
 
   /* Another sanity check. */
   if (authz_read_func)
@@ -878,7 +878,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
   /* Ensure that PATH is absolute, because our path-math will depend
      on that being the case.  */
   if (*path != '/')
-    path = apr_pstrcat(pool, "/", path, (char *)NULL);
+    path = apr_pstrcat(pool, "/", path, SVN_VA_NULL);
 
   /* Auth check. */
   if (authz_read_func)
@@ -942,7 +942,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 
           /* authz_read_func requires path to have a leading slash. */
           const char *abs_path = apr_pstrcat(subpool, "/", segment->path,
-                                             (char *)NULL);
+                                             SVN_VA_NULL);
 
           SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs,
                                        segment->range_end, subpool));

@@ -42,7 +42,6 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
 
-
 
 svn_error_t *
 svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
@@ -69,8 +68,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 
   /* Fetch the changes associated with REVISION. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed3(&changes, rev_root,
-                                svn_move_behavior_explicit_moves, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, rev_root, pool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(changes) == 0)
@@ -155,6 +153,147 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE, if CHANGE deleted the node previously found at its target
+   path. */
+static svn_boolean_t
+is_deletion(svn_log_changed_path2_t *change)
+{
+  /* We need a 'N' action here ... */
+  return change->action == 'E'
+      || change->action == 'R'
+      || change->action == 'D';
+}
+
+/* Change all moves in CHANGES to ADD.  Use POOL for temporary allocations.
+ */
+static void
+turn_moves_into_copies(apr_hash_t *changes,
+                       apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_ssize_t klen;
+      svn_log_changed_path2_t *change;
+      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+
+      switch (change->action)
+        {
+          case 'V':
+            change->action = 'A';
+            break;
+
+          case 'E':
+            change->action = 'R';
+            break;
+
+          default:
+            break;
+        }
+    }
+}
+
+/* Replace ADDs with MOVes, if they are unique, have a matching deletion
+ * and if the copy-from revision is REVISION-1.  Use POOL for temporary
+ * allocations.
+ */
+static void
+turn_unique_copies_into_moves(apr_hash_t *changes,
+                              svn_revnum_t revision,
+                              apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *unique_copy_sources;
+  const char **sources;
+  int i;
+
+  /* find all copy-from paths (ADD and MOV alike) */
+
+  svn_boolean_t any_deletion = FALSE;
+  apr_array_header_t *copy_sources
+    = apr_array_make(pool, apr_hash_count(changes), sizeof(const char*));
+
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      svn_log_changed_path2_t *change;
+      apr_hash_this(hi, NULL, NULL, (void**)&change);
+
+      if (change->copyfrom_path && change->copyfrom_rev == revision-1)
+        APR_ARRAY_PUSH(copy_sources, const char *)
+          = change->copyfrom_path;
+
+      any_deletion |= is_deletion(change);
+    }
+
+  /* no suitable copy-from or no deletion -> no moves */
+
+  if (!copy_sources->nelts || !any_deletion)
+    return;
+
+  /* identify copy-from paths that have been mentioned exactly once */
+
+  sources = (const char **)copy_sources->elts;
+  qsort(sources, copy_sources->nelts, copy_sources->elt_size,
+        (int (*)(const void *, const void *))svn_sort_compare_paths);
+
+  unique_copy_sources = apr_hash_make(pool);
+  for (i = 0; i < copy_sources->nelts; ++i)
+    if (   (i == 0 || strcmp(sources[i-1], sources[i]))
+        && (i == copy_sources->nelts-1 || strcmp(sources[i+1], sources[i])))
+      {
+        apr_hash_set(unique_copy_sources, sources[i],
+                     APR_HASH_KEY_STRING, sources[i]);
+      }
+
+  /* no unique copy-from paths -> no moves */
+
+  if (!apr_hash_count(unique_copy_sources))
+    return;
+
+  /* Replace all additions, replacements with a unique copy-from path,
+     the correct copy-from rev and a matching deletion in this revision,
+     with moves and move-replacements, respectively. */
+
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_ssize_t klen;
+      svn_log_changed_path2_t *change, *copy_from_change;
+
+      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+      if (   change->copyfrom_rev != revision-1
+          || !change->copyfrom_path
+          || !apr_hash_get(unique_copy_sources, change->copyfrom_path,
+                           APR_HASH_KEY_STRING))
+        continue;
+
+      copy_from_change = apr_hash_get(changes, change->copyfrom_path,
+                                      APR_HASH_KEY_STRING);
+      if (!copy_from_change || !is_deletion(copy_from_change))
+        continue;
+
+      /* There is a deletion of the ADD's copy-from path in *REVISION*.
+         This can either be the same as in REVISION-1 (o.k.) or must have
+         been replaced by some other node.  However, that would imply that
+         it still got deleted as part of the replacement, i.e. both cases
+         are o.k. */
+
+      switch (change->action)
+        {
+          case 'A':
+            change->action = 'V';
+            break;
+
+          case 'R':
+            change->action = 'E';
+            break;
+
+          default:
+            break;
+        }
+    }
+}
 
 /* Store as keys in CHANGED the paths of all node in ROOT that show a
  * significant change.  "Significant" means that the text or
@@ -201,7 +340,7 @@ detect_changed(apr_hash_t **changed,
 
   *changed = svn_hash__make(pool);
   if (changes == NULL)
-    SVN_ERR(svn_fs_paths_changed3(&changes, root, move_behavior, pool));
+    SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
 
   if (apr_hash_count(changes) == 0)
     /* No paths changed in this revision?  Uh, sure, I guess the
@@ -367,6 +506,23 @@ detect_changed(apr_hash_t **changed,
     /* Every changed-path was unreadable. */
     return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE,
                             NULL, NULL);
+
+  /* at least some paths are readable.  Post-process them. */
+  switch(move_behavior)
+    {
+      case svn_move_behavior_no_moves:
+        turn_moves_into_copies(*changed, pool);
+        break;
+
+      case svn_move_behavior_auto_moves:
+        turn_unique_copies_into_moves(*changed,
+                                      svn_fs_revision_root_revision(root),
+                                      pool);
+        break;
+
+      default:
+        break;
+    }
 
   if (found_unreadable)
     /* At least one changed-path was unreadable. */
@@ -577,9 +733,7 @@ next_history_rev(const apr_array_header_t *histories)
    catalogs describing how mergeinfo values on paths (which are the
    keys of those catalogs) were changed in REV.  If *PREFETCHED_CAHNGES
    already contains the changed paths for REV, use that.  Otherwise,
-   request that data and return it in *PREFETCHED_CHANGES.
-   MOVE_BEHAVIOR is a simple pass-through parameter that tells the FS
-   layer which changes to report as moves instead of additions. */
+   request that data and return it in *PREFETCHED_CHANGES. */
 /* ### TODO: This would make a *great*, useful public function,
    ### svn_repos_fs_mergeinfo_changed()!  -- cmpilato  */
 static svn_error_t *
@@ -588,7 +742,6 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                      apr_hash_t **prefetched_changes,
                      svn_fs_t *fs,
                      svn_revnum_t rev,
-                     svn_move_behavior_t move_behavior,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 
@@ -609,8 +762,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      narrow down our search. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, scratch_pool));
   if (*prefetched_changes == NULL)
-    SVN_ERR(svn_fs_paths_changed3(prefetched_changes, root, move_behavior,
-                                  scratch_pool));
+    SVN_ERR(svn_fs_paths_changed2(prefetched_changes, root, scratch_pool));
 
   /* No changed paths?  We're done. */
   if (apr_hash_count(*prefetched_changes) == 0)
@@ -802,9 +954,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
    *ADDED_MERGEINFO and deleted mergeinfo in *DELETED_MERGEINFO.
    If *PREFETCHED_CAHNGES already contains the changed paths for
    REV, use that.  Otherwise, request that data and return it in
-   *PREFETCHED_CHANGES.  MOVE_BEHAVIOR tells the FS layer which
-   changes to report as moves instead of additions.
-   Use POOL for all allocations. */
+   *PREFETCHED_CHANGES.  Use POOL for all allocations. */
 static svn_error_t *
 get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                svn_mergeinfo_t *deleted_mergeinfo,
@@ -812,7 +962,6 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                svn_fs_t *fs,
                                const apr_array_header_t *paths,
                                svn_revnum_t rev,
-                               svn_move_behavior_t move_behavior,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
@@ -842,7 +991,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   err = fs_mergeinfo_changed(&deleted_mergeinfo_catalog,
                              &added_mergeinfo_catalog,
                              prefetched_changes,
-                             fs, rev, move_behavior,
+                             fs, rev,
                              scratch_pool, scratch_pool);
   if (err)
     {
@@ -2050,7 +2199,7 @@ do_logs(svn_fs_t *fs,
                                                      &deleted_mergeinfo,
                                                      &changes,
                                                      fs, cur_paths,
-                                                     current, move_behavior,
+                                                     current,
                                                      iterpool, iterpool));
               has_children = (apr_hash_count(added_mergeinfo) > 0
                               || apr_hash_count(deleted_mergeinfo) > 0);

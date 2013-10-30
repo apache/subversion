@@ -213,16 +213,16 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                             footer, svn_dirent_local_style(config_path, pool));
 #endif
 #ifdef SVN_HAVE_GNOME_KEYRING
-      footer = apr_pstrcat(pool, footer, "  Gnome Keyring\n", NULL);
+      footer = apr_pstrcat(pool, footer, "  Gnome Keyring\n", SVN_VA_NULL);
 #endif
 #ifdef SVN_HAVE_GPG_AGENT
-      footer = apr_pstrcat(pool, footer, "  GPG-Agent\n", NULL);
+      footer = apr_pstrcat(pool, footer, "  GPG-Agent\n", SVN_VA_NULL);
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
-      footer = apr_pstrcat(pool, footer, "  Mac OS X Keychain\n", NULL);
+      footer = apr_pstrcat(pool, footer, "  Mac OS X Keychain\n", SVN_VA_NULL);
 #endif
 #ifdef SVN_HAVE_KWALLET
-      footer = apr_pstrcat(pool, footer, "  KWallet (KDE)\n", NULL);
+      footer = apr_pstrcat(pool, footer, "  KWallet (KDE)\n", SVN_VA_NULL);
 #endif
     }
 

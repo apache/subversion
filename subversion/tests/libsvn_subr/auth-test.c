@@ -63,13 +63,14 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
   number_of_providers += 2;
 #endif
 #if defined(WIN32) && !defined(__MINGW32__)
-  number_of_providers += 2;
+  number_of_providers += 4;
 #endif
   if (providers->nelts != number_of_providers)
     return svn_error_createf
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_auth_get_platform_specific_client_providers should return " \
-       "an array of %d providers", number_of_providers);
+       "an array of %d providers, but returned %d providers",
+       number_of_providers, providers->nelts);
 
   /* Test Keychain auth providers */
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES

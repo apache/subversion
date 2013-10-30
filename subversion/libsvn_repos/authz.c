@@ -36,6 +36,7 @@
 #include "svn_config.h"
 #include "svn_ctype.h"
 #include "private/svn_fspath.h"
+#include "private/svn_repos_private.h"
 #include "repos.h"
 
 
@@ -352,7 +353,7 @@ authz_get_path_access(svn_config_t *cfg, const char *repos_name,
   baton.user = user;
 
   /* Try to locate a repository-specific block first. */
-  qualified_path = apr_pstrcat(pool, repos_name, ":", path, (char *)NULL);
+  qualified_path = apr_pstrcat(pool, repos_name, ":", path, SVN_VA_NULL);
   svn_config_enumerate2(cfg, qualified_path,
                         authz_parse_line, &baton, pool);
 
@@ -395,7 +396,7 @@ authz_get_tree_access(svn_config_t *cfg, const char *repos_name,
   baton.required_access = required_access;
   baton.repos_path = path;
   baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
-                                           ":", path, (char *)NULL);
+                                           ":", path, SVN_VA_NULL);
   /* Default to access granted if no rules say otherwise. */
   baton.access = TRUE;
 
@@ -454,7 +455,7 @@ authz_get_any_access(svn_config_t *cfg, const char *repos_name,
   baton.access = FALSE; /* Deny access by default. */
   baton.repos_path = "/";
   baton.qualified_repos_path = apr_pstrcat(pool, repos_name,
-                                           ":/", (char *)NULL);
+                                           ":/", SVN_VA_NULL);
 
   /* We could have used svn_config_enumerate2 for "repos_name:/".
    * However, this requires access for root explicitly (which the user

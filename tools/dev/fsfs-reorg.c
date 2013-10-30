@@ -1391,8 +1391,8 @@ get_combined_window(svn_stringbuf_t **content,
   apr_array_header_t *windows;
   svn_stringbuf_t *base_content, *result;
   const char *source;
-  apr_pool_t *sub_pool;
-  apr_pool_t *iter_pool;
+  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   /* special case: no un-deltification necessary */
   if (representation->is_plain)
@@ -1404,16 +1404,16 @@ get_combined_window(svn_stringbuf_t **content,
     return SVN_NO_ERROR;
 
   /* read the delta windows for this representation */
-  sub_pool = svn_pool_create(pool);
-  iter_pool = svn_pool_create(pool);
-  SVN_ERR(read_windows(&windows, fs, representation, sub_pool));
+  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
+  SVN_ERR(read_windows(&windows, fs, representation, subpool));
 
   /* fetch the / create a base content */
   if (representation->delta_base && representation->delta_base->revision)
     SVN_ERR(get_combined_window(&base_content, fs,
-                                representation->delta_base, sub_pool));
+                                representation->delta_base, subpool));
   else
-    base_content = svn_stringbuf_create_empty(sub_pool);
+    base_content = svn_stringbuf_create_empty(subpool);
 
   /* apply deltas */
   result = svn_stringbuf_create_empty(pool);
@@ -1424,7 +1424,7 @@ get_combined_window(svn_stringbuf_t **content,
       svn_txdelta_window_t *window
         = APR_ARRAY_IDX(windows, i, svn_txdelta_window_t *);
       svn_stringbuf_t *buf
-        = svn_stringbuf_create_ensure(window->tview_len, iter_pool);
+        = svn_stringbuf_create_ensure(window->tview_len, iterpool);
 
       buf->len = window->tview_len;
       svn_txdelta_apply_instructions(window, window->src_ops ? source : NULL,
@@ -1433,11 +1433,11 @@ get_combined_window(svn_stringbuf_t **content,
       svn_stringbuf_appendbytes(result, buf->data, buf->len);
       source += window->sview_len;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
     }
 
-  svn_pool_destroy(iter_pool);
-  svn_pool_destroy(sub_pool);
+  svn_pool_destroy(iterpool);
+  svn_pool_destroy(subpool);
 
   /* cache result and return it */
   set_cached_window(fs, representation, result);

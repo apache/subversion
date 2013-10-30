@@ -117,7 +117,7 @@ svn_wc__adm_child(const char *path,
                               path,
                               adm_dir_name,
                               child,
-                              NULL);
+                              SVN_VA_NULL);
 }
 
 
