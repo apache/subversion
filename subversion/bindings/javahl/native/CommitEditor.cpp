@@ -303,7 +303,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(svn_editor_alter_directory(
                   m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jchildren ? build_children(children, subPool) : NULL),
-                  properties.hash(subPool, true)),);
+                  properties.hash(subPool, false)),);
 }
 
 void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
@@ -331,7 +331,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
                   m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jcontents ? &checksum : NULL),
                   (jcontents ? contents.getStream(subPool) : NULL),
-                  properties.hash(subPool, true)),);
+                  properties.hash(subPool, false)),);
 }
 
 void CommitEditor::alterSymlink(jstring jrelpath, jlong jrevision,

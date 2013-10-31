@@ -644,6 +644,53 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(eolstyle, propval));
     }
 
+    public void testEditorDeleteFileProps() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        client.propertySetRemote(
+             thisTest.getUrl() + "/iota", 1L,
+             "name", "value".getBytes(UTF8),
+             new CommitMessageCallback() {
+                 public String getLogMessage(Set<CommitItem> elements) {
+                     return "Set property 'name' to 'value'";
+                 }
+             }, false, null, null);
+
+        ISVNRemote session = getSession();
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        assertEquals(2L, session.getFile(Revision.SVN_INVALID_REVNUM, "iota",
+                                         null, props));
+
+        int propcount = 0;
+        for (Map.Entry<String, byte[]> e : props.entrySet()) {
+            final String key = e.getKey();
+            if (key.startsWith("svn:entry:") || key.startsWith("svn:wc:"))
+                continue;
+            ++propcount;
+        }
+        assertEquals(1, propcount);
+
+        CommitContext cc = new CommitContext(session, "Remove all props");
+        try {
+            props.clear();
+            cc.editor.alterFile("iota", 2L, null, null, props);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(3L, session.getFile(Revision.SVN_INVALID_REVNUM, "iota",
+                                         null, props));
+        propcount = 0;
+        for (Map.Entry<String, byte[]> e : props.entrySet()) {
+            final String key = e.getKey();
+            if (key.startsWith("svn:entry:") || key.startsWith("svn:wc:"))
+                continue;
+            ++propcount;
+        }
+        assertEquals(0, propcount);
+    }
+
     public void testEditorSetFileContents() throws Exception
     {
         Charset UTF8 = Charset.forName("UTF-8");
