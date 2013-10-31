@@ -210,6 +210,20 @@ Candidate changes:
      +1: breser (without r1537415)
      +1: rhuijben 
 
+ * r1525902
+   Fix issues #4428, #4429: "checkout via http with external pointing at
+   redirected URL".
+   Justification:
+     Such a stupid mistake, to carefully follow the URL redirection just to
+     use the unredirected URL subsequently. Breaks externals as soon as the
+     repository URL gets redirected.
+   Notes:
+     I'd be glad to add a regression test, but I'm not entirely clear on how
+     to make our test suite model an external to a redirected URL. A testing
+     recipe is in issue #4428.
+   Votes:
+     +1: neels
+
 Veto-blocked changes:
 =====================
 
