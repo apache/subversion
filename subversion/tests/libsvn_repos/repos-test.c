@@ -3413,7 +3413,9 @@ test_config_pool(const svn_test_opts_t *opts,
 
   /* create an in-repo config */
   SVN_ERR(svn_dirent_get_absolute(&repo_root_url, repo_name, pool));
-  repo_root_url = apr_pstrcat(pool, "file://", repo_root_url, SVN_VA_NULL);
+  repo_root_url = apr_pstrcat(pool, "file://",
+                              repo_root_url[0] == '/' ? "" : "/",
+                              repo_root_url, SVN_VA_NULL);
 
   SVN_ERR(svn_test__create_repos(&repos, repo_name, opts, pool));
   SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0, 0, pool));
