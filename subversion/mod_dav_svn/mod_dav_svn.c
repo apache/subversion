@@ -1140,7 +1140,7 @@ static int dav_svn__translate_name(request_rec *r)
    * repository is 'trunk/c:hi' this results in a non canonical dirent on
    * Windows. Instead we just cat them together. */
   r->filename = apr_pstrcat(r->pool,
-                            "svn:", fs_path, repos_path, SVN_VA_NULL);
+                            "svn:", fs_path, repos_path, NULL);
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
