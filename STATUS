@@ -185,6 +185,7 @@ Candidate changes:
      Bug introduced by me. Unreasonable behaviour. User complained.
    Votes:
      +1: stsp
+     +0.5: rhuijben (Change looks sane, but I'm unable to test this)
 
  * r1537193, r1537221
    Add test to verify if the used ZLib is affected by some block size bugs that
@@ -222,7 +223,7 @@ Candidate changes:
      to make our test suite model an external to a redirected URL. A testing
      recipe is in issue #4428.
    Votes:
-     +1: neels
+     +1: neels, rhuijben
 
 Veto-blocked changes:
 =====================
