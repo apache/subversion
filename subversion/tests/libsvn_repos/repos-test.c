@@ -3324,7 +3324,9 @@ test_config_pool(const svn_test_opts_t *opts,
   apr_pool_t *config_pool_pool;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  const char *wrk_dir = opts->srcdir; /* svn_test_data_path("", pool);*/
+  const char *wrk_dir = svn_test_data_path("config_pool", pool);
+
+  SVN_ERR(svn_io_make_dir_recursively(wrk_dir, pool));
 
   /* read all config info through a single config pool and we want to be
      able to control its lifetime.  The latter requires a separate pool. */
