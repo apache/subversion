@@ -29,6 +29,7 @@
 #include "svn_checksum.h"
 #include "svn_config.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_repos.h"
@@ -176,10 +177,14 @@ config_pool_cleanup(void *baton)
 {
   svn_repos__config_pool_t *config_pool = baton;
 
+  /* from now on, anyone is allowed to destroy the config_pool */
   svn_atomic_set(&config_pool->ready_for_cleanup, TRUE);
-  if (svn_atomic_read(&config_pool->used_config_count) == 0)
+
+  /* are there no more external references and can we grab the cleanup flag? */
+  if (   svn_atomic_read(&config_pool->used_config_count) == 0
+      && svn_atomic_cas(&config_pool->ready_for_cleanup, FALSE, TRUE) == TRUE)
     {
-      /* Attempts to get a configuration from a pool that whose cleanup has
+      /* Attempts to get a configuration from a pool whose cleanup has
        * already started is illegal.
        * So, used_config_count must not increase again.
        */
@@ -198,9 +203,9 @@ config_ref_cleanup(void *baton)
   svn_repos__config_pool_t *config_pool = config->config_pool;
 
   /* Maintain reference counters and handle object cleanup */
-  if (   svn_atomic_dec(&config->ref_count) == 1
-      && svn_atomic_dec(&config_pool->used_config_count) == 1
-      && svn_atomic_read(&config_pool->ready_for_cleanup) == TRUE)
+  if (   svn_atomic_dec(&config->ref_count) == 0
+      && svn_atomic_dec(&config_pool->used_config_count) == 0
+      && svn_atomic_cas(&config_pool->ready_for_cleanup, FALSE, TRUE) == TRUE)
     {
       /* There cannot be any future references to a config in this pool.
        * So, we are the last one and need to finally clean it up.
@@ -396,7 +401,7 @@ add_checksum(svn_repos__config_pool_t *config_pool,
   apr_size_t path_len = strlen(url);
   apr_pool_t *pool = config_pool->in_repo_hash_pool;
   in_repo_config_t *config = apr_hash_get(config_pool->in_repo_configs,
-                                            url, path_len);
+                                          url, path_len);
   if (config)
     {
       /* update the existing entry */
@@ -535,8 +540,7 @@ config_by_url(svn_config_t **cfg,
   apr_int64_t current;
 
   /* hash lookup url -> sha1 -> config */
-  in_repo_config_t *config = apr_hash_get(config_pool->in_repo_configs,
-                                          url, APR_HASH_KEY_STRING);
+  in_repo_config_t *config = svn_hash_gets(config_pool->in_repo_configs, url);
   *cfg = 0;
   if (config)
     config_ref = apr_hash_get(config_pool->configs,
@@ -574,7 +578,7 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
 
   /* construct the config pool in our private ROOT_POOL to survive POOL
    * cleanup and to prevent threading issues with the allocator */
-  svn_repos__config_pool_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_repos__config_pool_t *result = apr_pcalloc(root_pool, sizeof(*result));
   SVN_ERR(svn_mutex__init(&result->mutex, TRUE, root_pool));
 
   result->root_pool = root_pool;
@@ -608,7 +612,7 @@ svn_repos__config_pool_get(svn_config_t **cfg,
       SVN_MUTEX__WITH_LOCK(config_pool->mutex,
                            config_by_url(cfg, config_pool, path, pool,
                                          scratch_pool));
-      if (cfg)
+      if (*cfg)
         return SVN_NO_ERROR;
 
       /* Read and cache the configuration.  This may fail. */
