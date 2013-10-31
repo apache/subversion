@@ -384,7 +384,7 @@ Java_org_apache_subversion_javahl_SVNClient_remove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -498,7 +498,7 @@ Java_org_apache_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -539,7 +539,7 @@ Java_org_apache_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -577,7 +577,7 @@ Java_org_apache_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -610,7 +610,7 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -761,7 +761,7 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1012,7 +1012,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 

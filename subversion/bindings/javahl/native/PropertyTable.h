@@ -41,10 +41,13 @@ class PropertyTable
  private:
   std::map<std::string, std::string> m_revprops;
   jobject m_revpropTable;
+  bool m_empty_if_null;
  public:
-  PropertyTable(jobject jrevpropTable, bool bytearray_values=false);
+  PropertyTable(jobject jrevpropTable,
+                bool bytearray_values,
+                bool empty_if_null);
   ~PropertyTable();
-  apr_hash_t *hash(const SVN::Pool &pool, bool nullIfEmpty = true);
+  apr_hash_t *hash(const SVN::Pool &pool);
 };
 
 #endif // REVPROPTABLE_H
