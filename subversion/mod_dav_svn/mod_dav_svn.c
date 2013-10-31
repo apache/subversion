@@ -1137,10 +1137,18 @@ static int dav_svn__translate_name(request_rec *r)
     repos_path++;
 
   /* Combine 'svn:', fs_path and repos_path to produce the bogus path we're
-   * placing in r->filename. */
-  r->filename = apr_pstrcat(r->pool, "svn:",
-                            svn_dirent_join(fs_path, repos_path, r->pool),
-                            NULL);
+   * placing in r->filename.
+   *
+   * fs_path is a dirent, but repos_path is a relpath. In general it is safe
+   * to join these, but when a path in a repository is 'trunk/c:hi' this
+   * results in a non canonical dirent on Windows, so we can't use standard
+   * helpers such as svn_dirent_join.
+   *
+   * As nobody should care about this path, just construct something simple
+   * that makes sense when a user reads it in the log file.
+   */
+  r->filename = apr_pstrcat(r->pool, 
+                            "svn:|", fs_path, "|", repos_path, SVN_VA_NULL);
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
