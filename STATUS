@@ -185,6 +185,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1537360
+   mod_dav_svn: Set r->filename to a bogus value rather than NULL.
+   Justification:
+     Some httpd modules (mod_wsgi) assume that r->filename is not NULL and
+     don't bother to check before dereferincing.  Regression from earlier
+     1.7.x releases and user found server crash.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
