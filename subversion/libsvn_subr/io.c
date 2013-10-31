@@ -3782,14 +3782,20 @@ svn_io_write_atomic(const char *final_path,
   if (!err && copy_perms_path)
     err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
 
+  if (!err)
+    err = svn_io_file_rename(tmp_path, final_path, scratch_pool);
+
   if (err)
     {
-      return svn_error_compose_create(err,
-                                      svn_io_remove_file2(tmp_path, FALSE,
-                                                          scratch_pool));
-    }
+      err = svn_error_compose_create(err,
+                                     svn_io_remove_file2(tmp_path, TRUE,
+                                                         scratch_pool));
 
-  SVN_ERR(svn_io_file_rename(tmp_path, final_path, scratch_pool));
+      return svn_error_createf(err->apr_err, err,
+                               _("Can't write '%s' atomicly"),
+                               svn_dirent_local_style(final_path,
+                                                      scratch_pool));
+    }
 
 #ifdef __linux__
   {
