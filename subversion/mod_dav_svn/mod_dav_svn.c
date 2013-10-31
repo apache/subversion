@@ -1095,30 +1095,62 @@ static int dav_svn__handler(request_rec *r)
 
 #define NO_MAP_TO_STORAGE_NOTE "dav_svn-no-map-to-storage"
 
-/* Prevent filename on the request from being set since we aren't serving a
- * file off the disk.  This means that <Directory> blocks will not match and
- * that * %f in logging formats will show as "-". */
+/* Fill the filename on the request with a bogus path since we aren't serving
+ * a file off the disk.  This means that <Directory> blocks will not match and
+ * that %f in logging formats will show as "svn:/path/to/repo/path/in/repo". */
 static int dav_svn__translate_name(request_rec *r)
 {
+  const char *fs_path, *repos_basename, *repos_path;
+  const char *ignore_cleaned_uri, *ignore_relative_path;
+  int ignore_had_slash;
+  dav_error *err;
   dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
   /* module is not configured, bail out early */
   if (!conf->fs_path && !conf->fs_parent_path)
     return DECLINED;
 
-  /* Be paranoid and set it to NULL just in case some other module set it
-   * before we got called. */ 
-  r->filename = NULL;
+  /* Retrieve path to repo and within repo for the request */
+  if ((err = dav_svn_split_uri(r, r->uri, conf->root_dir, &ignore_cleaned_uri,
+                               &ignore_had_slash, &repos_basename,
+                               &ignore_relative_path, &repos_path)))
+    {
+      dav_svn__log_err(r, err, APLOG_ERR);
+      return HTTP_INTERNAL_SERVER_ERROR;
+    }
+  if (conf->fs_parent_path)
+    {
+      fs_path = svn_dirent_join(conf->fs_parent_path, repos_basename,
+                                r->pool);
+    }
+  else
+    {
+      fs_path = conf->fs_path;
+    }
 
-  /* Leave a note to ourselves so that we know not to decline in the 
+  /* Before we can combine repos_path with fs_path need to make sure it isn't
+   * NULL and to skip the leading '/' to "convert" it to a relpath appropriate
+   * for joining. */
+  if (!repos_path)
+    repos_path = "";
+  else if ('/' == *repos_path)
+    repos_path++;
+
+  /* Combine 'svn:', fs_path and repos_path to produce the bogus path we're
+   * placing in r->filename. */
+  r->filename = apr_pstrcat(r->pool, "svn:",
+                            svn_dirent_join(fs_path, repos_path, r->pool),
+                            NULL);
+
+  /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
-  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1); 
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1);
   return OK;
 }
 
 /* Prevent core_map_to_storage from running if we prevented the r->filename
  * from being set since core_map_to_storage doesn't like r->filename being
- * NULL. */
+ * bogus. */
 static int dav_svn__map_to_storage(request_rec *r)
 {
   /* Check a note we left in translate_name since map_to_storage doesn't
