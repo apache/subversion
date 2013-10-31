@@ -34,7 +34,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-issue4153
    Votes:
-     +1: breser
+     +1: breser, julianfoad
      +1 (without r1535554, r1535590, 1535592 commits on branch): stsp
 
  * r1426762
