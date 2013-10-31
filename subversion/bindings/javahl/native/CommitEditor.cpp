@@ -89,7 +89,7 @@ CommitEditor::CommitEditor(RemoteSession* session,
                                &m_callback_session_uuid,
                                pool.getPool()),);
 
-  PropertyTable revprops(jrevprops, true);
+  PropertyTable revprops(jrevprops, true, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
   LockTokenTable lock_tokens(jlock_tokens);
@@ -100,7 +100,7 @@ CommitEditor::CommitEditor(RemoteSession* session,
   SVN_JNI_ERR(svn_ra__get_commit_ev2(
                   &m_editor,
                   session->m_session,
-                  revprops.hash(subPool, false),
+                  revprops.hash(subPool),
                   m_callback.callback, &m_callback,
                   lock_tokens.hash(subPool, true),
                   bool(jkeep_locks),
@@ -213,7 +213,7 @@ void CommitEditor::addDirectory(jstring jrelpath,
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -225,7 +225,7 @@ void CommitEditor::addDirectory(jstring jrelpath,
 
   SVN_JNI_ERR(svn_editor_add_directory(m_editor, relpath.c_str(),
                                        build_children(children, subPool),
-                                       properties.hash(subPool, false),
+                                       properties.hash(subPool),
                                        svn_revnum_t(jreplaces_revision)),);
 }
 
@@ -238,7 +238,7 @@ void CommitEditor::addFile(jstring jrelpath,
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -253,7 +253,7 @@ void CommitEditor::addFile(jstring jrelpath,
     return;
   SVN_JNI_ERR(svn_editor_add_file(m_editor, relpath.c_str(),
                                   &checksum, contents.getStream(subPool),
-                                  properties.hash(subPool, false),
+                                  properties.hash(subPool),
                                   svn_revnum_t(jreplaces_revision)),);
 }
 
@@ -290,7 +290,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, false);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -303,7 +303,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(svn_editor_alter_directory(
                   m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jchildren ? build_children(children, subPool) : NULL),
-                  properties.hash(subPool, false)),);
+                  properties.hash(subPool)),);
 }
 
 void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
@@ -314,7 +314,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, false);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -331,7 +331,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
                   m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jcontents ? &checksum : NULL),
                   (jcontents ? contents.getStream(subPool) : NULL),
-                  properties.hash(subPool, false)),);
+                  properties.hash(subPool)),);
 }
 
 void CommitEditor::alterSymlink(jstring jrelpath, jlong jrevision,
