@@ -195,7 +195,7 @@ make_cache_key(const char *cred_kind,
                const char *realmstring,
                apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
+  return apr_pstrcat(pool, cred_kind, ":", realmstring, SVN_VA_NULL);
 }
 
 svn_error_t *

@@ -838,10 +838,10 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
     return apr_pstrdup(result_pool, name);
 
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
 
   if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
 
   if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
     return SVN_PROP_ENTRY_COMMITTED_REV;
@@ -869,7 +869,7 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
     }
 
   /* An unknown namespace, must be a custom property. */
-  return apr_pstrcat(result_pool, ns, name, (char *)NULL);
+  return apr_pstrcat(result_pool, ns, name, SVN_VA_NULL);
 }
 
 
@@ -928,9 +928,9 @@ select_revprops(void *baton,
   if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
   else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
   else if (strcmp(ns, "") == 0)
     prop_name = name;
   else

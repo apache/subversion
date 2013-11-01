@@ -1591,14 +1591,9 @@ io_set_file_perms(const char *path,
     {
       if (enable_write) /* Make read-write. */
         {
-          apr_file_t *fd;
-
-          /* Get the perms for the original file so we'll have any other bits
-           * that were already set (like the execute bits, for example). */
-          SVN_ERR(svn_io_file_open(&fd, path, APR_READ,
-                                   APR_OS_DEFAULT, pool));
-          SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
-          SVN_ERR(svn_io_file_close(fd, pool));
+          /* Tweak the owner bits only. The group/other bits aren't safe to
+           * touch because we may end up setting them in undesired ways. */
+          perms_to_set |= (APR_UREAD|APR_UWRITE);
         }
       else
         {
@@ -3294,7 +3289,7 @@ svn_io_run_diff3_3(int *exitcode,
                        SVN_CONFIG_OPTION_DIFF_CMD, SVN_CLIENT_DIFF);
         SVN_ERR(cstring_to_utf8(&diff_utf8, diff_cmd, pool));
         args[i++] = apr_pstrcat(pool, "--diff-program=", diff_utf8,
-                                (char *)NULL);
+                                SVN_VA_NULL);
 #ifndef NDEBUG
         ++nargs;
 #endif
@@ -3909,14 +3904,20 @@ svn_io_write_atomic(const char *final_path,
   if (!err && copy_perms_path)
     err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
 
+  if (!err)
+    err = svn_io_file_rename(tmp_path, final_path, scratch_pool);
+
   if (err)
     {
-      return svn_error_compose_create(err,
-                                      svn_io_remove_file2(tmp_path, FALSE,
-                                                          scratch_pool));
-    }
+      err = svn_error_compose_create(err,
+                                     svn_io_remove_file2(tmp_path, TRUE,
+                                                         scratch_pool));
 
-  SVN_ERR(svn_io_file_rename(tmp_path, final_path, scratch_pool));
+      return svn_error_createf(err->apr_err, err,
+                               _("Can't write '%s' atomicly"),
+                               svn_dirent_local_style(final_path,
+                                                      scratch_pool));
+    }
 
 #ifdef __linux__
   {

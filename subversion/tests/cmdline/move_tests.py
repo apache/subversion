@@ -1501,7 +1501,6 @@ def move_many_update_add(sbox):
                                         wc_dir, '--accept', 'mine-conflict')
 
 @Issue(4437)
-@XFail()
 def move_del_moved(sbox):
   "delete moved node, still a move"
 
@@ -1522,6 +1521,30 @@ def move_del_moved(sbox):
   # deleted there.
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def copy_move_commit(sbox):
+  "copy, move and commit"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+    #repro
+    # Prepare
+    #   - Create folder aaa
+    #   - Add file bbb.sql
+    #     create table bbb (Id int not null)
+    #   - Commit
+    # Repro Issue 2
+    #    - Copy folder aaa under same parent folder (i.e. as a sibling). (using Ctrl drag/drop). 
+    #      Creates Copy of aaa
+    #    - Rename Copy of aaa to eee
+    #    - Commit
+    #      Get error need to update
+    #    - Update
+    #    - Commit
+    #      Get error need to update
+
+  sbox.simple_copy('A/D/G', 'A/D/GG')
+  sbox.simple_move('A/D/GG', 'A/D/GG-moved')
+  sbox.simple_commit('A/D/GG-moved')
 
 #######################################################################
 # Run the tests
@@ -1538,6 +1561,7 @@ test_list = [ None,
               move_many_update_delete,
               move_many_update_add,
               move_del_moved,
+              copy_move_commit,
             ]
 
 if __name__ == '__main__':

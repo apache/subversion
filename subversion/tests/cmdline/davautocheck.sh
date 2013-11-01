@@ -447,7 +447,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
-LogFormat           "%h %l %u %t \"%r\" %>s %b" common
+LogFormat           "%h %l %u %t \"%r\" %>s %b \"%f\"" common
 CustomLog           "$HTTPD_ACCESS_LOG" common
 ErrorLog            "$HTTPD_ERROR_LOG"
 LogLevel            debug

@@ -57,7 +57,8 @@ create_greek_repos(const char **repos_url,
   svn_fs_root_t *txn_root;
 
   /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, name, opts, pool));
+  SVN_ERR(svn_test__create_repos(
+              &repos, svn_test_data_path(name, pool), opts, pool));
 
   /* Prepare and commit a txn containing the Greek tree. */
   SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0 /* rev */,
@@ -67,7 +68,8 @@ create_greek_repos(const char **repos_url,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, name, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(
+              repos_url, svn_test_data_path(name, pool), pool));
   return SVN_NO_ERROR;
 }
 
@@ -331,7 +333,6 @@ test_patch(const svn_test_opts_t *opts,
 {
   const char *repos_url;
   const char *wc_path;
-  const char *cwd;
   svn_opt_revision_t rev;
   svn_opt_revision_t peg_rev;
   svn_client_ctx_t *ctx;
@@ -370,12 +371,11 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "test-patch-repos", opts, pool));
 
   /* Check out the HEAD revision */
-  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
      unversioned directory prevents the problems. */
-  wc_path = svn_dirent_join(cwd, "test-patch", pool);
+  wc_path = svn_test_data_path("test-patch", pool);
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
 
@@ -389,9 +389,9 @@ test_patch(const svn_test_opts_t *opts,
                                TRUE, FALSE, ctx, pool));
 
   /* Create the patch file. */
-  patch_file_path = svn_dirent_join_many(pool, cwd,
-                                         "test-patch", "test-patch.diff",
-                                         (char *)NULL);
+  patch_file_path = svn_dirent_join_many(
+      pool, svn_test_data_path("test-patch", pool),
+      "test-patch.diff", SVN_VA_NULL);
   SVN_ERR(svn_io_file_open(&patch_file, patch_file_path,
                            (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE),
                            APR_OS_DEFAULT, pool));
@@ -446,7 +446,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "test-wc-add-repos", opts, pool));
   committed_rev = 1;
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+  wc_path = svn_test_data_path("test-wc-add", pool);
 
   /* Remove old test data from the previous run */
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
@@ -599,7 +599,7 @@ test_16k_add(const svn_test_opts_t *opts,
   svn_opt_revision_t rev;
   svn_client_ctx_t *ctx;
   const char *repos_url;
-  const char *cwd, *wc_path;
+  const char *wc_path;
   svn_opt_revision_t peg_rev;
   apr_array_header_t *targets;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -609,12 +609,11 @@ test_16k_add(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "test-16k-repos", opts, pool));
 
   /* Check out the HEAD revision */
-  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
      directly inside a 1.6 wc doesn't work reliably, an intervening
      unversioned directory prevents the problems. */
-  wc_path = svn_dirent_join(cwd, "test-16k", pool);
+  wc_path = svn_test_data_path("test-16k", pool);
   SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
   svn_test_add_dir_cleanup(wc_path);
 
@@ -736,7 +735,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
-  SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
+  wc_path = svn_test_data_path("test-wc-add", pool);
 
   wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
 

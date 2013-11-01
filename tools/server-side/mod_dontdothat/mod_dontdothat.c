@@ -36,6 +36,7 @@
 #include "mod_dav_svn.h"
 #include "svn_string.h"
 #include "svn_config.h"
+#include "private/svn_fspath.h"
 
 module AP_MODULE_DECLARE_DATA dontdothat_module;
 
@@ -194,7 +195,7 @@ is_this_legal(dontdothat_filter_ctx *ctx, const char *uri)
           if (! repos_path)
             repos_path = "";
 
-          repos_path = apr_psprintf(ctx->r->pool, "/%s", repos_path);
+          repos_path = svn_fspath__canonicalize(repos_path, ctx->r->pool);
 
           /* First check the special cases that are always legal... */
           for (idx = 0; idx < ctx->allow_recursive_ops->nelts; ++idx)

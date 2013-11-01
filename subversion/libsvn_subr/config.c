@@ -39,6 +39,7 @@
 #include "config_impl.h"
 
 #include "private/svn_dep_compat.h"
+#include "private/svn_subr_private.h"
 
 
 
@@ -264,9 +265,9 @@ get_category_config(svn_config_t **cfg,
     {
 #ifdef WIN32
       sys_reg_path = apr_pstrcat(pool, SVN_REGISTRY_SYS_CONFIG_PATH,
-                                 category, (char *)NULL);
+                                 category, SVN_VA_NULL);
       usr_reg_path = apr_pstrcat(pool, SVN_REGISTRY_USR_CONFIG_PATH,
-                                 category, (char *)NULL);
+                                 category, SVN_VA_NULL);
 #endif /* WIN32 */
 
       err = svn_config__sys_config_path(&sys_cfg_path, category, pool);
@@ -650,6 +651,33 @@ svn_config_create_option(cfg_option_t **opt,
   o->expanded = FALSE;
 
   *opt = o;
+}
+
+svn_boolean_t
+svn_config__is_expanded(svn_config_t *cfg,
+                        const char *section,
+                        const char *option)
+{
+  cfg_option_t *opt;
+
+  if (cfg == NULL)
+    return FALSE;
+
+  /* does the option even exist? */
+  opt = find_option(cfg, section, option, NULL);
+  if (opt == NULL)
+    return FALSE;
+
+  /* already expanded? */
+  if (opt->expanded)
+    return TRUE;
+
+  /* needs expansion? */
+  if (opt->value && strchr(opt->value, '%'))
+    return FALSE;
+
+  /* no expansion necessary */
+  return TRUE;
 }
 
 

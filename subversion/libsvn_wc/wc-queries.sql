@@ -72,12 +72,19 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_SELECT_BASE_CHILDREN_INFO
 SELECT local_relpath, nodes.repos_id, nodes.repos_path, presence, kind,
+  revision, depth, file_external
+FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
+
+-- STMT_SELECT_BASE_CHILDREN_INFO_LOCK
+SELECT local_relpath, nodes.repos_id, nodes.repos_path, presence, kind,
   revision, depth, file_external,
   lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
+
 
 -- STMT_SELECT_WORKING_NODE
 SELECT op_depth, presence, kind, checksum, translated_size,
@@ -1503,7 +1510,6 @@ WHERE wc_id = ?1
   AND presence=MAP_NORMAL
   AND file_external IS NULL
 
-/* ### FIXME: op-depth?  What about multiple moves? */
 -- STMT_SELECT_MOVED_FROM_RELPATH
 SELECT local_relpath, op_depth FROM nodes
 WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0
@@ -1530,14 +1536,33 @@ SELECT moved_to, local_relpath FROM nodes
 WHERE wc_id = ?1 AND op_depth > 0
   AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
+/* If the node is moved here (r.moved_here = 1) we are really interested in
+   where the node was moved from. To obtain that we need the op_depth, but
+   this form of select only allows a single return value */
 -- STMT_SELECT_MOVED_FOR_DELETE
-SELECT local_relpath, moved_to, op_depth FROM nodes
+SELECT local_relpath, moved_to, op_depth,
+       (SELECT CASE WHEN r.moved_here THEN r.op_depth END FROM nodes r
+        WHERE r.wc_id = ?1
+          AND r.local_relpath = n.local_relpath
+          AND r.op_depth < n.op_depth
+        ORDER BY r.op_depth DESC LIMIT 1) AS moved_here_op_depth
+ FROM nodes n
 WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND moved_to IS NOT NULL
   AND op_depth >= (SELECT MAX(op_depth) FROM nodes o
                     WHERE o.wc_id = ?1
                       AND o.local_relpath = ?2)
+
+-- STMT_SELECT_MOVED_FROM_FOR_DELETE
+SELECT local_relpath, op_depth,
+       (SELECT CASE WHEN r.moved_here THEN r.op_depth END FROM nodes r
+        WHERE r.wc_id = ?1
+          AND r.local_relpath = n.local_relpath
+          AND r.op_depth < n.op_depth
+        ORDER BY r.op_depth DESC LIMIT 1) AS moved_here_op_depth
+ FROM nodes n
+WHERE wc_id = ?1 AND moved_to = ?2 AND op_depth > 0
 
 -- STMT_UPDATE_MOVED_TO_DESCENDANTS
 UPDATE nodes SET moved_to = RELPATH_SKIP_JOIN(?2, ?3, moved_to)

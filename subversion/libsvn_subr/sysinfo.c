@@ -500,7 +500,7 @@ debian_release(apr_pool_t *pool)
       return NULL;
 
   stringbuf_first_line_only(buffer);
-  return apr_pstrcat(pool, "Debian ", buffer->data, (char *)NULL);
+  return apr_pstrcat(pool, "Debian ", buffer->data, SVN_VA_NULL);
 }
 
 /* Try to find the Linux distribution name, or return info from uname. */

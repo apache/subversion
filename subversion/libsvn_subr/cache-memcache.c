@@ -99,7 +99,7 @@ build_key(const char **mc_key,
     }
 
   long_key = apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix,
-                         (char *)NULL);
+                         SVN_VA_NULL);
   long_key_len = strlen(long_key);
 
   /* We don't want to have a key that's too big.  If it was going to
@@ -120,7 +120,7 @@ build_key(const char **mc_key,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
                              svn_checksum_to_cstring_display(checksum, pool),
-                             (char *)NULL);
+                             SVN_VA_NULL);
     }
 
   *mc_key = long_key;

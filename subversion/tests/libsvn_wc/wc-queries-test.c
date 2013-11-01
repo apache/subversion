@@ -30,22 +30,17 @@
 #include "../svn_test.h"
 
 #ifdef SVN_SQLITE_INLINE
-/* Include sqlite3 inline, making all symbols private. */
-  #define SQLITE_API static
-  #ifdef __APPLE__
-    #include <Availability.h>
-    #if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
-      /* <libkern/OSAtomic.h> is included on OS X by sqlite3.c, and
-         on old systems (Leopard or older), it cannot be compiled
-         with -std=c89 because it uses inline. This is a work-around. */
-      #define inline __inline__
-      #include <libkern/OSAtomic.h>
-      #undef inline
-    #endif
-  #endif
-  #include <sqlite3.c>
+/* Import the sqlite3 API vtable from sqlite3wrapper.c */
+#  define SQLITE_OMIT_DEPRECATED
+#  include <sqlite3ext.h>
+extern const sqlite3_api_routines *const svn_sqlite3__api_funcs;
+extern int (*const svn_sqlite3__api_initialize)(void);
+extern int (*const svn_sqlite3__api_config)(int, ...);
+#  define sqlite3_api svn_sqlite3__api_funcs
+#  define sqlite3_initialize svn_sqlite3__api_initialize
+#  define sqlite3_config svn_sqlite3__api_config
 #else
-  #include <sqlite3.h>
+#  include <sqlite3.h>
 #endif
 
 #include "../../libsvn_wc/wc-queries.h"
@@ -162,7 +157,7 @@ create_memory_db(sqlite3 **db,
 static svn_error_t *
 test_sqlite_version(apr_pool_t *scratch_pool)
 {
-  printf("DBG: Using Sqlite %s\n", sqlite3_version);
+  printf("DBG: Using Sqlite %s\n", sqlite3_libversion());
 
   if (sqlite3_libversion_number() != SQLITE_VERSION_NUMBER)
     printf("DBG: Compiled against Sqlite %s\n", SQLITE_VERSION);
@@ -170,7 +165,7 @@ test_sqlite_version(apr_pool_t *scratch_pool)
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
             "Compiled against Sqlite %s (at runtime we have Sqlite %s)",
-            SQLITE_VERSION, sqlite3_version);
+            SQLITE_VERSION, sqlite3_libversion());
 
 #if !SQLITE_VERSION_AT_LEAST(3, 7, 9)
   return svn_error_create(SVN_ERR_TEST_FAILED, NULL,

@@ -602,7 +602,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
         }
 
       unlock_ctx.force = force;
-      unlock_ctx.token = apr_pstrcat(iterpool, "<", token, ">", (char *)NULL);
+      unlock_ctx.token = apr_pstrcat(iterpool, "<", token, ">", SVN_VA_NULL);
 
       req_url = svn_path_url_add_component2(session->session_url.path, path,
                                             iterpool);

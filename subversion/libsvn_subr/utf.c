@@ -172,7 +172,7 @@ get_xlate_key(const char *topage,
     topage = "APR_DEFAULT_CHARSET";
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
-                     "-xlate-handle", (char *)NULL);
+                     "-xlate-handle", SVN_VA_NULL);
 }
 
 /* Atomically replace the content in *MEM with NEW_VALUE and return
@@ -639,7 +639,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     valid_txt = apr_pstrcat(pool, valid_txt,
                             apr_psprintf(pool, " %02x",
                                          (unsigned char)last[i-valid]),
-                                         (char *)NULL);
+                                         SVN_VA_NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -649,7 +649,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     invalid_txt = apr_pstrcat(pool, invalid_txt,
                               apr_psprintf(pool, " %02x",
                                            (unsigned char)last[i]),
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Valid UTF-8 data\n(hex:%s)\n"

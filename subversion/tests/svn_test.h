@@ -104,6 +104,8 @@ typedef struct svn_test_opts_t
   const char *fs_type;
   /* Config file. */
   const char *config_file;
+  /* Source dir. */
+  const char *srcdir;
   /* Minor version to use for servers and FS backends, or zero to use
      the current latest version. */
   int server_minor_version;
@@ -220,6 +222,12 @@ svn_test__tree_t;
 
 /* The standard Greek tree, terminated by a node with path=NULL. */
 extern const svn_test__tree_entry_t svn_test__greek_tree_nodes[21];
+
+
+/* Returns a path to BASENAME within the transient data area for the
+   current test. */
+const char *
+svn_test_data_path(const char* basename, apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

@@ -1085,7 +1085,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
     uuid = svn_uuid_generate(pool);
 
   /* Make sure we have a copy in FS->POOL, and append a newline. */
-  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", (char *)NULL);
+  my_uuid = apr_pstrcat(fs->pool, uuid, "\n", SVN_VA_NULL);
   my_uuid_len = strlen(my_uuid);
 
   /* We use the permissions of the 'current' file, because the 'uuid'

@@ -400,7 +400,7 @@ build_lockfile_path(const char *local_dir_abspath,
                               local_dir_abspath,
                               svn_wc_get_adm_dir(result_pool),
                               ADM_LOCK,
-                              (char *)NULL);
+                              SVN_VA_NULL);
 }
 
 
@@ -875,21 +875,21 @@ migrate_node_props(const char *dir_abspath,
                                      apr_pstrcat(scratch_pool,
                                                  name,
                                                  SVN_WC__BASE_EXT,
-                                                 (char *)NULL),
+                                                 SVN_VA_NULL),
                                      scratch_pool);
 
       revert_abspath = svn_dirent_join(basedir_abspath,
                                        apr_pstrcat(scratch_pool,
                                                    name,
                                                    SVN_WC__REVERT_EXT,
-                                                   (char *)NULL),
+                                                   SVN_VA_NULL),
                                        scratch_pool);
 
       working_abspath = svn_dirent_join(propsdir_abspath,
                                         apr_pstrcat(scratch_pool,
                                                     name,
                                                     SVN_WC__WORK_EXT,
-                                                    (char *)NULL),
+                                                    SVN_VA_NULL),
                                         scratch_pool);
     }
 
@@ -1248,7 +1248,7 @@ rename_pristine_file(void *baton,
           == PRISTINE_BASENAME_OLD_LEN))
     {
       const char *new_abspath
-        = apr_pstrcat(pool, abspath, PRISTINE_STORAGE_EXT, (char *)NULL);
+        = apr_pstrcat(pool, abspath, PRISTINE_STORAGE_EXT, SVN_VA_NULL);
 
       SVN_ERR(svn_io_file_rename(abspath, new_abspath, pool));
     }
@@ -1350,7 +1350,7 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   pristine_dir_abspath = svn_dirent_join_many(scratch_pool, wcroot_abspath,
                                               svn_wc_get_adm_dir(scratch_pool),
                                               PRISTINE_STORAGE_RELPATH,
-                                              (char *)NULL);
+                                              SVN_VA_NULL);
   SVN_ERR(svn_io_dir_walk2(pristine_dir_abspath, APR_FINFO_MIN,
                            rename_pristine_file, NULL, scratch_pool));
 
