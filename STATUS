@@ -56,7 +56,8 @@ Candidate changes:
      before r1503552).
    Votes:
      +1: stsp, rhuijben
-     -0: ivan (not regression from 1.7.x, destructive change in libsvn_wc core)
+     -0: ivan, brane (not regression from 1.7.x,
+                      destructive change in libsvn_wc core)
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
@@ -101,7 +102,7 @@ Candidate changes:
    Justification:
      Shouldn't need to install code to test it.
    Votes:
-     +1: breser
+     +1: breser, brane
 
  * r1535139
    Make openssl lib and include directory available when using --with-openssl
@@ -126,7 +127,7 @@ Candidate changes:
      Shouldn't need to install code to test it.  The existing Makefile target
      is just downright wrong.
    Votes:
-     +1: breser
+     +1: breser, brane
 
  * r1535532
    Make the certificate verification handling in ra_serf properly ask multiple
@@ -154,7 +155,7 @@ Candidate changes:
      Build system should work.  We shouldn't be trying to use the CPP from the
      APR build anyway.
    Votes:
-     +1: breser
+     +1: breser, brane
 
  * r1518942, r1536914, r1536931
    Fix commit of a specific mixed revision copy with non copy descendants that
@@ -199,7 +200,13 @@ Candidate changes:
      this test.
    Branch: ^/subversion/branches/1.8.x-r1537193/
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1537360, r1537415, r1537555, r1537700
    mod_dav_svn: Set r->filename to a bogus value rather than NULL.
@@ -208,7 +215,7 @@ Candidate changes:
      don't bother to check before dereferincing.  Regression from earlier
      1.8.x releases and user found server crash.
    Votes:
-     +1: breser, rhuijben
+     +1: breser, rhuijben, brane
 
  * r1525902
    Fix issues #4428, #4429: "checkout via http with external pointing at
@@ -222,10 +229,4 @@ Candidate changes:
      to make our test suite model an external to a redirected URL. A testing
      recipe is in issue #4428.
    Votes:
-     +1: neels, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: neels, rhuijben, brane
