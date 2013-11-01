@@ -3296,22 +3296,22 @@ def diff_invoke_external_diffcmd(sbox):
   expected_output = svntest.verify.ExpectedOutput([
       "Index: iota\n",
       "===================================================================\n",
-      # correct label %svn_old_label% -> label 1
+      # correct label %svn_label_old -> label 1
       "iota	(revision 1)\n",   
 
-      # correct file %svn_old% -> old
+      # correct file %svn_old -> old
       os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
 
-      # correct label %svn_new_label% -> label 2
+      # correct label %svn_label_new -> label 2
       "iota	(working copy)\n",
 
-      # correct file %svn_new% -> new
+      # correct file %svn_new -> new
       os.path.abspath("iota") + "\n",
 
       # preservation of quoted string  "X Y Z"-> "X Y Z"
       "\"X Y Z\"\n",
 
-      # correct insertion of filename into string "+%svn_new%+" -> "+" + new + "+"
+      # correct insertion of filename into string "+%svn_new+" -> "+" + new + "+"
       "+" + os.path.abspath("iota") + "+\n",
 
       ])
@@ -3319,7 +3319,7 @@ def diff_invoke_external_diffcmd(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
    'diff',
    '--invoke-diff-cmd='+diff_script_path+
-   ' %svn_old_label% %svn_old% %svn_new_label% %svn_new% \"X Y Z\" +%svn_new%+',
+   ' %svn_label_old %svn_old %svn_label_new %svn_new \"X Y Z\" +%svn_new+',
   iota_path)
 
 

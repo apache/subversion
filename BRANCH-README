@@ -73,12 +73,6 @@ API components
    routine that makes it.
 
 
-   ./subversion/libsvn_subr/io.c svn_io_parse_diff_cmd_file()
-   
-   temporary installation pending refactor of
-   svn_io_parse_mimetypes_file().
-
-
 UI components
 -------------
 
@@ -97,24 +91,6 @@ UI components
   one of --invoke-diff-cmd, --diff-cmd or --internal-diff-cmd are
   invoked.
 
-Issues with the current implementation
-======================================
-
-The --svn-cfg-query switch has not been implemented yet.
-
-The function that reads the file (svn_io_parse_diff_cmd_file) is
-currently copy pasta from (svn_io_parse_mimetypes_file) with slightly
-altered internal logic, and should be refactored to make a new general
-function svn_io_read_text_file() which delivers an apr_array_header_t
-object to the caller that contains all the lines read, who then can
-operate on that delivery in place.
-
-The diff_cmd_config file is read a-new again every time, it would
-probably be better to pass diff_baton directly into
-svn_io_run_external_diff and store the value there for re-use.  Then
-again this might be a terrible idea if the diff_cmd_config file gets
-large.
-
 
 Changes to the existing code structure:
 =======================================
@@ -123,7 +99,6 @@ The original --diff-cmd parsing and routing code has been refactored
 and the call to --diff-cmd is now handled by the
 __create_custom_diff_cmd() and svn_io_run_external_diff() routines.
 All the original functionality and user syntax has been retained.
-
 
 Tests
 =====
@@ -146,7 +121,20 @@ TODO:
 Review tools
 ============
 
-The entire code of the branch can be obtained thus:
+The entire code of the branch can be obtained thus (temporary measure,
+see below):
+
+svn log --stop-on-copy | grep '^*\ subversion' |\
+  awk '{gsub(/^ +| +$/,"")} {print $0}' | cut -d '*' -f 2 |\
+  sort --unique | while read line; do echo $line | if [ -a $line ];\
+  then echo ""; echo \
+"================================================================================";\
+  echo "";\
+  diff -p --context=0 -b -B -w "$HOME/trunk/$line" "$PWD/$line"; fi;\
+  done > entire-branch-code 
+
+The following used to work, but doesn't anymore, I'm not sure why
+(asking on svn-dev currently, will update once this is settled):
 
 svn diff ^/subversion/trunk@1531612\
  ^/subversion/branches/invoke-diff-cmd-feature

@@ -3186,12 +3186,12 @@ svn_io_run_diff2(const char *dir,
     svn_stringbuf_appendcstr(com, "-u "); 
 
   if (label1 != NULL)
-    svn_stringbuf_appendcstr(com,"-L %svn_old_label% ");
+    svn_stringbuf_appendcstr(com,"-L %svn_label_old ");
 
   if (label2 != NULL)
-    svn_stringbuf_appendcstr(com,"-L %svn_new_label% ");
+    svn_stringbuf_appendcstr(com,"-L %svn_label_new ");
 
-  svn_stringbuf_appendcstr(com,"%svn_old% %svn_new%"); 
+  svn_stringbuf_appendcstr(com,"%svn_old %svn_new"); 
 
   return svn_io_run_external_diff(dir,
                                   label1,
