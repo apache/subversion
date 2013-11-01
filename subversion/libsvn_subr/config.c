@@ -703,11 +703,11 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
         }
       else
         /* before attempting to expand an option, check for the placeholder.
-         * If none is there, there is no point in calling expand_option_value.
+         * If there is none, there is no point in calling expand_option_value.
          */
         if (default_value && strchr(default_value, '%'))
           {
-            apr_pool_t *tmp_pool = svn_pool_create(cfg->x_pool);
+            apr_pool_t *tmp_pool = svn_pool_create(cfg->pool);
             const char *x_default;
             expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
             if (x_default)
@@ -985,7 +985,7 @@ svn_config_enumerate(svn_config_t *cfg, const char *section,
   if (sec == NULL)
     return 0;
 
-  subpool = svn_pool_create(cfg->x_pool);
+  subpool = svn_pool_create(cfg->pool);
   count = 0;
   for (opt_ndx = apr_hash_first(subpool, sec->options);
        opt_ndx != NULL;
