@@ -113,47 +113,10 @@ Candidate changes:
      caused by svn_uri_is_canonical treating the hostname "." as a path
      segment.  After this change, svn_uri_is_canonicall correctly
      determines that the URL is (syntactically) canonical, and the
-     commands later faile with a normal error in the RA layer, which
+     commands later fail with a normal error in the RA layer, which
      validates the semantics of the hostname.
    Votes:
      +1: brane, stefan2
-
- * r1518184
-   Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
-   for the specific case where a repository is placed in a Windows drive
-   root.
-   Justification:
-     Improves correctness. Resolves user reported problem.
-   Votes:
-     +1: rhuijben, stefan2
-
- * r1522892
-   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
-   command interrupted when using ra_serf.
-   Changes[client]:
-     * fixed: command line client crashes when piped command is interrupted on
-       Windows.
-   Justification:
-     User reported crash.
-   Votes:
-     +1: rhuijben, stefan2
-
- * r1525902
-   Fix issues #4428 and #4429: external references a redirected HTTP-URL.
-   Changes:
-     In handle_external_item_change(), a redirect was effectively ignored by
-     passing the old URL to switch_dir_external(). Pass the new one.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4428
-   Votes:
-     +1: neels, stefan2
-
- * r1524869
-   JavaHL: Canonicalize path for streamFileContent method.
-   Justification:
-      JavaHL is designed around us doing the canonicalization.
-   Votes:
-     +1: breser, stefan2
 
  * r1527112
    Fix OOM with concurrent requests right after threaded server start.
@@ -163,7 +126,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1527103
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
  * r1534158
    Correct error message when FSFS detects unsupported future formats.
@@ -172,6 +135,7 @@ Candidate changes:
       format option error" for format bumps that also add new options.
    Votes:
      +1: stefan2
+     -0: brane (not a security fix)
 
  * r1536790
    Limit the time spent in committing files with deep change histories
@@ -184,15 +148,7 @@ Candidate changes:
      ^/subversion/branches/1.7.x-fsfs-commit
    Votes:
      +1: stefan2
-
- * r1537360, r1537415, r1537555, r1537700
-   mod_dav_svn: Set r->filename to a bogus value rather than NULL.
-   Justification:
-     Some httpd modules (mod_wsgi) assume that r->filename is not NULL and
-     don't bother to check before dereferincing.  Regression from earlier
-     1.7.x releases and user found server crash.
-   Votes:
-     +1: breser, rhuijben
+     -0: brane (not a security fix)
 
 Veto-blocked changes:
 =====================
@@ -212,3 +168,48 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1518184
+   Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
+   for the specific case where a repository is placed in a Windows drive
+   root.
+   Justification:
+     Improves correctness. Resolves user reported problem.
+   Votes:
+     +1: rhuijben, stefan2, brane
+
+ * r1522892
+   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
+   command interrupted when using ra_serf.
+   Changes[client]:
+     * fixed: command line client crashes when piped command is interrupted on
+       Windows.
+   Justification:
+     User reported crash.
+   Votes:
+     +1: rhuijben, stefan2, brane
+
+ * r1525902
+   Fix issues #4428 and #4429: external references a redirected HTTP-URL.
+   Changes:
+     In handle_external_item_change(), a redirect was effectively ignored by
+     passing the old URL to switch_dir_external(). Pass the new one.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4428
+   Votes:
+     +1: neels, stefan2, brane
+
+ * r1524869
+   JavaHL: Canonicalize path for streamFileContent method.
+   Justification:
+      JavaHL is designed around us doing the canonicalization.
+   Votes:
+     +1: breser, stefan2, brane
+
+ * r1537360, r1537415, r1537555, r1537700
+   mod_dav_svn: Set r->filename to a bogus value rather than NULL.
+   Justification:
+     Some httpd modules (mod_wsgi) assume that r->filename is not NULL and
+     don't bother to check before dereferincing.  Regression from earlier
+     1.7.x releases and user found server crash.
+   Votes:
+     +1: breser, rhuijben, brane
