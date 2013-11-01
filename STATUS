@@ -192,8 +192,7 @@ Candidate changes:
      don't bother to check before dereferincing.  Regression from earlier
      1.7.x releases and user found server crash.
    Votes:
-     +1: breser
-     +1: rhuijben (without r1537555, r1537700)
+     +1: breser, rhuijben
 
 Veto-blocked changes:
 =====================
