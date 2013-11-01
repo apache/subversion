@@ -1100,7 +1100,7 @@ static int dav_svn__handler(request_rec *r)
  * that %f in logging formats will show as "svn:/path/to/repo/path/in/repo". */
 static int dav_svn__translate_name(request_rec *r)
 {
-  const char *fs_path, *repos_basename, *repos_path, *slash;
+  const char *fs_path, *repos_basename, *repos_path;
   const char *ignore_cleaned_uri, *ignore_relative_path;
   int ignore_had_slash;
   dav_error *err;
@@ -1128,17 +1128,9 @@ static int dav_svn__translate_name(request_rec *r)
       fs_path = conf->fs_path;
     }
 
-  /* Avoid a trailing slash on the bogus path when repos_path is just "/" and
-   * ensure that there is always a slash between fs_path and repos_path as
-   * long as the repos_path is not an empty path. */
-  slash = "";
-  if (repos_path)
-    {
-      if ('/' == repos_path[0] && '\0' == repos_path[1])
-        repos_path = NULL;
-      else if ('/' != repos_path[0] && '\0' != repos_path[0])
-        slash = "/";
-    }
+  /* Avoid a trailing slash on the bogus path when repos_path is just "/" */
+  if (repos_path && '/' == repos_path[0] && '\0' == repos_path[1])
+    repos_path = NULL;
 
   /* Combine 'svn:', fs_path and repos_path to produce the bogus path we're
    * placing in r->filename.  We can't use our standard join helpers such
@@ -1148,7 +1140,7 @@ static int dav_svn__translate_name(request_rec *r)
    * repository is 'trunk/c:hi' this results in a non canonical dirent on
    * Windows. Instead we just cat them together. */
   r->filename = apr_pstrcat(r->pool,
-                            "svn:", fs_path, slash, repos_path, SVN_VA_NULL);
+                            "svn:", fs_path, repos_path, SVN_VA_NULL);
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */

@@ -1413,7 +1413,7 @@ dav_svn_split_uri(request_rec *r,
                         else
                           {
                             /* Found a slash after the special components. */
-                            *repos_path = apr_pstrdup(r->pool, start);
+                            *repos_path = apr_pstrdup(r->pool, start - 1);
                           }
                       }
                     else
@@ -1439,7 +1439,7 @@ dav_svn_split_uri(request_rec *r,
       {
         /* There's no "!svn/" at all, so the relative path is already
            a valid path within the repository.  */
-        *repos_path = apr_pstrdup(r->pool, relative);
+        *repos_path = apr_pstrdup(r->pool, relative - 1);
       }
   }
 
