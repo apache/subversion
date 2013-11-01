@@ -39,6 +39,9 @@
 #include "svn_version.h"
 #include "private/svn_repos_private.h"
 
+/* be able to look into svn_config_t */
+#include "../../libsvn_subr/config_impl.h"
+
 #include "../svn_test_fs.h"
 
 #include "dir-delta-editor.h"
@@ -3311,7 +3314,8 @@ test_config_pool(const svn_test_opts_t *opts,
   const char *repo_name = "test-repo-config-pool";
   svn_repos_t *repos;
   svn_stringbuf_t *cfg_buffer1, *cfg_buffer2;
-  svn_config_t *cfg, *cfg1, *cfg2;
+  svn_config_t *cfg;
+  apr_hash_t *sections1, *sections2;
   int i;
   svn_boolean_t bvalue;
   svn_fs_txn_t *txn;
@@ -3367,7 +3371,7 @@ test_config_pool(const svn_test_opts_t *opts,
 
   /* requesting a config over and over again should return the same
      (even though it is not being referenced) */
-  cfg1 = NULL;
+  sections1 = NULL;
   for (i = 0; i < 4; ++i)
     {
       SVN_ERR(svn_repos__config_pool_get(
@@ -3377,10 +3381,10 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     pool),
                                     subpool));
 
-      if (cfg1 == NULL)
-        cfg1 = cfg;
+      if (sections1 == NULL)
+        sections1 = cfg->sections;
       else
-        SVN_TEST_ASSERT(cfg == cfg1);
+        SVN_TEST_ASSERT(cfg->sections == sections1);
 
       svn_pool_clear(subpool);
     }
@@ -3396,13 +3400,13 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     pool),
                                     subpool));
 
-      SVN_TEST_ASSERT(cfg == cfg1);
+      SVN_TEST_ASSERT(cfg->sections == sections1);
 
       svn_pool_clear(subpool);
     }
 
   /* reading a different configuration should return a different pointer */
-  cfg2 = NULL;
+  sections2 = NULL;
   for (i = 0; i < 2; ++i)
     {
       SVN_ERR(svn_repos__config_pool_get(
@@ -3412,12 +3416,12 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     pool),
                                     subpool));
 
-      if (cfg2 == NULL)
-        cfg2 = cfg;
+      if (sections2 == NULL)
+        sections2 = cfg->sections;
       else
-        SVN_TEST_ASSERT(cfg == cfg2);
+        SVN_TEST_ASSERT(cfg->sections == sections2);
 
-      SVN_TEST_ASSERT(cfg1 != cfg2);
+      SVN_TEST_ASSERT(sections1 != sections2);
       svn_pool_clear(subpool);
     }
 
@@ -3441,7 +3445,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     repo_root_url,
                                                     "dir/config", pool),
                                      subpool));
-  SVN_TEST_ASSERT(cfg == cfg1);
+  SVN_TEST_ASSERT(cfg->sections == sections1);
   svn_pool_clear(subpool);
 
   /* create another in-repo config */
@@ -3459,7 +3463,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     repo_root_url,
                                                     "dir/config", pool),
                                      subpool));
-  SVN_TEST_ASSERT(cfg == cfg2);
+  SVN_TEST_ASSERT(cfg->sections == sections2);
   svn_pool_clear(subpool);
 
   /* reading the copied config should still give cfg1 */
@@ -3469,7 +3473,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     "another-dir/config",
                                                     pool),
                                      subpool));
-  SVN_TEST_ASSERT(cfg == cfg1);
+  SVN_TEST_ASSERT(cfg->sections == sections1);
   svn_pool_clear(subpool);
 
   /* once again: repeated reads.  This triggers a different code path. */
@@ -3478,14 +3482,14 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     repo_root_url,
                                                     "dir/config", pool),
                                      subpool));
-  SVN_TEST_ASSERT(cfg == cfg2);
+  SVN_TEST_ASSERT(cfg->sections == sections2);
   SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
                                      svn_path_url_add_component2(
                                                     repo_root_url,
                                                     "another-dir/config",
                                                     pool),
                                      subpool));
-  SVN_TEST_ASSERT(cfg == cfg1);
+  SVN_TEST_ASSERT(cfg->sections == sections1);
   svn_pool_clear(subpool);
 
   /* access paths that don't exist */
@@ -3501,7 +3505,7 @@ test_config_pool(const svn_test_opts_t *opts,
 
   /* as long as we keep a reference to a config, clearing the config pool
      should not invalidate that reference */
-  SVN_ERR(svn_repos__config_pool_get(&cfg1, config_pool,
+  SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
                                      svn_dirent_join(wrk_dir,
                                                      "config-pool-test1.cfg",
                                                      pool),
@@ -3510,7 +3514,7 @@ test_config_pool(const svn_test_opts_t *opts,
   for (i = 0; i < 64000; ++i)
     apr_pcalloc(config_pool_pool, 80);
 
-  SVN_ERR(svn_config_get_bool(cfg1, &bvalue, "booleans", "true3", FALSE));
+  SVN_ERR(svn_config_get_bool(cfg, &bvalue, "booleans", "true3", FALSE));
   SVN_TEST_ASSERT(bvalue);
 
   return SVN_NO_ERROR;

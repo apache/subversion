@@ -227,7 +227,7 @@ return_config_ref(config_ref_t *config,
     svn_atomic_inc(&config->config_pool->used_config_count);
   apr_pool_cleanup_register(pool, config, config_ref_cleanup,
                             apr_pool_cleanup_null);
-  return config->cfg;
+  return svn_config__shallow_copy(config->cfg, pool);
 }
 
 /* Set *CFG to the configuration with a parsed textual matching CHECKSUM.
