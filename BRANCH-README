@@ -35,29 +35,20 @@ from 'svn help diff':
 
   --invoke-diff-cmd ARG:
 
-   : use ARG as format string for external diff command     
-     invocation. 
-                 
-     Substitutions: %svn_new% new file                      
-                    %svn_old% old file                      
-                    %svn_new_label%  label of the new file  
-                    %svn_old_label%  label of the old file  
-     Examples:                                              
-     --invoke-diff-cmd='diff -y %svn_new% %svn_old%'      
-     --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \     
-           %svn_new% %svn_old% --L1 %svn_new_label% \      
-          --L2 "Custom Label" '                          
-     Other constructs possible are:                         
-     +%svn_new%, %svn_new%- and +++%svn_new_label%+++       
-     With optional switch given at the start of the command:
-     --svn-cfg-file=/path/to/config-file (automatic)        
-     Read config file, apply the diff-cmds stored in there  
-     --query-cfg-file=/path/to/config-file (interactive)    
-     As above, but query interactively.                     
-     Example: svn diff --invoke-diff-cmd='--svn-cfg-file\  
-      /home/user/diff_cmds diff -u %svn_new% %svn-old%'     
-     Config file format: (accepts # comments)               
-     relative/path/to/file/ = diff %svn_new% ...            
+       use ARG as format string for external diff command     
+        invocation. 
+                    
+        Substitutions: %svn_new new file                      
+                       %svn_old old file                      
+                       %svn_label_new  label of the new file  
+                       %svn_label_old  label of the old file  
+        Examples:                                              
+        --invoke-diff-cmd='diff -y %svn_new %svn_old'      
+        --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \     
+              %svn_new %svn_old --L1 %svn_new_label \      
+             --L2 "Custom Label" '                          
+        Substitution variables may be embedded in strings:
+        +%svn_new, %svn_new- and file=%svn_label_new+
 
 
 Structure of the feature:
@@ -149,23 +140,7 @@ The test for the updated --diff-cmd is
 TODO:
 ====
 
-  * refactor svn_io_parse_mimetypes_file() into a more general
-    svn_io_read_text_file().
-
-  * add code for the interactive switch, bearing in mind 3rd party
-    clients.(needs more research)
-
-  * Adding invoke-diff-cmd to merge:
-    add --invoke-diff-3-cmd using the svn_io_create_custom_diff_cmd()
-    and creating a new svn_io_run_external_merge function to manage
-    the external call in the same way that svn_io_run_external_diff
-    does.  Add the necessary UI components.  Add --invoke-diff-3-cmd
-    to 'svn up'.
-
-  * Fix the issue of unclear labels being displayed in external merge
-    programs:
-
-       http://subversion.tigris.org/issues/show_bug.cgi?id=3836
+  * Finalise the discussion about which substitution syntax to choose.
 
 
 Review tools

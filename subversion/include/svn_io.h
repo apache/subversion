@@ -2426,17 +2426,6 @@ svn_io_run_external_diff(const char *dir,
                          const char *external_diff_cmd,
                          apr_pool_t *scratch_pool);
 
-
-/** Open the diff_cmd file which contains custom diff commands
- *  pertaining to individual files.
- *  
- *  @since New in 1.9.
- */
-svn_error_t *
-svn_io_parse_diff_cmd_file(const char *diff_cmd_file,
-                           apr_array_header_t *diff_file_data,
-                           apr_pool_t *pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
