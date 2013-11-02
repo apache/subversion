@@ -134,7 +134,8 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
  *
  * If PATH cannot be parsed as a config file then an error is returned.  The
  * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
- * authz file is also an error.
+ * authz file is also an error.  The CASE_SENSITIVE controls the lookup
+ * behavior for section and option names alike.
  *
  * REPOS_ROOT points at the root of the repos you are
  * going to apply the authz against, can be NULL if you are sure that you
@@ -143,6 +144,7 @@ svn_error_t *
 svn_repos__retrieve_config(svn_config_t **cfg_p,
                            const char *path,
                            svn_boolean_t must_exist,
+                           svn_boolean_t case_sensitive,
                            apr_pool_t *pool);
 
 /**
@@ -172,6 +174,10 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * CONFIG_POOL will store the configuration and make further callers use
  * the same instance if the content matches.
  *
+ * If MUST_EXIST is TRUE, a missing config file is also an error, *CFG
+ * is otherwise simply NULL.  The CASE_SENSITIVE controls the lookup
+ * behavior for section and option names alike.
+ *
  * POOL determines the minimum lifetime of *CFG.
  *
  * Note: The read-only behavior is not enforced, yet. 
@@ -180,6 +186,8 @@ svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
+                           svn_boolean_t must_exist,
+                           svn_boolean_t case_sensitive,
                            apr_pool_t *pool);
 
 /** @} */
