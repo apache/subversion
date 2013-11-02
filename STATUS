@@ -168,16 +168,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1525902
-   Fix issues #4428 and #4429: external references a redirected HTTP-URL.
-   Changes:
-     In handle_external_item_change(), a redirect was effectively ignored by
-     passing the old URL to switch_dir_external(). Pass the new one.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4428
-   Votes:
-     +1: neels, stefan2, brane
-
  * r1524869
    JavaHL: Canonicalize path for streamFileContent method.
    Justification:

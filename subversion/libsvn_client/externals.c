@@ -916,7 +916,7 @@ handle_external_item_change(const struct external_change_baton_t *eb,
   switch (local_kind)
     {
       case svn_node_dir:
-        SVN_ERR(switch_dir_external(local_abspath, new_url,
+        SVN_ERR(switch_dir_external(local_abspath, ra_session_url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
