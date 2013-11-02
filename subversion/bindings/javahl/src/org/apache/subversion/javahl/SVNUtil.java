@@ -24,8 +24,10 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.types.*;
 import org.apache.subversion.javahl.util.*;
 
+import java.io.InputStream;
 import java.io.OutputStream;
 
 public class SVNUtil
@@ -280,5 +282,62 @@ public class SVNUtil
                                        conflictOriginal, conflictModified,
                                        conflictLatest, conflictSeparator,
                                        conflictStyle, resultStream);
+    }
+
+    //
+    // Property validation and parsing
+    //
+
+    /**
+     * Validate the value of an <code>svn:</code> property on file or
+     * directory and return a canonical representation of its value.
+     * @param name The name of the property (must be a valid svn: property)
+     * @param value The property's value
+     * @param path The path or URL of the file or directory that
+     *        owns the property; only used for error messages
+     * @param kind The node kind of the file or dir that owns the property
+     * @param mimeType If <code>kind</code> is {@link NodeKind.file}, this is
+     *        tye file's mime-type, used for extra validation for the
+     *        <code>svn:eol-style</code> property. If it is <code>null</code>,
+     *        the extra validation will be skipped.
+     * @return a canonicalized representation of the property value
+     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     */
+    public static byte[] canonicalizeNodeProperty(
+        String name, byte[] value, String path, NodeKind kind,
+        String mimeType)
+        throws ClientException
+    {
+        return new PropLib().canonicalizeNodeProperty(
+            name, value, path, kind, mimeType, null);
+    }
+
+    /**
+     * Validate the value of an <code>svn:</code> property on file or
+     * directory and return a canonical representation of its value.
+     * @param name The name of the property (must be a valid svn: property)
+     * @param value The property's value
+     * @param path The path or URL of the file or directory that
+     *        owns the property; only used for error messages
+     * @param kind The node kind of the file or dir that owns the property
+     * @param mimeType If <code>kind</code> is {@link NodeKind.file}, this is
+     *        tye file's mime-type, used for extra validation for the
+     *        <code>svn:eol-style</code> property. If it is <code>null</code>,
+     *        the extra validation will be skipped.
+     * @param fileContents A stream with the file's contents. Only used
+     *        to check for line-ending consistency when validating the
+     *        <code>svn:eol-style</code> property, and only when
+     *        <code>kind</code> is {@link NodeKind.file} and
+     *        <code>mimeType</code> is not <code>null</code>.
+     * @return a canonicalized representation of the property value
+     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     */
+    public static byte[] canonicalizeNodeProperty(
+        String name, byte[] value, String path, NodeKind kind,
+        String mimeType, InputStream fileContents)
+        throws ClientException
+    {
+        return new PropLib().canonicalizeNodeProperty(
+            name, value, path, kind, mimeType, fileContents);
     }
 }
