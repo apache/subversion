@@ -168,15 +168,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1518184
-   Fix an of-by-one error in the fspath calculations of libsvn_ra_local,
-   for the specific case where a repository is placed in a Windows drive
-   root.
-   Justification:
-     Improves correctness. Resolves user reported problem.
-   Votes:
-     +1: rhuijben, stefan2, brane
-
  * r1522892
    Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
    command interrupted when using ra_serf.

@@ -1050,7 +1050,7 @@ def checkout_wc_from_drive(sbox):
   svntest.main.safe_rmtree(sbox.wc_dir)
   os.mkdir(sbox.wc_dir)
 
-  # create a virtual drive to the working copy folder
+  # create a virtual drive to the repository folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
     raise svntest.Skip
@@ -1086,8 +1086,49 @@ def checkout_wc_from_drive(sbox):
     })
     svntest.actions.run_and_verify_checkout(repo_url, wc_dir,
                                             expected_output, expected_wc,
-                                            None, None, None, None,
-                                            '--force')
+                                            None, None, None, None)
+
+    wc2_dir = sbox.add_wc_path('2')
+    expected_output = wc.State(wc2_dir, {
+      'D'                 : Item(status='A '),
+      'D/H'               : Item(status='A '),
+      'D/H/psi'           : Item(status='A '),
+      'D/H/chi'           : Item(status='A '),
+      'D/H/omega'         : Item(status='A '),
+      'D/G'               : Item(status='A '),
+      'D/G/tau'           : Item(status='A '),
+      'D/G/pi'            : Item(status='A '),
+      'D/G/rho'           : Item(status='A '),
+      'D/gamma'           : Item(status='A '),
+      'C'                 : Item(status='A '),
+      'mu'                : Item(status='A '),
+      'B'                 : Item(status='A '),
+      'B/E'               : Item(status='A '),
+      'B/E/alpha'         : Item(status='A '),
+      'B/E/beta'          : Item(status='A '),
+      'B/F'               : Item(status='A '),
+      'B/lambda'          : Item(status='A '),
+    })
+    svntest.actions.run_and_verify_checkout(repo_url + '/A', wc2_dir,
+                                            expected_output, None,
+                                            None, None, None, None)
+
+    wc3_dir = sbox.add_wc_path('3')
+    expected_output = wc.State(wc3_dir, {
+      'H'                 : Item(status='A '),
+      'H/psi'             : Item(status='A '),
+      'H/chi'             : Item(status='A '),
+      'H/omega'           : Item(status='A '),
+      'G'                 : Item(status='A '),
+      'G/tau'             : Item(status='A '),
+      'G/pi'              : Item(status='A '),
+      'G/rho'             : Item(status='A '),
+      'gamma'             : Item(status='A '),
+    })
+
+    svntest.actions.run_and_verify_checkout(repo_url + '/A/D', wc3_dir,
+                                            expected_output, None,
+                                            None, None, None, None)
 
   finally:
     os.chdir(was_cwd)
