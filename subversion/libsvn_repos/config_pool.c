@@ -477,7 +477,8 @@ add_checksum(svn_repos__config_pool_t *config_pool,
 
 /* Set *CFG to the configuration stored in URL@HEAD and cache it in 
  * CONFIG_POOL. ### Always returns a NULL CFG.  CASE_SENSITIVE controls
- * option and section name matching.
+ * option and section name matching.  If PREFERRED_REPOS is given,
+ * use that if it also matches URL.
  * 
  * RESULT_POOL determines the lifetime of the returned reference and 
  * SCRATCH_POOL is being used for temporary allocations.
@@ -487,10 +488,11 @@ find_repos_config(svn_config_t **cfg,
                   svn_repos__config_pool_t *config_pool,
                   const char *url,
                   svn_boolean_t case_sensitive,
+                  svn_repos_t *preferred_repos,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_repos_t *repos;
+  svn_repos_t *repos = NULL;
   svn_fs_t *fs;
   svn_fs_root_t *root;
   svn_revnum_t youngest_rev;
@@ -505,11 +507,29 @@ find_repos_config(svn_config_t **cfg,
   *cfg = NULL;
   SVN_ERR(svn_uri_get_dirent_from_file_url(&dirent, url, scratch_pool));
 
-  /* Search for a repository in the full path. */
-  repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
+  /* maybe we can use the preferred repos instance instead of creating a
+   * new one */
+  if (preferred_repos)
+    {
+      repos_root_dirent = svn_repos_path(preferred_repos, scratch_pool);
+      if (!svn_dirent_is_absolute(repos_root_dirent))
+        SVN_ERR(svn_dirent_get_absolute(&repos_root_dirent,
+                                        repos_root_dirent,
+                                        scratch_pool));
 
-  /* Attempt to open a repository at repos_root_dirent. */
-  SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+      if (svn_dirent_is_ancestor(repos_root_dirent, dirent))
+        repos = preferred_repos;
+    }
+
+  /* open repos if no suitable preferred repos was provided. */
+  if (!repos)
+    {
+      /* Search for a repository in the full path. */
+      repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
+
+      /* Attempt to open a repository at repos_root_dirent. */
+      SVN_ERR(svn_repos_open2(&repos, repos_root_dirent, NULL, scratch_pool));
+    }
 
   fs_path = &dirent[strlen(repos_root_dirent)];
 
@@ -648,6 +668,7 @@ svn_repos__config_pool_get(svn_config_t **cfg,
                            const char *path,
                            svn_boolean_t must_exist,
                            svn_boolean_t case_sensitive,
+                           svn_repos_t *preferred_repos,
                            apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -666,7 +687,7 @@ svn_repos__config_pool_get(svn_config_t **cfg,
 
       /* Read and cache the configuration.  This may fail. */
       err = find_repos_config(cfg, config_pool, path, case_sensitive,
-                              pool, scratch_pool);
+                              preferred_repos, pool, scratch_pool);
       if (err || !*cfg)
         {
           /* let the standard implementation handle all the difficult cases */
