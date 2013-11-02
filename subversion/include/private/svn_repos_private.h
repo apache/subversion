@@ -178,6 +178,11 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * is otherwise simply NULL.  The CASE_SENSITIVE controls the lookup
  * behavior for section and option names alike.
  *
+ * PREFERRED_REPOS is only used if it is not NULL and PATH is a URL.
+ * If it matches the URL, access the repository through this object
+ * instead of creating a new repo instance.  Note that this might not
+ * return the latest content.
+ *
  * POOL determines the minimum lifetime of *CFG.
  *
  * Note: The read-only behavior is not enforced, yet. 
@@ -188,6 +193,7 @@ svn_repos__config_pool_get(svn_config_t **cfg,
                            const char *path,
                            svn_boolean_t must_exist,
                            svn_boolean_t case_sensitive,
+                           svn_repos_t *preferred_repos,
                            apr_pool_t *pool);
 
 /** @} */
