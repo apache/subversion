@@ -168,17 +168,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1522892
-   Fix issue #4425 and #3014 on Windows: svn.exe crashed when output of 'log'
-   command interrupted when using ra_serf.
-   Changes[client]:
-     * fixed: command line client crashes when piped command is interrupted on
-       Windows.
-   Justification:
-     User reported crash.
-   Votes:
-     +1: rhuijben, stefan2, brane
-
  * r1525902
    Fix issues #4428 and #4429: external references a redirected HTTP-URL.
    Changes:
