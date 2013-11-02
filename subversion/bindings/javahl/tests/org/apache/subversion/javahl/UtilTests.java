@@ -23,7 +23,10 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.NodeKind;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
@@ -134,5 +137,55 @@ public class UtilTests extends SVNTests
                                  ">>>>>>> local\n" +
                                  "\nN-3\nN-2\nN-1\nN\n").getBytes();
         assertTrue(Arrays.equals(expected, result.toByteArray()));
+    }
+
+    public void testValidateProp() throws Throwable
+    {
+        File temp = File.createTempFile("propcheck", ".file", localTmp);
+        FileOutputStream out = new FileOutputStream(temp);
+        out.write("normal text\n".getBytes());
+        out.close();
+
+        byte[] prop = SVNUtil.canonicalizeNodeProperty(
+                           "svn:eol-style", "  native".getBytes(),
+                           "propcheck.file", NodeKind.file,
+                           "text/plain");
+        assertEquals("native", new String(prop));
+
+        prop = SVNUtil.canonicalizeNodeProperty(
+                    "svn:eol-style", " native  ".getBytes(),
+                    "propcheck.file", NodeKind.file,
+                    "text/plain", new FileInputStream(temp));
+        assertEquals("native", new String(prop));
+
+        boolean caught_exception = false;
+        try {
+            prop = SVNUtil.canonicalizeNodeProperty(
+                        "svn:eol-style", " weird  ".getBytes(),
+                        "propcheck.file", NodeKind.file,
+                        "text/plain");
+        } catch (ClientException ex) {
+            assertEquals("Unrecognized line ending style",
+                         ex.getAllMessages().get(0).getMessage());
+            caught_exception = true;
+        }
+        assertTrue(caught_exception);
+
+        out = new FileOutputStream(temp);
+        out.write("inconsistent\r\ntext\n".getBytes());
+        out.close();
+
+        caught_exception = false;
+        try {
+            prop = SVNUtil.canonicalizeNodeProperty(
+                        "svn:eol-style", " native  ".getBytes(),
+                        "propcheck.file", NodeKind.file,
+                        "text/plain", new FileInputStream(temp));
+        } catch (ClientException ex) {
+            assertEquals("Inconsistent line ending style",
+                         ex.getAllMessages().get(2).getMessage());
+            caught_exception = true;
+        }
+        assertTrue(caught_exception);
     }
 }
