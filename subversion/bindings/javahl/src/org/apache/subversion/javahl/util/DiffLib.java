@@ -43,7 +43,7 @@ public class DiffLib
         NativeResources.loadNativeLibrary();
     }
 
-    /** @see ISVNUtil.fileDiff */
+    /** @see SVNUtil.fileDiff */
     public boolean fileDiff(String originalFile,
                             String modifiedFile,
                             SVNUtil.DiffOptions diffOptions,
@@ -88,7 +88,7 @@ public class DiffLib
                                OutputStream resultStream)
         throws ClientException;
 
-    /** @see ISVNUtil.fileMerge */
+    /** @see SVNUtil.fileMerge */
     public boolean fileMerge(String originalFile,
                              String modifiedFile,
                              String latestFile,
