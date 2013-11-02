@@ -683,7 +683,10 @@ svn_repos__config_pool_get(svn_config_t **cfg,
                                          case_sensitive, pool,
                                          scratch_pool));
       if (*cfg)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(scratch_pool);
+          return SVN_NO_ERROR;
+        }
 
       /* Read and cache the configuration.  This may fail. */
       err = find_repos_config(cfg, config_pool, path, case_sensitive,
