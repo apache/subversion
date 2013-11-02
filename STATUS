@@ -168,13 +168,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1524869
-   JavaHL: Canonicalize path for streamFileContent method.
-   Justification:
-      JavaHL is designed around us doing the canonicalization.
-   Votes:
-     +1: breser, stefan2, brane
-
  * r1537360, r1537415, r1537555, r1537700
    mod_dav_svn: Set r->filename to a bogus value rather than NULL.
    Justification:
