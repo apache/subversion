@@ -54,8 +54,14 @@ typedef struct config_ref_t
    * This is a SHA1 checksum of the parsed textual representation of CFG. */
   svn_checksum_t *key;
 
-  /* Parsed and expanded configuration */
-  svn_config_t *cfg;
+  /* Parsed and expanded configuration.  At least one of the following
+   * must not be NULL. */
+
+  /* Case-sensitive config. May be NULL */
+  svn_config_t *cs_cfg;
+
+  /* Case-insensitive config. May be NULL */
+  svn_config_t *ci_cfg;
 
   /* private pool. This instance and its other members got allocated in it.
    * Will be destroyed when this instance is cleaned up. */
@@ -217,21 +223,27 @@ config_ref_cleanup(void *baton)
 }
 
 /* Return an automatic reference to the CFG member in CONFIG that will be
- * released when POOL gets cleaned up.
+ * released when POOL gets cleaned up.  CASE_SENSITIVE controls option and
+ * section name matching.
  */
 static svn_config_t *
 return_config_ref(config_ref_t *config,
+                  svn_boolean_t case_sensitive,
                   apr_pool_t *pool)
 {
   if (svn_atomic_inc(&config->ref_count) == 0)
     svn_atomic_inc(&config->config_pool->used_config_count);
+
   apr_pool_cleanup_register(pool, config, config_ref_cleanup,
                             apr_pool_cleanup_null);
-  return svn_config__shallow_copy(config->cfg, pool);
+  return svn_config__shallow_copy(case_sensitive ? config->cs_cfg
+                                                 : config->ci_cfg,
+                                  pool);
 }
 
 /* Set *CFG to the configuration with a parsed textual matching CHECKSUM.
  * Set *CFG to NULL if no such config can be found in CONFIG_POOL.
+ * CASE_SENSITIVE controls option and section name matching.
  * 
  * RESULT_POOL determines the lifetime of the returned reference.
  *
@@ -241,12 +253,15 @@ static svn_error_t *
 config_by_checksum(svn_config_t **cfg,
                    svn_repos__config_pool_t *config_pool,
                    svn_checksum_t *checksum,
+                   svn_boolean_t case_sensitive,
                    apr_pool_t *result_pool)
 {
   config_ref_t *config_ref = apr_hash_get(config_pool->configs,
                                           checksum->digest,
                                           svn_checksum_size(checksum));
-  *cfg = config_ref ? return_config_ref(config_ref, result_pool) : NULL;
+  *cfg = config_ref
+       ? return_config_ref(config_ref, case_sensitive, result_pool)
+       : NULL;
 
   return SVN_NO_ERROR;
 }
@@ -283,6 +298,7 @@ remove_unused_configs(svn_repos__config_pool_t *config_pool)
 
 /* Cache config_ref* in CONFIG_POOL and return a reference to it in *CFG.
  * RESULT_POOL determines the lifetime of that reference.
+ * CASE_SENSITIVE controls option and section name matching.
  *
  * Requires external serialization on CONFIG_POOL.
  */
@@ -290,6 +306,7 @@ static svn_error_t *
 config_add(svn_config_t **cfg,
            svn_repos__config_pool_t *config_pool,
            config_ref_t *config_ref,
+           svn_boolean_t case_sensitive,
            apr_pool_t *result_pool)
 {
   config_ref_t *config = apr_hash_get(config_ref->config_pool->configs,
@@ -297,8 +314,23 @@ config_add(svn_config_t **cfg,
                                       svn_checksum_size(config_ref->key));
   if (config)
     {
-      /* entry already exists (e.g. race condition)
-       * Destroy the new one and return a reference to the existing one
+      /* entry already exists (e.g. race condition) */
+
+      /* Maybe, we created a variant with different case sensitivity? */
+      if (case_sensitive && config->cs_cfg == NULL)
+        {
+          SVN_ERR(svn_config_dup(&config->cs_cfg, config_ref->cs_cfg,
+                                 config->pool));
+          svn_config__set_read_only(config->cs_cfg, config_ref->pool);
+        }
+      else if (!case_sensitive && config->ci_cfg == NULL)
+        {
+          SVN_ERR(svn_config_dup(&config->ci_cfg, config_ref->ci_cfg,
+                                 config->pool));
+          svn_config__set_read_only(config->ci_cfg, config_ref->pool);
+        }
+
+      /* Destroy the new one and return a reference to the existing one
        * because the existing one may already have references on it.
        */
       svn_pool_destroy(config_ref->pool);
@@ -320,14 +352,14 @@ config_add(svn_config_t **cfg,
                    config_ref);
     }
 
-  *cfg = return_config_ref(config_ref, result_pool);
+  *cfg = return_config_ref(config_ref, case_sensitive, result_pool);
 
   return SVN_NO_ERROR;
 }
 
 /* Set *CFG to the configuration passed in as text in CONTENTS.  If no such
  * configuration exists in CONFIG_POOL, yet, parse CONTENTS and cache the
- * result.
+ * result.  CASE_SENSITIVE controls option and section name matching.
  * 
  * RESULT_POOL determines the lifetime of the returned reference and 
  * SCRATCH_POOL is being used for temporary allocations.
@@ -336,6 +368,7 @@ static svn_error_t *
 auto_parse(svn_config_t **cfg,
            svn_repos__config_pool_t *config_pool,
            svn_stringbuf_t *contents,
+           svn_boolean_t case_sensitive,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -353,7 +386,7 @@ auto_parse(svn_config_t **cfg,
   *cfg = NULL;
   SVN_MUTEX__WITH_LOCK(config_pool->mutex,
                        config_by_checksum(cfg, config_pool, checksum,
-                                          result_pool));
+                                          case_sensitive, result_pool));
 
   if (*cfg)
     return SVN_NO_ERROR;
@@ -369,16 +402,20 @@ auto_parse(svn_config_t **cfg,
   config_ref->pool = cfg_pool;
   config_ref->ref_count = 0;
 
-  SVN_ERR(svn_config_parse(&config_ref->cfg,
+  SVN_ERR(svn_config_parse(case_sensitive ? &config_ref->cs_cfg
+                                          : &config_ref->ci_cfg,
                            svn_stream_from_stringbuf(contents, scratch_pool),
-                           TRUE, TRUE, cfg_pool));
+                           case_sensitive, case_sensitive, cfg_pool));
 
   /* switch config data to r/o mode to guarantee thread-safe access */
-  svn_config__set_read_only(config_ref->cfg, cfg_pool);
+  svn_config__set_read_only(case_sensitive ? config_ref->cs_cfg
+                                           : config_ref->ci_cfg,
+                            cfg_pool);
 
   /* add config in pool, handle loads races and return the right config */
   SVN_MUTEX__WITH_LOCK(config_pool->mutex,
-                       config_add(cfg, config_pool, config_ref, result_pool));
+                       config_add(cfg, config_pool, config_ref,
+                                  case_sensitive, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -439,7 +476,8 @@ add_checksum(svn_repos__config_pool_t *config_pool,
 }
 
 /* Set *CFG to the configuration stored in URL@HEAD and cache it in 
- * CONFIG_POOL. ### Always returns a NULL CFG.
+ * CONFIG_POOL. ### Always returns a NULL CFG.  CASE_SENSITIVE controls
+ * option and section name matching.
  * 
  * RESULT_POOL determines the lifetime of the returned reference and 
  * SCRATCH_POOL is being used for temporary allocations.
@@ -448,6 +486,7 @@ static svn_error_t *
 find_repos_config(svn_config_t **cfg,
                   svn_repos__config_pool_t *config_pool,
                   const char *url,
+                  svn_boolean_t case_sensitive,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
@@ -487,7 +526,7 @@ find_repos_config(svn_config_t **cfg,
   if (checksum)
     SVN_MUTEX__WITH_LOCK(config_pool->mutex,
                          config_by_checksum(cfg, config_pool, checksum,
-                                            result_pool));
+                                            case_sensitive, result_pool));
 
   /* not parsed, yet? */
   if (!*cfg)
@@ -505,8 +544,8 @@ find_repos_config(svn_config_t **cfg,
                                         (apr_size_t)length, scratch_pool));
 
       /* handle it like ordinary file contents and cache it */
-      SVN_ERR(auto_parse(cfg, config_pool, contents, result_pool,
-                         scratch_pool));
+      SVN_ERR(auto_parse(cfg, config_pool, contents, case_sensitive,
+                         result_pool, scratch_pool));
     }
 
   /* store the (path,rev) -> checksum mapping as well */
@@ -520,7 +559,7 @@ find_repos_config(svn_config_t **cfg,
 
 /* Set *CFG to the configuration cached in CONFIG_POOL for URL.  If no
  * suitable config has been cached or if it is potentially outdated, set
- * *CFG to NULL.
+ * *CFG to NULL.  CASE_SENSITIVE controls option and section name matching.
  *
  * RESULT_POOL determines the lifetime of the returned reference and 
  * SCRATCH_POOL is being used for temporary allocations.
@@ -531,6 +570,7 @@ static svn_error_t *
 config_by_url(svn_config_t **cfg,
               svn_repos__config_pool_t *config_pool,
               const char *url,
+              svn_boolean_t case_sensitive,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
@@ -541,12 +581,18 @@ config_by_url(svn_config_t **cfg,
 
   /* hash lookup url -> sha1 -> config */
   in_repo_config_t *config = svn_hash_gets(config_pool->in_repo_configs, url);
-  *cfg = 0;
+  *cfg = NULL;
   if (config)
     config_ref = apr_hash_get(config_pool->configs,
                               config->key->digest,
                               svn_checksum_size(config->key));
   if (!config_ref)
+    return SVN_NO_ERROR;
+
+  /* available with the desired case sensitivity? */
+  if (case_sensitive && config_ref->cs_cfg == NULL)
+    return SVN_NO_ERROR;
+  if (!case_sensitive && config_ref->ci_cfg == NULL)
     return SVN_NO_ERROR;
 
   /* found *some* configuration. 
@@ -561,7 +607,7 @@ config_by_url(svn_config_t **cfg,
   if (err)
     svn_error_clear(err);
   else if (current == config->revision)
-    *cfg = return_config_ref(config_ref, result_pool);
+    *cfg = return_config_ref(config_ref, case_sensitive, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -600,6 +646,8 @@ svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
+                           svn_boolean_t must_exist,
+                           svn_boolean_t case_sensitive,
                            apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -610,18 +658,21 @@ svn_repos__config_pool_get(svn_config_t **cfg,
       /* Read config file from repository.
        * Attempt a quick lookup first. */
       SVN_MUTEX__WITH_LOCK(config_pool->mutex,
-                           config_by_url(cfg, config_pool, path, pool,
+                           config_by_url(cfg, config_pool, path, 
+                                         case_sensitive, pool,
                                          scratch_pool));
       if (*cfg)
         return SVN_NO_ERROR;
 
       /* Read and cache the configuration.  This may fail. */
-      err = find_repos_config(cfg, config_pool, path, pool, scratch_pool);
+      err = find_repos_config(cfg, config_pool, path, case_sensitive,
+                              pool, scratch_pool);
       if (err || !*cfg)
         {
           /* let the standard implementation handle all the difficult cases */
           svn_error_clear(err);
-          err = svn_repos__retrieve_config(cfg, path, TRUE, pool);
+          err = svn_repos__retrieve_config(cfg, path, must_exist,
+                                           case_sensitive, pool);
         }
     }
   else
@@ -633,12 +684,14 @@ svn_repos__config_pool_get(svn_config_t **cfg,
         {
           /* let the standard implementation handle all the difficult cases */
           svn_error_clear(err);
-          err = svn_config_read3(cfg, path, TRUE, TRUE, TRUE, pool);
+          err = svn_config_read3(cfg, path, must_exist, case_sensitive,
+                                 case_sensitive, pool);
         }
       else
         {
           /* parsing and caching will always succeed */
-          err = auto_parse(cfg, config_pool, contents, pool, scratch_pool);
+          err = auto_parse(cfg, config_pool, contents, case_sensitive,
+                           pool, scratch_pool);
         }
     }
 
