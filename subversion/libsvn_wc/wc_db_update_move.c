@@ -1410,9 +1410,9 @@ get_tc_info(svn_wc_operation_t *operation,
 
 /* Return *PROPS, *CHECKSUM, *CHILDREN and *KIND for LOCAL_RELPATH at
    OP_DEPTH provided the row exists.  Return *KIND of svn_node_none if
-   the row does not exist. *CHILDREN is a sorted array of basenames of
-   type 'const char *', rather than a hash, to allow the driver to
-   process children in a defined order. */
+   the row does not exist, or only describes a delete of a lower op-depth.
+   *CHILDREN is a sorted array of basenames of type 'const char *', rather
+   than a hash, to allow the driver to process children in a defined order. */
 static svn_error_t *
 get_info(apr_hash_t **props,
          const svn_checksum_t **checksum,
@@ -1427,16 +1427,36 @@ get_info(apr_hash_t **props,
   apr_hash_t *hash_children;
   apr_array_header_t *sorted_children;
   svn_error_t *err;
+  svn_wc__db_status_t status;
+  const char *repos_relpath;
   int i;
 
-  err = svn_wc__db_depth_get_info(NULL, kind, NULL, NULL, NULL, NULL, NULL,
-                                  NULL, NULL, checksum, NULL, NULL, props,
+  err = svn_wc__db_depth_get_info(&status, kind, NULL, &repos_relpath, NULL,
+                                  NULL, NULL, NULL, NULL, checksum, NULL,
+                                  NULL, props,
                                   wcroot, local_relpath, op_depth,
                                   result_pool, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+
+  /* If there is no node at this depth, or only a node that describes a delete
+     of a lower layer we report this node as not existing.
+
+     But when a node is reported as DELETED, but has a repository location it
+     is really a not-present node that must be reported as being there */
+  if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      || (!err && status == svn_wc__db_status_deleted))
     {
       svn_error_clear(err);
-      *kind = svn_node_none;
+
+      if (kind && (err || !repos_relpath))
+        *kind = svn_node_none;
+      if (checksum)
+        *checksum = NULL;
+      if (props)
+        *props = NULL;
+      if (children)
+        *children = apr_array_make(result_pool, 0, sizeof(const char *));
+
+      return SVN_NO_ERROR;
     }
   else
     SVN_ERR(err);
