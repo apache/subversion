@@ -4648,6 +4648,27 @@ def diff_local_missing_obstruction(sbox):
                                      'diff', wc_dir)
 
 
+@Issue(4444)
+@XFail()
+def diff_move_inside_copy(sbox):
+  "diff copied-along child that contains a moved file"
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  d_path = 'A/D'
+  d_copy = 'A/D-copy'
+  h_path = 'A/D-copy/H'
+  chi_path = '%s/chi' % h_path
+  chi_moved = '%s/chi-moved' % h_path
+
+  sbox.simple_copy(d_path, d_copy)
+  sbox.simple_move(chi_path, chi_moved)
+  sbox.simple_append(chi_moved, 'a new line')
+
+  # Bug: Diffing the copied directory asserts
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'diff', sbox.ospath(h_path))
+
 ########################################################################
 #Run the tests
 
@@ -4729,6 +4750,7 @@ test_list = [ None,
               diff_repos_empty_file_addition,
               diff_missing_tree_conflict_victim,
               diff_local_missing_obstruction,
+              diff_move_inside_copy,
               ]
 
 if __name__ == '__main__':
