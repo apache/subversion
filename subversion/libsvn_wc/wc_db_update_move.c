@@ -306,7 +306,7 @@ mark_tree_conflict(const char *local_relpath,
                   && strcmp(move_src_op_root_relpath,
                             svn_dirent_skip_ancestor(wcroot->abspath,
                                                      existing_abspath))))
-            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+            return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                                      _("'%s' already in conflict"),
                                      svn_dirent_local_style(local_relpath,
                                                             scratch_pool));
