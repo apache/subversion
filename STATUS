@@ -37,20 +37,6 @@ Candidate changes:
      +1: breser, julianfoad
      +1 (without r1535554, r1535590, 1535592 commits on branch): stsp
 
- * r1426762
-   Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
-   diff" produces incorrect diff.
-   Justification:
-     Without this patch the identical suffix might show up as an added or
-     deleted suffix of a file.
-   Depends: (conflicts, doesn't compile)
-   Notes:
-     Will probably conflict if r1426752 and/or r1427278 are merged to
-     1.7.x, because they all add a test to the testlist in diff-diff3-test.c.
-   Votes:
-     +1: rhuijben, jcorvel
-     +0: stsp (doesn't compile, undefined reference to `svn_stringbuf_insert')
-
  * r1435635, r1435714, r1435722, r1435737
    When svn update removes a switched subtree because it was deleted in the
    target revision, it would be nice if a future update would bring back
@@ -157,3 +143,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1426762
+   Fix issue #4283, When the identical suffix starts at chunk boundary, "svn
+   diff" produces incorrect diff.
+   Justification:
+     Without this patch the identical suffix might show up as an added or
+     deleted suffix of a file.
+   Branch:
+     ^/subversion/branches/1.7.x-r1426762
+   Votes:
+     +1: rhuijben, jcorvel, julianfoad
+     +0: stsp (doesn't compile, undefined reference to `svn_stringbuf_insert')
+              (referring to r1426762 by itself without the branch)
