@@ -2349,7 +2349,6 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  int op_depth = relpath_depth(local_relpath);
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
@@ -2358,24 +2357,25 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_OP_DEPTH_MOVED_PAIR));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                            op_depth));
+                            relpath_depth(local_relpath)));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while(have_row)
     {
       svn_error_t *err;
-      const char *moved_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      const char *move_root_dst_relpath = svn_sqlite__column_text(stmt, 1,
-                                                                  NULL);
-      const char *moved_dst_repos_relpath = svn_sqlite__column_text(stmt, 2,
-                                                                    NULL);
+      const char *src_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_node_kind_t src_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+      const char *dst_relpath = svn_sqlite__column_text(stmt, 2, NULL);
+      const char *src_repos_relpath = svn_sqlite__column_text(stmt, 3, NULL);
       svn_pool_clear(iterpool);
 
-      err = mark_tree_conflict(moved_relpath,
+      SVN_ERR_ASSERT(src_repos_relpath != NULL);
+
+      err = mark_tree_conflict(src_relpath,
                                wcroot, db, old_version, new_version,
-                               move_root_dst_relpath, operation,
-                               svn_node_dir /* ### ? */,
-                               svn_node_dir /* ### ? */,
-                               moved_dst_repos_relpath,
+                               dst_relpath, operation,
+                               src_kind /* ### old kind */,
+                               src_kind /* ### new kind */,
+                               src_repos_relpath,
                                svn_wc_conflict_reason_moved_away,
                                action, local_relpath,
                                iterpool);
