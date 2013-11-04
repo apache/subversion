@@ -952,11 +952,6 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  /* If comparing against WORKING, skip entries that are
-     schedule-deleted - they don't really exist. */
-  if (!diff_pristine && status == svn_wc__db_status_deleted)
-    return SVN_NO_ERROR;
-
   assert(kind == svn_node_file
          && (status == svn_wc__db_status_normal
              || status == svn_wc__db_status_added
