@@ -147,8 +147,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-fsfs-commit
    Votes:
-     +1: stefan2
-     -0: brane (not a security fix)
+     +1: stefan2, brane
 
 Veto-blocked changes:
 =====================
