@@ -2500,8 +2500,9 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
                                       STMT_CREATE_UPDATE_MOVE_LIST));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_MOVED_PAIR2));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+                                    STMT_SELECT_MOVED_PAIRS_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            relpath_depth(local_relpath)));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   iterpool = svn_pool_create(scratch_pool);
