@@ -2337,6 +2337,7 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while(have_row)
     {
+      svn_error_t *err;
       const char *moved_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       const char *move_root_dst_relpath = svn_sqlite__column_text(stmt, 1,
                                                                   NULL);
@@ -2344,15 +2345,18 @@ resolve_delete_raise_moved_away(svn_wc__db_wcroot_t *wcroot,
                                                                     NULL);
       svn_pool_clear(iterpool);
 
-      SVN_ERR(mark_tree_conflict(moved_relpath,
-                                 wcroot, db, old_version, new_version,
-                                 move_root_dst_relpath, operation,
-                                 svn_node_dir /* ### ? */,
-                                 svn_node_dir /* ### ? */,
-                                 moved_dst_repos_relpath,
-                                 svn_wc_conflict_reason_moved_away,
-                                 action, local_relpath,
-                                 iterpool));
+      err = mark_tree_conflict(moved_relpath,
+                               wcroot, db, old_version, new_version,
+                               move_root_dst_relpath, operation,
+                               svn_node_dir /* ### ? */,
+                               svn_node_dir /* ### ? */,
+                               moved_dst_repos_relpath,
+                               svn_wc_conflict_reason_moved_away,
+                               action, local_relpath,
+                               iterpool);
+
+      if (err)
+        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
