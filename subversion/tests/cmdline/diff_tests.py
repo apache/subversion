@@ -4665,7 +4665,7 @@ def diff_move_inside_copy(sbox):
   sbox.simple_move(chi_path, chi_moved)
   sbox.simple_append(chi_moved, 'a new line')
 
-  # Bug: Diffing the copied directory asserts
+  # Bug: Diffing the copied-along parent directory asserts
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'diff', sbox.ospath(h_path))
 
