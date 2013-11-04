@@ -558,6 +558,10 @@ svn_repos_capabilities(apr_hash_t **capabilities,
 svn_fs_t *
 svn_repos_fs(svn_repos_t *repos);
 
+/** Return the type of filesystem associated with repository object
+ * @a repos allocated in @a pool. */
+const char *
+svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
 
 /** Make a hot copy of the Subversion repository found at @a src_path
  * to @a dst_path.

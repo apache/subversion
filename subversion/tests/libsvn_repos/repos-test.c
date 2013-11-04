@@ -3521,7 +3521,27 @@ test_config_pool(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-
+
+static svn_error_t *
+test_repos_fs_type(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+    svn_repos_t *repos;
+
+    /* Create test repository. */
+    SVN_ERR(svn_test__create_repos(&repos, "test-repo-repos_fs_type",
+                                   opts, pool));
+
+    SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
+
+    /* Re-open repository and verify fs-type again. */
+    SVN_ERR(svn_repos_open2(&repos, svn_repos_path(repos, pool), NULL, pool));
+
+    SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
+
+    return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -3571,5 +3591,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_info_*"),
     SVN_TEST_OPTS_PASS(test_config_pool,
                        "test svn_repos__config_pool_*"),
-    SVN_TEST_NULL
+    SVN_TEST_OPTS_PASS(test_repos_fs_type,
+                       "test test_repos_fs_type"),
+                       SVN_TEST_NULL
   };
