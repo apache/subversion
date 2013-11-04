@@ -29,8 +29,8 @@ Candidate changes:
    Notes:
      Please read the branch and related trunk log messages for detailed notes
      about these changes.
-     breser: Not so found of the temp file use but 1.8.x is out with a much
-     implementation anyway.
+     breser: Not so fond of the temp file use but 1.8.x is out with a much
+     better implementation anyway.
    Branch:
      ^/subversion/branches/1.7.x-issue4153
    Votes:
