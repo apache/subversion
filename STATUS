@@ -202,14 +202,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, brane
 
- * r1538516, r1538517, r1538519, r1538574
+ * r1538516, r1538517, r1538519, r1538574, r1538581
    Fix issue #4444, "diffing move inside a copy asserts"
    Justification:
      I want to get to a pub on Friday so let's get this done.
      http://svn.haxx.se/users/archive-2013-11/0037.shtml
    Votes:
-     +1: stsp (without r1538574)
-     +1: rhuijben
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
