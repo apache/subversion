@@ -2438,7 +2438,6 @@ break_move(svn_wc__db_wcroot_t *wcroot,
            const char *src_relpath,
            int src_op_depth,
            const char *dst_relpath,
-           int dst_op_depth,
            apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -2449,11 +2448,12 @@ break_move(svn_wc__db_wcroot_t *wcroot,
                             src_op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  /* This statement clears moved_here. */
+  /* The destination is always an op-root, so we can calculate the depth
+     from there. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_OP_DEPTH_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isdd", wcroot->wc_id,
-                            dst_relpath, dst_op_depth, dst_op_depth));
+                                    STMT_CLEAR_MOVED_HERE_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                            dst_relpath, relpath_depth(dst_relpath)));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -2482,7 +2482,6 @@ svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(break_move(wcroot, local_relpath,
                      relpath_depth(move_src_op_root_relpath),
                      move_dst_op_root_relpath,
-                     relpath_depth(move_dst_op_root_relpath),
                      scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2515,7 +2514,7 @@ break_moved_away_children_internal(svn_wc__db_wcroot_t *wcroot,
       svn_pool_clear(iterpool);
 
       SVN_ERR(break_move(wcroot, src_relpath, src_op_depth, dst_relpath,
-                         relpath_depth(dst_relpath), iterpool));
+                         iterpool));
       SVN_ERR(update_move_list_add(wcroot, src_relpath,
                                    svn_wc_notify_move_broken,
                                    svn_node_unknown,
