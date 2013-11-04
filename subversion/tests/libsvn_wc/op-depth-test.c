@@ -9186,7 +9186,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move4: edit AAA"),
     SVN_TEST_OPTS_XFAIL(move4_update_delete_AAA,
                        "move4: delete AAA"),
-    SVN_TEST_OPTS_XFAIL(move4_update_add_AAA,
+    SVN_TEST_OPTS_PASS(move4_update_add_AAA,
                        "move4: add AAA"),
     SVN_TEST_OPTS_XFAIL(move4_update_delself_AAA,
                        "move4: delete self AAA"),
