@@ -8915,6 +8915,21 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
+
+  /* Resolve a few conflicts manually */
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  /* ### These can currently only be resolved to merged ???? */
+  SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+  SVN_ERR(sbox_wc_resolve(&b, "A/A/A", svn_depth_empty,
+                          svn_wc_conflict_choose_merged));
+
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
@@ -8995,6 +9010,20 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
     /* Update and resolve via mine strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
+
+    /* Resolve a few conflicts manually */
+    SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+        svn_wc_conflict_choose_mine_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "B", svn_depth_empty,
+        svn_wc_conflict_choose_mine_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "C/A", svn_depth_empty,
+        svn_wc_conflict_choose_mine_conflict));
+
+    /* ### These can currently only be resolved to merged ???? */
+    SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty,
+        svn_wc_conflict_choose_merged));
+    SVN_ERR(sbox_wc_resolve(&b, "A/A/A", svn_depth_empty,
+        svn_wc_conflict_choose_merged));
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Go back to start position */
     SVN_ERR(sbox_wc_update(&b, "", 1));
@@ -9300,7 +9329,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "del4: delete AAA"),
     SVN_TEST_OPTS_PASS(del4_update_add_AAA,
                        "del4: add AAA"),
-    SVN_TEST_OPTS_XFAIL(del4_update_delself_AAA,
+    SVN_TEST_OPTS_PASS(del4_update_delself_AAA,
                        "del4: delete self AAA"),
     SVN_TEST_OPTS_PASS(move4_update_edit_AAA,
                        "move4: edit AAA"),
