@@ -838,6 +838,7 @@ tc_editor_alter_directory(void *baton,
       apr_hash_t *actual_props;
       apr_array_header_t *propchanges;
 
+      /* ### TODO: Only do this when there is no higher WORKING layer */
       SVN_ERR(update_working_props(&prop_state, &conflict_skel,
                                    &propchanges, &actual_props,
                                    b->db, dst_abspath,
@@ -908,6 +909,7 @@ update_working_file(const char *local_relpath,
   svn_wc_notify_state_t prop_state, content_state;
   svn_skel_t *work_item, *work_items = NULL;
 
+  /* ### TODO: Only do this when there is no higher WORKING layer */
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
                                &actual_props, db, local_abspath,
                                old_version, new_version,
