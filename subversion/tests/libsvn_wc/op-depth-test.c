@@ -9006,6 +9006,126 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+simple_move_bump(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "simple_move_bump", opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(&b, "A"));
+  SVN_ERR(sbox_wc_mkdir(&b, "A/B"));
+
+  SVN_ERR(sbox_wc_propset(&b, "old_A", "val", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "old_B", "val", "A/B"));
+
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_propset(&b, "new_A", "val", "A"));
+  SVN_ERR(sbox_wc_propset(&b, "new_B", "val", "A/B"));
+
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+
+  SVN_ERR(sbox_wc_move(&b, "A/B", "A/B_mv"));
+  SVN_ERR(sbox_wc_move(&b, "A", "A_mv"));
+
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "",          "normal",       1, ""},
+      { 0, "A",         "normal",       1, "A", NOT_MOVED, "old_A"},
+      { 0, "A/B",       "normal",       1, "A/B", NOT_MOVED, "old_B"},
+
+      { 1, "A",         "base-deleted", NO_COPY_FROM, "A_mv"},
+      { 1, "A/B",       "base-deleted", NO_COPY_FROM},
+
+      { 1, "A_mv",      "normal",       1, "A", MOVED_HERE, "old_A" },
+      { 1, "A_mv/B",    "normal",       1, "A/B", MOVED_HERE, "old_B" },
+
+      { 2, "A_mv/B",    "base-deleted", NO_COPY_FROM, "A_mv/B_mv" },
+      { 2, "A_mv/B_mv", "normal",       1, "A/B", FALSE, NULL, TRUE, "old_B" },
+
+      { 0 },
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 2));
+
+  /* Expect the A tree to be updated */
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "",          "normal",       2, ""},
+      { 0, "A",         "normal",       2, "A", NOT_MOVED, "new_A,old_A"},
+      { 0, "A/B",       "normal",       2, "A/B", NOT_MOVED, "new_B,old_B"},
+
+      { 1, "A",         "base-deleted", NO_COPY_FROM, "A_mv"},
+      { 1, "A/B",       "base-deleted", NO_COPY_FROM},
+
+      { 1, "A_mv",      "normal",       1, "A", MOVED_HERE, "old_A" },
+      { 1, "A_mv/B",    "normal",       1, "A/B", MOVED_HERE, "old_B" },
+
+      { 2, "A_mv/B",    "base-deleted", NO_COPY_FROM, "A_mv/B_mv" },
+      { 2, "A_mv/B_mv", "normal",       1, "A/B", FALSE, NULL, TRUE, "old_B" },
+
+      { 0 },
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "",          "normal",       2, ""},
+      { 0, "A",         "normal",       2, "A", NOT_MOVED, "new_A,old_A"},
+      { 0, "A/B",       "normal",       2, "A/B", NOT_MOVED, "new_B,old_B"},
+
+      { 1, "A",         "base-deleted", NO_COPY_FROM, "A_mv"},
+      { 1, "A/B",       "base-deleted", NO_COPY_FROM},
+
+      { 1, "A_mv",      "normal",       2, "A", MOVED_HERE, "new_A,old_A" },
+      { 1, "A_mv/B",    "normal",       2, "A/B", MOVED_HERE, "new_B,old_B" },
+
+      { 2, "A_mv/B",    "base-deleted", NO_COPY_FROM, "A_mv/B_mv" },
+      { 2, "A_mv/B_mv", "normal",       1, "A/B", FALSE, NULL, TRUE, "old_B" },
+
+      { 0 },
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  SVN_ERR(sbox_wc_resolve(&b, "A_mv/B", svn_depth_empty,
+                          svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "",          "normal",       2, ""},
+      { 0, "A",         "normal",       2, "A", NOT_MOVED, "new_A,old_A"},
+      { 0, "A/B",       "normal",       2, "A/B", NOT_MOVED, "new_B,old_B"},
+
+      { 1, "A",         "base-deleted", NO_COPY_FROM, "A_mv"},
+      { 1, "A/B",       "base-deleted", NO_COPY_FROM},
+
+      { 1, "A_mv",      "normal",       2, "A", MOVED_HERE, "new_A,old_A" },
+      { 1, "A_mv/B",    "normal",       2, "A/B", MOVED_HERE, "new_B,old_B" },
+
+      { 2, "A_mv/B",    "base-deleted", NO_COPY_FROM, "A_mv/B_mv" },
+      { 2, "A_mv/B_mv", "normal",       2, "A/B", FALSE, NULL, TRUE, "new_B,old_B" },
+
+      { 0 },
+    };
+    SVN_ERR(check_db_rows(&b, "", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -9190,5 +9310,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move4: add AAA"),
     SVN_TEST_OPTS_XFAIL(move4_update_delself_AAA,
                        "move4: delete self AAA"),
+    SVN_TEST_OPTS_PASS(simple_move_bump,
+                       "simple move bump"),
     SVN_TEST_NULL
   };
