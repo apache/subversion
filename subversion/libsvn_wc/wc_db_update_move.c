@@ -251,11 +251,14 @@ mark_tree_conflict(const char *local_relpath,
     : NULL;
 
   if (!new_repos_relpath)
-    new_repos_relpath
-      = svn_relpath_join(new_version->path_in_repos,
-                         svn_relpath_skip_ancestor(move_root_dst_relpath,
-                                                   local_relpath),
-                         scratch_pool);
+    {
+      const char *child_relpath = svn_relpath_skip_ancestor(
+                                            move_root_dst_relpath,
+                                            local_relpath);
+      SVN_ERR_ASSERT(child_relpath != NULL);
+      new_repos_relpath = svn_relpath_join(new_version->path_in_repos,
+                                           child_relpath, scratch_pool);
+    }
 
   err = svn_wc__db_read_conflict_internal(&conflict, wcroot, local_relpath,
                                           scratch_pool, scratch_pool);
