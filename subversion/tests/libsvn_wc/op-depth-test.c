@@ -8861,7 +8861,7 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
 }
@@ -8881,7 +8881,7 @@ del4_update_delete_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
 }
@@ -8901,7 +8901,7 @@ del4_update_add_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
 }
@@ -8921,7 +8921,7 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
-  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+  SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
   return SVN_NO_ERROR;
 }
@@ -8941,7 +8941,7 @@ move4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Update and resolve via their strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
-    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
     return SVN_NO_ERROR;
 }
@@ -8961,7 +8961,7 @@ move4_update_delete_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Update and resolve via their strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
-    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
     return SVN_NO_ERROR;
 }
@@ -8981,7 +8981,7 @@ move4_update_add_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Update and resolve via their strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
-    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
     return SVN_NO_ERROR;
 }
@@ -9001,7 +9001,7 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Update and resolve via their strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
-    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_theirs_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
 
     return SVN_NO_ERROR;
 }
@@ -9182,7 +9182,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "del4: add AAA"),
     SVN_TEST_OPTS_XFAIL(del4_update_delself_AAA,
                        "del4: delete self AAA"),
-    SVN_TEST_OPTS_XFAIL(move4_update_edit_AAA,
+    SVN_TEST_OPTS_PASS(move4_update_edit_AAA,
                        "move4: edit AAA"),
     SVN_TEST_OPTS_XFAIL(move4_update_delete_AAA,
                        "move4: delete AAA"),
