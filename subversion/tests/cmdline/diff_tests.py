@@ -4649,7 +4649,6 @@ def diff_local_missing_obstruction(sbox):
 
 
 @Issue(4444)
-@XFail()
 def diff_move_inside_copy(sbox):
   "diff copied-along child that contains a moved file"
   sbox.build(read_only=True)
