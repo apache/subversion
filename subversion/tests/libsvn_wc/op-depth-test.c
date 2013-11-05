@@ -9250,7 +9250,7 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "A/E3",   "base-deleted", NO_COPY_FROM},
 
       {1, "B2",     "normal",       2, "A/B2", MOVED_HERE, "k"},
-      {1, "C2",     "normal",       1, "A/C2", MOVED_HERE},
+      {1, "C2",     "normal",       1, "A/C2"},
       {1, "D2",     "normal",       1, "A/D2", MOVED_HERE},
 
       {1, "Z",      "normal",       2, "A", MOVED_HERE},
@@ -9265,9 +9265,6 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
       {1, "Z/E3",   "normal",       2, "A/E3", MOVED_HERE},
 
       {2, "Z/B2",   "normal",       NO_COPY_FROM, "B2"},
-      /* ### Z/C2 still contains move information, but there is no
-         ### layer below it that is moved.
-         ###    And there is no tree conflict left */
       {2, "Z/C2",   "normal",       NO_COPY_FROM},
       {2, "Z/D2",   "normal",       NO_COPY_FROM, "D2"},
       {2, "Z/E2",   "normal",       NO_COPY_FROM},
