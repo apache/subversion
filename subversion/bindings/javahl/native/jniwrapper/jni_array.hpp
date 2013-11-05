@@ -24,6 +24,7 @@
 #ifndef SVN_JAVAHL_JNIWRAPPER_ARRAY_HPP
 #define SVN_JAVAHL_JNIWRAPPER_ARRAY_HPP
 
+#include <cstring>
 #include <string>
 
 #include "svn_string.h"
@@ -54,7 +55,7 @@ public:
    */
   explicit ByteArray(Env env, const char* text)
     : m_env(env),
-      m_length(jsize(::strlen(text))),
+      m_length(jsize(::std::strlen(text))),
       m_array(m_env.NewByteArray(m_length))
     {
       ByteArray::Contents contents(*this);
