@@ -413,7 +413,7 @@ public:
 private:
   ::JNIEnv* m_env;
 
-  JNIEXPORT jint JNICALL friend ::JNI_OnLoad(::JavaVM*, void*);
+  friend JNIEXPORT jint JNICALL ::JNI_OnLoad(::JavaVM*, void*);
   static ::JavaVM* m_jvm;
   static ::JNIEnv* env_from_jvm();
 
