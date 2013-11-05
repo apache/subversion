@@ -277,6 +277,16 @@ public class Revision implements java.io.Serializable
                 throw new IllegalArgumentException("a date must be specified");
             revDate = date;
         }
+
+        /**
+         * Create a revision from a timestamp in milliseconds.
+         * Used by the native implementaiton.
+         */
+        private DateSpec(long milliseconds)
+        {
+            this(new Date(milliseconds));
+        }
+
         /**
          * Returns the date of the revision
          * @return the date
@@ -316,7 +326,6 @@ public class Revision implements java.io.Serializable
         {
             return revDate.hashCode();
         }
-
     }
 
     /**
