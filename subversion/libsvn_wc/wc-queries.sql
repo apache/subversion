@@ -1631,14 +1631,16 @@ ORDER BY local_relpath
 
 -- STMT_SELECT_HAS_NON_FILE_CHILDREN
 SELECT 1 FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0 AND kind != MAP_FILE
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3 AND kind != MAP_FILE
+LIMIT 1
 
 -- STMT_SELECT_HAS_GRANDCHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(parent_relpath, ?2)
-  AND op_depth = 0
+  AND op_depth = ?3
   AND file_external IS NULL
+LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 
