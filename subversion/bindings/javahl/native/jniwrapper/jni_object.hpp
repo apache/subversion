@@ -202,7 +202,7 @@ class String : public Object
 {
 public:
   /**
-   * onstructs a wrapper around an existing string @a str.
+   * Constructs a wrapper around an existing string @a str.
    */
   explicit String(Env env, jstring str)
     : Object(env, ClassCache::get_string(), str)
