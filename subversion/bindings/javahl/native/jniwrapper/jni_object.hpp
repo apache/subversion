@@ -24,6 +24,7 @@
 #ifndef SVN_JAVAHL_JNIWRAPPER_OBJECT_HPP
 #define SVN_JAVAHL_JNIWRAPPER_OBJECT_HPP
 
+#include <cstring>
 #include <string>
 
 #include "jni_env.hpp"
@@ -262,7 +263,7 @@ public:
                : str.m_env.GetStringUTFChars(str.get(), NULL)),
         m_new_text(NULL),
         m_mutable(true),
-        m_length(m_text ? jsize(::strlen(m_text)) : 0)
+        m_length(m_text ? jsize(::std::strlen(m_text)) : 0)
       {}
 
     /**
@@ -274,7 +275,7 @@ public:
                : str.m_env.GetStringUTFChars(str.get(), NULL)),
         m_new_text(NULL),
         m_mutable(false),
-        m_length(m_text ? jsize(::strlen(m_text)) : 0)
+        m_length(m_text ? jsize(::std::strlen(m_text)) : 0)
       {}
 
     /**
@@ -314,7 +315,7 @@ public:
         if (m_text && m_mutable)
           {
             m_new_text = new_text;
-            m_length = jsize(::strlen(new_text));
+            m_length = jsize(::std::strlen(new_text));
           }
         else if (!m_mutable)
           throw std::logic_error(
