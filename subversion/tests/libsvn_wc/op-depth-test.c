@@ -9194,7 +9194,7 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
                             svn_wc_conflict_choose_merged));
     SVN_ERR(sbox_wc_resolve(&b, "A_moved/A/A", svn_depth_empty,
                             svn_wc_conflict_choose_merged));
-    //SVN_ERR(check_db_conflicts(&b, "", NULL));
+    /*SVN_ERR(check_db_conflicts(&b, "", NULL));*/
     SVN_ERR(sbox_wc_resolve(&b, "A/A", svn_depth_empty,
                             svn_wc_conflict_choose_mine_conflict));
     SVN_ERR(sbox_wc_resolve(&b, "BA_moved/A", svn_depth_empty,
