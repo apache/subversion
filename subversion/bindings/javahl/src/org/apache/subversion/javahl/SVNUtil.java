@@ -29,6 +29,7 @@ import org.apache.subversion.javahl.util.*;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 
 public class SVNUtil
 {
@@ -339,5 +340,65 @@ public class SVNUtil
     {
         return new PropLib().canonicalizeNodeProperty(
             name, value, path, kind, mimeType, fileContents);
+    }
+
+    /**
+     * Parse <code>description</code>, assuming it is an externals
+     * specification in the format required for the
+     * <code>svn:externals</code> property, and return a list of
+     * parsed external items.
+     * @param description The externals description.
+     * @param parentDirectory Used to construct error messages.
+     * @param canonicalizeUrl Whe <code>true</code>, canonicalize the
+     *     <code>url</code> member of the returned objects. If the
+     *     <code>url</code> member refers to an absolute URL, it will
+     *     be canonicalized as URL consistent with the way URLs are
+     *     canonicalized throughout the Subversion API. If, however,
+     *     the <code>url</code> member makes use of the recognized
+     *     (SVN-specific) relative URL syntax for
+     *     <code>svn:externals</code>, "canonicalization" is an
+     *     ill-defined concept which may even result in munging the
+     *     relative URL syntax beyond recognition. You've been warned.
+     * @return a list of {@link ExternalItem}s
+     */
+    public static List<ExternalItem> parseExternals(byte[] description,
+                                                    String parentDirectory,
+                                                    boolean canonicalizeUrl)
+        throws ClientException
+    {
+        return new PropLib().parseExternals(description, parentDirectory,
+                                            canonicalizeUrl);
+    }
+
+    /**
+     * Unparse and list of external items into a format suitable for
+     * the value of the <code>svn:externals</code> property and
+     * validate the result.
+     * @param items The list of {@link ExternalItem}s
+     * @param parentDirectory Used to construct error messages.
+     * @param compatibleWithSvn1_5 When <code>true</code>, the format
+     *     of the returned property value will be compatible with
+     *     clients older than Subversion 1.5.
+     */
+    public static byte[] unparseExternals(List<ExternalItem> items,
+                                          String parentDirectory)
+        throws SubversionException
+    {
+        return new PropLib().unparseExternals(items, parentDirectory, false);
+    }
+
+    /**
+     * Unparse and list of external items into a format suitable for
+     * the value of the <code>svn:externals</code> property compatible
+     * with Subversion clients older than release 1.5, and validate
+     * the result.
+     * @param items The list of {@link ExternalItem}s
+     * @param parentDirectory Used to construct error messages.
+     */
+    public static byte[] unparseExternalsForAncientUnsupportedClients(
+        List<ExternalItem> items, String parentDirectory)
+        throws SubversionException
+    {
+        return new PropLib().unparseExternals(items, parentDirectory, true);
     }
 }

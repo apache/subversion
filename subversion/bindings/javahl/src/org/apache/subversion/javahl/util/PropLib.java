@@ -25,10 +25,13 @@ package org.apache.subversion.javahl.util;
 
 import org.apache.subversion.javahl.SVNUtil;
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.SubversionException;
 import org.apache.subversion.javahl.NativeResources;
+import org.apache.subversion.javahl.types.ExternalItem;
 import org.apache.subversion.javahl.types.NodeKind;
 import org.apache.subversion.javahl.types.Revision;
 
+import java.util.List;
 import java.io.InputStream;
 
 /**
@@ -64,4 +67,17 @@ public class PropLib
                                         InputStream fileContents,
                                         boolean skipSomeChecks)
         throws ClientException;
+
+
+    /** @see SVNUtil.parseExternals */
+    public native List<ExternalItem> parseExternals(byte[] description,
+                                                    String parentDirectory,
+                                                    boolean canonicalizeUrl)
+        throws ClientException;
+
+    /** @see SVNUtil.unparseExternals */
+    public native byte[] unparseExternals(List<ExternalItem> items,
+                                          String parentDirectory,
+                                          boolean old_format)
+        throws SubversionException;
 }
