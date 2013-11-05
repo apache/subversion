@@ -29,6 +29,7 @@
 
 #include "svn_private_config.h"
 #include "svn_types.h"
+#include "svn_hash.h"
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
@@ -103,6 +104,14 @@ typedef struct nodes_row_t {
     svn_boolean_t moved_here;
     const char *props;  /* comma-separated list of prop names */
 } nodes_row_t;
+
+/* What conflicts are on a path. */
+typedef struct conflict_info_t {
+    const char *local_relpath;
+    svn_boolean_t text_conflicted;
+    svn_boolean_t prop_conflicted;
+    svn_boolean_t tree_conflicted;
+} conflict_info_t;
 
 /* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
  * that has no copy-from info. */
@@ -328,6 +337,146 @@ check_db_rows(svn_test__sandbox_t *b,
   SVN_ERR(svn_hash_diff(expected_hash, found_hash,
                         compare_nodes_rows, &comparison_baton, b->pool));
   SVN_ERR(svn_sqlite__close(sdb));
+  return comparison_baton.errors;
+}
+
+
+static const char *
+print_conflict(const conflict_info_t *row,
+               apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool, "\"%s\", %s, %s, %s",
+                      row->local_relpath,
+                      row->text_conflicted ? "TRUE" : "FALSE",
+                      row->prop_conflicted ? "TRUE" : "FALSE",
+                      row->tree_conflicted ? "TRUE" : "FALSE");
+}
+
+static svn_error_t *
+compare_conflict_info(const void *key, apr_ssize_t klen,
+                      enum svn_hash_diff_key_status status,
+                      void *baton)
+{
+  comparison_baton_t *b = baton;
+  conflict_info_t *expected = apr_hash_get(b->expected_hash, key, klen);
+  conflict_info_t *found = apr_hash_get(b->found_hash, key, klen);
+
+  if (! expected)
+    {
+      b->errors = svn_error_createf(
+                    SVN_ERR_TEST_FAILED, b->errors,
+                    "found   {%s}",
+                    print_conflict(found, b->scratch_pool));
+    }
+  else if (! found)
+    {
+      b->errors = svn_error_createf(
+                    SVN_ERR_TEST_FAILED, b->errors,
+                    "expected {%s}",
+                    print_conflict(expected, b->scratch_pool));
+    }
+  else if (expected->text_conflicted != found->text_conflicted
+           || expected->prop_conflicted != found->prop_conflicted
+           || expected->tree_conflicted != found->tree_conflicted)
+    {
+      b->errors = svn_error_createf(
+                    SVN_ERR_TEST_FAILED, b->errors,
+                    "expected {%s}; found {%s}",
+                    print_conflict(expected, b->scratch_pool),
+                    print_conflict(found, b->scratch_pool));
+    }
+
+  /* Don't terminate the comparison: accumulate all differences. */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+check_db_conflicts(svn_test__sandbox_t *b,
+                   const char *root_path,
+                   const conflict_info_t *expected_conflicts)
+{
+  const char *base_relpath = root_path;
+  svn_sqlite__db_t *sdb;
+  int i;
+  svn_sqlite__stmt_t *stmt;
+  static const char *const statements[] = {
+    "SELECT local_relpath"
+    " FROM actual_node "
+    " WHERE conflict_data is NOT NULL "
+    "   AND local_relpath = ?1 OR local_relpath LIKE ?2",
+    NULL };
+#define STMT_SELECT_ACTUAL_INFO 0
+
+  svn_boolean_t have_row;
+  apr_hash_t *found_hash = apr_hash_make(b->pool);
+  apr_hash_t *expected_hash = apr_hash_make(b->pool);
+  apr_pool_t *iterpool = svn_pool_create(b->pool);
+  apr_hash_index_t *hi;
+  comparison_baton_t comparison_baton;
+
+  comparison_baton.expected_hash = expected_hash;
+  comparison_baton.found_hash = found_hash;
+  comparison_baton.scratch_pool = b->pool;
+  comparison_baton.errors = NULL;
+
+  /* Fill ACTUAL_HASH with data from the WC DB. */
+  SVN_ERR(open_wc_db(&sdb, b->wc_abspath, statements, b->pool, b->pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", base_relpath,
+                            (base_relpath[0]
+                             ? apr_psprintf(b->pool, "%s/%%", base_relpath)
+                             : "_%")));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      conflict_info_t *row = apr_palloc(b->pool, sizeof(*row));
+
+      row->local_relpath = svn_sqlite__column_text(stmt, 0, b->pool);
+
+      svn_hash_sets(found_hash, row->local_relpath, row);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  for (hi = apr_hash_first(b->pool, found_hash); hi; hi = apr_hash_next(hi))
+    {
+      svn_skel_t *conflict;
+      conflict_info_t *info = svn__apr_hash_index_val(hi);
+      const char *local_abspath;
+
+      svn_pool_clear(iterpool);
+
+      local_abspath = svn_dirent_join(b->wc_abspath, info->local_relpath,
+                                      iterpool);
+
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, b->wc_ctx->db, local_abspath,
+                                       iterpool, iterpool));
+
+      SVN_TEST_ASSERT(conflict != NULL);
+
+      SVN_ERR(svn_wc__conflict_read_info(NULL, NULL,
+                                         &info->text_conflicted,
+                                         &info->prop_conflicted,
+                                         &info->tree_conflicted,
+                                         b->wc_ctx->db, local_abspath,
+                                         conflict,
+                                         iterpool, iterpool));
+    }
+
+  /* Fill EXPECTED_HASH with data from EXPECTED_ROWS. */
+  if (expected_conflicts)
+    for (i = 0; expected_conflicts[i].local_relpath != NULL; i++)
+      {
+        const conflict_info_t *row = &expected_conflicts[i];
+
+        svn_hash_sets(expected_hash, row->local_relpath, row);
+      }
+
+  /* Compare EXPECTED_HASH with ACTUAL_HASH and return any errors. */
+  SVN_ERR(svn_hash_diff(expected_hash, found_hash,
+                        compare_conflict_info, &comparison_baton, b->pool));
   return comparison_baton.errors;
 }
 
@@ -5215,9 +5364,21 @@ update_prop_mod_into_moved(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "", nodes));
   }
 
+  {
+    conflict_info_t conflicts[] = {
+      { "A", FALSE, FALSE, TRUE },
+      {0}
+    };
+
+    SVN_ERR(check_db_conflicts(&b, "", conflicts));
+  }
+
   /* Resolve should update the move. */
   SVN_ERR(sbox_wc_resolve(&b, "A", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
+
+  SVN_ERR(check_db_conflicts(&b, "", NULL));
+
   {
     nodes_row_t nodes[] = {
       {0, "",         "normal",       2, ""},
@@ -5326,6 +5487,8 @@ nested_move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   /* Update A to r3 brings no changes but updates the revisions. */
   SVN_ERR(sbox_wc_update(&b, "A", 3));
+  SVN_ERR(check_db_conflicts(&b, "", NULL /* no conflicts */));
+
   {
     nodes_row_t nodes[] = {
       {0, "",          "normal",       2, ""},
