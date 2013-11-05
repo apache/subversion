@@ -63,7 +63,7 @@ private:
   void* m_report_baton;
   EditorProxy* m_editor;
 
-  friend class RemoteSession;
+  friend RemoteSession;
   apr_pool_t* get_report_pool() const { return pool.getPool(); }
   void set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
                          void* report_baton,
