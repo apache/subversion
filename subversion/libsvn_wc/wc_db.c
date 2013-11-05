@@ -4893,7 +4893,7 @@ handle_move_back(svn_boolean_t *moved_back,
              generally these values should be the same anyway as it was
              a no-op move. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_MOVED_BACK));
+                                        STMT_DELETE_WORKING_OP_DEPTH));
 
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
                                              local_relpath,

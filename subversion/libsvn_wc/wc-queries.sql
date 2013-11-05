@@ -468,13 +468,6 @@ WHERE u.wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(u.local_relpath, ?2)
   AND u.op_depth = ?4
 
--- STMT_DELETE_MOVED_BACK
-DELETE FROM nodes
-WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND op_depth = ?3
-
 -- STMT_DELETE_LOCK
 DELETE FROM lock
 WHERE repos_id = ?1 AND repos_relpath = ?2
@@ -1213,14 +1206,6 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 /* ------------------------------------------------------------------------- */
 
 /* these are used in upgrade.c  */
-
--- STMT_UPDATE_ACTUAL_CONFLICT_DATA
-UPDATE actual_node SET conflict_data = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_INSERT_ACTUAL_CONFLICT_DATA
-INSERT INTO actual_node (wc_id, local_relpath, conflict_data, parent_relpath)
-VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_SELECT_ALL_FILES
 SELECT local_relpath FROM nodes_current
