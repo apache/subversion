@@ -9189,9 +9189,16 @@ move4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
     /* ### These can currently only be resolved to merged ???? */
     SVN_ERR(sbox_wc_resolve(&b, "D/A/A", svn_depth_empty,
-        svn_wc_conflict_choose_merged));
+                            svn_wc_conflict_choose_merged));
     SVN_ERR(sbox_wc_resolve(&b, "A/A/A", svn_depth_empty,
-        svn_wc_conflict_choose_merged));
+                            svn_wc_conflict_choose_merged));
+    SVN_ERR(sbox_wc_resolve(&b, "A_moved/A/A", svn_depth_empty,
+                            svn_wc_conflict_choose_merged));
+    //SVN_ERR(check_db_conflicts(&b, "", NULL));
+    SVN_ERR(sbox_wc_resolve(&b, "A/A", svn_depth_empty,
+                            svn_wc_conflict_choose_mine_conflict));
+    SVN_ERR(sbox_wc_resolve(&b, "BA_moved/A", svn_depth_empty,
+                            svn_wc_conflict_choose_merged));
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Go back to start position */
     SVN_ERR(sbox_wc_update(&b, "", 1));
@@ -9626,7 +9633,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "del4: delete self AAA"),
     SVN_TEST_OPTS_PASS(move4_update_edit_AAA,
                        "move4: edit AAA"),
-    SVN_TEST_OPTS_XFAIL(move4_update_delete_AAA,
+    SVN_TEST_OPTS_PASS(move4_update_delete_AAA,
                        "move4: delete AAA"),
     SVN_TEST_OPTS_PASS(move4_update_add_AAA,
                        "move4: add AAA"),
