@@ -2033,11 +2033,12 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
 }
 
 /* Set *CAN_BUMP to TRUE if DEPTH is sufficient to cover the entire
-   BASE tree at LOCAL_RELPATH, to FALSE otherwise. */
+   tree  LOCAL_RELPATH at OP_DEPTH, to FALSE otherwise. */
 static svn_error_t *
 depth_sufficient_to_bump(svn_boolean_t *can_bump,
-                         const char *local_relpath,
                          svn_wc__db_wcroot_t *wcroot,
+                         const char *local_relpath,
+                         int op_depth,
                          svn_depth_t depth,
                          apr_pool_t *scratch_pool)
 {
@@ -2054,21 +2055,21 @@ depth_sufficient_to_bump(svn_boolean_t *can_bump,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_OP_DEPTH_CHILDREN));
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
-                                local_relpath, 0));
+                                local_relpath, op_depth));
       break;
 
     case svn_depth_files:
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_HAS_NON_FILE_CHILDREN));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                local_relpath, op_depth));
       break;
 
     case svn_depth_immediates:
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_HAS_GRANDCHILDREN));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id,
+                                local_relpath, op_depth));
       break;
     default:
       SVN_ERR_MALFUNCTION();
@@ -2140,10 +2141,12 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
-/* Bump LOCAL_RELPATH, and all the children of LOCAL_RELPATH, that are
-   moved-to at op-depth greater than OP_DEPTH.  SRC_DONE is a hash
-   with keys that are 'const char *' relpaths that have already been
-   bumped.  Any bumped paths are added to SRC_DONE. */
+/* Bump moves of LOCAL_RELPATH and all its descendants that were
+   originally below LOCAL_RELPATH at op-depth OP_DEPTH.
+
+   SRC_DONE is a hash with keys that are 'const char *' relpaths
+   that have already been bumped.  Any bumped paths are added to
+   SRC_DONE. */
 static svn_error_t *
 bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                 const char *local_relpath,
@@ -2169,7 +2172,7 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
     {
       svn_sqlite__stmt_t *stmt2;
       const char *src_relpath, *dst_relpath;
-      int src_op_depth = svn_sqlite__column_int(stmt, 2);
+      int src_op_depth;
       svn_error_t *err;
       svn_skel_t *conflict;
       svn_depth_t src_depth = depth;
@@ -2178,6 +2181,7 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
 
       src_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
       dst_relpath = svn_sqlite__column_text(stmt, 1, iterpool);
+      src_op_depth = svn_sqlite__column_int(stmt, 2);
 
       if (depth != svn_depth_infinity)
         {
@@ -2232,8 +2236,8 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
           const char *src_root_relpath = src_relpath;
 
           if (op_depth == 0)
-            err = depth_sufficient_to_bump(&can_bump, src_relpath, wcroot,
-                                           src_depth, scratch_pool);
+            err = depth_sufficient_to_bump(&can_bump, wcroot, src_relpath,
+                                           op_depth, src_depth, scratch_pool);
           else
             /* Having chosen to bump an entire BASE tree move we
                always have sufficient depth to bump subtree moves. */
