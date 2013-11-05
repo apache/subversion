@@ -9466,7 +9466,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "move4: delete self AAA"),
     SVN_TEST_OPTS_PASS(simple_move_bump,
                        "simple move bump"),
-    SVN_TEST_OPTS_XFAIL(movedhere_extract_retract,
+    SVN_TEST_OPTS_PASS(movedhere_extract_retract,
                        "movedhere extract retract"),
     SVN_TEST_NULL
   };
