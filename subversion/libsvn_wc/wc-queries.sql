@@ -1574,21 +1574,6 @@ UPDATE nodes SET moved_to = NULL
  WHERE wc_id = ?1
    AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
-
-/* This statement returns pairs of move-roots below the path ?2 in WC_ID ?1,
- * where the original source of the move is within the subtree rooted at path
- * ?2 at op_depth ?3. (The move is recorded immediately above op_depth ?3) */
--- STMT_SELECT_MOVED_PAIRS_DEPTH
-SELECT local_relpath, moved_to, op_depth FROM nodes n
-WHERE wc_id = ?1
-  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND moved_to IS NOT NULL
-  AND op_depth > ?3
-  AND op_depth = (SELECT MIN(op_depth) FROM nodes o
-                   WHERE o.wc_id = ?1
-                     AND o.local_relpath = n.local_relpath
-                     AND o.op_depth > ?3)
-
 -- STMT_SELECT_MOVED_PAIR3
 SELECT local_relpath, moved_to, op_depth, kind FROM nodes
 WHERE wc_id = ?1
