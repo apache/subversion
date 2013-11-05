@@ -1,0 +1,251 @@
+******************************************************************************
+                              HIGH LEVEL DESIGN
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
+
+TABLE OF CONTENTS
+
+    OPEN ISSUES
+
+    1. INTRODUCTION
+
+    2. HIGH LEVEL DESIGN ISSUES
+      2.1 Invocation
+      2.2 Repository Transformation
+      2.3 Propagation (to Clients, Mirrors, Backups)
+      2.4 Client-side Behaviour
+      2.5 Audit Trail
+
+
+OPEN ISSUES
+
+  (none)
+
+
+1. INTRODUCTION
+
+  This document presents the high level design issues for the Obliterate
+  feature.
+
+
+2. HIGH LEVEL DESIGN ISSUES
+
+  The design of the Obliterate feature, if taken at its widest potential
+  scope, can be divided into the following areas. In each area, suggestions
+  are given for both a minimal level of support (which in some cases is
+  nothing) and for more sophisticated and desirable behaviours.
+
+
+  2.1 Invocation
+
+    Invocation from:
+
+      * server side only, or
+
+      * client side?
+
+    Ultimately we need client-side invocation because many of the use cases
+    (except the disk space reduction) are client-side responsibilities and in
+    large installations it is infeasible to push all such tasks on to a
+    server-side administrator.
+
+    It is possible that implementation would be simplified if we split the
+    obliteration into data-hiding invoked from the client and space-reduction
+    invoked as an off-line adminitrative procedure on the server. For example,
+    a dump-load cycle or an svnsync mirror could be employed as a crude (slow)
+    way to achieve the space-reduction part. Such a split has no significant
+    user benefits in itself. The effect on implementation complexity is yet to
+    be determined.
+
+    One behavioural design option is to split the obliteration into a
+    reversible data-hiding invoked from the client, and an administrative
+    "purge" after which the data-hiding is no longer reversible. This option
+    at first glance sounds "safer", but it is a substantially more complex
+    behaviour in that the history of the repository as viewed by a client is
+    subject not only to change with obliteration but also to change again if
+    the hiding is reversed. It also adds complexity to the implementation.
+
+    Authorization (if client-side):
+
+      * By a new pre-obliterate hook.
+
+    Subversion currently has no more suitable permission system. A hook would
+    probably be wanted anyway and would probably be the easiest way to achieve
+    authorization.
+
+    Ways to specify the obliteration set (UI):
+
+      * rev=X:Y PATH@PEG
+
+      * all copies of ...
+
+      * all but the newest N revisions of ...
+
+      * date range of ...
+
+    SIMPLE
+
+      * Server-side only; no explicit authorization.
+
+      * UI: svnadmin obliterate OBLIT_SPEC...
+
+      * User must take repos off line first and put it back on line
+        afterwards.
+
+      * Consider implementing data-hiding and space-recovery aspects totally
+        separately.
+
+    MORE SOPHISTICATED
+
+      * Client-side; authorization by pre-obliterate hook.
+
+      * UI: svn obliterate [--obliteration-method=...] OBLIT_SPEC...
+
+
+  2.2 Repository Transformation
+
+    Primarily, this means transformation of the versioned tree. Also includes
+    transformation of rev-props and any other metadata.
+
+    Versioned tree transformation is probably one of:
+
+      * node := none
+
+      * node := previous
+
+      * node := arbitrary
+
+      * file content := empty
+
+      * file content := previous
+
+      * file content := arbitrary
+
+    The choice of transformation could be fixed or specifiable at run-time.
+    The choice is probably not critical for the majority of use cases.
+
+    Alternatively, or as a quick-to-execute (and perhaps quick to design and
+    implement) first step, versioned tree transformation can consist of making
+    selected node-revs "hidden" with the same semantics as if hidden by
+    removing read authorization.
+
+    Metadata transformation will probably be limited to:
+
+      * an option to append a summary of the change to svn:log
+
+    Design and impement:
+
+      * FS structural transformation in first phase of development.
+
+      * Space recovery in a second phase of development.
+
+
+  2.3 Propagation (to Clients, Mirrors, Backups)
+
+    Propagation is about making the server able to propagate changes due to
+    obliteration to clients (including working-copy clients and mirrors). In
+    this section we also include the ability to save in a repository backup
+    any information necessary for continuing such propagation after restoring
+    from a backup.
+
+    It is not important, according to feedback from admins, to make svnsync
+    automatically propagate obliterations. In fact it can be seen as correct
+    that obliteration must be applied separately to any svnsync mirrors if the
+    obliteration is indeed intended to be propagated, because it is not
+    necessarily the case that obliterations should be propagated.
+
+    The dump file needs no change. It would be perverse to record obliteration
+    history or even metadata in the dump file, as it is intended to represent
+    just the visible history of the repository.
+
+    SIMPLE
+
+      * No server-side support for propagation of changes.
+
+      * No change to backups.
+
+    MORE SOPHISTICATED
+
+      * To propagate the obliterations efficiently, the repository needs to
+        keep a history of them.
+
+      * API for sending oblit to oblit-aware clients and mirrors.
+
+      * If there is obliteration history or metadata, it should be included in
+        a repository backup, but not in a dump file.
+
+
+  2.4 Client-side Behaviour
+
+    Old WC behaviour:
+
+      * Test and document the effect of using a 1.6 WC with obliteration.
+
+    SIMPLE
+
+    New WC behaviour:
+
+      * Give clients a minimal ability to detect a mis-match of pristine base,
+        with no help from the server, and a simple failure mode.
+
+      * Let the user do a fresh checkout if necessary.
+
+    New svnsync behaviour:
+
+      * No support.
+
+    MORE SOPHISTICATED
+
+    New WC behaviour:
+
+      * During "update", receive also obliterations affecting any pristine
+        base.
+
+      * If an obliteration affects a WC node that is not locally modified,
+        change it and issue a notification (or do it silently if it's a "secret"
+        obliteration).
+
+      * If an obliteration affects a WC node that is locally modified, ###?
+
+    New svnsync behaviour:
+
+      * At each sync, request metadata on obliterations performed since (time
+        stamp or ID of) last known obliteration.
+
+      * Re-sync affected revisions.
+
+
+  2.5 Audit Trail
+
+    SIMPLE
+
+    None, except
+
+      * The implicit evidence of any paths, properties, etc. that are left
+        behind.
+
+      * Document how different kinds of backups of the repository provide the
+        audit trail.
+
+      * An option to append a brief summary of the change to svn:log on each
+        affected revision.
+
+      * An option to append a summary of the change to a server-side log file.
+
+    MORE SOPHISTICATED
+
+    Ideas include
+
+      * Make a dump file containing the node-revs to be obliterated
+
+      * Some folk want a mode in which no client-visible traces are left,
+        including no evidence during "svn update" that anything odd is
+        happening.  Have an option to record a flag in the repository's
+        obliteration history (if there is one) that says "this obliteration is
+        secret".
+
+    Note: Making the full history of obliterations (with content changes)
+    available on the client side would be perverse - version control within
+    version control.

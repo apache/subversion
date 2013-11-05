@@ -1,0 +1,81 @@
+                                                                -*- Text -*-
+
+Modularization of Code in WC-NG
+===============================
+###HKW: This section may someday want to live in libsvn_wc/README or some
+such.  I'll leave that change until such time as we do the doc cleanup in
+that library.
+
+Strict separation must be applied to a number of modules which can be
+recognised.  This will help prevent spaghetti code as in wc-1.0 where
+one piece of code manipulates paths to a working copy file, its URL
+*and* the path to the base file.
+
+To enforce this strict separation, WC-NG is layered using several API levels.
+Some of these levels are internal to libsvn_wc, some are (currently) only
+exposed to other code within Subversion, while others are meant for public
+consumption.  The functions which define an API may be one of two flavors:
+ - functions which *do* something (i.e., change the state of the disk or
+   database somehow)
+ - functions which callers can use to *know* something.
+Each API may define and consume have both types of functions.
+
+For extensibility and maintainability, it is recommended that API layers only
+expose data structures as opaque types, and then provide the means for
+consumers to retrieve the data that interests them.  This helps enforce
+loose coupling between layers and code, as well as the API separation defined
+above.  Even when technological restrictions are loose enough to permit
+direct access to a data structure, refrain from doing so.
+
+It is *highly recommended* that future extensions to libsvn_wc maintain this
+paradigm, as it helps eliminate confusion, such as combined input/output
+parameters and state changes within the working copy.  We'd like to think we
+learned our lesson with wc-1; don't make the same mistake again!
+
+For now, these API layers can be separated thusly:
+
+ - the wc_db-internal API
+   * ### HKW: Still working on this.  Right now, wc_db.c is one massive
+     power plant of a file, and it just Ought Not To Be. :(
+ - the library-internal
+   * svn_wc__db_ functions, which handle access and changes to the working
+     copy data store.  See libsvn_wc/wc_db.h for a more detailed subdivision.
+   * svn_wc__wq_ functions, which replace the old 'loggy' concept with more
+     high-level APIs.
+   * pristine handling?
+ - the Subversion-public API
+   * various svn_wc__node_ functions, used to obtain (read-only) information
+     about nodes in the working copy
+ - the world-public API
+   * any existing non-deprecated svn_wc_ APIs
+   * the APIs surrounding the WC context object (svn_wc_context_t)
+
+Additional layering be yet be needed and developed, but as of this writing,
+these are the current API layers within, and exported by, libsvn_wc.
+
+(Note: there is some talk of whether or not libsvn_wc should itself be folded
+into libsvn_client.  The debate as to the practicalities of such a suggestion
+is left as an exercise for the reader.)
+
+
+File Descriptions
+-----------------
+
+
+Historical Information
+----------------------
+These APIs are not currently implemented, and there exist no plans for such,
+but the ideas may still be of value:
+
+ - Event hooks for the union of all paths in (BASE, WORKING)
+   wc_hook event based single-callback API
+   for e.g. these events:
+        + props updated
+        + base text updated
+        + wc file updated
+        + update completed
+        + lock acquired
+        + lock released
+       (+ lock can't be acquired [in order to 'unprotect'
+           svn:needs-lock protected files which have been removed
+           from the repository?])

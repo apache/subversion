@@ -1,0 +1,154 @@
+
+
+What's the idea?
+
+
+External means Switched
+=======================
+
+Well, not quite!  But at the WC layer they have a lot in common.  Let's
+take advantage of it.
+
+In both cases:
+
+  * An 'external' or 'switched' WC node is a file or a directory (tree).
+
+  * An 'external' or 'switched' WC node lives somewhere inside a
+    versioned WC directory.  (A switched node is always an immediate
+    child of a versioned directory [3].  An external dir can be at a
+    deeper level, with one or more levels of unversioned directory in
+    between, but that doesn't currently work for file externals.)
+
+  * An 'external' or 'switched' WC node is attached to a repository
+    location other than the one implied by its WC parent directory.
+
+  * In and inside itself, an 'external' or 'switched' file or tree is
+    indistinguishable from any other WC file or tree. [4]
+
+  * Only its relationship to its WC parent directory is 'special'.  The
+    only operations that may see it as different are those that start at
+    a higher level (outside the node) and recurse or look into it, and
+    those that start inside the node and walk up the tree towards the WC
+    root.
+
+  * Client operations treat the node as part of its parent WC in some
+    ways, and treat it as special in other ways, depending on the
+    command and on user-specified options.
+
+
+By defining 'External' and 'Switched' in terms of their common ground
+and their differences, we can reduce complexity and clarify the issues
+that are currently obscure.  This could be especially helpful at the
+moment for designing their WC representation.
+
+How should we represent external files and external dirs in the WC in a
+unified manner?  Do we need to explicitly mark them as 'external'?  What
+differences in behaviour should 'external' nodes and 'switched' nodes
+exhibit within the WC?
+
+
+Differences in WC State
+=======================
+
+This table documents the differences in WC state at a high level.
+
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      | switched             | external (file)      | external (dir)       |
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      |                      |                      |                      |
+  | WC path affected     | Existing child       | Non-existent child   | Non-existent child   |
+  |                      | of a versioned dir   | of a versioned dir   | or grandchild etc.   |
+  |                      |                      |                      | of a versioned dir   |
+  |                      |                      |                      |                      |
+  | Resulting WC         | Same WC              | Same WC              | Separate WC          |
+  |                      |                      |                      |                      |
+  | Target URL           | Same repo            | Same repo            | Same or other repo   |
+  |                      |                      |                      |                      |
+  | Pinned to a revision | No [2]               | Optional; recorded   | Optional; recorded   |
+  |                      |                      | on the node itself   | in 'svn:externals'   |
+  |                      |                      |                      |                      |
+  | Initial depth        | Set by "switch" cmd  | n/a                  | Infinity             |
+  |                      |                      |                      |                      |
+  +----------------------+----------------------+----------------------+----------------------+
+
+### Anything else?
+
+
+Differences in Client Commands (Current behaviour)
+==================================================
+
+The following differences occur when a command encounters an 'external'
+or 'switched' node during its operation.  This table is to document the
+current (1.6.x) behaviour.
+
+### We'll need some test scripts to help gather this data.
+
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      | switched             | external (file)      | external (dir)       |
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      |                      |                      |                      |
+  | recursive descent,   | descend              | descend              | optional             |
+  |   in general         |                      |                      |                      |
+  |                      |                      |                      |                      |
+  | status               | report & descend     | report 'X' & status  | report [& descend]   |
+  |                      |                      |                      |                      |
+  | propget/list/etc.    | descend              | descend              | skip                 |
+  |                      |                      |                      |                      |
+  | diff                 | descend              | descend              | skip                 |
+  |                      |                      |                      |                      |
+  | commit               | descend              | descend              | skip [5]             |
+  |                      |                      |                      |                      |
+  | update               | descend              | descend              | descend (optional)   |
+  |                      | (in-line)            | (in-line)            | (afterwards)         |
+  |                      |                      |                      |                      |
+  | switch               | ?                    | ?                    | descend [6]          |
+  |                      |                      |                      |                      |
+  | merge (tracking)     | Skip it; track it as | Skip it; track it as | Just skip it; no     |
+  |                      | skipped.             | skipped.             | tracking needed.     |
+  |                      |                      |                      |                      |
+  | ...                  |                      |                      |                      |
+  |                      |                      |                      |                      |
+  +----------------------+----------------------+----------------------+----------------------+
+
+Behaviour differences when the target is the switched/external node or
+somewhere inside it:
+
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      | switched             | external (file)      | external (dir)       |
+  +----------------------+----------------------+----------------------+----------------------+
+  |                      |                      |                      |                      |
+  | ...                  |                      |                      |                      |
+  |                      |                      |                      |                      |
+  +----------------------+----------------------+----------------------+----------------------+
+
+We ought to think about the UI and design a set of useful and consistent
+behaviours.  But that's out of scope here; this document focuses on the
+WC layer.
+
+
+Footnotes
+=========
+
+  [2] The ability for "svn update -rX" to "pin" that part of the WC at
+      rX has been requested by users and seems like a reasonable (clean,
+      moderately useful) feature.
+
+  [3] You can "svn switch" a WC root, and the whole WC is then based on
+      the new location, but it is not normally regarded as being in a
+      "switched" state.  The concept of a node being in a "switched"
+      state is only meaningful with respect to the expected location as
+      determined from the node's parent directory in the same WC.  (The
+      "svnversion" command has an option to specify an expected location
+      so that it can report the status of the whole WC as "switched"
+      relative to that specified location.)
+
+  [4] A possible exception is that "update" should obey the "pinned
+      revision number" if present.  But that need not necessarily be an
+      exception: we might choose to define that functionality on all WC
+      nodes but only use it on 'external' nodes.
+
+  [5] Bert says: "except for some buggy behavior relying on passing a
+      limiting depth".
+
+  [6] Bert says: "externals definitions are normally updated after a
+      switch by handling the svn:externals property changes".

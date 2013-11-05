@@ -1,0 +1,39 @@
+TODO for locking
+================
+
+
+NICE TO HAVE
+------------
+
+* support cancellation during lock/unlock.
+
+* "svn rm file" should error if file has "svn:needs-lock" and is not
+  locked (is read-only) in WC. On Linux, at least, neither Svn nor the OS
+  prevents "svn rm file" from completing. Same for "svn mv" of course.
+
+
+-----------------------------------------------
+
+* Questions:
+
+   * Should propedit and propset reject to set a property on a file with
+     svn:needs-lock set?
+
+   * how do locks relate to dump/load?  file as an enhancement? 
+
+
+* Stuff to document in book:
+
+       - new 'svn up' and 'svn commit' behaviors w.r.t. locktokens
+       - two new bdb tables in BDB section.
+       - update the description of autoversioning in appendix C!
+
+* Unfriendly error messages are quoted in the svn-book for trying to commit
+  or unlock a file without the correct lock,
+  e.g. "Server sent ... 423 Locked ...". Is the book out of date? With 1.6.x,
+  RA-local, lock held by me but in a different WC, messages include:
+    $ svn ci
+    svn: Cannot verify lock on path '/d/2'; no matching lock-token available
+    $ svn unlock d/2
+    svn: '2' is not locked in this working copy
+

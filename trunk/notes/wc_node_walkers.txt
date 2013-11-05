@@ -1,0 +1,41 @@
+Outstanding Use of svn_wc__node_walk_children()
+===============================================
+
+These are known consumers of svn_wc__node_walk_children(), which we'd
+ideally like to eliminate altogether from the codebase in favor of
+less ... one-at-a-time approaches.
+
+---
+
+subversion/libsvn_client/changelist.c
+
+   svn_client_add_to_changelist() - Apply a changelist to a tree (up
+     to specified depth), on file nodes only, and possibly only those
+     matching one of a specified set of changelists.  Needs to notify
+     per-path, and differently based on whether the file has a
+     pre-existing changelist association or is a directory (skipped),
+     etc.
+
+   svn_client_remove_from_changelists() - Clear changelist assignments
+     from a tree (up to specified depth), possibly only for nodes
+     matching one of a specified set of changelists.  Needs to notify
+     per-path for those files (only) from which changelist
+     associations were removed.
+
+   svn_client_get_changelists() - Drive callback to report all
+     changelist associations in a tree up to a specified depth.
+
+subversion/libsvn_client/info.c
+
+   crawl_entries() - Crawl a tree (up to specified depth) driving an
+     svn_info_receiver_t callback.  The current implementation not
+     only uses the svn_wc__node_walk_children() interface, but the
+     callback it drives peeks back into the WC database many, many
+     times per node.
+
+subversion/libsvn_client/prop_commands.c
+
+   set_props_cb() - Crawl a tree (up to specified depth) setting a
+     property name/value pair on each item therein (possibly restricted
+     to those which match one of a specified set of changelists).
+     Needs to notify on a per-path basis.

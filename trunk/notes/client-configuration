@@ -1,0 +1,66 @@
+              Managing Client-side Configuration in Subversion
+                                     OR
+              "How to make Subversion do what I want it to do"
+
+                                 A Treatise
+
+
+Introduction
+============
+Subversion provides a number of client-side configurable behaviors.  Some of
+these behaviors are dictated by command line arguments (which are then passed
+through to the underlying client library APIs), while others are contained
+in configuration files read by the various parts of the client at runtime.
+
+In order to better meet the needs of a number of producers and consumers of
+configuration data, this document aims to document current behavior, as well
+as propose a more comprehensive approach to managing configuration information
+for Subversion clients.  For background, see the mailing list discussions and
+issues under 'References', below.
+
+
+Current Infrastructure
+======================
+
+
+Proposed Changes
+================
+
+To address some of the failings of the current implementation, the following
+changes are proposed:
+
+Goals
+-----
+ * Provide client library consumers facilities to override configuration
+
+Sources of configuration data
+-----------------------------
+Configuration data may come from several sources, in no particular order.
+
+File system, first a system-wide configuration file, then user-specific
+configuration files.  (On Windows, this information may also be kept in the
+registry.)  The commandline client provides an option to override the location
+of the configuration directory.
+
+Server-suggested configuration, transmitted from the repository, and cached
+on the client.  This feature is not yet implemented, but should be accounted
+for.
+
+Options provided by the a libsvn_client API consumer.  API consumers (the
+command line client, GUI clients, etc), may wish to provide specific values
+for configuration options in the client.
+
+
+
+References
+==========
+dev@s.a.o: "Bikeshed: configuration override order";
+    http://svn.haxx.se/dev/archive-2010-08/0166.shtml
+dev@s.a.o: "Default commandline args";
+    http://svn.haxx.se/dev/archive-2010-12/0449.shtml
+Issue 1974: "server-side config which 'broadcasts' to clients";
+    http://subversion.tigris.org/issues/show_bug.cgi?id=1974
+Issue 3765: "client-configurable default args";
+    http://subversion.tigris.org/issues/show_bug.cgi?id=3765
+Issue 3769: "Add APIs which allow library consumers to specify configuration options"
+    http://subversion.tigris.org/issues/show_bug.cgi?id=3769

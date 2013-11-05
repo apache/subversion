@@ -1,0 +1,180 @@
+                               -*- text -*-
+
+This file is a scratch pad for working out current and expected
+behaviors for various tree-conflict situations.  It may be considered
+unfinished at best -- scatterbrained is more like it.
+
+NOTE:  As Subversion does not actually have real 'move' functionality,
+please try to express move-ish use-cases in terms of deletes and
+adds-with-history (copies).
+
+
+===================
+BACKGROUND THOUGHTS
+===================
+
+This whole thing is, I think, basically about ensuring that the
+history of a file isn't allowed to fork and then suffer the
+unceremonious death of one of the two resulting lines of history when
+the streams are rejoined.
+
+When doing an update, we don't have to worry that the working copy
+base file has deviated from the line of history that's being deleted
+-- other processes prevent this from happening (you can't commit
+to a deleted file; you can't delete a file that's been modified since
+you last updated).  But you do have to worry about local mods, which
+are a "different path" in the file's line of history than the path
+that led to its deletion.
+
+When doing a merge, though, stuff gets really complicated.  Now you
+have an arbitrary line of history as the source which you are trying to
+"lay down" overtop the line of history of the stuff in your
+repository, and the goal remains the same: don't assume that
+deviations in those lines should be resolved by disregarding one side
+of the fork or the other -- that's ungood.  In the best case you are
+trying to append segments of one fork in the history road to the
+other, and hopefully you don't leave gaps or cause deviations.  In the
+worst case, though, you're dealing with a "line of history" that's
+made up on-the-fly (due to your left- and right-side merge sources
+being unrelated, or only related as second cousins twice removed, or
+something).  This is where the "merge = diff + patch" paradigm really
+starts to show its weaknesses (and maybe, just maybe, should have been
+a use-case that Subversion disallowed ... if only it weren't so darned
+useful for vendor branches...).
+
+Anyway, there appear to me to be some pretty clear goals:
+
+   * Conflicting operations should be marked as such and require user
+     interaction to resolve
+
+   * In such a conflicting situation, users would like to be able to
+     easily do the following:
+
+        - determine what local mods they've made
+        - apply those mods elsewhere if necessary
+        - determine what mods conflict with the ones with they
+        - overrule the conflict and make their changes anyway
+
+   * Tree conflicts appear to be something special, and should be 
+     annotated as such.
+
+So a tree conflict is really just a conflict on the content of a
+directory, much like a regular conflict is on the content of a file,
+and a prop conflict is on the properties of a file or directory.  To
+annotate a tree conflict, we recycle the 'conflict-new' conflict file
+slot pointing to a dropped file named dir_contents.trej.  It's
+contents can note the details of the tree conflict.  [### TODO: Do we
+need to be able to mark files as tree-conflicted, too?]
+
+
+===================
+SCENARIO PLAYGROUND
+===================
+
+'svn update' pulls file deletion atop file with local text mods
+
+  NOW:  File is silently unversioned.
+
+  NEW:  File is marked as added-with-history (as of the revision
+        previously in the working copy), and placed into a state of
+        conflict.  There are no conflict markers, but the .trej file
+        notes that our file was deleted in the repository.  User can
+        see mods with 'svn diff'; revert still works; resolved+commit
+        undoes the deletion and commits the users's mods.
+
+'svn update' pulls text mods onto schedule-delete file
+
+  NOW:  Text mods are silently merged into file's text-base and file
+        remains scheduled for deletion.
+
+  NEW:  File remains scheduled for deletion, text-base is up-to-date,
+        but file is marked as conflict, and .trej file notes that
+        the file was modified in the repository.  
+
+        QUESTION: Should .trej file contain the diff of those mods
+        from the repository?
+
+'svn update' pulls dir deletion atop dir containing deep text mods
+
+  NOW:  Directory is removed save for modified files (left
+        unversioned).
+
+  NEW:  Modified files are marked as added-with-history (as of their
+        working copy revisions), placed into a state of conflict, with
+        .trej files noting the deletion of the parent directory.
+        Intermediate directories are marked as added (no history) and
+        in conflict, with their .trej files noting the deletion of the
+        directory.
+
+'svn update' pulls file replacement atop modified file
+
+  NOW:  Behaves as a two-step action: delete over modified file (see
+        above), then file add over existing file (which is obstructed
+        unless --force is provided.
+
+  NEW:  If the 'delete' step goes as recommended above, we'll wind up
+        in a state of conflict already with a schedule-added file.
+        Once the 'add' step hits, the operation will be obstructed
+        even if --force is provided.
+
+        QUESTION:  Is this desirable?  What's the final state of the
+        file after the failed update?  How do the recovery options
+        play out from here?  For example, we wouldn't want the file
+        scheduled for add-with-history because that commit can't
+        succeed (another file already exists in the repository at
+        that location).
+
+'svn update' pulls dir replacement atop deep-modified directory
+
+'svn update' pulls file-to-dir replacement atop modified file
+
+  NOW:  Behaves as a two-step action: delete over modified file (see
+        above), then directory add over existing file (which is 
+        disallowed, even if --force is supplied).
+
+  NEW:
+ 
+'svn update' pulls dir-to-file replacement atop deep-modified directory
+
+  NOW:  Behaves as a two-step action: delete over deep-modified
+        directory (see above), then file add over existing directory 
+        left over from delete step (which fails).
+
+  NEW:  
+
+'svn merge' pulls file deletion
+
+  NOW:  If there's nothing at the target location to delete, the
+        target is "skipped" (?); otherwise the target is removed from
+        version control and, if not locally modified, deleted.
+
+  NEW:  All file deletions that would affect a local file and that come
+        via merge get sanity-checked, with the client pulling the
+        left-side source version of the file down and comparing its
+        contents with the to-be-deleted working file.  If they are
+        equivalent and there are no local mods to the file, it is
+        removed from version control.  Otherwise, we have two sets of
+        data we'd like to keep easy track of:  diffs between
+        deleted-source and wc base file, and diffs between wc base and
+        wc working files.  
+        NOTE:  Need more thinkin' 'round these parts...
+
+'svn merge' pulls file modification atop schedule-delete file
+
+  NOW:  "Skipped missing target" message.
+
+  NEW:  File remains scheduled for deletion, but working file is
+        restored (if missing), marked as conflicted, and contents
+        carry conflict info.
+
+'svn merge' pulls file modification atop missing file
+
+  NOW:  "Skipped missing target" message.
+
+  NEW:  
+
+'svn merge' pulls file modification atop added file
+
+  NOW:  Conflict!
+
+  NEW:  Conflict!

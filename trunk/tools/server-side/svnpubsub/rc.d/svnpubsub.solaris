@@ -1,0 +1,53 @@
+#!/usr/bin/bash
+#
+# a dumb init script for twistd on solaris. cus like, writing XML for SMF is f'ing lame.
+#
+
+svnpubsub_user=${svnpubsub_user-"daemon"}
+svnpubsub_group=${svnpubsub_group-"daemon"}
+svnpubsub_reactor=${svnpubsub_reactor-"poll"}
+svnpubsub_pidfile=${svnpubsub_pidfile-"/var/run/svnpubsub/svnpubsub.pid"}
+pidfile="${svnpubsub_pidfile}"
+
+TWSITD_CMD="/opt/local/bin//twistd -y /usr/local/svnpubsub/svnpubsub.tac \
+            --logfile=/x1/log/svnpubsub.log \
+            --pidfile=${pidfile} \
+            --uid=${svnpubsub_user} --gid=${svnpubsub_user} \
+            -r${svnpubsub_reactor}"
+
+RETVAL=0
+ 
+start() {
+    echo "Starting SvnPubSub Server: "
+    $TWSITD_CMD
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
+    return $RETVAL
+}
+ 
+stop() {
+    echo "Stopping SvnPubSub Server: "
+    THE_PID=`cat ${pidfile}`
+    kill $THE_PID
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && echo "ok" || echo "failed"
+    return $RETVAL
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $RETVAL

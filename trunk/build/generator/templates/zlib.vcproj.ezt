@@ -1,0 +1,85 @@
+[define COPYRIGHT]
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+-->
+[end]<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="zlib"
+	ProjectGUID="[project_guid]"
+	Keyword="MakeFileProj">
+	<Platforms>
+[for platforms]		<Platform
+			Name="[platforms]"/>
+[end]	</Platforms>
+	<Configurations>
+[for platforms]		<Configuration
+			Name="Debug|[platforms]"
+			OutputDirectory="[zlib_path]\Debug"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
+			IntermediateDirectory="[zlib_path]\Debug"
+			ConfigurationType="0"
+			ManagedExtensions="1"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_zlib.bat debug [platforms]"
+				ReBuildCommandLine="cmd /c build_zlib.bat debug [platforms] rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat debug [platforms] clean"
+				Output="[zlib_path]\zlibstatD.lib"/>
+		</Configuration>
+		<Configuration
+			Name="Release|[platforms]"
+			OutputDirectory="[zlib_path]\Release"
+			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
+			IntermediateDirectory="[zlib_path]\Release"
+			ConfigurationType="0"
+			ManagedExtensions="1"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_zlib.bat release [platforms]"
+				ReBuildCommandLine="cmd /c build_zlib.bat release [platforms] rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat release [platforms] clean"
+				Output="[zlib_path]\zlibstat.lib"/>
+		</Configuration>
+[end]	</Configurations>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			[for zlib_sources]<File
+				RelativePath="[zlib_sources]">
+			</File>
+[end]
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+			[for zlib_headers]<File
+				RelativePath="[zlib_headers]">
+			</File>
+[end]
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

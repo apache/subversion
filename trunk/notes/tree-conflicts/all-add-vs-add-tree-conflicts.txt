@@ -1,0 +1,112 @@
+This file describes handling of all add-vs.-add tree conflict situations
+on 2010-jul-20 (previously 2010-jul-01, r959735). Maybe someone will update it
+and put another date here some day, maybe not.
+
+Add-vs.-add tree conflicts handling introduces a new meaning for
+svn_wc__db_status_not_present. Apart from the usual "node deleted and
+committed and parent not updated yet", a not_present BASE_NODE can also mean:
+This node was intended to be added during update/switch/checkout, but there
+was an unversioned obstruction in the local working copy at that path. A tree
+conflict with reason == svn_wc_conflict_reason_unversioned is flagged on such
+nodes. If such a tree conflict with _reason_unversioned is found on a
+not_present node during update/checkout/switch, and if furthermore there is no
+unversioned obstruction in the WC anymore (the user moved it away), then
+complete_directory() automatically removes the tree conflict, after which the
+running update/switch/checkout will pull that node in.
+
+
+All add vs. add cases:
+----------------------
+(see a legend below)
+
+all add-vs.-add   | incoming ADD of a           | incoming COPY of a          |
+tree conflict     | file    | symlink | dir (2) | file    | symlink | dir (2) |
+situations        |co up sw |co up sw |co up sw |co up sw |co up sw |co up sw |
+------------------+---------+---------+---------+---------+---------+---------+
+locally      file |?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|
+UNVER-    symlink |?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|
+SIONED        dir |?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|?C*?C*?C*|?C*?C*?C*|?C+?C+?C+|
+------------------+---------+---------+---------+---------+---------+---------+
+locally      file |Ex Ex RC*|RC*RC*RC*|:( :( :( |Ex RC*RC*|RC*RC*RC*|:( :( :( |
+ADDED     symlink |RC*RC*RC*|Ex Ex RC*|:( :( :( |RC*RC*RC*|Ex RC*RC*|:( :( :( |
+          (2) dir |:( :( :( |:( :( :( |Ex Ex Ex |:( :( :( |:( :( :( |Ex Ex Ex |
+------------------+---------+---------+---------+---------+---------+---------+
+DIFFERENT    file |RC*RC*RC*|RC*RC*RC*|:( :( :( |RC*RC*RC*|RC*RC*RC*|:( :( :( |
+COPY      symlink |RC*RC*RC*|RC*RC*RC*|:( :( :( |RC*RC*RC*|RC*RC*RC*|:( :( :( |
+of a      (2) dir |:( :( :( |:( :( :( |AC AC AC |:( :( :( |:( :( :( |AC AC AC |
+------------------+---------+---------+---------+---------+---------+---------+
+IDENTICAL    file |                             |RC*Ex*RC*|         |         |
+COPY of   symlink |         (see above)         |         |RC*Ex*RC*|         |
+a (1)     (2) dir |                             |         |         |AC AC AC |
+
+           
+"*" The cases changed in r959735 marked with a * on their right.
+"+" The cases most recently changed are marked with a + on their right.
+
+(1) Where both local and incoming are copies and both copies are from the
+exact same copyfrom URL@REV, the node kinds must also match. The colums
+against incoming simple-add are identical to "different copy" and omitted.
+
+(2) Since we can only deal with replace-by-different-kind properly after we
+moved to single-db, some of these rows/columns are still ':(' or 'AC'.
+
+
+In the table above, each cell shows three letter pairs for,
+checkout, update, switch operations, respectively.
+
+The letter pairs are:
+  RC = tree conflict where local add/copy becomes a schedule-replace,
+       i.e. status reports:
+       'R     C'    -> that's why this is called 'RC'
+       '      > local add, incoming add upon update|switch'
+       Resolving is easy. 'svn revert' gives theirs, 'svn commit' replaces
+       theirs with mine. (this is new!)
+
+  ?C = tree conflict against locally unversioned, adds a not_present BASE
+       node. Status reports
+       '?     C'
+       '      > local unversioned, incoming add upon update|switch'
+       Resolving is easy. Just move away the obstruction and run 'update'.
+       The tree conflict is removed automagically. (this is new!)
+
+  Ex = "Existed": local add and incoming add are seen as identical, there
+       will be a text/prop merge and possibly a text conflict.
+
+  :( = svn bails with an error, interrupting the operation. The parent is
+       left '!' == incomplete. Removing the obstruction and running the
+       operation again fixes the node as expected.
+
+  AC = Though a tree conflict is flagged, the node is skipped and the working
+       copy is left in a state where it doesn't notice that the incoming add
+       is still missing. After a revert, it is necessary to update back to an
+       older revision and then again back to HEAD to restore the file.
+       This is the old behaviour for all caught add-vs-add tree conflicts.
+       i.e. status reports
+          'A     C'
+       or 'A  +  C',
+          '      > local add, incoming add upon update|switch'
+
+So "Ex Ex RC*" would mean:
+ "During checkout and update, the local add is merged with the incoming add.
+  During switch, an easily resolvable tree conflict is flagged.
+  r959735 only changes the 'switch' behavior."
+
+A note on checkout: It *is* possible to checkout a URL onto a working copy of
+the same URL, which can have local adds scheduled. Then, checkout presumably
+is like an update -- almost. Note the incoming copy columns during checkout
+saying 'Ex' and 'RC' in some wrong places. That's because during checkout,
+add_file() gets no copy_from info and the incoming action always looks like a
+simple add. #TODO: we should discuss this non-feature.
+Note that tree conflicts from a checkout wrongly say "upon update".
+
+Notably, earlier servers provide no copy_from info to add_file() either, so
+'update' then acts the same way as 'checkout' -- fails to flag same-kind tree
+conflicts with local-add vs. incoming-copy, and fails to not flag conflicts on
+matching copies. #TODO: we should discuss this, too.
+
+The reasoning with 'switch' is that when 'switch' merges a local add
+with an incoming add, it is "lost" in the sense that switching back wants to
+simply delete that node, not re-schedule it for addition. So switch should
+*always* flag tree conflicts, never merge local adds away, so that the user is
+(hopefully not annoyed but) made aware of the situation.
+

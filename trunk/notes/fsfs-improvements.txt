@@ -1,0 +1,233 @@
+[ At the time of writing (1.7-dev), FSFS format 5 was current.  Since then
+format 5 has been retracted; it was never released.  1.7 shipped with f4 and
+1.8 will most likely ship with f6.  Format 5 was current during 1.7-dev and
+packed revprops into an authoritative SQLite database. ]
+
+Introduction
+------------
+
+The FSFS external data format can be changed to allow for
+significantly reduced I/O overhead without changing the
+fundamental ideas behind FSFS.
+
+The whole idea is to rearrange packed revision info in a
+new FSFS format "6".  A two-way conversion between format
+"5" and "6" should be possible as well as supporting both
+formats for different repositories on the same server.
+
+
+Revision Order
+--------------
+
+FSFS format "5" packs revisions by putting revision 0 at 
+the beginning of the file and concatenating the others in 
+ascending order.  This intuitive design is counter-productive 
+because we always trace data HEAD -> r0 and scanning a file
+backwards is expensive.
+
++-------+
+| rev 0 |
++-------+
+| rev 1 |
++-------+
+
+:  ...  :
+
++-------+
+| rev N |
++-------+
+<EOF>
+
+A counter-intuitive but more efficient reversed order (de-
+scending revision order in a packed file) results in always
+reading forward through a file.
+
++-------+
+| rev N |
++-------+
+
+:  ...  :
+
++-------+
+| rev 1 |
++-------+
+| rev 0 |
++-------+
+<EOF>
+
+
+Don't Interleave Revision and Content Data
+------------------------------------------
+
+Format "5" keeps each revision as a single block.  When
+re-constructing a node content from the diffs,  we jump
+through a number of distant revision blocks.  For each node.
+
++--------------+
+| rev N Reps   |
++--------------+
+| rev N Header |
++--------------+
+
+:     ...      :
+
++--------------+
+| rev 1 Reps   |
++--------------+
+| rev 1 Header |
++--------------+
+| rev 0 Reps   |
++--------------+
+| rev 0 Header |
++--------------+
+<EOF>
+
+Instead,  delta-info should be removed from the revision 
+blocks and put at the end of the file.  This speeds up
+header-only operations like "log" without impairing node
+content lookup.  And it lays the foundation for further
+improvements.
+
++--------------+
+| rev N Header |
++--------------+
+
+:     ...      :
+
++--------------+
+| rev 1 Header |
++--------------+
+| rev 0 Header |
++--------------+
+| rev N Reps   |
++--------------+
+
+:     ...      :
+
++--------------+
+| rev 1 Reps   |
++--------------+
+| rev 0 Reps   |
++--------------+
+<EOF>
+
+The only downside is that putting headers first is somewhat
+more computationally expensive since offsets needs to be
+calculated in advance.  This is made even more difficult by
+using a variable length encoding for those offsets.
+
+
+Group the Representations by Delta Tree
+---------------------------------------
+
+All diffs that are based on the same node within the packed
+revision file are put in one place.  Re-constructing a node
+would then involve reading the revision headers (relatively
+close together) and the content deltas after that (again
+with high locality).
+
++------------------+
+| rev N Header     |
++------------------+
+
+:       ...        :
+
++------------------+
+| rev 1 Header     |
++------------------+
+| rev 0 Header     |
++------------------+
+| node tree A Reps |
++------------------+
+| node tree B Reps |
++------------------+
+
+:       ...        :
+
++------------------+
+| node tree Z Reps |
++------------------+
+<EOF>
+
+We can optimize that even further by exploiting the skip-
+delta information: the "walks" through the delta tree for a
+given node will merge bit by bit into a main "trunk". The
+nodes on these paths can be re-ordered such that very few
+seek() operations are required on average to reconstruct 
+the node content in this file.
+
+Example of 8 changes in revs r0 .. r7 (for simplicity), 
+looking at the delta-info only ("->" means "stored as diff 
+against"):
+
+	r0
+	r1->r0
+	r2->r0
+	r3->r2
+	r4->r0
+	r5->r4
+	r6->r4
+	r7->r6
+
+Default ordering r0,r1,r2,r3,r4,r5,r6,r7 requires
+1/1/2/2/2/2/3/3 seeks.  For 2^N changes (N integer > 0),
+we need (N+1)/2 seeks on average.
+
+A path-optimized ordering r0,r4,r6,r7,r5,r2,r3,r1
+requires 1/1/1/1/2/2/2/2 seeks.  It's (N+3)/4 on average.
+That optimized ordering can easily be constructed by
+
+	* select the highest rev not covered, yet
+	* add its diff path to the existing result
+	  (starting with the first revision not
+          already is in the result)
+	* repeat until all revs are covered
+
+Note that revision paths start with the low end of
+the revision range because contents gets reconstructed
+from r0 upwards.
+
+
+Move the Manifest Info into the Packed File
+-------------------------------------------
+
+Once we mastered the offset pre-calculation issue (see
+above),  we may as well put the manifest info at the be-
+ginning of the file.  This will benefit "log" in particular
+as only one consecutive chunk of data needs to be read 
+from only one file.
+
++------------------+
+| rev 0 Offset     |
++------------------+
+| rev 1 Offset     |
++------------------+
+
+:       ...        :
+
++------------------+
+| rev N Offset     |
++------------------+
+| rev N Header     |
++------------------+
+
+:       ...        :
+
++------------------+
+| rev 1 Header     |
++------------------+
+| rev 0 Header     |
++------------------+
+| node tree A Reps |
++------------------+
+| node tree B Reps |
++------------------+
+
+:       ...        :
+
++------------------+
+| node tree Z Reps |
++------------------+
+<EOF>
+
+

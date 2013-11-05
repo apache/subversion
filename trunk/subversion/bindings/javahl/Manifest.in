@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Apache Subversion JavaHL API
+Bundle-Vendor: Apache Subversion
+Bundle-SymbolicName: org.apache.subversion.javahl
+Bundle-Version: %bundleVersion
+Export-Package: org.apache.subversion.javahl,
+ org.apache.subversion.javahl.callback,
+ org.apache.subversion.javahl.types,
+ org.tigris.subversion.javahl

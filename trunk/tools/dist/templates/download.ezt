@@ -1,0 +1,13 @@
+<p style="font-size: 150%; text-align: center;">Apache Subversion [version]</p>
+<table class="centered">
+<tr>
+  <th>File</th>
+  <th>Checksum (SHA1)</th>
+  <th>Signatures</th>
+</tr>
+[for fileinfo]<tr>
+  <td><a href="[[]preferred]subversion/[fileinfo.filename]">[fileinfo.filename]</a></td>
+  <td class="checksum">[fileinfo.sha1]</td>
+  <td>[<a href="http://www.apache.org/dist/subversion/[fileinfo.filename].asc">PGP</a>]</td>
+</tr>[end]
+</table>

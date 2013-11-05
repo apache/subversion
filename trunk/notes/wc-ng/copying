@@ -1,0 +1,150 @@
+WC to WC Copy
+=============
+
+In 1.6 a wc-to-wc copy of a directory first does a plain copy,
+including the admin directory, and then adjust the metadata to make it
+a copy.  With a centralised db the metadata has to be copied
+separately and explicitly.
+
+When copying a mixed revision working copy the source may have nodes
+that are in states such as absent, excluded, not-present or
+incomplete, as well as nodes at different revisions and nodes with
+local modifications.
+
+Consider copying and committing
+
+  $ svn cp wc/S wc/X
+  $ svn ci wc/X
+
+where S contains a child T.  When the copy is committed certain
+changes have to be made in the repository.  Some examples:
+
+      Source                     Commit after copy
+  Parent  Child              Parent             Child
+
+  /S@N    /S/T@N             A /X (from /S@N)
+                             or
+                             A /X (from /S@N)   M /X/T
+                                                (with local mods)
+
+  /S@N    /S/T@M             A /X (from /S@N)
+                             (if server finds T@M is same thing as T@N)
+                             or
+                             A /X (from /S@N)   A /X/T (from /S/A@M)
+                             or
+                             A /X (from /S@N)   R /X/T (from /S/A@M)
+                                                (the FS layer converts
+                                                 A to R if required)
+
+  /S@N    added              A /X (from S@N)    A /X/T
+                             or
+                             A /X (from S@N)    R /X/T
+
+  /S@N    copied             A /X (from S@N)    A /X/T (from G@M)
+                             or
+                             A /X (from S@N)    R /X/T (from G@M)
+
+  /S@N    not-present        A /X (from /S@N)   D /X/T
+
+  /S@N    excluded           A /X (from S@N)
+
+  /S@N    base-deleted       A /X (from S@N)    D /X/T
+
+A single revision source produces a copy that is a gets committed as a
+single copy.  Local modifications, before or after the copy, get
+committed as modifications to the copied nodes.
+
+A mixed revision copy is represented as multiple copies when
+committed.  We could represent this with a single copy operation root
+in the working tree by using the copyfrom_revision field in the
+working node.
+
+Child nodes added, copied or replaced in the source can remain added,
+copied or replaced in the copy.  Since these adds, copies and replaces
+are root operations in the source they will be root operations in the
+copy.  This means that a single copy operation will produce a working
+tree that contains several operation roots.  We could allow these
+child operation roots to be individually reverted in the copy.
+
+There is a subtle difference between committing a copy from a mixed
+revision source and from a source with a locally added or replaced
+child.  In both cases the commit must either add or replace the child
+and if the copy is from a source that is locally added or replaced the
+client can make the distinction and send a delete before adding the
+replacement.  For a mixed revision, as the client doesn't know whether
+the child existed in its parent's revision and so can't distinguish
+between add and replace, it always sends an add and the FS layer
+converts to a replace as required (for details see 2010-04-19 comments
+in issue 3314).  We will probably have to continue rely on this in
+WC-NG as there is not enough information in the source to determine
+whether or not the child also exists in the parent's revision.
+
+If the mixed-rev source has a "not-present" child (effectively the
+same as "updated to r0"), then the copy schedules this as "delete".
+The client doesn't know whether the child existed in its parent's
+revision, so it can't distinguish between delete and no-op, so it
+always sends a delete.
+
+  ### This current fails, in both 1.6 and trunk.
+
+  ### TODO: The server needs to silently elide a delete, or the client
+  needs to detect the error and recover from it and continue if that
+  is possible.
+
+Child nodes not-present in the source become not-present working nodes
+in the copy, this ensures that they get deleted by the commit.  We
+might want to use a new not-copied state instead, since these deletes
+cannot be reverted.
+
+Child nodes that are excluded in the source can remain excluded in the
+copy.
+
+Child nodes that are base-deleted in the source become not-present in
+the copy.  These deletes can be individually reverted.
+
+Child nodes that are incomplete in the source become incomplete in the
+copy.  Some operations, like delete, could be possible on the
+incomplete node.  Could "svn up" retrieve the missing information and
+make them complete?  The commit processing would probably choose not
+to allow incomplete directories.
+
+Child nodes that are absent in the source cannot be copied and
+committed.  During the commit the copy of the parent will fail with an
+authz error since Subversion requires read access to the whole tree
+being copied.
+
+--
+
+URL-to-wc copy is equivalent to a single revision wc-to-wc copy.
+
+--
+
+The child /S/T may also be switched wrt the parent /S.  At present
+this is handled badly by 1.6.
+
+  $ svn sw ^/G wc/S/T
+  $ svn cp wc/S wc/X
+
+the working copy X/T will look like /G but the switch status is lost.
+If X/T is unmodified then the commit will add /X (from /S@N) and do
+nothing for /X/T so /X/T in the repository looks like /S/T.  (This is
+rather like committing a non-copied switch and so is not necessarily a
+bug, although whether users would expect it I don't know--I had to
+experiment to verify the behaviour.)
+
+If X/T is a modifed file the commit fails with a checksum error, the
+wrong text-base is used.  If X/T is a directory that is modified or
+contains modified children the commit is unreliable as again changes
+are made against the wrong base.
+
+How should a copied, switched node be handled?  The switch could be
+preserved so that the copied node points to the same node as switched
+source node.  This would almost certainly require extending the client
+commit code to handle this.  It's not currently possible to switch an
+added node so is it sensible for copy to do it?
+
+An alternative would be to convert the switch into a replace.
+Relatively easy to do but it would mean that node is no longer really
+switched.
+
+--

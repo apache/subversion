@@ -469,6 +469,26 @@ svn_config__is_read_only(svn_config_t *cfg)
   return cfg->read_only;
 }
 
+svn_config_t *
+svn_config__shallow_copy(svn_config_t *src,
+                         apr_pool_t *pool)
+{
+  svn_config_t *cfg = apr_palloc(pool, sizeof(*cfg));
+
+  cfg->sections = src->sections;
+  cfg->pool = pool;
+
+  /* r/o configs are fully expanded and don't need the x_pool anymore */
+  cfg->x_pool = src->read_only ? NULL : svn_pool_create(pool);
+  cfg->x_values = src->x_values;
+  cfg->tmp_key = svn_stringbuf_create_empty(pool);
+  cfg->tmp_value = svn_stringbuf_create_empty(pool);
+  cfg->section_names_case_sensitive = src->section_names_case_sensitive;
+  cfg->option_names_case_sensitive = src->option_names_case_sensitive;
+  cfg->read_only = src->read_only;
+
+  return cfg;
+}
 
 
 svn_error_t *

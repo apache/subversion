@@ -1,0 +1,65 @@
+﻿[#
+<!--
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+-->
+]<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+[for configs][for platforms]    <ProjectConfiguration Include="[configs]|[platforms]">
+      <Configuration>[configs]</Configuration>
+      <Platform>[platforms]</Platform>
+    </ProjectConfiguration>
+[end][end]  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>serf</ProjectName>
+    <ProjectGuid>[project_guid]</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+[for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>[is configs "Debug"]true[else]false[end]</UseDebugLibraries>
+    <PlatformToolset>[toolset_version]</PlatformToolset>
+  </PropertyGroup>
+[end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+[for platforms][for configs]  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  </ImportGroup>
+[end][end]  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+[for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[configs]</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[configs]</IntDir>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak ALL [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [apr_static] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path] [openssl_static][end]</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak CLEAN ALL [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [apr_static] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path] [openssl_static][end]</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"$(VCInstallDir)bin\nmake.exe" /s /nologo /f serf.mak CLEAN [is configs "Debug"]DEBUG_BUILD=1 [end]APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [apr_static] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path] [openssl_static][end]</NMakeCleanCommandLine>
+    <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">$(OutDir)\[serf_lib]</NMakeOutput>
+[end][end]  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+[for serf_sources]    <ClCompile Include="[serf_sources]" />
+[end]  </ItemGroup>
+  <ItemGroup>
+[for serf_headers]    <ClInclude Include="[serf_headers]" />
+[end]  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

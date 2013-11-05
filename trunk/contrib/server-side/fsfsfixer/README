@@ -1,0 +1,30 @@
+The set of scripts in this directory attempts to fix some kinds of
+corruption in a FSFS repository, particularly errors that are reported by
+'svnadmin verify' with the following two kinds of error message:
+
+  svnadmin: E160004: Corrupt node-revision '5-12980.0.r12980/5571'
+  svnadmin: E160004: Found malformed header in revision file
+
+  svnadmin: E160004: Corrupt representation '13001 1496 2082 16645 [...]'
+  svnadmin: E160004: Malformed representation header
+
+  svnadmin: E200014: Checksum mismatch while reading representation:
+     expected:  d41d8cd98f00b204e9800998ecf8427e
+       actual:  67e7c6f56087c371ae4dd7152c6ba04b
+
+The files are:
+
+  fix-repo: a /bin/sh script that calls fixer/fix-rev.py on each rev in a range
+  fixer/fix-rev.py: checks and fixes if possible a single revision
+  fixer/find_good_id.py: a helper function
+  fixer/__init__.py: an empty file that signals to Python that this directory
+    is a Python module
+
+Backup your repository before running them.
+
+For more details, see the email from Julian Foad on 2010-10-06, subject
+"Fixing FSFS 'Corrupt node-revision' and 'Corrupt representation' errors",
+<http://svn.haxx.se/dev/archive-2010-10/0095.shtml>.
+
+This script does not support fixing revisions that had been packed.  Consider
+using ../../../tools/server-side/fsfs-reshard.py first.

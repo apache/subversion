@@ -1,0 +1,69 @@
+# DEFAULT section can be used to place options that can be referenced in 
+# other section values with the %(option)s syntax.  Note that the svnlook
+# value below is required as it is used by the script to determine the path
+# to the svnlook command in order to determine the changes.  Feel free
+# to create additional values here that you can reuse in other options,
+# especially the command options to make it easier to maintain.
+[DEFAULT]
+svnlook = /usr/local/bin/svnlook
+#svnauthz = /usr/local/bin/svn-tools/svnauthz
+#xmllint = /usr/bin/xmllint
+
+# The repositories section has key value pairs where the key is a pattern
+# to match on the repository path and the value is a space separated list of
+# rules to apply to that repository.  Multiple patterns can match and all
+# unique rules will be applied.  The pattern is a Unix shell-style wildcard.
+# As seen below all repositories will have the svnauthz-validate and xmllint
+# rules applied and repositories in /repos or below will have admin-rw-authz
+# applied.
+[repositories]
+#* = svnauthz-validate xmllint
+#/repos/* = admin-rw-authz 
+
+# Rules allow you define a pattern to match against which files in the
+# repository to run a command against.  Rules are defined by creating a
+# section name starting with 'rule:' as seen below.
+#
+# The pattern option is a Unix shell-style wildcard match against the
+# files in the repo that the rule will be run for.  A leading / in your
+# pattern will be ignored.  Paths segments are / separated regardless of
+# platform.
+#
+# The command option is the command to run, this command will be run via
+# the shell of your platform.  The following environment variables will
+# be defined for you:
+#  REPO  = the path of the repository for the commit.
+#  TXN   = the transaction id of the commit.
+#  FILE  = the name of the file that matched the pattern.
+#
+# IMPORTANT: AS A CONSEQUENCE OF THE USE OF THE SHELL IT IS IMPORTANT TO
+# QUOTE THE ARGUMENTS OF YOUR COMMANDS.  THE FILE VARIABLE DOES CONTAIN
+# USER GENERATED DATA AND SHELL METACHARACTERS ARE NOT ESCAPED FOR YOU!
+#
+# The following examples assume a POSIX shell, if your platform has a
+# different shell you may need to adjust them.  For example on Windows
+# cmd.exe uses %VARIABLENAME% instead of $VARIABLENAME to expand environment
+# variables.
+#
+# The following rule runs the svnauthz command's validate subcommand
+# for file named authz in the conf subdir if it is present in the commit.
+# This is a simple way to ensure that invalid authz files are not allowed
+# to be committed.
+#[rule:svnauthz-validate]
+#pattern = conf/authz
+#command = '%(svnauthz)s' validate -t "$TXN" "$REPO" "$FILE"
+
+# The following rule runs the svnauthz command's accessof subcommand
+# for any file ending in .authz for the conf subdir and checks that the admin
+# user has rw rights to the same file.  This can be used to prevent an
+# authz file being committed that would remove access for the admin user.
+# Note that accessof also validates the validity of the file as well as
+# checking the permissions, so it's unecessary to run validate and accessof.
+#[rule:admin-rw-authz]
+#pattern = /conf/*.authz
+#command = '%(svnauthz)s' accessof --username admin --path "$FILE" --is rw -t "$TXN" "$REPO" "$FILE"
+
+# Use the xmllint command to validate all files ending in .xml
+#[rule:xmllint]
+#pattern = *.xml
+#command = '%(svnlook)s' cat -t "$TXN" "$REPO" "$FILE" | '%(xmllint)s' --noout -

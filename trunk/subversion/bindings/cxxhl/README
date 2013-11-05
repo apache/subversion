@@ -1,0 +1,13 @@
+WORK IN PROGRESS
+================
+
+This directory contains an experimental implementation of a C++HL, a
+high-level Subversion C++ API, modeled along the lines of JavaHL.
+
+It is far from complete and may never see the light of day.
+
+On the other hand, one good reason for having a high-level C++ API is
+to use it as a baseline for Swig-generated binadings.  Our current set
+of Perl, Python and Ruby bindings is too heterogenous in terms of
+feature set, object and usage model. They're almost as hard to use as
+the C API itself.

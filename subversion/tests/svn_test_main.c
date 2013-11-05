@@ -410,9 +410,9 @@ static svn_error_t *init_test_data(const char *argv0, apr_pool_t *pool)
 }
 
 const char *
-svn_test_data_path(const char *basename, apr_pool_t *result_pool)
+svn_test_data_path(const char *base_name, apr_pool_t *result_pool)
 {
-  return svn_dirent_join(data_path, basename, result_pool);
+  return svn_dirent_join(data_path, base_name, result_pool);
 }
 
 

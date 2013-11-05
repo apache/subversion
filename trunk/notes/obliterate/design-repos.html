@@ -1,0 +1,421 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Repository Transaction Design for Svn Obliterate</title>
+</head>
+
+<body>
+
+<div class="h1">
+<h1 style="text-align: center">Repository Transaction Design for Svn
+  Obliterate</h1>
+</div>
+
+<div class="h1">
+<h2>Table of Contents</h2>
+<ol id="toc">
+  <li><a href="#server">Server &mdash; How the server works</a>
+  <ol>
+    <li><a href="#server.fs">Filesystem</a>
+    <ol>
+      <li><a href="#server.fs.txn">Transactions of Obliteration</a></li>
+    </ol>
+    </li> <!-- server.fs -->
+  </ol>
+  </li> <!-- server -->
+  <li><a href="#refs">References</a></li>
+</ol>
+</div>
+
+<!--
+  ================================================================
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+  ====================================================================
+
+  This software consists of voluntary contributions made by many
+  individuals on behalf of CollabNet.
+-->
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<div class="h2" id="server" title="#server">
+  <h2>Server &mdash; How the server works</h2>
+
+
+  <div class="h3" id="server.fs" title="#server.fs">
+    <h3>Filesystem</h3>
+
+
+    <div class="h4" id="server.fs.txn" title="#server.fs.txn">
+      <h4>Transactions of Obliteration</h4>
+
+
+      <p>This section describes how the Obliterate Transaction works, using
+        the model of obliteration in which an obliterated node-rev is
+        deleted from its revision (and not replaced with other content). The
+        functional spec diagrams for this model are in
+        &lt;<a href="fspec-dd1/">notes/obliterate/fspec-dd1/</a>&gt;.</p>
+
+      <div class="h5" id="server.fs.txn.simple">
+        <h5>Simple Obliterate</h5>
+
+
+        <p>Let us obliterate the file node-rev called "tuna" in r2, where the
+          content said "Fried". We don't want anyone to see that content any
+          longer.</p>
+
+        <p>More precisely, let us obliterate the "tuna" entry in the directory
+          known as "fish" in r2. If a copy of the file node whose content is
+          "Fried", and that was called "tuna" in r2, also exists elsewhere (in
+          a tag, a branch, a copy or another revision), let us choose to let
+          all such copies remain in the repository for now. (We can obliterate
+          them separately if we wish.) In this example, there are no such
+          copies of the file node.</p>
+
+        <pre>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \
+          |         \_____
+       ___|____         __\_____
+      |D       |       |D       |            Key:
+      |        |       |        |              Each rectangle with 'D' or
+      |   A    |       |   A    |              'F' in top-left corner is
+      |    \   |       |    \   |              a separate node - a dir or
+      |   B \  |       |   B \  |              file node respectively.
+      |__/___\_|       |__/___\_|              Text shown in a node is its
+        /     \          /     \               content, not its name.
+       |    ___\________/       \
+       |   /    \                \
+    ___|__/   ___\____         ___\____
+   |D      | |D       |       |D       |
+   |       | |        |       |        |
+   |       | | fish   |       | fish   |
+   |_______| |___\____|       |___\____|
+                  \                \
+                   \                \
+                 ___\____         ___\____
+                |D       |       |D       |
+                |        |       |        |
+                | tuna   |       | tuna   |   &lt;- entry to obliterate
+                |___\____|       |___\____|
+                     \                \
+                      \                \
+                    ___\____         ___\____
+                   |F       |       |F       |
+                   |        |       |        |
+                   |"Fresh" |       |"Fried" |
+                   |________|       |________|
+
+</pre>
+
+        <p>We construct a transaction containing a new version of the r2
+          tree. It is like the old r2 tree except we have a new node to hold
+          the directory that no longer contains <tt
+          class="filename">tuna</tt>, and a new node for each of its parent
+          directories up to the root.</p>
+
+        <p>We will do this in two steps. First, a begin_obliteration_txn()
+          function will create a new transaction that is a mutable clone of
+          the old r2. Second, we will use the normal transaction editing
+          functions to delete the "tuna" entry.</p>
+
+        <pre>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \
+          |         \_____
+       ___|____         __\_____         ________
+      |D       |       |D       |       |D       |
+      |        |       |        |       |        |   &lt;- new r2 tree
+      |   A    |       |   A    |       |   A    |
+      |    \   |       |    \   |       |    \   |
+      |   B \  |       |   B \  |       |   B \  |
+      |__/___\_|       |__/___\_|       |__/___\_|
+        /  ______________/_____\__________/     \
+       |  / ___\________/       \                \
+       | / /    \                \                \
+    ___|/_/   ___\____         ___\____         ___\____
+   |D      | |D       |       |D       |       |D       |
+   |       | |        |       |        |       |        |
+   |       | | fish   |       | fish   |       | fish   |
+   |_______| |___\____|       |___\____|       |___\____|
+                  \                \                \
+                   \                \                \
+                 ___\____         ___\____         ___\____
+                |D       |       |D       |       |D       |
+                |        |       |        |       |        |
+                | tuna   |       | tuna   |       |        |
+                |___\____|       |___\____|       |________|
+                     \                \
+                      \                \
+                    ___\____         ___\____
+                   |F       |       |F       |
+                   |        |       |        |
+                   |"Fresh" |       |"Fried" |
+                   |________|       |________|
+
+</pre>
+
+        <p>We link the new transaction in as r2, replacing the old r2. The old
+          r2 tree does not yet go away; its nodes are still present and other
+          revisions and transactions may be referring to them. This operation
+          is analogous to the "finalize" stage of a commit, but it is not the
+          final operation in an obliteration.</p>
+
+        <pre>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \______________________
+          |                               \
+       ___|____         ________         __\_____
+      |D       |       |D       |       |D       |   &lt;- r2 is now this tree
+      |        |       |        |       |        |
+      |   A    |       |   A    |       |   A    |
+      |    \   |       |    \   |       |    \   |
+      |   B \  |       |   B \  |       |   B \  |
+      |__/___\_|       |__/___\_|       |__/___\_|
+        /  ______________/_____\__________/     \
+       |  / ___\________/       \                \
+       | / /    \                \                \
+    ___|/_/   ___\____         ___\____         ___\____
+   |D      | |D       |       |D       |       |D       |
+   |       | |        |       |        |       |        |
+   |       | | fish   |       | fish   |       | fish   |
+   |_______| |___\____|       |___\____|       |___\____|
+                  \                \                \
+                   \                \                \
+                 ___\____         ___\____         ___\____
+                |D       |       |D       |       |D       |
+                |        |       |        |       |        |
+                | tuna   |       | tuna   |       |        |
+                |___\____|       |___\____|       |________|
+                     \                \
+                      \                \
+                    ___\____         ___\____
+                   |F       |       |F       |
+                   |        |       |        |
+                   |"Fresh" |       |"Fried" |
+                   |________|       |________|
+
+</pre>
+
+        <p>Now the old r2 tree is orphaned. Some of its nodes are no longer
+          referenced and can therefore be deleted. In particular, the old
+          file-rev containing "Fried" is no longer referenced through r2 - and
+          in our example it is not referenced from any other revision
+          either.</p>
+
+        <p>We could delete the orphaned nodes right away, or we could leave
+          them in place for now and at some later time trawl through the list
+          of all nodes looking for orphans and deleting them. The latter
+          scheme is known as "garbage collection".</p>
+
+        <p>Let us assume for now that we will delete the orphaned nodes right
+          away. In fact, we will do it during the "finalization" so as not to
+          leave any orphaned nodes in the tree. (The "no dead nodes" rule in
+          &lt;<a href="../../www/design.html#server.fs.struct"
+          >www/design.html#server.fs.struct</a>&gt;.)</p>
+
+        <p>Starting from the root directory node of the old r2, we traverse
+          that tree, deleting orphaned nodes from the top down. First we
+          delete that root directory node. (This is just an illustration; the
+          implementation can delete them in whatever order or manner it
+          chooses, as long as it is transactional.)</p>
+
+        <pre>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \______________________
+          |                               \
+       ___|____                          __\_____
+      |D       |        * * * *         |D       |
+      |        |       * GONE! *        |        |
+      |   A    |        * * * *         |   A    |
+      |    \   |                        |    \   |
+      |   B \  |                        |   B \  |
+      |__/___\_|                        |__/___\_|
+        /  _______________________________/     \
+       |  /    \                                 \
+       | /      \                                 \
+    ___|/__   ___\____         ________         ___\____
+   |D      | |D       |       |D       |       |D       |
+   |       | |        |       |        |       |        |
+   |       | | fish   |       | fish   |       | fish   |
+   |_______| |___\____|       |___\____|       |___\____|
+                  \                \                \
+                   \                \                \
+                 ___\____         ___\____         ___\____
+                |D       |       |D       |       |D       |
+                |        |       |        |       |        |
+                | tuna   |       | tuna   |       |        |
+                |___\____|       |___\____|       |________|
+                     \                \
+                      \                \
+                    ___\____         ___\____
+                   |F       |       |F       |
+                   |        |       |        |
+                   |"Fresh" |       |"Fried" |
+                   |________|       |________|
+
+</pre>
+
+        <p>After deleting the root directory node, we leave the directory node
+          known as "B" in place because it still has other parents, but delete
+          that known as "A" because it becomes orphaned. Similarly we delete
+          the dir known as "fish" and the file known as "tuna".</p>
+
+        <pre>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \______________________
+          |                               \
+       ___|____                          __\_____
+      |D       |                        |D       |
+      |        |                        |        |
+      |   A    |                        |   A    |
+      |    \   |                        |    \   |
+      |   B \  |                        |   B \  |
+      |__/___\_|                        |__/___\_|
+        /  _______________________________/     \
+       |  /    \                                 \
+       | /      \                                 \
+    ___|/__   ___\____                          ___\____
+   |D      | |D       |                        |D       |
+   |       | |        |                        |        |
+   |       | | fish   |                        | fish   |
+   |_______| |___\____|                        |___\____|
+                  \                                 \
+                   \                                 \
+                 ___\____                          ___\____
+                |D       |                        |D       |
+                |        |                        |        |
+                | tuna   |                        |        |
+                |___\____|                        |________|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |"Fresh" |
+                   |________|
+
+</pre>
+
+        <p>That is the end of a simple obliteration, in which there were no
+          other references in the repository to the obliterated node or its
+          parents.</p>
+
+        <p>Note that there is no restriction on references to other sub-trees
+          of the original r2. For example, existing or future references to
+          the node called "B" are unaffected, even if a transaction using such
+          a reference is being constructed while this obliteration is
+          happening.</p>
+
+      </div> <!-- server.fs.txn.simple (h5) -->
+
+      <div class="h5" id="server.fs.txn.checks">
+        <h5>Construction and Finalization Checks</h5>
+
+
+        <p>Consider a case in which a normal commit transaction is being
+          constructed at the same time as the above obliteration is carried
+          out.  The new commit transaction includes a pointer to the node
+          called "fish" in old r2, which exists at the time of construction.
+          By the time we try to finalize this commit, the obliteration has
+          been finalized and the node pointed to no longer exists. We cannot
+          allow a transaction with a broken link to be committed.</p>
+
+        <p>Finalization must include a check that all referenced existing
+          nodes do in fact still exist. This check must be performed both in
+          normal commit finalization and in obliterate finalization.</p>
+
+        <p>That check could be costly if implemented naïvely, but there are
+          ways to make it cheap. First, ensure no invalid node is added during
+          construction. Second, detect whether any obliteration has been
+          performed in the repository since the transaction was started.
+          ### TODO: "Obliteration Serial Number".</p>
+
+      </div> <!-- server.fs.txn.checks (h5) -->
+
+      <div class="h5" id="server.fs.txn.referenced">
+        <h5>Obliterating a Node that is Referenced Elsewhere</h5>
+
+
+        <p>We don't mean to obliterate the "node" but rather the
+          directory entry that points to the node. If another directory entry
+          in this same revision or in another revision points to the node, that
+          is no problem: we will simply re-write the directory so as to remove
+          the entry, but we will not delete the node itself because it will
+          not be orphaned.</p>
+
+      </div> <!-- server.fs.txn.referenced (h5) -->
+
+    </div> <!-- server.fs.txn (h4) -->
+
+  </div> <!-- server.fs (h3) -->
+
+</div> <!-- server (h2) -->
+
+
+<div class="h2" id="refs" title="#refs">
+  <h2>References</h2>
+
+  <p>Diagrams...</p>
+
+  <p>The repository transformations for <a href="fspec-dd1" >fspec-dd1</a> <a
+    href="fspec-dd1/dd1-file-ops.svg" >files</a> and <a
+    href="fspec-dd1/dd1-dir-ops.svg" >dirs</a>, and for <a href="fspec-cc1"
+    >fspec-cc1</a> <a href="fspec-cc1/cc1-file-ops.svg" >files</a> and <a
+    href="fspec-cc1/cc1-dir-ops.svg" >dirs</a>.</p>
+
+  <p>A database <a href="../../subversion/libsvn_fs_base/notes/schema-bdb-1.6.svg"
+    >schema diagram for BDB</a> in Subversion 1.6.</p>
+
+  <p>Diagrams showing the before-and-after content of BDB tables for a "dd1"
+    type of obliteration: <a href="schema-bdb-dd1-before.svg" >before</a> and <a
+    href="schema-bdb-dd1-after.svg" >after</a>.</p>
+
+  <p>A database <a href="http://homepages.paradise.net.nz/~ejrh/subversion/mysql/"
+    >schema diagram for MYSQL</a> by Edmund Horner, which is like the
+    BDB schema except with exploding of skels into table columns -
+    transaction_props, transaction_copies, representation_windows.</p>
+
+  <p><a href="../../subversion/libsvn_fs_fs/structure" >FSFS structure</a> doc</p>
+
+  <p><a href="../../subversion/libsvn_fs_base/notes/structure" >FS-BDB
+    structure</a> doc: nodes, node-revs, keys, skels, reps, deltifying, txns,
+    changes, copies, locks, merge rules, uuid, summary (structure syntax),
+    misc-table (forward-delta support)</p>
+
+  <p>FS-BDB <a href="../../subversion/libsvn_fs_base/notes/fs-history"
+    >fs-history</a> doc: DAG node-revs, node-rev-ids, copies, copy-ids</p>
+
+  <p><a
+    href=""
+    ></a></p>
+
+</div> <!-- server.fs (h3) -->
+
+
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+</body>
+</html>

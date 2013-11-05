@@ -1,0 +1,134 @@
+[define COPYRIGHT]
+#
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+#
+[end]@echo off
+@rem **************************************************************************
+@rem * --== WARNING ==-- This is a generated file. Do not edit!
+@rem *
+@rem * From this directory, run this batch file like so:
+@rem *
+@rem *    .\build_zlib debug|release Win32|X64 [rebuild|clean]
+@rem *
+@rem **************************************************************************
+
+@rem **************************************************************************
+cd /D [zlib_path]
+set exitcode=0
+set zlib_version=[zlib_version]
+
+if /i "%1" == "release" goto release
+if /i "%1" == "debug" goto debug
+goto pIerr
+
+:checkplatform
+if /i "%2" == "Win32" goto PWin32
+if /i "%2" == "x64" goto PX64
+goto pIIerr
+
+:checkrebuild
+
+[if-any use_ml]
+@rem **************************************************************************
+@rem Compile ASM sources with ML
+set ASFLAGS=-nologo -Zi -coff
+set LOC=-DASMV -DASMINF
+[is zlib_version "1.2.4"]
+set OBJA=contrib\masmx86\gvmat32c.obj contrib\masmx86\gvmat32.obj contrib\masmx86\inffas32.obj
+set ASM_OPTS=ASFLAGS="%ASFLAGS%" LOC="%LOC%" OBJA="%OBJA%"
+[else]
+if /i "%2" == "Win32" (
+  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj" "AS=ml -safeseh"
+) else if /i "%2" == "x64" (
+  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.obj" AS=ml64 
+)
+[end]
+[end]
+
+
+if /i "%3" == "rebuild" goto rebuild
+if /i "%3" == "clean" goto clean
+if not "%3" == "" goto pIIIerr
+set target= %STATICLIB%
+goto build
+
+:rebuild
+set target=clean %STATICLIB%
+goto build
+
+:clean
+set target=clean
+goto build
+
+@rem **************************************************************************
+:release
+set STATICLIB=zlibstat.lib
+set CC_OPTS=/MD /O2 /Zi
+goto checkplatform
+
+@rem **************************************************************************
+:debug
+set STATICLIB=zlibstatD.lib
+set CC_OPTS=/MDd /Gm /ZI /Od /GZ /D_DEBUG
+goto checkplatform
+
+@rem **************************************************************************
+:PWin32
+goto checkrebuild
+
+@rem **************************************************************************
+:PX64
+goto checkrebuild
+
+@rem **************************************************************************
+:build
+set COMMON_CC_OPTS=/nologo /W3 /DWIN32 /D_WINDOWS
+[is zlib_version "1.2.4"]
+set CFLAGS=%COMMON_CC_OPTS% %CC_OPTS% %LOC%
+set BUILD_OPTS=%ASM_OPTS% CFLAGS="%COMMON_CC_OPTS% %CC_OPTS% %LOC%"
+[else]
+set BUILD_OPTS=%ASM_OPTS%
+[end]
+@echo nmake /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
+nmake /nologo /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
+if errorlevel 1 goto err
+goto end
+
+@rem **************************************************************************
+:pIerr
+echo error: First parameter should be "release" or "debug"
+goto err
+
+@rem **************************************************************************
+:pIIerr
+echo error: Second parameter should be "Win32" or "X64"
+goto err
+
+
+@rem **************************************************************************
+:pIIIerr
+echo error: Third parameter should be "rebuild" or empty
+goto err
+
+@rem **************************************************************************
+:err
+set exitcode=1
+:end
+exit %exitcode%

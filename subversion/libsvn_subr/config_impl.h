@@ -47,7 +47,8 @@ struct svn_config_t
   /* Table of cfg_section_t's. */
   apr_hash_t *sections;
 
-  /* Pool for hash tables, table entries and unexpanded values */
+  /* Pool for hash tables, table entries and unexpanded values.
+     Also, parent pool for temporary pools. */
   apr_pool_t *pool;
 
   /* Pool for expanded values -- this is separate, so that we can

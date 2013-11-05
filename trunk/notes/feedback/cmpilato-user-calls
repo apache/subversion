@@ -1,0 +1,196 @@
+                            -*- text -*-
+
+During Q1 2010, my CollabNet colleagues and I (C. Michael Pilato)
+invited select customers (deemed to be generally representative of our
+vast Subversion customer base) to participate in one-on-one meetings
+around the general topic of version control.  All of these customers
+are Subversion users; some of them are using it alongside other
+version control systems.  Customers were asked to share openly about
+what is missing from their version control experience.  The persons or
+teams that I spoke with were knowledgable enough to identify what
+would constitute a "core Subversion feature" or "core Subversion fix",
+so most of the responses were self-limited to complaints or
+suggestions about Subversion itself.  Some folks took us up on the
+offer to speak about their version control experience in general, so
+we got some feedback that might be best evaluated by, for example, the
+TortoiseSVN project or CollabNet internal Engineering staff.
+
+In all, I met (via teleconference) with 11 customer teams, and
+received additional feedback from others via email.  Customers
+provided wishlists of various sizes -- from only a couple of items to
+as many as 15 identified as important enough to draw attention to in
+our meetings.  Some identified the relative priorities of their
+wishlist items; some did not.  None were privy the requests that other
+customers had made -- we wanted to first understand what was annoying
+them enough to stay in foremost in their minds (and not "lead the
+witness").  (We will revisit every one of these customers with an
+aggregate list of requests so they can each take a pass at
+prioritizing the lot of them.)
+
+What follows here is a summary of what I learned in the process, plus
+the aggregated list of wishlist items (post-processed to add some
+additional organization to the thoughts shared).
+
+
+
+GENERAL TAKEAWAYS
+=================
+
+Subversion remains the version control system of choice for the
+enterprise.  There is grassroots pressure from the lower ranks to give
+DVCS a spin, but it's almost universally the case that the love for
+DVCS comes not because of the distributed model itself, but from some
+of the secondary features and behaviors of those systems: better
+performance of day-to-day operations, better merge handling, better
+handling of renamed items, and support for offline commits.
+Interestingly, Subversion is where it is today inside most of these
+shops largely because of similar grassroots pressure in favor of
+Subversion over closed-source systems over the past six years.  An
+interesting difference, though, is that Subversion's model to date has
+always been in line with the basic needs of the enterprise, offering
+centralized storage, path-based authorization, and so on.  DVCS tools,
+on the other hand, stand opposed (by their very design) to some of
+those core requirements, much to the chagrin of managers and auditing
+bodies alike.
+
+Enterprises are united in the desire to see Subversion continue to
+push beyond mere "best of open source version control systems" status
+and into a dedicated courtship of the enterprise user base and
+administrators.  Install bases of thousands of users across multiple
+geographical locations beg for sheer power, user simplicity, and
+administrative control.  Some items that were commonly cited along
+these lines include the following:
+
+   * Performance:  Make it faster.  Then make it faster again.
+
+   * Enterprise-class authentication and authorization:  Subversion
+     should be able to work with other services on the corporate
+     network.  Single sign-on (SSO), LDAP, Kerberos, etc.
+
+   * Server-side control of client-side behaviors:  Admins want to know
+     that every Subversion user has the same configuration for simple
+     things like auto-props rules, and want to be able to control
+     things like our "store-plaintext-passwords" toggles remotely in a
+     way that's not easily override-able.
+
+   * Improved branching and merging: Everybody loves merge tracking
+     and tree conflicts.  That is, when they don't hate it.
+     Subversion should be smarter, and *must* learn to gracefully deal
+     with renames.
+
+I didn't meet a single angry customer.  Were some of them frustrated
+by certain shortcomings in Subversion?  Certainly.  But many expressed
+strong support for Subversion, even saying outright that they would
+gladly suffer 2.0 migration pains if it meant getting these features
+into their hands faster.
+
+
+
+WISHLIST ITEMS
+==============
+
+Performance
+
+   Client Performance
+
+   * Faster checkouts
+   * Faster history browsing (log, etc.)
+   * Faster merging
+   * Better performance with large binaries
+   * Reuse authenticated sessions
+
+   HTTP Performance
+
+   * Better overall speed (close gap with svnserve)
+   * Alleviate path-based authorization logic performance penalties
+   * Fully support caching web proxies
+
+Security
+
+   * Server-governed enterprise password caching solution
+   * Kerberos support
+   * Support for LDAP groups with path-based permissioning
+   * ACL support with more fine-grained operational control
+   * Bug: Update pulling new file copied from unreadable branch fails
+
+Server Features
+
+   * Server-governed configuration (per repository)
+   * Forward history tracing (for tree conflicts, repos browsing, etc.)
+
+Distribution
+
+   * First-class support for clustering
+   * Open source multi-site solution
+   * Bug: "Chunk delimiter was invalid" seen in svnsync of large commits
+   * svnsync performance
+   * Write-thru proxy support for svnserve
+
+Client Features
+
+   Sparse Checkouts
+
+   * Search-based sparse working copy population
+   * Sparsely populated tag when made from sparse working copy
+
+   Externals Enhancements
+
+   * File externals from foreign repository sources
+   * Recursion into external working copies during commits
+   * Tagging recursion into externals, tagging those as well
+   * Stabilize peg revisions of external definitions when tagging
+   * --ignore-externals flag should be sticky (and add --include-externals)
+   * More robust single-file externals
+
+   Obliterate
+
+   * Remove path or path revision leaving auditing breadcrumbs
+   * Archive older revisions (by date or size)
+
+   Merging
+
+   * More robust merging
+   * --reintegration should tolerate sparse checkouts that aren't affected
+   * Use common ancestor as part of the merge resolution process
+   * First class citizenship for mergeinfo (revision- and path-level support)
+   * Better handling of property merges (particularly svn:mergeinfo)
+   * Support path-level merge traceability without adding heavy overhead
+   * Make record-only merges support transitive merges
+   * Support cyclic merging (multi-reintegrate support)
+   * Support --changelist option on 'svn merge' (limit merge targets)
+   * Avoid creating svn:mergeinfo when merging into a sparse working copy
+
+   Tree Conflicts
+
+   * Better user feedback -- what's the problem and how do they resolve it
+   * Detect where a renamed target has been moved to
+   * Track renames/moves better to support refactoring
+   * Automatic resolution of tree conflicts with obvious resolution
+
+   Miscellaneous
+
+   * Offline commits
+   * Timestamp versioning
+   * Clearer error messages (not just HTTP details)
+   * Earlier abort of commits where a lock is missing/stale
+   * Warning when an update to past revision removes a file
+   * Support for single file checkouts
+   * Search mechanism (find files by name, property value, etc.)
+   * Shared changelists
+   * Optional text-bases
+   * Support/emulate symbolic links on Windows
+   * Better support of WebDAV mounts under Windows
+   * Support directory locks (of the 'svn lock' variety)
+   * Support at least one previous version of working copy formats
+   * Add svn_load_dirs.pl functionality to 'svn import' operation
+   * Show node origin information in 'svn info' output
+
+Extra-Subversional Stuff
+
+   * Keep "Version Control With Subversion" up-to-date
+   * Better migration tools for VC systems other than CVS
+   * Repository search mechanism
+   * Documentation and tooling to help admins leverage Apache power features
+   * Single source of info for what's new and hot in Subversion ecosystem
+   * More powerful and featureful repository browser (show merges, etc.)
+   * Better graphical 3-way-merge tools

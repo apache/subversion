@@ -1,0 +1,24 @@
+Status of Documents in This Folder
+==================================
+
+The following documents are more recent and go together.
+
+  req-spec.txt
+    High-level and mid-level requirements capture.
+
+  high-level-design.txt
+    Notes on high-level functionality required and choices to be made,
+    grouped by functional area. To be refined further.
+
+  fspec-cc1/
+    Functional spec ("Combine-Changes model 1"). A written and diagrammatic
+    description of one model of repository transformation. The diagrams are
+    in SVG format, with PNG bitmap versions available for browsing when SVG
+    format is inconvenient.
+
+The following document contains much useful information. It is older and not
+linked to the others.
+
+  obliterate-functional-spec.txt
+    A functional spec for the repository transformation part of the design.
+    Also contains use cases, background, etc.

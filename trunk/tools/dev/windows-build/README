@@ -1,0 +1,22 @@
+Makefiles for automating the Windows build.
+
+Should work either either nmake or GNU make.
+
+Doesn't require Cygwin.
+
+* TODO:
+  - document: how to use
+  - known bugs/shortcomings
+  - separate the configurable parts to a Makefile.local.tmpl file
+  - allow serf,httpd,neon,etc to be optional
+  - auto-generate the list of individual targets from build.conf
+    (that list is not used by the default make targets)
+  - add 'make tools' to the default windows build
+
+See: http://svn.haxx.se/users/archive-2009-07/0764.shtml
+(Message-Id: <alpine.561.2.00.0907241718550.6824@daniel2.local>)
+
+
+'cp' and friends can be obtained from gnuwin32.sf.net, unxutils.sf.net,
+cygwin, etc.  Or tweak the makefile to use cp.pl or the built-in 'copy'
+command instead.:

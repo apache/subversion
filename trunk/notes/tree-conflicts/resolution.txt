@@ -1,0 +1,546 @@
+                           Resolving Tree Conflicts
+                           ========================
+
+############################################################################
+### NOTE: This file describes what I'd like, not what Subversion does.   ###
+###   - Julian Foad, 2008                                                ###
+############################################################################
+
+Resolution of tree conflicts includes:
+
+  (i)   A known state of the WC after the conflict is raised.
+
+  (ii)  Constructing the desired result from the conflicted state.
+
+  (iii) Marking as resolved (both "svn resolve" and interactive).
+
+
+I. STATE OF THE WC AFTER CONFLICT IS RAISED
+===========================================
+
+When a tree conflict is raised, the "old" and "theirs" and "mine" versions
+should be stored locally in the WC in such a way that
+
+  (a) Subversion can turn one of them into a final outcome when told
+        svn resolve --accept=theirs TARGET
+
+  (b) the user can examine them and combine them to create a final outcome,
+      using commands like
+        svn proplist TARGET.theirs
+        svn merge TARGET.theirs OTHERFILE TARGET
+
+WC State is defined in terms of what file content and what scheduling is
+stored for each of ".working" (the active WC file/dir during resolving),
+".mine" (the previous working file/dir, as preserved for reference), and
+".theirs" (the type and resulting content of the incoming change).
+
+The expected state for each case is defined in the "WC State" sections inside
+the "Resolution Recipes" section.
+
+Principles
+----------
+
+* When "svn update" or "svn switch" raises a tree conflict, it shall update
+  the victim's "base" version from OLD to THEIRS, and leave the "working"
+  version in a state that would be committable (but for the explicit check
+  that prevents committing an item marked as in conflict) and that, if
+  committed, would restore the item to how it looked in "mine". This may
+  involve changing the scheduling of the item, e.g. to be re-added if "update"
+  applied a delete.
+
+  When "svn merge" raises a tree conflict, it shall not change the working
+  content or scheduling of the victim.
+
+* An update from rX to rY followed by an update back to rX should have no
+  overall effect on the local modifications scheduled in the WC. Likewise a
+  switch to a different URL@REV and a switch back to the original one.
+  Likewise a merge followed by a merge of the reverse change.
+
+Q. How do we store the "theirs" tree in the WC, especially in the case where
+it's a tree and needs to be constructed anew because it comes (as an Add or
+Mod) onto a WC item that's Del or not present? What I mean is to persuade
+the normal "update" or "merge" code paths to construct a new WC directory
+named "TARGET.theirs" on the fly and then recurse into it applying the
+incoming mods.
+
+(Need to list the cases where constructing such a new WC tree will be
+necessary.)
+
+
+II. CONSTRUCTING THE DESIRED RESULT
+===================================
+
+For cases where the user needs to merge the two conflicting changes (as
+opposed to choosing just one and ignoring the other), we need:
+
+  * Recipes for the user to follow
+    - see the "Tree Conflict Resolution Recipes" section.
+
+  * Enhanced facilities for merging changes from conflicting partial results
+    into the desired result.
+    - see the "Arbitrary Merge Facility Required" section.
+
+
+Tree Conflict Resolution Recipes
+================================
+
+This section sets out, for each type of tree conflict, the resolutions that I
+expect would be commonly wanted, either giving a useful result directly or as
+building blocks for more complex resolutions.
+
+The aim is to provide in each of the selected cases a sufficiently clear
+recipe for a user to resolve most tree conflicts that they encounter. Such a
+user is expected to be fairly proficient in using Subversion but not to have
+any knowledge of the way tree conflicts are handled internally.
+
+Under each type of conflict are the following subsections:
+
+  "WC State" describes the state in which the WC should be left when the
+  conflict is raised, according to the principles set out in section I.
+
+  "Some use cases" lists some likely use cases by which a user might encounter
+  such a conflict, concentrating on cases that want a resolution other than
+  "THEIRS" or "MINE".
+
+  "Options" lists resolution options that ought to be available.  The
+  resolution options "THEIRS" and "MINE" should be available in every case (so
+  that a user can resolve a whole tree at once with one of those options) and
+  should be implemented internally. Any other options listed here may be
+  recipes for the user to apply manually. These recipes are starting from the
+  state in which the WC should be left by Subversion after raising a conflict.
+
+The "WC State" subsection is intended as design requirements, not for the end
+user. I have not yet attempted to implement this as part of tree-conflict
+detection, and have no idea to what extent this is currently achieved in the
+tree-conflicts branch.
+
+The other two subsections are intended as the basis of material for end users
+to read.
+
+Principles
+----------
+
+* We shall assume the ability to examine the source-left ("old") and source-
+  right ("theirs") and target ("mine") tree states as well as the source
+  diffs.
+
+  In a merge, we shall not assume or attempt to make use of any ancestral
+  relationship between the target and the source.
+
+Renames and Replacements
+------------------------
+
+Incoming rename:
+
+  An incoming rename is treated here as its two constituent actions - an
+  incoming delete and an incoming add - separately.
+
+Incoming replacement:
+
+  In an incoming replacement, the delete is assumed to come before the add.
+  (Currently, they may sometimes come the wrong way around. I have not
+  analyzed the cases in which this can happen, nor the consequences.)
+
+Scheduled rename:
+
+  With a scheduled rename, each of the names (the old and the new) will be
+  treated separately as a potential victim of a tree conflict.
+
+Scheduled replacement:
+
+  A scheduled replacement is treated mainly the same as a scheduled deletion,
+  because any incoming change is assumed to apply to the old object that was
+  deleted rather than to the new object that replaced it.
+
+  Where the ability to schedule a replacement of one node kind with another is
+  implied, this ability may not be supported (and currently is not supported)
+  by the working copy library. Such cases will therefore be unsupported. This
+  is not seen as a deficiency inherent in tree conflict handling, but as a
+  separate deficiency that restricts tree conflict handling in certain cases.
+
+Meaning of "Choose Theirs" and "Choose Mine"
+--------------------------------------------
+
+There is a subtle difference between the meanings of "Choose Theirs" and
+"Choose Mine" as applied to an update or switch compared with when
+the terms are applied to a merge.
+
+For update and switch, the final state resulting from the incoming change is
+already existing in the history of the branch we're working on, and is going
+to be our WC's new "base" version, so we can't choose to "ignore" this
+incoming change. The request to "Choose Mine" means "Schedule the item to be
+changed from its new base state back to how my version of it looked before
+this operation". This may involve changing the scheduling of the item. The
+request to "Choose Theirs" simply means "Discard my pending changes so as to
+keep their version of it".
+
+For a merge, however, the final state of the incoming change is not going to
+be the new base state of the branch we're working on, and so we _can_ choose
+to ignore it if we so wish. Also, "my" version is a combination of historical
+and working-copy changes, so we cannot in general choose to ignore this, we
+can only schedule changes that reverse it. In a merge, then, "Choose Mine"
+means "Leave my version of the item as it is" (which does not involve any
+change of scheduling), while "Choose Theirs" means "Overwrite my version with
+a copy of Their version of the item" (which may involve scheduling an add or
+delete). The potential alternative meaning, "Make Their change", is not
+viable: it is what Subversion already tried to do, and it resulted in the very
+conflict we're now trying to resolve.
+
+
+Recipes
+=======
+
+up/sw: Add onto Add
+-------------------
+
+WC State:
+  .working: sched=Normal/Replace, content=.mine
+  .mine:    sched=Add[w/hist], content=Something
+  .theirs:  action=Add[w/hist], content=Something
+
+Some use cases:
+  - I have already applied the patch - their item is identical to mine.
+    -> want to do it just once -> THEIRS.
+  - Two different new items happened to be given the same name.
+    -> accept theirs & rename mine -> RENAME-MINE.
+  - I was doing roughly the same thing but the item is a bit different.
+    -> merge the two items -> manual 2-way merge (or 3-way if both are w/hist
+      and it's the same copy-from source).
+
+Options:
+  THEIRS: As usual, like "svn revert TARGET".
+  MINE:   My content as a scheduled modification, or as a scheduled replace*
+          if "my" node-kind (or copy-from?) differs.
+  RENAME-MINE: Add "my" content under a different name, and then accept
+          "their" add:
+    - Choose a new name for mine.
+    - svn rename TARGET NEWNAME
+    - svn revert TARGET
+
+If identical (node-kind, content, props, copyfrom-info?):
+  Recommend choosing THEIRS.
+
+
+up/sw: Del onto Del
+-------------------
+
+WC State:
+  .working: sched=unversioned, content=None
+  .mine:    sched=Del, content=None
+  .theirs:  action=Del, content=None
+
+Some use cases:
+  - Already applied the patch
+    -> want to do it just once -> THEIRS.
+  - Renamed to two different names
+    -> want to undo Their renaming and make it like Mine, as if we had a
+    "Choose Mine" option that worked on whole rename operations. -> RENAME.
+
+Options:
+  THEIRS: As usual (but has no effect in this case)
+  MINE:   As usual (but has no effect in this case)
+  RENAME:
+    - svn rename THEIR-NEW-NAME MY-NEW-NAME
+    And take care to notice if there were any modifications made at the same
+    time as the renames; if so, these might need merging.
+
+Note: In an update or switch, THEIRS and MINE are from the same OLD base, so
+there is no possibility that the item we are deleting locally is different
+from the item the incoming change is deleting.
+
+
+up/sw: Mod onto Del
+-------------------
+
+WC State:
+  .working: sched=Del, content=None
+  .mine:    sched=Del, content=None
+  .theirs:  action=Mod, content=Something
+
+Some use cases:
+  - Locally renamed
+    -> want to apply the incoming mod to a different item -> ELSEWHERE.
+
+Options:
+  THEIRS: As usual.
+  MINE:   Leave it deleted.
+  ELSEWHERE1: Apply their mod onto my renamed item. (Mine is the master.)
+    - Determine a way to obtain the incoming diff and apply it to the new
+      name, e.g. one of these:
+      - svn merge -r OLDREV:NEWREV TARGET(URL?) NEWNAME
+        (should be possible for "up" always, "sw" never, "merge" sometimes)
+      - svn merge -r old:theirs TARGET NEWNAME  [*1]
+  ELSEWHERE2: Reapply my Rename [+mod] onto theirs. (Theirs is the master.)
+    - mv NEWNAME TMP
+    - svn revert NEWNAME / rm -rf NEWNAME
+    - Move TARGET.theirs to NEWNAME. Here's one way to do that:
+      - svn resolve --accept=theirs TARGET
+      - svn rename TARGET NEWNAME
+      - svn resolve --accept=mine TARGET
+    - svn merge TARGET@old TMP@working NEWNAME  [*1]
+
+
+up/sw: Del onto Mod
+-------------------
+
+WC State:
+  .working: sched=Add, content=.mine
+  .mine:    sched=Normal, content=Something
+  .theirs:  action=Del, content=None
+
+Some use cases:
+  - The incoming change is (part of) a rename
+    -> want to transfer my local mod to the renamed item -> MOVE-MY-MODS.
+
+Options:
+  THEIRS: As usual.
+  MINE:   Schedule for Add.
+  MOVE-MY-MODS: Reapply my mod onto their renamed item. (Theirs is the master.)
+    - Determine their new name.
+    - Wait till up/sw has processed the new-named item.
+    - svn merge -r OLD:MINE TARGET THEIRNEWNAME  [*1]
+    - svn revert TARGET
+  MOVE-MY-MODS2: Apply their rename[+mod] onto my item. (Mine is the master.)
+    - svn merge TARGET@old THEIRNEWNAME TARGET  [*1]
+    - svn revert THEIRNEWNAME
+    - svn rename TARGET THEIRNEWNAME
+
+
+merge: Add onto Something (Identical or Different-Content or Different-Kind)
+-------------------------
+
+WC State:
+  .working: =.mine
+  .mine:    sched=(not Del), content=Something
+  .theirs:  action=Add[w/hist?], content=Something
+
+Some use cases:
+  Same as for "up/sw: Add onto Add", plus one more:
+  - Two different new items happened to be given the same name.
+    -> keep mine & rename theirs -> RENAME-THEIRS.
+
+Options:
+  THEIRS: Schedule local mods (if any change needed) to replace mine
+    with theirs. (If copyfrom differs, should we schedule Replace or not?)
+  MINE:   (Nothing to do.)
+  RENAME-MINE: Add "my" content under a new name, and accept "their" add under
+    the original name. (Theirs is the master.)
+    - Choose a new name for mine.
+    - svn rename TARGET NEWNAME
+    - svn resolve --accept=theirs TARGET
+  RENAME-THEIRS: Add theirs under a new name. (Mine is the master.)
+    - Choose a new name for theirs.
+    - svn rename TARGET.theirs NEWNAME  [*1]
+    - svn resolve --accept=mine TARGET
+
+If identical (node-kind, content, props, copyfrom-info?):
+  Recommend choosing THEIRS.
+
+
+merge: Del onto Nothing Here
+----------------------------
+
+WC State:
+  .working: =.mine
+  .mine:    sched=(Del/unversioned), content=None
+  .theirs:  action=Del, content=None
+
+Some use cases:
+  - User's process is wrong: maybe something else needed to be merged first.
+    -> want to revert this whole merge.
+  - Already applied the patch or merged the change without recording the fact.
+    -> want to do it once -> MINE.
+  - The item being deleted (or renamed) in the source has been renamed in the
+    target branch.
+    -> want to delete/rename something else -> ELSEWHERE.
+
+Options:
+  THEIRS: Nothing to do - same result as MINE.
+  MINE:   (Nothing to do.)
+  ELSEWHERE: Leave TARGET as it is, and
+    - Find the new name(s).
+    - svn delete MYNEWNAME
+      or
+      svn rename MYNEWNAME THEIRNEWNAME
+
+
+merge: Del onto Not Same Kind
+-----------------------------
+
+WC State:
+  .working: =.mine
+  .mine:    sched=(not Del), content=TheOtherKind
+  .theirs:  action=Del, content=None
+
+Some use cases:
+  - User's process is wrong: maybe something else needed to be merged first.
+    -> want to revert this whole merge.
+
+Options:
+  THEIRS:
+    - svn delete TARGET
+  MINE:   (Nothing to do.)
+
+
+merge: Del onto Not Same Content
+--------------------------------
+
+WC State:
+  .working: =.mine
+  .mine:    sched=(not Del), content=SameKind
+  .theirs:  action=Del, content=None
+
+Some use cases:
+  - The content was intentionally divergent, and we still want to delete it.
+    -> THEIRS.
+  - The content was intentionally divergent, and the source node is being
+    renamed (and possibly modified at the same time).
+    -> Apply the incoming rename (possibly +mod) onto mine -> RENAME.
+
+Options:
+  THEIRS:
+    - svn delete TARGET
+  MINE:   (Nothing to do.)
+  RENAME1: Apply their rename [+mod] onto mine. (Mine is the master.)
+    - Find the incoming new name.
+    - Wait till the new name has been processed (added).
+    - svn merge TARGET.old THEIRNEWNAME TARGET  [*1]
+    - svn revert THEIRNEWNAME
+    - svn rename TARGET THEIRNEWNAME
+  RENAME2: Reapply my mods onto their renamed item. (Theirs is the master.)
+    - Find the incoming new name.
+    - Wait till the new name has been processed (added).
+    - svn merge -r old:mine TARGET THEIRNEWNAME  [*1]
+    - svn resolve --accept=theirs TARGET
+
+
+merge: Mod onto Nothing Here
+----------------------------
+
+WC State:
+  .working: =.mine
+  .mine:    sched=(Del/unversioned), content=None
+  .theirs:  action=Mod, content=Something
+
+Some use cases:
+  - The item was renamed locally
+    -> apply the incoming mod elsewhere -> ELSEWHERE.
+
+Options:
+  THEIRS: Re-schedule the target to come back.
+    - copy TARGET.theirs TARGET
+    - svn add TARGET
+  MINE:   (Nothing to do.)
+  ELSEWHERE1: Apply their mod onto mine. (Mine is the master.)
+    - Find the new name.
+    - Wait till the new name has been processed (added).
+    - svn merge -r OLD:THEIRS TARGET NEWNAME  [*1]
+  ELSEWHERE2: Apply my rename[+mod] onto Theirs. (Theirs is the master.)
+    - svn merge -r BASE:WC NEWNAME TARGET.theirs  [*1]
+    - mv TARGET.theirs NEWNAME
+
+
+merge: Mod onto Not Same Kind
+-----------------------------
+
+WC State:
+  .working: =.mine
+  .mine:    sched=(not Del), content=TheOtherKind
+  .theirs:  action=Mod, content=Something
+
+Options:
+  THEIRS: Not supported. Throw an error. (Want to schedule the target to
+    replace with theirs, but WC doesn't support this.)
+  MINE:   (Nothing to do.)
+
+
+Note [*1]: These commands are not yet supported.
+
+
+Arbitrary Merge Facility Required
+=================================
+
+To enable the user to resolve a "Rename onto Mod" or "Mod onto Rename"
+conflict efficiently and flexible, we need the ability to merge the difference
+between two arbitrary WC items into another WC item. The two source items:
+  - may have different names;
+  - may be related by copyfrom info in one that in some way refers to the
+    other;
+  - may be pre-resolution conflict results like TARGET.mine or TARGET@mine.
+
+Two ways this could be achieved:
+
+1. Make use of history-sensitive merging by referring to the two items through
+   special revision kinds "old" "theirs" "mine":
+
+     svn merge -r old:theirs TARGET NEWNAME
+
+2. Use non-history-sensitive merging on arbitrary files
+   "<TARGET>.old" "<TARGET>.theirs" "<TARGET>.mine":
+
+     svn merge TARGET.old TARGET.theirs NEWNAME
+
+Q. How can we most easily implement an extension of "svn merge" that achieves
+a copyfrom-history-sensitive diff (between WC items) rather than an unaware
+diff?
+
+
+III. MARKING AS RESOLVED
+========================
+
+Primary APIs:
+
+  libsvn_wc/adm_ops.c:resolve_conflict_on_entry()
+
+Pre-tree-conflicts, the "resolve" functions in client through to WC layers all
+end up calling resolve_conflict_on_entry() on each item. It marks all text
+conflicts and property conflicts on the item as resolved. It also can select
+and copy into place one of the available file-text choices, but doesn't appear
+to have any such support for property conflicts.
+
+On the tree conflicts branch, (till branch@{2008-05-29} at least) this
+function assumes it will be passed the path to the parent dir of some conflict
+victims, and it simply clears tree conflict data about all victims from the
+entries file.
+
+Plan
+----
+
+Separate the different functions that resolve_conflict_on_entry() performs,
+making it more modular and "orthogonal".
+
+Make the tree conflict functions operate on one victim rather than on a whole
+parent directory having conflicts on any number of victims.
+
+Make these new functions public so that the caller can compose the various
+actions (copying, marking as resolved, notifying, and recursing) in whatever
+order it wants.
+
+Create the following new functions:
+
+  * Copy one of the simple outcomes (old, mine, theirs) onto the target.
+
+    select_conflict_outcome(path, svn_wc_conflict_choice_t, ...);
+    select_tree_conflict_outcome(victim_path, svn_wc_conflict_choice_t, ...);
+
+    - Copies the user's choice onto the "working" version of the item.
+    - For tree conflicts, also includes changing the scheduling of the item.
+    - This operation, and certainly the choice part of it, is logically above
+      the WC layer, except for knowledge of where the files to choose from are
+      stored.
+
+
+  * Mark conflicts as resolved on a (victim) path.
+
+    svn_wc_mark_conflict_resolved(path, ...);
+
+    - Mark text and property conflicts on one item as resolved.
+
+    svn_wc_mark_tree_conflict_resolved(victim_path, ...);
+
+    - Mark the tree conflict on one victim as resolved.
+
+
+  * Support for resolver callback? - where/how?
+
+

@@ -1,0 +1,275 @@
+******************************************************************************
+                          REQUIREMENTS SPECIFICATION
+                                     FOR
+                            ISSUE #516: OBLITERATE
+******************************************************************************
+
+
+TABLE OF CONTENTS
+
+    OPEN ISSUES
+
+    1. INTRODUCTION
+      1.1 Sources of Requirements
+
+    2. USER STORIES
+      2.1 Added secrets in a new file
+      2.2 Added secrets into an existing file
+      2.3 Added a single huge file by accident
+      2.4 Repeated modification of a huge file
+
+    3. REQUIREMENTS
+      3.1 Levels of Obliteration
+      3.2 Content of the Modified Repository
+      3.3 Working Copies
+      3.4 Access to the Modified Repository
+      3.5 Audit Trail
+      3.6 Svnsync Mirrors
+      3.7 Permissions
+      3.8 Time Taken
+
+
+OPEN ISSUES
+
+  (none)
+
+
+1. INTRODUCTION
+
+  This document captures the requirements for the Subversion feature commonly
+  known as "Obliterate". It is intended to include all of the requirements
+  that could be deemed to fall within the scope of an Obliterate feature. The
+  set of requirements to be satisfied by a proposed development of such a
+  feature may be a specified sub-set of those listed here.
+
+  The purpose of this document is to enable a design to be evaluated and an
+  implementation to be tested against specific criteria that are all written
+  down in one place.
+
+  Section 2 lists requirements from a user's point of view.
+
+  Section 3 lists requirements from a software design point of view.
+
+  1.1 Sources of Requirements
+
+    The requirements are sourced from:
+      * Comments in issue #516.
+      * Comments on the Subversion developers' mailing list.
+      * Personal experience of the authors.
+
+
+2. USER STORIES
+
+  The "user stories" are examples, described from a user's point of view, of
+  scenarios in which the Obliterate feature should or might be used. Their
+  purpose is to indicate the range and diversity of requirements, without
+  being an exhaustive list of combinations. They loosely define the high-level
+  requirements which the specific requirements in section 3 must satisfy.
+
+  The following user stories are gathered from the sources in section 1 and
+  include both typical and unusual use cases.
+
+  2.1 Added secrets in a new file
+
+    User U1 has just accidentally committed the addition of a new file F1 that
+    contains confidential data (let's say people's addresses).  F1 is visible
+    to other users of the repository. The probability of anyone committing
+    another change before the administrator can intervene is low. The
+    probability of anyone updating their WC to this revision is low.
+
+    U1 wants to restrict the visibility and propagation of the confidential
+    data as soon as possible.
+
+    Possible solutions:
+      * hide the existence of F1
+      * replace the content of F1 with empty content
+      * replace the content of F1 with its "previous" content (definition
+        required)
+      * replace the content of F1 with arbitrary other content
+      * roll back the entire head revision (definition required)
+      * something else.
+
+  2.2 Added secrets into an existing file
+
+    User U1 has just accidentally committed a change that adds confidential
+    data (let's say people's addresses) into an existing file F1. F1 is
+    visible to other users of the repository. The existence and other content
+    of F1 is important to other users.
+
+    U1 wants to restrict the visibility and propagation of the confidential
+    data as soon as possible.
+
+  2.3 Added a single huge file by accident
+
+    User U1 has just accidentally committed the addition of a new file F1 that
+    is huge and unwanted, with no other changes included in the commit.
+
+    U1 wants to get rid of the file in order to save space and time on
+    colleagues' WC updates.
+
+  2.4 Repeated modification of a huge file
+
+    User U1 keeps checking in the latest version of a huge file F1, in order
+    to have them handy for testing. Nobody needs versions of F1 older than 2
+    weeks; they can be re-generated from source if required. F1 is usually
+    checked in alongside some modifications to source files.
+
+    U1 wants to prune old versions of F1 regularly in order to limit server
+    disk space usage.
+
+    This use case is not directly what most people consider to be
+    "obliterate". It is really a separate feature that could use the
+    functionality of "obliterate" in its implementation, but could also be
+    implemented in other ways.
+
+
+3. REQUIREMENTS
+
+  The requirements listed here are a set of design requirements that together
+  would satisfy all of the user-level requirements. A successful design will
+  satify most of these requirements to a large extent, but need not satisfy
+  all of them completely.  A functional design document should specify which
+  of these requirements it satisfies, and to what extent.
+
+  Each requirement can be designated for convenience as "functional" or
+  "non-functional". A functional requirement specifies what output is produced
+  from what input, where input and output include such things as repositories,
+  working copies and audit trails.  A non-functional requirement is a
+  constraint on how the functional operation is performed, such as speed of
+  operation or memory usage.
+
+  3.1 Levels of Obliteration
+
+    The requirements involve the following "levels" of obliteration:
+
+      L1: hiding data from clients
+        (a) avoiding sending the data in any new communications
+        (b) removing data from repository mirrors that already have it
+        (c) removing data from clients that already have it
+
+      L2: hiding data from people with direct access to the server disk
+
+      L3: recovering space on the server disk
+
+    NOTES:
+
+      L1 and L3 are directly relevant to the common use cases. Requirements
+      for L2 are coneivable but appear not to be common.
+
+  3.2 Content of the Modified Repository
+
+    * At revisions older than the obliteration, the repository should yield
+      exactly the same data that it used to.
+
+      RATIONALE: A Subversion repository has no forward-looking metadata so
+      there is no reason for old revisions to be changed so they should not be
+      changed.
+
+      EXCEPTIONS: Any manual adjustments to revision properties, such as to
+      forward-looking comments in log messages or to third-party data in
+      revision-0 properties.
+
+    * At the revision of the obliterated data, the stored tree should be
+      modified in a way to be specified in a Functional Spec. Briefly, two
+      likely schemes are:
+        (scheme "dd") each node to be obliterated is deleted; or
+        (scheme "cc") each node to be obliterated becomes exactly like it was
+          in the previous revision.
+
+    * At each revision younger than the obliteration, the repository file
+      system tree structure and content should look exactly as it used to.
+      However, any node with a "copied from" pointer that pointed to a node
+      which has been removed by obliteration should have this pointer adjusted
+      or removed, as defined by the Functional Spec.
+
+    NOTES:
+
+      This description assumes per-revision granularity of obliteration.
+
+  3.3 Working Copies
+
+    * A WC managed by an obliterate-aware Subversion client and logically
+      unaffected should show no sign that anything has happened.
+
+    * A WC managed by an obliterate-aware Subversion client and logically
+      affected by the change should behave in a friendly manner ...
+
+    * A WC managed by an old (pre-obliterate) Subversion client and logically
+      unaffected should show little or no sign that anything has happened, and
+      should require no user intervention to continue working.
+
+    * A WC managed by an old (pre-obliterate) Subversion client and logically
+      affected by the change should ...
+
+  3.4 Access to the Modified Repository
+
+    * The modified repository should keep the same URL and UUID, and client
+      access should continue without manual intervention, after any required
+      down-time, for all working copies that are not logically affected by the
+      obliteration.
+
+      Rationale: Obliteration is often required in large repositories having
+      large numbers of users, most of whom are not working near the
+      obliterated data. If all users were impacted each time, then
+      obliteration could become impractical.
+
+  3.5 Audit Trail
+
+    * On the client side, no trace of the obliteration need be visible other
+      than the intended changes to versioned data and to revision properties.
+
+    * On the server side, the administrator should be able to choose whether a
+      record of obliterations is stored. The form and storage location of this
+      record is not specified here.
+
+    NOTES:
+
+      Some customers are concerned about auditability and may want an audit
+      trail to be stored with the repository so that it is included in backups
+      and perpetually available for later examination.
+
+  3.6 Svnsync Mirrors
+
+    * A read-only mirror of the repository maintained by an old
+      (pre-obliterate) version of "svnsync" should either keep all of its
+      already-copied revisions exactly as they were, and continue to copy new
+      revisions from the modified repository without any hiccup, or it should
+      stop working so that its administrator has to intervene.
+
+      Rationale: An old svnsync has no way to re-synchronize old revisions. If
+      it behaves just like a regular client that had been taking snap-shots of
+      the master repository, that would be logical and self-consistent but not
+      propagating the obliteration; that's a problem for the secrecy use
+      cases. If it requires human intervention, that would disrupt its users
+      but would force a human to consider whether the mirrored data should be
+      kept or modified. Ideally the administrator of the master repository
+      would control which of these scenarios will occur.
+
+    * A read-only mirror of the repository maintained by an obliterate-aware
+      version of "svnsync" should re-synchronize its old revisions to match
+      the modified master repository.
+
+  3.7 Permissions
+
+    * The data-hiding part of an obliterate should be available to a user
+      with suitable permissions, from the client side, using a standard
+      Subversion client installation.
+
+    * The space-saving part of an obliterate should be available to an
+      administrator, from the server side, using a standard Subversion server
+      installation. This may also be available in the same way as the
+      data-hiding part.
+
+  3.8 Time Taken
+
+    * The time from when an administrator discovers an accidental secrecy
+      problem to when the data in question is unavailable to ordinary clients
+      (that don't already have it) should be within minutes, or at most hours,
+      on a large repository.
+
+    * The time from when an administrator discovers an accidental large
+      check-in until the data can be removed from the repository should be at
+      most hours, on a large repository.  (The intent here is that an
+      administrator should be able to avoid the data getting into a nightly
+      back-up, if desired.)
+

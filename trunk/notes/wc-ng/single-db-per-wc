@@ -1,0 +1,105 @@
+"Single DB" in this context means one SQLite DB in the root of each working
+copy.
+
+
+Build and Test
+==============
+
+To build with experimental single-DB support:
+  define SINGLE_DB ("CFLAGS=-DSINGLE_DB configure ...")
+  define SVN_WC__VERSION to 18 in wc.h
+
+Current test results (r960984):
+  most/all C tests pass
+  half of the Python tests fail; common errors are
+    Wrong results but no error message.
+    Error: columns wc_id, local_dir_relpath are not unique
+    Error: No write-lock in '...'
+    Crash.
+
+
+Upgrade: Migration of DB tables from subdir DBs to wcroot DB
+============================================================
+
+"Move into wcroot's table" means move each row into the same table in the WC
+root's DB; we expect the primary key to be unique - not already in the
+wcroot table.
+
+REPOSITORY
+
+  Merge into wcroot's table:
+    move the row into the wcroot's REPOSITORY table, unless a row that's
+    identical (apart from its id) is already present, in which case take the
+    existing wcroot row's id.
+
+  Change all repos id's accordingly in the other tables being migrated:
+    BASE_NODE.repos_id
+    WORKING_NODE.copyfrom_repos_id
+    LOCK.repos_id
+    # and in tree conflict info?
+
+  Note: The existence of more than one repository id in a working copy
+  arises when "svn switch --relocate" is used.  A new repository table row
+  is created, with the new repository URL and a new id (say repos_id = 2).
+  Any new versioned directories that are created after that have the new
+  repository URL but with repos-id = 1.  Hence the need to merge the tables.
+
+WCROOT
+
+  Ignore this table.  (It always has just one row, with a default id and a
+  null local_abspath.)
+
+BASE_NODE
+
+  Move into wcroot's table;
+    omit if .kind == subdir
+    change .local_relpath
+    set .parent_relpath
+
+WORKING_NODE
+
+  Move into wcroot's table;
+    omit if .kind == subdir (?)
+    change .local_relpath
+    set .parent_relpath
+
+  Note from Greg:
+    Generally, ignoring subdir might be okay in these two tables [BASE_NODE,
+    WORKING_NODE], but the not-present value is used/important.
+
+ACTUAL_NODE
+
+  Move into wcroot's table;
+    change .local_relpath
+    set .parent_relpath
+
+LOCK
+
+  Move into wcroot's table.
+
+PRISTINE
+
+  Move into wcroot's table.
+  Move the corresponding pristine text files into wcroot's 'pristine' dir.
+  Change wcroot's pristine directory to sharded (or this could be a
+    separate upgrade).
+
+WC_LOCK
+
+  Ignore this table.  (Ensure it is empty.  If not, 'svn cleanup' should be
+  run.)
+
+WORK_QUEUE
+
+  Ignore this table.  (Ensure it is empty.  If not, 'svn cleanup' should be
+  run.)
+
+
+Code Changes Required
+=====================
+
+  Greg says: An area to examine is all of the uses of db_status_obstructed,
+  db_status_obstructed_(add|delete). Those should not occur in single-db, so
+  anything that sets those status values or checks for them is suspect. (I'd
+  #ifdef them away, for example, then patch all references).
+

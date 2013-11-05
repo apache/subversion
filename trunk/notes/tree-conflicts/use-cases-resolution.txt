@@ -1,0 +1,459 @@
+### NOTE:
+### This file covers the state of Subversion trunk as of about r34285.
+### It may not be 100% applicable to future versions if not updated.
+
+Resolution recipes for tree conflict use cases 1 to 6
+(see use-cases.txt and detection.txt), for files and directories.
+
+In practice, users will likely run into more complex scenarios
+than presented here (e.g. moved files and directories are not
+considered below). However, the examples below show that
+all these use cases are principally resolvable.
+
+=== Use case 1, files
+
+Conflict reported:
+
+$ svn status
+D     C alpha
+$ svn info alpha
+[...]
+Tree conflict:
+  The update attempted to edit 'alpha'.
+  You have deleted 'alpha' locally.
+  Maybe you renamed it?
+
+Possible resolutions:
+        1) restore alpha, apply modification
+        2) leave alpha deleted
+
+--- Resolution 1)
+$ svn revert alpha
+Reverted 'alpha'
+### revert has cleared tree-conflicted status:
+$ svn status alpha
+### alpha is now at r2 again:
+$ svn info alpha | grep Revision
+Revision: 2
+$ cat alpha   
+alpha
+$ svn diff -c3 ^/trunk/alpha
+Index: alpha
+===================================================================
+--- alpha       (revision 2)
++++ alpha       (revision 3)
+@@ -1 +1 @@
+-alpha
++alpha, modified
+$ svn update 
+U    alpha
+Updated to revision 3.
+$ cat alpha 
+alpha, modified
+
+--- Resolution 2)
+$ svn status alpha
+D     C alpha
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status alpha
+D       alpha
+
+
+=== Use case 1, directories
+
+Conflict reported:
+
+$ svn status
+D     C gamma
+D       gamma/delta
+$ svn info gamma 
+[...]
+Tree conflict:
+  The update attempted to edit 'gamma'.
+  You have deleted 'gamma' locally.
+  Maybe you renamed it?
+
+### In this case, the modification made to the directory gamma
+### was a modification to the file gamma/delta. This is why
+### resolution recipes below sometimes operate on gamma/delta.
+
+Possible resolutions:
+        1) restore gamma, apply modification
+        2) leave gamma deleted
+
+--- Resolution 1)
+$ svn revert gamma/delta
+Reverted 'gamma/delta'
+$ svn status
+$ cat gamma/delta 
+delta
+$ svn info gamma/delta | grep Revision
+Revision: 2
+$ svn update   
+U    gamma/delta
+Updated to revision 3.
+
+-- Resolution 2)
+$ svn status
+D     C gamma
+D       gamma/delta
+$ svn resolved gamma
+Resolved conflicted state of 'gamma'
+$ svn status
+D       gamma
+D       gamma/delta
+
+=== Use case 2, files
+
+Conflict reported:
+$ svn status
+M     C alpha
+$ svn info alpha 
+[...]
+Tree conflict:
+  The update attempted to delete 'alpha',
+  or attempted to rename it.
+  You have edited 'alpha' locally.
+
+Possible resolutions:
+        1) Leave alpha in place, with local modifications.
+        2) Remove alpha including local modifications.
+
+-- Resolution 1)
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status
+M       alpha
+
+-- Resolution 2)
+$ svn remove --force alpha
+D         alpha
+$ svn status alpha
+D     C alpha
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status alpha
+D       alpha
+
+
+=== Use case 2, directories
+
+Conflict reported:
+$ svn status
+      C gamma
+A       gamma/iota
+$ svn info gamma
+[...]
+Tree conflict:
+  The update attempted to delete 'gamma',
+  or attempted to rename it.
+  You have edited 'gamma' locally.
+
+Possible resolutions:
+        1) Leave gamma in place, with local modifications.
+        2) Remove gamma including local modifications.
+
+--- Resolution 1)
+$ svn resolved gamma
+Resolved conflicted state of 'gamma'
+$ svn status
+A       gamma/iota
+
+--- Resolution 2)
+$ svn remove --force gamma
+D         gamma/delta
+D         gamma/iota
+D         gamma
+$ svn status
+D     C gamma
+D       gamma/delta
+$ svn resolved gamma
+Resolved conflicted state of 'gamma'
+$ svn status
+D       gamma
+D       gamma/delta
+
+
+=== Use case 3, files
+
+Conflict reported:
+$ svn status
+D     C alpha
+$ svn info alpha
+[...]
+Tree conflict:
+  The update attempted to delete 'alpha',
+  or attempted to rename it.
+  You have deleted 'alpha' locally.
+  Maybe you renamed it?
+
+Possible resolutions:
+        1) Leave alpha deleted.
+           (Not shown below):
+           If alpha was renamed on both sides, figure out the conflicting
+           move target paths and decide where alpha should be moved to,
+           and delete the undesired move target path before committing.
+           If alpha was only renamed on one side, decide whether the
+           file at the move target path should be deleted or not.
+
+--- Resolution 1):
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status
+D       alpha
+### Additional steps may be needed here in case alpha was renamed, see above.
+ 
+
+=== Use case 3, directories
+
+Conflict reported:
+
+$ svn status
+D     C gamma
+D       gamma/delta
+$ svn info gamma
+[...]
+  The update attempted to delete 'gamma',
+  or attempted to rename it.
+  You have deleted 'gamma' locally.
+  Maybe you renamed it?
+
+Possible resolutions:
+        1) Leave gamma deleted.
+           (Not shown below):
+           If gamma was renamed on both sides, figure out the conflicting
+           move target paths and decide where gamma should be moved to,
+           and delete the undesired move target path before committing.
+           If gamma was only renamed on one side, decide whether the
+           directory at the move target path should be deleted or not.
+
+--- Resolution 1):
+$ svn resolved gamma
+Resolved conflicted state of 'gamma'
+$ svn status
+D       gamma
+D       gamma/delta
+### Additional steps may be needed here in case gamma was renamed, see above.
+
+=== Use case 4, files
+
+Conflict reported:
+$ svn status
+ M      .
+!     C alpha
+$ svn info alpha
+Path: alpha
+Name: alpha
+Node Kind: none
+Tree conflict:
+  The merge attempted to edit 'alpha'.
+'alpha' does not exist locally. Maybe you renamed it? Or has it been
+renamed in the history of the branch you are merging into?
+
+Possible resolutions:
+        1) Ignore incoming edit.
+        2) Restore alpha in branch and run merge again.
+           (Not shown below:)
+           In case alpha was renamed, rename alpha in the branch
+           and run the merge again.
+
+--- Resolution 1)
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status
+ M      .   # mergeinfo
+
+--- Resolution 2)
+### revert merge to start from clean state, this also removes
+### tree conflict markers:
+$ svn revert -R .
+Reverted '.'
+Reverted 'alpha'
+$ svn status
+### find out when alpha was deleted on branch:
+$ svn log -r4 ^/branch
+------------------------------------------------------------------------
+r4 | stsp | 2008-11-20 14:43:21 +0000 (Thu, 20 Nov 2008) | 1 line
+
+deleted alpha
+------------------------------------------------------------------------
+### alpha was deleted in r4, restore alpha from r3:
+$ svn copy ^/branch/alpha@3 .
+A         alpha
+### run the merge again, it succeeds:
+$ svn merge ^/trunk
+--- Merging r2 through r4 into '.':
+U    alpha
+$ svn status
+ M      .
+A  +    alpha
+
+
+== Use case 4, directories
+
+Conflict reported:
+$ svn status
+ M      .
+!     C gamma
+$ svn info gamma
+Path: gamma
+Name: gamma
+Node Kind: none
+Tree conflict:
+  The merge attempted to edit 'gamma'.
+  You have deleted 'gamma' locally.
+  Maybe you renamed it?
+
+Possible resolutions:
+        1) Ignore incoming edit.
+        2) Restore gamma in branch and run merge again.
+           (Not shown below:)
+           In case gamma was renamed, rename gamma in the branch
+           and run the merge again.
+
+-- Resolution 1)
+$ svn resolved gamma
+Resolved conflicted state of 'gamma'
+$ svn status
+ M      .   # mergeinfo
+
+--- Resolution 2)
+### revert merge to start from clean state, this also removes
+### tree conflict markers:
+$ svn revert -R .
+Reverted '.'
+Reverted 'gamma'
+$ svn status
+### find out when gamma was deleted on branch:
+$ svn log -r4 ^/branch
+------------------------------------------------------------------------
+r4 | stsp | 2008-11-20 15:02:08 +0000 (Thu, 20 Nov 2008) | 1 line
+
+deleted gamma
+------------------------------------------------------------------------
+### gamma was deleted in r4, restore gamma from r3:
+$ svn copy ^/branch/gamma@3 .
+A    gamma/delta
+Checked out revision 3.
+A         gamma
+### run the merge again, it succeeds:
+$ svn merge ^/trunk
+--- Merging r2 through r4 into '.':
+A    gamma/iota
+
+
+== Use case 5, files
+
+Conflict reported:
+$ svn status
+ M      .
+M     C alpha
+$ svn info alpha
+[...]
+Tree conflict:
+  The merge attempted to delete 'alpha',
+  or attempted to rename it.
+Either you have edited 'alpha' locally, or it has been edited in the
+history of the branch you are merging into, but those edits are not
+present on the branch you are merging from.
+
+Possible resolutions:
+        1) Keep alpha with local modifications.
+        2) Delete alpha.
+           (Not shown below:)
+           If alpha was renamed, determine move target path and
+           apply local modifications there first.
+
+-- Resolution 1)
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status alpha
+M       alpha
+
+-- Resolution 2)
+$ svn status
+ M      .
+M     C alpha
+### If alpha was renamed, additional steps may be needed here
+### to transfer local modifications to the new location.
+$ svn remove --force alpha
+D         alpha
+$ svn status
+ M      .
+D     C alpha
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status
+ M      .
+D       alpha
+
+
+== Use case 5, directories
+
+Conflict is not detected automatically.
+Check merge result manually for this conflict.
+
+
+=== Use case 6, files
+
+Conflict reported:
+$ svn status
+ M      .
+!     C alpha
+$ svn info alpha
+Path: alpha
+Name: alpha
+Node Kind: none
+Tree conflict:
+  The merge attempted to delete 'alpha',
+  or attempted to rename it.
+  You have deleted 'alpha' locally.
+  Maybe you renamed it?
+
+Possible resolutions:
+        1) Delete alpha
+           (Not shown below:)
+           If alpha was renamed on both sides, figure out the conflicting
+           move target paths and decide where alpha should be moved to,
+           and delete the undesired move target path before committing.
+           If alpha was only renamed on one side, decide whether the
+           file at the move target path should be deleted or not.
+
+--- Resolution 1)
+$ svn resolved alpha
+Resolved conflicted state of 'alpha'
+$ svn status
+ M      .   # mergeinfo
+
+
+=== Use case 6, directories
+
+Conflict reported:
+$ svn status
+ M      .
+!     C gamma
+$ svn info gamma
+Path: gamma
+Name: gamma
+Node Kind: none
+Tree conflict:
+  The merge attempted to delete 'gamma',
+  or attempted to rename it.
+  You have deleted 'gamma' locally.
+  Maybe you renamed it?
+
+Possible resolutions:
+        1) Delete gamma.
+           (Not shown below:)
+           If gamma was renamed on both sides, figure out the conflicting
+           move target paths and decide where gamma should be moved to,
+           and delete the undesired move target path before committing.
+           If gamma was only renamed on one side, decide whether the
+           file at the move target path should be deleted or not.
+
+-- Resolution 1)
+$ svn resolved gamma
+Resolved conflicted state of 'gamma'
+$ svn status
+ M      .   # mergeinfo

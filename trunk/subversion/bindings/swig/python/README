@@ -1,0 +1,90 @@
+                                -*- text -*-
+
+TRANSLATING PARAMETER LISTS
+
+   The argument-reductions laws of the SWIG bindings something go like
+   this:
+   
+     - The module prefix can be omitted.  o:
+
+          void *some_C_function = svn_client_foo;
+       
+       becomes:
+
+          import svn.client
+          func = svn.client.foo
+
+       However, the following two alternatives also work:
+
+          # Fully-qualified C name
+          import svn.client
+          func = svn.client.svn_client_foo
+
+          # Star-import imports just svn_* names, not bare 'foo' names.
+          from svn.client import *
+          func = svn_client_foo
+
+     - Python functions don't return errors.  They throw exceptions.
+       Which means that...
+   
+     - ...Python functions will return the "other" stuff that the C
+       functions "return" instead.  C functions which populate
+       pointers with new data (you know, values that are returned to
+       the caller, but not as "return values") will return those
+       values directly in Python.  So:
+
+          object_t *returned_obj;
+          SVN_ERR(svn_client_foo(&returned_obj, blah));
+
+       becomes:
+
+          returned_obj = svn.client.foo(blah)
+
+       and:
+
+          err = svn_client_foo(&returned_obj, blah);
+          if (err && err->apr_err == SVN_ERR_...)
+            /* handle it */
+
+       becomes:
+   
+          try:
+              returned_obj = svn.client.foo(blah)
+          except:
+              # handle it
+   
+     - Callback function/baton pairs get reduced to just callback
+       functions, and the benefit you get from batons is gotten
+       instead through defining the callback function locally and
+       passing the 'baton' data in through Python default arguments.  So:
+
+          struct baton_t { userdata1, ... };
+
+          svn_error_t *cb_func(cb_arg1, ..., void *baton)
+          {
+            baton_t *b = baton;
+            /* do stuff here with b->userdata1... etc. */
+          }
+
+          /* Now use it: */
+          {
+            baton_t *b = { whatever, ... };
+            error = svn_client_foo(cb_func, b);
+          }
+
+       becomes:
+
+          def cb_func(cb_arg1, ..., userdata1=whatever, ...):
+              # do stuff here with userdata1 etc.
+          svn.client.foo(cb_func)
+
+
+RUNNING THE TESTS
+
+   $ cd subversion/bindings/swig/python
+   $ python ./tests/run_all.py --help
+   $ python ./tests/run_all.py [TEST...]
+
+   where TEST can be the name of a test suite ('core', 'mergeinfo',
+   'client', etc.), or see '--help' for other options.  The default is to
+   run the tests in all modules.

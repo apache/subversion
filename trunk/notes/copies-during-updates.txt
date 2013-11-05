@@ -1,0 +1,65 @@
+
+Ben's thoughts:
+
+
+General problem we want to solve:
+
+  When 'svn up' receives a copy or move (copy+delete), the existing
+  locally-edited file should be copied (wc -> wc).  (The status quo is
+  to just delete (unversion) the edited file and add a wholly new file
+  -- which greatly angers users.)
+
+
+Proposal:
+
+  When driving the working copy update-editor, have the server send
+  copyfrom-args in add_file() and add_dir().
+
+   - The copyfrom-path would be transmitted as an *absolute* fs path;
+     it's up to the client to decide whether it has the path@rev
+     available somewhere in its wc.
+
+   - If the client doesn't have it, the client can do an extra RA
+     request to fetch it.  (i.e. we degrade to the status quo.)
+
+   - If the server sends extra txdelta data, it would then be applied
+     to the fulltext.
+
+
+Problem:
+
+   What if the transmitted copyfrom-path is outside of the update's
+   target-tree, i.e. the user updates only "one side" of a copy or
+   move operation?  (Example: user run 'svn update wc/B/', but the
+   server wants to add a file that's copied from wc/A/?)
+
+
+Answer:
+
+   No problem here.  Even though the server has no idea whether or not
+   the client has wc/A/ (the client only described a working copy
+   rooted at wc/B/), the client can still have the 'smarts' to locate
+   the root of its working copy, and figure out if it has the copyfrom
+   path or not.
+
+
+Problem:
+
+   Server wants to transmit a move operation.  What if it transmits a
+   delete before it transmits a copy operation?  (This can happen
+   because trees are always crawled depth-first.)  Then the client may
+   not have the file anymore (or it may have become unversioned).
+
+
+Answer:
+
+   If the source of the copy is truly gone, the client can do an extra
+   RA request to fetch it.  (We degrade to the status quo; it's just
+   bad luck.)
+
+   If the source of the copy had local edits, then it's not actually
+   gone; the deletion has caused it to become either unversioned
+   (status quo) or schedule-add-with-history (cmpilato's proposed new
+   tree-conflict behavior.)   Assuming we implement the latter
+   behavior, we'll still have an edited file we can copy.
+
