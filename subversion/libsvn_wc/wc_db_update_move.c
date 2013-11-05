@@ -485,7 +485,6 @@ check_tree_conflict(svn_boolean_t *is_conflicted,
 static svn_error_t *
 tc_editor_add_directory(update_move_baton_t *b,
                         const char *relpath,
-                        const apr_array_header_t *children,
                         apr_hash_t *props,
                         apr_pool_t *scratch_pool)
 {
@@ -575,7 +574,6 @@ static svn_error_t *
 tc_editor_add_file(update_move_baton_t *b,
                    const char *relpath,
                    const svn_checksum_t *checksum,
-                   svn_stream_t *contents,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
@@ -801,7 +799,6 @@ update_working_props(svn_wc_notify_state_t *prop_state,
 static svn_error_t *
 tc_editor_alter_directory(update_move_baton_t *b,
                           const char *dst_relpath,
-                          const apr_array_header_t *children,
                           apr_hash_t *new_props,
                           apr_pool_t *scratch_pool)
 {
@@ -1030,7 +1027,6 @@ static svn_error_t *
 tc_editor_alter_file(update_move_baton_t *b, 
                      const char *dst_relpath,
                      const svn_checksum_t *new_checksum,
-                     svn_stream_t *new_contents,
                      apr_hash_t *new_props,
                      apr_pool_t *scratch_pool)
 {
@@ -1514,19 +1510,14 @@ update_moved_away_node(update_move_baton_t *b,
     {
       if (src_kind == svn_node_file || src_kind == svn_node_symlink)
         {
-          svn_stream_t *contents;
-
-          SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db,
-                                           wcroot->abspath, src_checksum,
-                                           scratch_pool, scratch_pool));
           SVN_ERR(tc_editor_add_file(b, dst_relpath,
-                                     src_checksum, contents, src_props,
+                                     src_checksum, src_props,
                                      scratch_pool));
         }
       else if (src_kind == svn_node_dir)
         {
           SVN_ERR(tc_editor_add_directory(b, dst_relpath,
-                                          src_children, src_props,
+                                          src_props,
                                           scratch_pool));
         }
     }
@@ -1541,21 +1532,12 @@ update_moved_away_node(update_move_baton_t *b,
 
       if (src_kind == svn_node_file || src_kind == svn_node_symlink)
         {
-          svn_stream_t *contents;
-
           if (svn_checksum_match(src_checksum, dst_checksum))
             src_checksum = NULL;
 
-          if (src_checksum)
-            SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db,
-                                             wcroot->abspath, src_checksum,
-                                             scratch_pool, scratch_pool));
-          else
-            contents = NULL;
-
           if (props || src_checksum)
             SVN_ERR(tc_editor_alter_file(b, dst_relpath,
-                                         src_checksum, contents, props,
+                                         src_checksum, props,
                                          scratch_pool));
         }
       else if (src_kind == svn_node_dir)
@@ -1564,8 +1546,7 @@ update_moved_away_node(update_move_baton_t *b,
             = children_match(src_children, dst_children) ? NULL : src_children;
 
           if (props || children)
-            SVN_ERR(tc_editor_alter_directory(b, dst_relpath,
-                                              children, props,
+            SVN_ERR(tc_editor_alter_directory(b, dst_relpath, props,
                                               scratch_pool));
         }
     }
@@ -1748,14 +1729,13 @@ suitable_for_move(svn_wc__db_wcroot_t *wcroot,
                                     STMT_SELECT_BASE_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    {
-      revision = svn_sqlite__column_revnum(stmt, 4);
-      repos_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
   if (!have_row)
-    return SVN_NO_ERROR; /* Return an error? */
+    return svn_error_trace(svn_sqlite__reset(stmt));
+
+  revision = svn_sqlite__column_revnum(stmt, 4);
+  repos_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_REPOS_PATH_REVISION));
