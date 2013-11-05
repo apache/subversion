@@ -15,28 +15,6 @@ Status of 1.7.14:
 Candidate changes:
 ==================
 
- * r1306275, and other revisions
-   New diff support code for added/deleted files and directories.
-   Fixes issue #4153, "svn log --diff" on moved file gives "not found",
-   and other problems such as issue #4421, "diff --summarize of a child of
-   a newly added child causes crash" (over HTTP only).
-   Justification:
-     The current code (introduced in 1.7.x in the r1207351 backport commit)
-     produces inconsistent paths in diff output (see
-     http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
-     with the paradigm that the target of an editor drive may never have more
-     than one path component (which according to cmpilato is an API violation).
-   Notes:
-     Please read the branch and related trunk log messages for detailed notes
-     about these changes.
-     breser: Not so fond of the temp file use but 1.8.x is out with a much
-     better implementation anyway.
-   Branch:
-     ^/subversion/branches/1.7.x-issue4153
-   Votes:
-     +1: breser, julianfoad
-     +1 (without r1535554, r1535590, 1535592 commits on branch): stsp
-
  * r1435635, r1435714, r1435722, r1435737
    When svn update removes a switched subtree because it was deleted in the
    target revision, it would be nice if a future update would bring back
@@ -143,3 +121,24 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1306275, and other revisions
+   New diff support code for added/deleted files and directories.
+   Fixes issue #4153, "svn log --diff" on moved file gives "not found",
+   and other problems such as issue #4421, "diff --summarize of a child of
+   a newly added child causes crash" (over HTTP only).
+   Justification:
+     The current code (introduced in 1.7.x in the r1207351 backport commit)
+     produces inconsistent paths in diff output (see
+     http://svn.haxx.se/dev/archive-2012-03/0385.shtml), and it also breaks
+     with the paradigm that the target of an editor drive may never have more
+     than one path component (which according to cmpilato is an API violation).
+   Notes:
+     Please read the branch and related trunk log messages for detailed notes
+     about these changes.
+     breser: Not so fond of the temp file use but 1.8.x is out with a much
+     better implementation anyway.
+   Branch:
+     ^/subversion/branches/1.7.x-issue4153
+   Votes:
+     +1: breser, julianfoad, stsp
