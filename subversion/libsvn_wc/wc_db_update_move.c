@@ -369,6 +369,35 @@ mark_tree_conflict(const char *local_relpath,
   return SVN_NO_ERROR;
 }
 
+/* Checks if a specific local path is shadowed as seen from the move root */
+static svn_error_t *
+check_node_shadowed(svn_boolean_t *shadowed,
+                    struct tc_editor_baton *b,
+                    const char *local_relpath,
+                    apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  int op_depth = -1;
+  *shadowed = FALSE;
+
+  /* ### This should really be optimized by using something smart
+         in the baton */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    op_depth = svn_sqlite__column_int(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  *shadowed = (op_depth > relpath_depth(b->move_root_dst_relpath));
+
+  return SVN_NO_ERROR;
+}
+
 /* If LOCAL_RELPATH is a child of the most recently raised
    tree-conflict or is shadowed then set *IS_CONFLICTED to TRUE and
    raise a tree-conflict on the root of the obstruction if such a
@@ -789,6 +818,9 @@ tc_editor_alter_directory(void *baton,
   working_node_version_t old_version, new_version;
   svn_wc__db_status_t status;
   svn_boolean_t is_conflicted;
+  svn_boolean_t shadowed;
+
+  SVN_ERR(check_node_shadowed(&shadowed, b, dst_relpath, scratch_pool));
 
   SVN_ERR_ASSERT(expected_move_dst_revision == b->old_version->peg_rev);
 
@@ -800,18 +832,13 @@ tc_editor_alter_directory(void *baton,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
 
-  /* If the node would be recorded as svn_wc__db_status_base_deleted it
-     wouldn't have a repos_relpath */
-  /* ### Can svn_wc__db_depth_get_info() do this for us without this hint? */
-  if (status == svn_wc__db_status_deleted && move_dst_repos_relpath)
-    status = svn_wc__db_status_not_present;
 
   /* There might be not-present nodes of a different revision as the same
      depth as a copy. This is commonly caused by copying/moving mixed revision
      directories */
-  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision
-                 || status == svn_wc__db_status_not_present);
-  SVN_ERR_ASSERT(move_dst_kind == svn_node_dir);
+  SVN_ERR_ASSERT(shadowed
+                 || (move_dst_revision == expected_move_dst_revision));
+  SVN_ERR_ASSERT(shadowed || move_dst_kind == svn_node_dir);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
                               move_dst_kind,
@@ -819,7 +846,7 @@ tc_editor_alter_directory(void *baton,
                               move_dst_repos_relpath,
                               svn_wc_conflict_action_edit,
                               scratch_pool));
-  if (is_conflicted)
+  if (is_conflicted || shadowed)
     return SVN_NO_ERROR;
 
   old_version.location_and_kind = b->old_version;
@@ -1027,6 +1054,10 @@ tc_editor_alter_file(void *baton,
   svn_boolean_t is_conflicted;
   svn_wc__db_status_t status;
 
+  svn_boolean_t shadowed;
+
+  SVN_ERR(check_node_shadowed(&shadowed, b, dst_relpath, scratch_pool));
+
   SVN_ERR(svn_wc__db_depth_get_info(&status, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &old_version.checksum, NULL,
@@ -1035,15 +1066,8 @@ tc_editor_alter_file(void *baton,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
 
-  /* If the node would be recorded as svn_wc__db_status_base_deleted it
-     wouldn't have a repos_relpath */
-  /* ### Can svn_wc__db_depth_get_info() do this for us without this hint? */
-  if (status == svn_wc__db_status_deleted && move_dst_repos_relpath)
-    status = svn_wc__db_status_not_present;
-
-  SVN_ERR_ASSERT(move_dst_revision == expected_move_dst_revision
-                 || status == svn_wc__db_status_not_present);
-  SVN_ERR_ASSERT(move_dst_kind == svn_node_file);
+  SVN_ERR_ASSERT(shadowed || move_dst_revision == expected_move_dst_revision);
+  SVN_ERR_ASSERT(shadowed || move_dst_kind == svn_node_file);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
                               move_dst_kind,
@@ -1051,7 +1075,7 @@ tc_editor_alter_file(void *baton,
                               move_dst_repos_relpath,
                               svn_wc_conflict_action_edit,
                               scratch_pool));
-  if (is_conflicted)
+  if (is_conflicted || shadowed)
     return SVN_NO_ERROR;
 
   old_version.location_and_kind = b->old_version;
@@ -1102,6 +1126,9 @@ tc_editor_delete(void *baton,
   const char *parent_relpath = svn_relpath_dirname(relpath, scratch_pool);
   int op_depth_below;
   svn_boolean_t have_row;
+  svn_boolean_t shadowed;
+
+  SVN_ERR(check_node_shadowed(&shadowed, b, relpath, scratch_pool));
 
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &move_dst_kind, NULL,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
@@ -1120,7 +1147,7 @@ tc_editor_delete(void *baton,
                               svn_wc_conflict_action_delete,
                               scratch_pool));
 
-  if (!is_conflicted)
+  if (!shadowed && !is_conflicted)
     {
       svn_boolean_t is_modified, is_all_deletes;
 
@@ -1168,7 +1195,7 @@ tc_editor_delete(void *baton,
         }
     }
 
-  if (!is_conflicted || must_delete_working_nodes)
+  if (!shadowed && (!is_conflicted || must_delete_working_nodes))
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       svn_skel_t *work_item;
