@@ -755,13 +755,13 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
         {
           /* There is an existing ACTUAL row, so just update it. */
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_UPDATE_ACTUAL_CONFLICT_DATA));
+                                            STMT_UPDATE_ACTUAL_CONFLICT));
         }
       else
         {
           /* We need to insert an ACTUAL row with the tree conflict data. */
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_INSERT_ACTUAL_CONFLICT_DATA));
+                                            STMT_INSERT_ACTUAL_CONFLICT));
         }
 
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wc_id, conflict_relpath,
