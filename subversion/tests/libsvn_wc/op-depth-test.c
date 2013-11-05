@@ -5461,6 +5461,7 @@ nested_move_update(const svn_test_opts_t *opts, apr_pool_t *pool)
                           svn_wc_conflict_choose_mine_conflict));
   SVN_ERR(sbox_wc_resolve(&b, "A2/B/C", svn_depth_empty,
                           svn_wc_conflict_choose_mine_conflict));
+  SVN_ERR(check_db_conflicts(&b, "", NULL /* no conflicts */));
   {
     nodes_row_t nodes[] = {
       {0, "",          "normal",       2, ""},
@@ -5788,7 +5789,9 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
       svn_wc_conflict_version_t *version
         = APR_ARRAY_IDX(locations, 0, svn_wc_conflict_version_t *);
 
-      SVN_ERR_ASSERT(!strcmp(version->path_in_repos, repos_path1));
+      SVN_TEST_ASSERT(version != NULL);
+
+      SVN_TEST_ASSERT(!strcmp(version->path_in_repos, repos_path1));
     }
 
   if (repos_path2)
@@ -5796,7 +5799,9 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
       svn_wc_conflict_version_t *version
         = APR_ARRAY_IDX(locations, 1, svn_wc_conflict_version_t *);
 
-      SVN_ERR_ASSERT(!strcmp(version->path_in_repos, repos_path2));
+      SVN_TEST_ASSERT(version != NULL);
+
+      SVN_TEST_ASSERT(!strcmp(version->path_in_repos, repos_path2));
     }
 
   return SVN_NO_ERROR;
