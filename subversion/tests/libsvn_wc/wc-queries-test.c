@@ -22,6 +22,7 @@
  */
 
 #include "svn_pools.h"
+#include "svn_hash.h"
 #include "svn_ctype.h"
 #include "private/svn_dep_compat.h"
 
@@ -713,6 +714,105 @@ test_query_expectations(apr_pool_t *scratch_pool)
   return warnings;
 }
 
+static svn_error_t *
+test_query_duplicates(apr_pool_t *scratch_pool)
+{
+  sqlite3 *sdb;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_error_t *warnings = NULL;
+  svn_boolean_t supports_query_info;
+  apr_hash_t *sha_to_query = apr_hash_make(scratch_pool);
+
+  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+
+  SVN_ERR(supported_explain_query_plan(&supports_query_info, sdb,
+      scratch_pool));
+  if (!supports_query_info)
+    {
+      SQLITE_ERR(sqlite3_close(sdb));
+      return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+          "Sqlite doesn't support EXPLAIN QUERY PLAN");
+    }
+
+  for (i = 0; i < STMT_SCHEMA_FIRST; i++)
+    {
+      sqlite3_stmt *stmt;
+      const char *tail;
+      int r;
+      svn_stringbuf_t *result;
+      svn_checksum_t *checksum;
+
+      if (is_schema_statement(i))
+        continue;
+
+      /* Prepare statement to find if it is a single statement. */
+      r = sqlite3_prepare_v2(sdb, wc_queries[i], -1, &stmt, &tail);
+
+      if (r != SQLITE_OK)
+        continue; /* Parse failure is already reported by 'test_parable' */
+
+      SQLITE_ERR(sqlite3_finalize(stmt));
+      if (tail[0] != '\0')
+        continue; /* Multi-queries are currently not testable */
+
+      svn_pool_clear(iterpool);
+
+      r = sqlite3_prepare_v2(sdb,
+                             apr_pstrcat(iterpool,
+                             "EXPLAIN ",
+                             wc_queries[i],
+                             NULL),
+                             -1, &stmt, &tail);
+
+      if (r != SQLITE_OK)
+          continue; /* EXPLAIN not enabled or doesn't support this query */
+
+      result = svn_stringbuf_create_empty(iterpool);
+
+      while (SQLITE_ROW == (r = sqlite3_step(stmt)))
+        {
+          int col;
+
+          for (col = 0; col < sqlite3_column_count(stmt); col++)
+            {
+              const char *txt = (const char*)sqlite3_column_text(stmt, col);
+              if (txt)
+                  svn_stringbuf_appendcstr(result, txt);
+
+              svn_stringbuf_appendcstr(result, "|");
+            }
+
+          svn_stringbuf_appendcstr(result, "\n");
+        }
+
+      SQLITE_ERR(sqlite3_reset(stmt));
+      SQLITE_ERR(sqlite3_finalize(stmt));
+
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
+                           result->data, result->len,
+                           iterpool));
+
+      {
+        const char *hex = svn_checksum_to_cstring(checksum, scratch_pool);
+        const char *other;
+
+        other = svn_hash_gets(sha_to_query, hex);
+        if (other)
+          {
+            warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+                              "Query %s has an identical execution plan as %s",
+                              wc_query_info[i][0], other);
+          }
+        else
+          svn_hash_sets(sha_to_query, hex, wc_query_info[i][0]);
+      }
+    }
+  SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
+
+  return warnings;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -722,5 +822,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "queries are parsable"),
     SVN_TEST_PASS2(test_query_expectations,
                    "test query expectations"),
+    SVN_TEST_PASS2(test_query_duplicates,
+                   "test query duplicates"),
     SVN_TEST_NULL
   };

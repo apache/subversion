@@ -485,6 +485,16 @@ svn_config__is_expanded(svn_config_t *cfg,
                         const char *section,
                         const char *option);
 
+/* Return a shallow copy of SCR in POOL.  If SRC is read-only, different
+ * shallow copies may be used from different threads.
+ *
+ * Any single r/o svn_config_t or shallow copy is not thread-safe because
+ * it contains shared buffers for tempoary data.
+ */
+svn_config_t *
+svn_config__shallow_copy(svn_config_t *src,
+                         apr_pool_t *pool);
+
 /** @} */
 
 #ifdef __cplusplus

@@ -773,13 +773,17 @@ authz_validate(svn_authz_t *authz, apr_pool_t *pool)
  *
  * If DIRENT cannot be parsed as a config file then an error is returned.  The
  * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
- * authz file is also an error.
+ * authz file is also an error.  The CASE_SENSITIVE controls the lookup
+ * behavior for section and option names alike.
  *
  * SCRATCH_POOL will be used for temporary allocations. */
 static svn_error_t *
-authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
-                          svn_boolean_t must_exist,
-                          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+authz_retrieve_config_repo(svn_config_t **cfg_p,
+                           const char *dirent,
+                           svn_boolean_t must_exist,
+                           svn_boolean_t case_sensitive,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_repos_t *repos;
@@ -826,7 +830,8 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
     {
       if (!must_exist)
         {
-          SVN_ERR(svn_config_create2(cfg_p, TRUE, TRUE, result_pool));
+          SVN_ERR(svn_config_create2(cfg_p, case_sensitive, case_sensitive,
+                                     result_pool));
           return SVN_NO_ERROR;
         }
       else
@@ -844,7 +849,8 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
     }
 
   SVN_ERR(svn_fs_file_contents(&contents, root, fs_path, scratch_pool));
-  err = svn_config_parse(cfg_p, contents, TRUE, TRUE, result_pool);
+  err = svn_config_parse(cfg_p, contents, case_sensitive, case_sensitive,
+                         result_pool);
 
   /* Add the URL to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
@@ -856,8 +862,11 @@ authz_retrieve_config_repo(svn_config_t **cfg_p, const char *dirent,
 }
 
 svn_error_t *
-svn_repos__retrieve_config(svn_config_t **cfg_p, const char *path,
-                           svn_boolean_t must_exist, apr_pool_t *pool)
+svn_repos__retrieve_config(svn_config_t **cfg_p,
+                           const char *path,
+                           svn_boolean_t must_exist,
+                           svn_boolean_t case_sensitive,
+                           apr_pool_t *pool)
 {
   if (svn_path_is_url(path))
     {
@@ -868,8 +877,8 @@ svn_repos__retrieve_config(svn_config_t **cfg_p, const char *path,
       err = svn_uri_get_dirent_from_file_url(&dirent, path, scratch_pool);
 
       if (err == SVN_NO_ERROR)
-        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist, pool,
-                                         scratch_pool);
+        err = authz_retrieve_config_repo(cfg_p, dirent, must_exist,
+                                         case_sensitive, pool, scratch_pool);
 
       /* Close the repos and streams we opened. */
       svn_pool_destroy(scratch_pool);
@@ -879,7 +888,8 @@ svn_repos__retrieve_config(svn_config_t **cfg_p, const char *path,
   else
     {
       /* Outside of repo file or Windows registry*/
-      SVN_ERR(svn_config_read3(cfg_p, path, must_exist, TRUE, TRUE, pool));
+      SVN_ERR(svn_config_read3(cfg_p, path, must_exist, case_sensitive,
+                               case_sensitive, pool));
     }
 
   return SVN_NO_ERROR;
@@ -930,9 +940,11 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
 
   /* Load the authz file */
   if (accept_urls)
-    SVN_ERR(svn_repos__retrieve_config(&authz->cfg, path, must_exist, pool));
+    SVN_ERR(svn_repos__retrieve_config(&authz->cfg, path, must_exist, TRUE,
+                                       pool));
   else
-    SVN_ERR(svn_config_read3(&authz->cfg, path, must_exist, TRUE, TRUE, pool));
+    SVN_ERR(svn_config_read3(&authz->cfg, path, must_exist, TRUE, TRUE,
+                             pool));
 
   if (groups_path)
     {
@@ -942,7 +954,7 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
       /* Load the groups file */
       if (accept_urls)
         SVN_ERR(svn_repos__retrieve_config(&groups_cfg, groups_path,
-                                           must_exist, pool));
+                                           must_exist, TRUE, pool));
       else
         SVN_ERR(svn_config_read3(&groups_cfg, groups_path, must_exist,
                                  TRUE, TRUE, pool));

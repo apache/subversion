@@ -198,7 +198,7 @@ WHERE wc_id = ?1
 -- STMT_DELETE_NODE
 DELETE
 FROM NODES
-WHERE wc_id = ?1 AND local_relpath = ?2
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_DELETE_ACTUAL_FOR_BASE_RECURSIVE
 /* The ACTUAL_NODE applies to BASE, unless there is in at least one op_depth
@@ -468,13 +468,6 @@ WHERE u.wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(u.local_relpath, ?2)
   AND u.op_depth = ?4
 
--- STMT_DELETE_MOVED_BACK
-DELETE FROM nodes
-WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND op_depth = ?3
-
 -- STMT_DELETE_LOCK
 DELETE FROM lock
 WHERE repos_id = ?1 AND repos_relpath = ?2
@@ -718,7 +711,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3)
   AND presence = MAP_BASE_DELETED
 
--- STMT_DELETE_ALL_LAYERS
+-- STMT_DELETE_NODE_ALL_LAYERS
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 
@@ -1214,14 +1207,6 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 
 /* these are used in upgrade.c  */
 
--- STMT_UPDATE_ACTUAL_CONFLICT_DATA
-UPDATE actual_node SET conflict_data = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_INSERT_ACTUAL_CONFLICT_DATA
-INSERT INTO actual_node (wc_id, local_relpath, conflict_data, parent_relpath)
-VALUES (?1, ?2, ?3, ?4)
-
 -- STMT_SELECT_ALL_FILES
 SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND kind = MAP_FILE
@@ -1574,20 +1559,6 @@ UPDATE nodes SET moved_to = NULL
  WHERE wc_id = ?1
    AND IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
-
-/* This statement returns pairs of move-roots below the path ?2 in WC_ID ?1,
- * where the source of the move is within the subtree rooted at path ?2, and
- * the destination of the move is outside the subtree rooted at path ?2. */
--- STMT_SELECT_MOVED_PAIR2
-SELECT local_relpath, moved_to, op_depth FROM nodes
-WHERE wc_id = ?1
-  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
-  AND moved_to IS NOT NULL
-  AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
-  AND op_depth >= (SELECT MAX(op_depth) FROM nodes o
-                    WHERE o.wc_id = ?1
-                      AND o.local_relpath = ?2)
-
 -- STMT_SELECT_MOVED_PAIR3
 SELECT local_relpath, moved_to, op_depth, kind FROM nodes
 WHERE wc_id = ?1
@@ -1604,12 +1575,17 @@ WHERE wc_id = ?1
   AND NOT IS_STRICT_DESCENDANT_OF(moved_to, ?2)
 
 -- STMT_SELECT_OP_DEPTH_MOVED_PAIR
-SELECT n.local_relpath, n.moved_to,
-       (SELECT o.repos_path FROM nodes AS o
-        WHERE o.wc_id = n.wc_id
-          AND o.local_relpath = n.local_relpath
-          AND o.op_depth < ?3 ORDER BY o.op_depth DESC LIMIT 1)
+SELECT n.local_relpath, p.kind, n.moved_to, p.repos_path
 FROM nodes AS n
+JOIN (SELECT local_relpath, kind, repos_path
+      FROM nodes AS o
+        WHERE o.wc_id = ?1
+          AND o.op_depth=(SELECT MAX(d.op_depth)
+                          FROM nodes AS d
+                          WHERE d.wc_id = ?1
+                            AND d.local_relpath = o.local_relpath
+                            AND d.op_depth < ?3)) AS p
+  ON n.local_relpath = p.local_relpath
 WHERE n.wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
   AND n.op_depth = ?3
