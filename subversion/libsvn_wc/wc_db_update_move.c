@@ -91,7 +91,6 @@
 #include "private/svn_skel.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_editor.h"
 
 #include "wc.h"
 #include "props.h"
@@ -1306,58 +1305,6 @@ tc_editor_delete(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-tc_editor_copy(void *baton,
-               const char *src_relpath,
-               svn_revnum_t src_revision,
-               const char *dst_relpath,
-               svn_revnum_t replaces_rev,
-               apr_pool_t *scratch_pool)
-{
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
-}
-
-static svn_error_t *
-tc_editor_move(void *baton,
-               const char *src_relpath,
-               svn_revnum_t src_revision,
-               const char *dst_relpath,
-               svn_revnum_t replaces_rev,
-               apr_pool_t *scratch_pool)
-{
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
-}
-
-static svn_error_t *
-tc_editor_complete(void *baton,
-                   apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-tc_editor_abort(void *baton,
-                apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-/* The editor callback table implementing the receiver. */
-static const svn_editor_cb_many_t editor_ops = {
-  tc_editor_add_directory,
-  tc_editor_add_file,
-  tc_editor_add_symlink,
-  tc_editor_add_absent,
-  tc_editor_alter_directory,
-  tc_editor_alter_file,
-  tc_editor_alter_symlink,
-  tc_editor_delete,
-  tc_editor_copy,
-  tc_editor_move,
-  tc_editor_complete,
-  tc_editor_abort
-};
-
 
 /*
  * Driver code.
@@ -1559,7 +1506,7 @@ props_match(svn_boolean_t *match,
 /* ### Drive TC_EDITOR so as to ...
  */
 static svn_error_t *
-update_moved_away_node(svn_editor_t *tc_editor,
+update_moved_away_node(struct tc_editor_baton *tc_baton,
                        const char *src_relpath,
                        const char *dst_relpath,
                        int src_op_depth,
@@ -1586,8 +1533,9 @@ update_moved_away_node(svn_editor_t *tc_editor,
   if (src_kind == svn_node_none
       || (dst_kind != svn_node_none && src_kind != dst_kind))
     {
-      SVN_ERR(svn_editor_delete(tc_editor, dst_relpath,
-                                move_root_dst_revision));
+      SVN_ERR(tc_editor_delete(tc_baton, dst_relpath,
+                               move_root_dst_revision,
+                               scratch_pool));
     }
 
   if (src_kind != svn_node_none && src_kind != dst_kind)
@@ -1599,15 +1547,17 @@ update_moved_away_node(svn_editor_t *tc_editor,
           SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db,
                                            wcroot->abspath, src_checksum,
                                            scratch_pool, scratch_pool));
-          SVN_ERR(svn_editor_add_file(tc_editor, dst_relpath,
+          SVN_ERR(tc_editor_add_file(tc_baton, dst_relpath,
                                       src_checksum, contents, src_props,
-                                      move_root_dst_revision));
+                                      move_root_dst_revision,
+                                      scratch_pool));
         }
       else if (src_kind == svn_node_dir)
         {
-          SVN_ERR(svn_editor_add_directory(tc_editor, dst_relpath,
-                                           src_children, src_props,
-                                           move_root_dst_revision));
+          SVN_ERR(tc_editor_add_directory(tc_baton, dst_relpath,
+                                          src_children, src_props,
+                                          move_root_dst_revision,
+                                          scratch_pool));
         }
     }
   else if (src_kind != svn_node_none)
@@ -1634,9 +1584,10 @@ update_moved_away_node(svn_editor_t *tc_editor,
             contents = NULL;
 
           if (props || src_checksum)
-            SVN_ERR(svn_editor_alter_file(tc_editor, dst_relpath,
-                                          move_root_dst_revision,
-                                          src_checksum, contents, props));
+            SVN_ERR(tc_editor_alter_file(tc_baton, dst_relpath,
+                                         move_root_dst_revision,
+                                         src_checksum, contents, props,
+                                         scratch_pool));
         }
       else if (src_kind == svn_node_dir)
         {
@@ -1644,9 +1595,10 @@ update_moved_away_node(svn_editor_t *tc_editor,
             = children_match(src_children, dst_children) ? NULL : src_children;
 
           if (props || children)
-            SVN_ERR(svn_editor_alter_directory(tc_editor, dst_relpath,
-                                               move_root_dst_revision,
-                                               children, props));
+            SVN_ERR(tc_editor_alter_directory(tc_baton, dst_relpath,
+                                              move_root_dst_revision,
+                                              children, props,
+                                              scratch_pool));
         }
     }
 
@@ -1693,11 +1645,11 @@ update_moved_away_node(svn_editor_t *tc_editor,
           dst_child_relpath = svn_relpath_join(dst_relpath, child_name,
                                                iterpool);
 
-          SVN_ERR(update_moved_away_node(tc_editor, src_child_relpath,
+          SVN_ERR(update_moved_away_node(tc_baton, src_child_relpath,
                                          dst_child_relpath, src_op_depth,
                                          move_root_dst_relpath,
                                          move_root_dst_revision,
-                                         db, wcroot, scratch_pool));
+                                         db, wcroot, iterpool));
 
           if (!dst_only)
             ++i;
@@ -1762,7 +1714,7 @@ replace_moved_layer(const char *src_relpath,
 
 /* Transfer changes from the move source to the move destination.
  *
- * Drive the editor TC_EDITOR with the difference between DST_RELPATH
+ * Drive the editor with the difference between DST_RELPATH
  * (at its own op-depth) and SRC_RELPATH (at op-depth zero).
  *
  * Then update the single op-depth layer in the move destination subtree
@@ -1772,7 +1724,7 @@ replace_moved_layer(const char *src_relpath,
  * ### And the other params?
  */
 static svn_error_t *
-drive_tree_conflict_editor(svn_editor_t *tc_editor,
+drive_tree_conflict_editor(struct tc_editor_baton *tc_baton,
                            const char *src_relpath,
                            const char *dst_relpath,
                            int src_op_depth,
@@ -1803,15 +1755,13 @@ drive_tree_conflict_editor(svn_editor_t *tc_editor,
   /* We walk the move source (i.e. the post-update tree), comparing each node
    * with the equivalent node at the move destination and applying the update
    * to nodes at the move destination. */
-  SVN_ERR(update_moved_away_node(tc_editor, src_relpath, dst_relpath,
+  SVN_ERR(update_moved_away_node(tc_baton, src_relpath, dst_relpath,
                                  src_op_depth,
                                  dst_relpath, old_version->peg_rev,
                                  db, wcroot, scratch_pool));
 
   SVN_ERR(replace_moved_layer(src_relpath, dst_relpath, src_op_depth,
                               wcroot, scratch_pool));
-
-  SVN_ERR(svn_editor_complete(tc_editor));
 
   return SVN_NO_ERROR;
 }
@@ -1901,7 +1851,6 @@ update_moved_away_conflict_victim(svn_wc__db_t *db,
                                   void *cancel_baton,
                                   apr_pool_t *scratch_pool)
 {
-  svn_editor_t *tc_editor;
   struct tc_editor_baton *tc_editor_baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -1961,13 +1910,9 @@ update_moved_away_conflict_victim(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_UPDATE_MOVE_LIST));
   /* Create the editor... */
-  SVN_ERR(svn_editor_create(&tc_editor, tc_editor_baton,
-                            cancel_func, cancel_baton,
-                            scratch_pool, scratch_pool));
-  SVN_ERR(svn_editor_setcb_many(tc_editor, &editor_ops, scratch_pool));
 
   /* ... and drive it. */
-  SVN_ERR(drive_tree_conflict_editor(tc_editor,
+  SVN_ERR(drive_tree_conflict_editor(tc_editor_baton,
                                      victim_relpath,
                                      tc_editor_baton->move_root_dst_relpath,
                                      src_op_depth,
