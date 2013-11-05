@@ -40,13 +40,17 @@ ClassCache::ClassCache(Env env)
   : SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(object, Object),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(classtype, Class),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(throwable, Exception),
-    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(string, String)
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(string, String),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
+                                           ::JavaHL::SubversionException)
 {
   m_instance = this;
   // no-op: Object::static_init(env);
   Class::static_init(env);
   Exception::static_init(env);
   String::static_init(env);
+  // no-op: ::JavaHL::SubversionException::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT
 
