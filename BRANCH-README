@@ -1,9 +1,4 @@
-This branch implements the 'invoke-merge-cmd' feature and is located at 
-https://svn.apache.org/repos/asf/subversion/branches/invoke-merge-feature/
-
-It is a continuation of the invoke-diff-cmd-feature branch, which is
-located here:
-
+This branch implements the 'invoke-diff-cmd' feature and is located at 
 https://svn.apache.org/repos/asf/subversion/branches/invoke-diff-cmd-feature/
 
 It is a feature branch, receiving regular sync merges from /trunk, and
@@ -14,22 +9,46 @@ original motivation for this project.
 
 
 ======================================================================
-        INVOKE-MERGE-CMD SECTION
+        INVOKE-DIFF-CMD SECTION
 ======================================================================
 
---invoke-merge-cmd allows command line, config file and interactive
-selection of an external merge program.
+--invoke-diff-cmd allows command line selection of an external diff
+program and will be extended to cover the existing diff3 option with a
+similar --invoke-diff3-cmd option.
 
 Currently this capability is provided by user written shell scripts
-which are passed as the merge program via the svn config file.
+which are passed as the diff program via the svn config file.
 
-What --invoke-merge-cmd provides
-================================
+--invoke-diff-cmd is currently implemented for 'diff', 'log',
+'svnlook' and the config file.
 
-Users can type 'free-style' command lines for their selected merge
-program, define a default command in the config file and also,
-interactively select a merge program during the merge conflict
-dialogue.
+
+What --invoke-diff-cmd provides
+===============================
+
+Users can type 'free-style' command lines for their selected
+diff/merge program, and optionally select a diff command file that
+applies stored commands to selected files.  If the file diffed is not
+in the list, the given command will be used instead.  
+
+from 'svn help diff':
+
+  --invoke-diff-cmd ARG:
+
+       use ARG as format string for external diff command     
+        invocation. 
+                    
+        Substitutions: %svn_new new file                      
+                       %svn_old old file                      
+                       %svn_label_new  label of the new file  
+                       %svn_label_old  label of the old file  
+        Examples:                                              
+        --invoke-diff-cmd='diff -y %svn_new %svn_old'      
+        --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \     
+              %svn_new %svn_old --L1 %svn_new_label \      
+             --L2 "Custom Label" '                          
+        Substitution variables may be embedded in strings:
+        +%svn_new, %svn_new- and file=%svn_label_new+
 
 
 Structure of the feature:
@@ -38,73 +57,87 @@ Structure of the feature:
 API components 
 --------------
 
-TBD
+   ./subversion/libsvn_subr/io.c __create_custom_diff_cmd()
+ 
+   transforms the user input 'invoke-diff-cmd' into a command line
+   call by substitution the labels and file names(where defined),
+   whilst leaving everything else untouched.  This is more of an
+   internal routine and probably not well placed in the public API.
+   It will be reused for the merge part of this project.
+
+
+   ./subversion/libsvn_subr/io.c svn_io_run_external_diff()
+
+   calls __create_custom_diff_cmd() and does all the error checking
+   required, before routing the result to the actual call to the APR
+   routine that makes it.
+
 
 UI components
 -------------
+
+  --invoke-diff-cmd and its user interface components for the command
+  line have been installed everywhere where --diff-cmd is available,
+  in svnlook.c, svn.c, svnlog.c.
+
+  Users can specify the following mutually exclusive options:
+
+  --invoke-diff-cmd, --diff-cmd and --internal-diff-cmd, and also
+  define what diff program to use via the ./svn/config file, using the
+  new config file parameter "invoke-diff-cmd"..
+
+  The selection first defaults to the internal diff program, then to
+  the config file entry (if defined) which in turn is overridden when
+  one of --invoke-diff-cmd, --diff-cmd or --internal-diff-cmd are
+  invoked.
 
 
 Changes to the existing code structure:
 =======================================
 
-TBD
+The original --diff-cmd parsing and routing code has been refactored
+and the call to --diff-cmd is now handled by the
+__create_custom_diff_cmd() and svn_io_run_external_diff() routines.
+All the original functionality and user syntax has been retained.
 
 Tests
 =====
 
-Correct functionality
----------------------
-TBD
+The test for the 'invoke-diff-cmd' feature is
 
-Working copy functionality
---------------------------
+  /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
 
-Create a suitable conflict to test the UI part of the feature:
-       
-    mkdir conflict
-    svn co -r r1526439  https://svn.apache.org/repos/asf/subversion/trunk/ trunk
-    svn co -r r1502389 https://svn.apache.org/repos/asf/subversion/branches//invoke-diff-cmd-feature branch
-    cd branch
-    svn /home/g/conflict/trunk 
-    revert -R .
+The test for the updated --diff-cmd is 
 
-The above produces 2 conflicts using the native svn merge command, and
-30 conflicts when kdiff3 is used.
-
-$ kdiff3 --version
-Qt: 4.8.4
-KDE Development Platform: 4.10.5
-kdiff3: 0.9.97 (32 bit)
+  /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
 
 
 TODO:
 ====
 
-  * add invoke-merge-cmd to svn.c
-    # plug in opt_get_invoke-merge-cmd
-    # UI checks:
-      write decision matrix
-      write checking code
-    # write help info
+  * Finalise the discussion about which substitution syntax to choose.
 
-  * Create the UI for the interactive dialogue in
-    subversion/svn/conflict-callbacks.
 
-    Proposed interactive dialoge entry:
+Review tools
+============
 
-    (3f) - use diff3 tool defined in the config file to resolve conflict 
-    (3c) - use diff3 tool defined in the commandline to resolve conflict 
-    (3i) - interactively select diff3 tool now to resolve conflict  
+The entire code of the branch can be obtained thus (temporary measure,
+see below):
 
-  * make list of where else in svn to add the invoke-merge-cmd.
+svn log --stop-on-copy | grep '^*\ subversion' |\
+  awk '{gsub(/^ +| +$/,"")} {print $0}' | cut -d '*' -f 2 |\
+  sort --unique | while read line; do echo $line | if [ -a $line ];\
+  then echo ""; echo \
+"================================================================================";\
+  echo "";\
+  diff -p --context=0 -b -B -w "$HOME/trunk/$line" "$PWD/$line"; fi;\
+  done > entire-branch-code 
 
-  * add routing for invoke-merge-cmd.
+The following used to work, but doesn't anymore, I'm not sure why
+(asking on svn-dev currently, will update once this is settled):
 
-  * add new function to io.c that copies svn_io_run_diff3_3().
-  
-  * config file service:
-    plug in config file service into io.c
-    add new entry in config file
+svn diff ^/subversion/trunk@1531612\
+ ^/subversion/branches/invoke-diff-cmd-feature
 
 To obtain a visitable list of files with line numbers in the Emacs
 compilation buffer:
@@ -263,3 +296,4 @@ Log messages of salient code changes (not including the per file feature)
 
   (main): Assign opt_arg to opt_state.invoke_diff_cmd.  Add
     exclusiveness test for invoke_diff_cmd and diff_cmd.
+
