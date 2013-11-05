@@ -487,7 +487,6 @@ tc_editor_add_directory(void *baton,
                         const char *relpath,
                         const apr_array_header_t *children,
                         apr_hash_t *props,
-                        svn_revnum_t replaces_rev,
                         apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
@@ -579,7 +578,6 @@ tc_editor_add_file(void *baton,
                    const svn_checksum_t *checksum,
                    svn_stream_t *contents,
                    apr_hash_t *props,
-                   svn_revnum_t replaces_rev,
                    apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
@@ -805,7 +803,6 @@ update_working_props(svn_wc_notify_state_t *prop_state,
 static svn_error_t *
 tc_editor_alter_directory(void *baton,
                           const char *dst_relpath,
-                          svn_revnum_t expected_move_dst_revision,
                           const apr_array_header_t *children,
                           apr_hash_t *new_props,
                           apr_pool_t *scratch_pool)
@@ -821,8 +818,6 @@ tc_editor_alter_directory(void *baton,
 
   SVN_ERR(check_node_shadowed(&shadowed, b, dst_relpath, scratch_pool));
 
-  SVN_ERR_ASSERT(expected_move_dst_revision == b->old_version->peg_rev);
-
   SVN_ERR(svn_wc__db_depth_get_info(&status, &move_dst_kind, &move_dst_revision,
                                     &move_dst_repos_relpath, NULL, NULL, NULL,
                                     NULL, NULL, &old_version.checksum, NULL,
@@ -835,8 +830,6 @@ tc_editor_alter_directory(void *baton,
   /* There might be not-present nodes of a different revision as the same
      depth as a copy. This is commonly caused by copying/moving mixed revision
      directories */
-  SVN_ERR_ASSERT(shadowed
-                 || (move_dst_revision == expected_move_dst_revision));
   SVN_ERR_ASSERT(shadowed || move_dst_kind == svn_node_dir);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
@@ -1039,7 +1032,6 @@ update_working_file(const char *local_relpath,
 static svn_error_t *
 tc_editor_alter_file(void *baton,
                      const char *dst_relpath,
-                     svn_revnum_t expected_move_dst_revision,
                      const svn_checksum_t *new_checksum,
                      svn_stream_t *new_contents,
                      apr_hash_t *new_props,
@@ -1065,7 +1057,6 @@ tc_editor_alter_file(void *baton,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(shadowed || move_dst_revision == expected_move_dst_revision);
   SVN_ERR_ASSERT(shadowed || move_dst_kind == svn_node_file);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
@@ -1097,20 +1088,8 @@ tc_editor_alter_file(void *baton,
 }
 
 static svn_error_t *
-tc_editor_alter_symlink(void *baton,
-                        const char *relpath,
-                        svn_revnum_t revision,
-                        const char *target,
-                        apr_hash_t *props,
-                        apr_pool_t *scratch_pool)
-{
-  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
-}
-
-static svn_error_t *
 tc_editor_delete(void *baton,
                  const char *relpath,
-                 svn_revnum_t revision,
                  apr_pool_t *scratch_pool)
 {
   struct tc_editor_baton *b = baton;
@@ -1511,7 +1490,6 @@ update_moved_away_node(struct tc_editor_baton *tc_baton,
                        const char *dst_relpath,
                        int src_op_depth,
                        const char *move_root_dst_relpath,
-                       svn_revnum_t move_root_dst_revision,
                        svn_wc__db_t *db,
                        svn_wc__db_wcroot_t *wcroot,
                        apr_pool_t *scratch_pool)
@@ -1534,7 +1512,6 @@ update_moved_away_node(struct tc_editor_baton *tc_baton,
       || (dst_kind != svn_node_none && src_kind != dst_kind))
     {
       SVN_ERR(tc_editor_delete(tc_baton, dst_relpath,
-                               move_root_dst_revision,
                                scratch_pool));
     }
 
@@ -1549,14 +1526,12 @@ update_moved_away_node(struct tc_editor_baton *tc_baton,
                                            scratch_pool, scratch_pool));
           SVN_ERR(tc_editor_add_file(tc_baton, dst_relpath,
                                       src_checksum, contents, src_props,
-                                      move_root_dst_revision,
                                       scratch_pool));
         }
       else if (src_kind == svn_node_dir)
         {
           SVN_ERR(tc_editor_add_directory(tc_baton, dst_relpath,
                                           src_children, src_props,
-                                          move_root_dst_revision,
                                           scratch_pool));
         }
     }
@@ -1585,7 +1560,6 @@ update_moved_away_node(struct tc_editor_baton *tc_baton,
 
           if (props || src_checksum)
             SVN_ERR(tc_editor_alter_file(tc_baton, dst_relpath,
-                                         move_root_dst_revision,
                                          src_checksum, contents, props,
                                          scratch_pool));
         }
@@ -1596,7 +1570,6 @@ update_moved_away_node(struct tc_editor_baton *tc_baton,
 
           if (props || children)
             SVN_ERR(tc_editor_alter_directory(tc_baton, dst_relpath,
-                                              move_root_dst_revision,
                                               children, props,
                                               scratch_pool));
         }
@@ -1648,7 +1621,6 @@ update_moved_away_node(struct tc_editor_baton *tc_baton,
           SVN_ERR(update_moved_away_node(tc_baton, src_child_relpath,
                                          dst_child_relpath, src_op_depth,
                                          move_root_dst_relpath,
-                                         move_root_dst_revision,
                                          db, wcroot, iterpool));
 
           if (!dst_only)
@@ -1757,7 +1729,7 @@ drive_tree_conflict_editor(struct tc_editor_baton *tc_baton,
    * to nodes at the move destination. */
   SVN_ERR(update_moved_away_node(tc_baton, src_relpath, dst_relpath,
                                  src_op_depth,
-                                 dst_relpath, old_version->peg_rev,
+                                 dst_relpath,
                                  db, wcroot, scratch_pool));
 
   SVN_ERR(replace_moved_layer(src_relpath, dst_relpath, src_op_depth,
