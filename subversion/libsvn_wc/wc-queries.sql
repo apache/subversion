@@ -198,7 +198,7 @@ WHERE wc_id = ?1
 -- STMT_DELETE_NODE
 DELETE
 FROM NODES
-WHERE wc_id = ?1 AND local_relpath = ?2
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_DELETE_ACTUAL_FOR_BASE_RECURSIVE
 /* The ACTUAL_NODE applies to BASE, unless there is in at least one op_depth
@@ -718,7 +718,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > ?3)
   AND presence = MAP_BASE_DELETED
 
--- STMT_DELETE_ALL_LAYERS
+-- STMT_DELETE_NODE_ALL_LAYERS
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 
