@@ -39,7 +39,7 @@ class JNIMutex
  public:
   JNIMutex(apr_pool_t *pool);
   ~JNIMutex();
-  friend JNICriticalSection;
+  friend class JNICriticalSection;
  private:
   /**
    * The apr mutex.

@@ -114,7 +114,7 @@ class RemoteSession : public SVNBase
     jboolean hasCapability(jstring capability);
 
   private:
-    friend CommitEditor;
+    friend class CommitEditor;
     RemoteSession(int retryAttempts,
                   const char* url, const char* uuid,
                   const char* configDirectory,

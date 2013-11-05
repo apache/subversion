@@ -130,8 +130,8 @@ private:
  */
 class ClassCache
 {
-  JNIEXPORT jint JNICALL friend ::JNI_OnLoad(::JavaVM*, void*);
-  JNIEXPORT void JNICALL friend ::JNI_OnUnload(::JavaVM*, void*);
+  friend JNIEXPORT jint JNICALL ::JNI_OnLoad(::JavaVM*, void*);
+  friend JNIEXPORT void JNICALL ::JNI_OnUnload(::JavaVM*, void*);
   explicit ClassCache(Env env);
   ~ClassCache();
 
