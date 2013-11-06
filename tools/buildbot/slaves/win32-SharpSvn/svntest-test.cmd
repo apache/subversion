@@ -69,7 +69,7 @@ IF "%SVN_BRANCH%" LSS "1.9." (
   IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
   xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
 
-  PATH %TESTDIR%\bin;%PATH%
+  PATH %TESTDIR%\bin;!PATH!
 )
 
 IF "%LOCAL%+%FSFS%" == "1+1" (
