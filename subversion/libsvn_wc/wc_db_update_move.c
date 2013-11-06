@@ -719,8 +719,8 @@ update_working_props(svn_wc_notify_state_t *prop_state,
                      svn_skel_t **conflict_skel,
                      apr_array_header_t **propchanges,
                      apr_hash_t **actual_props,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
+                     update_move_baton_t *b,
+                     const char *local_relpath,
                      const struct working_node_version_t *old_version,
                      const struct working_node_version_t *new_version,
                      apr_pool_t *result_pool,
@@ -735,36 +735,36 @@ update_working_props(svn_wc_notify_state_t *prop_state,
    * merge-left version, and the current props of the
    * moved-here working file as the merge-right version.
    */
-  SVN_ERR(svn_wc__db_read_props(actual_props,
-                                db, local_abspath,
-                                result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_props_internal(actual_props,
+                                         b->wcroot, local_relpath,
+                                         result_pool, scratch_pool));
   SVN_ERR(svn_prop_diffs(propchanges, new_version->props, old_version->props,
                          result_pool));
   SVN_ERR(svn_wc__merge_props(conflict_skel, prop_state,
                               &new_actual_props,
-                              db, local_abspath,
+                              b->db, svn_dirent_join(b->wcroot->abspath,
+                                                     local_relpath,
+                                                     scratch_pool),
                               old_version->props, old_version->props,
                               *actual_props, *propchanges,
                               result_pool, scratch_pool));
 
-  /* Setting properties in ACTUAL_NODE with svn_wc__db_op_set_props
-     relies on NODES row having been updated first which we don't do
-     at present. So this extra property diff has the same effect.
+  /* Setting properties in ACTUAL_NODE with svn_wc__db_op_set_props_internal
+     relies on NODES row being updated via a different route .
 
-     ### Perhaps we should update NODES first (but after
-     ### svn_wc__db_read_props above)?  */
+     This extra property diff makes sure we clear the actual row when
+     the final result is unchanged properties. */
   SVN_ERR(svn_prop_diffs(&new_propchanges, new_actual_props, new_version->props,
                          scratch_pool));
   if (!new_propchanges->nelts)
     new_actual_props = NULL;
 
-  /* Install the new actual props. Don't set the conflict_skel yet, because
-     we might need to add a text conflict to it as well. */
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  new_actual_props,
-                                  svn_wc__has_magic_property(*propchanges),
-                                  NULL/*conflict_skel*/, NULL/*work_items*/,
-                                  scratch_pool));
+  /* Install the new actual props. */
+  SVN_ERR(svn_wc__db_op_set_props_internal(b->wcroot, local_relpath,
+                                           new_actual_props,
+                                           svn_wc__has_magic_property(
+                                                    *propchanges),
+                                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -795,7 +795,7 @@ tc_editor_alter_directory(update_move_baton_t *b,
   /* There might be not-present nodes of a different revision as the same
      depth as a copy. This is commonly caused by copying/moving mixed revision
      directories */
-  SVN_ERR_ASSERT(shadowed || move_dst_kind == svn_node_dir);
+  SVN_ERR_ASSERT(move_dst_kind == svn_node_dir);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
                               move_dst_kind,
@@ -825,7 +825,7 @@ tc_editor_alter_directory(update_move_baton_t *b,
       /* ### TODO: Only do this when there is no higher WORKING layer */
       SVN_ERR(update_working_props(&prop_state, &conflict_skel,
                                    &propchanges, &actual_props,
-                                   b->db, dst_abspath,
+                                   b, dst_relpath,
                                    &old_version, &new_version,
                                    scratch_pool, scratch_pool));
 
@@ -872,16 +872,15 @@ tc_editor_alter_directory(update_move_baton_t *b,
  * Set *WORK_ITEMS to any required work items, allocated in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-update_working_file(const char *local_relpath,
+update_working_file(update_move_baton_t *b,
+                    const char *local_relpath,
                     const char *repos_relpath,
                     svn_wc_operation_t operation,
                     const working_node_version_t *old_version,
                     const working_node_version_t *new_version,
-                    svn_wc__db_wcroot_t *wcroot,
-                    svn_wc__db_t *db,
                     apr_pool_t *scratch_pool)
 {
-  const char *local_abspath = svn_dirent_join(wcroot->abspath,
+  const char *local_abspath = svn_dirent_join(b->wcroot->abspath,
                                               local_relpath,
                                               scratch_pool);
   const char *old_pristine_abspath;
@@ -895,7 +894,7 @@ update_working_file(const char *local_relpath,
 
   /* ### TODO: Only do this when there is no higher WORKING layer */
   SVN_ERR(update_working_props(&prop_state, &conflict_skel, &propchanges,
-                               &actual_props, db, local_abspath,
+                               &actual_props, b, local_relpath,
                                old_version, new_version,
                                scratch_pool, scratch_pool));
 
@@ -904,12 +903,12 @@ update_working_file(const char *local_relpath,
       svn_boolean_t is_locally_modified;
 
       SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
-                                               db, local_abspath,
+                                               b->db, local_abspath,
                                                FALSE /* exact_comparison */,
                                                scratch_pool));
       if (!is_locally_modified)
         {
-          SVN_ERR(svn_wc__wq_build_file_install(&work_item, db,
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
                                                 local_abspath,
                                                 NULL,
                                                 FALSE /* FIXME: use_commit_times? */,
@@ -929,15 +928,15 @@ update_working_file(const char *local_relpath,
            * moved-here working file as the merge-right version.
            */
           SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
-                                               db, wcroot->abspath,
+                                               b->db, b->wcroot->abspath,
                                                old_version->checksum,
                                                scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
-                                               db, wcroot->abspath,
+                                               b->db, b->wcroot->abspath,
                                                new_version->checksum,
                                                scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
-                                         &merge_outcome, db,
+                                         &merge_outcome, b->db,
                                          old_pristine_abspath,
                                          new_pristine_abspath,
                                          local_abspath,
@@ -966,22 +965,23 @@ update_working_file(const char *local_relpath,
    * too. */
   if (conflict_skel)
     {
-      SVN_ERR(create_conflict_markers(&work_item, local_abspath, db,
+      SVN_ERR(create_conflict_markers(&work_item, local_abspath, b->db,
                                       repos_relpath, conflict_skel,
                                       operation, old_version, new_version,
                                       svn_node_file,
                                       scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__db_mark_conflict_internal(wcroot, local_relpath,
+      SVN_ERR(svn_wc__db_mark_conflict_internal(b->wcroot, local_relpath,
                                                 conflict_skel,
                                                 scratch_pool));
 
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
 
-  SVN_ERR(svn_wc__db_wq_add(db, wcroot->abspath, work_items, scratch_pool));
+  SVN_ERR(svn_wc__db_wq_add(b->db, b->wcroot->abspath, work_items,
+                            scratch_pool));
 
-  SVN_ERR(update_move_list_add(wcroot, local_relpath,
+  SVN_ERR(update_move_list_add(b->wcroot, local_relpath,
                                svn_wc_notify_update_update,
                                svn_node_file,
                                content_state,
@@ -1017,7 +1017,7 @@ tc_editor_alter_file(update_move_baton_t *b,
                                     relpath_depth(b->move_root_dst_relpath),
                                     scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(shadowed || move_dst_kind == svn_node_file);
+  SVN_ERR_ASSERT(move_dst_kind == svn_node_file);
 
   SVN_ERR(check_tree_conflict(&is_conflicted, b, dst_relpath,
                               move_dst_kind,
@@ -1038,9 +1038,8 @@ tc_editor_alter_file(update_move_baton_t *b,
   /* Update file and prop contents if the update has changed them. */
   if (!svn_checksum_match(new_checksum, old_version.checksum) || new_props)
     {
-      SVN_ERR(update_working_file(dst_relpath, move_dst_repos_relpath,
+      SVN_ERR(update_working_file(b, dst_relpath, move_dst_repos_relpath,
                                   b->operation, &old_version, &new_version,
-                                  b->wcroot, b->db,
                                   scratch_pool));
     }
 

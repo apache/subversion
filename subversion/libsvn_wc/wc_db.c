@@ -5766,6 +5766,25 @@ set_actual_props(apr_int64_t wc_id,
   return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
+svn_error_t *
+svn_wc__db_op_set_props_internal(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 apr_hash_t *props,
+                                 svn_boolean_t clear_recorded_info,
+                                 apr_pool_t *scratch_pool)
+{
+  SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath,
+                           props, wcroot->sdb, scratch_pool));
+
+  if (clear_recorded_info)
+    {
+      SVN_ERR(db_record_fileinfo(wcroot, local_relpath,
+                                 SVN_INVALID_FILESIZE, 0,
+                                 scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* The body of svn_wc__db_op_set_props().
 
@@ -5801,15 +5820,8 @@ set_props_txn(svn_wc__db_wcroot_t *wcroot,
         props = NULL;
     }
 
-  SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath,
-                           props, wcroot->sdb, scratch_pool));
-
-  if (clear_recorded_info)
-    {
-      SVN_ERR(db_record_fileinfo(wcroot, local_relpath,
-                                 SVN_INVALID_FILESIZE, 0,
-                                 scratch_pool));
-    }
+  SVN_ERR(svn_wc__db_op_set_props_internal(wcroot, local_relpath, props,
+                                           clear_recorded_info, scratch_pool));
 
   /* And finally.  */
   SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
@@ -9581,12 +9593,12 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
 
 /* Helper for svn_wc__db_read_props().
  */
-static svn_error_t *
-db_read_props(apr_hash_t **props,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_read_props_internal(apr_hash_t **props,
+                               svn_wc__db_wcroot_t *wcroot,
+                               const char *local_relpath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -9643,8 +9655,10 @@ svn_wc__db_read_props(apr_hash_t **props,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_WC__DB_WITH_TXN(db_read_props(props, wcroot, local_relpath,
-                                    result_pool, scratch_pool),
+  SVN_WC__DB_WITH_TXN(svn_wc__db_read_props_internal(props, wcroot,
+                                                     local_relpath,
+                                                     result_pool,
+                                                     scratch_pool),
                       wcroot);
 
   return SVN_NO_ERROR;

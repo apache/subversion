@@ -466,6 +466,23 @@ svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_op_set_props, but updates ACTUAL_NODE directly without
+   comparing with the pristine properties, etc.
+*/
+svn_error_t *
+svn_wc__db_op_set_props_internal(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 apr_hash_t *props,
+                                 svn_boolean_t clear_recorded_info,
+                                 apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_read_props_internal(apr_hash_t **props,
+                               svn_wc__db_wcroot_t *wcroot,
+                               const char *local_relpath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
 /* Do a post-drive revision bump for the moved-away destination for
    any move sources under LOCAL_RELPATH.  This is called from within
    the revision bump transaction after the tree at LOCAL_RELPATH has
