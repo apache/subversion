@@ -38,8 +38,8 @@
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM* jvm, void*)
 {
-  ::Java::Env::m_jvm = jvm;
-  new ::Java::ClassCache(::Java::Env());
+  ::Java::Env::static_init(jvm);
+  ::Java::ClassCache::create();
   return JNI_VERSION_1_2;
 }
 
@@ -50,7 +50,7 @@ JNI_OnLoad(JavaVM* jvm, void*)
 JNIEXPORT void JNICALL
 JNI_OnUnload(JavaVM*, void*)
 {
-  delete ::Java::ClassCache::m_instance;
+  ::Java::ClassCache::destroy();
 }
 
 
@@ -59,6 +59,10 @@ namespace Java {
 // class Java::Env
 
 ::JavaVM* Env::m_jvm = NULL;
+void Env::static_init(::JavaVM* jvm)
+{
+  m_jvm = jvm;
+}
 
 ::JNIEnv* Env::env_from_jvm()
 {

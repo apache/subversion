@@ -412,8 +412,6 @@ public:
 
 private:
   ::JNIEnv* m_env;
-
-  friend JNIEXPORT jint JNICALL ::JNI_OnLoad(::JavaVM*, void*);
   static ::JavaVM* m_jvm;
   static ::JNIEnv* env_from_jvm();
 
@@ -429,6 +427,10 @@ private:
     }
 
   void throw_java_out_of_memory(const char* message) const;
+
+public:
+  /* This static initializer must only be called by JNI_OnLoad */
+  static void static_init(::JavaVM*);
 };
 
 
