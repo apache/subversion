@@ -190,7 +190,37 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
       const Java::Env env(jenv);
 
       const Java::ByteArray description(env, jdescription);
-      const Java::String paren_dir(env, jparent_dir);
+      const Java::String parent_dir(env, jparent_dir);
+
+      // Using a "global" request pool since we don't keep a context
+      // with its own pool around for these functions.
+      SVN::Pool pool;
+
+      apr_array_header_t* externals;
+      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+                           &externals,
+                           Java::String::Contents(parent_dir).c_str(),
+                           Java::ByteArray::Contents(description).data(),
+                           svn_boolean_t(jcanonicalize_url),
+                           pool.getPool()));
+
+      Java::MutableList<JavaHL::ExternalItem> items(env, externals->nelts);
+      for (jint i = 0; i < externals->nelts; ++i)
+        {
+          // References to the newly created external items are stored
+          // in the list, so make sure the local reference in this
+          // frame get cleared on each iteration.
+          Java::LocalFrame frame;
+
+          const svn_wc_external_item2_t* const item =
+            APR_ARRAY_IDX(externals, i, svn_wc_external_item2_t*);
+          items.add(JavaHL::ExternalItem(env,
+                                         item->target_dir,
+                                         item->url,
+                                         &item->revision,
+                                         &item->peg_revision));
+        }
+      return items.get();
     }
   SVN_JAVAHL_JNI_CATCH;
   return NULL;
@@ -213,7 +243,8 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
       SVN::Pool iterpool;
 
       std::ostringstream buffer;
-      for (jint i = 0; i < items.length(); ++i)
+      const jint items_length = items.length();
+      for (jint i = 0; i < items_length; ++i)
         {
           iterpool.clear();
 

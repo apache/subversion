@@ -25,13 +25,15 @@
 
 namespace Java {
 
+// Class Java::BaseList
+
 const char* const BaseList::m_class_name = "java/util/List";
 
 BaseList::ovector
 BaseList::convert_to_vector(Env env, jclass cls, jobject jlist)
 {
-  const size_type length = size_type(
-      env.CallIntMethod(jlist, env.GetMethodID(cls, "size", "()I")));
+  const jint length = env.CallIntMethod(
+      jlist, env.GetMethodID(cls, "size", "()I"));
 
   if (!length)
     return ovector();
@@ -44,6 +46,57 @@ BaseList::convert_to_vector(Env env, jclass cls, jobject jlist)
   for (i = 0, it = contents.begin(); it != contents.end(); ++it, ++i)
     *it = env.CallObjectMethod(jlist, mid_get, i);
   return contents;
+}
+
+
+// Class Java::BaseMutableList
+
+const char* const BaseMutableList::m_class_name = "java/util/ArrayList";
+
+namespace {
+jobject make_array_list(Env env, const char* class_name, jint length)
+{
+  const jclass cls = env.FindClass(class_name);
+  const jmethodID mid_ctor = env.GetMethodID(cls, "<init>", "(I)V");
+  return env.NewObject(cls, mid_ctor, length);
+}
+} // anonymous namespace
+
+BaseMutableList::BaseMutableList(Env env, jint length)
+  : Object(env, m_class_name,
+           make_array_list(env, m_class_name, length)),
+      m_mid_add(NULL),
+      m_mid_clear(NULL),
+      m_mid_get(NULL),
+      m_mid_size(NULL)
+{}
+
+void BaseMutableList::add(jobject obj)
+{
+  if (!m_mid_add)
+    m_mid_add = m_env.GetMethodID(m_class, "add", "(Ljava/lang/Object;)Z");
+  m_env.CallBooleanMethod(m_jthis, m_mid_add, obj);
+}
+
+void BaseMutableList::clear()
+{
+  if (!m_mid_clear)
+    m_mid_clear = m_env.GetMethodID(m_class, "clear", "()V");
+  m_env.CallVoidMethod(m_jthis, m_mid_clear);
+}
+
+jobject BaseMutableList::operator[](jint index) const
+{
+  if (!m_mid_get)
+    m_mid_get = m_env.GetMethodID(m_class, "get", "(I)Ljava/lang/Object;");
+  return m_env.CallObjectMethod(m_jthis, m_mid_get, index);
+}
+
+jint BaseMutableList::length() const
+{
+  if (!m_mid_size)
+    m_mid_size = m_env.GetMethodID(m_class, "size", "()I");
+  return m_env.CallIntMethod(m_jthis, m_mid_add);
 }
 
 } // namespace Java
