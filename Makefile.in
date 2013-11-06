@@ -480,8 +480,11 @@ install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-l
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
 clean-javahl:
+	if [ -d $(javahl_test_rootdir) ]; then \
+	  find $(javahl_test_rootdir) -mindepth 1 -maxdepth 1 \
+               -print0 | xargs -0 rm -rf --;   \
+	fi
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
-	rm -fr $(javahl_test_rootdir)
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
