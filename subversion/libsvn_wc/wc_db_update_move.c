@@ -2053,6 +2053,61 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Checks if SRC_RELPATH is within BUMP_DEPTH from BUMP_ROOT. Sets
+ * *SKIP to TRUE if the node should be skipped, otherwise to FALSE.
+ * Sets *SRC_DEPTH to the remaining depth at SRC_RELPATH.
+ */
+static svn_error_t *
+check_bump_layer(svn_boolean_t *skip,
+                 svn_depth_t *src_depth,
+                 const char *bump_root,
+                 svn_depth_t bump_depth,
+                 const char *src_relpath,
+                 svn_node_kind_t src_kind,
+                 apr_pool_t *scratch_pool)
+{
+  const char *relpath;
+
+  *skip = FALSE;
+  *src_depth = bump_depth;
+
+  relpath = svn_relpath_skip_ancestor(bump_root, src_relpath);
+
+  if (!relpath)
+    *skip = TRUE;
+
+  if (bump_depth == svn_depth_infinity)
+    return SVN_NO_ERROR;
+
+  if (relpath && *relpath == '\0')
+    return SVN_NO_ERROR;
+
+  switch (bump_depth)
+    {
+      case svn_depth_empty:
+        *skip = TRUE;
+        break;
+
+      case svn_depth_files:
+        if (src_kind != svn_node_file)
+          {
+            *skip = TRUE;
+            break;
+          }
+        /* Fallthrough */
+      case svn_depth_immediates:
+        if (!relpath || relpath_depth(relpath) > 1)
+          *skip = TRUE;
+
+        *src_depth = svn_depth_empty;
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* The guts of bump_moved_away: Determines if a move can be bumped to match
  * the move origin and if so performs this bump.
  */
@@ -2061,10 +2116,10 @@ bump_moved_layer(svn_boolean_t *recurse,
                  svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
                  int op_depth,
-                 svn_depth_t depth,
                  const char *src_relpath,
                  int src_op_depth,
                  svn_node_kind_t src_kind,
+                 svn_depth_t src_depth,
                  const char *dst_relpath,
                  apr_hash_t *src_done,
                  svn_wc__db_t *db,
@@ -2074,35 +2129,8 @@ bump_moved_layer(svn_boolean_t *recurse,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_skel_t *conflict;
-  svn_depth_t src_depth = depth;
   svn_boolean_t can_bump;
   const char *src_root_relpath = src_relpath;
-
-  *recurse = FALSE;
-
-  if (depth != svn_depth_infinity)
-    {
-      if (strcmp(src_relpath, local_relpath))
-        {
-            switch (depth)
-            {
-            case svn_depth_empty:
-                return SVN_NO_ERROR;
-            case svn_depth_files:
-                if (src_kind != svn_node_file)
-                  return SVN_NO_ERROR;
-                /* Fallthrough */
-            case svn_depth_immediates:
-                if (strcmp(svn_relpath_dirname(src_relpath, scratch_pool),
-                           local_relpath))
-                   return SVN_NO_ERROR;
-                src_depth = svn_depth_empty;
-                break;
-            default:
-                SVN_ERR_MALFUNCTION();
-            }
-        }
-    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_HAS_LAYER_BETWEEN));
@@ -2179,6 +2207,7 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_pool_t *iterpool;
+  svn_error_t *err = NULL;
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -2191,9 +2220,9 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
     {
       const char *src_relpath, *dst_relpath;
       int src_op_depth;
-      svn_error_t *err;
-      svn_boolean_t recurse;
       svn_node_kind_t src_kind;
+      svn_depth_t src_depth;
+      svn_boolean_t skip;
 
       svn_pool_clear(iterpool);
 
@@ -2202,29 +2231,38 @@ bump_moved_away(svn_wc__db_wcroot_t *wcroot,
       src_op_depth = svn_sqlite__column_int(stmt, 2);
       src_kind = svn_sqlite__column_token(stmt, 3, kind_map);
 
-      err = bump_moved_layer(&recurse, wcroot,
-                             local_relpath, op_depth, depth,
-                             src_relpath, src_op_depth, src_kind,
-                             dst_relpath,
-                             src_done, db, result_pool, iterpool);
+      err = check_bump_layer(&skip, &src_depth, local_relpath, depth,
+          src_relpath, src_kind, iterpool);
 
       if (err)
-        return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+        break;
 
-      if (recurse)
-          err = bump_moved_away(wcroot, dst_relpath, relpath_depth(dst_relpath),
-                                src_done, depth, db, result_pool, iterpool);
+      if (!skip)
+        {
+          svn_boolean_t recurse;
+
+          err = bump_moved_layer(&recurse, wcroot,
+                                 local_relpath, op_depth,
+                                 src_relpath, src_op_depth, src_kind, src_depth,
+                                 dst_relpath,
+                                 src_done, db, result_pool, iterpool);
+
+          if (!err && recurse)
+            err = bump_moved_away(wcroot, dst_relpath, relpath_depth(dst_relpath),
+                                  src_done, depth, db, result_pool, iterpool);
+        }
 
       if (err)
-          return svn_error_compose_create(err, svn_sqlite__reset(stmt));
+        break;
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
+
+  err = svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
   svn_pool_destroy(iterpool);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 svn_error_t *
