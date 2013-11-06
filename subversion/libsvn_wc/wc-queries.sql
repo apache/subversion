@@ -325,7 +325,7 @@ WHERE wc_id = ?1 AND op_depth = ?3
 -- STMT_COMMIT_DESCENDANTS_TO_BASE
 UPDATE NODES SET op_depth = 0,
                  repos_id = ?4,
-                 repos_path = ?5 || SUBSTR(local_relpath, LENGTH(?2)+1),
+                 repos_path = RELPATH_SKIP_JOIN(?2, ?5, local_relpath),
                  revision = ?6,
                  dav_cache = NULL,
                  moved_here = NULL,
@@ -1606,12 +1606,8 @@ WHERE n.wc_id = ?1
   AND h.moved_to IS NOT NULL
 
 -- STMT_COMMIT_UPDATE_ORIGIN
-/* Note that the only reason this SUBSTR() trick is valid is that you
-   can move neither the working copy nor the repository root.
-
-   SUBSTR(local_relpath, LENGTH(?2)+1) includes the '/' of the path */
 UPDATE nodes SET repos_id = ?4,
-                 repos_path = ?5 || SUBSTR(local_relpath, LENGTH(?2)+1),
+                 repos_path = RELPATH_SKIP_JOIN(?2, ?5, local_relpath),
                  revision = ?6
 WHERE wc_id = ?1
   AND (local_relpath = ?2
