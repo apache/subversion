@@ -32,6 +32,18 @@ namespace Java {
 
 const ClassCache* ClassCache::m_instance = NULL;
 
+void ClassCache::create()
+{
+  new ClassCache(Env());
+}
+
+void ClassCache::destroy()
+{
+  const ClassCache* const instance = m_instance;
+  m_instance = NULL;
+  delete instance;
+}
+
 ClassCache::~ClassCache() {}
 
 #define SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(M, C)    \

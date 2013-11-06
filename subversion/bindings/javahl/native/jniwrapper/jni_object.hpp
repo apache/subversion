@@ -130,8 +130,6 @@ private:
  */
 class ClassCache
 {
-  friend JNIEXPORT jint JNICALL ::JNI_OnLoad(::JavaVM*, void*);
-  friend JNIEXPORT void JNICALL ::JNI_OnUnload(::JavaVM*, void*);
   explicit ClassCache(Env env);
   ~ClassCache();
 
@@ -152,6 +150,13 @@ class ClassCache
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(string);
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(subversion_exception);
 #undef SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS
+
+public:
+  /* This static initializer must only be called by JNI_OnLoad */
+  static void create();
+
+  /* This static finalizer must only be called by JNI_OnUnload */
+  static void destroy();
 };
 
 
