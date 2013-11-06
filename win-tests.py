@@ -336,6 +336,10 @@ def locate_libs():
       if os.path.exists(src):
         copy_changed_file(src, to_dir=abs_builddir, cleanup=False)
 
+    for name in lib.extra_bin:
+      src = os.path.join(dir, name)
+      copy_changed_file(src, to_dir=abs_builddir)
+
 
   # Copy the Subversion library DLLs
   for i in gen_obj.graph.get_all_sources(gen_base.DT_INSTALL):
