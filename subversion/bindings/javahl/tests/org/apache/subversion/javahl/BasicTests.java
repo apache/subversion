@@ -3965,6 +3965,7 @@ public class BasicTests extends SVNTests
     {
         public void doChangelist(String path, String changelist)
         {
+            path = fileToSVNPath(new File(path), true);
             if (super.containsKey(path))
             {
                 // Append the changelist to the existing list
