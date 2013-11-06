@@ -62,7 +62,7 @@ jobject make_external_item(::Java::Env env,
                     "(ZLjava/lang/String;Ljava/lang/String;"
                     "L"JAVA_PACKAGE"/types/Revision;"
                     "L"JAVA_PACKAGE"/types/Revision;)V");
-  return env.NewObject(cls, mid_ctor,
+  return env.NewObject(cls, mid_ctor, JNI_FALSE,
                        env.NewStringUTF(target_dir),
                        env.NewStringUTF(url),
                        Revision::makeJRevision(*revision),

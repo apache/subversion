@@ -177,6 +177,26 @@ std::ostream& operator<<(std::ostream& os, const FormatRevision& pr)
     }
   return os;
 }
+
+bool operator==(const svn_opt_revision_t& a,
+                const svn_opt_revision_t& b)
+{
+  if (a.kind != b.kind)
+    return false;
+  if (a.kind == svn_opt_revision_number
+      && a.value.number != b.value.number)
+    return false;
+  if (a.kind == svn_opt_revision_date
+      && a.value.date != b.value.date)
+    return false;
+  return true;
+}
+
+inline bool operator!=(const svn_opt_revision_t& a,
+                       const svn_opt_revision_t& b)
+{
+  return !(a == b);
+}
 } // anoymous namespace
 
 
@@ -197,12 +217,22 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
       SVN::Pool pool;
 
       apr_array_header_t* externals;
-      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
-                           &externals,
-                           Java::String::Contents(parent_dir).c_str(),
-                           Java::ByteArray::Contents(description).data(),
-                           svn_boolean_t(jcanonicalize_url),
-                           pool.getPool()));
+      {
+        const Java::String::Contents parent_dir_contents(parent_dir);
+        const Java::ByteArray::Contents descr_contents(description);
+
+        // There is no guarantee that the description contents are
+        // null-terminated. Copy them to an svn_string_t to make sure
+        // that they are.
+        svn_string_t* const safe_contents = descr_contents.get_string(pool);
+
+        SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+                             &externals,
+                             parent_dir_contents.c_str(),
+                             safe_contents->data,
+                             svn_boolean_t(jcanonicalize_url),
+                             pool.getPool()));
+      }
 
       Java::MutableList<JavaHL::ExternalItem> items(env, externals->nelts);
       for (jint i = 0; i < externals->nelts; ++i)
@@ -253,7 +283,8 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
 
           if (!jold_format)
             {
-              if (item.revision()->kind != svn_opt_revision_head)
+              if (item.revision()->kind != svn_opt_revision_head
+                  && *item.revision() != *item.peg_revision())
                 {
                   buffer << "-r"
                          << FormatRevision(item.revision(), iterpool)
@@ -272,7 +303,8 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
           else
             {
               // Sanity check: old format does not support peg revisions
-              if (item.peg_revision()->kind != svn_opt_revision_head)
+              if (item.peg_revision()->kind != svn_opt_revision_head
+                  && *item.revision() != *item.peg_revision())
                 {
                   JavaHL::SubversionException(env)
                     .raise(_("Clients older than Subversion 1.5"
@@ -305,11 +337,14 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
       // Validate the result. Even though we generated the string
       // ourselves, we did not validate the input paths and URLs.
       const std::string description(buffer.str());
-      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
-                           NULL,
-                           Java::String::Contents(parent_dir).c_str(),
-                           description.c_str(),
-                           false, iterpool.getPool()));
+      {
+        const Java::String::Contents parent_dir_contents(parent_dir);
+        SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+                             NULL,
+                             parent_dir_contents.c_str(),
+                             description.c_str(),
+                             false, iterpool.getPool()));
+      }
       return Java::ByteArray(env, description).get();
     }
   SVN_JAVAHL_JNI_CATCH;
