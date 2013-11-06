@@ -917,7 +917,7 @@ VALUES (?1, ?2, 0,
             AND op_depth = 0))
 
 -- STMT_INSTALL_WORKING_NODE_FOR_DELETE
-INSERT OR REPLACE INTO nodes (
+INSERT INTO nodes (
     wc_id, local_relpath, op_depth,
     parent_relpath, presence, kind)
 VALUES(?1, ?2, ?3, ?4, MAP_BASE_DELETED, ?5)
