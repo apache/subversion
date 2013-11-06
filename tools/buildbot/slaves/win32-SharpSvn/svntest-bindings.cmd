@@ -22,7 +22,6 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
-ECHO ON
 
 IF "%SVN_BRANCH%" LEQ "1.6.x" (
   ECHO --- Building 1.6.x or older: Skipping bindings ---
@@ -34,7 +33,7 @@ SET result=0
 
 python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
 IF ERRORLEVEL 1 (
-  echo [python reported error !ERRORLEVEL!]
+  echo [Test runner reported error !ERRORLEVEL!]
   SET result=1
 )
 
@@ -43,7 +42,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
     python win-tests.py -r -f fsfs --swig=python "%TESTDIR%\tests"
 
     IF ERRORLEVEL 1 (
-        echo [Python tests exited with error !ERRORLEVEL!]
+        echo [Test runner reported error !ERRORLEVEL!]
         SET result=1
     )
 
@@ -61,17 +60,17 @@ if "%SVN_BRANCH%" GTR "1.9." (
 
     python subversion\bindings\swig\python\tests\run_all.py
     IF ERRORLEVEL 1 (
-        echo [Python tests exited with error !ERRORLEVEL!]
+        echo [Test runner reported error !ERRORLEVEL!]
         SET result=1
     )
 )
 
 if "%SVN_BRANCH%" GTR "1.9." (
 
-    python win-tests.py -d -f fsfs --swig=perl "%TESTDIR%\tests"
+REM python win-tests.py -d -f fsfs --swig=perl "%TESTDIR%\tests"
 
     IF ERRORLEVEL 1 (
-        echo [Perl tests exited with error !ERRORLEVEL!]
+        echo [Test runner reported error !ERRORLEVEL!]
         SET result=1
     )
 
@@ -94,7 +93,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
     pushd subversion\bindings\swig\perl\native
     perl -MExtUtils::Command::MM -e "test_harness()" t\*.t
     IF ERRORLEVEL 1 (
-        echo [Perl reported error !ERRORLEVEL!]
+        echo [Test runner reported error !ERRORLEVEL!]
         SET result=1
     )
     popd
@@ -104,9 +103,10 @@ if "%SVN_BRANCH%" GTR "1.9." (
   python win-tests.py -d -f fsfs --swig=ruby "%TESTDIR%\tests"
 
   IF ERRORLEVEL 1 (
-    echo [Ruby tests reported error !ERRORLEVEL!] (not fatal)
+        echo [Test runner reported error !ERRORLEVEL!]
     REM SET result=1
   )
+  taskkill /im svnserve.exe /f
 )
 
 exit /b %result%
