@@ -346,32 +346,33 @@ const apr_getopt_option_t svn_cl__options[] =
   /* diff options */
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"invoke-diff-cmd", opt_invoke_diff_cmd, 1, 
-                   N_("use ARG as format string for external diff command     \n"
+                   N_("use ARG as format string for external diff command\n"
                       "                             "
-                      "invocation. \n                                         \n" 
+                      "invocation.\n" 
                       "                             "
-                      "Substitutions: %svn_new new file                       \n"
+                      "The following reserved keywords are replaced:\n"
                       "                             "
-                      "               %svn_old old file                       \n"
+                      "    %svn_new -- new file\n"
                       "                             "
-                      "               %svn_label_new  label of the new file   \n"
+                      "    %svn_old -- old file\n"
                       "                             "
-                      "               %svn_label_old  label of the old file   \n"
+                      "    %svn_label_new -- label of the new file\n"
                       "                             "
-                      "Examples:                                              \n"
+                      "    %svn_label_old -- label of the old file\n"
                       "                             "
-                      "--invoke-diff-cmd=\'diff -y %svn_new %svn_old\'        \n"          
+                      "Examples:\n"
                       "                             "
-                      "--invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\     \n"
+                      "--invoke-diff-cmd=\'diff -y %svn_new %svn_old\'\n"          
                       "                             "
-                      "      %svn_new %svn_old --L1 %svn_label_new \\         \n"
+                      "--invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\\n"
                       "                             "
-                      "     --L2 \"Custom Label\" \'                          \n"
+                      "      %svn_new %svn_old --L1 %svn_label_new \\\n"
                       "                             "
-                      "Substitution variables may be embedded in strings:     \n"
+                      "     --L2 \"Custom Label\" \'\n"
                       "                             "
-                      "+%svn_new, %svn_new- and file=%svn_label_new+          \n"
-     )},
+                      "Reserved keywords may be embedded in strings:\n"
+                      "                             "
+                      "+%svn_new  %svn_new- and file=%svn_label_new+")},
   {"internal-diff", opt_internal_diff, 0,
                        N_("override diff-cmd specified in config file")},
   {"no-diff-added", opt_no_diff_added, 0,

@@ -536,6 +536,9 @@ struct diff_cmd_baton {
   /* If non-null, the external diff command to invoke. */
   const char *diff_cmd;
 
+  /* external custom diff command */
+  const char *invoke_diff_cmd;
+
   /* This is allocated in this struct's pool or a higher-up pool. */
   union {
     /* If 'diff_cmd' is null, then this is the parsed options to
@@ -612,9 +615,6 @@ struct diff_cmd_baton {
 
   /* Whether the local diff target of a repos->wc diff is a copy. */
   svn_boolean_t repos_wc_diff_target_is_copy;
-
-  /* external custom diff command */
-  const char *invoke_diff_cmd;
 
 };
 
@@ -792,7 +792,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
 
   if (diff_cmd_baton->diff_cmd && diff_cmd_baton->invoke_diff_cmd)
       return svn_error_create(SVN_ERR_CLIENT_DIFF_CMD, NULL,
-                              _("diff-cmd and invoke-diff-cmd are"
+                              _("diff-cmd and invoke-diff-cmd are "
                                 "mutually exclusive."));
 
   if (diff_cmd_baton->diff_cmd || diff_cmd_baton->invoke_diff_cmd)

@@ -111,6 +111,20 @@ Valid options:
                                -w, --ignore-all-space: Ignore all white space
                                --ignore-eol-style: Ignore changes in EOL style
                                -p, --show-c-function: Show C function name
+  --invoke-diff-cmd ARG    : use ARG as format string for external diff command
+                             invocation.
+                             The following reserved keywords are replaced:
+                                 %svn_new -- new file
+                                 %svn_old -- old file
+                                 %svn_label_new -- label of the new file
+                                 %svn_label_old -- label of the old file
+                             Examples:
+                             --invoke-diff-cmd='diff -y %svn_new %svn_old'
+                             --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \
+                                   %svn_new %svn_old --L1 %svn_label_new \
+                                  --L2 "Custom Label" '
+                             Reserved keywords may be embedded in strings:
+                             +%svn_new  %svn_new- and file=%svn_label_new+
   --search ARG             : use ARG as search pattern (glob syntax)
   --search-and ARG         : combine ARG with the previous search pattern
 
