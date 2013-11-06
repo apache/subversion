@@ -1580,7 +1580,6 @@ def check_for_omitted_prefix_in_path_component(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-@XFail()
 def diff_renamed_file(sbox):
   "diff a file that has been renamed"
 
@@ -2574,6 +2573,52 @@ def basic_diff_summarize(sbox):
   wc_dir = sbox.wc_dir
   p = sbox.ospath
 
+  # Diff summarize of a newly added file
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c1')
+
+  # Reverse summarize diff of a newly added file
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('iota'), '-c-1')
+
+  # Diff summarize of a newly added directory
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/D':          Item(status='A '),
+    'A/D/gamma':    Item(status='A '),
+    'A/D/H':        Item(status='A '),
+    'A/D/H/chi':    Item(status='A '),
+    'A/D/H/psi':    Item(status='A '),
+    'A/D/H/omega':  Item(status='A '),
+    'A/D/G':        Item(status='A '),
+    'A/D/G/pi':     Item(status='A '),
+    'A/D/G/rho':    Item(status='A '),
+    'A/D/G/tau':    Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('A/D'), '-c1')
+
+  # Reverse summarize diff of a newly added directory
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/D':          Item(status='D '),
+    'A/D/gamma':    Item(status='D '),
+    'A/D/H':        Item(status='D '),
+    'A/D/H/chi':    Item(status='D '),
+    'A/D/H/psi':    Item(status='D '),
+    'A/D/H/omega':  Item(status='D '),
+    'A/D/G':        Item(status='D '),
+    'A/D/G/pi':     Item(status='D '),
+    'A/D/G/rho':    Item(status='D '),
+    'A/D/G/tau':    Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('A/D'), '-c-1')
+
   # Add props to some items that will be deleted, and commit.
   sbox.simple_propset('prop', 'val',
                       'A/C',
@@ -2677,29 +2722,19 @@ def basic_diff_summarize(sbox):
   svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
                                                 wc_dir, '-c-3')
 
-  # Get the differences between a newly added file 
+  # Get the differences between a deep newly added dir Issue(4421)
   expected_diff = svntest.wc.State(wc_dir, {
-    'newfile': Item(status='A '),
+    'Q/R'         : Item(status='A '),
+    'Q/R/newfile' : Item(status='A '),
     })
   expected_reverse_diff = svntest.wc.State(wc_dir, {
-    'newfile': Item(status='D '),
+    'Q/R'         : Item(status='D '),
+    'Q/R/newfile' : Item(status='D '),
     })
   svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                p('newfile'), '-c3')
+                                                p('Q/R'), '-c3')
   svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
-                                                p('newfile'), '-c-3')
-
-  # Get the differences between a newly added dir 
-  expected_diff = svntest.wc.State(wc_dir, {
-    'P': Item(status='A '),
-    })
-  expected_reverse_diff = svntest.wc.State(wc_dir, {
-    'P': Item(status='D '),
-    })
-  svntest.actions.run_and_verify_diff_summarize(expected_diff,
-                                                p('P'), '-c3')
-  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
-                                                p('P'), '-c-3')
+                                                p('Q/R'), '-c-3')
 
 #----------------------------------------------------------------------
 def diff_weird_author(sbox):
@@ -3803,6 +3838,35 @@ def no_spurious_conflict(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def diff_deleted_url(sbox):
+  "diff -cN of URL deleted in rN"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # remove A/D/H in r2
+  sbox.simple_rm("A/D/H")
+  sbox.simple_commit()
+
+  # A diff of r2 with target A/D/H should show the removed children
+  expected_output = make_diff_header("chi", "revision 1", "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'chi'.\n",
+                    ] + make_diff_header("omega", "revision 1",
+                                         "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'omega'.\n",
+                    ] + make_diff_header("psi", "revision 1",
+                                         "revision 2") + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'psi'.\n",
+                    ]
+
+  # Files in diff may be in any order.
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-c2',
+                                     sbox.repo_url + '/A/D/H')
+
 ########################################################################
 #Run the tests
 
@@ -3869,6 +3933,7 @@ test_list = [ None,
               diff_git_with_props_on_dir,
               diff_abs_localpath_from_wc_folder,
               no_spurious_conflict,
+              diff_deleted_url,
               diff_git_format_wc_wc_dir_mv,
               ]
 
