@@ -104,6 +104,15 @@ Candidate changes:
    Votes:
      +1: stefan2, brane
 
+ * r1539309 
+   Fix test failure in checkout_tests.py after backporting of r1518184
+   to 1.7.x in r1538135.
+   Justification:
+     The extended regression test relied on test suite behavior in 1.8+,
+     by not passing a disk tree. The easy fix is to just pass a disk tree.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
