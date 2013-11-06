@@ -19,38 +19,36 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file Revision.h
- * @brief Interface of the class Revision
  */
 
-#ifndef REVISION_H
-#define REVISION_H
+#ifndef SVN_JAVAHL_SUBVERSION_EXCEPTION_HPP
+#define SVN_JAVAHL_SUBVERSION_EXCEPTION_HPP
 
-#include <jni.h>
-#include "svn_opt.h"
+#include "jniwrapper/jni_exception.hpp"
 
-class Revision
+namespace JavaHL {
+
+/**
+ * Generator class for exceptions of type
+ * @c org.apache.subversion.javahl.SubversionException.
+ *
+ * The associated JNI class reference is stored for the lifetime of
+ * the JVM in the global class cache.
+ *
+ * @since New in 1.9.
+ */
+class SubversionException : public ::Java::Exception
 {
- private:
-  svn_opt_revision_t m_revision;
+public:
+  explicit SubversionException(::Java::Env env)
+    : Java::Exception(env, ::Java::ClassCache::get_subversion_exception())
+    {}
 
- public:
-  static const svn_opt_revision_kind START;
-  static const svn_opt_revision_kind HEAD;
-
-  Revision(jobject jthis, bool headIfUnspecified = false,
-           bool oneIfUnspecified = false);
-  Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
-  ~Revision();
-
-  const svn_opt_revision_t *revision() const;
-
-  /**
-   * Make a Revision Java object.
-   */
-  static jobject makeJRevision(svn_revnum_t rev);
-  static jobject makeJRevision(const svn_opt_revision_t& rev);
+private:
+  friend class ::Java::ClassCache;
+  static const char* const m_class_name;
 };
 
-#endif // REVISION_H
+} // namespace JavaHL
+
+#endif // SVN_JAVAHL_SUBVERSION_EXCEPTION_HPP

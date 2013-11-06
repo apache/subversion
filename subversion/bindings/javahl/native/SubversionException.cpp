@@ -19,38 +19,14 @@
  *    under the License.
  * ====================================================================
  * @endcopyright
- *
- * @file Revision.h
- * @brief Interface of the class Revision
  */
 
-#ifndef REVISION_H
-#define REVISION_H
+#include "SubversionException.hpp"
+#include "JNIUtil.h"
 
-#include <jni.h>
-#include "svn_opt.h"
+namespace JavaHL {
 
-class Revision
-{
- private:
-  svn_opt_revision_t m_revision;
+const char* const SubversionException::m_class_name =
+  JAVA_PACKAGE"/SubversionException";
 
- public:
-  static const svn_opt_revision_kind START;
-  static const svn_opt_revision_kind HEAD;
-
-  Revision(jobject jthis, bool headIfUnspecified = false,
-           bool oneIfUnspecified = false);
-  Revision(const svn_opt_revision_kind kind = svn_opt_revision_unspecified);
-  ~Revision();
-
-  const svn_opt_revision_t *revision() const;
-
-  /**
-   * Make a Revision Java object.
-   */
-  static jobject makeJRevision(svn_revnum_t rev);
-  static jobject makeJRevision(const svn_opt_revision_t& rev);
-};
-
-#endif // REVISION_H
+} // namespace JavaHL
