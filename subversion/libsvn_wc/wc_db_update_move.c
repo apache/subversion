@@ -2132,6 +2132,8 @@ bump_moved_layer(svn_boolean_t *recurse,
   svn_boolean_t can_bump;
   const char *src_root_relpath = src_relpath;
 
+  *recurse = FALSE;
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_HAS_LAYER_BETWEEN));
 
