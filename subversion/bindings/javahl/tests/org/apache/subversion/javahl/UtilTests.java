@@ -197,7 +197,7 @@ public class UtilTests extends SVNTests
     private static List<ExternalItem> externals = null;
     static {
         try {
-            externals = new ArrayList<ExternalItem>(20);
+            externals = new ArrayList<ExternalItem>(25);
             externals.add(new ExternalItem("a", "http://server/repo/path",
                                            null, null));
             externals.add(new ExternalItem("b", "//server/repo/path",
@@ -246,17 +246,54 @@ public class UtilTests extends SVNTests
             externals.add(new ExternalItem("t", "^/../oper/path",
                                            Revision.getInstance(69),
                                            Revision.getInstance(71)));
+
+            externals.add(new ExternalItem("u", "http://server/repo/path",
+                                           Revision.getInstance(42),
+                                           Revision.getInstance(42)));
+            externals.add(new ExternalItem("v", "//server/repo/path",
+                                           Revision.getInstance(42),
+                                           Revision.getInstance(42)));
+            externals.add(new ExternalItem("w", "/repo/path",
+                                           Revision.getInstance(42),
+                                           Revision.getInstance(42)));
+            externals.add(new ExternalItem("x", "^/path",
+                                           Revision.getInstance(42),
+                                           Revision.getInstance(42)));
+            externals.add(new ExternalItem("y", "^/../oper/path",
+                                           Revision.getInstance(42),
+                                           Revision.getInstance(42)));
         } catch (SubversionException ex) {
             externals = null;
             throw new RuntimeException(ex);
         }
     }
 
-    public void testUnparseExternals() throws Throwable
-    {
-        byte[] props = SVNUtil.unparseExternals(externals, "dirname");
-        assertEquals(424, props.length);
-    }
+    private static final byte[] externals_propval =
+        ("http://server/repo/path a\n" +
+         "//server/repo/path b\n" +
+         "/repo/path c\n" +
+         "^/path d\n" +
+         "^/../oper/path e\n" +
+         "-r42 http://server/repo/path f\n" +
+         "-r42 //server/repo/path g\n" +
+         "-r42 /repo/path h\n" +
+         "-r42 ^/path j\n" +
+         "-r42 ^/../oper/path j\n" +
+         "http://server/repo/path@42 k\n" +
+         "//server/repo/path@42 l\n" +
+         "/repo/path@42 m\n" +
+         "^/path@42 n\n" +
+         "^/../oper/path@42 o\n" +
+         "-r69 http://server/repo/path@71 p\n" +
+         "-r69 //server/repo/path@71 q\n" +
+         "-r69 /repo/path@71 r\n" +
+         "-r69 ^/path@71 s\n" +
+         "-r69 ^/../oper/path@71 t\n" +
+         "http://server/repo/path@42 u\n" +
+         "//server/repo/path@42 v\n" +
+         "/repo/path@42 w\n" +
+         "^/path@42 x\n" +
+         "^/../oper/path@42 y\n").getBytes();
 
     private static List<ExternalItem> old_externals = null;
     static {
@@ -265,11 +302,43 @@ public class UtilTests extends SVNTests
             old_externals.add(new ExternalItem("X", "http://server/repo/path",
                                                null, null));
             old_externals.add(new ExternalItem("Y", "http://server/repo/path",
-                                               Revision.getInstance(42), null));
+                                               null, Revision.getInstance(42)));
         } catch (SubversionException ex) {
             old_externals = null;
             throw new RuntimeException(ex);
         }
+    }
+
+    private static final byte[] old_externals_propval =
+        ("X http://server/repo/path\n" +
+         "Y -r42 http://server/repo/path\n").getBytes();
+
+    private static void compare_item_lists(List<ExternalItem> a,
+                                           List<ExternalItem> b,
+                                           String list_name)
+    {
+        final int length = a.size();
+        assertEquals(length, b.size());
+        for (int i = 0; i < length; ++i)
+            assertTrue("Items in " + list_name + " at index " + i + " differ",
+                       a.get(i).equals(b.get(i)));
+    }
+
+    public void testParseExternals() throws Throwable
+    {
+        List<ExternalItem> items;
+
+        items = SVNUtil.parseExternals(externals_propval, "dirname", false);
+        compare_item_lists(items, externals, "externals");
+
+        items = SVNUtil.parseExternals(old_externals_propval, "dirname", false);
+        compare_item_lists(items, old_externals, "old_externals");
+    }
+
+    public void testUnparseExternals() throws Throwable
+    {
+        byte[] props = SVNUtil.unparseExternals(externals, "dirname");
+        assertTrue(Arrays.equals(externals_propval, props));
     }
 
     public void testUnparseExternalsOldstyle() throws Throwable
@@ -278,7 +347,7 @@ public class UtilTests extends SVNTests
 
         props = SVNUtil.unparseExternalsForAncientUnsupportedClients(
                      old_externals, "dirname");
-        assertEquals(57, props.length);
+        assertTrue(Arrays.equals(old_externals_propval, props));
 
         // The fancy new features are not supported in the old format
         boolean caught_exception = false;

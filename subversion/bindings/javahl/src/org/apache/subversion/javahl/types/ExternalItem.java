@@ -37,12 +37,19 @@ public class ExternalItem implements java.io.Serializable
 
     /**
      * Create a new external item declaration.
+     * <p>
+     * <b>Note:</b> If both <code>revision</code> and
+     * <code>pegRevision</code> are <code>null</code>, they will be
+     * interpreted as {@link Revision#HEAD}. If only one of them is
+     * <code>null</code>, it will get the same value as the other
+     * revision.
+     *
      * @param targetDir See {@link #getTargetDir}
      * @param url See {@link #getUrl}
-     * @param revision See {@link #getRevision};
-     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
-     * @param pegRevision See {@link #getPegRevision};
-     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
+-     * @param revision See {@link #getRevision};
+-     *     <code>null</code> will be interpreted as <code>pegRevision</code>
+-     * @param pegRevision See {@link #getPegRevision};
+-     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
      */
     public ExternalItem(String targetDir, String url,
                         Revision revision, Revision pegRevision)
@@ -60,8 +67,8 @@ public class ExternalItem implements java.io.Serializable
     {
         this.targetDir = targetDir;
         this.url = url;
-        this.revision = (revision != null ? revision : Revision.HEAD);
         this.pegRevision = (pegRevision != null ? pegRevision : Revision.HEAD);
+        this.revision = (revision != null ? revision : this.pegRevision);
     }
 
     /**
@@ -102,6 +109,22 @@ public class ExternalItem implements java.io.Serializable
     public Revision getPegRevision()
     {
         return pegRevision;
+    }
+
+    /**
+     * Compare to another external item.
+     */
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (!(obj instanceof ExternalItem))
+            return false;
+
+        final ExternalItem that = (ExternalItem)obj;
+        return (this.targetDir.equals(that.targetDir)
+                && this.url.equals(that.url)
+                && this.revision.equals(that.revision)
+                && this.pegRevision.equals(that.pegRevision));
     }
 
     /* Exception class for failed revision kind validation. */
