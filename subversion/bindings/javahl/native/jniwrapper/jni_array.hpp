@@ -30,6 +30,7 @@
 #include "svn_string.h"
 
 #include "jni_env.hpp"
+#include "../Pool.h"
 
 namespace Java {
 
@@ -164,6 +165,7 @@ public:
 
     /**
      * Returns the address of the array contents.
+     * @note The data will @b not be NUL-terminated!
      * @throw std::logic_error if the data reference is immutable.
      */
     char* data()
@@ -183,12 +185,13 @@ public:
       }
 
     /**
-     * Constructs @a str that refers to the array contents.
+     * Copies the array contents to a NUL-terminated string allocated
+     * from @a result_pool.
      */
-    void get_string(svn_string_t* str) const
+    svn_string_t* get_string(const ::SVN::Pool& result_pool) const
       {
-        str->data = data();
-        str->len = m_array.m_length;
+        return svn_string_ncreate(data(), m_array.m_length,
+                                  result_pool.getPool());
       }
 
   private:
