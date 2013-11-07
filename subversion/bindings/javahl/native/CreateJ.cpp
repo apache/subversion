@@ -784,6 +784,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
                                "JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/types/RevisionRange;"
+                               "Ljava/lang/String;"
                                "Ljava/lang/String;Ljava/lang/String;"
                                "Ljava/util/Map;JJJJJJI)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
@@ -841,6 +842,10 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
         POP_AND_RETURN_NULL;
     }
 
+  jstring jUrl = JNIUtil::makeJString(wcNotify->url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jstring jpathPrefix = JNIUtil::makeJString(wcNotify->path_prefix);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -872,7 +877,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                  jKind, jMimeType, jLock, jErr, jErrStack,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange, jpathPrefix, jpropName,
+                                 jMergeRange, jUrl, jpathPrefix, jpropName,
                                  jrevProps, joldRevision,
                                  jhunkOriginalStart, jhunkOriginalLength,
                                  jhunkModifiedStart, jhunkModifiedLength,

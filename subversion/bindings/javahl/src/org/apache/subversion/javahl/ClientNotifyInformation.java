@@ -46,6 +46,14 @@ public class ClientNotifyInformation extends EventObject
     private static final long serialVersionUID = 2L;
 
     /**
+     * Path, either absolute or relative to the current working
+     * directory (i.e., not relative to an anchor). <code>path</code>
+     * is <code>null</vode> when the real target is an URL that is
+     * available in {@link #url}.
+     */
+    private String path;
+
+    /**
      * The {@link Action} which triggered this event.
      */
     private Action action;
@@ -107,6 +115,12 @@ public class ClientNotifyInformation extends EventObject
     private RevisionRange mergeRange;
 
     /**
+     * Similar to {@link #path}, but when not <code>null</code>, the
+     * notification is about a UR>.
+     */
+    private String url;
+
+    /**
      * A common absolute path prefix that can be subtracted from .path.
      */
     private String pathPrefix;
@@ -147,31 +161,35 @@ public class ClientNotifyInformation extends EventObject
      * @param changelistName The name of the changelist.
      * @param mergeRange The range of the merge just beginning to occur.
      * @param pathPrefix A common path prefix.
+     * @since 1.9
      */
     public ClientNotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
+                             List<ClientException.ErrorMessage> errMsgStack,
                              Status contentState, Status propState,
                              LockStatus lockState, long revision,
                              String changelistName, RevisionRange mergeRange,
-                             String pathPrefix, String propName,
+                             String url, String pathPrefix, String propName,
                              Map<String, String> revProps, long oldRevision,
                              long hunkOriginalStart, long hunkOriginalLength,
                              long hunkModifiedStart, long hunkModifiedLength,
                              long hunkMatchedLine, int hunkFuzz)
     {
-        super(path == null ? "" : path);
+        super(path != null ? path : (url != null ? url : ""));
+        this.path = path;
         this.action = action;
         this.kind = kind;
         this.mimeType = mimeType;
         this.lock = lock;
         this.errMsg = errMsg;
-        this.errMsgStack = null;
+        this.errMsgStack = errMsgStack;
         this.contentState = contentState;
         this.propState = propState;
         this.lockState = lockState;
         this.revision = revision;
         this.changelistName = changelistName;
         this.mergeRange = mergeRange;
+        this.url = url;
         this.pathPrefix = pathPrefix;
         this.propName = propName;
         this.revProps = revProps;
@@ -185,14 +203,11 @@ public class ClientNotifyInformation extends EventObject
     }
 
     /**
-     * This constructor will be called only by the native code.
-     *
-     * In addition to all the other parameters, sets the detailed
-     * message stack.
+     * @deprecated Constructor compatible with teh 1.8 API; uses
+     * <code>null</code> URL and errMsgStack values.
      */
-    protected ClientNotifyInformation(String path, Action action, NodeKind kind,
+    public ClientNotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
-                             List<ClientException.ErrorMessage> errMsgStack,
                              Status contentState, Status propState,
                              LockStatus lockState, long revision,
                              String changelistName, RevisionRange mergeRange,
@@ -202,22 +217,31 @@ public class ClientNotifyInformation extends EventObject
                              long hunkModifiedStart, long hunkModifiedLength,
                              long hunkMatchedLine, int hunkFuzz)
     {
-        this(path, action, kind, mimeType, lock, errMsg,
+        this(path, action, kind, mimeType, lock, errMsg, null,
              contentState, propState, lockState, revision,
-             changelistName, mergeRange, pathPrefix, propName,
-             revProps, oldRevision,
+             changelistName, mergeRange, null, pathPrefix,
+             propName, revProps, oldRevision,
              hunkOriginalStart, hunkOriginalLength,
              hunkModifiedStart, hunkModifiedLength,
              hunkMatchedLine, hunkFuzz);
-        this.errMsgStack = errMsgStack;
     }
 
     /**
      * @return The path of the item, which is the source of the event.
+     *         This may actually be a URL.
      */
     public String getPath()
     {
         return (String) super.source;
+    }
+
+    /**
+     * @return {@link #path}, which may be <code>null</code>.
+     * @since 1.9
+     */
+    public String getNotifiedPath()
+    {
+        return this.path;
     }
 
     /**
@@ -314,6 +338,15 @@ public class ClientNotifyInformation extends EventObject
     public RevisionRange getMergeRange()
     {
         return mergeRange;
+    }
+
+    /**
+     * @return {@link #url}, which may be <code>null</code>
+     * @since 1.9
+     */
+    public String getUrl()
+    {
+        return this.url;
     }
 
     /**
