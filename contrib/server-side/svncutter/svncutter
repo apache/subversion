@@ -126,10 +126,12 @@ in the LOGFILE, which should be in the format of an svn log output.
 Replacements may be restricted to a specified range.
 """,
     "skeleton": """\
-skeleton: usage: svncutter [-r SELECTION] skeleton
+skeleton: usage: svncutter [-r SELECTION] skeleton PATTERN...
 
-Replace content with unique generated cookies.  Useful
-when you need to examine a particularly complex node structure.
+Replace content with unique generated cookies on all node paths
+matching the specified regular expressions; if no expressions are
+given, match all paths.  Useful when you need to examine a
+particularly complex node structure.
 """,
     "expunge": """\
 expunge: usage: svncutter [-r SELECTION ] expunge PATTERN...
@@ -725,7 +727,7 @@ def setlog(source, logpatch, selection):
         return (propkeys, propdict)
     source.apply_property_hook(selection, loghook)
 
-def skeletonize(source, selection):
+def skeletonize(source, selection, patterns):
     "Skeletonize a portion of the dump file defined by a revision selection."
     def __skeletonize(header, properties, content):
         def get_header(hd, name):
@@ -733,6 +735,18 @@ def skeletonize(source, selection):
             return m and m.group(1)
         def set_length(hd, name, val):
             return re.sub("(?<=%s: )[0-9]+" % name, str(val), hd)
+
+        # first check against the pattern
+        ok = True
+        for pattern in patterns:
+            if header.startswith("Node-path: ") and re.search(pattern, header[11:]):
+                #sys.stderr.write("skeletonize skipping: " + header[11:header.index("\n")] +"\n")
+                ok = False
+                break
+        if not ok:
+            return header + properties + content
+        del ok
+
         if content:
             tell = "Revision is %s, file path is %s.\n\n\n" % \
                       (source.revision, get_header(header, "Node-path"),)
@@ -756,7 +770,8 @@ def expunge(source, selection, patterns):
     "Strip out ops defined by a revision selection and a path regexp."
     def __expunge(header, properties, content):
         for pattern in patterns:
-            if re.search("Node-path: " + pattern, header):
+            if header.startswith("Node-path: ") and re.search(pattern, header[11:]):
+                #sys.stderr.write("expunge skipping: " + header[11:header.index("\n")] +"\n")
                 return ""
         else:
             return header + properties + content
@@ -840,9 +855,9 @@ if __name__ == '__main__':
                 sys.stderr.write("svncutter: setlog requires a log entries file.\n")
             setlog(DumpfileSource(sys.stdin, baton), logpatch, selection)
         elif arguments[0] == "skeleton":
-            skeletonize(DumpfileSource(sys.stdin, baton), selection)
+            skeletonize(DumpfileSource(sys.stdin, baton), selection, arguments[1:])
         elif arguments[0] == "expunge":
-            expunge(DumpfileSource(sys.stdin, baton), selection, arguments)
+            expunge(DumpfileSource(sys.stdin, baton), selection, arguments[1:])
         elif arguments[0] == "renumber":
             renumber(DumpfileSource(sys.stdin, baton))
         elif arguments[0] == "help":
