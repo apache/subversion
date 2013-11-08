@@ -59,7 +59,7 @@ public:
       m_length(jsize(::std::strlen(text))),
       m_array(m_env.NewByteArray(m_length))
     {
-      ByteArray::Contents contents(*this);
+      ByteArray::MutableContents contents(*this);
       ::memcpy(contents.data(), text, m_length);
     }
 
@@ -72,7 +72,7 @@ public:
       m_length(length),
       m_array(m_env.NewByteArray(m_length))
     {
-      ByteArray::Contents contents(*this);
+      ByteArray::MutableContents contents(*this);
       ::memcpy(contents.data(), data, m_length);
     }
 
@@ -84,7 +84,7 @@ public:
       m_length(jsize(text.size())),
       m_array(m_env.NewByteArray(m_length))
     {
-      ByteArray::Contents contents(*this);
+      ByteArray::MutableContents contents(*this);
       ::memcpy(contents.data(), text.c_str(), m_length);
     }
 
@@ -109,27 +109,11 @@ public:
    *
    * Objects of this class should be created within the scope where
    * the raw data stored in the array must be manipulated. They will
-   * create either a mutable or an immutable mirror of the array
-   * contents, depending on the constantness of the array wrapper. The
-   * data will be released (and changes copied into the JVM, depending
-   * on access mode) by the destructor.
+   * create an immutable mirror of the array contents.
    */
   class Contents
   {
   public:
-    /**
-     * Constructs a mutable array contents accessor.
-     */
-    explicit Contents(ByteArray& array)
-      : m_array(array),
-        m_data(array.m_env.GetByteArrayElements(array.m_array, NULL)),
-        m_mode(0)
-      {
-        //fprintf(stderr,
-        //        "%s:%d: non-const byte array data, size=%d\n",
-        //        __FILE__, __LINE__, int(m_array.m_length));
-      }
-
     /**
      * Constructs an immutable array contents accessor.
      *
@@ -138,42 +122,28 @@ public:
      */
     explicit Contents(const ByteArray& array)
       : m_array(array),
-        m_data(array.m_env.GetByteArrayElements(array.m_array, NULL)),
-        m_mode(JNI_ABORT)
-      {
-        //fprintf(stderr,
-        //        "%s:%d: const byte array data, size=%d\n",
-        //        __FILE__, __LINE__, int(m_array.m_length));
-      }
+        m_data(array.m_env.GetByteArrayElements(array.m_array, NULL))
+      {}
 
     /**
-     * Releases the array contents, possibly committing changes to the JVM.
+     * Releases the array contents.
      */
     ~Contents()
       {
-        const Env& env = m_array.m_env;
-        env.ReleaseByteArrayElements(m_array.m_array, m_data, m_mode);
+        if (m_data)
+          {
+            const Env& env = m_array.m_env;
+            env.ReleaseByteArrayElements(m_array.m_array, m_data, JNI_ABORT);
+          }
       }
 
     /**
-     * Returns the address of the array contents.
+     * Returns the address of the immutable array contents.
+     * @note The data will @b not be NUL-terminated!
      */
     const char* data() const
       {
         return reinterpret_cast<const char*>(m_data);
-      }
-
-    /**
-     * Returns the address of the array contents.
-     * @note The data will @b not be NUL-terminated!
-     * @throw std::logic_error if the data reference is immutable.
-     */
-    char* data()
-      {
-        if (!m_mode)
-          return reinterpret_cast<char*>(const_cast<jbyte*>(m_data));
-        throw std::logic_error(
-            _("Can't make a writable pointer to immutable array contents."));
       }
 
     /**
@@ -194,10 +164,66 @@ public:
                                   result_pool.getPool());
       }
 
-  private:
+  protected:
     const ByteArray& m_array;
-    jbyte* const m_data;
-    const jint m_mode;
+    jbyte* m_data;
+  };
+
+  /**
+   * Accessor class for the contents of the byte array.
+   *
+   * Behaves like the #Contents class, but the mirrored contents are
+   * considered mutable and any changes made to them will be committed
+   * to the JVM.
+   */
+  class MutableContents : protected Contents
+  {
+  public:
+    /**
+     * Constructs a mutable array contents accessor.
+     */
+    explicit MutableContents(ByteArray& array)
+      : Contents(array)
+      {}
+
+    /**
+     * Releases the array contents, committing changes to the JVM.
+     */
+    ~MutableContents()
+      {
+        if (m_data)
+          {
+            // Prevent double-release by the Contents desctuctor
+            jbyte* const data = m_data;
+            m_data = NULL;
+            m_array.m_env.ReleaseByteArrayElements(m_array.m_array, data, 0);
+          }
+      }
+    /**
+     * Returns the mutable address of the array contents.
+     * @note The data will @b not be NUL-terminated!
+     */
+    char* data()
+      {
+        return const_cast<char*>(Contents::data());
+      }
+
+    /**
+     * Returns the size of the array contents.
+     */
+    jsize length() const
+      {
+        return Contents::length();
+      }
+
+    /**
+     * Copies the array contents to a NUL-terminated string allocated
+     * from @a result_pool.
+     */
+    svn_string_t* get_string(const ::SVN::Pool& result_pool) const
+      {
+        return Contents::get_string(result_pool);
+      }
   };
 
 private:

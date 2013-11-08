@@ -143,6 +143,7 @@ Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
 #include "jniwrapper/jni_stack.hpp"
 #include "jniwrapper/jni_array.hpp"
 #include "jniwrapper/jni_list.hpp"
+#include "jniwrapper/jni_string.hpp"
 #include "ExternalItem.hpp"
 #include "SubversionException.hpp"
 
@@ -218,18 +219,16 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
 
       apr_array_header_t* externals;
       {
-        const Java::String::Contents parent_dir_contents(parent_dir);
-        const Java::ByteArray::Contents descr_contents(description);
-
         // There is no guarantee that the description contents are
         // null-terminated. Copy them to an svn_string_t to make sure
         // that they are.
-        svn_string_t* const safe_contents = descr_contents.get_string(pool);
+        svn_string_t* const description_contents =
+          Java::ByteArray::Contents(description).get_string(pool);
 
         SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
                              &externals,
-                             parent_dir_contents.c_str(),
-                             safe_contents->data,
+                             Java::String::Contents(parent_dir).c_str(),
+                             description_contents->data,
                              svn_boolean_t(jcanonicalize_url),
                              pool.getPool()));
       }
@@ -337,14 +336,11 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
       // Validate the result. Even though we generated the string
       // ourselves, we did not validate the input paths and URLs.
       const std::string description(buffer.str());
-      {
-        const Java::String::Contents parent_dir_contents(parent_dir);
-        SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
-                             NULL,
-                             parent_dir_contents.c_str(),
-                             description.c_str(),
-                             false, iterpool.getPool()));
-      }
+      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+                           NULL,
+                           Java::String::Contents(parent_dir).c_str(),
+                           description.c_str(),
+                           false, iterpool.getPool()));
       return Java::ByteArray(env, description).get();
     }
   SVN_JAVAHL_JNI_CATCH;

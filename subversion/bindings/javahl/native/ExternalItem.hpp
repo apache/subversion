@@ -29,6 +29,7 @@
 #include "svn_opt.h"
 
 #include "jniwrapper/jni_object.hpp"
+#include "jniwrapper/jni_string.hpp"
 
 namespace JavaHL {
 
