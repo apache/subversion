@@ -95,10 +95,18 @@ UI components
 Changes to the existing code structure:
 =======================================
 
-The original --diff-cmd parsing and routing code has been refactored
-and the call to --diff-cmd is now handled by the
-__create_custom_diff_cmd() and svn_io_run_external_diff() routines.
-All the original functionality and user syntax has been retained.
+None.
+
+The existing --diff-cmd has been in use for years and is best left
+untouched, since many users will not require the extra services
+offered by the --invoke-diff-cmd feature, and any errors could cause
+many users a lot of problems.  
+
+Moreover, the nature of --invoke-diff-cmd and --diff-cmd are quite
+different; --diff-cmd is tailored for GNU diff and carefully checks the
+user's input of switches, whereas --invoke-diff-cmd is a
+free-style-anything-goes-including-shooting-your-foot creation.
+
 
 Tests
 =====
