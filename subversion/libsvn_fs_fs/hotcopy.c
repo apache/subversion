@@ -742,7 +742,7 @@ hotcopy_body(void *baton, apr_pool_t *pool)
        * rev dir can be removed. */
       SVN_ERR(remove_folder(svn_fs_fs__path_rev_shard(dst_fs, rev, iterpool),
                             cancel_func, cancel_baton, iterpool));
-      if (rev > 0)
+      if (rev > 0 && dst_ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
         SVN_ERR(remove_folder(svn_fs_fs__path_revprops_shard(dst_fs, rev,
                                                              iterpool),
                               cancel_func, cancel_baton, iterpool));
