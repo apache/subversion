@@ -60,6 +60,7 @@ public class RemoteFactory
                          String username, String password,
                          UserPasswordCallback prompt,
                          ProgressCallback progress,
+                         ConfigEvent configHandler,
                          TunnelAgent tunnelAgent)
     {
         setConfigDirectory(configDirectory);
@@ -67,6 +68,7 @@ public class RemoteFactory
         setPassword(password);
         setPrompt(prompt);
         setProgressCallback(progress);
+        setConfigEventHandler(configHandler);
         setTunnelAgent(tunnelAgent);
     }
 
@@ -127,6 +129,16 @@ public class RemoteFactory
     }
 
     /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded by the ISVNRemote objects created by
+     * this factory.
+     */
+    public void setConfigEventHandler(ConfigEvent configHandler)
+    {
+        this.configHandler = configHandler;
+    }
+
+    /**
      * Set callbacks for ra_svn tunnel handling.
      */
     public void setTunnelAgent(TunnelAgent tunnelAgent)
@@ -151,7 +163,8 @@ public class RemoteFactory
             throws ClientException, SubversionException
     {
         return open(1, url, null, configDirectory,
-                    username, password, prompt, progress, tunnelAgent);
+                    username, password, prompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     /**
@@ -178,7 +191,8 @@ public class RemoteFactory
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
         return open(retryAttempts, url, null, configDirectory,
-                    username, password, prompt, progress, tunnelAgent);
+                    username, password, prompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     /**
@@ -205,7 +219,8 @@ public class RemoteFactory
         if (reposUUID == null)
             throw new IllegalArgumentException("reposUUID may not be null");
         return open(1, url, reposUUID, configDirectory,
-                    username, password, prompt, progress, tunnelAgent);
+                    username, password, prompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     /**
@@ -239,7 +254,8 @@ public class RemoteFactory
             throw new IllegalArgumentException(
                 "retryAttempts must be positive");
         return open(retryAttempts, url, reposUUID, configDirectory,
-                    username, password, prompt, progress, tunnelAgent);
+                    username, password, prompt, progress,
+                    configHandler, tunnelAgent);
     }
 
     private String configDirectory;
@@ -247,6 +263,7 @@ public class RemoteFactory
     private String password;
     private UserPasswordCallback prompt;
     private ProgressCallback progress;
+    private ConfigEvent configHandler;
     private TunnelAgent tunnelAgent;
 
     /* Native factory implementation. */
@@ -256,6 +273,7 @@ public class RemoteFactory
                                           String username, String password,
                                           UserPasswordCallback prompt,
                                           ProgressCallback progress,
+                                          ConfigEvent configHandler,
                                           TunnelAgent tunnelAgent)
             throws ClientException, SubversionException;
 }

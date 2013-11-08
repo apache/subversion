@@ -1521,7 +1521,8 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
         context.getUsername(), context.getPassword(),
-        prompter, context.getSelf(), context.getTunnelCallback());
+        prompter, context.getSelf(),
+        context.getConfigEventHandler(), context.getTunnelCallback());
     if (JNIUtil::isJavaExceptionThrown())
       delete prompter;
 

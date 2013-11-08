@@ -49,13 +49,13 @@ class RemoteSession : public SVNBase
                         jstring jconfigDirectory,
                         jstring jusername, jstring jpassword,
                         jobject jprompter, jobject jprogress,
-                        jobject jtunnelcb);
+                        jobject jcfgcb, jobject jtunnelcb);
     static jobject open(jint jretryAttempts,
                         const char* url, const char* uuid,
                         const char* configDirectory,
                         const char* username, const char* password,
                         Prompter*& prompter, jobject jprogress,
-                        jobject jtunnelcb);
+                        jobject jcfgcb, jobject jtunnelcb);
     ~RemoteSession();
 
     void cancelOperation() const { m_context->cancelOperation(); }
@@ -119,7 +119,7 @@ class RemoteSession : public SVNBase
                   const char* url, const char* uuid,
                   const char* configDirectory,
                   const char* username, const char* password,
-                  Prompter*& prompter, jobject jtunnelcb);
+                  Prompter*& prompter, jobject jcfgcb, jobject jtunnelcb);
 
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;

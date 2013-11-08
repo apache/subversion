@@ -1082,6 +1082,19 @@ public interface ISVNClient
     String getConfigDirectory() throws ClientException;
 
     /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded by this client object.
+     */
+    void setConfigEventHandler(ConfigEvent configHandler)
+            throws ClientException;
+
+    /**
+     * Return a reference to the installed configuration event
+     * handler. The returned value may be <code>null</code>.
+     */
+    ConfigEvent getConfigEventHandler() throws ClientException;
+
+    /**
      * cancel the active operation
      * @throws ClientException
      */

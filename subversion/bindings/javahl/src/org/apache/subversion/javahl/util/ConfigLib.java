@@ -54,12 +54,4 @@ public class ConfigLib
     /** @see SVNUtil.isNativeCredentialsStoreEnabled */
     public native boolean isNativeCredentialsStoreEnabled()
         throws ClientException;
-
-    /** @see SVNUtil.setConfigEventHandler */
-    public native void setConfigEventHandler(ConfigEvent configHandler)
-        throws ClientException;
-
-    /** @see SVNUtil.setConfigEventHandler */
-    public native ConfigEvent getConfigEventHandler()
-        throws ClientException;
 }

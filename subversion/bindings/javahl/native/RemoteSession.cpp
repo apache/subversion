@@ -68,7 +68,8 @@ RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
                     jstring jusername, jstring jpassword,
-                    jobject jprompter, jobject jprogress, jobject jtunnelcb)
+                    jobject jprompter, jobject jprogress,
+                    jobject jcfgcb, jobject jtunnelcb)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -111,7 +112,7 @@ RemoteSession::open(jint jretryAttempts,
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
-      usernameStr, passwordStr, prompter, jprogress, jtunnelcb);
+      usernameStr, passwordStr, prompter, jprogress, jcfgcb, jtunnelcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
@@ -125,7 +126,8 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter*& prompter, jobject jprogress, jobject jtunnelcb)
+                    Prompter*& prompter, jobject jprogress,
+                    jobject jcfgcb, jobject jtunnelcb)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -139,7 +141,7 @@ RemoteSession::open(jint jretryAttempts,
 
   RemoteSession* session = new RemoteSession(
       jretryAttempts, url, uuid, configDirectory,
-      usernameStr, passwordStr, prompter, jtunnelcb);
+      usernameStr, passwordStr, prompter, jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
@@ -201,11 +203,12 @@ RemoteSession::RemoteSession(int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
                              const char*  username, const char*  password,
-                             Prompter*& prompter, jobject jtunnelcb)
+                             Prompter*& prompter,
+                             jobject jcfgcb, jobject jtunnelcb)
   : m_session(NULL), m_context(NULL)
 {
   m_context = new RemoteSessionContext(
-      pool, configDirectory, username, password, prompter, jtunnelcb);
+      pool, configDirectory, username, password, prompter, jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
