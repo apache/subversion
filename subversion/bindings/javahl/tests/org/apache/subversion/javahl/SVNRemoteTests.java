@@ -112,7 +112,7 @@ public class SVNRemoteTests extends SVNTests
                 super.conf.getAbsolutePath(),
                 USERNAME, PASSWORD,
                 new DefaultPromptUserPassword(),
-                null, null)
+                null, null, null)
                 .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)
@@ -140,7 +140,7 @@ public class SVNRemoteTests extends SVNTests
                     super.conf.getAbsolutePath(),
                     USERNAME, PASSWORD,
                     new DefaultPromptUserPassword(),
-                    null, null)
+                    null, null, null)
                     .openRemoteSession(prefix + "repositorydoesnotexisthere");
             }
             finally
@@ -843,15 +843,24 @@ public class SVNRemoteTests extends SVNTests
                         cat.enumerate(sec, en);
                     }
                 }
+
             };
 
-        try {
-            SVNUtil.setConfigEventHandler(handler);
-            ISVNRemote session = getSession();
-            session.getLatestRevision();
-        } finally {
-            SVNUtil.setConfigEventHandler(null);
+        ISVNRemote session;
+        try
+        {
+            session = new RemoteFactory(
+                super.conf.getAbsolutePath(),
+                USERNAME, PASSWORD,
+                new DefaultPromptUserPassword(),
+                null, handler, null)
+                .openRemoteSession(getTestRepoUrl());
         }
+        catch (ClientException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        session.getLatestRevision();
     }
 
     private static class RemoteStatusReceiver implements RemoteStatus

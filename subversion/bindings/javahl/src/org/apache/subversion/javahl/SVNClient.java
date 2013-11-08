@@ -578,6 +578,12 @@ public class SVNClient implements ISVNClient
     public native String getConfigDirectory()
             throws ClientException;
 
+    public native void setConfigEventHandler(ConfigEvent configHandler)
+            throws ClientException;
+
+    public native ConfigEvent getConfigEventHandler()
+            throws ClientException;
+
     public native void cancelOperation()
             throws ClientException;
 
