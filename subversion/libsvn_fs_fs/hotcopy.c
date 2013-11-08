@@ -1,4 +1,4 @@
-/* hotcopys.c --- FS hotcopy functionality for FSFS
+/* hotcopy.c --- FS hotcopy functionality for FSFS
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
