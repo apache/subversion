@@ -25,6 +25,7 @@
 #include "jni_globalref.hpp"
 #include "jni_exception.hpp"
 #include "jni_object.hpp"
+#include "jni_string.hpp"
 
 #include "../SubversionException.hpp"
 
@@ -61,7 +62,7 @@ ClassCache::ClassCache(Env env)
   // no-op: Object::static_init(env);
   Class::static_init(env);
   Exception::static_init(env);
-  String::static_init(env);
+  // no-op: String::static_init(env);
   // no-op: ::JavaHL::SubversionException::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT

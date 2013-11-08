@@ -25,6 +25,7 @@
 #include "jni_globalref.hpp"
 #include "jni_exception.hpp"
 #include "jni_object.hpp"
+#include "jni_string.hpp"
 #include "jni_array.hpp"
 
 
@@ -171,10 +172,6 @@ jstring Class::get_name() const
 // Class Java::String
 
 const char* const String::m_class_name = "java/lang/String";
-void String::static_init(Env env)
-{
-  // TODO: Init various string methods
-}
 
 
 // class Java::Exception
