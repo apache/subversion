@@ -44,6 +44,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
+#include "svn_utf.h"
 
 #include "private/svn_cmdline_private.h"
 
