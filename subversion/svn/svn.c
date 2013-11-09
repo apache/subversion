@@ -95,6 +95,7 @@ typedef enum svn_cl__longopt_t {
   opt_ignore_externals,
   opt_incremental,
   opt_merge_cmd,
+  opt_diff3_cmd,
   opt_native_eol,
   opt_new_cmd,
   opt_no_auth_cache,
@@ -250,6 +251,24 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
+  {"invoke-diff3-cmd", opt_invoke_diff_cmd, 1, 
+                   N_("use ARG as format string for external merge program\n"
+                      "                             "
+                      "invocation.  Substitutions: \n" 
+                      "                             "
+                      "  %svn_mine  'mine' file\n"
+                      "                             "
+                      "  %svn_yours 'yours' file\n"
+                      "                "
+                      "  %svn_base  'base' file\n"
+                      "                "
+                      "  %svn_label_mine   label of the 'mine file\n"
+                      "                "
+                      "  %svn_label_yours  label of the 'yours' file\n"
+                      "                "
+                      "  %svn_label_base   label of the 'mine file\n"
+                      "                             "
+                      "See 'help diff' for example usage.")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
   {"record-only",   opt_record_only, 0,
                     N_("merge only mergeinfo differences")},
@@ -545,7 +564,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  for writing by another Subversion client.\n"
      "  Note that the 'svn status' command shows unversioned items as '?',\n"
      "  and ignored items as 'I' if the --no-ignore option is given to it.\n"),
-    {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored,
+    {opt_merge_cmd, opt_diff3_cmd, opt_remove_unversioned, opt_remove_ignored,
      opt_include_externals, 'q'} },
 
   { "commit", svn_cl__commit, {"ci"},
@@ -1139,8 +1158,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  target. Also, merge-tracking is not supported for merges from foreign\n"
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
-     opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions, 'v'} },
+     opt_diff3_cmd, opt_record_only, 'x', opt_ignore_ancestry, opt_accept, 
+     opt_reintegrate, opt_allow_mixed_revisions, 'v'} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1603,8 +1622,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn switch --relocate http:// svn://\n"
      "    svn switch --relocate http://www.example.com/repo/project \\\n"
      "                          svn://svn.example.com/repo/project\n"),
-    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
-      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept},
+    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_diff3_cmd,
+      opt_relocate, opt_ignore_externals, opt_ignore_ancestry, opt_force, 
+      opt_accept},
     {{opt_ignore_ancestry,
       N_("allow switching to a node with no common ancestor")}}
   },
@@ -1662,9 +1682,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
      "  targets of this operation.\n"),
-    {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
-     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
-     opt_parents} },
+    {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_diff3_cmd, 
+     opt_force, opt_ignore_externals, opt_changelist, opt_editor_cmd, 
+     opt_accept, opt_parents} },
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
@@ -2173,6 +2193,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_merge_cmd:
         opt_state.merge_cmd = apr_pstrdup(pool, opt_arg);
         break;
+      case opt_diff3_cmd:
+        opt_state.invoke_diff3_cmd = apr_pstrdup(pool, opt_arg);
+        break;
       case opt_record_only:
         opt_state.record_only = TRUE;
         break;
@@ -2610,6 +2633,16 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       return EXIT_ERROR(err);
     }
 
+  /* Check for mutually exclusive args --diff3-cmd and
+     --invoke-diff3-cmd */
+  if (opt_state.merge_cmd && opt_state.invoke_diff3_cmd)
+    {
+      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                             _("--diff3-cmd  and --invoke-diff3-cmd are "
+                               "mutually exclusive"));
+      return EXIT_ERROR(err);
+    }
+
   /* Ensure that 'revision_ranges' has at least one item, and make
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
@@ -2829,8 +2862,15 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
   if (opt_state.merge_cmd)
-    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
-                   SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+    {
+      svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+    }
+  if (opt_state.invoke_diff3_cmd) 
+    {
+      svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, opt_state.invoke_diff3_cmd);
+    }
   if (opt_state.diff.internal_diff)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, NULL);
@@ -2949,6 +2989,12 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                    SVN_CL__ACCEPT_EDIT));
 
       if (opt_state.accept_which == svn_cl__accept_launch)
+        return EXIT_ERROR(
+                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("--accept=%s incompatible with"
+                                     " --non-interactive"),
+                                   SVN_CL__ACCEPT_LAUNCH));
+      if (opt_state.accept_which == svn_cl__accept_invoke_diff3_config)
         return EXIT_ERROR(
                  svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("--accept=%s incompatible with"

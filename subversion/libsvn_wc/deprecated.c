@@ -4402,6 +4402,53 @@ svn_wc_copy(const char *src_path,
 /*** From merge.c ***/
 
 svn_error_t *
+svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_outcome,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
+{
+  return  svn_wc_merge6(merge_content_outcome,
+                        merge_props_outcome,
+                        wc_ctx,
+                        left_abspath,
+                        right_abspath,
+                        target_abspath,
+                        left_label,
+                        right_label,
+                        target_label,
+                        left_version,
+                        right_version,
+                        dry_run,
+                        diff3_cmd,
+                        NULL,
+                        merge_options,
+                        original_props,
+                        prop_diff,
+                        conflict_func,
+                        conflict_baton,
+                        cancel_func,
+                        cancel_baton,
+                        scratch_pool);
+}
+
+svn_error_t *
 svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
@@ -4815,4 +4862,99 @@ svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict
       svn_wc_conflict_version_dup(conflict->src_right_version, pool);
 
   return new_conflict;
+}
+
+/* 
+   Prepare to merge a file content change into the working copy.
+
+   This does not merge properties; see svn_wc__merge_props() for that.
+   This does not necessarily change the file TARGET_ABSPATH on disk; it
+   may instead return work items that will replace the file on disk when
+   they are run.  ### Can we be more consistent about this?
+
+   Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
+   TARGET_ABSPATH.
+
+   Set *WORK_ITEMS to the appropriate work queue operations.
+
+   If there are any conflicts, append a conflict description to
+   *CONFLICT_SKEL.  (First allocate *CONFLICT_SKEL from RESULT_POOL if
+   it is initially NULL.  CONFLICT_SKEL itself must not be NULL.)
+   Also, unless it is considered to be a 'binary' file, mark any
+   conflicts in the text of the file TARGET_ABSPATH using LEFT_LABEL,
+   RIGHT_LABEL and TARGET_LABEL.
+
+   Set *MERGE_OUTCOME to indicate the result.
+
+   When DRY_RUN is true, no actual changes are made to the working copy.
+
+   If DIFF3_CMD is specified, the given external diff3 tool will
+   be used instead of our built in diff3 routines.
+
+   When MERGE_OPTIONS are specified, they are used by the internal
+   diff3 routines, or passed to the external diff3 tool.
+
+   WRI_ABSPATH describes in which working copy information should be
+   retrieved. (Interesting for merging file externals).
+
+   OLD_ACTUAL_PROPS is the set of actual properties before merging; used for
+   detranslating the file before merging.  This is necessary because, in
+   the case of updating, the update can have sent new properties, so we
+   cannot simply fetch and use the current actual properties.
+
+     ### Is OLD_ACTUAL_PROPS still necessary, now that we first prepare the
+         content change and property change and then apply them both to
+         the WC together?
+
+   Property changes sent by the update are provided in PROP_DIFF.
+
+   For a complete description, see svn_wc_merge5() for which this is
+   the (loggy) implementation.
+
+   *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
+   will be performed in SCRATCH_POOL.
+*/
+svn_error_t *
+svn_wc__internal_merge(svn_skel_t **work_items,
+                       svn_skel_t **conflict_skel,
+                       enum svn_wc_merge_outcome_t *merge_outcome,
+                       svn_wc__db_t *db,
+                       const char *left_abspath,
+                       const char *right_abspath,
+                       const char *target_abspath,
+                       const char *wri_abspath,
+                       const char *left_label,
+                       const char *right_label,
+                       const char *target_label,
+                       apr_hash_t *old_actual_props,
+                       svn_boolean_t dry_run,
+                       const char *diff3_cmd,
+                       const apr_array_header_t *merge_options,
+                       const apr_array_header_t *prop_diff,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_wc__internal_merge1(work_items,
+                                 conflict_skel,
+                                 merge_outcome,
+                                 db,
+                                 left_abspath,
+                                 right_abspath,
+                                 target_abspath,
+                                 wri_abspath,
+                                 left_label, 
+                                 right_label, 
+                                 target_label,
+                                 old_actual_props,
+                                 dry_run,
+                                 diff3_cmd,
+                                 NULL,
+                                 merge_options,
+                                 prop_diff,
+                                 cancel_func, 
+                                 cancel_baton,
+                                 result_pool, 
+                                 scratch_pool);
 }

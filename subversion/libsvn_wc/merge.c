@@ -45,11 +45,12 @@ typedef struct merge_target_t
   const char *local_abspath;                /* The absolute path to target */
   const char *wri_abspath;                  /* The working copy of target */
 
-  apr_hash_t *old_actual_props;                 /* The set of actual properties
+  apr_hash_t *old_actual_props;             /* The set of actual properties
                                                before merging */
   const apr_array_header_t *prop_diff;      /* The property changes */
 
   const char *diff3_cmd;                    /* The diff3 command and options */
+  const char *invoke_diff3_cmd;             /* The invoke_diff3_cmd command  */
   const apr_array_header_t *merge_options;
 
 } merge_target_t;
@@ -437,6 +438,7 @@ static svn_error_t *
 do_text_merge_external(svn_boolean_t *contains_conflicts,
                        apr_file_t *result_f,
                        const char *diff3_cmd,
+                       const char *invoke_diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const char *detranslated_target,
                        const char *left_abspath,
@@ -448,16 +450,25 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
 {
   int exit_code;
 
-  SVN_ERR(svn_io_run_diff3_3(&exit_code, ".",
-                             detranslated_target, left_abspath, right_abspath,
-                             target_label, left_label, right_label,
-                             result_f, diff3_cmd,
-                             merge_options, scratch_pool));
-
-  *contains_conflicts = exit_code == 1;
+  if (diff3_cmd)
+    SVN_ERR(svn_io_run_diff3_3(&exit_code, ".",
+                               detranslated_target, left_abspath, right_abspath,
+                               target_label, left_label, right_label,
+                               result_f, diff3_cmd,
+                               merge_options, scratch_pool));
+  else 
+    SVN_ERR(svn_io_run_invoke_diff3(&exit_code, ".",
+                                    detranslated_target, 
+                                    left_abspath, right_abspath,
+                                    target_label, left_label, right_label,
+                                    result_f, invoke_diff3_cmd,
+                                    scratch_pool));
+  
+  *contains_conflicts = (exit_code == 1);
 
   return SVN_NO_ERROR;
 }
+
 
 /* Preserve the three pre-merge files.
 
@@ -843,11 +854,13 @@ merge_text_file(svn_skel_t **work_items,
                                      temp_dir, base_name, ".tmp",
                                      svn_io_file_del_none, pool, pool));
 
-  /* Run the external or internal merge, as requested. */
-  if (mt->diff3_cmd)
+  /* Run the external (old-style or new-style) or internal merge, as
+     requested. */
+  if (mt->diff3_cmd || mt->invoke_diff3_cmd)
       SVN_ERR(do_text_merge_external(&contains_conflicts,
                                      result_f,
                                      mt->diff3_cmd,
+                                     mt->invoke_diff3_cmd,
                                      mt->merge_options,
                                      detranslated_target_abspath,
                                      left_abspath,
@@ -1066,7 +1079,7 @@ merge_binary_file(svn_skel_t **work_items,
 }
 
 svn_error_t *
-svn_wc__internal_merge(svn_skel_t **work_items,
+svn_wc__internal_merge1(svn_skel_t **work_items,
                        svn_skel_t **conflict_skel,
                        enum svn_wc_merge_outcome_t *merge_outcome,
                        svn_wc__db_t *db,
@@ -1080,6 +1093,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        apr_hash_t *old_actual_props,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
+                       const char *invoke_diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
                        svn_cancel_func_t cancel_func,
@@ -1106,6 +1120,8 @@ svn_wc__internal_merge(svn_skel_t **work_items,
   mt.old_actual_props = old_actual_props;
   mt.prop_diff = prop_diff;
   mt.diff3_cmd = diff3_cmd;
+  mt.invoke_diff3_cmd = invoke_diff3_cmd;
+  
   mt.merge_options = merge_options;
 
   /* Decide if the merge target is a text or binary file. */
@@ -1121,7 +1137,9 @@ svn_wc__internal_merge(svn_skel_t **work_items,
     }
 
   SVN_ERR(detranslate_wc_file(&detranslated_target_abspath, &mt,
-                              (! is_binary) && diff3_cmd != NULL,
+                              (! is_binary) 
+                              && diff3_cmd != NULL 
+                              && invoke_diff3_cmd != NULL,
                               target_abspath,
                               cancel_func, cancel_baton,
                               scratch_pool, scratch_pool));
@@ -1193,7 +1211,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
 
 svn_error_t *
-svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+svn_wc_merge6(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
@@ -1206,6 +1224,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               const svn_wc_conflict_version_t *right_version,
               svn_boolean_t dry_run,
               const char *diff3_cmd,
+              const char *invoke_diff3_cmd,
               const apr_array_header_t *merge_options,
               apr_hash_t *original_props,
               const apr_array_header_t *prop_diff,
@@ -1333,22 +1352,23 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
     }
 
   /* Merge the text. */
-  SVN_ERR(svn_wc__internal_merge(&work_items,
-                                 &conflict_skel,
-                                 merge_content_outcome,
-                                 wc_ctx->db,
-                                 left_abspath,
-                                 right_abspath,
-                                 target_abspath,
-                                 target_abspath,
-                                 left_label, right_label, target_label,
-                                 old_actual_props,
-                                 dry_run,
-                                 diff3_cmd,
-                                 merge_options,
-                                 prop_diff,
-                                 cancel_func, cancel_baton,
-                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_merge1(&work_items,
+                                  &conflict_skel,
+                                  merge_content_outcome,
+                                  wc_ctx->db,
+                                  left_abspath,
+                                  right_abspath,
+                                  target_abspath,
+                                  target_abspath,
+                                  left_label, right_label, target_label,
+                                  old_actual_props,
+                                  dry_run,
+                                  diff3_cmd,
+                                  invoke_diff3_cmd,
+                                  merge_options,
+                                  prop_diff,
+                                  cancel_func, cancel_baton,
+                                  scratch_pool, scratch_pool));
 
   /* If this isn't a dry run, then update the DB, run the work, and
    * call the conflict resolver callback.  */

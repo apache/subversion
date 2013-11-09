@@ -440,6 +440,31 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    will be performed in SCRATCH_POOL.
 */
 svn_error_t *
+svn_wc__internal_merge1(svn_skel_t **work_items,
+                        svn_skel_t **conflict_skel,
+                        enum svn_wc_merge_outcome_t *merge_outcome,
+                        svn_wc__db_t *db,
+                        const char *left_abspath,
+                        const char *right_abspath,
+                        const char *target_abspath,
+                        const char *wri_abspath,
+                        const char *left_label,
+                        const char *right_label,
+                        const char *target_label,
+                        apr_hash_t *old_actual_props,
+                        svn_boolean_t dry_run,
+                        const char *invoke_diff3_cmd,
+                        const char *diff3_cmd,
+                        const apr_array_header_t *merge_options,
+                        const apr_array_header_t *prop_diff,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* As  svn_wc__internal_merge but without the invoke_diff3_cmd parameter. */
+SVN_DEPRECATED
+svn_error_t *
 svn_wc__internal_merge(svn_skel_t **work_items,
                        svn_skel_t **conflict_skel,
                        enum svn_wc_merge_outcome_t *merge_outcome,
@@ -460,6 +485,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
+
 
 /* A default error handler for svn_wc_walk_entries3().  Returns ERR in
    all cases. */

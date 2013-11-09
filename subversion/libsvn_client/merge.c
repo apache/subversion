@@ -316,10 +316,13 @@ typedef struct merge_cmd_baton_t {
   /* A list of tree conflict victim absolute paths which may be NULL. */
   apr_hash_t *tree_conflicted_abspaths;
 
-  /* The diff3_cmd in ctx->config, if any, else null.  We could just
-     extract this as needed, but since more than one caller uses it,
-     we just set it up when this baton is created. */
+  /* The diff3_cmd and invoke_diff3_cmd in ctx->config, if any, else
+     null.  We could just extract this as needed, but since more than
+     one caller uses it, we just set it up when this baton is
+     created. */
   const char *diff3_cmd;
+  const char *invoke_diff3_cmd;
+
   const apr_array_header_t *merge_options;
 
   /* RA sessions used throughout a merge operation.  Opened/re-parented
@@ -2040,11 +2043,13 @@ merge_file_changed(const char *relpath,
 
       /* Do property merge and text merge in one step so that keyword expansion
          takes into account the new property values. */
-      SVN_ERR(svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
+      SVN_ERR(svn_wc_merge6(&content_outcome, &property_state, ctx->wc_ctx,
                             left_file, right_file, local_abspath,
                             left_label, right_label, target_label,
                             left, right,
-                            merge_b->dry_run, merge_b->diff3_cmd,
+                            merge_b->dry_run, 
+                            merge_b->diff3_cmd,
+                            merge_b->invoke_diff3_cmd,
                             merge_b->merge_options,
                             left_props, prop_changes,
                             NULL, NULL,

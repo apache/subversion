@@ -2426,6 +2426,25 @@ svn_io_run_external_diff(const char *dir,
                          const char *external_diff_cmd,
                          apr_pool_t *scratch_pool);
 
+/** Run the external merge command defined by the invoke-diff3-cmd
+ *  option.
+ *  
+ *  @since New in 1.9.
+ */
+svn_error_t *
+svn_io_run_invoke_diff3(int *exitcode,
+                        const char *dir,
+                        const char *mine,
+                        const char *older,
+                        const char *yours,
+                        const char *mine_label,
+                        const char *older_label,
+                        const char *yours_label,
+                        apr_file_t *merged,
+                        const char *diff3_cmd,
+                        apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -43,11 +43,36 @@ TBD
 UI components
 -------------
 
+#  --invoke-diff-cmd and its user interface components for the command
+#  line have been installed everywhere where --diff-cmd is available,
+#  in svnlook.c, svn.c, svnlog.c.
+
+& Users can specify the following mutually exclusive options:
+
+  --invoke-merge-cmd, --diff3-cmd , and also define what diff3 program
+  to use via the ./svn/config file, using the new config file
+  parameter "invoke-merge-cmd"..
+
+  The selection first defaults to the config file entry (if defined)
+  which in turn is overridden when one of --invoke-merge-cmd,
+  --diff-cmd are invoked.
+
 
 Changes to the existing code structure:
 =======================================
 
-TBD
+None.
+
+The existing --diff3-cmd has been in use for years and is best left
+untouched, since many users will not require the extra services
+offered by the --invoke-diff3-cmd feature, and any errors could cause
+many users a lot of problems.  
+
+Moreover, the nature of --invoke-diff3-cmd and --diff-cmd are quite
+different; --diff-3 is tailored for GNU diff3 and carefully checks the
+user's input of switches, whereas --invoke-diff3-cmd is a
+free-style-anything-goes-including-shooting-your-foot creation.
+
 
 Tests
 =====
@@ -80,12 +105,7 @@ kdiff3: 0.9.97 (32 bit)
 TODO:
 ====
 
-  * add invoke-merge-cmd to svn.c
-    # plug in opt_get_invoke-merge-cmd
-    # UI checks:
-      write decision matrix
-      write checking code
-    # write help info
+  * write help info
 
   * Create the UI for the interactive dialogue in
     subversion/svn/conflict-callbacks.
@@ -97,11 +117,8 @@ TODO:
     (3i) - interactively select diff3 tool now to resolve conflict  
 
   * make list of where else in svn to add the invoke-merge-cmd.
+   - svn cleanup
 
-  * add routing for invoke-merge-cmd.
-
-  * add new function to io.c that copies svn_io_run_diff3_3().
-  
   * config file service:
     plug in config file service into io.c
     add new entry in config file
