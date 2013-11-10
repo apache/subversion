@@ -47,7 +47,7 @@ public:
    */
   explicit ByteArray(Env env, jbyteArray array)
     : m_env(env),
-      m_length(array ? m_env.GetArrayLength(array) : -1),
+      m_length(array ? m_env.GetArrayLength(array) : 0),
       m_array(array)
     {}
 
@@ -122,7 +122,8 @@ public:
      */
     explicit Contents(const ByteArray& array)
       : m_array(array),
-        m_data(array.m_env.GetByteArrayElements(array.m_array, NULL))
+        m_data(!array.m_array ? NULL
+               : array.m_env.GetByteArrayElements(array.m_array, NULL))
       {}
 
     /**
@@ -160,8 +161,10 @@ public:
      */
     svn_string_t* get_string(const ::SVN::Pool& result_pool) const
       {
-        return svn_string_ncreate(data(), m_array.m_length,
-                                  result_pool.getPool());
+        if (m_data)
+          return svn_string_ncreate(data(), m_array.m_length,
+                                    result_pool.getPool());
+        return NULL;
       }
 
   protected:
