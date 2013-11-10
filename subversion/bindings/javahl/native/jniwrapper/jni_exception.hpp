@@ -146,7 +146,7 @@ private:
   friend class ClassCache;
   static void static_init(Env env);
   static const char* const m_class_name;
-  static jmethodID m_mid_get_message;
+  static MethodID m_mid_get_message;
 };
 
 /**

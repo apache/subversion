@@ -64,11 +64,7 @@ jobject make_array_list(Env env, const char* class_name, jint length)
 
 BaseMutableList::BaseMutableList(Env env, jint length)
   : Object(env, m_class_name,
-           make_array_list(env, m_class_name, length)),
-      m_mid_add(NULL),
-      m_mid_clear(NULL),
-      m_mid_get(NULL),
-      m_mid_size(NULL)
+           make_array_list(env, m_class_name, length))
 {}
 
 void BaseMutableList::add(jobject obj)
