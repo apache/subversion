@@ -130,8 +130,8 @@ const char* const Object::m_class_name = "java/lang/Object";
 // Class Java::Class
 
 const char* const Class::m_class_name = "java/lang/Class";
-jmethodID Class::m_mid_get_class = NULL;
-jmethodID Class::m_mid_get_name = NULL;
+MethodID Class::m_mid_get_class;
+MethodID Class::m_mid_get_name;
 void Class::static_init(Env env)
 {
   m_mid_get_class = env.GetMethodID(
@@ -185,7 +185,7 @@ jstring Exception::get_message() const
 }
 
 const char* const Exception::m_class_name = "java/lang/Throwable";
-jmethodID Exception::m_mid_get_message = NULL;
+MethodID Exception::m_mid_get_message;
 void Exception::static_init(Env env)
 {
   m_mid_get_message = env.GetMethodID(

@@ -187,8 +187,8 @@ private:
   friend class ClassCache;
   static void static_init(Env env);
   static const char* const m_class_name;
-  static jmethodID m_mid_get_class;
-  static jmethodID m_mid_get_name;
+  static MethodID m_mid_get_class;
+  static MethodID m_mid_get_name;
 };
 
 } // namespace Java

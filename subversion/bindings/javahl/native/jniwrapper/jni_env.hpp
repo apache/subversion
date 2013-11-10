@@ -45,6 +45,105 @@
 namespace Java {
 
 /**
+ * Auto-initializing proxy for the JNI method ID.
+ *
+ * Behaves like a @c jmethodID but automatically initializes to @c NULL.
+ *
+ * @since New in 1.9.
+ */
+class MethodID
+{
+public:
+  MethodID()
+    : m_mid(NULL)
+    {}
+
+  MethodID(jmethodID mid)
+    : m_mid(mid)
+    {}
+
+  MethodID(const MethodID& that)
+    : m_mid(that.m_mid)
+    {}
+
+  MethodID& operator=(jmethodID mid)
+    {
+      m_mid = mid;
+      return *this;
+    }
+
+  MethodID& operator=(const MethodID& that)
+    {
+      m_mid = that.m_mid;
+      return *this;
+    }
+
+  operator jmethodID() const
+    {
+      return m_mid;
+    }
+
+  operator bool() const
+    {
+      return (NULL != m_mid);
+    }
+
+private:
+  jmethodID m_mid;
+};
+
+
+/**
+ * Auto-initializing proxy for the JNI field ID.
+ *
+ * Behaves like a @c jfieldID but automatically initializes to @c NULL.
+ *
+ * @since New in 1.9.
+ */
+class FieldID
+{
+public:
+  FieldID()
+    : m_fid(NULL)
+    {}
+
+  FieldID(jfieldID mid)
+    : m_fid(mid)
+    {}
+
+  FieldID(const FieldID& that)
+    : m_fid(that.m_fid)
+    {}
+
+  FieldID& operator=(jfieldID fid)
+    {
+      m_fid = fid;
+      return *this;
+    }
+
+  FieldID& operator=(const FieldID& that)
+    {
+      m_fid = that.m_fid;
+      return *this;
+    }
+
+  operator jfieldID() const
+    {
+      return m_fid;
+    }
+
+  operator bool() const
+    {
+      return (NULL != m_fid);
+    }
+
+private:
+  jfieldID m_fid;
+};
+
+
+
+/**
  * Encapsulation of a JNI environment reference.
  *
  * This class wraps all (relevant) JNI functions and checks for thrown
