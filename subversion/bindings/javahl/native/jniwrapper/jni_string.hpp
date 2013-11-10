@@ -93,9 +93,9 @@ public:
    * Accessor class for the contents of the string.
    *
    * Objects of this class should be created within the scope where
-   * the raw C string is required. They will an immutable modified
-   * UTF-8 representation of the string contents. The data will be
-   * released by the destructor.
+   * the raw C string is required. They will create an immutable
+   * modified UTF-8 representation of the string contents. The data
+   * will be released by the destructor.
    */
   class Contents
   {
