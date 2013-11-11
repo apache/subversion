@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 
+#include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_object_pool.h"
 #include "private/svn_subr_private.h"
