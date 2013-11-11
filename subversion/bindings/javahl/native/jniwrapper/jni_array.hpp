@@ -52,6 +52,15 @@ public:
     {}
 
   /**
+   * Constructs a new, uninitialized array of size @a length.
+   */
+  explicit ByteArray(Env env, jsize length)
+    : m_env(env),
+      m_length(length),
+      m_array(m_env.NewByteArray(m_length))
+    {}
+
+  /**
    * Constructs a new array and wrapper from @a text.
    */
   explicit ByteArray(Env env, const char* text)

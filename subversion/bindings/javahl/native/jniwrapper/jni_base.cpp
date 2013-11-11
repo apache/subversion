@@ -205,6 +205,9 @@ const char* const NullPointerException::m_class_name =
 const char* const OutOfMemoryError::m_class_name =
   "java/lang/OutOfMemoryError";
 
+const char* const IOException::m_class_name =
+  "java/io/IOException";
+
 } // namespace Java
 
 
