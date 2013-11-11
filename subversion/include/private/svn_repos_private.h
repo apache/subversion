@@ -34,6 +34,8 @@
 #include "svn_editor.h"
 #include "svn_config.h"
 
+#include "private/svn_string_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -160,19 +162,23 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
  */
 typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
 
-/* Create a new configuration pool object with a minim lifetime determined
+/* Create a new configuration pool object with a minimum lifetime determined
  * by POOL and return it in *CONFIG_POOL.  References to any configuration
  * in the *CONFIG_POOL will keep the latter alive beyond POOL cleanup.
+ * The THREAD_SAFE flag indicates whether the pool actually needs to be
+ * thread-safe.
  */
 svn_error_t *
 svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
+                              svn_boolean_t thread_safe,
                               apr_pool_t *pool);
 
 /* Set *CFG to a read-only reference to the current contents of the
  * configuration specified by PATH.  If the latter is a URL, we read the
  * data from a local repository.  REGISTRY: urls are not supported.
  * CONFIG_POOL will store the configuration and make further callers use
- * the same instance if the content matches.
+ * the same instance if the content matches.  If KEY is not NULL, *KEY
+ * will be set to a unique ID - if available.
  *
  * If MUST_EXIST is TRUE, a missing config file is also an error, *CFG
  * is otherwise simply NULL.  The CASE_SENSITIVE controls the lookup
@@ -184,11 +190,10 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * return the latest content.
  *
  * POOL determines the minimum lifetime of *CFG.
- *
- * Note: The read-only behavior is not enforced, yet. 
  */
 svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
+                           svn_membuf_t **key,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
                            svn_boolean_t must_exist,
