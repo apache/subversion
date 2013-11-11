@@ -33,6 +33,7 @@
 #include "private/svn_atomic.h"
 #include "private/svn_object_pool.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_dep_compat.h"
 
 
 
