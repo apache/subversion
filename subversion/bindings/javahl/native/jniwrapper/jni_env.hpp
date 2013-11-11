@@ -509,6 +509,14 @@ public:
   SVN_JAVAHL_JNIWRAPPER_PRIMITIVE_TYPE_ARRAY(jdouble, Double)
 #undef SVN_JAVAHL_JNIWRAPPER_PRIMITIVE_TYPE_ARRAY
 
+  /** Wrapped JNI function. */
+  void* GetDirectBufferAddress(jobject buffer) const
+    {
+      void* const addr = m_env->GetDirectBufferAddress(buffer);
+      check_java_exception();
+      return addr;
+    }
+
 private:
   ::JNIEnv* m_env;
   static ::JavaVM* m_jvm;
