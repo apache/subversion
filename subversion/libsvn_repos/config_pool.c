@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 
+#include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_repos_private.h"
