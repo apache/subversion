@@ -55,9 +55,12 @@ Candidate changes:
      Branch should probably be removed from the nomination (it was only needed
      before r1503552).
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp
      -0: ivan, brane (not regression from 1.7.x,
                       destructive change in libsvn_wc core)
+     -0: rhuijben (temporarily remove my +1 until I complete investigating
+                   a related problem. It looks like this fix doesn't work for
+                   the user scenario it was intended for)
 
  * r1524145
    Make the 'm' conflict prompt option run external merge tool if configured.
@@ -159,8 +162,8 @@ Candidate changes:
      this test.
    Branch: ^/subversion/branches/1.8.x-r1537193/
    Votes:
-     +1: stefan2
-     +1 (without r1540428): rhuijben, brane
+     +1: stefan2, rhuijben
+     +1 (without r1540428): brane
 
  * r1538812, r1538925, r1538928, r1538939
    Properly remove moved_to information when the node in its original location
