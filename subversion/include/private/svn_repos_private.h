@@ -258,6 +258,44 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
 
 /** @} */
 
+/**
+ * @defgroup svn_repos_pool svn_repos_t object pool API
+ * @{
+ */
+
+/* Opaque thread-safe factory and container for svn_repos_t objects.
+ */
+typedef struct svn_repos__repos_pool_t svn_repos__repos_pool_t;
+
+/* Create a new repository pool object with a minimum lifetime determined
+ * by POOL and return it in *REPOS_POOL.  All repositories share the same
+ * FS_CONFIG configuration which may be NULL.  The THREAD_SAFE flag
+ * indicates whether the pool actually needs to be thread-safe.
+ *
+ * References to any repository instances in *REPOS_POOL will keep the
+ * latter alive beyond POOL cleanup.
+ */
+svn_error_t *
+svn_repos__repos_pool_create(svn_repos__repos_pool_t **repos_pool,
+                             apr_hash_t *fs_config,
+                             svn_boolean_t thread_safe,
+                             apr_pool_t *pool);
+
+/* Set *REPOS_P to an open repository object for the repository at local
+ * path REPOS_ROOT.  Once POOL gets cleared or destroyed, REPOS_POOL will
+ * store the repository instance and make further callers may return that
+ * same instance.  POOL determines the minimum lifetime of *REPOS_P.
+ *
+ * Note that you may need to update the youngest revision info cached
+ * inside *REPOS_P. 
+ */
+svn_error_t *
+svn_repos__repos_pool_get(svn_repos_t **repos_p,
+                          svn_repos__repos_pool_t *repos_pool,
+                          const char *repos_root,
+                          apr_pool_t *pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }
