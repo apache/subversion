@@ -282,9 +282,12 @@ svn_repos__repos_pool_create(svn_repos__repos_pool_t **repos_pool,
                              apr_pool_t *pool);
 
 /* Set *REPOS_P to an open repository object for the repository at local
- * path REPOS_ROOT.  Once POOL gets cleared or destroyed, REPOS_POOL will
- * store the repository instance and make further callers may return that
- * same instance.  POOL determines the minimum lifetime of *REPOS_P.
+ * path REPOS_ROOT.  If UUID is given, the repository's UUID must match it;
+ * otherwise we re-read from disk.
+ *
+ * Once POOL gets cleared or destroyed, REPOS_POOL will store the repository
+ * instance and make further callers may return that same instance.  POOL
+ * determines the minimum lifetime of *REPOS_P.
  *
  * Note that you may need to update the youngest revision info cached
  * inside *REPOS_P. 
@@ -293,6 +296,7 @@ svn_error_t *
 svn_repos__repos_pool_get(svn_repos_t **repos_p,
                           svn_repos__repos_pool_t *repos_pool,
                           const char *repos_root,
+                          const char *uuid,
                           apr_pool_t *pool);
 
 /** @} */
