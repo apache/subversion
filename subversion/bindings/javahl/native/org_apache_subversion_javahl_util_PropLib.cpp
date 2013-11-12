@@ -42,6 +42,7 @@
 #include "svn_time.h"
 #include "svn_wc.h"
 
+#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 
@@ -143,6 +144,7 @@ Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
 #include "jniwrapper/jni_stack.hpp"
 #include "jniwrapper/jni_array.hpp"
 #include "jniwrapper/jni_list.hpp"
+#include "jniwrapper/jni_string.hpp"
 #include "ExternalItem.hpp"
 #include "SubversionException.hpp"
 
@@ -218,18 +220,16 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
 
       apr_array_header_t* externals;
       {
-        const Java::String::Contents parent_dir_contents(parent_dir);
-        const Java::ByteArray::Contents descr_contents(description);
-
         // There is no guarantee that the description contents are
         // null-terminated. Copy them to an svn_string_t to make sure
         // that they are.
-        svn_string_t* const safe_contents = descr_contents.get_string(pool);
+        svn_string_t* const description_contents =
+          Java::ByteArray::Contents(description).get_string(pool);
 
         SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
                              &externals,
-                             parent_dir_contents.c_str(),
-                             safe_contents->data,
+                             Java::String::Contents(parent_dir).c_str(),
+                             description_contents->data,
                              svn_boolean_t(jcanonicalize_url),
                              pool.getPool()));
       }
@@ -255,6 +255,7 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
   SVN_JAVAHL_JNI_CATCH;
   return NULL;
 }
+
 
 JNIEXPORT jbyteArray JNICALL
 Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
@@ -337,15 +338,43 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
       // Validate the result. Even though we generated the string
       // ourselves, we did not validate the input paths and URLs.
       const std::string description(buffer.str());
-      {
-        const Java::String::Contents parent_dir_contents(parent_dir);
-        SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
-                             NULL,
-                             parent_dir_contents.c_str(),
-                             description.c_str(),
-                             false, iterpool.getPool()));
-      }
+      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+                           NULL,
+                           Java::String::Contents(parent_dir).c_str(),
+                           description.c_str(),
+                           false, iterpool.getPool()));
       return Java::ByteArray(env, description).get();
+    }
+  SVN_JAVAHL_JNI_CATCH;
+  return NULL;
+}
+
+
+JNIEXPORT jstring JNICALL
+Java_org_apache_subversion_javahl_util_PropLib_resolveExternalsUrl(
+    JNIEnv* jenv, jobject jthis,
+    jobject jitem, jstring jrepos_root_url, jstring jparent_dir_url)
+{
+  SVN_JAVAHL_JNI_TRY(PropLib, unparseExternals)
+    {
+      const Java::Env env(jenv);
+
+      const Java::String repos_root_url(env, jrepos_root_url);
+      const Java::String parent_dir_url(env, jparent_dir_url);
+      const JavaHL::ExternalItem item(env, jitem);
+
+      // Using a "global" request pool since we don't keep a context
+      // with its own pool around for these functions.
+      SVN::Pool pool;
+
+      const char* resolved_url;
+      SVN_JAVAHL_CHECK(svn_wc__resolve_relative_external_url(
+                           &resolved_url,
+                           item.get_external_item(pool),
+                           Java::String::Contents(repos_root_url).c_str(),
+                           Java::String::Contents(parent_dir_url).c_str(),
+                           pool.getPool(), pool.getPool()));
+      return Java::String(env, resolved_url).get();
     }
   SVN_JAVAHL_JNI_CATCH;
   return NULL;

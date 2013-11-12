@@ -33,7 +33,7 @@
 RemoteSessionContext::RemoteSessionContext(
     SVN::Pool &pool, const char* configDirectory,
     const char* usernameStr, const char* passwordStr,
-    Prompter* prompter)
+    Prompter* prompter, jobject jcfgcb)
   : OperationContext(pool), m_raCallbacks(NULL)
 {
   setConfigDirectory(configDirectory);
@@ -44,6 +44,7 @@ RemoteSessionContext::RemoteSessionContext(
     password(passwordStr);
 
   setPrompt(prompter);
+  setConfigEventHandler(jcfgcb);
 
   /*
    * Setup callbacks

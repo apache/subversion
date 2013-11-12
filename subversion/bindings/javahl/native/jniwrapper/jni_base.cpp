@@ -25,6 +25,7 @@
 #include "jni_globalref.hpp"
 #include "jni_exception.hpp"
 #include "jni_object.hpp"
+#include "jni_string.hpp"
 #include "jni_array.hpp"
 
 
@@ -129,8 +130,8 @@ const char* const Object::m_class_name = "java/lang/Object";
 // Class Java::Class
 
 const char* const Class::m_class_name = "java/lang/Class";
-jmethodID Class::m_mid_get_class = NULL;
-jmethodID Class::m_mid_get_name = NULL;
+MethodID Class::m_mid_get_class;
+MethodID Class::m_mid_get_name;
 void Class::static_init(Env env)
 {
   m_mid_get_class = env.GetMethodID(
@@ -171,10 +172,6 @@ jstring Class::get_name() const
 // Class Java::String
 
 const char* const String::m_class_name = "java/lang/String";
-void String::static_init(Env env)
-{
-  // TODO: Init various string methods
-}
 
 
 // class Java::Exception
@@ -188,7 +185,7 @@ jstring Exception::get_message() const
 }
 
 const char* const Exception::m_class_name = "java/lang/Throwable";
-jmethodID Exception::m_mid_get_message = NULL;
+MethodID Exception::m_mid_get_message;
 void Exception::static_init(Env env)
 {
   m_mid_get_message = env.GetMethodID(
@@ -207,6 +204,9 @@ const char* const NullPointerException::m_class_name =
 
 const char* const OutOfMemoryError::m_class_name =
   "java/lang/OutOfMemoryError";
+
+const char* const IOException::m_class_name =
+  "java/io/IOException";
 
 } // namespace Java
 

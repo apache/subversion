@@ -132,11 +132,7 @@ protected:
    * Constructs the list wrapper, deriving the class from @a jlist.
    */
   explicit BaseMutableList(Env env, jobject jlist)
-    : Object(env, jlist),
-      m_mid_add(NULL),
-      m_mid_clear(NULL),
-      m_mid_get(NULL),
-      m_mid_size(NULL)
+    : Object(env, jlist)
     {}
 
   /**
@@ -157,10 +153,10 @@ protected:
 
 private:
   static const char* const m_class_name;
-  jmethodID m_mid_add;
-  jmethodID m_mid_clear;
-  mutable jmethodID m_mid_get;
-  mutable jmethodID m_mid_size;
+  MethodID m_mid_add;
+  MethodID m_mid_clear;
+  mutable MethodID m_mid_get;
+  mutable MethodID m_mid_size;
 };
 
 /**

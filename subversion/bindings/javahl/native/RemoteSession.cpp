@@ -68,7 +68,8 @@ RemoteSession::open(jint jretryAttempts,
                     jstring jurl, jstring juuid,
                     jstring jconfigDirectory,
                     jstring jusername, jstring jpassword,
-                    jobject jprompter, jobject jprogress)
+                    jobject jprompter, jobject jprogress,
+                    jobject jcfgcb)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -111,7 +112,7 @@ RemoteSession::open(jint jretryAttempts,
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
-      usernameStr, passwordStr, prompter, jprogress);
+      usernameStr, passwordStr, prompter, jprogress, jcfgcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     {
       delete prompter;
@@ -125,7 +126,7 @@ RemoteSession::open(jint jretryAttempts,
                     const char* url, const char* uuid,
                     const char* configDirectory,
                     const char*  usernameStr, const char*  passwordStr,
-                    Prompter*& prompter, jobject jprogress)
+                    Prompter*& prompter, jobject jprogress, jobject jcfgcb)
 {
   /*
    * Initialize ra layer if we have not done so yet
@@ -139,7 +140,7 @@ RemoteSession::open(jint jretryAttempts,
 
   RemoteSession* session = new RemoteSession(
       jretryAttempts, url, uuid, configDirectory,
-      usernameStr, passwordStr, prompter);
+      usernameStr, passwordStr, prompter, jcfgcb);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
@@ -201,11 +202,11 @@ RemoteSession::RemoteSession(int retryAttempts,
                              const char* url, const char* uuid,
                              const char* configDirectory,
                              const char*  username, const char*  password,
-                             Prompter*& prompter)
+                             Prompter*& prompter, jobject jcfgcb)
   : m_session(NULL), m_context(NULL)
 {
   m_context = new RemoteSessionContext(
-      pool, configDirectory, username, password, prompter);
+      pool, configDirectory, username, password, prompter, jcfgcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

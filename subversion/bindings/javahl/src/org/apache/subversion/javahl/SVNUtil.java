@@ -36,6 +36,7 @@ public class SVNUtil
     //
     // Global configuration
     //
+    private static final ConfigLib configLib = new ConfigLib();
 
     /**
      * Enable storing authentication credentials in Subversion's
@@ -52,7 +53,7 @@ public class SVNUtil
     public static void enableNativeCredentialsStore()
         throws ClientException
       {
-          new ConfigLib().enableNativeCredentialsStore();
+          configLib.enableNativeCredentialsStore();
       }
 
     /**
@@ -76,7 +77,7 @@ public class SVNUtil
     public static void disableNativeCredentialsStore()
         throws ClientException
       {
-          new ConfigLib().disableNativeCredentialsStore();
+          configLib.disableNativeCredentialsStore();
       }
 
     /**
@@ -85,37 +86,13 @@ public class SVNUtil
     public static boolean isNativeCredentialsStoreEnabled()
         throws ClientException
       {
-          return new ConfigLib().isNativeCredentialsStoreEnabled();
-      }
-
-    /**
-     * Set an event handler that will be called every time the
-     * configuration is loaded.
-     * <p>
-     * This setting will be inherited by all ISVNClient and ISVNRemote
-     * objects. Changing the setting will not affect existing such
-     * objects.
-     * @throws ClientException
-     */
-    public static void setConfigEventHandler(ConfigEvent configHandler)
-        throws ClientException
-      {
-          new ConfigLib().setConfigEventHandler(configHandler);
-      }
-
-    /**
-     * Return a reference to the installed configuration event
-     * handler. The returned value may be <code>null</code>.
-     */
-    public static ConfigEvent getConfigEventHandler()
-        throws ClientException
-      {
-          return new ConfigLib().getConfigEventHandler();
+          return configLib.isNativeCredentialsStoreEnabled();
       }
 
     //
     // Diff and Merge
     //
+    private static final DiffLib diffLib = new DiffLib();
 
     /**
      * Options to control the behaviour of the file diff routines.
@@ -234,10 +211,10 @@ public class SVNUtil
                                    OutputStream resultStream)
         throws ClientException
     {
-        return new DiffLib().fileDiff(originalFile, modifiedFile, diffOptions,
-                                      originalHeader, modifiedHeader,
-                                      headerEncoding,
-                                      relativeToDir, resultStream);
+        return diffLib.fileDiff(originalFile, modifiedFile, diffOptions,
+                                originalHeader, modifiedHeader,
+                                headerEncoding,
+                                relativeToDir, resultStream);
     }
 
 
@@ -278,16 +255,17 @@ public class SVNUtil
                                     OutputStream resultStream)
         throws ClientException
     {
-        return new DiffLib().fileMerge(originalFile, modifiedFile, latestFile,
-                                       diffOptions,
-                                       conflictOriginal, conflictModified,
-                                       conflictLatest, conflictSeparator,
-                                       conflictStyle, resultStream);
+        return diffLib.fileMerge(originalFile, modifiedFile, latestFile,
+                                 diffOptions,
+                                 conflictOriginal, conflictModified,
+                                 conflictLatest, conflictSeparator,
+                                 conflictStyle, resultStream);
     }
 
     //
     // Property validation and parsing
     //
+    private static final PropLib propLib = new PropLib();
 
     /**
      * Validate the value of an <code>svn:</code> property on file or
@@ -309,7 +287,7 @@ public class SVNUtil
         String mimeType)
         throws ClientException
     {
-        return new PropLib().canonicalizeNodeProperty(
+        return propLib.canonicalizeNodeProperty(
             name, value, path, kind, mimeType, null);
     }
 
@@ -338,7 +316,7 @@ public class SVNUtil
         String mimeType, InputStream fileContents)
         throws ClientException
     {
-        return new PropLib().canonicalizeNodeProperty(
+        return propLib.canonicalizeNodeProperty(
             name, value, path, kind, mimeType, fileContents);
     }
 
@@ -366,8 +344,8 @@ public class SVNUtil
                                                     boolean canonicalizeUrl)
         throws ClientException
     {
-        return new PropLib().parseExternals(description, parentDirectory,
-                                            canonicalizeUrl);
+        return propLib.parseExternals(description, parentDirectory,
+                                      canonicalizeUrl);
     }
 
     /**
@@ -384,7 +362,7 @@ public class SVNUtil
                                           String parentDirectory)
         throws SubversionException
     {
-        return new PropLib().unparseExternals(items, parentDirectory, false);
+        return propLib.unparseExternals(items, parentDirectory, false);
     }
 
     /**
@@ -399,6 +377,43 @@ public class SVNUtil
         List<ExternalItem> items, String parentDirectory)
         throws SubversionException
     {
-        return new PropLib().unparseExternals(items, parentDirectory, true);
+        return propLib.unparseExternals(items, parentDirectory, true);
+    }
+
+    /**
+     * If the URL in <code>external</code> is relative, resolve it to
+     * an absolute URL, using <code>reposRootUrl</code> and
+     * <code>parentDirUrl</code> to provide contest.
+     *<p>
+     * Regardless if the URL is absolute or not, if there are no
+     * errors, the returned URL will be canonicalized.
+     *<p>
+     * The following relative URL formats are supported:
+     * <dl>
+     *  <dt><code>../</code></dt>
+     *  <dd>relative to the parent directory of the external</dd>
+     *  <dt><code>^/</code></dt>
+     *  <dd>relative to the repository root</dd>
+     *  <dt><code>//</code></dt>
+     *  <dd>relative to the scheme</dd>
+     *  <dt><code>/</code></dt>
+     *  <dd>relative to the server's hostname</dd>
+     *<p>
+     * The <code>../<code> and ^/ relative URLs may use <code>..<code>
+     * to remove path elements up to the server root.
+     *<p>
+     * The external URL should not be canonicalized before calling
+     * this function, as otherwise the scheme relative URL
+     * '<code>//host/some/path</code>' would have been canonicalized
+     * to '<code>/host/some/path</code>' and we would not be able to
+     * match on the leading '<code>//</code>'.
+    */
+    public static String resolveExternalsUrl(ExternalItem external,
+                                             String reposRootUrl,
+                                             String parentDirUrl)
+        throws ClientException
+    {
+        return propLib.resolveExternalsUrl(
+                   external, reposRootUrl, parentDirUrl);
     }
 }

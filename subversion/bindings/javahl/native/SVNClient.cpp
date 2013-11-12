@@ -1511,7 +1511,6 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
                     ctx, subPool.getPool()),
                 NULL);
 
-    jobject jctx = context.getSelf();
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -1525,7 +1524,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
         retryAttempts, path_info.url.c_str(), path_info.uuid.c_str(),
         context.getConfigDirectory(),
         context.getUsername(), context.getPassword(),
-        prompter, jctx);
+        prompter, context.getSelf(), context.getConfigEventHandler());
     if (JNIUtil::isJavaExceptionThrown())
       delete prompter;
 

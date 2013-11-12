@@ -34,7 +34,6 @@
 
 namespace {
 bool g_ignore_native_credentials = false;
-jobject g_config_callback = NULL;
 } // anonymous callback
 
 bool GlobalConfig::useNativeCredentialsStore()
@@ -42,13 +41,6 @@ bool GlobalConfig::useNativeCredentialsStore()
   JNICriticalSection lock(*JNIUtil::g_configMutex);
   return !g_ignore_native_credentials;
 }
-
-jobject GlobalConfig::getConfigCallback()
-{
-  JNICriticalSection lock(*JNIUtil::g_configMutex);
-  return g_config_callback;
-}
-
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_util_ConfigLib_enableNativeCredentialsStore(
@@ -70,11 +62,6 @@ Java_org_apache_subversion_javahl_util_ConfigLib_disableNativeCredentialsStore(
   g_ignore_native_credentials = true;
 }
 
-/*
- * Class:     org_apache_subversion_javahl_util_ConfigLib
- * Method:    isNativeCredentialsStoreEnabled
- * Signature: ()Z
- */
 JNIEXPORT jboolean JNICALL
 Java_org_apache_subversion_javahl_util_ConfigLib_isNativeCredentialsStoreEnabled(
     JNIEnv* env, jobject jthis)
@@ -82,37 +69,4 @@ Java_org_apache_subversion_javahl_util_ConfigLib_isNativeCredentialsStoreEnabled
   JNIEntry(ConfigLib, isNativeCredentialsStoreEnabled);
 
   return jboolean(GlobalConfig::useNativeCredentialsStore());
-}
-
-/*
- * Class:     org_apache_subversion_javahl_util_ConfigLib
- * Method:    setConfigEventHandler
- * Signature: (Lorg/apache/subversion/javahl/callback/ConfigEvent;)V
- */
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_util_ConfigLib_setConfigEventHandler(
-    JNIEnv* env, jobject jthis, jobject jcallback)
-{
-  JNIEntry(ConfigLib, setConfigEventHandler);
-
-  JNICriticalSection lock(*JNIUtil::g_configMutex);
-  if (g_config_callback)
-    {
-      env->DeleteGlobalRef(g_config_callback);
-      g_config_callback = NULL;
-    }
-  if (jcallback)
-    {
-      g_config_callback = env->NewGlobalRef(jcallback);
-      env->DeleteLocalRef(jcallback);
-    }
-}
-
-JNIEXPORT jobject JNICALL
-Java_org_apache_subversion_javahl_util_ConfigLib_getConfigEventHandler(
-    JNIEnv* env, jobject jthis)
-{
-  JNIEntry(ConfigLib, getConfigEventHandler);
-
-  return GlobalConfig::getConfigCallback();
 }

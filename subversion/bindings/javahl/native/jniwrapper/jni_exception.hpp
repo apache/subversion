@@ -146,7 +146,7 @@ private:
   friend class ClassCache;
   static void static_init(Env env);
   static const char* const m_class_name;
-  static jmethodID m_mid_get_message;
+  static MethodID m_mid_get_message;
 };
 
 /**
@@ -199,6 +199,25 @@ public:
    * Constructs an exception generator object.
    */
   explicit OutOfMemoryError(Env env)
+    : Exception(env, m_class_name)
+    {}
+
+private:
+  static const char* const m_class_name;
+};
+
+/**
+ * Generator class for exceptions of type @c java.io.IOException.
+ *
+ * @since New in 1.9.
+ */
+class IOException : public Exception
+{
+public:
+  /**
+   * Constructs an exception generator object.
+   */
+  explicit IOException(Env env)
     : Exception(env, m_class_name)
     {}
 

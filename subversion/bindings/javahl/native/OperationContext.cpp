@@ -78,10 +78,6 @@ OperationContext::attachJavaObject(
     return;
 
   env->DeleteLocalRef(jctx);
-
-  m_jcfgcb = env->NewGlobalRef(GlobalConfig::getConfigCallback());
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
 }
 
 OperationContext::~OperationContext()
@@ -283,6 +279,26 @@ const char *
 OperationContext::getConfigDirectory() const
 {
   return (m_configDir.empty() ? NULL : m_configDir.c_str());
+}
+
+void OperationContext::setConfigEventHandler(jobject jcfgcb)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+  if (jcfgcb)
+    {
+      jcfgcb = env->NewGlobalRef(jcfgcb);
+      if (JNIUtil::isJavaExceptionThrown())
+        return;
+    }
+
+  if (m_jcfgcb)
+    env->DeleteGlobalRef(m_jcfgcb);
+  m_jcfgcb = jcfgcb;
+}
+
+jobject OperationContext::getConfigEventHandler() const
+{
+  return m_jcfgcb;
 }
 
 const char *
