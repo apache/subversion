@@ -209,6 +209,7 @@ remove_unused_objects(svn_object_pool__t *object_pool)
           next = object_ref->next;
           if (object_ref->ref_count == 0)
             {
+              svn_atomic_dec(&object_pool->unused_count);
               svn_pool_destroy(object_ref->pool);
             }
           else
@@ -226,8 +227,6 @@ remove_unused_objects(svn_object_pool__t *object_pool)
   svn_pool_destroy(object_pool->objects_hash_pool);
   object_pool->objects = new_hash;
   object_pool->objects_hash_pool = new_pool;
-
-  object_pool->unused_count = 0;
 }
 
 /* Cleanup function called when an object_ref_t gets released.
@@ -251,8 +250,8 @@ object_ref_cleanup(void *baton)
 
   /* Release unused configurations if there are relatively frequent. */
   if (   object_pool->unused_count > object_pool->max_unused
-      || object_pool->used_count * 2 + object_pool->min_unused
-         < apr_hash_count(object_pool->objects))
+      ||   object_pool->used_count * 2 + object_pool->min_unused
+         < object_pool->unused_count)
     {
       remove_unused_objects(object_pool);
     }
@@ -393,6 +392,11 @@ insert(void **object,
 
       apr_hash_set(object_pool->objects, object_ref->key.data,
                    object_ref->key.size, object_ref);
+
+      /* the new entry is *not* in use yet.
+       * add_object_ref will update counters again. 
+       */
+      svn_atomic_inc(&object_ref->object_pool->unused_count);
     }
 
   /* return a reference to the object we just added */
