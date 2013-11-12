@@ -36,6 +36,7 @@ public class SVNUtil
     //
     // Global configuration
     //
+    private static final ConfigLib configLib = new ConfigLib();
 
     /**
      * Enable storing authentication credentials in Subversion's
@@ -52,7 +53,7 @@ public class SVNUtil
     public static void enableNativeCredentialsStore()
         throws ClientException
       {
-          new ConfigLib().enableNativeCredentialsStore();
+          configLib.enableNativeCredentialsStore();
       }
 
     /**
@@ -76,7 +77,7 @@ public class SVNUtil
     public static void disableNativeCredentialsStore()
         throws ClientException
       {
-          new ConfigLib().disableNativeCredentialsStore();
+          configLib.disableNativeCredentialsStore();
       }
 
     /**
@@ -85,12 +86,13 @@ public class SVNUtil
     public static boolean isNativeCredentialsStoreEnabled()
         throws ClientException
       {
-          return new ConfigLib().isNativeCredentialsStoreEnabled();
+          return configLib.isNativeCredentialsStoreEnabled();
       }
 
     //
     // Diff and Merge
     //
+    private static final DiffLib diffLib = new DiffLib();
 
     /**
      * Options to control the behaviour of the file diff routines.
@@ -209,10 +211,10 @@ public class SVNUtil
                                    OutputStream resultStream)
         throws ClientException
     {
-        return new DiffLib().fileDiff(originalFile, modifiedFile, diffOptions,
-                                      originalHeader, modifiedHeader,
-                                      headerEncoding,
-                                      relativeToDir, resultStream);
+        return diffLib.fileDiff(originalFile, modifiedFile, diffOptions,
+                                originalHeader, modifiedHeader,
+                                headerEncoding,
+                                relativeToDir, resultStream);
     }
 
 
@@ -253,16 +255,17 @@ public class SVNUtil
                                     OutputStream resultStream)
         throws ClientException
     {
-        return new DiffLib().fileMerge(originalFile, modifiedFile, latestFile,
-                                       diffOptions,
-                                       conflictOriginal, conflictModified,
-                                       conflictLatest, conflictSeparator,
-                                       conflictStyle, resultStream);
+        return diffLib.fileMerge(originalFile, modifiedFile, latestFile,
+                                 diffOptions,
+                                 conflictOriginal, conflictModified,
+                                 conflictLatest, conflictSeparator,
+                                 conflictStyle, resultStream);
     }
 
     //
     // Property validation and parsing
     //
+    private static final PropLib propLib = new PropLib();
 
     /**
      * Validate the value of an <code>svn:</code> property on file or
@@ -284,7 +287,7 @@ public class SVNUtil
         String mimeType)
         throws ClientException
     {
-        return new PropLib().canonicalizeNodeProperty(
+        return propLib.canonicalizeNodeProperty(
             name, value, path, kind, mimeType, null);
     }
 
@@ -313,7 +316,7 @@ public class SVNUtil
         String mimeType, InputStream fileContents)
         throws ClientException
     {
-        return new PropLib().canonicalizeNodeProperty(
+        return propLib.canonicalizeNodeProperty(
             name, value, path, kind, mimeType, fileContents);
     }
 
@@ -341,8 +344,8 @@ public class SVNUtil
                                                     boolean canonicalizeUrl)
         throws ClientException
     {
-        return new PropLib().parseExternals(description, parentDirectory,
-                                            canonicalizeUrl);
+        return propLib.parseExternals(description, parentDirectory,
+                                      canonicalizeUrl);
     }
 
     /**
@@ -359,7 +362,7 @@ public class SVNUtil
                                           String parentDirectory)
         throws SubversionException
     {
-        return new PropLib().unparseExternals(items, parentDirectory, false);
+        return propLib.unparseExternals(items, parentDirectory, false);
     }
 
     /**
@@ -374,7 +377,7 @@ public class SVNUtil
         List<ExternalItem> items, String parentDirectory)
         throws SubversionException
     {
-        return new PropLib().unparseExternals(items, parentDirectory, true);
+        return propLib.unparseExternals(items, parentDirectory, true);
     }
 
     /**
@@ -410,7 +413,7 @@ public class SVNUtil
                                              String parentDirUrl)
         throws ClientException
     {
-        return new PropLib()
-            .resolveExternalsUrl(external, reposRootUrl, parentDirUrl);
+        return propLib.resolveExternalsUrl(
+                   external, reposRootUrl, parentDirUrl);
     }
 }
