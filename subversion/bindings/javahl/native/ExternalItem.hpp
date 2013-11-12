@@ -27,6 +27,9 @@
 #include <string>
 
 #include "svn_opt.h"
+#include "svn_wc.h"
+
+#include "Pool.h"
 
 #include "jniwrapper/jni_object.hpp"
 #include "jniwrapper/jni_string.hpp"
@@ -89,6 +92,12 @@ public:
     {
       return &m_peg_revision;
     }
+
+  /**
+   * Returns an @c svn_wc_external_item2_t allocated from @a pool and
+   * filled in with this object's values.
+   */
+  svn_wc_external_item2_t* get_external_item(SVN::Pool& pool) const;
 
 private:
   static const char* const m_class_name;

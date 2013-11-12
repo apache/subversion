@@ -21,8 +21,9 @@
  * @endcopyright
  */
 
+#include "jniwrapper/jni_stack.hpp"
+
 #include "ExternalItem.hpp"
-#include "JNIUtil.h"
 #include "Revision.h"
 
 namespace JavaHL {
@@ -91,6 +92,22 @@ ExternalItem::ExternalItem(::Java::Env env,
     m_revision(*revision),
     m_peg_revision(*peg_revision)
 {}
+
+svn_wc_external_item2_t*
+ExternalItem::get_external_item(SVN::Pool& svnpool) const
+{
+  svn_wc_external_item2_t* item;
+  apr_pool_t* const pool = svnpool.getPool();
+  SVN_JAVAHL_CHECK(svn_wc_external_item2_create(&item, pool));
+
+  item->target_dir = apr_pstrdup(
+      pool, Java::String::Contents(m_target_dir).c_str());
+  item->url = apr_pstrdup(
+      pool, Java::String::Contents(m_url).c_str());
+  item->revision = m_revision;
+  item->peg_revision = m_peg_revision;
+  return item;
+}
 
 } // namespace JavaHL
 

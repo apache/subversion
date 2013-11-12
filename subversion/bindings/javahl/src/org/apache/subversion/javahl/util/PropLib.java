@@ -48,7 +48,7 @@ public class PropLib
         NativeResources.loadNativeLibrary();
     }
 
-    /** @see SVNUtil.canonicalizeSvnProperty */
+    /** @see SVNUtil#canonicalizeSvnProperty */
     public byte[] canonicalizeNodeProperty(String name, byte[] value,
                                            String path, NodeKind kind,
                                            String mimeType,
@@ -75,9 +75,16 @@ public class PropLib
                                                     boolean canonicalizeUrl)
         throws ClientException;
 
-    /** @see SVNUtil.unparseExternals */
+    /** @see SVNUtil#unparseExternals */
     public native byte[] unparseExternals(List<ExternalItem> items,
                                           String parentDirectory,
                                           boolean old_format)
         throws SubversionException;
+
+
+    /** @see SVNUtil#resolveExternalsUrl */
+    public native String resolveExternalsUrl(ExternalItem external,
+                                             String reposRootUrl,
+                                             String parentDirUrl)
+        throws ClientException;
 }
