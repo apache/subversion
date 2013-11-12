@@ -88,6 +88,7 @@ svn_error_t *
 svn_repos__repos_pool_get(svn_repos_t **repos_p,
                           svn_repos__repos_pool_t *repos_pool,
                           const char *repos_root,
+                          const char *uuid,
                           apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -98,7 +99,21 @@ svn_repos__repos_pool_get(svn_repos_t **repos_p,
   SVN_ERR(svn_object_pool__lookup((void **)repos_p, repos_pool->object_pool,
                                   key, NULL, pool));
   if (*repos_p)
-    return SVN_NO_ERROR;
+    {
+      if (uuid)
+        {
+          /* use a cached repo only if it matches the given UUID */
+          const char *actual;
+          SVN_ERR(svn_fs_get_uuid(svn_repos_fs(*repos_p), &actual, pool));
+          if (strcmp(actual, uuid) == 0)
+            return SVN_NO_ERROR;
+        }
+      else
+        {
+          /* no UUID specified by caller -> all repos match */
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* open repos in its private pool */
   wrapper_pool
