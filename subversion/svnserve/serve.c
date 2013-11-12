@@ -202,12 +202,13 @@ log_authz_denied(const char *path,
   return logger__write(b->logger, line, strlen(line));
 }
 
-/* If CFG specifies a path to the password DB, read that DB and store it
- * in REPOSITORY->PWDB.
+/* If CFG specifies a path to the password DB, read that DB through
+ * CONFIG_POOL and store it in REPOSITORY->PWDB.
  */
 static svn_error_t *
 load_pwdb_config(repository_t *repository,
                  svn_config_t *cfg,
+                 svn_repos__config_pool_t *config_pool,
                  apr_pool_t *pool)
 {
   const char *pwdb_path;
@@ -223,8 +224,9 @@ load_pwdb_config(repository_t *repository,
       pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(repository->base, pwdb_path, pool);
 
-      err = svn_config_read3(&repository->pwdb, pwdb_path, TRUE,
-                             FALSE, FALSE, pool);
+      err = svn_repos__config_pool_get(&repository->pwdb, NULL, config_pool,
+                                       pwdb_path, TRUE, FALSE,
+                                       repository->repos, pool);
       if (err)
         {
           /* Because it may be possible to read the pwdb file with some
@@ -281,8 +283,8 @@ canonicalize_access_file(const char **access_file, repository_t *repository,
   return SVN_NO_ERROR;
 }
 
-/* Load the authz database for the listening server based on the
-   entries in the SERVER struct.
+/* Load the authz database for the listening server through AUTHZ_POOL
+   based on the entries in the SERVER struct.
 
    SERVER and CONN must not be NULL. The real errors will be logged with
    SERVER and CONN but return generic errors to the client. */
@@ -290,6 +292,7 @@ static svn_error_t *
 load_authz_config(repository_t *repository,
                   const char *repos_root,
                   svn_config_t *cfg,
+                  svn_repos__authz_pool_t *authz_pool,
                   apr_pool_t *pool)
 {
   const char *authzdb_path;
@@ -317,8 +320,9 @@ load_authz_config(repository_t *repository,
                                        repos_root, pool);
 
       if (!err)
-        err = svn_repos_authz_read2(&repository->authzdb, authzdb_path,
-                                    groupsdb_path, TRUE, pool);
+        err = svn_repos__authz_pool_get(&repository->authzdb, authz_pool,
+                                        authzdb_path, groupsdb_path, TRUE,
+                                        repository->repos, pool);
 
       if (err)
         return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, err, NULL);
@@ -3264,11 +3268,17 @@ repos_path_valid(const char *path)
  * capabilities to CAPABILITIES, which must be at least as long-lived
  * as POOL, and whose elements are SVN_RA_CAPABILITY_*.  VHOST and
  * READ_ONLY flags are the same as in the server baton.
+ *
+ * CONFIG_POOL, AUTHZ_POOL and REPOS_POOL shall be used to load any
+ * object of the respective type.
  */
 static svn_error_t *find_repos(const char *url, const char *root,
                                svn_boolean_t vhost, svn_boolean_t read_only,
                                svn_config_t *cfg, repository_t *repository,
                                const apr_array_header_t *capabilities,
+                               svn_repos__config_pool_t *config_pool,
+                               svn_repos__authz_pool_t *authz_pool,
+                               svn_repos__repos_pool_t *repos_pool,
                                apr_pool_t *pool)
 {
   const char *path, *full_path, *repos_root, *fs_path, *hooks_env, *val;
@@ -3306,8 +3316,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos_open2(&repository->repos, repos_root,
-                          repository->fs_config, pool));
+  SVN_ERR(svn_repos__repos_pool_get(&repository->repos, repos_pool,
+                                    repos_root, "", pool));
   SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
                                                  capabilities));
   repository->fs = svn_repos_fs(repository->repos);
@@ -3339,8 +3349,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
                                pool));
     }
 
-  SVN_ERR(load_pwdb_config(repository, cfg, pool));
-  SVN_ERR(load_authz_config(repository, repos_root, cfg, pool));
+  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, pool));
+  SVN_ERR(load_authz_config(repository, repos_root, cfg, authz_pool, pool));
 
 #ifdef SVN_HAVE_SASL
   /* Should we use Cyrus SASL? */
@@ -3573,15 +3583,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.logger = params->logger;
   b.client_info = get_client_info(conn, params, pool);
 
-  /* construct FS configuration parameters */
-  repository.fs_config = apr_hash_make(pool);
-  svn_hash_sets(repository.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
-                params->cache_txdeltas ? "1" :"0");
-  svn_hash_sets(repository.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
-                params->cache_fulltexts ? "1" :"0");
-  svn_hash_sets(repository.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                params->cache_revprops ? "1" :"0");
-
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
   if (params->compression_level > 0)
@@ -3665,7 +3666,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   err = handle_config_error(find_repos(client_url, params->root,
                                        b.vhost, b.read_only,
                                        params->cfg, b.repository,
-                                       cap_words, pool), &b);
+                                       cap_words, params->config_pool,
+                                       params->authz_pool, params->repos_pool,
+                                       pool),
+                            &b);
   if (!err)
     {
       if (repository.anon_access == NO_ACCESS
