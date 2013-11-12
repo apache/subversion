@@ -359,4 +359,32 @@ public class UtilTests extends SVNTests
         }
         assertTrue(caught_exception);
     }
+
+    public void testResolveExternalsUrl() throws Throwable
+    {
+        assertEquals("http://a/b/c",
+                     SVNUtil.resolveExternalsUrl(
+                         new ExternalItem("x", "http://a/b/c/", null, null),
+                         "http://a", "http://a/b"));
+
+        assertEquals("http://a/b/c",
+                     SVNUtil.resolveExternalsUrl(
+                         new ExternalItem("x", "^/b/c", null, null),
+                         "http://a", "http://a/b"));
+
+        assertEquals("http://a/b/c",
+                     SVNUtil.resolveExternalsUrl(
+                         new ExternalItem("x", "../b/c", null, null),
+                         "http://a", "http://a/b"));
+
+        assertEquals("http://a/b/c",
+                     SVNUtil.resolveExternalsUrl(
+                         new ExternalItem("x", "/b/c", null, null),
+                         "http://a", "http://a/b"));
+
+        assertEquals("http://a/b/c",
+                     SVNUtil.resolveExternalsUrl(
+                         new ExternalItem("x", "//a/b/c", null, null),
+                         "http://a", "http://a/b"));
+    }
 }

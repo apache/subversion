@@ -376,4 +376,41 @@ public class SVNUtil
     {
         return new PropLib().unparseExternals(items, parentDirectory, true);
     }
+
+    /**
+     * If the URL in <code>external</code> is relative, resolve it to
+     * an absolute URL, using <code>reposRootUrl</code> and
+     * <code>parentDirUrl</code> to provide contest.
+     *<p>
+     * Regardless if the URL is absolute or not, if there are no
+     * errors, the returned URL will be canonicalized.
+     *<p>
+     * The following relative URL formats are supported:
+     * <dl>
+     *  <dt><code>../</code></dt>
+     *  <dd>relative to the parent directory of the external</dd>
+     *  <dt><code>^/</code></dt>
+     *  <dd>relative to the repository root</dd>
+     *  <dt><code>//</code></dt>
+     *  <dd>relative to the scheme</dd>
+     *  <dt><code>/</code></dt>
+     *  <dd>relative to the server's hostname</dd>
+     *<p>
+     * The <code>../<code> and ^/ relative URLs may use <code>..<code>
+     * to remove path elements up to the server root.
+     *<p>
+     * The external URL should not be canonicalized before calling
+     * this function, as otherwise the scheme relative URL
+     * '<code>//host/some/path</code>' would have been canonicalized
+     * to '<code>/host/some/path</code>' and we would not be able to
+     * match on the leading '<code>//</code>'.
+    */
+    public static String resolveExternalsUrl(ExternalItem external,
+                                             String reposRootUrl,
+                                             String parentDirUrl)
+        throws ClientException
+    {
+        return new PropLib()
+            .resolveExternalsUrl(external, reposRootUrl, parentDirUrl);
+    }
 }
