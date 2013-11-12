@@ -98,6 +98,10 @@ struct svn_object_pool__t
   /* the root pool owning this structure */
   apr_pool_t *root_pool;
 
+  /* this pool determines the minimum lifetime of this container.
+   * We use this to unregister cleanup routines (see below). */
+  apr_pool_t *owning_pool;
+  
   /* allocate the OBJECTS index here */
   apr_pool_t *objects_hash_pool;
 
@@ -127,6 +131,10 @@ destroy_object_pool(svn_object_pool__t *object_pool)
   return APR_SUCCESS;
 }
 
+/* Forward-declaration */
+static apr_status_t
+root_object_pool_cleanup(void *baton);
+
 /* Pool cleanup function for the whole object pool.  Actual destruction
  * will be deferred until no configurations are left in use.
  */
@@ -134,6 +142,10 @@ static apr_status_t
 object_pool_cleanup(void *baton)
 {
   svn_object_pool__t *object_pool = baton;
+
+  /* disable the alternative cleanup */
+  apr_pool_cleanup_kill(object_pool->root_pool, baton,
+                        root_object_pool_cleanup);
 
   /* from now on, anyone is allowed to destroy the OBJECT_POOL */
   svn_atomic_set(&object_pool->ready_for_cleanup, TRUE);
@@ -149,6 +161,23 @@ object_pool_cleanup(void *baton)
       destroy_object_pool(object_pool);
     }
 
+  return APR_SUCCESS;
+}
+
+/* This will be called when the root pool gets destroyed before the actual
+ * owner pool.  This may happen if the owner pool is the global root pool. 
+ * In that case, all the relevant cleanup has either already been done or
+ * is default-scheduled.
+ */
+static apr_status_t
+root_object_pool_cleanup(void *baton)
+{
+  svn_object_pool__t *object_pool = baton;
+ 
+  /* disable the full-fledged cleanup code */
+  apr_pool_cleanup_kill(object_pool->owning_pool, baton,
+                        object_pool_cleanup);
+  
   return APR_SUCCESS;
 }
 
@@ -431,6 +460,7 @@ svn_object_pool__create(svn_object_pool__t **object_pool,
   SVN_ERR(svn_mutex__init(&result->mutex, thread_safe, root_pool));
 
   result->root_pool = root_pool;
+  result->owning_pool = pool;
   result->objects_hash_pool = svn_pool_create(root_pool);
   result->objects = svn_hash__make(result->objects_hash_pool);
   result->ready_for_cleanup = FALSE;
@@ -440,10 +470,18 @@ svn_object_pool__create(svn_object_pool__t **object_pool,
   result->min_unused = min_unused;
   result->max_unused = max_unused;
 
-  /* make sure we clean up nicely */
+  /* make sure we clean up nicely.
+   * We need two cleanup functions of which exactly one will be run
+   * (disabling the respective other as the first step).  If the owning
+   * pool does not cleaned up / destroyed explicitly, it may live longer
+   * than our allocator.  So, we need do act upon cleanup requests from
+   * either side - owning_pool and root_pool.
+   */
   apr_pool_cleanup_register(pool, result, object_pool_cleanup,
                             apr_pool_cleanup_null);
-
+  apr_pool_cleanup_register(root_pool, result, root_object_pool_cleanup,
+                            apr_pool_cleanup_null);
+  
   *object_pool = result;
   return SVN_NO_ERROR;
 }
