@@ -402,7 +402,8 @@ struct edit_baton
   /* Information from the caller */
   svn_boolean_t use_commit_times;
   const apr_array_header_t *ext_patterns;
-  const char *diff3cmd;
+  const char *diff3_cmd;
+  const char *invoke_diff3_cmd;
 
   const char *url;
   const char *repos_root_url;
@@ -813,7 +814,8 @@ close_file(void *file_baton,
                                                    eb->original_revision,
                                                    *eb->target_revision,
                                                    eb->propchanges,
-                                                   eb->diff3cmd,
+                                                   eb->diff3_cmd,
+                                                   eb->invoke_diff3_cmd,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    pool, pool));
@@ -984,6 +986,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  apr_array_header_t *iprops,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
+                                 const char *invoke_diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
                                  const char *record_ancestor_abspath,
                                  const char *recorded_url,
@@ -1021,7 +1024,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
 
   eb->use_commit_times = use_commit_times;
   eb->ext_patterns = preserved_exts;
-  eb->diff3cmd = diff3_cmd;
+  eb->diff3_cmd = diff3_cmd;
+  eb->invoke_diff3_cmd = invoke_diff3_cmd;
 
   eb->record_ancestor_abspath = apr_pstrdup(edit_pool,record_ancestor_abspath);
   eb->recorded_repos_relpath = svn_uri_skip_ancestor(repos_root_url, recorded_url,

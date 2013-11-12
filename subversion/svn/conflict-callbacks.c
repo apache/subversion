@@ -118,6 +118,10 @@ svn_cl__accept_from_word(const char *word)
   if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0
       || strcmp(word, "l") == 0 || strcmp(word, ":-l") == 0)
     return svn_cl__accept_launch;
+  if (strcmp(word, SVN_CL__ACCEPT_INVOKE_DIFF3_CONFIG) == 0
+      /* I'm stumped.  What is this smiley selection? */
+      || strcmp(word, "3f") == 0 || strcmp(word, ":-?") == 0)
+    return svn_cl__accept_launch;
   /* word is an invalid action. */
   return svn_cl__accept_invalid;
 }
@@ -409,6 +413,33 @@ launch_resolver(svn_boolean_t *performed_edit,
   return SVN_NO_ERROR;
 }
 
+/* Run an external merge tool, passing it the 'base', 'their', 'my' and
+ * 'merged' files in DESC. The tool to use is determined by B->config and
+ * environment variables; see svn_cl__merge_file_externally() for details.
+ *
+ * If the tool runs, set *PERFORMED_EDIT to true; if a tool is not
+ * configured or cannot run, do not touch *PERFORMED_EDIT, report the error
+ * on stderr, and return SVN_NO_ERROR; if any other error is encountered,
+ * return that error.  */
+static svn_error_t *
+invoke_diff3_resolver(svn_boolean_t *performed_edit,
+                      const svn_wc_conflict_description2_t *desc,
+                      svn_cl__interactive_conflict_baton_t *b,
+                      const char *opt_code,
+                      apr_pool_t *pool)
+{
+  SVN_ERR(svn_cl__invoke_diff3_cmd_externally(
+                                    desc->base_abspath, desc->their_abspath,
+                                    desc->my_abspath, desc->merged_file,
+                                    desc->local_abspath, b->config, NULL,
+                                    opt_code,
+                                    pool));
+  if (performed_edit)
+    *performed_edit = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Maximum line length for the prompt string. */
 #define MAX_PROMPT_WIDTH 70
@@ -458,15 +489,7 @@ static const resolver_option_t text_conflict_options[] =
                                      -1 },
   { "l",  N_("launch tool"),      N_("launch external tool to resolve "
                                      "conflict  [launch]"), -1 },
-  { "3f", N_("invoke-diff3-cmd given in config file"), 
-                                  N_("use invoke-diff3 command defined in "
-                                     "the config file to resolve conflict "
-                                     "[invoke-diff3-config]"), -1 },
-  { "3c", N_("invoke-diff3-cmd given on command line"),      
-                                  N_("use invoke-diff3 tool defined in the "
-                                     "commandline to resolve conflict "
-                                     "[invoke-diff3-cmd]"), -1 },
-  { "3i", N_("interactive invoke-diff3-cmd selection"), 
+  { "i", N_("interactive invoke-diff3-cmd selection"), 
                                   N_("interactively select tool now to "
                                      "resolve conflict"), -1 },
 
@@ -747,9 +770,7 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           *next_option++ = "e";
           *next_option++ = "m";
 
-          *next_option++ = "3f";
-          *next_option++ = "3c";
-          *next_option++ = "3i";
+          *next_option++ = "i";
 
           if (knows_something)
             *next_option++ = "r";
@@ -829,13 +850,11 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
             knows_something = TRUE;
         }
       else if (strcmp(opt->code, "m") == 0 || strcmp(opt->code, ":-g") == 0 ||
-               strcmp(opt->code, "=>-") == 0 || strcmp(opt->code, ":>.") == 0 ||
-               strcmp(opt->code, "3f") == 0 || strcmp(opt->code, "3c") == 0 ||
-               strcmp(opt->code, "3i") == 0)
+               strcmp(opt->code, "=>-") == 0 || strcmp(opt->code, ":>.") == 0)
         {
           svn_boolean_t remains_in_conflict;
           svn_error_t *err;
-
+          
           err = launch_resolver(&performed_edit, desc, b, iterpool);
           if (err)
             {
@@ -848,7 +867,6 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               else
                 return svn_error_trace(err);
             }
-
           if (!performed_edit &&
               desc->base_abspath && desc->their_abspath &&
               desc->my_abspath && desc->merged_file)
@@ -912,6 +930,38 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               else if (err)
                 return svn_error_trace(err);
 
+              if (performed_edit)
+                knows_something = TRUE;
+            }
+          else
+            SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                                        _("Invalid option.\n\n")));
+        }
+      else if (strcmp(opt->code, "i") == 0)
+        { /* interactively get the invoke-diff3-cmd */
+              
+          if (desc->base_abspath && desc->their_abspath &&
+              desc->my_abspath && desc->merged_file)
+            {
+              const char *answer;
+              svn_error_t *err;
+              
+              SVN_ERR(svn_cmdline_prompt_user2(&answer, 
+                                               "Enter the invoke-diff3-cmd: ", 
+                                               b->pb, iterpool));
+              err = invoke_diff3_resolver(&performed_edit, desc, b, answer, iterpool);
+              
+              if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                                              err->message ? err->message :
+                                              _("Error executing the interactive, "
+                                                "invoke-diff3-cmd.\n")));
+                  svn_error_clear(err);
+                }
+              else if (err)
+                return svn_error_trace(err);
+              
               if (performed_edit)
                 knows_something = TRUE;
             }
@@ -1323,15 +1373,15 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
               (*result)->choice = svn_wc_conflict_choose_postpone;
               return SVN_NO_ERROR;
             }
-
-          err = svn_cl__invoke_diff3_cmd_file_externally(desc->base_abspath,
-                                              desc->their_abspath,
-                                              desc->my_abspath,
-                                              desc->merged_file,
-                                              desc->local_abspath,
-                                              b->config,
-                                              &remains_in_conflict,
-                                              scratch_pool);
+          err = svn_cl__invoke_diff3_cmd_externally(desc->base_abspath,
+                                                    desc->their_abspath,
+                                                    desc->my_abspath,
+                                                    desc->merged_file,
+                                                    desc->local_abspath,
+                                                    b->config,
+                                                    &remains_in_conflict,
+                                                    "3f",
+                                                    scratch_pool);
           if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
@@ -1345,7 +1395,7 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           err->message ? err->message :
-                                          _("Error running invoke-diff2-cmd tool;"
+                                          _("Error running invoke-diff3-cmd tool;"
                                             " leaving all conflicts.")));
               b->external_failed = TRUE;
               return svn_error_trace(err);

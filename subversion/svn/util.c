@@ -174,50 +174,61 @@ svn_cl__merge_file_externally(const char *base_path,
 }
 
 svn_error_t *
-svn_cl__invoke_diff3_cmd_file_externally(const char *base_path,
-                                         const char *their_path,
-                                         const char *my_path,
-                                         const char *merged_path,
-                                         const char *wc_path,
-                                         apr_hash_t *config,
-                                         svn_boolean_t *remains_in_conflict,
-                                         apr_pool_t *pool)
+svn_cl__invoke_diff3_cmd_externally(const char *base_path,
+                                    const char *their_path,
+                                    const char *my_path,
+                                    const char *merged_path,
+                                    const char *wc_path,
+                                    apr_hash_t *config,
+                                    svn_boolean_t *remains_in_conflict,
+                                    const char *opt_code,
+                                    apr_pool_t *pool)
 {
   char *invoke_diff3_cmd;
   /* Error if there is no editor specified */
   /* not sure how or where to set this, but it loads on fail... so... FIXME? */
-  if (apr_env_get(&invoke_diff3_cmd, "SVN_INVOKE_DIFF3_CMD", pool) != APR_SUCCESS)
+
+  if (0 == strcmp(opt_code,"3f")) /* command in config file */
     {
-      struct svn_config_t *cfg;
-      invoke_diff3_cmd = NULL;
-      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
-      /* apr_env_get wants char **, this wants const char ** */
-      svn_config_get(cfg, (const char **)&invoke_diff3_cmd,
-                     SVN_CONFIG_SECTION_HELPERS,
-                     SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
-    }
+      if (apr_env_get(&invoke_diff3_cmd, "SVN_INVOKE_DIFF3_CMD", pool) != APR_SUCCESS)
+        {
+          struct svn_config_t *cfg;
+          invoke_diff3_cmd = NULL;
+          cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
+          /* apr_env_get wants char **, this wants const char ** */
+          svn_config_get(cfg, (const char **)&invoke_diff3_cmd,
+                         SVN_CONFIG_SECTION_HELPERS,
+                         SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
+        }
 
-  if (invoke_diff3_cmd)
-    {
-      const char *c;
+      if (invoke_diff3_cmd)
+        {
+          const char *c;
 
-      for (c = invoke_diff3_cmd; *c; c++)
-        if (!svn_ctype_isspace(*c))
-          break;
+          for (c = invoke_diff3_cmd; *c; c++)
+            if (!svn_ctype_isspace(*c))
+              break;
 
-      if (! *c)
+          if (! *c)
+            return svn_error_create
+              (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
+               _("The SVN_INVOKE_DIFF3_TOOL environment variable is empty or "
+                 "consists solely of whitespace. Expected a shell command.\n"));
+        }
+      else
         return svn_error_create
           (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
-           _("The SVN_INVOKE_DIFF3_TOOL environment variable is empty or "
-             "consists solely of whitespace. Expected a shell command.\n"));
+           _("The environment variable SVN_INVOKE_DIFF3_TOOL and the invoke-diff3-cmd run-time "
+             "configuration option were not set.\n"));
     }
-  else
-      return svn_error_create
-        (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
-         _("The environment variable SVN_INVOKE_DIFF3_TOOL and the invoke-diff3-cmd run-time "
-           "configuration option were not set.\n"));
-
-  {
+    /* if (0 == strcmp(opt_code,"3c") /\* command in on command line *\/ */
+    /*   { /\* nothing yet *\/} */
+    /*   else */
+    else
+      {
+        invoke_diff3_cmd = apr_pstrdup(pool, opt_code);
+      }
+    {
     const char ** cmd;
 
     apr_pool_t *scratch_pool = svn_pool_create(pool); 

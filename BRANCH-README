@@ -57,6 +57,17 @@ UI components
   which in turn is overridden when one of --invoke-merge-cmd,
   --diff-cmd are invoked.
 
+=> Note: the current mess is messy.  Once it's all working I will be
+looking to simplify this stuff.
+
+* see if the check with the notice can be generally moved to where the
+  options are determined.
+
+* see if the launch resolver /invoke-diff-revolved thingy should be
+  sausagemachined. (probably not. the code is a snake nest as is
+  without adding yet another knot to it)
+
+* 
 
 Changes to the existing code structure:
 =======================================
@@ -73,13 +84,47 @@ different; --diff-3 is tailored for GNU diff3 and carefully checks the
 user's input of switches, whereas --invoke-diff3-cmd is a
 free-style-anything-goes-including-shooting-your-foot creation.
 
+Known Problems
+==============
+
+The error trace back in subversion/svn/conflict-callbacks.c is broken
+in general.  I've kept the current shape to match the 'l' option, but
+I think that is a seperate bug.
+
+see line 902 ('l' option)
+and line 940 ('i' option)
+
+Merge of 'subversion/libsvn_client/diff.c' aborted.
+Select: (p) postpone, (df) show diff, (e) edit file, (m) merge,
+        (i) interactive invoke-diff3-cmd selection,
+        (mc) my side of conflict, (tc) their side of conflict,
+        (s) show all options: l
+l
+traced call
+Select: (p) postpone, (df) show diff, (e) edit file, (m) merge,
+        (i) interactive invoke-diff3-cmd selection,
+        (mc) my side of conflict, (tc) their side of conflict,
+        (s) show all options: i
+i
+Enter the invoke-diff3-cmd: flobble
+flobble
+traced call
+Select: (p) postpone, (df) show diff, (e) edit file, (m) merge,
+        (i) interactive invoke-diff3-cmd selection,
+        (mc) my side of conflict, (tc) their side of conflict,
+        (s) show all options: 
 
 Tests
 =====
 
 Correct functionality
 ---------------------
-TBD
+
+I could not find a pre-existing test for the --diff3-cmd option and so
+I omitted a test for now.  See below for test suite failures.
+
+TODO:  fix the get-opt data test.
+
 
 Working copy functionality
 --------------------------
@@ -105,22 +150,217 @@ kdiff3: 0.9.97 (32 bit)
 TODO:
 ====
 
-  * write help info
+ * extract the patch.
 
-  * Create the UI for the interactive dialogue in
-    subversion/svn/conflict-callbacks.
+ * make new branch from invoke-diff-cmd-feature.
 
-    Proposed interactive dialoge entry:
+ * apply patch, make changes to match invoke-diff-cmd-feature since
+   then.
 
-    (3f) - use diff3 tool defined in the config file to resolve conflict 
-    (3c) - use diff3 tool defined in the commandline to resolve conflict 
-    (3i) - interactively select diff3 tool now to resolve conflict  
+ * write log messages
 
-  * make list of where else in svn to add the invoke-merge-cmd.
-   - svn cleanup
+ * fix the get-opt test.  
 
-  * config file service:
-    plug in config file service into io.c
-    add new entry in config file
 
-  * ask on svn-dev how to create a suitable python test.
+FAILED TESTS
+============
+
+Tha tests below are failing, but I have no idea as to why:
+
+$ ./externals_tests.py 
+PASS:  externals_tests.py 1: test checkouts with externals
+PASS:  externals_tests.py 2: update to receive a new external module
+PASS:  externals_tests.py 3: update to lose an external module
+PASS:  externals_tests.py 4: update change to an unmodified external module
+PASS:  externals_tests.py 5: update changes to a modified external module
+PASS:  externals_tests.py 6: update changes under an external module
+PASS:  externals_tests.py 7: commit and update additional externals
+PASS:  externals_tests.py 8: error if external target dir involves '.' or '..'
+PASS:  externals_tests.py 9: test exports with externals
+PASS:  externals_tests.py 10: test exports from working copies with externals
+PASS:  externals_tests.py 11: use a peg revision to specify an external module
+PASS:  externals_tests.py 12: check the new '-rN URL PATH' syntax
+PASS:  externals_tests.py 13: error if propset'ing external with invalid format
+PASS:  externals_tests.py 14: old 'PATH URL' format should ignore peg revisions
+PASS:  externals_tests.py 15: should not be able to mv or rm a file external
+W: EXPECTED STDERR (regexp):
+W: | svn: E205011: Failure occurred.*definitions
+W: ACTUAL STDERR:
+W: | svn: warning: apr_err=SVN_ERR_WC_BAD_PATH
+W: | svn: warning: W155022: Cannot insert a file external defined on '/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svn-test-work/working_copies/externals_tests-16' into the working copy '/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svn-test-work/working_copies/externals_tests-16/A/D-copy'.
+W: | subversion/svn/update-cmd.c:175: (apr_err=SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS)
+W: | svn: E205012: Failure occurred processing one or more externals definitions
+W: CWD: /home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline
+W: EXCEPTION: SVNUnmatchedError
+Traceback (most recent call last):
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 1584, in run
+    rc = self.pred.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 176, in run
+    return self.func(sandbox)
+  File "./externals_tests.py", line 1143, in cant_place_file_external_into_dir_external
+    'up', wc_dir)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 282, in run_and_verify_svn
+    expected_exit, *varargs)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 321, in run_and_verify_svn2
+    verify.verify_outputs(message, out, err, expected_stdout, expected_stderr)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/verify.py", line 445, in verify_outputs
+    compare_and_display_lines(message, label, expected, actual, raisable)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/verify.py", line 418, in compare_and_display_lines
+    raise raisable
+SVNUnmatchedError
+FAIL:  externals_tests.py 16: place a file external into a directory external
+PASS:  externals_tests.py 17: allow spaces in external local paths
+PASS:  externals_tests.py 18: binary file externals
+PASS:  externals_tests.py 19: delete a file external
+PASS:  externals_tests.py 20: switch a relative external
+PASS:  externals_tests.py 21: export from a sparse working copy with externals
+PASS:  externals_tests.py 22: relegate external from one repo to another
+PASS:  externals_tests.py 23: tag directory with file externals from wc to url
+PASS:  externals_tests.py 24: merge target with externals
+PASS:  externals_tests.py 25: update that modifies a file external
+PASS:  externals_tests.py 26: update an external on a locally added dir
+PASS:  externals_tests.py 27: switch an external on a locally added dir
+PASS:  externals_tests.py 28: update a file external in sibling dir
+PASS:  externals_tests.py 29: update a file external without committing target
+PASS:  externals_tests.py 30: bring in a new file over a file external
+PASS:  externals_tests.py 31: bring in a new file external over a file
+PASS:  externals_tests.py 32: try to exclude externals
+PASS:  externals_tests.py 33: update file externals via different url
+PASS:  externals_tests.py 34: file external in unversioned dir
+PASS:  externals_tests.py 35: a WC->WC copy should exclude file externals
+PASS:  externals_tests.py 36: commit --include-externals
+PASS:  externals_tests.py 37: commit --include-externals --depth=immediates
+W: CWD: /home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline
+W: EXCEPTION: Failure: Creating conflicting child 'C' of 'A' didn't error
+Traceback (most recent call last):
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 1584, in run
+    rc = self.pred.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 114, in run
+    return self._delegate.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 176, in run
+    return self.func(sandbox)
+  File "./externals_tests.py", line 2813, in shadowing
+    raise svntest.Failure("Creating conflicting child 'C' of 'A' didn't error")
+Failure: Creating conflicting child 'C' of 'A' didn't error
+XFAIL: externals_tests.py 38: external shadows an existing dir
+PASS:  externals_tests.py 39: file external remap segfaults due to deleted props
+PASS:  externals_tests.py 40: whether '-r1 ^/A B' updates properly
+PASS:  externals_tests.py 41: url-to-wc copy of externals
+PASS:  externals_tests.py 42: local path appears twice in one svn:external prop
+PASS:  externals_tests.py 43: list with --include-externals
+PASS:  externals_tests.py 44: move with file externals
+W: CWD: /home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline
+W: EXCEPTION: SVNUnmatchedError
+Traceback (most recent call last):
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 1584, in run
+    rc = self.pred.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 176, in run
+    return self.func(sandbox)
+  File "./externals_tests.py", line 3187, in pinned_externals
+    expected_error)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 879, in run_and_verify_update
+    raise main.SVNUnmatchedError
+SVNUnmatchedError
+FAIL:  externals_tests.py 45: pinned external
+PASS:  externals_tests.py 46: shallow update should remove externals
+W: svn: warning: apr_err=SVN_ERR_FS_NOT_FOUND
+W: svn: warning: W160013: Working copy path 'gamma-ext' does not exist in repository
+W: subversion/svn/update-cmd.c:175: (apr_err=SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS)
+W: svn: E205012: Failure occurred processing one or more externals definitions
+W: CWD: /home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline
+W: EXCEPTION: Failure: Command failed: "/home/g/branches/invoke-diff-merge-feature/subversion/svn/svn update svn-test-work/working_copies/externals_tests-47.branch --config-dir ..."; exit code 1
+Traceback (most recent call last):
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 1584, in run
+    rc = self.pred.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 114, in run
+    return self._delegate.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 176, in run
+    return self.func(sandbox)
+  File "./externals_tests.py", line 3265, in switch_parent_relative_file_external
+    'update', branch_wc)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 282, in run_and_verify_svn
+    expected_exit, *varargs)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 320, in run_and_verify_svn2
+    exit_code, out, err = main.run_svn(want_err, *varargs)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 699, in run_svn
+    *(_with_auth(_with_config_dir(varargs))))
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 365, in run_command
+    None, *varargs)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 557, in run_command_stdin
+    '"; exit code ' + str(exit_code))
+Failure: Command failed: "/home/g/branches/invoke-diff-merge-feature/subversion/svn/svn update svn-test-work/working_copies/externals_tests-47.branch --config-dir ..."; exit code 1
+XFAIL: externals_tests.py 47: switch parent-relative file external
+PASS:  externals_tests.py 48: file externals unversioned obstruction
+W: Couldn't find node 'mu-ext' in actual disk tree
+W:  * Node name:   mu-ext
+    Path:       __SVN_ROOT_NODE/A/mu-ext
+    Contents:   This is the file 'mu'.
+
+    Properties: {}
+    Attributes: {}
+    Children:  None (node is probably a file)
+
+W: Unequal at node A
+W: EXPECTED DISK TREE:
+svntest.wc.State(wc_dir, {
+  'A/B/E/beta'        : Item(contents="This is the file 'beta'.\n"),
+  'A/B/E/alpha'       : Item(contents="This is the file 'alpha'.\n"),
+  'A/B/F'             : Item(),
+  'A/B/lambda'        : Item(contents="This is the file 'lambda'.\n"),
+  'A/D/G/rho'         : Item(contents="This is the file 'rho'.\n"),
+  'A/D/G/pi'          : Item(contents="This is the file 'pi'.\n"),
+  'A/D/G/tau'         : Item(contents="This is the file 'tau'.\n"),
+  'A/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
+  'A/D/H/omega'       : Item(contents="This is the file 'omega'.\n"),
+  'A/D/H/chi'         : Item(contents="This is the file 'chi'.\n"),
+  'A/D/gamma'         : Item(contents="This is the file 'gamma'.\n"),
+  'A/mu'              : Item(contents="This is the file 'mu'.\n"),
+  'A/mu-ext'          : Item(contents="This is the file 'mu'.\n"),
+  'A/C'               : Item(),
+  'iota'              : Item(contents="This is the file 'iota'.\n"),
+})
+W: ACTUAL DISK TREE:
+svntest.wc.State(wc_dir, {
+  'A/D/H/psi'         : Item(contents="This is the file 'psi'.\n"),
+  'A/D/H/omega'       : Item(contents="This is the file 'omega'.\n"),
+  'A/D/H/chi'         : Item(contents="This is the file 'chi'.\n"),
+  'A/D/G/rho'         : Item(contents="This is the file 'rho'.\n"),
+  'A/D/G/pi'          : Item(contents="This is the file 'pi'.\n"),
+  'A/D/G/tau'         : Item(contents="This is the file 'tau'.\n"),
+  'A/D/gamma'         : Item(contents="This is the file 'gamma'.\n"),
+  'A/B/E/beta'        : Item(contents="This is the file 'beta'.\n"),
+  'A/B/E/alpha'       : Item(contents="This is the file 'alpha'.\n"),
+  'A/B/F'             : Item(),
+  'A/B/lambda'        : Item(contents="This is the file 'lambda'.\n"),
+  'A/C'               : Item(),
+  'A/mu'              : Item(contents="This is the file 'mu'.\n"),
+  'iota'              : Item(contents="This is the file 'iota'.\n"),
+})
+W: CWD: /home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline
+W: EXCEPTION: SVNTreeUnequal
+Traceback (most recent call last):
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/main.py", line 1584, in run
+    rc = self.pred.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 114, in run
+    return self._delegate.run(sandbox)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/testcase.py", line 176, in run
+    return self.func(sandbox)
+  File "./externals_tests.py", line 3347, in file_external_versioned_obstruction
+    expected_status)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 886, in run_and_verify_update
+    check_props)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 799, in verify_update
+    singleton_handler_b, b_baton)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/actions.py", line 820, in verify_disk
+    singleton_handler_b, b_baton)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/tree.py", line 696, in compare_trees
+    singleton_handler_b, b_baton)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/tree.py", line 701, in compare_trees
+    singleton_handler_b(b_child, b_baton)
+  File "/home/g/branches/invoke-diff-merge-feature/subversion/tests/cmdline/svntest/tree.py", line 593, in default_singleton_handler
+    raise SVNTreeUnequal
+SVNTreeUnequal
+XFAIL: externals_tests.py 49: file externals versioned obstruction
+~/branches/invoke-diff-merge-feature/subversion/tests/cmdline>
+$ 
+

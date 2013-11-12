@@ -223,6 +223,10 @@ struct edit_baton
      internal merge code is used). */
   const char *diff3_cmd;
 
+  /* External custom invoke diff3 to use for merges (can be null, in
+     which case internal merge code is used). */
+  const char *invoke_diff3_cmd;
+
   /* Externals handler */
   svn_wc_external_update_t external_func;
   void *external_baton;
@@ -3900,6 +3904,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
+                           const char *invoke_diff3_cmd,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
@@ -3966,20 +3971,21 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
   /* Merge the changes from the old textbase to the new
      textbase into the file we're updating.
      Remember that this function wants full paths! */
-  SVN_ERR(svn_wc__internal_merge(&work_item,
-                                 conflict_skel,
-                                 &merge_outcome,
-                                 db,
-                                 merge_left,
-                                 new_text_base_tmp_abspath,
-                                 local_abspath,
-                                 wri_abspath,
-                                 oldrev_str, newrev_str, mine_str,
-                                 old_actual_props,
-                                 FALSE /* dry_run */,
-                                 diff3_cmd, NULL, propchanges,
-                                 cancel_func, cancel_baton,
-                                 result_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_merge1(&work_item,
+                                  conflict_skel,
+                                  &merge_outcome,
+                                  db,
+                                  merge_left,
+                                  new_text_base_tmp_abspath,
+                                  local_abspath,
+                                  wri_abspath,
+                                  oldrev_str, newrev_str, mine_str,
+                                  old_actual_props,
+                                  FALSE /* dry_run */,
+                                  diff3_cmd, invoke_diff3_cmd,
+                                  NULL, propchanges,
+                                  cancel_func, cancel_baton,
+                                  result_pool, scratch_pool));
 
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
   *found_conflict = (merge_outcome == svn_wc_merge_conflict);
@@ -4138,6 +4144,7 @@ merge_file(svn_skel_t **work_items,
                                          *eb->target_revision,
                                          fb->propchanges,
                                          eb->diff3_cmd,
+                                         eb->invoke_diff3_cmd,
                                          eb->cancel_func, eb->cancel_baton,
                                          result_pool, scratch_pool));
     } /* end: working file exists and has mods */
@@ -4831,6 +4838,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_wc_external_update_t external_func,
             void *external_baton,
             const char *diff3_cmd,
+            const char *invoke_diff3_cmd,
             const apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
             void **edit_baton,
@@ -4901,6 +4909,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->external_func            = external_func;
   eb->external_baton           = external_baton;
   eb->diff3_cmd                = diff3_cmd;
+  eb->invoke_diff3_cmd         = invoke_diff3_cmd;
   eb->cancel_func              = cancel_func;
   eb->cancel_baton             = cancel_baton;
   eb->conflict_func            = conflict_func;
@@ -5107,6 +5116,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           svn_boolean_t clean_checkout,
                           const char *diff3_cmd,
+                          const char *invoke_diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_dirents_func_t fetch_dirents_func,
                           void *fetch_dirents_baton,
@@ -5131,7 +5141,8 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                      fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
-                     diff3_cmd, preserved_exts, editor, edit_baton,
+                     diff3_cmd, invoke_diff3_cmd,
+                     preserved_exts, editor, edit_baton,
                      result_pool, scratch_pool);
 }
 
@@ -5150,6 +5161,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
+                          const char *invoke_diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_dirents_func_t fetch_dirents_func,
                           void *fetch_dirents_baton,
@@ -5178,7 +5190,8 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                      fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
-                     diff3_cmd, preserved_exts,
+                     diff3_cmd, invoke_diff3_cmd,
+                     preserved_exts,
                      editor, edit_baton,
                      result_pool, scratch_pool);
 }

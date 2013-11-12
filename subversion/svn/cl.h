@@ -542,14 +542,15 @@ svn_cl__merge_file_externally(const char *base_path,
 /* As svn_cl__merge_file_externally, but for the invoke_diff3_cmd
    selected merge tool  */
 svn_error_t *
-svn_cl__invoke_diff3_cmd_file_externally(const char *base_path,
-                                         const char *their_path,
-                                         const char *my_path,
-                                         const char *merged_path,
-                                         const char *wc_path,
-                                         apr_hash_t *config,
-                                         svn_boolean_t *remains_in_conflict,
-                                         apr_pool_t *pool);
+svn_cl__invoke_diff3_cmd_externally(const char *base_path,
+                                    const char *their_path,
+                                    const char *my_path,
+                                    const char *merged_path,
+                                    const char *wc_path,
+                                    apr_hash_t *config,
+                                    svn_boolean_t *remains_in_conflict,
+                                    const char *opt_code,
+                                    apr_pool_t *pool);
 
 
 /* Like svn_cl__merge_file_externally, but using a built-in merge tool

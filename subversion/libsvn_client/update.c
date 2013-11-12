@@ -226,7 +226,8 @@ update_internal(svn_revnum_t *result_rev,
   svn_revnum_t revnum;
   svn_boolean_t use_commit_times;
   svn_boolean_t clean_checkout = FALSE;
-  const char *diff3_cmd;
+  const char *diff3_cmd = NULL;
+  const char *invoke_diff3_cmd = NULL;
   apr_hash_t *wcroot_iprops;
   svn_opt_revision_t opt_rev;
   svn_ra_session_t *ra_session;
@@ -332,13 +333,24 @@ update_internal(svn_revnum_t *result_rev,
   /* check whether the "clean c/o" optimization is applicable */
   SVN_ERR(is_empty_wc(&clean_checkout, local_abspath, anchor_abspath, pool));
 
-  /* Get the external diff3, if any. */
+ /* Get the external *_diff3_cmd, if any. 
+     Precedence: If there is no invoke_diff3_cmd on the cmd line,
+     check if there is a diff3-cmd in the config file.  If there is,
+     do not check invoke_diff3_cmd in the config file.*/
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   if (diff3_cmd != NULL)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
-
+  else
+    {
+      svn_config_get(cfg, &invoke_diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
+      if (invoke_diff3_cmd != NULL)
+        SVN_ERR(svn_path_cstring_to_utf8(&invoke_diff3_cmd, 
+                                         invoke_diff3_cmd, pool));
+    }
+ 
   /* See if the user wants last-commit timestamps instead of current ones. */
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
@@ -429,7 +441,8 @@ update_internal(svn_revnum_t *result_rev,
                                     adds_as_modification,
                                     server_supports_depth,
                                     clean_checkout,
-                                    diff3_cmd, preserved_exts,
+                                    diff3_cmd, invoke_diff3_cmd,
+                                    preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
                                     conflicted_paths ? record_conflict : NULL,
                                     conflicted_paths,

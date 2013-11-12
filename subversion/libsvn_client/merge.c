@@ -9672,7 +9672,8 @@ do_merge(apr_hash_t **modified_subtrees,
 {
   merge_cmd_baton_t merge_cmd_baton = { 0 };
   svn_config_t *cfg;
-  const char *diff3_cmd;
+  const char *diff3_cmd = NULL;
+  const char *invoke_diff3_cmd = NULL;
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
   svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
@@ -9723,7 +9724,11 @@ do_merge(apr_hash_t **modified_subtrees,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  /* Set up the diff3 command, so various callers don't have to. */
+ /* Get the external *_diff3_cmd, if any. 
+     Precedence: If there is no invoke_diff3_cmd on the cmd line,
+     check if there is a diff3-cmd in the config file.  If there is,
+     do not check invoke_diff3_cmd in the config file.*/
+
   cfg = ctx->config
         ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
         : NULL;
@@ -9732,6 +9737,14 @@ do_merge(apr_hash_t **modified_subtrees,
 
   if (diff3_cmd != NULL)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, scratch_pool));
+  else
+    {
+      svn_config_get(cfg, &invoke_diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
+      if (invoke_diff3_cmd != NULL)
+        SVN_ERR(svn_path_cstring_to_utf8(&invoke_diff3_cmd, 
+                                         invoke_diff3_cmd, scratch_pool));
+    }
 
   /* Build the merge context baton (or at least the parts of it that
      don't need to be reset for each merge source).  */
@@ -9748,6 +9761,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.pool = iterpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
+  merge_cmd_baton.invoke_diff3_cmd = invoke_diff3_cmd;
   merge_cmd_baton.use_sleep = use_sleep;
 
   /* Do we already know the specific subtrees with mergeinfo we want
@@ -9805,7 +9819,6 @@ do_merge(apr_hash_t **modified_subtrees,
       if ((strcmp(source->loc1->url, source->loc2->url) == 0)
           && (source->loc1->rev == source->loc2->rev))
         continue;
-
       /* Establish RA sessions to our URLs, reuse where possible. */
       SVN_ERR(ensure_ra_session_url(&ra_session1, source->loc1->url,
                                     target->abspath, ctx, scratch_pool));

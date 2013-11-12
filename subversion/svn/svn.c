@@ -251,21 +251,21 @@ const apr_getopt_option_t svn_cl__options[] =
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
-  {"invoke-diff3-cmd", opt_invoke_diff_cmd, 1, 
-                   N_("use ARG as format string for external merge program\n"
+  {"invoke-diff3-cmd", opt_diff3_cmd, 1, 
+                    N_("use ARG as format string for external merge program\n"
                       "                             "
                       "invocation.  Substitutions: \n" 
                       "                             "
                       "  %svn_mine  'mine' file\n"
                       "                             "
                       "  %svn_yours 'yours' file\n"
-                      "                "
+                      "                             "
                       "  %svn_base  'base' file\n"
-                      "                "
+                      "                             "
                       "  %svn_label_mine   label of the 'mine file\n"
-                      "                "
+                      "                             "
                       "  %svn_label_yours  label of the 'yours' file\n"
-                      "                "
+                      "                             "
                       "  %svn_label_base   label of the 'mine file\n"
                       "                             "
                       "See 'help diff' for example usage.")},
