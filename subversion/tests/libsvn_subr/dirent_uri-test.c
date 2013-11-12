@@ -891,6 +891,9 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
 #endif /* SVN_USE_DOS_PATHS */
+    /* Hostnames that look like non-canonical paths */
+    { "file://./foo",             "file://./foo" },
+    { "http://./foo",             "http://./foo" },
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
      absolute URLs are considered canonical uris now. */

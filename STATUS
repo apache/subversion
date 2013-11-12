@@ -116,17 +116,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1516806
-   Do not look at the hostname part of an URI when checking that
-   the schema data is canonical.
-   Justification:
-     As reported on dev@, "svn co file://./" and similar commands abort
-     instead of returning an error that the URL is invalid.  This was
-     caused by svn_uri_is_canonical treating the hostname "." as a path
-     segment.  After this change, svn_uri_is_canonicall correctly
-     determines that the URL is (syntactically) canonical, and the
-     commands later fail with a normal error in the RA layer, which
-     validates the semantics of the hostname.
-   Votes:
-     +1: brane, stefan2, philip
