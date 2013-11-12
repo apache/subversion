@@ -166,7 +166,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
     SVN_ERR(svn_repos__config_pool_get(&authz_ref->groups_cfg,
                                        &authz_ref->groups_key,
                                        authz_pool->config_pool,
-                                       path, must_exist, TRUE,
+                                       groups_path, must_exist, TRUE,
                                        preferred_repos, authz_ref_pool));
 
   authz_ref->key = construct_key(authz_ref->authz_key,
@@ -176,9 +176,12 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
   SVN_ERR(svn_object_pool__lookup((void **)authz_p, authz_pool->object_pool,
                                   authz_ref->key, NULL, pool));
   if (*authz_p)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(authz_ref_pool);
+      return SVN_NO_ERROR;
+    }
 
-  authz_ref->authz = apr_palloc(pool, sizeof(*authz_ref->authz));
+  authz_ref->authz = apr_palloc(authz_ref_pool, sizeof(*authz_ref->authz));
   authz_ref->authz->cfg = authz_ref->authz_cfg;
 
   if (groups_path)
