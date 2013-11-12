@@ -185,85 +185,36 @@ svn_cl__invoke_diff3_cmd_externally(const char *base_path,
                                     apr_pool_t *pool)
 {
   char *invoke_diff3_cmd;
-  /* Error if there is no editor specified */
-  /* not sure how or where to set this, but it loads on fail... so... FIXME? */
+  const char ** cmd;
+  apr_pool_t *scratch_pool = svn_pool_create(pool); 
+  char *cwd;
+  int exitcode;
+  apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
 
-  if (0 == strcmp(opt_code,"3f")) /* command in config file */
+  if (status != 0)
+    return svn_error_wrap_apr(status, NULL);
+
+  invoke_diff3_cmd = apr_pstrdup(pool, opt_code);
+  if (0 == strlen(invoke_diff3_cmd)) 
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
+    
+  cmd = __create_custom_diff_cmd(my_path, their_path, base_path, 
+                                 my_path, merged_path, wc_path, 
+                                 invoke_diff3_cmd, scratch_pool);
+    
+  SVN_ERR(svn_io_run_cmd(svn_dirent_internal_style(cwd, pool), 
+                         cmd[0], cmd, &exitcode, NULL, TRUE,
+                         NULL, NULL, NULL, scratch_pool));
+    
+    
+  /* According to the diff3 docs, a '0' means the merge was clean, and
+     '1' means conflict markers were found.  Anything else is real
+     error. */
+  if ((exitcode != 0) && (exitcode != 1))
     {
-      if (apr_env_get(&invoke_diff3_cmd, "SVN_INVOKE_DIFF3_CMD", pool) != APR_SUCCESS)
-        {
-          struct svn_config_t *cfg;
-          invoke_diff3_cmd = NULL;
-          cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
-          /* apr_env_get wants char **, this wants const char ** */
-          svn_config_get(cfg, (const char **)&invoke_diff3_cmd,
-                         SVN_CONFIG_SECTION_HELPERS,
-                         SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
-        }
-
-      if (invoke_diff3_cmd)
-        {
-          const char *c;
-
-          for (c = invoke_diff3_cmd; *c; c++)
-            if (!svn_ctype_isspace(*c))
-              break;
-
-          if (! *c)
-            return svn_error_create
-              (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
-               _("The SVN_INVOKE_DIFF3_TOOL environment variable is empty or "
-                 "consists solely of whitespace. Expected a shell command.\n"));
-        }
-      else
-        return svn_error_create
-          (SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL, NULL,
-           _("The environment variable SVN_INVOKE_DIFF3_TOOL and the invoke-diff3-cmd run-time "
-             "configuration option were not set.\n"));
-    }
-    /* if (0 == strcmp(opt_code,"3c") /\* command in on command line *\/ */
-    /*   { /\* nothing yet *\/} */
-    /*   else */
-    else
-      {
-        invoke_diff3_cmd = apr_pstrdup(pool, opt_code);
-      }
-    {
-    const char ** cmd;
-
-    apr_pool_t *scratch_pool = svn_pool_create(pool); 
-
-    char *cwd;
-    int exitcode;
-
-    apr_status_t status = apr_filepath_get(&cwd, APR_FILEPATH_NATIVE, pool);
-    if (status != 0)
-      return svn_error_wrap_apr(status, NULL);
-
-    /* doppelt gemoppelt... FIXME */
-    if (0 == strlen(invoke_diff3_cmd)) 
-      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
-    
-    /* cmd = __create_custom_diff_cmd(mine_label, yours_label, older_label,  */
-    /*                                mine, yours, older,  */
-    /*                                invoke_diff3_cmd, scratch_pool); */
-    cmd = __create_custom_diff_cmd(my_path, their_path, base_path, 
-                                   my_path, merged_path, wc_path, 
-                                   invoke_diff3_cmd, scratch_pool);
-    
-    SVN_ERR(svn_io_run_cmd(svn_dirent_internal_style(cwd, pool), 
-                           cmd[0], cmd, &exitcode, NULL, TRUE,
-                           NULL, NULL, NULL, scratch_pool));
-    
-    
-    /* According to the diff3 docs, a '0' means the merge was clean, and
-       '1' means conflict markers were found.  Anything else is real
-       error. */
-    if ((exitcode != 0) && (exitcode != 1))
-      {
         
-        int i;
-        const char *failed_command = "";
+      int i;
+      const char *failed_command = "";
         
       for (i = 0; cmd[i]; ++i)
         failed_command = apr_pstrcat(pool, failed_command, 
@@ -274,11 +225,11 @@ svn_cl__invoke_diff3_cmd_externally(const char *base_path,
                                invoke_diff3_cmd,
                                failed_command,
                                exitcode);
-      }
-    else if (remains_in_conflict)
-      *remains_in_conflict = exitcode == 1;
-    svn_pool_destroy(scratch_pool);
-  }
+    }
+  else if (remains_in_conflict)
+    *remains_in_conflict = exitcode == 1;
+  svn_pool_destroy(scratch_pool);
+
   return SVN_NO_ERROR;
 }
 
