@@ -91,7 +91,8 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
 /* canonicalize ACCESS_FILE based on the type of argument.
  * If SERVER_RELATIVE is true, ACCESS_FILE is a relative
  * path then ACCESS_FILE is converted to an absolute
- * path rooted at the server root. */
+ * path rooted at the server root.
+ * Returns NULL if path is not valid.*/
 static const char *
 canonicalize_access_file(const char *access_file,
                          svn_boolean_t server_relative,
@@ -104,7 +105,11 @@ canonicalize_access_file(const char *access_file,
   else if (!svn_path_is_repos_relative_url(access_file))
     {
       if (server_relative)
-        access_file = ap_server_root_relative(pool, access_file);
+        {
+          access_file = ap_server_root_relative(pool, access_file);
+          if (access_file == NULL)
+            return NULL;
+        }
 
       access_file = svn_dirent_internal_style(access_file, pool);
     }
@@ -126,6 +131,8 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
            "directives are mutually exclusive.";
 
   conf->access_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+  if (!conf->access_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, NULL);
 
   return NULL;
 }
@@ -145,6 +152,9 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
   conf->repo_relative_access_file = canonicalize_access_file(arg1, FALSE,
                                                              cmd->pool);
 
+  if (!conf->repo_relative_access_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, NULL);
+
   return NULL;
 }
 
@@ -154,6 +164,9 @@ AuthzSVNGroupsFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
   authz_svn_config_rec *conf = config;
 
   conf->groups_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+
+  if (!conf->groups_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, NULL);
 
   return NULL;
 }
