@@ -68,16 +68,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1527112
-   Fix OOM with concurrent requests right after threaded server start.
-   Changes:
-     This was a common condition in my load tests.  Affects threaded
-     servers only.  Apache will just respawn a new worker process.
-   Branch:
-     ^/subversion/branches/1.7.x-r1527103
-   Votes:
-     +1: stefan2, brane
-
  * r1536790
    Limit the time spent in committing files with deep change histories
    Justification:
@@ -116,3 +106,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1527112
+   Fix OOM with concurrent requests right after threaded server start.
+   Changes:
+     This was a common condition in my load tests.  Affects threaded
+     servers only.  Apache will just respawn a new worker process.
+   Branch:
+     ^/subversion/branches/1.7.x-r1527103
+   Votes:
+     +1: stefan2, brane, breser
