@@ -159,7 +159,7 @@ Candidate changes:
      Endless recursion is bad, especially in case some users might get into
      this in a pretty normal code path.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
