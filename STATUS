@@ -94,15 +94,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1536790
-   Limit the time spent in committing files with deep change histories
-   Justification:
-      The problem has been observed in the real world with certain
-      committs taking hours instead of seconds.  This patch sets a
-      firm limit to the internal processing effort and cuts it down
-      from several hours to a few minutes.
-   Branch:
-     ^/subversion/branches/1.7.x-fsfs-commit
-   Votes:
-     +1: stefan2, brane, breser
