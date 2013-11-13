@@ -98,6 +98,12 @@ typedef struct svn_config_t svn_config_t;
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS     "http-chunked-requests"
 
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_SERF_LOG_COMPONENTS       "serf-log-components"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_SERF_LOG_LEVEL            "serf-log-level"
+
+
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
 #define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
