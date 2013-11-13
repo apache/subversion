@@ -1931,10 +1931,8 @@ def verify_invalid_path_changes(sbox):
 
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
-  B_url = sbox.repo_url + '/B'
-  C_url = sbox.repo_url + '/C'
 
-  # Create A/B/E/bravo in r2.
+  # Create a number of revisions each adding a single path
   for r in range(2,20):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'mkdir', '-m', 'log_msg',
