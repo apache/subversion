@@ -160,6 +160,8 @@ Candidate changes:
    Branch: ^/subversion/branches/1.8.x-issue4448
    Votes:
      +1: stefan2
+     +0.5: ivan (Looks fine, but I don't have enough expertise in this area
+                 for full review')
 
  * r1541432
    Fix potential crash in mod_authz_svn during startup if path specified
