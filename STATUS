@@ -81,7 +81,7 @@ Candidate changes:
       Without this patch merge_tests.py 135 may fail to output its required
       output.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1535115
    Make JavaHL tests run without installing on OS X.
