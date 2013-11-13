@@ -62,15 +62,6 @@ Candidate changes:
                    a related problem. It looks like this fix doesn't work for
                    the user scenario it was intended for)
 
- * r1524145
-   Make the 'm' conflict prompt option run external merge tool if configured.
-   Justification:
-     Usability fix. The current behaviour ('m' -> internal merge tool,
-     'l' -> external merge tool) confuses users who try 'm' to run an
-     external merge tool. See issue #4426.
-   Votes:
-     +1: stsp
-
  * r1534149, r1535676
    In the windows CryptoAPI ssl certificate verification, properly handle
    certificates that are only trusted via intermediate authorities.
@@ -187,6 +178,16 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
+
+ * r1524145
+   Make the 'm' conflict prompt option run external merge tool if configured.
+   Justification:
+     Usability fix. The current behaviour ('m' -> internal merge tool,
+     'l' -> external merge tool) confuses users who try 'm' to run an
+     external merge tool. See issue #4426.
+   Votes:
+     +1: stsp
+     -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
 
 Approved changes:
 =================
