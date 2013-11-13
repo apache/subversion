@@ -675,8 +675,7 @@ replace_change(svn_fs_path_change2_t *old_change,
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
    svn_fs_path_change2_t CHANGES, collapsing multiple changes into a
-   single summarical (is that real word?) change per path.  Also keep
-   the COPYFROM_CACHE up to date with new adds and replaces.  */
+   single summarical (is that real word?) change per path.  */
 static svn_error_t *
 fold_change(apr_hash_t *changes,
             const change_t *change)
