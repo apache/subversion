@@ -150,7 +150,7 @@ Candidate changes:
      rhuijben: The test for this problem might accidentally depend on other
                move fixes on trunk.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
 Veto-blocked changes:
 =====================
