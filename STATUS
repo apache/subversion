@@ -176,6 +176,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1541432
+   Fix potential crash in mod_authz_svn during startup if path specified
+   by AuthzSVNAccessFile, AuthzSVNReposRelativeAccessFile, or 
+   AuthzSVNGroupsFile directives is not accessible.
+   Justification:
+     Crash on invalid configuration.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
