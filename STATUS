@@ -187,21 +187,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1537193, r1537221, r1540428
-   Add test to verify if the used ZLib is affected by some block size bugs that
-   affect our usage of serf.
-   Justification:
-     Most Windows binaries were affected by this bug and we should verify
-     that we don't accidentally reintroduce this problem.
-   Notes:
-     This patch needs the source directory for obtaining its test data. The
-     backport branch contains portions of r1537147 and r1537190 to enable
-     this test.
-   Branch: ^/subversion/branches/1.8.x-r1537193/
-   Votes:
-     +1: stefan2, rhuijben, ivan
-     +1 (without r1540428): brane
-
  * r1541432
    Fix potential crash in mod_authz_svn during startup if path specified
    by AuthzSVNAccessFile, AuthzSVNReposRelativeAccessFile, or 
