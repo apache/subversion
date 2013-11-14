@@ -58,10 +58,10 @@ class SVNLook(object):
     """
     path  - path to repository
     rev   - revision number
-    txn   - path to transaction (usually to the one about to be committed)
+    txn   - name of transaction (usually the one about to be committed)
     cmd   - if set, specifies cmd_* method to execute
 
-    if both rev and txn params are empty, inspect latest committed revision
+    txn takes precedence over rev; if both are None, inspect the head revision
     """
     path = core.svn_path_canonicalize(path)
     repos_ptr = repos.open(path)
@@ -74,6 +74,8 @@ class SVNLook(object):
       self.txn_ptr = None
       if rev is None:
         rev = fs.youngest_rev(self.fs_ptr)
+      else:
+        rev = int(rev)
     self.rev = rev
 
     if cmd != None:
@@ -189,6 +191,8 @@ class SVNLook(object):
       # or the previous revision
       if self.txn_ptr:
         base_rev = fs.txn_base_revision(self.txn_ptr)
+      elif self.rev == 0:
+        base_rev = 0
       else:
         base_rev = self.rev - 1
 
