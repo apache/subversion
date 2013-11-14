@@ -176,7 +176,7 @@ Candidate changes:
    Justification:
      Our svn-x64-ubuntu-gcc buildbot is broken
    Votes:
-     +1: breser
+     +1: breser, philip
 
 Veto-blocked changes:
 =====================
