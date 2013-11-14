@@ -77,6 +77,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1541790
+   Don't break SVNListParentPath
+   Branch: ^/subversion/branches/1.7.x-r1541790
+   Justification:
+     The fix for modules crashing breaks SVNListParentPath
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
