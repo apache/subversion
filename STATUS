@@ -184,9 +184,6 @@ Veto-blocked changes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
 
-Approved changes:
-=================
-
  * r1537193, r1537221, r1540428
    Add test to verify if the used ZLib is affected by some block size bugs that
    affect our usage of serf.
@@ -201,3 +198,8 @@ Approved changes:
    Votes:
      +1: stefan2, rhuijben, ivan
      +1 (without r1540428): brane
+     -1: breser (build broken by merge)
+
+Approved changes:
+=================
+
