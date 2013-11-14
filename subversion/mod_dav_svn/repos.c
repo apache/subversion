@@ -1348,7 +1348,7 @@ dav_svn_split_uri(request_rec *r,
         if (ch == '\0')
           {
             /* relative is just "!svn", which is malformed. */
-            return dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+            return dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                       SVN_ERR_APMOD_MALFORMED_URI,
                                       "Nothing follows the svn special_uri.");
           }
@@ -1375,7 +1375,7 @@ dav_svn_split_uri(request_rec *r,
                           *repos_path = NULL;
                         else
                           return dav_svn__new_error(
-                                     r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                     r->pool, HTTP_NOT_FOUND,
                                      SVN_ERR_APMOD_MALFORMED_URI,
                                      "Missing info after special_uri.");
                       }
@@ -1399,7 +1399,7 @@ dav_svn_split_uri(request_rec *r,
                             /* Did we break from the loop prematurely? */
                             if (j != (defn->numcomponents - 1))
                               return dav_svn__new_error(
-                                         r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                         r->pool, HTTP_NOT_FOUND,
                                          SVN_ERR_APMOD_MALFORMED_URI,
                                          "Not enough components after "
                                          "special_uri.");
@@ -1419,7 +1419,7 @@ dav_svn_split_uri(request_rec *r,
                     else
                       {
                         return
-                          dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                          dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                         SVN_ERR_APMOD_MALFORMED_URI,
                                         "Unknown data after special_uri.");
                       }
@@ -1430,7 +1430,7 @@ dav_svn_split_uri(request_rec *r,
 
             if (defn->name == NULL)
               return
-                dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                    SVN_ERR_APMOD_MALFORMED_URI,
                                    "Couldn't match subdir after special_uri.");
           }
