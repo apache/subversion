@@ -171,13 +171,6 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1537263
-   Fix checksum-test not linking 
-   Justification:
-     Our svn-x64-ubuntu-gcc buildbot is broken
-   Votes:
-     +1: breser, philip
-
 Veto-blocked changes:
 =====================
 
@@ -193,3 +186,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1537263
+   Fix checksum-test not linking 
+   Justification:
+     Our svn-x64-ubuntu-gcc buildbot is broken
+   Votes:
+     +1: breser, philip, stefan2
+
