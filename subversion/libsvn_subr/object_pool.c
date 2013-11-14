@@ -447,12 +447,10 @@ svn_object_pool__create(svn_object_pool__t **object_pool,
     = apr_allocator_owner_get(svn_pool_create_allocator(thread_safe));
 
   /* paranoia limiter code */
-#if APR_SIZET_MAX > APR_UINT32_MAX
   if (max_unused > APR_UINT32_MAX)
     max_unused = APR_UINT32_MAX;
   if (min_unused > APR_UINT32_MAX)
     min_unused = APR_UINT32_MAX;
-#endif
 
   if (max_unused < min_unused)
     max_unused = min_unused;
