@@ -472,9 +472,11 @@ svn_repos__config_pool_get(svn_config_t **cfg,
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   /* make sure we always have a *KEY object */
-  svn_membuf_t *local_key;
+  svn_membuf_t *local_key = NULL;
   if (key == NULL)
     key = &local_key;
+  else
+    *key = NULL;
 
   if (svn_path_is_url(path))
     {

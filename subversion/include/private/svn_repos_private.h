@@ -175,10 +175,9 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
 
 /* Set *CFG to a read-only reference to the current contents of the
  * configuration specified by PATH.  If the latter is a URL, we read the
- * data from a local repository.  REGISTRY: urls are not supported.
- * CONFIG_POOL will store the configuration and make further callers use
- * the same instance if the content matches.  If KEY is not NULL, *KEY
- * will be set to a unique ID - if available.
+ * data from a local repository.  CONFIG_POOL will store the configuration
+ * and make further callers use the same instance if the content matches.
+ * If KEY is not NULL, *KEY will be set to a unique ID - if available.
  *
  * If MUST_EXIST is TRUE, a missing config file is also an error, *CFG
  * is otherwise simply NULL.  The CASE_SENSITIVE controls the lookup
@@ -234,8 +233,8 @@ svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
 /* Set *AUTHZ_P to a read-only reference to the current contents of the
  * authorization specified by PATH and GROUPS_PATH.  If these are URLs,
  * we read the data from a local repository (see #svn_repos_authz_read2).
- * REGISTRY: urls are not supported.  AUTHZ_POOL will store the authz data
- * and make further callers use the same instance if the content matches.
+ * AUTHZ_POOL will store the authz data and make further callers use the
+ * same instance if the content matches.
  *
  * If MUST_EXIST is TRUE, a missing config file is also an error, *AUTHZ_P
  * is otherwise simply NULL.
