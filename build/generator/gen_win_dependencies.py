@@ -529,14 +529,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_path = os.path.join(self.apr_util_path, 'include')
       lib_dir = os.path.join(self.apr_util_path, 'lib')
       debug_lib_dir = None
-      
+
     version_file_path = os.path.join(inc_path, 'expat.h')
 
     if not os.path.exists(version_file_path):
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
       sys.stderr.write("Use '--with-apr-util' option to configure APR-Util's XML location.\n");
       sys.exit(1)
-      
+
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+XML_MAJOR_VERSION\s+(\d+)', txt, re.M)
@@ -548,11 +548,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+XML_MICRO_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
 
+    # apr-Util 0.9-1.4 compiled expat to 'xml.lib', but apr-util 1.5 switched
+    # to the more common 'libexpat.lib'
+    libname = 'libexpat.lib'
+    if not os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
+      libname = 'xml.lib'
+
     version = (major, minor, patch)
     xml_version = '%d.%d.%d' % version
 
     self._libraries['xml'] = SVNCommonLibrary('expat', inc_path, lib_dir,
-                                               'xml.lib', xml_version,
+                                               libname, xml_version,
                                                debug_lib_dir = debug_lib_dir,
                                                defines=['XML_STATIC'])
 
