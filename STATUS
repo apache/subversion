@@ -186,14 +186,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1540044, r1540417
-   Fix issue 4448: hotcopy losing revprop files in packed repositories.
-   Justification:
-     Hot copies of packed svn 1.6/1.7 repos will not contain revision
-     properties - rendering 'svnadmin hotcopy' useless as a means of backup.
-   Branch: ^/subversion/branches/1.8.x-issue4448
-   Votes:
-     +1: stefan2, philip, rhuijben
-     +0.5: ivan (Looks fine, but I don't have enough expertise in this area
-                 for full review')
