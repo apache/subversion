@@ -364,3 +364,193 @@ XFAIL: externals_tests.py 49: file externals versioned obstruction
 ~/branches/invoke-diff-merge-feature/subversion/tests/cmdline>
 $ 
 
+Emacs map of changes
+====================
+
+/home/g/InstalledSVN1.9/subversion/svn/svn diff | perl -ne '/Index: (.*)$/ && ($name = $1);/^@@.*\+(\d+),/ && print "./$name:$1:diff\n";'
+./BRANCH-README:57:diff
+./BRANCH-README:73:diff
+./BRANCH-README:105:diff
+./subversion/include/private/svn_wc_private.h:77:diff
+./subversion/include/private/svn_wc_private.h:1507:diff
+./subversion/include/private/svn_wc_private.h:1549:diff
+./subversion/include/svn_config.h:117:diff
+./subversion/include/svn_error_codes.h:1451:diff
+./subversion/libsvn_client/externals.c:364:diff
+./subversion/libsvn_client/externals.c:376:diff
+./subversion/libsvn_client/externals.c:483:diff
+./subversion/libsvn_client/merge.c:9672:diff
+./subversion/libsvn_client/merge.c:9723:diff
+./subversion/libsvn_client/merge.c:9732:diff
+./subversion/libsvn_client/merge.c:9748:diff
+./subversion/libsvn_client/merge.c:9805:diff
+./subversion/libsvn_client/switch.c:106:diff
+./subversion/libsvn_client/switch.c:134:diff
+./subversion/libsvn_client/switch.c:312:diff
+./subversion/libsvn_client/update.c:226:diff
+./subversion/libsvn_client/update.c:332:diff
+./subversion/libsvn_client/update.c:429:diff
+./subversion/libsvn_wc/deprecated.c:3492:diff
+./subversion/libsvn_wc/deprecated.c:3676:diff
+./subversion/libsvn_wc/externals.c:402:diff
+./subversion/libsvn_wc/externals.c:813:diff
+./subversion/libsvn_wc/externals.c:984:diff
+./subversion/libsvn_wc/externals.c:1021:diff
+./subversion/libsvn_wc/update_editor.c:223:diff
+./subversion/libsvn_wc/update_editor.c:3900:diff
+./subversion/libsvn_wc/update_editor.c:3966:diff
+./subversion/libsvn_wc/update_editor.c:4138:diff
+./subversion/libsvn_wc/update_editor.c:4831:diff
+./subversion/libsvn_wc/update_editor.c:4901:diff
+./subversion/libsvn_wc/update_editor.c:5107:diff
+./subversion/libsvn_wc/update_editor.c:5131:diff
+./subversion/libsvn_wc/update_editor.c:5150:diff
+./subversion/libsvn_wc/update_editor.c:5178:diff
+./subversion/libsvn_wc/wc.h:756:diff
+./subversion/svn/cl.h:542:diff
+./subversion/svn/conflict-callbacks.c:118:diff
+./subversion/svn/conflict-callbacks.c:409:diff
+./subversion/svn/conflict-callbacks.c:458:diff
+./subversion/svn/conflict-callbacks.c:747:diff
+./subversion/svn/conflict-callbacks.c:829:diff
+./subversion/svn/conflict-callbacks.c:848:diff
+./subversion/svn/conflict-callbacks.c:919:diff
+./subversion/svn/conflict-callbacks.c:1323:diff
+./subversion/svn/conflict-callbacks.c:1345:diff
+./subversion/svn/svn.c:251:diff
+./subversion/svn/svn.c:259:diff
+./subversion/svn/util.c:174:diff
+./subversion/svn/util.c:189:diff
+
+Log messages
+============
+
+* BRANCH-README
+  (*)  Description of Branch.
+
+
+* subversion/include/private/svn_wc_private.h
+
+  (svn_wc__get_file_external_editor,
+  (svn_wc__get_update_editor,
+  (svn_wc__get_switch_editor): New parameter:
+     const char *invoke_diff3_cmd.
+
+
+* subversion/include/svn_config.h
+
+  (): New definition: SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD.
+
+
+* subversion/include/svn_error_codes.h
+
+  (command-line client errors): New definition:
+    SVN_ERR_CL_NO_EXTERNAL_DIFF3_TOOL.
+
+
+* subversion/libsvn_client/externals.c
+
+  (switch_file_external): New variable: *invoke_diff3_cmd. Initialize
+    diff3_cmd to NULL.  Add precedence logic and read the config file
+    to populate invoke_diff3_cmd.  Add invoke_diff3_cmd in call to
+    svn_wc__get_file_external_editor().
+
+
+* subversion/libsvn_client/merge.c
+
+  (do_merge): New variable: *invoke_diff3_cmd. Initialize diff3_cmd to
+    NULL.  Add precedence logic and read the config file to populate
+    invoke_diff3_cmd. Add invoke_diff3_cmd to merge_baton.
+
+* subversion/libsvn_client/switch.c
+
+  (switch_internal): New variable: *invoke_diff3_cmd.  Add precedence
+    logic and read the config file to populate invoke_diff3_cmd.  Add
+    invoke_diff3_cmd in call to [svn_wc__get_switch_editor]
+
+
+* subversion/libsvn_client/update.c
+
+  (update_internal): New variable: *invoke_diff3_cmd.  Add precedence
+    logic and read the config file to populate invoke_diff3_cmd.  Add
+    invoke_diff3_cmd in call to [svn_wc__get_update_editor].
+
+
+* subversion/libsvn_wc/deprecated.c
+
+  (svn_wc_get_update_editor4): Deprecate.  Note: cannot find this
+    function anywhere.
+
+  (svn_wc_get_switch_editor4): Deprecate.  Note: cannot find this
+    function anywhere.
+
+
+* subversion/libsvn_wc/externals.c
+  
+  (): New variable: *invoke_diff3_cmd.  Add precedence logic and read
+    the config file to populate invoke_diff3_cmd.  Add
+    invoke_diff3_cmd in call to [svn_wc__perform_file_merge].
+
+  (svn_wc__get_file_external_editor): New parameter: const char
+    *invoke_diff3_cmd.  Assign invoke_diff3_cmd to struct edit_baton eb.
+
+  (make_editor): New parameter: const char *invoke_diff3_cmd.
+
+
+* subversion/libsvn_wc/update_editor.c
+
+  (struct edit_baton): New member const char *invoke_diff3_cmd.
+
+  (svn_wc__perform_file_merge): New parameter: const char
+    *invoke_diff3_cmd.  Add invoke_diff3_cmd to
+    svn_wc__internal_merge1()..
+
+  (merge_file): Add invoke_diff3_cmd to [svn_wc__internal_merge1].
+    Assign invoke_diff3_cmd to struct edit_baton eb.
+
+  (svn_wc__get_update_editor): New parameter: const char
+    *invoke_diff3_cmd. Add invoke_diff3_cmd to call to make_editor).
+
+  (svn_wc__get_switch_editor):  New parameter: const char
+    *invoke_diff3_cmd. Add invoke_diff3_cmd to call to make_editor).
+
+
+* subversion/libsvn_wc/wc.h
+ 
+ (svn_wc__perform_file_merge): New parameter: const char
+   *invoke_diff3_cmd. .
+
+
+* subversion/svn/cl.h
+  
+  (svn_cl__invoke_diff3_cmd_externally): New function.
+
+
+* subversion/svn/conflict-callbacks.c
+
+  (svn_cl__accept_from_word): Add conditional svn_cl__accept_launch()
+    call.  
+
+  (invoke_diff3_resolver): New routing function (calls
+    svn_cl__invoke_diff3_cmd_externally().
+
+  (text_conflict_options): Add 'i' option for interactive
+    invoke-diff3-cmd input.
+
+  (handle_text_conflict): Add 'i' to next_option.  Add interactive
+    selection code for invoke-diff3-cmd input.
+
+  (conflict_func_interactive): Add case
+    svn_cl__accept_invoke_diff3_config.
+
+
+* subversion/svn/svn.c
+
+  (svn_cl__options): Add 'invoke-diff3-cmd' entry plus help text.
+
+
+* subversion/svn/util.c
+
+  (svn_cl__invoke_diff3_cmd_externally): New function.
+
+
