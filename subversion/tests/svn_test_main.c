@@ -44,6 +44,7 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_ctype.h"
+#include "svn_utf.h"
 
 #include "private/svn_cmdline_private.h"
 
@@ -474,6 +475,10 @@ main(int argc, const char *argv[])
           break;
         case fstype_opt:
           opts.fs_type = apr_pstrdup(pool, opt_arg);
+          break;
+        case srcdir_opt:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&opts.srcdir, opt_arg, pool));
+          opts.srcdir = svn_dirent_internal_style(opts.srcdir, pool);
           break;
         case list_opt:
           list_mode = TRUE;
