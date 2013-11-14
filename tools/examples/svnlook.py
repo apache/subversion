@@ -21,6 +21,9 @@
 #    under the License.
 ######################################################################
 #
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedRevision$
 
 """
 svnlook.py can also be used as a Python module::
