@@ -571,6 +571,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.14
     * mod_dav_svn: Prevent crashes with some 3rd party modules (r1537360 et al)
     * fix OOM on concurrent requests at threaded server start (r1527103 et al)
     * fsfs: limit commit time of files with deep change histories (r1536790)
+    * mod_dav_svn: canonicalize paths properly (r1542071)
+
+  - Other tool improvements and bugfixes:
+    * mod_dontdothat: Fix the uri parser (r1542069 et al)
 
  Developer-visible changes:
   - Bindings:
