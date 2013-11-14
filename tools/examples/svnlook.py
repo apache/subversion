@@ -93,13 +93,22 @@ class SVNLook(object):
       print("%-3s %s" % (status, path))
 
   def cmd_date(self):
+    # duplicate original svnlook format, which is
+    # 2010-02-08 21:53:15 +0200 (Mon, 08 Feb 2010)
     secs = self.get_date(unixtime=True)
     if secs is None:
       print("")
     else:
-      # assume secs in local TZ, convert to tuple, and format
-      ### we don't really know the TZ, do we?
-      print(time.strftime('%Y-%m-%d %H:%M', time.localtime(secs)))
+      # convert to tuple, detect time zone and format
+      stamp = time.localtime(secs)
+      isdst = stamp.tm_isdst
+      utcoffset = -(time.altzone if (time.daylight and isdst) else time.timezone) // 60
+
+      suffix = "%+03d%02d" % (utcoffset // 60, abs(utcoffset) % 60)
+      outstr = time.strftime('%Y-%m-%d %H:%M:%S ', stamp) + suffix
+      outstr += time.strftime(' (%a, %d %b %Y)', stamp)
+      print(outstr)
+
 
   def cmd_diff(self):
     self._print_tree(DiffEditor, pass_root=1)
