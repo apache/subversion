@@ -412,6 +412,32 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
                           "Unsupported URI form");
 }
 
+svn_boolean_t
+dav_svn__is_parentpath_list(request_rec *r)
+{
+  const char *fs_parent_path = dav_svn__get_fs_parent_path(r);
+
+  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+    {
+      const char *root_path = dav_svn__get_root_dir(r);
+      char *uri = apr_pstrdup(r->pool, r->uri);
+      char *parentpath = apr_pstrdup(r->pool, root_path);
+      apr_size_t uri_len = strlen(uri);
+      apr_size_t parentpath_len = strlen(parentpath);
+
+      if (uri[uri_len-1] == '/')
+        uri[uri_len-1] = '\0';
+
+      if (parentpath[parentpath_len-1] == '/')
+        parentpath[parentpath_len-1] = '\0';
+
+      if (strcmp(parentpath, uri) == 0)
+        {
+          return TRUE;
+        }
+    }
+  return FALSE;
+}
 
 /* ### move this into apr_xml */
 int
