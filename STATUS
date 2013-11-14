@@ -163,7 +163,7 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1541790
+ * r1541790, r1542042
    Don't break SVNListParentPath
    Branch: ^/subversion/branches/1.8.x-r1541790
    Justification:
