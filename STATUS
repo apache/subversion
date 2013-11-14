@@ -83,7 +83,7 @@ Candidate changes:
    Justification:
      The fix for modules crashing breaks SVNListParentPath
    Votes:
-     +1: breser
+     +1: breser, stefan2
 
 Veto-blocked changes:
 =====================
