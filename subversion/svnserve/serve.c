@@ -3340,13 +3340,11 @@ static svn_error_t *find_repos(const char *url, const char *root,
     {
       repository->base = svn_repos_conf_dir(repository->repos, pool);
 
-      SVN_ERR(svn_config_read3(&cfg,
-                               svn_repos_svnserve_conf(repository->repos,
-                                                       pool),
-                               FALSE, /* must_exist */
-                               FALSE, /* section_names_case_sensitive */
-                               FALSE, /* option_names_case_sensitive */
-                               pool));
+      SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                         svn_repos_svnserve_conf
+                                            (repository->repos, pool), 
+                                         FALSE, FALSE, repository->repos,
+                                         pool));
     }
 
   SVN_ERR(load_pwdb_config(repository, cfg, config_pool, pool));
