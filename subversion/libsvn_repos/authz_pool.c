@@ -38,6 +38,7 @@
 #include "../libsvn_subr/config_impl.h"
 
 #include "repos.h"
+#include <apr_poll.h>
 
 /* Currently this structure is just a wrapper around a svn_config_t.
  */
@@ -155,20 +156,33 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
     = svn_pool_create(svn_object_pool__pool(authz_pool->object_pool));
   authz_object_t *authz_ref
     = apr_pcalloc(authz_ref_pool, sizeof(*authz_ref));
-
+  svn_boolean_t have_all_keys;
+  
+  /* read the configurations */
   SVN_ERR(svn_repos__config_pool_get(&authz_ref->authz_cfg,
                                      &authz_ref->authz_key,
                                      authz_pool->config_pool,
                                      path, must_exist, TRUE,
                                      preferred_repos, authz_ref_pool));
-
+  have_all_keys = authz_ref->authz_key != NULL;
+  
   if (groups_path)
-    SVN_ERR(svn_repos__config_pool_get(&authz_ref->groups_cfg,
-                                       &authz_ref->groups_key,
-                                       authz_pool->config_pool,
-                                       groups_path, must_exist, TRUE,
-                                       preferred_repos, authz_ref_pool));
+    {
+      SVN_ERR(svn_repos__config_pool_get(&authz_ref->groups_cfg,
+                                         &authz_ref->groups_key,
+                                         authz_pool->config_pool,
+                                         groups_path, must_exist, TRUE,
+                                         preferred_repos, authz_ref_pool));
+      have_all_keys &= authz_ref->groups_key != NULL;
+    }
 
+  /* fall back to standard implementation in case we don't have all the 
+   * facts (i.e. keys). */
+  if (!have_all_keys)
+    return svn_error_trace(svn_repos_authz_read2(authz_p, path, groups_path,
+                                                 must_exist, pool));
+    
+  /* all keys are known and lookup is unambigious. */
   authz_ref->key = construct_key(authz_ref->authz_key,
                                  authz_ref->groups_key,
                                  authz_ref_pool);
