@@ -931,7 +931,8 @@ static int dav_svn__handler(request_rec *r)
  * that %f in logging formats will show as "svn:/path/to/repo/path/in/repo". */
 static int dav_svn__translate_name(request_rec *r)
 {
-  const char *fs_path, *repos_basename, *repos_path, *slash;
+  const char *fs_path, *repos_path, *slash;
+  const char *repos_basename = NULL;
   const char *ignore_cleaned_uri, *ignore_relative_path;
   int ignore_had_slash;
   dav_error *err;
@@ -942,20 +943,39 @@ static int dav_svn__translate_name(request_rec *r)
     return DECLINED;
 
   /* Retrieve path to repo and within repo for the request */
-  if ((err = dav_svn_split_uri(r, r->uri, conf->root_dir, &ignore_cleaned_uri,
-                               &ignore_had_slash, &repos_basename,
-                               &ignore_relative_path, &repos_path)))
-    {
-      dav_svn__log_err(r, err, APLOG_ERR);
-      return HTTP_INTERNAL_SERVER_ERROR;
-    }
+  err = dav_svn_split_uri(r, r->uri, conf->root_dir, &ignore_cleaned_uri,
+                          &ignore_had_slash, &repos_basename,
+                          &ignore_relative_path, &repos_path);
+
   if (conf->fs_parent_path)
     {
+      if (err)
+        {
+          if (!repos_basename)
+            {
+              /* detect that there is no repos_basename.  We can't error out
+               * here due to this because it would mean that SVNListParentPath
+               * wouldn't work.  So set things up to just use the parent path
+               * as our bogus path. */
+              repos_basename = ""; 
+              repos_path = NULL;
+            }
+          else
+            {
+              dav_svn__log_err(r, err, APLOG_ERR);
+              return err->status;
+            }
+        }
       fs_path = svn_dirent_join(conf->fs_parent_path, repos_basename,
                                 r->pool);
     }
   else
     {
+      if (err)
+        {
+          dav_svn__log_err(r, err, APLOG_ERR);
+          return err->status;
+        }
       fs_path = conf->fs_path;
     }
 
