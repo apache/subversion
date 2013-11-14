@@ -187,16 +187,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1541432
-   Fix potential crash in mod_authz_svn during startup if path specified
-   by AuthzSVNAccessFile, AuthzSVNReposRelativeAccessFile, or 
-   AuthzSVNGroupsFile directives is not accessible.
-   Justification:
-     Crash on invalid configuration.
-   Votes:
-     +1: ivan, stefan2, rhuijben
-
-
  * r1540044, r1540417
    Fix issue 4448: hotcopy losing revprop files in packed repositories.
    Justification:
