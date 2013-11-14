@@ -1,3 +1,33 @@
+Version 1.7.14
+(?? Nov 2013, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.14
+
+ User-visible changes:
+  - Client- and server-side bugfixes:
+    * fix assertion on urls of the form 'file://./' (r1516806)
+
+  - Client-side bugfixes:
+    * upgrade: fix an assertion when used with pre-1.3 wcs (r1530849)
+    * ra_local: fix error with repository in Windows drive root (r1518184)
+    * fix crash on windows when piped command is interrupted (r1522892)
+    * fix externals that point at redirected locations (issues #4428, #4429)
+    * diff: fix incorrect calculation of changes in some cases (issue #4283)
+    * diff: fix errors with added/deleted targets (issues #4153, #4421)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: Prevent crashes with some 3rd party modules (r1537360 et al)
+    * fix OOM on concurrent requests at threaded server start (r1527103 et al)
+    * fsfs: limit commit time of files with deep change histories (r1536790)
+    * mod_dav_svn: canonicalize paths properly (r1542071)
+
+  - Other tool improvements and bugfixes:
+    * mod_dontdothat: Fix the uri parser (r1542069 et al)
+
+ Developer-visible changes:
+  - Bindings:
+    * javahl: canonicalize path for streamFileContent method (r1524869)
+
+
 Version 1.7.13
 (29 Aug 2013, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.13
