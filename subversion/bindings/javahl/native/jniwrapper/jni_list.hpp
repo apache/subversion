@@ -126,7 +126,7 @@ private:
 
     void operator()(const jobject& obj) const
       {
-        T item(m_env, NativeT(obj));
+        const T item(m_env, NativeT(obj));
         m_function(item);
       }
 
