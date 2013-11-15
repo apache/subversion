@@ -24,6 +24,7 @@
 #ifndef SVN_JAVAHL_JNIWRAPPER_LIST_HPP
 #define SVN_JAVAHL_JNIWRAPPER_LIST_HPP
 
+#include <algorithm>
 #include <vector>
 
 #include "jni_env.hpp"
@@ -212,8 +213,8 @@ public:
    * Constructs and wraps an empty list of type @c java.util.ArrayList
    * with initial allocation size @a length.
    */
-  explicit MutableList(Env env, jint length = 0)
-    : BaseMutableList(env, length)
+  explicit MutableList(Env env, jint length_ = 0)
+    : BaseMutableList(env, length_)
     {}
 
   /**
