@@ -199,6 +199,82 @@ inline bool operator!=(const svn_opt_revision_t& a,
 {
   return !(a == b);
 }
+
+class UnparseFunctor
+{
+public:
+  explicit UnparseFunctor(std::ostringstream& buffer, bool old_format,
+                          SVN::Pool& iterpool)
+    : m_buffer(buffer),
+      m_old_format(old_format),
+      m_iterpool(iterpool)
+    {}
+
+  void operator()(const JavaHL::ExternalItem& item)
+    {
+      m_iterpool.clear();
+
+      const Java::Env env(item.get_env());
+      const Java::LocalFrame frame(env);
+
+      if (!m_old_format)
+        {
+          if (item.revision()->kind != svn_opt_revision_head
+              && *item.revision() != *item.peg_revision())
+            {
+              m_buffer << "-r"
+                       << FormatRevision(item.revision(), m_iterpool)
+                       << ' ';
+            }
+          if (item.peg_revision()->kind == svn_opt_revision_head)
+            m_buffer << item.url() << ' ';
+          else
+            {
+              m_buffer << item.url() << '@'
+                       << FormatRevision(item.peg_revision(), m_iterpool)
+                       << ' ';
+            }
+          m_buffer << item.target_dir() << '\n';
+        }
+      else
+        {
+          // Sanity check: old format does not support peg revisions
+          if (item.peg_revision()->kind != svn_opt_revision_head
+              && *item.revision() != *item.peg_revision())
+            {
+              JavaHL::SubversionException(env)
+                .raise(_("Clients older than Subversion 1.5"
+                         " do not support peg revision syntax"
+                         " in the svn:externals property"));
+            }
+
+          // Sanity check: old format does not support relative URLs
+          const std::string url = item.url();
+          if (   (url.size() >= 1 && (url[0] == '.' || url[0] == '/'))
+                 || (url.size() >= 2 && (url[0] == '^' && url[1] == '/')))
+            {
+              JavaHL::SubversionException(env)
+                .raise(_("Clients older than Subversion 1.5"
+                         " do not support relative URLs"
+                         " in the svn:externals property"));
+            }
+
+          m_buffer << item.target_dir() << ' ';
+          if (item.revision()->kind != svn_opt_revision_head)
+            {
+              m_buffer << "-r"
+                       << FormatRevision(item.revision(), m_iterpool)
+                       << ' ';
+            }
+          m_buffer << url << '\n';
+        }
+    }
+
+private:
+  std::ostringstream& m_buffer;
+  const bool m_old_format;
+  SVN::Pool& m_iterpool;
+};
 } // anoymous namespace
 
 
@@ -274,70 +350,11 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
       SVN::Pool iterpool;
 
       std::ostringstream buffer;
-      const jint items_length = items.length();
-      for (jint i = 0; i < items_length; ++i)
-        {
-          iterpool.clear();
-
-          const Java::LocalFrame frame(env);
-          const JavaHL::ExternalItem item(items[i]);
-
-          if (!jold_format)
-            {
-              if (item.revision()->kind != svn_opt_revision_head
-                  && *item.revision() != *item.peg_revision())
-                {
-                  buffer << "-r"
-                         << FormatRevision(item.revision(), iterpool)
-                         << ' ';
-                }
-              if (item.peg_revision()->kind == svn_opt_revision_head)
-                buffer << item.url() << ' ';
-              else
-                {
-                  buffer << item.url() << '@'
-                         << FormatRevision(item.peg_revision(), iterpool)
-                         << ' ';
-                }
-              buffer << item.target_dir() << '\n';
-            }
-          else
-            {
-              // Sanity check: old format does not support peg revisions
-              if (item.peg_revision()->kind != svn_opt_revision_head
-                  && *item.revision() != *item.peg_revision())
-                {
-                  JavaHL::SubversionException(env)
-                    .raise(_("Clients older than Subversion 1.5"
-                             " do not support peg revision syntax"
-                             " in the svn:externals property"));
-                }
-
-              // Sanity check: old format does not support relative URLs
-              const std::string url = item.url();
-              if (   (url.size() >= 1 && (url[0] == '.' || url[0] == '/'))
-                  || (url.size() >= 2 && (url[0] == '^' && url[1] == '/')))
-                {
-                  JavaHL::SubversionException(env)
-                    .raise(_("Clients older than Subversion 1.5"
-                             " do not support relative URLs"
-                             " in the svn:externals property"));
-                }
-
-              buffer << item.target_dir() << ' ';
-              if (item.revision()->kind != svn_opt_revision_head)
-                {
-                  buffer << "-r"
-                         << FormatRevision(item.revision(), iterpool)
-                         << ' ';
-                }
-              buffer << url << '\n';
-            }
-        }
+      items.for_each(UnparseFunctor(buffer, jold_format, iterpool));
+      const std::string description(buffer.str());
 
       // Validate the result. Even though we generated the string
       // ourselves, we did not validate the input paths and URLs.
-      const std::string description(buffer.str());
       SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
                            NULL,
                            Java::String::Contents(parent_dir).c_str(),

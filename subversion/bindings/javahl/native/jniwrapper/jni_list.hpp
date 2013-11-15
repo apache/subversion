@@ -69,10 +69,11 @@ protected:
       return m_contents[ovector::size_type(index)];
     }
 
+  const ovector m_contents;
+
 private:
   static const char* const m_class_name;
   static ovector convert_to_vector(Env env, jclass cls, jobject jlist);
-  const ovector m_contents;
 };
 
 /**
@@ -80,7 +81,7 @@ private:
  *
  * @since New in 1.9.
  */
-template <typename T>
+template <typename T, typename NativeT=jobject>
 class List : public BaseList
 {
 public:
@@ -97,8 +98,40 @@ public:
    */
   T operator[](jint index) const
     {
-      return T(m_env, BaseList::operator[](index));
+      return T(m_env, NativeT(BaseList::operator[](index)));
     }
+
+  /**
+   * Iterates over the items in the list, calling @a function for
+   * each item.
+   * @see std::for_each
+   */
+  template<typename F>
+  F for_each(F function) const
+    {
+      const FunctorAdapter<F> adapter(m_env, function);
+      std::for_each(m_contents.begin(), m_contents.end(), adapter);
+      return function;
+    }
+
+private:
+  template<typename F>
+  struct FunctorAdapter
+  {
+    explicit FunctorAdapter(const Env& env, F& function)
+      : m_env(env),
+        m_function(function)
+      {}
+
+    void operator()(const jobject& obj) const
+      {
+        T item(m_env, NativeT(obj));
+        m_function(item);
+      }
+
+    const Env& m_env;
+    F& m_function;
+  };
 };
 
 /**
@@ -164,7 +197,7 @@ private:
  *
  * @since New in 1.9.
  */
-template <typename T>
+template <typename T, typename NativeT=jobject>
 class MutableList : public BaseMutableList
 {
 public:
@@ -196,7 +229,7 @@ public:
    */
   T operator[](jint index) const
     {
-      return T(m_env, BaseMutableList::operator[](index));
+      return T(m_env, NativeT(BaseMutableList::operator[](index)));
     }
 };
 
