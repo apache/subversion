@@ -31,8 +31,6 @@ Version 1.8.5
 http://svn.apache.org/repos/asf/subversion/tags/1.8.5
 
  User-visible changes:
-  - Client- and server-side bugfixes:
-
   - Client-side bugfixes:
     * fix externals that point at redirected locations (issues #4428, #4429)
     * diff: fix assertion with move inside a copy (issue #4444)
