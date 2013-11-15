@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Tests the JavaHL SVNUtil APIs.
@@ -391,5 +392,21 @@ public class UtilTests extends SVNTests
                      SVNUtil.resolveExternalsUrl(
                          new ExternalItem("x", "//a/b/c", null, null),
                          "http://a", "http://a/b"));
+    }
+
+    public void testBuildKeywords() throws Throwable
+    {
+        final byte[] kwval = "TEST=%H%_%b%_%u".getBytes();
+
+        Map<String, byte[]> result;
+
+        result = SVNUtil.buildKeywords(kwval, Revision.SVN_INVALID_REVNUM,
+                                       null, null, null, null);
+        assertEquals("     ", new String(result.get("TEST")));
+
+        result = SVNUtil.buildKeywords(kwval, 48, "http://a/b/c",
+                                       "http://a", new Date(1), "X");
+        assertEquals("b/c 48 1970-01-01 00:00:00Z X c http://a/b/c",
+                     new String(result.get("TEST")));
     }
 }
