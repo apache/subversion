@@ -64,6 +64,7 @@ protected:
 
   /**
    * Returns the object reference at @a index.
+   * @throw std::out_of_range if the index value is not valid.
    */
   jobject operator[](jint index) const
     {
@@ -96,6 +97,7 @@ public:
 
   /**
    * Returns a wrapper object for the object reference at @a index.
+   * @throw std::out_of_range if the index value is not valid.
    */
   T operator[](jint index) const
     {
@@ -182,6 +184,7 @@ protected:
 
   /**
    * Returns the object reference at @a index.
+   * @note Throws a Java exception if the index value is not valid.
    */
   jobject operator[](jint index) const;
 
@@ -227,6 +230,7 @@ public:
 
   /**
    * Returns a wrapper object for the object reference at @a index.
+   * @note Throws a Java exception if the index value is not valid.
    */
   T operator[](jint index) const
     {
