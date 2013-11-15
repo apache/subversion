@@ -26,6 +26,38 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Bindings:
 
 
+Version 1.8.5
+(25 November 2013, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.5
+
+ User-visible changes:
+  - Client- and server-side bugfixes:
+
+  - Client-side bugfixes:
+    * fix externals that point at redirected locations (issues #4428, #4429)
+    * diff: fix assertion with move inside a copy (issue #4444)
+
+  - Server-side bugfixes:
+    * mod_dav_svn: Prevent crashes with some 3rd party modules (r1537360 et al)
+    * mod_dav_svn: canonicalize paths properly (r1542071)
+    * mod_authz_svn: fix crash of mod_authz_svn with invalid config (r1541432)
+    * hotcopy: fix hotcopy losing revprop files in packed repos (issue #4448)
+ 
+  - Other tool improvements and bugfixes:
+    * mod_dontdothat: Fix the uri parser (r1542069 et al)
+
+ Developer-visible changes:
+  - General:
+    * fix compilation with '--enable-optimize' with clang (r1534860)
+    * fix copmpilation with debug build of BDB on Windows (r1501656, r1501702)
+    * fix '--with-openssl' option when building on Windows (r1535139) 
+    * add test to fail when built against broken ZLib (r1537193 et al)
+
+  - Bindings:
+    * swig-rb: fix tests to run without installing on OS X (r1535161)
+    * ctypes-python: build with compiler selected via configure (r1536537)
+
+
 Version 1.8.4
 (29 October 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.4
