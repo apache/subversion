@@ -135,7 +135,8 @@ jobject Revision::makeJRevision(const svn_opt_revision_t& rev)
     {
       const jclass cls = env.FindClass(
           JAVA_PACKAGE"/types/Revision$DateSpec");
-      return env.NewObject(cls, env.GetMethodID(cls, "<init>", "(J)V"));
+      return env.NewObject(cls, env.GetMethodID(cls, "<init>", "(J)V"),
+                           jlong(rev.value.date / 1000));
     }
 
   const jclass cls = env.FindClass(JAVA_PACKAGE"/types/Revision");

@@ -32,8 +32,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Tests the JavaHL SVNUtil APIs.
@@ -298,11 +299,14 @@ public class UtilTests extends SVNTests
     private static List<ExternalItem> old_externals = null;
     static {
         try {
-            old_externals = new ArrayList<ExternalItem>(2);
+            old_externals = new ArrayList<ExternalItem>(3);
             old_externals.add(new ExternalItem("X", "http://server/repo/path",
                                                null, null));
             old_externals.add(new ExternalItem("Y", "http://server/repo/path",
                                                null, Revision.getInstance(42)));
+
+            old_externals.add(new ExternalItem("Z", "http://server/repo/path",
+                                               null, Revision.getInstance(new Date(0L))));
         } catch (SubversionException ex) {
             old_externals = null;
             throw new RuntimeException(ex);
@@ -311,7 +315,8 @@ public class UtilTests extends SVNTests
 
     private static final byte[] old_externals_propval =
         ("X http://server/repo/path\n" +
-         "Y -r42 http://server/repo/path\n").getBytes();
+         "Y -r42 http://server/repo/path\n" +
+         "Z -r{1970-01-01T00:00:00.000000Z} http://server/repo/path\n").getBytes();
 
     private static void compare_item_lists(List<ExternalItem> a,
                                            List<ExternalItem> b,
