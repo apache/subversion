@@ -681,8 +681,8 @@ doc-javahl:
 	  org.apache.subversion.javahl.util
 
 doc-clean:
-	rm -rf $(top_srcdir)/doc/doxygen
-	rm -rf $(top_srcdir)/doc/javadoc
+	rm -rf $(abs_builddir)/doc/doxygen
+	rm -rf $(abs_builddir)/doc/javadoc
 
 # Converting from the .rnc XML shcemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
