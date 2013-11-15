@@ -47,7 +47,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.5
  Developer-visible changes:
   - General:
     * fix compilation with '--enable-optimize' with clang (r1534860)
-    * fix copmpilation with debug build of BDB on Windows (r1501656, r1501702)
+    * fix compilation with debug build of BDB on Windows (r1501656, r1501702)
     * fix '--with-openssl' option when building on Windows (r1535139) 
     * add test to fail when built against broken ZLib (r1537193 et al)
 
