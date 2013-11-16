@@ -193,24 +193,37 @@ svn_iter__break(void)
 
 const void *svn__apr_hash_index_key(const apr_hash_index_t *hi)
 {
+#if APR_VERSION_AT_LEAST(1, 5, 0)
+  return apr_hash_this_key((apr_hash_index_t *)hi);
+#else
   const void *key;
 
+  apr_hash_this_key(
   apr_hash_this((apr_hash_index_t *)hi, &key, NULL, NULL);
   return key;
+#endif
 }
 
 apr_ssize_t svn__apr_hash_index_klen(const apr_hash_index_t *hi)
 {
+#if APR_VERSION_AT_LEAST(1, 5, 0)
+  return apr_hash_this_key_len((apr_hash_index_t *)hi);
+#else
   apr_ssize_t klen;
 
   apr_hash_this((apr_hash_index_t *)hi, NULL, &klen, NULL);
   return klen;
+#endif
 }
 
 void *svn__apr_hash_index_val(const apr_hash_index_t *hi)
 {
+#if APR_VERSION_AT_LEAST(1, 5, 0)
+  return apr_hash_this_val((apr_hash_index_t *)hi);
+#else
   void *val;
 
   apr_hash_this((apr_hash_index_t *)hi, NULL, NULL, &val);
   return val;
+#endif
 }
