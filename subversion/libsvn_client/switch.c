@@ -106,6 +106,7 @@ switch_internal(svn_revnum_t *result_rev,
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   const char *diff3_cmd;
+  const char *invoke_diff3_cmd;
   apr_hash_t *wcroot_iprops;
   apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
@@ -134,6 +135,17 @@ switch_internal(svn_revnum_t *result_rev,
 
   if (diff3_cmd != NULL)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+  else
+    /* Get the external invoke_diff3_cmd, if any. */
+    svn_config_get(cfg, &invoke_diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                   SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
+
+  if (diff3_cmd != NULL)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+  else
+    if (invoke_diff3_cmd != NULL)
+      SVN_ERR(svn_path_cstring_to_utf8(&invoke_diff3_cmd, invoke_diff3_cmd, pool));
+
 
   /* See if the user wants last-commit timestamps instead of current ones. */
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
@@ -312,7 +324,8 @@ switch_internal(svn_revnum_t *result_rev,
                                     use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
-                                    diff3_cmd, preserved_exts,
+                                    diff3_cmd, invoke_diff3_cmd,
+                                    preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
                                     conflicted_paths ? record_conflict : NULL,
                                     conflicted_paths,

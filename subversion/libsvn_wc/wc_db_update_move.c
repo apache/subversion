@@ -961,8 +961,9 @@ update_working_file(const char *local_relpath,
                                          NULL, NULL, NULL, /* diff labels */
                                          actual_props,
                                          FALSE, /* dry-run */
-                                         NULL, /* diff3-cmd */
-                                         NULL, /* merge options */
+                                         NULL,  /* diff3-cmd */
+                                         NULL,  /* invoke-diff3-cmd */
+                                         NULL,  /* merge options */
                                          propchanges,
                                          NULL, NULL, /* cancel_func + baton */
                                          scratch_pool, scratch_pool));

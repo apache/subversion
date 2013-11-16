@@ -316,10 +316,13 @@ typedef struct merge_cmd_baton_t {
   /* A list of tree conflict victim absolute paths which may be NULL. */
   apr_hash_t *tree_conflicted_abspaths;
 
-  /* The diff3_cmd in ctx->config, if any, else null.  We could just
-     extract this as needed, but since more than one caller uses it,
-     we just set it up when this baton is created. */
+  /* The diff3_cmd and invoke_diff3_cmd in ctx->config, if any, else
+     null.  We could just extract this as needed, but since more than
+     one caller uses it, we just set it up when this baton is
+     created. */
   const char *diff3_cmd;
+  const char *invoke_diff3_cmd;
+
   const apr_array_header_t *merge_options;
 
   /* RA sessions used throughout a merge operation.  Opened/re-parented
@@ -2040,11 +2043,13 @@ merge_file_changed(const char *relpath,
 
       /* Do property merge and text merge in one step so that keyword expansion
          takes into account the new property values. */
-      SVN_ERR(svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
+      SVN_ERR(svn_wc_merge6(&content_outcome, &property_state, ctx->wc_ctx,
                             left_file, right_file, local_abspath,
                             left_label, right_label, target_label,
                             left, right,
-                            merge_b->dry_run, merge_b->diff3_cmd,
+                            merge_b->dry_run, 
+                            merge_b->diff3_cmd,
+                            merge_b->invoke_diff3_cmd,
                             merge_b->merge_options,
                             left_props, prop_changes,
                             NULL, NULL,
@@ -9667,7 +9672,8 @@ do_merge(apr_hash_t **modified_subtrees,
 {
   merge_cmd_baton_t merge_cmd_baton = { 0 };
   svn_config_t *cfg;
-  const char *diff3_cmd;
+  const char *diff3_cmd = NULL;
+  const char *invoke_diff3_cmd = NULL;
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
   svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
@@ -9718,7 +9724,11 @@ do_merge(apr_hash_t **modified_subtrees,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  /* Set up the diff3 command, so various callers don't have to. */
+ /* Get the external *_diff3_cmd, if any. 
+     Precedence: If there is no invoke_diff3_cmd on the cmd line,
+     check if there is a diff3-cmd in the config file.  If there is,
+     do not check invoke_diff3_cmd in the config file.*/
+
   cfg = ctx->config
         ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
         : NULL;
@@ -9727,6 +9737,14 @@ do_merge(apr_hash_t **modified_subtrees,
 
   if (diff3_cmd != NULL)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, scratch_pool));
+  else
+    {
+      svn_config_get(cfg, &invoke_diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
+      if (invoke_diff3_cmd != NULL)
+        SVN_ERR(svn_path_cstring_to_utf8(&invoke_diff3_cmd, 
+                                         invoke_diff3_cmd, scratch_pool));
+    }
 
   /* Build the merge context baton (or at least the parts of it that
      don't need to be reset for each merge source).  */
@@ -9743,6 +9761,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.pool = iterpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
+  merge_cmd_baton.invoke_diff3_cmd = invoke_diff3_cmd;
   merge_cmd_baton.use_sleep = use_sleep;
 
   /* Do we already know the specific subtrees with mergeinfo we want

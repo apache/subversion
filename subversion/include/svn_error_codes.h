@@ -1451,8 +1451,13 @@ SVN_ERROR_START
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
 
-  SVN_ERRDEF(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_DIFF3_TOOL,
              SVN_ERR_CL_CATEGORY_START + 11,
+             "No external invoke-diff3 tool available")
+
+  SVN_ERRDEF(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+             SVN_ERR_CL_CATEGORY_START + 12,
              "Failed processing one or more externals definitions")
 
   /* ra_svn errors */

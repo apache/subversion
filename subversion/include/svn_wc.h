@@ -7011,6 +7011,35 @@ typedef enum svn_wc_merge_outcome_t
  * @since New in 1.8.
  */
 svn_error_t *
+svn_wc_merge6(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_state,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const char *invoke_diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_merge6() but with @a invoke_diff3_cmd.
+ *
+ * @since New in 1.9.
+ */
+SVN_DEPRECATED
+svn_error_t *
 svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_state,
               svn_wc_context_t *wc_ctx,

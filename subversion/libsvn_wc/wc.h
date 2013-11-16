@@ -413,8 +413,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
    When DRY_RUN is true, no actual changes are made to the working copy.
 
-   If DIFF3_CMD is specified, the given external diff3 tool will
-   be used instead of our built in diff3 routines.
+   If DIFF3_CMD or INVOKE_DIFF3_CMD is specified, the given external
+   diff3 tool will be used instead of our built in diff3 routines.
 
    When MERGE_OPTIONS are specified, they are used by the internal
    diff3 routines, or passed to the external diff3 tool.
@@ -453,6 +453,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *target_label,
                        apr_hash_t *old_actual_props,
                        svn_boolean_t dry_run,
+                       const char *invoke_diff3_cmd,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
@@ -460,6 +461,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        void *cancel_baton,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
+
 
 /* A default error handler for svn_wc_walk_entries3().  Returns ERR in
    all cases. */
@@ -730,6 +732,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
+                           const char *invoke_diff3_cmd,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,

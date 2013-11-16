@@ -3371,6 +3371,59 @@ svn_io_run_diff3_3(int *exitcode,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_io_run_invoke_diff3(int *exitcode,
+                        const char *dir,
+                        const char *mine,
+                        const char *older,
+                        const char *yours,
+                        const char *mine_label,
+                        const char *older_label,
+                        const char *yours_label,
+                        apr_file_t *merged,
+                        const char *invoke_diff3_cmd,
+                        apr_pool_t *pool)
+{
+
+  const char ** cmd;
+
+  apr_pool_t *scratch_pool = svn_pool_create(pool); 
+
+  if (0 == strlen(invoke_diff3_cmd)) 
+     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
+
+  cmd = svn_io__create_custom_diff_cmd(mine_label, yours_label, older_label, 
+                                       mine, yours, older, 
+                                       invoke_diff3_cmd, scratch_pool);
+  
+  SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, exitcode, NULL, TRUE,
+                         NULL, merged, NULL, scratch_pool));
+
+
+  /* According to the diff3 docs, a '0' means the merge was clean, and
+     '1' means conflict markers were found.  Anything else is real
+     error. */
+  if ((*exitcode != 0) && (*exitcode != 1))
+    {
+
+      int i;
+      const char *failed_command = "";
+
+      for (i = 0; cmd[i]; ++i)
+          failed_command = apr_pstrcat(pool, failed_command, 
+                                       cmd[i], " ", (char*) NULL);
+      svn_pool_destroy(scratch_pool);
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               _("'%s' was expanded to '%s' and returned %d"),
+                               invoke_diff3_cmd,
+                               failed_command,
+                               *exitcode);
+    }
+  else
+    svn_pool_destroy(scratch_pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* Canonicalize a string for hashing.  Modifies KEY in place. */
 static APR_INLINE char *

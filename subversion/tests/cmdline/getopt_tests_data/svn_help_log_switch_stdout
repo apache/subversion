@@ -201,6 +201,15 @@ Valid options:
                              'empty', 'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
+  --invoke-diff3-cmd ARG   : use ARG as format string for external merge program
+                             invocation.  Substitutions: 
+                               %svn_mine  'mine' file
+                               %svn_yours 'yours' file
+                               %svn_base  'base' file
+                               %svn_label_mine   label of the 'mine file
+                               %svn_label_yours  label of the 'yours' file
+                               %svn_label_base   label of the 'mine file
+                             See 'help diff' for example usage.
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
   --ignore-ancestry        : allow switching to a node with no common ancestor

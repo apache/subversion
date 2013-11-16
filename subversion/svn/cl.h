@@ -83,7 +83,11 @@ typedef enum svn_cl__accept_t
   svn_cl__accept_edit,
 
   /* Launch user's resolver and resolve conflict with edited file. */
-  svn_cl__accept_launch
+  svn_cl__accept_launch,
+
+  /* Launch user's resolver with the invoke_diff3_cmd in the config
+     file and resolve conflict with edited file. */
+  svn_cl__accept_invoke_diff3_config
 
 } svn_cl__accept_t;
 
@@ -97,6 +101,7 @@ typedef enum svn_cl__accept_t
 #define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
+#define SVN_CL__ACCEPT_INVOKE_DIFF3_CONFIG "invoke-diff3-config"
 
 /* Return the svn_cl__accept_t value corresponding to WORD, using exact
  * case-sensitive string comparison. Return svn_cl__accept_invalid if WORD
@@ -204,6 +209,9 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t revprop;         /* operate on a revision property */
   const char *merge_cmd;         /* the external merge command to use
                                     (not converted to UTF-8) */
+  const char *invoke_diff3_cmd;  /* the format string for the external
+                                    merge command to use (not
+                                    converted to UTF-8) */
   const char *editor_cmd;        /* the external editor command to use
                                     (not converted to UTF-8) */
   svn_boolean_t record_only;     /* whether to record mergeinfo */
@@ -530,6 +538,21 @@ svn_cl__merge_file_externally(const char *base_path,
                               apr_hash_t *config,
                               svn_boolean_t *remains_in_conflict,
                               apr_pool_t *pool);
+
+/* As svn_cl__merge_file_externally, but for the invoke_diff3_cmd
+   selected merge tool  */
+svn_error_t *
+svn_cl__invoke_diff3_cmd_externally(const char *base_label,
+                                    const char *their_label,
+                                    const char *my_label,
+                                    const char *base_file,
+                                    const char *their_file,
+                                    const char *my_file,
+                                    apr_hash_t *config,
+                                    svn_boolean_t *remains_in_conflict,
+                                    const char *opt_code,
+                                    apr_pool_t *pool);
+
 
 /* Like svn_cl__merge_file_externally, but using a built-in merge tool
  * with help from an external editor specified by EDITOR_CMD. */

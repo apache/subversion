@@ -364,7 +364,8 @@ switch_file_external(const char *local_abspath,
                       ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
                       : NULL;
   svn_boolean_t use_commit_times;
-  const char *diff3_cmd;
+  const char *diff3_cmd = NULL;
+  const char *invoke_diff3_cmd = NULL;
   const char *preserved_exts_str;
   const apr_array_header_t *preserved_exts;
   svn_node_kind_t kind, external_kind;
@@ -376,13 +377,23 @@ switch_file_external(const char *local_abspath,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
-  /* Get the external diff3, if any. */
+  /* Get the external *_diff3_cmd, if any. 
+     Precedence: If there is no invoke_diff3_cmd on the cmd line,
+     check if there is a diff3-cmd in the config file.  If there is,
+     do not check invoke_diff3_cmd in the config file.*/
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   if (diff3_cmd != NULL)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, scratch_pool));
-
+  else
+    {
+      svn_config_get(cfg, &invoke_diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                     SVN_CONFIG_OPTION_INVOKE_DIFF3_CMD, NULL);
+      if (invoke_diff3_cmd != NULL)
+        SVN_ERR(svn_path_cstring_to_utf8(&invoke_diff3_cmd, 
+                                         invoke_diff3_cmd, scratch_pool));
+    }
   /* See which files the user wants to preserve the extension of when
      conflict files are made. */
   svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
@@ -483,7 +494,8 @@ switch_file_external(const char *local_abspath,
                                              switch_loc->repos_uuid,
                                              inherited_props,
                                              use_commit_times,
-                                             diff3_cmd, preserved_exts,
+                                             diff3_cmd, invoke_diff3_cmd,
+                                             preserved_exts,
                                              def_dir_abspath,
                                              url, peg_revision, revision,
                                              ctx->conflict_func2,
