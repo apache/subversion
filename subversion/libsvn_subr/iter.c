@@ -198,7 +198,6 @@ const void *svn__apr_hash_index_key(const apr_hash_index_t *hi)
 #else
   const void *key;
 
-  apr_hash_this_key(
   apr_hash_this((apr_hash_index_t *)hi, &key, NULL, NULL);
   return key;
 #endif
