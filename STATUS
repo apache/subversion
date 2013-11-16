@@ -77,6 +77,12 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1542610
+   Add missing description to build.conf, to properly generate a version
+   resource (including icon) for this executable on Windows.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
