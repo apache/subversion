@@ -2145,7 +2145,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
   if not options.is_child_process and not options.keep_local_tmp:
-    safe_rmtree(temp_dir, 1)
+    try:
+      safe_rmtree(temp_dir, 1)
+    except:
+      logger.error("ERROR: cleanup of '%s' directory failed." % temp_dir)
+      exit_code = 1
 
   # Cleanup after ourselves.
   svntest.sandbox.cleanup_deferred_test_paths()
