@@ -73,6 +73,7 @@ static const int schema_statements[] =
   STMT_CREATE_NODES,
   STMT_CREATE_NODES_TRIGGERS,
   STMT_CREATE_EXTERNALS,
+  STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
   STMT_CREATE_CHANGELIST_LIST,
@@ -813,6 +814,147 @@ test_query_duplicates(apr_pool_t *scratch_pool)
   return warnings;
 }
 
+/* Helper to verify a bit of data in the sqlite3 statistics */
+static int
+parse_stat_data(const char *stat)
+{
+  int n = 0;
+  apr_int64_t last = APR_INT64_MAX;
+  while (*stat)
+    {
+      apr_int64_t v;
+      char *next;
+
+      if (*stat < '0' || *stat > '9')
+        return -2;
+
+      errno = 0;
+      v = apr_strtoi64(stat, &next, 10);
+
+      /* All numbers specify the average number of rows
+         with the same values in all columns left of it,
+         so the value must be >= 1 and lower than or equal
+         to all previous seen numbers */
+      if (v <= 0 || (v > last) || (errno != 0))
+        return -1;
+
+      last = v;
+
+      n++;
+      stat = next;
+
+      if (*stat == ' ')
+        stat++;
+    }
+
+  return n;
+}
+
+static svn_error_t *
+test_schema_statistics(apr_pool_t *scratch_pool)
+{
+  sqlite3 *sdb;
+  int r;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_error_t *warnings = NULL;
+  sqlite3_stmt *stmt;
+
+  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "CREATE TABLE shadow_stat1(tbl TEXT, idx TEXT, stat TEXT)",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO shadow_stat1 (tbl, idx, stat) "
+                   "SELECT tbl, idx, stat FROM sqlite_stat1",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "DROP TABLE sqlite_stat1",
+                   NULL, NULL, NULL));
+
+  /* Insert statement to give index at least 1 record */
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO nodes (wc_id, local_relpath, op_depth,"
+                   "                   presence, kind) "
+                   "VALUES (1, '', 0, 'normal', 'dir')",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO actual_node (wc_id, local_relpath) "
+                   "VALUES (1, '')",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO lock (repos_id, repos_relpath, lock_token) "
+                   "VALUES (1, '', '')",
+                   NULL, NULL, NULL));
+
+  /* These are currently not necessary for query optimization, but it's better
+     to tell Sqlite how we intend to use this table anyway */
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO wc_lock (wc_id, local_dir_relpath) "
+                   "VALUES (1, '')",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO WORK_QUEUE (work) "
+                   "VALUES ('')",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "ANALYZE",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_prepare(sdb, "SELECT s.tbl, s.idx, s.stat, r.stat "
+                           "FROM shadow_stat1 s "
+                           "LEFT JOIN sqlite_stat1 r ON "
+                                "s.tbl=r.tbl and s.idx=r.idx",
+                      -1, &stmt, NULL));
+
+  while (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+      const char *wc_stat       = (const char*)sqlite3_column_text(stmt, 2);
+      const char *sqlite_stat   = (const char*)sqlite3_column_text(stmt, 3);
+
+      if (! sqlite_stat)
+        {
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Schema statistic failure:"
+                                   " Refering to unknown index '%s' on '%s'",
+                                   sqlite3_column_text(stmt, 1),
+                                   sqlite3_column_text(stmt, 0));
+        }
+
+      if (parse_stat_data(wc_stat) != parse_stat_data(sqlite_stat))
+        {
+          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                   "Schema statistic failure:"
+                                   " Column mismatch for '%s' on '%s'",
+                                   sqlite3_column_text(stmt, 1),
+                                   sqlite3_column_text(stmt, 0));
+        }
+    }
+
+  SQLITE_ERR(sqlite3_reset(stmt));
+  SQLITE_ERR(sqlite3_finalize(stmt));
+
+  SQLITE_ERR(sqlite3_close(sdb)); /* Close the DB if ok; otherwise leaked */
+
+  return SVN_NO_ERROR;
+}
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -824,5 +966,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test query expectations"),
     SVN_TEST_PASS2(test_query_duplicates,
                    "test query duplicates"),
+    SVN_TEST_PASS2(test_schema_statistics,
+                   "test schema statistics"),
     SVN_TEST_NULL
   };
