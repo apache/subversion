@@ -92,8 +92,8 @@ static const int slow_statements[] =
   /* Operate on the entire WC */
   STMT_SELECT_ALL_NODES,                /* schema validation code */
 
-  /* Is there a record? ### Can we somehow check for LIMIT 1? */
-  STMT_LOOK_FOR_WORK,
+  /* Updates all records for a repository (designed slow) */
+  STMT_UPDATE_LOCK_REPOS_ID,
 
   /* Full temporary table read */
   STMT_INSERT_ACTUAL_EMPTIES,
@@ -107,6 +107,19 @@ static const int slow_statements[] =
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
+
+  -1 /* final marker */
+};
+
+/* Statements that just read the first record from a table,
+   using the primary key. Specialized as different sqlite
+   versions produce different results */
+static const int primary_key_statements[] =
+{
+  /* Is there a record? ### Can we somehow check for LIMIT 1,
+     and primary key instead of adding a list? */
+  STMT_LOOK_FOR_WORK,
+  STMT_SELECT_WORK_ITEM,
 
   -1 /* final marker */
 };
@@ -526,6 +539,7 @@ is_node_table(const char *table_name)
   return (apr_strnatcasecmp(table_name, "nodes") == 0
           || apr_strnatcasecmp(table_name, "actual_node") == 0
           || apr_strnatcasecmp(table_name, "externals") == 0
+          || apr_strnatcasecmp(table_name, "lock") == 0
           || apr_strnatcasecmp(table_name, "wc_lock") == 0
           || FALSE);
 }
@@ -648,14 +662,24 @@ test_query_expectations(apr_pool_t *scratch_pool)
                        || (item->expression_vars < 1))
                    && !is_result_table(item->table))
             {
-              warned = TRUE;
-              if (!is_slow_statement(i))
-                warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
+              if (in_list(primary_key_statements, i))
+                {
+                  /* Reported as primary key index usage in Sqlite 3.7,
+                     as table scan in 3.8+, while the execution plan is
+                     identical: read first record from table */
+                }
+              else if (!is_slow_statement(i))
+                {
+                  warned = TRUE;
+                  warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Uses %s with only %d index component: (%s)\n%s",
                                 wc_query_info[i][0], item->table,
                                 item->expression_vars, item->expressions,
                                 wc_queries[i]);
+                }
+              else
+                warned = TRUE;
             }
           else if (item->search && !item->index)
             {
