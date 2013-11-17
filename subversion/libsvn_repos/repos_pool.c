@@ -72,7 +72,8 @@ svn_repos__repos_pool_create(svn_repos__repos_pool_t **repos_pool,
   /* no getter nor setter is required but we also can't share repos
    * instances */
   SVN_ERR(svn_object_pool__create(&object_pool, NULL, NULL,
-                                  4, APR_UINT32_MAX, FALSE, thread_safe,
+/* ### temp. disabled             4, APR_UINT32_MAX, FALSE, thread_safe, */
+                                  0, 0, FALSE, thread_safe,
                                   pool));
 
   root_pool = svn_object_pool__pool(object_pool);
