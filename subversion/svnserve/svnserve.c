@@ -48,6 +48,7 @@
 #include "svn_cache_config.h"
 #include "svn_version.h"
 #include "svn_io.h"
+#include "svn_hash.h"
 
 #include "svn_private_config.h"
 
@@ -616,7 +617,12 @@ int main(int argc, const char *argv[])
   apr_thread_t *tid;
 #endif
 #endif
+  svn_boolean_t is_multi_threaded;
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
+  apr_hash_t *fs_config = NULL;
+  svn_boolean_t cache_fulltexts = TRUE;
+  svn_boolean_t cache_txdeltas = TRUE;
+  svn_boolean_t cache_revprops = FALSE;
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
   int family = APR_INET;
@@ -667,12 +673,12 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.logger = NULL;
+  params.config_pool = NULL;
+  params.authz_pool = NULL;
+  params.repos_pool = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
-  params.cache_fulltexts = TRUE;
-  params.cache_txdeltas = TRUE;
-  params.cache_revprops = FALSE;
   params.zero_copy_limit = 0;
   params.error_check_interval = 4096;
 
@@ -809,18 +815,15 @@ int main(int argc, const char *argv[])
           break;
 
         case SVNSERVE_OPT_CACHE_TXDELTAS:
-          params.cache_txdeltas
-             = svn_tristate__from_word(arg) == svn_tristate_true;
+          cache_txdeltas = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
         case SVNSERVE_OPT_CACHE_FULLTEXTS:
-          params.cache_fulltexts
-             = svn_tristate__from_word(arg) == svn_tristate_true;
+          cache_fulltexts = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
         case SVNSERVE_OPT_CACHE_REVPROPS:
-          params.cache_revprops
-             = svn_tristate__from_word(arg) == svn_tristate_true;
+          cache_revprops = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
         case SVNSERVE_OPT_CLIENT_SPEED:
@@ -908,17 +911,41 @@ int main(int argc, const char *argv[])
       usage(argv[0], pool);
     }
 
+  /* construct object pools */
+  is_multi_threaded = handling_mode == connection_mode_thread;
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+                cache_txdeltas ? "1" :"0");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+                cache_fulltexts ? "1" :"0");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                cache_revprops ? "1" :"0");
+
+  SVN_INT_ERR(svn_repos__config_pool_create(&params.config_pool,
+                                            is_multi_threaded,
+                                            pool));
+  SVN_INT_ERR(svn_repos__authz_pool_create(&params.authz_pool,
+                                           params.config_pool,
+                                           is_multi_threaded,
+                                           pool));
+  SVN_INT_ERR(svn_repos__repos_pool_create(&params.repos_pool,
+                                           fs_config,
+                                           is_multi_threaded,
+                                           pool));
+  
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_INT_ERR(svn_config_read3(&params.cfg, config_filename,
-                                   TRUE, /* must_exist */
-                                   FALSE, /* section_names_case_sensitive */
-                                   FALSE, /* option_names_case_sensitive */
-                                   pool));
+      SVN_INT_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
+                                             params.config_pool,
+                                             config_filename, 
+                                             TRUE, /* must_exist */
+                                             FALSE, /* names_case_sensitive */
+                                             NULL,
+                                             pool));
     }
 
   if (log_filename)

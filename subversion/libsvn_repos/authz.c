@@ -78,8 +78,8 @@ struct authz_validate_baton {
                            enumerator, if any. */
 };
 
-/* Currently this structure is just a wrapper around a
-   svn_config_t. */
+/* Currently this structure is just a wrapper around a svn_config_t.
+   Please update authz_pool if you modify this structure. */
 struct svn_authz_t
 {
   svn_config_t *cfg;
@@ -750,9 +750,8 @@ static svn_boolean_t authz_validate_section(const char *name,
 }
 
 
-/* Walk the configuration in AUTHZ looking for any errors. */
-static svn_error_t *
-authz_validate(svn_authz_t *authz, apr_pool_t *pool)
+svn_error_t *
+svn_repos__authz_validate(svn_authz_t *authz, apr_pool_t *pool)
 {
   struct authz_validate_baton baton = { 0 };
 
@@ -971,7 +970,7 @@ svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
     }
 
   /* Make sure there are no errors in the configuration. */
-  SVN_ERR(authz_validate(authz, pool));
+  SVN_ERR(svn_repos__authz_validate(authz, pool));
 
   *authz_p = authz;
   return SVN_NO_ERROR;
@@ -1011,7 +1010,7 @@ svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
     }
 
   /* Make sure there are no errors in the configuration. */
-  SVN_ERR(authz_validate(authz, pool));
+  SVN_ERR(svn_repos__authz_validate(authz, pool));
 
   *authz_p = authz;
   return SVN_NO_ERROR;

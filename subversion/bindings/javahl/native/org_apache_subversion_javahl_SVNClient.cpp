@@ -1666,6 +1666,36 @@ Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 }
 
 JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler(
+    JNIEnv* env, jobject jthis, jobject jcallback)
+{
+  JNIEntry(SVNClient, setConfigEventHandler);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setConfigEventHandler(jcallback);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_getConfigEventHandler(
+    JNIEnv* env, jobject jthis)
+{
+  JNIEntry(SVNClient, getConfigEventHandler);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+
+  return cl->getClientContext().getConfigEventHandler();
+}
+
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_cancelOperation
 (JNIEnv *env, jobject jthis)
 {

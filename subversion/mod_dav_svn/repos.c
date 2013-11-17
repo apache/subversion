@@ -1348,7 +1348,7 @@ dav_svn_split_uri(request_rec *r,
         if (ch == '\0')
           {
             /* relative is just "!svn", which is malformed. */
-            return dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+            return dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                       SVN_ERR_APMOD_MALFORMED_URI,
                                       "Nothing follows the svn special_uri.");
           }
@@ -1375,7 +1375,7 @@ dav_svn_split_uri(request_rec *r,
                           *repos_path = NULL;
                         else
                           return dav_svn__new_error(
-                                     r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                     r->pool, HTTP_NOT_FOUND,
                                      SVN_ERR_APMOD_MALFORMED_URI,
                                      "Missing info after special_uri.");
                       }
@@ -1399,7 +1399,7 @@ dav_svn_split_uri(request_rec *r,
                             /* Did we break from the loop prematurely? */
                             if (j != (defn->numcomponents - 1))
                               return dav_svn__new_error(
-                                         r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                         r->pool, HTTP_NOT_FOUND,
                                          SVN_ERR_APMOD_MALFORMED_URI,
                                          "Not enough components after "
                                          "special_uri.");
@@ -1419,7 +1419,7 @@ dav_svn_split_uri(request_rec *r,
                     else
                       {
                         return
-                          dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                          dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                         SVN_ERR_APMOD_MALFORMED_URI,
                                         "Unknown data after special_uri.");
                       }
@@ -1430,7 +1430,7 @@ dav_svn_split_uri(request_rec *r,
 
             if (defn->name == NULL)
               return
-                dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                    SVN_ERR_APMOD_MALFORMED_URI,
                                    "Couldn't match subdir after special_uri.");
           }
@@ -1970,26 +1970,12 @@ get_resource(request_rec *r,
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
-  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+  if (dav_svn__is_parentpath_list(r))
     {
-      char *uri = apr_pstrdup(r->pool, r->uri);
-      char *parentpath = apr_pstrdup(r->pool, root_path);
-      apr_size_t uri_len = strlen(uri);
-      apr_size_t parentpath_len = strlen(parentpath);
-
-      if (uri[uri_len-1] == '/')
-        uri[uri_len-1] = '\0';
-
-      if (parentpath[parentpath_len-1] == '/')
-        parentpath[parentpath_len-1] = '\0';
-
-      if (strcmp(parentpath, uri) == 0)
-        {
-          err = get_parentpath_resource(r, resource);
-          if (err)
-            return err;
-          return NULL;
-        }
+      err = get_parentpath_resource(r, resource);
+      if (err)
+        return err;
+      return NULL;
     }
 
   /* This does all the work of interpreting/splitting the request uri. */
@@ -2456,9 +2442,12 @@ get_parent_resource(const dav_resource *resource,
       parent->info = parentinfo;
 
       parentinfo->uri_path =
-        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
-                                             TRUE, resource->pool),
-                             resource->pool);
+        svn_stringbuf_create(
+               get_parent_path(
+                   svn_urlpath__canonicalize(resource->info->uri_path->data,
+                                            resource->pool),
+                   TRUE, resource->pool),
+               resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;

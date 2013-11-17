@@ -1,3 +1,6 @@
+TODO:  add invoke-diff-cmd help to svnlook.c, log
+change location of opt_invoke_diff_cmd in declarion svn_cl__longopt_t
+
 This branch implements the 'invoke-diff-cmd' feature and is located at 
 https://svn.apache.org/repos/asf/subversion/branches/invoke-diff-cmd-feature/
 

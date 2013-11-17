@@ -64,6 +64,8 @@
 #include "Pool.h"
 
 
+#include "jniwrapper/jni_env.hpp"
+
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
@@ -76,34 +78,13 @@ JNIEnv *JNIUtil::g_initEnv;
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
 
-namespace {
-JavaVM *g_jvm = NULL;
-} // anonymous namespace
-
-extern "C" JNIEXPORT jint JNICALL
-JNI_OnLoad(JavaVM *jvm, void*)
-{
-  g_jvm = jvm;
-  return JNI_VERSION_1_2;
-}
-
-extern "C" JNIEXPORT void JNICALL
-JNI_OnUnload(JavaVM*, void*)
-{}
-
 /**
  * Return the JNI environment to use
  * @return the JNI environment
  */
 JNIEnv *JNIUtil::getEnv()
 {
-  // During init -> look into the global variable.
-  if (g_inInit)
-    return g_initEnv;
-
-  void* penv;
-  g_jvm->GetEnv(&penv, JNI_VERSION_1_2);
-  return static_cast<JNIEnv*>(penv);
+  return Java::Env().get();
 }
 
 /**

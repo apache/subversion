@@ -29,12 +29,16 @@ import org.apache.subversion.javahl.util.*;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public class SVNUtil
 {
     //
     // Global configuration
     //
+    private static final ConfigLib configLib = new ConfigLib();
 
     /**
      * Enable storing authentication credentials in Subversion's
@@ -51,7 +55,7 @@ public class SVNUtil
     public static void enableNativeCredentialsStore()
         throws ClientException
       {
-          new ConfigLib().enableNativeCredentialsStore();
+          configLib.enableNativeCredentialsStore();
       }
 
     /**
@@ -75,7 +79,7 @@ public class SVNUtil
     public static void disableNativeCredentialsStore()
         throws ClientException
       {
-          new ConfigLib().disableNativeCredentialsStore();
+          configLib.disableNativeCredentialsStore();
       }
 
     /**
@@ -84,37 +88,13 @@ public class SVNUtil
     public static boolean isNativeCredentialsStoreEnabled()
         throws ClientException
       {
-          return new ConfigLib().isNativeCredentialsStoreEnabled();
-      }
-
-    /**
-     * Set an event handler that will be called every time the
-     * configuration is loaded.
-     * <p>
-     * This setting will be inherited by all ISVNClient and ISVNRemote
-     * objects. Changing the setting will not affect existing such
-     * objects.
-     * @throws ClientException
-     */
-    public static void setConfigEventHandler(ConfigEvent configHandler)
-        throws ClientException
-      {
-          new ConfigLib().setConfigEventHandler(configHandler);
-      }
-
-    /**
-     * Return a reference to the installed configuration event
-     * handler. The returned value may be <code>null</code>.
-     */
-    public static ConfigEvent getConfigEventHandler()
-        throws ClientException
-      {
-          return new ConfigLib().getConfigEventHandler();
+          return configLib.isNativeCredentialsStoreEnabled();
       }
 
     //
     // Diff and Merge
     //
+    private static final DiffLib diffLib = new DiffLib();
 
     /**
      * Options to control the behaviour of the file diff routines.
@@ -233,10 +213,10 @@ public class SVNUtil
                                    OutputStream resultStream)
         throws ClientException
     {
-        return new DiffLib().fileDiff(originalFile, modifiedFile, diffOptions,
-                                      originalHeader, modifiedHeader,
-                                      headerEncoding,
-                                      relativeToDir, resultStream);
+        return diffLib.fileDiff(originalFile, modifiedFile, diffOptions,
+                                originalHeader, modifiedHeader,
+                                headerEncoding,
+                                relativeToDir, resultStream);
     }
 
 
@@ -277,16 +257,17 @@ public class SVNUtil
                                     OutputStream resultStream)
         throws ClientException
     {
-        return new DiffLib().fileMerge(originalFile, modifiedFile, latestFile,
-                                       diffOptions,
-                                       conflictOriginal, conflictModified,
-                                       conflictLatest, conflictSeparator,
-                                       conflictStyle, resultStream);
+        return diffLib.fileMerge(originalFile, modifiedFile, latestFile,
+                                 diffOptions,
+                                 conflictOriginal, conflictModified,
+                                 conflictLatest, conflictSeparator,
+                                 conflictStyle, resultStream);
     }
 
     //
     // Property validation and parsing
     //
+    private static final PropLib propLib = new PropLib();
 
     /**
      * Validate the value of an <code>svn:</code> property on file or
@@ -308,7 +289,7 @@ public class SVNUtil
         String mimeType)
         throws ClientException
     {
-        return new PropLib().canonicalizeNodeProperty(
+        return propLib.canonicalizeNodeProperty(
             name, value, path, kind, mimeType, null);
     }
 
@@ -337,7 +318,335 @@ public class SVNUtil
         String mimeType, InputStream fileContents)
         throws ClientException
     {
-        return new PropLib().canonicalizeNodeProperty(
+        return propLib.canonicalizeNodeProperty(
             name, value, path, kind, mimeType, fileContents);
+    }
+
+    /**
+     * Parse <code>description</code>, assuming it is an externals
+     * specification in the format required for the
+     * <code>svn:externals</code> property, and return a list of
+     * parsed external items.
+     * @param description The externals description.
+     * @param parentDirectory Used to construct error messages.
+     * @param canonicalizeUrl Whe <code>true</code>, canonicalize the
+     *     <code>url</code> member of the returned objects. If the
+     *     <code>url</code> member refers to an absolute URL, it will
+     *     be canonicalized as URL consistent with the way URLs are
+     *     canonicalized throughout the Subversion API. If, however,
+     *     the <code>url</code> member makes use of the recognized
+     *     (SVN-specific) relative URL syntax for
+     *     <code>svn:externals</code>, "canonicalization" is an
+     *     ill-defined concept which may even result in munging the
+     *     relative URL syntax beyond recognition. You've been warned.
+     * @return a list of {@link ExternalItem}s
+     */
+    public static List<ExternalItem> parseExternals(byte[] description,
+                                                    String parentDirectory,
+                                                    boolean canonicalizeUrl)
+        throws ClientException
+    {
+        return propLib.parseExternals(description, parentDirectory,
+                                      canonicalizeUrl);
+    }
+
+    /**
+     * Unparse and list of external items into a format suitable for
+     * the value of the <code>svn:externals</code> property and
+     * validate the result.
+     * @param items The list of {@link ExternalItem}s
+     * @param parentDirectory Used to construct error messages.
+     * @param compatibleWithSvn1_5 When <code>true</code>, the format
+     *     of the returned property value will be compatible with
+     *     clients older than Subversion 1.5.
+     */
+    public static byte[] unparseExternals(List<ExternalItem> items,
+                                          String parentDirectory)
+        throws SubversionException
+    {
+        return propLib.unparseExternals(items, parentDirectory, false);
+    }
+
+    /**
+     * Unparse and list of external items into a format suitable for
+     * the value of the <code>svn:externals</code> property compatible
+     * with Subversion clients older than release 1.5, and validate
+     * the result.
+     * @param items The list of {@link ExternalItem}s
+     * @param parentDirectory Used to construct error messages.
+     */
+    public static byte[] unparseExternalsForAncientUnsupportedClients(
+        List<ExternalItem> items, String parentDirectory)
+        throws SubversionException
+    {
+        return propLib.unparseExternals(items, parentDirectory, true);
+    }
+
+    /**
+     * If the URL in <code>external</code> is relative, resolve it to
+     * an absolute URL, using <code>reposRootUrl</code> and
+     * <code>parentDirUrl</code> to provide contest.
+     *<p>
+     * Regardless if the URL is absolute or not, if there are no
+     * errors, the returned URL will be canonicalized.
+     *<p>
+     * The following relative URL formats are supported:
+     * <dl>
+     *  <dt><code>../</code></dt>
+     *  <dd>relative to the parent directory of the external</dd>
+     *  <dt><code>^/</code></dt>
+     *  <dd>relative to the repository root</dd>
+     *  <dt><code>//</code></dt>
+     *  <dd>relative to the scheme</dd>
+     *  <dt><code>/</code></dt>
+     *  <dd>relative to the server's hostname</dd>
+     * </dl>
+     *<p>
+     * The <code>../<code> and ^/ relative URLs may use <code>..<code>
+     * to remove path elements up to the server root.
+     *<p>
+     * The external URL should not be canonicalized before calling
+     * this function, as otherwise the scheme relative URL
+     * '<code>//host/some/path</code>' would have been canonicalized
+     * to '<code>/host/some/path</code>' and we would not be able to
+     * match on the leading '<code>//</code>'.
+    */
+    public static String resolveExternalsUrl(ExternalItem external,
+                                             String reposRootUrl,
+                                             String parentDirUrl)
+        throws ClientException
+    {
+        return propLib.resolveExternalsUrl(
+                   external, reposRootUrl, parentDirUrl);
+    }
+
+    //
+    // Newline translation and keyword expansion
+    //
+    private static final SubstLib substLib = new SubstLib();
+
+    /**
+     * Use the linefeed code point ('<code>\x0a</code>')
+     * for the newline separator.
+     * @see translateStream
+     * @see untranslateStream
+     */
+    public static final byte[] EOL_LF = substLib.EOL_LF;
+
+    /**
+     * Use the carraige-return code point ('<code>\x0d</code>')
+     * for the newline separator.
+     * @see translateStream
+     * @see untranslateStream
+     */
+    public static final byte[] EOL_CR = substLib.EOL_CR;
+
+    /**
+     * Use carriage-return/linefeed sequence ('<code>\x0d\x0a</code>')
+     * for the newline separator.
+     * @see translateStream
+     * @see untranslateStream
+     */
+    public static final byte[] EOL_CRLF = substLib.EOL_CRLF;
+
+
+    /**
+     * Build a dictionary of expanded keyword values, given the
+     * contents of a file's <code>svn:keywords</code> property, its
+     * revision, URL, the date it was committed on, the author of the
+     * commit and teh URL of the repository root.
+     *<p>
+     * Custom keywords defined in <code>svn:keywords</code> properties
+     * are expanded using the provided parameters and in accordance
+     * with the following format substitutions in the
+     * <code>keywordsValue</code>:
+     * <dl>
+     *   <dt><code>%a</dt></code>
+     * <dd>The author.</dd>
+     *   <dt><code>%b</dt></code>
+     * <dd>The basename of the URL.</dd>
+     *   <dt><code>%d</dt></code>
+     * <dd>Short format of the date.</dd>
+     *   <dt><code>%D</dt></code>
+     * <dd>Long format of the date.</dd>
+     *   <dt><code>%P</dt></code>
+     * <dd>The file's path, relative to the repository root URL.</dd>
+     *   <dt><code>%r</dt></code>
+     * <dd>The revision.</dd>
+     *   <dt><code>%R</dt></code>
+     * <dd>The URL to the root of the repository.</dd>
+     *   <dt><code>%u</dt></code>
+     * <dd>The URL of the file.</dd>
+     *   <dt><code>%_</dt></code>
+     * <dd>A space (keyword definitions cannot contain a literal space).</dd>
+     *   <dt><code>%%</dt></code>
+     * <dd>A literal '%'.</dd>
+     *   <dt><code>%H</dt></code>
+     * <dd>Equivalent to <code>%P%_%r%_%d%_%a</code>.</dd>
+     *   <dt><code>%I</dt></code>
+     * <dd>Equivalent to <code>%b%_%r%_%d%_%a</code>.</dd>
+     * </dl>
+     *<p>
+     * Custom keywords are defined by appending '=' to the keyword
+     * name, followed by a string containing any combination of the
+     * format substitutions.
+     *<p>
+     * Any of the <code>revision</code>, <code>url</code>,
+     * <code>reposRootUrl</code>, <code>date</code> and
+     * <code>author</code> parameters may be <code>null</code>, or
+     * {@link Revision#SVN_INVALID_REVNUM} for <code>revision</code>,
+     * to indicate that the information is not present. Each piece of
+     * information that is not present expands to the empty string
+     * wherever it appears in an expanded keyword value.  (This can
+     * result in multiple adjacent spaces in the expansion of a
+     * multi-valued keyword such as "<code>Id</code>".)
+     */
+    public static Map<String, byte[]> buildKeywords(byte[] keywordsValue,
+                                                    long revision,
+                                                    String url,
+                                                    String reposRootUrl,
+                                                    Date date,
+                                                    String author)
+        throws SubversionException, ClientException
+    {
+        return substLib.buildKeywords(keywordsValue, revision,
+                                      url, reposRootUrl, date, author);
+    }
+
+    /**
+     * Return a stream which performs end-of-line translation and
+     * keyword expansion when read from.
+     *<p>
+     * Make sure you close the reurned stream stream to ensure all
+     * data are flushed and cleaned up (this will also close the
+     * provided stream).
+     *<p>
+     * If <code>eolMarker</code> is not <code>null</code>, replace
+     * whatever any end-of-line sequences in the input with
+     * <code>eolMarker</code>.  If the input has an inconsistent line
+     * ending style, then:
+     * <ul>
+     *   <li>if <code>repairEol</code> is <code>false</code>, then a
+     *       subsequent read or other operation on the stream will
+     *       generate an error when the inconsistency is detected;</li>
+     *   <li>if <code>repaorEol</code> is <code>true</code>, convert any
+     *       line ending to <code>eolMarker</code>.<br/>
+     *       Recognized line endings are: "\n", "\r", and "\r\n".</li>
+     * </ul>
+     *<p>
+     * Expand or contract keywords using the contents of
+     * <code>keywords</code> as the new values.  If
+     * <code>expandKeywords</code> is <code>true</code>, expand
+     * contracted keywords and re-expand expanded keywords; otherwise,
+     * contract expanded keywords and ignore contracted ones.
+     * Keywords not found in the dictionary are ignored (not
+     * contracted or expanded).  If the <code>keywords</code> itself
+     * is <code>null</code>, keyword substitution will be altogether
+     * ignored.
+     *<p>
+     * Detect only keywords that are no longer than
+     * <code>SVN_KEYWORD_MAX_LEN</code> bytes (currently: 255),
+     * including the delimiters and the keyword itself.
+     *<p>
+     * Recommendation: if <code>expandKeywords</code> is
+     * <code>false</code>, then you don't care about the keyword
+     * values, so just put <code>null</code> values into the
+     * <code>keywords</code> dictionary.
+     *<p>
+     * If the inner stream implements marking and seeking via
+     * {@link InputStream#mark} and {@link InputStream#reset}, the
+     * translated stream will too.
+     *
+     * @param source the source (untranslated) stream.
+     * @param eolMarker the byte sequence to use as the end-of-line marker;
+     *     must be one of {@link #EOL_LF}, {@link #EOL_CR}
+     *     or {@link #EOL_CRLF}.
+     * @param repairEol flag to repair end-of-lines; see above
+     * @param keywords the keyword dictionary; see {@link buildKeywords}
+     * @param expandKeywords flag to expand keywords
+     */
+    public static InputStream translateStream(InputStream source,
+                                              byte[] eolMarker,
+                                              boolean repairEol,
+                                              Map<String, byte[]> keywords,
+                                              boolean expandKeywords)
+        throws SubversionException, ClientException
+    {
+        return substLib.translateInputStream(
+                    source, eolMarker, repairEol,
+                    keywords, true, expandKeywords,
+                    null, Revision.SVN_INVALID_REVNUM,
+                    null, null, null, null);
+    }
+
+    /**
+     * Expand keywords and return a stream which performs end-of-line
+     * translation and keyword expansion when read from.
+     * @see buildKeywords
+     * @see translateStream(InputStream,byte[],boolean,Map,boolean)
+     */
+    public static InputStream translateStream(InputStream source,
+                                              byte[] eolMarker,
+                                              boolean repairEol,
+                                              boolean expandKeywords,
+                                              byte[] keywordsValue,
+                                              long revision,
+                                              String url,
+                                              String reposRootUrl,
+                                              Date date,
+                                              String author)
+        throws SubversionException, ClientException
+    {
+        return substLib.translateInputStream(
+                    source, eolMarker, repairEol,
+                    null, false, expandKeywords,
+                    keywordsValue, revision,
+                    url, reposRootUrl, date, author);
+    }
+
+    /**
+     * Return a stream which performs end-of-line translation and
+     * keyword expansion when written to. Behaves like
+     * {@link #translateStream(InputStream,byte[],boolean,Map,boolean)},
+     * except that it translates an <code>OutputStream</code> and never
+     * supports marking and seeking.
+     */
+    public static OutputStream translateStream(OutputStream destination,
+                                               byte[] eolMarker,
+                                               boolean repairEol,
+                                               Map<String, byte[]> keywords,
+                                               boolean expandKeywords)
+        throws SubversionException, ClientException
+    {
+        return substLib.translateOutputStream(
+                    destination, eolMarker, repairEol,
+                    keywords, true, expandKeywords,
+                    null, Revision.SVN_INVALID_REVNUM,
+                    null, null, null, null);
+    }
+
+    /**
+     * Expand keywords and return a stream which performs end-of-line
+     * translation and keyword expansion when written to.
+     * @see buildKeywords
+     * @see translateStream(OutputStream,byte[],boolean,Map,boolean)
+     */
+    public static OutputStream translateStream(OutputStream destination,
+                                               byte[] eolMarker,
+                                               boolean repairEol,
+                                               boolean expandKeywords,
+                                               byte[] keywordsValue,
+                                               long revision,
+                                               String url,
+                                               String reposRootUrl,
+                                               Date date,
+                                               String author)
+        throws SubversionException, ClientException
+    {
+        return substLib.translateOutputStream(
+                    destination, eolMarker, repairEol,
+                    null, false, expandKeywords,
+                    keywordsValue, revision,
+                    url, reposRootUrl, date, author);
     }
 }

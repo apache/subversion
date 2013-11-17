@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
 #include "svn_auth.h"
+#include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
@@ -488,6 +489,18 @@ svn_config__shallow_copy(svn_config_t *src,
   cfg->read_only = src->read_only;
 
   return cfg;
+}
+
+void
+svn_config__shallow_replace_section(svn_config_t *target,
+                                    svn_config_t *source,
+                                    const char *section)
+{
+  if (target->read_only)
+    target->sections = apr_hash_copy(target->pool, target->sections);
+
+  svn_hash_sets(target->sections, section,
+                svn_hash_gets(source->sections, section));
 }
 
 

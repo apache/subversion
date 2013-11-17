@@ -37,7 +37,8 @@ extern "C" {
 #include "svn_ra_svn.h"
 
 #include "private/svn_mutex.h"
-
+#include "private/svn_repos_private.h"
+  
 enum username_case_type { CASE_FORCE_UPPER, CASE_FORCE_LOWER, CASE_ASIS };
 
 enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
@@ -54,7 +55,6 @@ typedef struct repository_t {
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
   svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
-  apr_hash_t *fs_config;   /* Additional FS configuration parameters */
   enum username_case_type username_case; /* Case-normalize the username? */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
@@ -115,17 +115,17 @@ typedef struct serve_params_t {
   /* logging data structure; possibly NULL. */
   struct logger_t *logger;
 
+  /* all configurations should be opened through this factory */
+  svn_repos__config_pool_t *config_pool;
+
+  /* all authz data should be opened through this factory */
+  svn_repos__authz_pool_t *authz_pool;
+
+  /* all repositories should be opened through this factory */
+  svn_repos__repos_pool_t *repos_pool;
+
   /* Username case normalization style. */
   enum username_case_type username_case;
-
-  /* Enable text delta caching for all FSFS repositories. */
-  svn_boolean_t cache_txdeltas;
-
-  /* Enable full-text caching for all FSFS repositories. */
-  svn_boolean_t cache_fulltexts;
-
-  /* Enable revprop caching for all FSFS repositories. */
-  svn_boolean_t cache_revprops;
 
   /* Size of the in-memory cache (used by FSFS only). */
   apr_uint64_t memory_cache_size;

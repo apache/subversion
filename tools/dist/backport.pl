@@ -326,7 +326,8 @@ EOF
 
 sub sanitize_branch {
   local $_ = shift;
-  s#.*/##;
+  my $branches_re = quotemeta $BRANCHES;
+  s#.*$branches_re/##;
   s/^\s*//;
   s/\s*$//;
   return $_;

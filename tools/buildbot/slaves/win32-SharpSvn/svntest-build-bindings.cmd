@@ -42,7 +42,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
 msbuild subversion_vcnet.sln /m /p:Configuration=Debug /p:Platform=win32 %DEBUG_TARGETS%
 IF ERRORLEVEL 1 EXIT /B 1
 
-msbuild subversion_vcnet.sln /p:Configuration=Release /p:Platform=win32 %RELEASE_TARGETS%
+msbuild subversion_vcnet.sln /m /p:Configuration=Release /p:Platform=win32 %RELEASE_TARGETS%
 IF ERRORLEVEL 1 EXIT /B 1
 
 EXIT /B 0

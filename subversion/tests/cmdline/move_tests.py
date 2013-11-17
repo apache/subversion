@@ -1433,7 +1433,6 @@ def move_many_update_delete(sbox):
   # Would be nice if we could run the resolver as a separate step, 
   # but 'svn resolve' just fails for any value but working
 
-@XFail()
 def move_many_update_add(sbox):
   "move many and add-on-update"
 
@@ -1457,7 +1456,7 @@ def move_many_update_add(sbox):
      'B/A/A'             : Item(status='  ', treeconflict='U'),
      'B/A/A/BB'          : Item(status='  ', treeconflict='A'),
      # And while resolving
-     'A/A/'              : Item(status='  ', treeconflict='C')
+     'A/A'               : Item(status='  ', treeconflict='C')
     })
 
   expected_status.tweak('',
@@ -1485,9 +1484,17 @@ def move_many_update_add(sbox):
   expected_status.tweak('',
                         'B', 'B/A', 'B/A/A', 'B/A/A/A',
                         'C', 'C/A', 'C/A/A', 'C/A/A/A',
+                        'B/A/A/BB',
                         wc_rev='4')
 
+  expected_status.add({
+        'C/A/A/BB'          : Item(status='D ', wc_rev='4'),
+    })
+
+  expected_status.tweak('A/A/A', treeconflict='C')
+
   expected_output = svntest.wc.State(wc_dir, {
+     'A/A/A'             : Item(status='  ', treeconflict='C'),
      'C/A'               : Item(status='  ', treeconflict='C'),
      'C/A/A'             : Item(status='  ', treeconflict='U'),
      'C/A/A/BB'          : Item(status='  ', treeconflict='A'),

@@ -34,6 +34,8 @@
 #include "svn_editor.h"
 #include "svn_config.h"
 
+#include "private/svn_string_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -160,19 +162,22 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
  */
 typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
 
-/* Create a new configuration pool object with a minim lifetime determined
+/* Create a new configuration pool object with a minimum lifetime determined
  * by POOL and return it in *CONFIG_POOL.  References to any configuration
  * in the *CONFIG_POOL will keep the latter alive beyond POOL cleanup.
+ * The THREAD_SAFE flag indicates whether the pool actually needs to be
+ * thread-safe.
  */
 svn_error_t *
 svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
+                              svn_boolean_t thread_safe,
                               apr_pool_t *pool);
 
 /* Set *CFG to a read-only reference to the current contents of the
  * configuration specified by PATH.  If the latter is a URL, we read the
- * data from a local repository.  REGISTRY: urls are not supported.
- * CONFIG_POOL will store the configuration and make further callers use
- * the same instance if the content matches.
+ * data from a local repository.  CONFIG_POOL will store the configuration
+ * and make further callers use the same instance if the content matches.
+ * If KEY is not NULL, *KEY will be set to a unique ID - if available.
  *
  * If MUST_EXIST is TRUE, a missing config file is also an error, *CFG
  * is otherwise simply NULL.  The CASE_SENSITIVE controls the lookup
@@ -184,11 +189,10 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * return the latest content.
  *
  * POOL determines the minimum lifetime of *CFG.
- *
- * Note: The read-only behavior is not enforced, yet. 
  */
 svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
+                           svn_membuf_t **key,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
                            svn_boolean_t must_exist,
@@ -198,7 +202,103 @@ svn_repos__config_pool_get(svn_config_t **cfg,
 
 /** @} */
 
+/**
+ * @defgroup svn_authz_pool Authz object pool API
+ * @{
+ */
 
+/* Opaque thread-safe factory and container for authorization objects.
+ *
+ * Instances handed out are read-only and may be given to multiple callers
+ * from multiple threads.  Authorization objects no longer referenced by
+ * any user may linger for a while before being cleaned up.
+ */
+typedef struct svn_repos__authz_pool_t svn_repos__authz_pool_t;
+
+/* Create a new authorization pool object with a minimum lifetime determined
+ * by POOL and return it in *AUTHZ_POOL.  CONFIG_POOL will be the common
+ * source for the configuration data underlying the authz objects.
+ * The THREAD_SAFE flag indicates whether the pool actually needs to be
+ * thread-safe.
+ * 
+ * References to any authorization object in the *AUTHZ_POOL will keep the
+ * latter alive beyond POOL cleanup.
+ */
+svn_error_t *
+svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
+                             svn_repos__config_pool_t *config_pool,
+                             svn_boolean_t thread_safe,
+                             apr_pool_t *pool);
+
+/* Set *AUTHZ_P to a read-only reference to the current contents of the
+ * authorization specified by PATH and GROUPS_PATH.  If these are URLs,
+ * we read the data from a local repository (see #svn_repos_authz_read2).
+ * AUTHZ_POOL will store the authz data and make further callers use the
+ * same instance if the content matches.
+ *
+ * If MUST_EXIST is TRUE, a missing config file is also an error, *AUTHZ_P
+ * is otherwise simply NULL.
+ *
+ * PREFERRED_REPOS is only used if it is not NULL and PATH is a URL.
+ * If it matches the URL, access the repository through this object
+ * instead of creating a new repo instance.  Note that this might not
+ * return the latest content.
+ *
+ * POOL determines the minimum lifetime of *AUTHZ_P.
+ */
+svn_error_t *
+svn_repos__authz_pool_get(svn_authz_t **authz_p,
+                          svn_repos__authz_pool_t *authz_pool,
+                          const char *path,
+                          const char *groups_path,
+                          svn_boolean_t must_exist,
+                          svn_repos_t *preferred_repos,
+                          apr_pool_t *pool);
+
+/** @} */
+
+/**
+ * @defgroup svn_repos_pool svn_repos_t object pool API
+ * @{
+ */
+
+/* Opaque thread-safe factory and container for svn_repos_t objects.
+ */
+typedef struct svn_repos__repos_pool_t svn_repos__repos_pool_t;
+
+/* Create a new repository pool object with a minimum lifetime determined
+ * by POOL and return it in *REPOS_POOL.  All repositories share the same
+ * FS_CONFIG configuration which may be NULL.  The THREAD_SAFE flag
+ * indicates whether the pool actually needs to be thread-safe.
+ *
+ * References to any repository instances in *REPOS_POOL will keep the
+ * latter alive beyond POOL cleanup.
+ */
+svn_error_t *
+svn_repos__repos_pool_create(svn_repos__repos_pool_t **repos_pool,
+                             apr_hash_t *fs_config,
+                             svn_boolean_t thread_safe,
+                             apr_pool_t *pool);
+
+/* Set *REPOS_P to an open repository object for the repository at local
+ * path REPOS_ROOT.  If UUID is given, the repository's UUID must match it;
+ * otherwise we re-read from disk.
+ *
+ * Once POOL gets cleared or destroyed, REPOS_POOL will store the repository
+ * instance and make further callers may return that same instance.  POOL
+ * determines the minimum lifetime of *REPOS_P.
+ *
+ * Note that you may need to update the youngest revision info cached
+ * inside *REPOS_P. 
+ */
+svn_error_t *
+svn_repos__repos_pool_get(svn_repos_t **repos_p,
+                          svn_repos__repos_pool_t *repos_pool,
+                          const char *repos_root,
+                          const char *uuid,
+                          apr_pool_t *pool);
+
+/** @} */
 
 #ifdef __cplusplus
 }

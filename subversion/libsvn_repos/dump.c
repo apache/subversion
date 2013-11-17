@@ -134,9 +134,9 @@ tracker_create(svn_revnum_t revision,
  * we encounter a new tree change.
  */
 static void
-tracker__trim(path_tracker_t *tracker,
-              const char *path,
-              svn_boolean_t allow_exact_match)
+tracker_trim(path_tracker_t *tracker,
+             const char *path,
+             svn_boolean_t allow_exact_match)
 {
   /* remove everything that is unrelated to PATH.
      Note that TRACKER->STACK is depth-ordered,
@@ -176,7 +176,7 @@ tracker_lookup(const char **orig_path,
                const char *path,
                apr_pool_t *pool)
 {
-  tracker__trim(tracker, path, TRUE);
+  tracker_trim(tracker, path, TRUE);
   if (tracker->depth == 0)
     {
       /* no tree changes -> paths are the same as in the previous rev. */
@@ -230,11 +230,11 @@ tracker_lookup(const char **orig_path,
    will have undefined values.
  */
 static path_tracker_entry_t *
-tracker__add_entry(path_tracker_t *tracker,
-                   const char *path)
+tracker_add_entry(path_tracker_t *tracker,
+                  const char *path)
 {
   path_tracker_entry_t *entry;
-  tracker__trim(tracker, path, FALSE);
+  tracker_trim(tracker, path, FALSE);
 
   if (tracker->depth == tracker->stack->nelts)
     {
@@ -263,7 +263,7 @@ tracker_path_copy(path_tracker_t *tracker,
                   const char *copyfrom_path,
                   svn_revnum_t copyfrom_rev)
 {
-  path_tracker_entry_t *entry = tracker__add_entry(tracker, path);
+  path_tracker_entry_t *entry = tracker_add_entry(tracker, path);
 
   svn_stringbuf_set(entry->copyfrom_path, copyfrom_path);
   entry->copyfrom_rev = copyfrom_rev;
@@ -276,7 +276,7 @@ static void
 tracker_path_add(path_tracker_t *tracker,
                  const char *path)
 {
-  path_tracker_entry_t *entry = tracker__add_entry(tracker, path);
+  path_tracker_entry_t *entry = tracker_add_entry(tracker, path);
 
   svn_stringbuf_setempty(entry->copyfrom_path);
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -301,7 +301,7 @@ static void
 tracker_path_delete(path_tracker_t *tracker,
                     const char *path)
 {
-  path_tracker_entry_t *entry = tracker__add_entry(tracker, path);
+  path_tracker_entry_t *entry = tracker_add_entry(tracker, path);
 
   svn_stringbuf_setempty(entry->copyfrom_path);
   entry->copyfrom_rev = SVN_INVALID_REVNUM;

@@ -1931,10 +1931,8 @@ def verify_invalid_path_changes(sbox):
 
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
-  B_url = sbox.repo_url + '/B'
-  C_url = sbox.repo_url + '/C'
 
-  # Create A/B/E/bravo in r2.
+  # Create a number of revisions each adding a single path
   for r in range(2,20):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'mkdir', '-m', 'log_msg',
@@ -1953,11 +1951,13 @@ def verify_invalid_path_changes(sbox):
 
   # del non-existent node
   set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '6'),
-                        "_0.0.t5-2 del-dir false false /C\n\n")
+                        "_0.0.t5-2 delete-dir false false /C\n\n")
 
   # del existent node of the wrong kind
+  # THIS WILL NOT BE DETECTED
+  # since dump mechanism and file don't care about the types of deleted nodes
   set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '8'),
-                        "_0.0.t7-2 dev-file false false /B3\n\n")
+                        "_0.0.t7-2 delete-file false false /B3\n\n")
 
   # copy from non-existent node
   set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '10'),
@@ -1995,7 +1995,7 @@ def verify_invalid_path_changes(sbox):
                                            ".*Verified revision 5.",
                                            ".*Error verifying revision 6.",
                                            ".*Verified revision 7.",
-                                           ".*Error verifying revision 8.",
+                                           ".*Verified revision 8.",
                                            ".*Verified revision 9.",
                                            ".*Error verifying revision 10.",
                                            ".*Verified revision 11.",
