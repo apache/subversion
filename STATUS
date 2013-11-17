@@ -155,6 +155,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1542765, r1542767, r1542774
+   Add or update an 'sqlite_stat1' table when creating or upgrading a database
+   to make the Sqlite 3.8 'NG' query planner work with us instead of against
+   us.
+   Notes:
+     r1542765 is the actual fix and a testcase which makes sure we don't
+     accidentally add bad information whenever we update the schema.
+     r1542767 and r1542774 are test suite tweaks to improve test coverage and
+     to make sure we don't have false positive test failures on Sqlite 3.8.X.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
