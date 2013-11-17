@@ -2541,6 +2541,7 @@ main(int argc, const char *argv[])
                            _("Invalid revision number supplied")));
           }
           break;
+
         case 't':
           opt_state.txn = opt_arg;
           break;

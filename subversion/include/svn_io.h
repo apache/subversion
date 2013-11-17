@@ -1835,7 +1835,7 @@ svn_io_run_cmd(const char *path,
  * @a diff_cmd must be non-NULL.
  *
  * Do all allocation in @a pool.
- * @since New in 1.6.0. 
+ * @since New in 1.6.0.
  */
 svn_error_t *
 svn_io_run_diff2(const char *dir,

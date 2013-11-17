@@ -615,7 +615,6 @@ struct diff_cmd_baton {
 
   /* Whether the local diff target of a repos->wc diff is a copy. */
   svn_boolean_t repos_wc_diff_target_is_copy;
-
 };
 
 /* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
@@ -825,6 +824,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
         SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
                                          svn_io_file_del_on_pool_cleanup,
                                          scratch_pool, scratch_pool));
+
       errfile = svn_stream__aprfile(errstream);
       if (errfile)
         errfilename = NULL;
@@ -2498,9 +2498,10 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
             options = svn_cstring_split(diff_extensions, " \t\n\r", TRUE, pool);
         }
     }
+
   if (options == NULL)
     options = apr_array_make(pool, 0, sizeof(const char *));
-  
+
   if (diff_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, 
 				     diff_cmd, pool));

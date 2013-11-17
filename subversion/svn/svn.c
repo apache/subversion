@@ -2823,7 +2823,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
-  if (opt_state.diff.diff_cmd) 
+  if (opt_state.diff.diff_cmd)
     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff.diff_cmd);
   if (opt_state.diff.invoke_diff_cmd)

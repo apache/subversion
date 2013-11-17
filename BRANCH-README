@@ -1,6 +1,3 @@
-TODO:  add invoke-diff-cmd help to svnlook.c, log
-change location of opt_invoke_diff_cmd in declarion svn_cl__longopt_t
-
 This branch implements the 'invoke-diff-cmd' feature and is located at 
 https://svn.apache.org/repos/asf/subversion/branches/invoke-diff-cmd-feature/
 
@@ -10,10 +7,22 @@ expected to be reintegrated back thereto.
 See: http://subversion.tigris.org/issues/show_bug.cgi?id=2044 for the
 original motivation for this project.
 
+Index:
+======
 
-======================================================================
-        INVOKE-DIFF-CMD SECTION
-======================================================================
+1.  Introduction
+2.  What --invoke-diff-cmd provides
+3.  Structure of the feature
+    API components
+    UI components   
+4.  Changes to the existing code structure
+5.  Tests
+6.  Log Messages
+7.  Diff file
+
+
+1. Introduction
+================
 
 --invoke-diff-cmd allows command line selection of an external diff
 program and will be extended to cover the existing diff3 option with a
@@ -26,8 +35,8 @@ which are passed as the diff program via the svn config file.
 'svnlook' and the config file.
 
 
-What --invoke-diff-cmd provides
-===============================
+2. What --invoke-diff-cmd provides
+==================================
 
 Users can type 'free-style' command lines for their selected
 diff/merge program, and optionally select a diff command file that
@@ -54,8 +63,8 @@ from 'svn help diff':
         +%svn_new, %svn_new- and file=%svn_label_new+
 
 
-Structure of the feature:
-=========================
+3.  Structure of the feature:
+=============================
 
 API components 
 --------------
@@ -95,8 +104,8 @@ UI components
   invoked.
 
 
-Changes to the existing code structure:
-=======================================
+4.  Changes to the existing code structure:
+===========================================
 
 None.
 
@@ -111,8 +120,8 @@ user's input of switches, whereas --invoke-diff-cmd is a
 free-style-anything-goes-including-shooting-your-foot creation.
 
 
-Tests
-=====
+5.  Tests
+=========
 
 The test for the 'invoke-diff-cmd' feature is
 
@@ -122,68 +131,6 @@ The test for the 'invoke-diff-cmd' feature is
 
 Log messages 
 =============
-
-* subversion/include/private/svn_io_private.h
-
-  (svn_io__create_custom_diff_cmd): New function declaration.
-
-
-* subversion/include/svn_client.h 
-
-  (svn_client_diff7, svn_client_diff_peg7): Declare the new API.  Like
-    svn_client_diff[_peg]6 but with invoke_diff_cmd parameter.
-
-  (svn_client_diff6, svn_client_diff_peg_6): Deprecate. 
-
-
-* subversion/include/svn_config.h
-
-  (SVN_CONFIG_OPTION_INVOKE_DIFF_CMD): New definition.
-
-
-* subversion/include/svn_error_codes.h
-
-  (SVN_CLIENT_DIFF_CMD): New macro.
-
-
-* subversion/include/svn_io.h
-
-   (svn_io_run_external_diff): New function.
-
-
-* subversion/libsvn_client/deprecated.c
-
-  (svn_client_diff6, svn_client_diff_peg6): New deprecation wrappers.
-
-
-* subversion/libsvn_client/diff.c
-
-  (*): Update all comments mentioning 'svn_client_diff6' to
-    'svn_client_diff7'.
-
-  (diff_cmd_baton): New member: 'invoke_diff_cmd'. 
-
-  (set_up_diff_cmd_and_options): Apply invoke-diff-cmd option
-    preferentially.  Note: fucntion has been refactored, but previous
-    behavior regards the old diff_cmd stays unchanged.
-
-  (diff_content_changed): Raise an error if both diff_cmd and
-    invoke-diff-cmd are set.  Add invoke-diff-cmd to if condition.
-    Add comment explaining the presence of non-canonical path in
-    function call.  Call svn_io_run_external_diff if --invoke-diff-cmd
-    option was specified, otherwise retain previous behaviour.
-
-  (svn_client_diff_peg_7): Rename and update from
-    svn_client_diff_peg_6.  Add new parameter: invoke_diff_cmd.
-
-  (svn_client_diff7): Rename and update from svn_client_diff6, add
-    new parameter 'invoke_diff_cmd'.  
-
-
-* subversion/libsvn_subr/config_file.c
-
-  (svn_config_ensure,"invoke-diff-cmd"): New entry: invoke-diff-cmd.
-    Add help info.
 
 
 * subversion/libsvn_subr/io.c
@@ -195,74 +142,17 @@ Log messages
   (svn_io_run_diff2):  Add test location information.
 
 
-* subversion/svn/cl.h
+* subversion/libsvn_subr/config_file.c
 
-  (struct svn_cl__opt_state_t.diff): New member: 'invoke_diff_cmd'.
-
-
-* subversion/svn/diff-cmd.c
-
-  (svn_cl__diff): Update call to svn_client_diff6 to svn_client_diff7,
-    add invoke_diff_cmd to parameter listing.  Update call to svn_client_diff_peg7 to
-    svn_client_diff_peg7, add invoke_diff_cmd to parameter listing.
+  (svn_config_ensure,"invoke-diff-cmd"): New entry: invoke-diff-cmd.
+    Add help info.
 
 
-* subversion/svn/log-cmd.c
+* subversion/tests/cmdline/diff_tests.py
 
-  (log_receiver_baton): New struct member invoke_diff_cmd.
+  (diff_invoke_external_diffcmd): New function.
 
-  (display_diff): New parameter 'invoke_diff_cmd' . Update call to
-    svn_client_peg_diff7.  Pass invoke_diff_cmd parameter into
-    svn_client_diff_peg7().
-
-  (log_entry_receiver): Pass invoke_diff_cmd into display_diff().
- 
-  (svn_cl__log): Ensure mutual exclusions between invoke_diff_cmd and
-    diff-cmd. Require 'diff' option to be set when requesting
-    invoke_diff option. Populate log_receiver_baton member
-    invoke_diff_cmd.
-
-
-* subversion/svnlook/svnlook.c
-
-  (enum): New variable svnlook__invoke_diff_cmd.
-
-  (options_table[]): New entry 'invoke-diff-cmd'.
-
-  (cmd_tablcmd[]): Add svnlook__invoke_diff_cmd to diff cmd table
-    entry.
-
-  (svnlook_opt_state): New member variable "invoke_diff_cmd".
-
-  (svnlook_ctxt_t): New member variable "invoke_diff_cmd".
-
-  (print_diff_tree): Modify 'if condition' to include new
-    invoke_diff_cmd. Add conditional call to
-    /include/svn_io.c:svn_io_run_external_diff().
-
-  (get_ctxt_baton): Assign invoke_diff_cmd data.
-
-  (main): Add case svnlook__invoke_diff_cmd. Assign opt_arg to
-    opt_state.invoke_diff_cmd.  Add exclusiveness test for
-    invoke_diff_cmd and diff_cmd.
-
-
-* subversion/svn/svn.c
-
-  (svn_cl__longopt_t): New enum opt_invoke_diff_cmd.              
- 
-  (svn_cl__options "invoke-diff-cmd"): Add help information.  Add new
-    variable 'opt_invoke_diff_cmd'.
-
-  (svn_cl__cmd_table[]): New option: 'invoke-diff-cmd', help info.  Add
-    opt_invoke_diff_cmd to svn_cl__log entry.  Add opt_invoke_diff_cmd
-    to the list of valid subcommands.
-
-
-  (sub_main): Add case opt_invoke_diff_cmd. Prohibit simultaneous
-    usage of --invoke-diff-cmd and --internal-diff.  Prohibit
-    simultaneous usage of --diff-cmd and --invoke-diff-cmd. Add call
-    to svn_config_set.
+  (test_list): Add new entry 'diff_invoke_external_diffcmd'.
 
 
 * subversion/tests/cmdline/diff_tests.py
@@ -277,992 +167,1493 @@ Log messages
   (--invoke-diff-cmd): Add new entry to 'help' output data.
 
 
-Diff file for this branch
-=========================
+* subversion/svn/log-cmd.c
 
-*** /home/g/trunk/subversion/include/private/svn_io_private.h	2013-07-12 22:06:51.122108458 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/include/private/svn_io_private.h	2013-11-06 19:06:16.397366843 +0000
-*************** svn_stream__aprfile(svn_stream_t *stream
-*** 98 ****
---- 99,143 ----
-+ /** Parse a user defined command to contain dynamically created labels
-+  *  and filenames.  This function serves both diff and diff3 parsing
-+  *  requirements.
-+  *
-+  *  When used in a diff context: (responding parse tokens in braces)
-+  *
-+  *  @a label1 (%svn_label_old) refers to the label of @a tmpfile1
-+  *  (%svn_old) which is the pristine copy.
-+  *
-+  *  @a label2 (%svn_label_new) refers to the label of @a tmpfile2
-+  *  (%svn_new) which is the altered copy.
-+  *
-+  *  When used in a diff3 context:
-+  *
-+  *  @a label1 refers to the label of @a tmpfile1 which is the 'mine'
-+  *  copy.
-+  *
-+  *  @a label2 refers to the label of @a tmpfile2 which is the 'older'
-+  *  copy.
-+  *
-+  *  @a label3 (%svn_label_base) refers to the label of @a base
-+  *  (%svn_base) which is the 'base' copy.
-+  *
-+  *  In general:
-+  *
-+  *  @a cmd is a user defined string containing 0 or more parse tokens
-+  *  which are expanded by the required labels and filenames.
-+  * 
-+  *  @a pool is used for temporary allocations.
-+  *
-+  *  @return A NULL-terminated character array.
-+  * 
-+  * @since New in 1.9.
+  (log_receiver_baton): New struct member const char *invoke_diff_cmd.
+
+  (display_diff): New parameter cons char *invoke_diff_cmd.  Update
+    callfrom svn_client_diff_peg6() to svn_client_peg_diff7() and pass
+    const char *invoke_diff_cmd parameter.
+
+  (log_entry_receiver): Pass lb->invoke_diff_cmd into display_diff().
+ 
+  (svn_cl__log): Ensure mutual exclusions between invoke_diff_cmd and
+    diff-cmd. Add 3 CR's. Require diff cmd when --invoke-diff-cmd is
+    called.  Populate log_receiver_baton member invoke_diff_cmd.
+
+
+* subversion/svn/svn.c
+
+  (svn_cl__longopt_t): New enum opt_invoke_diff_cmd.              
+ 
+  (svn_cl__options "invoke-diff-cmd"): Add help information.  Add new
+    variable 'opt_invoke_diff_cmd'.
+
+  (svn_cl__cmd_table[]): New option: 'invoke-diff-cmd', help info.
+    Add opt_invoke_diff_cmd to 'diff'.  Add opt_invoke_diff_cmd to 'log'. 
+
+  (sub_main): Add case opt_diff_cmd. Update comment. Prohibit
+    simultaneous usage of --invoke-diff-cmd and --internal-diff.
+    Prohibit simultaneous usage of --diff-cmd and
+    --invoke-diff-cmd. Add conditional call to svn_config_set.
+
+
+* subversion/svn/cl.h
+
+  (struct svn_cl__opt_state_t.diff): New member: invoke_diff_cmd.
+
+
+* subversion/svn/diff-cmd.c
+
+  (svn_cl__diff): Update call from svn_client_diff6() to
+    svn_client_diff7().  Pass invoke_diff_cmd into svn_client_diff7().
+    Update call from svn_client_diff_peg6() to
+    svn_client_diff_peg7(). Pass invoke_diff_cmd into
+    svn_client_diff_peg7().
+
+
+* subversion/include/private/svn_io_private.h
+
+  (svn_io__create_custom_diff_cmd): New function declaration.
+
+
+* subversion/include/svn_error_codes.h
+
+  (SVN_CLIENT_DIFF_CMD): New macro.
+
+
+* subversion/include/svn_config.h
+
+  (SVN_CONFIG_OPTION_INVOKE_DIFF_CMD): New definition.
+
+
+* subversion/include/svn_io.h
+
+   (svn_io_run_external_diff): New function.
+
+
+* subversion/include/svn_client.h 
+
+  (svn_client_diff7, svn_client_diff_peg7): Declare the new API and
+    update comments.  Like svn_client_diff[_peg]6 but with
+    invoke_diff_cmd parameter.
+
+  (svn_client_diff6, svn_client_diff_peg_6): Deprecate. 
+
+* subversion/svnlook/svnlook.c
+
+  (enum (anonymous?)): New variable svnlook__invoke_diff_cmd.
+
+  (options_table "invoke_diff_cmd"): New entry.
+
+  (cmd_tablcmd, "diff"): Add svnlook__invoke_diff_cmd.
+
+  (svnlook_opt_state): Adjust comment. New member variable const char
+    *invoke_diff_cmd.
+
+  (svnlook_ctxt_t):   New member variable const char
+    *invoke_diff_cmd.
+
+  (print_diff_tree): Modify 'if condition' and add new
+    invoke_diff_cmd.  Add conditional call to
+    /include/svn_io.c:svn_io_run_external_diff().
+
+  (get_ctxt_baton): Assign invoke_diff_cmd data.
+
+  (main): Add new case svnlook__invoke_diff_cmd.  Add exclusiveness
+    test for invoke_diff_cmd and diff_cmd.
+
+* subversion/libsvn_client/diff.c
+
+  (*): Update all comments mentioning 'svn_client_diff6' to
+    'svn_client_diff7'.
+
+  (diff_cmd_baton): New member: const char *invoke_diff_cmd.
+
+  (diff_content_changed): Raise an error if both diff_cmd and
+    invoke-diff-cmd are set and add invoke-diff-cmd to if condition.
+    Add call to svn_io_run_external_diff().  
+
+  (unsupported_diff_error): Update error condition user information.
+
+  (set_up_diff_cmd_and_options): Update comment.  Add CRs.  Update
+  conditional call, add invoke-diff-cmd config file operation.
+  Improve code redability.
+
+  (svn_client_diff_peg_7): Rename and update from
+    svn_client_diff_peg_6().  Add new parameter: const char
+    *invoke_diff_cmd.
+
+  (svn_client_diff7): Rename and update from svn_client_diff6(), add
+    new parameter const char *invoke_diff_cmd.
+
+
+* subversion/libsvn_client/deprecated.c
+
+  (svn_client_diff6, svn_client_diff_peg6): New deprecation wrappers.
+
+
+
+7.  Diff file
+=============
+
+svn diff -x -p ^/subversion/trunk/subversion ^/subversion/branches/invoke-diff-cmd-feature/subversion@1542685
+
+
+Index: libsvn_subr/io.c
+===================================================================
+--- libsvn_subr/io.c	(.../trunk/subversion)	(revision 1542732)
++++ libsvn_subr/io.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -2993,8 +2993,166 @@ svn_io_run_cmd(const char *path,
+   return svn_io_wait_for_cmd(&cmd_proc, cmd, exitcode, exitwhy, pool);
+ }
+ 
++const char **
++svn_io__create_custom_diff_cmd(const char *label1,
++                               const char *label2,
++                               const char *label3,
++                               const char *from,
++                               const char *to,
++                               const char *base,
++                               const char *cmd,
++                               apr_pool_t *pool)
++{
++  /* 
++     This function can be tested with:
++     /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
 +  */
-+ const char **
-+ svn_io__create_custom_diff_cmd(const char *label1,
-+                                const char *label2,
-+                                const char *label3,
-+                                const char *from,
-+                                const char *to,
-+                                const char *base,
-+                                const char *cmd,
-+                                apr_pool_t *pool);
-+ 
-+ 
-
-================================================================================
-
-*** /home/g/trunk/subversion/include/svn_client.h	2013-10-15 15:55:28.309189195 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/include/svn_client.h	2013-11-06 16:28:10.178327223 +0000
-*************** svn_client_blame(const char *path_or_url
-*** 3059 ****
---- 3060,3064 ----
-+  * @a invoke_diff_cmd is used to call an external diff program but may
-+  * not be @c NULL.  The command line invocation will override the
-+  * invoke-diff-cmd invocation entry(if any) in the Subversion
-+  * configuration file.
-+  *
-*************** svn_client_blame(const char *path_or_url
-*** 3089 ****
---- 3095,3123 ----
-+  * @since New in 1.9.
-+  */
-+ svn_error_t *
-+ svn_client_diff7(const apr_array_header_t *options,
-+                  const char *path_or_url1,
-+                  const svn_opt_revision_t *revision1,
-+                  const char *path_or_url2,
-+                  const svn_opt_revision_t *revision2,
-+                  const char *relative_to_dir,
-+                  svn_depth_t depth,
-+                  svn_boolean_t ignore_ancestry,
-+                  svn_boolean_t no_diff_added,
-+                  svn_boolean_t no_diff_deleted,
-+                  svn_boolean_t show_copies_as_adds,
-+                  svn_boolean_t ignore_content_type,
-+                  svn_boolean_t ignore_properties,
-+                  svn_boolean_t properties_only,
-+                  svn_boolean_t use_git_diff_format,
-+                  const char *header_encoding,
-+                  svn_stream_t *outstream,
-+                  svn_stream_t *errstream,
-+                  const apr_array_header_t *changelists,
-+                  const char *invoke_diff_cmd,
-+                  svn_client_ctx_t *ctx,
-+                  apr_pool_t *pool);
-+ 
-+ /** Similar to svn_client_diff7(), but without @a invoke_diff_cmd.
-+  *
-+  * @deprecated Provided for backward compatibility with the 1.8 API.
-*************** svn_client_blame(const char *path_or_url
-*** 3091 ****
---- 3126 ----
-+ SVN_DEPRECATED
-*************** svn_client_diff(const apr_array_header_t
-*** 3249 ****
-!  * identically to svn_client_diff6(), using @a path_or_url for both of that
---- 3284 ----
-!  * identically to svn_client_diff7(), using @a path_or_url for both of that 
-*************** svn_client_diff(const apr_array_header_t
-*** 3252 ****
-!  * All other options are handled identically to svn_client_diff6().
---- 3287 ----
-!  * All other options are handled identically to svn_client_diff7().
-*************** svn_client_diff(const apr_array_header_t
-*** 3253 ****
---- 3289,3321 ----
-+  * @since New in 1.9.
-+  */
-+ svn_error_t *
-+ svn_client_diff_peg7(const apr_array_header_t *diff_options,
-+                      const char *path_or_url,
-+                      const svn_opt_revision_t *peg_revision,
-+                      const svn_opt_revision_t *start_revision,
-+                      const svn_opt_revision_t *end_revision,
-+                      const char *relative_to_dir,
-+                      svn_depth_t depth,
-+                      svn_boolean_t ignore_ancestry,
-+                      svn_boolean_t no_diff_added,
-+                      svn_boolean_t no_diff_deleted,
-+                      svn_boolean_t show_copies_as_adds,
-+                      svn_boolean_t ignore_content_type,
-+                      svn_boolean_t ignore_properties,
-+                      svn_boolean_t properties_only,
-+                      svn_boolean_t use_git_diff_format,
-+                      const char *header_encoding,
-+                      svn_stream_t *outstream,
-+                      svn_stream_t *errstream,
-+                      const apr_array_header_t *changelists,
-+                      const char *invoke_diff_cmd,
-+                      svn_client_ctx_t *ctx,
-+                      apr_pool_t *pool);
-+          
-+ 
-+ /**
-+  * Similar to svn_client_peg7(), but without @a no_diff_added set to
-+  * FALSE, @a ignore_properties set to FALSE and @a properties_only set
-+  * to FALSE.
-+  *
-+  * @deprecated Provided for backward compatibility with the 1.7 API.
-*************** svn_client_diff(const apr_array_header_t
-*** 3255 ****
---- 3324 ----
-+ SVN_DEPRECATED
-*************** svn_client_diff_peg6(const apr_array_hea
-*** 3279 ****
-! /** Similar to svn_client_diff6_peg6(), but with @a outfile and @a errfile,
---- 3348,3349 ----
-! /**
-!  * Similar to svn_client_diff_peg6(), but with @a outfile and @a errfile,
-
-================================================================================
-
-*** /home/g/trunk/subversion/include/svn_config.h	2013-08-21 14:38:52.462504050 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/include/svn_config.h	2013-08-21 15:13:02.172668024 +0100
-*************** typedef struct svn_config_t svn_config_t
-*** 116 ****
---- 117,118 ----
-+ /** @since New in 1.9. */
-+ #define SVN_CONFIG_OPTION_INVOKE_DIFF_CMD           "invoke-diff-cmd"
-
-================================================================================
-
-*** /home/g/trunk/subversion/include/svn_error_codes.h	2013-09-24 21:40:36.710752868 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/include/svn_error_codes.h	2013-09-26 13:50:41.575809672 +0100
-*************** SVN_ERROR_START
-*** 1206 ****
---- 1207,1211 ----
-+   /** @since New in 1.9 */
-+   SVN_ERRDEF(SVN_ERR_CLIENT_DIFF_CMD,
-+              SVN_ERR_CLIENT_CATEGORY_START + 24,
-+              "More than one diff command defined")
-+ 
-
-================================================================================
-
-*** /home/g/trunk/subversion/include/svn_io.h	2013-10-15 15:55:28.305189175 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/include/svn_io.h	2013-11-06 17:13:17.923754208 +0000
-*************** svn_io_file_readline(apr_file_t *file,
-*** 2362 ****
---- 2363,2379 ----
-+ 
-+ /** Run the external diff command defined by the invoke-diff-cmd
-+  *  option.
-+  *  
-+  *  @since New in 1.9.
-+  */
-+ svn_error_t *
-+ svn_io_run_external_diff(const char *dir,
-+                          const char *label1,
-+                          const char *label2,
-+                          const char *tmpfile1,
-+                          const char *tmpfile2,
-+                          int *pexitcode,
-+                          apr_file_t *outfile,
-+                          apr_file_t *errfile,
-+                          const char *external_diff_cmd,
-+                          apr_pool_t *scratch_pool);
-
-================================================================================
-
-*** /home/g/trunk/subversion/libsvn_client/deprecated.c	2013-09-24 21:40:36.722752927 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/libsvn_client/deprecated.c	2013-09-26 13:50:46.983836489 +0100
-*************** svn_error_t *
-*** 916 ****
---- 917,963 ----
-+ svn_client_diff6(const apr_array_header_t *options,
-+                  const char *path_or_url1,
-+                  const svn_opt_revision_t *revision1,
-+                  const char *path_or_url2,
-+                  const svn_opt_revision_t *revision2,
-+                  const char *relative_to_dir,
-+                  svn_depth_t depth,
-+                  svn_boolean_t ignore_ancestry,
-+                  svn_boolean_t no_diff_added,
-+                  svn_boolean_t no_diff_deleted,
-+                  svn_boolean_t show_copies_as_adds,
-+                  svn_boolean_t ignore_content_type,
-+                  svn_boolean_t ignore_properties,
-+                  svn_boolean_t properties_only,
-+                  svn_boolean_t use_git_diff_format,
-+                  const char *header_encoding,
-+                  svn_stream_t *outstream,
-+                  svn_stream_t *errstream,
-+                  const apr_array_header_t *changelists,
-+                  svn_client_ctx_t *ctx,
-+                  apr_pool_t *pool)
-+ {
-+   return svn_client_diff7(options,
-+                           path_or_url1,
-+                           revision1,
-+                           path_or_url2,
-+                           revision2,
-+                           relative_to_dir,
-+                           depth,
-+                           ignore_ancestry,
-+                           no_diff_added,
-+                           no_diff_deleted,
-+                           show_copies_as_adds,
-+                           ignore_content_type,
-+                           ignore_properties,
-+                           properties_only,
-+                           use_git_diff_format,
-+                           header_encoding,
-+                           outstream,
-+                           errstream,
-+                           changelists,
-+                           NULL,
-+                           ctx, 
-+                           pool);
-+ }
-+ 
-+ svn_error_t *
-*************** svn_client_diff(const apr_array_header_t
-*** 1035 ****
---- 1083,1129 ----
-+ }
-+ 
-+ svn_error_t *
-+ svn_client_diff_peg6(const apr_array_header_t *options,
-+                      const char *path_or_url,
-+                      const svn_opt_revision_t *peg_revision,
-+                      const svn_opt_revision_t *start_revision,
-+                      const svn_opt_revision_t *end_revision,
-+                      const char *relative_to_dir,
-+                      svn_depth_t depth,
-+                      svn_boolean_t ignore_ancestry,
-+                      svn_boolean_t no_diff_added,
-+                      svn_boolean_t no_diff_deleted,
-+                      svn_boolean_t show_copies_as_adds,
-+                      svn_boolean_t ignore_content_type,
-+                      svn_boolean_t ignore_properties,
-+                      svn_boolean_t properties_only,
-+                      svn_boolean_t use_git_diff_format,
-+                      const char *header_encoding,
-+                      svn_stream_t *outstream,
-+                      svn_stream_t *errstream,
-+                      const apr_array_header_t *changelists,
-+                      svn_client_ctx_t *ctx,
-+                      apr_pool_t *pool)
-+ {
-+   return svn_client_diff_peg7(options,
-+                               path_or_url,
-+                               peg_revision,
-+                               start_revision,
-+                               end_revision,
-+                               relative_to_dir,
-+                               depth,
-+                               ignore_ancestry,
-+                               no_diff_added,
-+                               no_diff_deleted,
-+                               show_copies_as_adds,
-+                               ignore_content_type,
-+                               ignore_properties,
-+                               properties_only,
-+                               use_git_diff_format,
-+                               header_encoding,
-+                               outstream,
-+                               errstream,
-+                               changelists,
-+                               NULL,
-+                               ctx,
-+                               pool);
-
-================================================================================
-
-*** /home/g/trunk/subversion/libsvn_client/diff.c	2013-08-07 20:56:50.881234131 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/libsvn_client/diff.c	2013-11-06 17:10:30.546924231 +0000
-*************** print_git_diff_header(svn_stream_t *os,
-*** 431 ****
-!    passed to svn_client_diff6(), which is probably stdout.
---- 431 ----
-!    passed to svn_client_diff7(), which is probably stdout.
-*************** struct diff_cmd_baton {
-*** 538 ****
---- 539,541 ----
-+   /* external custom diff command */
-+   const char *invoke_diff_cmd;
-+ 
-*************** struct diff_cmd_baton {
-*** 567 ****
-!      svn_client_diff6(), either may be SVN_INVALID_REVNUM.  We need these
---- 570 ----
-!      svn_client_diff7(), either may be SVN_INVALID_REVNUM.  We need these
-*************** diff_content_changed(svn_boolean_t *wrot
-*** 788 ****
---- 793,796 ----
-+   if (diff_cmd_baton->diff_cmd && diff_cmd_baton->invoke_diff_cmd)
-+       return svn_error_create(SVN_ERR_CLIENT_DIFF_CMD, NULL,
-+                               _("diff-cmd and invoke-diff-cmd are "
-+                                 "mutually exclusive."));
-*************** diff_content_changed(svn_boolean_t *wrot
-*** 790 ****
-!   if (diff_cmd_baton->diff_cmd)
---- 798 ----
-!   if (diff_cmd_baton->diff_cmd || diff_cmd_baton->invoke_diff_cmd)
-*************** diff_content_changed(svn_boolean_t *wrot
-*** 828 ****
---- 836,837 ----
-+       /* "." is a non-canonical path for the diff process's working directory. */
-+       if (diff_cmd_baton->diff_cmd) 
-*************** diff_content_changed(svn_boolean_t *wrot
-*** 835 ****
---- 845,853 ----
-+       else
-+         { 
-+           SVN_ERR(svn_io_run_external_diff(".", 
-+                                            label1, label2,
-+                                            tmpfile1, tmpfile2,
-+                                            &exitcode, outfile, errfile,
-+                                            diff_cmd_baton->invoke_diff_cmd,
-+                                            scratch_pool));
-+         }
-*************** diff_prepare_repos_repos(const char **ur
-*** 1537,1538 ****
-!    This function is really svn_client_diff6().  If you read the public
-!    API description for svn_client_diff6(), it sounds quite Grand.  It
---- 1555,1556 ----
-!    This function is really svn_client_diff7().  If you read the public
-!    API description for svn_client_diff7(), it sounds quite Grand.  It
-*************** diff_prepare_repos_repos(const char **ur
-*** 1562 ****
-!    Perhaps someday a brave soul will truly make svn_client_diff6()
---- 1580 ----
-!    Perhaps someday a brave soul will truly make svn_client_diff7()
-*************** unsupported_diff_error(svn_error_t *chil
-*** 1575 ****
-!                           _("Sorry, svn_client_diff6 was called in a way "
---- 1593 ----
-!                           _("Sorry, svn_client_diff7 was called in a way "
-*************** unsupported_diff_error(svn_error_t *chil
-*** 1584 ****
-!    All other options are the same as those passed to svn_client_diff6(). */
---- 1602 ----
-!    All other options are the same as those passed to svn_client_diff7(). */
-*************** diff_wc_wc(const char *path1,
-*** 1667 ****
-!    All other options are the same as those passed to svn_client_diff6(). */
---- 1685 ----
-!    All other options are the same as those passed to svn_client_diff7(). */
-*************** diff_repos_repos(const svn_wc_diff_callb
-*** 1812 ****
-!    All other options are the same as those passed to svn_client_diff6(). */
---- 1830 ----
-!    All other options are the same as those passed to svn_client_diff7(). */
-*************** do_diff(const svn_wc_diff_callbacks4_t *
-*** 2147 ****
-!    All other options are the same as those passed to svn_client_diff6(). */
---- 2165 ----
-!    All other options are the same as those passed to svn_client_diff7(). */
-*************** diff_summarize_repos_wc(svn_client_diff_
-*** 2191 ****
-!    All other options are the same as those passed to svn_client_diff6(). */
---- 2209 ----
-!    All other options are the same as those passed to svn_client_diff7(). */
-*************** set_up_diff_cmd_and_options(struct diff_
-*** 2466 ****
-!   /* See if there is a diff command and/or diff arguments. */
---- 2484 ----
-!   /* old style diff_cmd has precedence in config file */
-*************** set_up_diff_cmd_and_options(struct diff_
-*** 2486,2487 ****
-!     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
-!                                      pool));
---- 2505,2506 ----
-!     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, 
-! 				     diff_cmd, pool));
-*************** set_up_diff_cmd_and_options(struct diff_
-*** 2488 ****
---- 2508,2511 ----
-+     {
-+       if (config) /* check if there is a invoke_diff_cmd in the config file */
-+ 	{
-+ 	  svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
-*************** set_up_diff_cmd_and_options(struct diff_
-*** 2489 ****
---- 2513,2522 ----
-+ 	  svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
-+ 			 SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
-+ 	  if (diff_cmd) 
-+ 	    {
-+ 	      SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->invoke_diff_cmd,
-+                                                diff_cmd, pool));
-+ 	      return SVN_NO_ERROR;
-+ 	    }
-+ 	}
-+     }
-*************** set_up_diff_cmd_and_options(struct diff_
-*** 2502 ****
-!                       APR_ARRAY_IDX(options, i, const char *), pool));
---- 2537,2539 ----
-!                                             APR_ARRAY_IDX(options, i, 
-!                                                           const char *), 
-!                                             pool));
-*************** svn_error_t *
-*** 2555 ****
-! svn_client_diff6(const apr_array_header_t *options,
---- 2592 ----
-! svn_client_diff7(const apr_array_header_t *options,
-*************** svn_client_diff6(const apr_array_header_
-*** 2573 ****
---- 2611 ----
-+                  const char *invoke_diff_cmd,
-*************** svn_client_diff6(const apr_array_header_
-*** 2590 ****
---- 2629 ----
-+   diff_cmd_baton.invoke_diff_cmd = invoke_diff_cmd;
-*************** svn_error_t *
-*** 2622 ****
-! svn_client_diff_peg6(const apr_array_header_t *options,
---- 2661 ----
-! svn_client_diff_peg7(const apr_array_header_t *options,
-*************** svn_client_diff_peg6(const apr_array_hea
-*** 2640 ****
---- 2680 ----
-+                      const char *invoke_diff_cmd,
-*************** svn_client_diff_peg6(const apr_array_hea
-*** 2653 ****
---- 2694 ----
-+   diff_cmd_baton.invoke_diff_cmd = invoke_diff_cmd;
-
-================================================================================
-
-*** /home/g/trunk/subversion/libsvn_subr/config_file.c	2013-11-04 17:30:37.864042065 +0000
---- /home/g/branches/invoke-diff-cmd-feature/subversion/libsvn_subr/config_file.c	2013-11-05 12:39:49.417954357 +0000
-*************** svn_config_ensure(const char *config_dir
-*** 1189 ****
---- 1190,1194 ----
-+         "### Set invoke-diff-cmd to the absolute path of your 'diff'"        NL
-+         "### program."                                                       NL
-+         "###   This will override the compile-time default, which is to use" NL
-+         "###   Subversion's internal diff implementation."                   NL
-+         "# invoke-diff-cmd = (see svn help diff for examples)"               NL
-
-================================================================================
-
-
-================================================================================
-
-*** /home/g/trunk/subversion/libsvn_subr/io.c	2013-10-31 19:53:47.816899485 +0000
---- /home/g/branches/invoke-diff-cmd-feature/subversion/libsvn_subr/io.c	2013-11-06 19:07:58.589873589 +0000
-*************** svn_io_run_cmd(const char *path,
-*** 2995 ****
---- 2996,3153 ----
-+ const char **
-+ svn_io__create_custom_diff_cmd(const char *label1,
-+                                const char *label2,
-+                                const char *label3,
-+                                const char *from,
-+                                const char *to,
-+                                const char *base,
-+                                const char *cmd,
-+                                apr_pool_t *pool)
-+ {
-+   /* 
-+      This function can be tested with:
-+      /subversion/tests/cmdline/diff_tests.py diff_invoke_external_diffcmd
-+   */
-+ 
-+   apr_array_header_t *words;
-+   const char ** result;
-+   size_t argv, item, i, delimiters = 6;
-+   apr_pool_t *scratch_pool = svn_pool_create(pool); 
-+   
-+   struct replace_tokens_tab
-+   {
-+     const char *delimiter;
-+     const char *replace;
-+   } tokens_tab[] = {  /* Diff terminology */
-+     { "%svn_label_old",  label1 },
-+     { "%svn_label_new",  label2 },
-+     { "%svn_label_base", label3 },
-+     { "%svn_old",  from },  
-+     { "%svn_new",  to   },    
-+     { "%svn_base", base },    
-+     { NULL, NULL }
-+   };
+ 
++  apr_array_header_t *words;
++  const char ** result;
++  size_t argv, item, i, delimiters = 6;
++  apr_pool_t *scratch_pool = svn_pool_create(pool); 
 +  
-+   if (label3) /* Merge terminology */
-+     {
-+       tokens_tab[0].delimiter = "%svn_label_mine";
-+       tokens_tab[1].delimiter = "%svn_label_yours";
-+       tokens_tab[3].delimiter = "%svn_mine";
-+       tokens_tab[4].delimiter = "%svn_yours";
-+     }
++  struct replace_tokens_tab
++  {
++    const char *delimiter;
++    const char *replace;
++  } tokens_tab[] = {  /* Diff terminology */
++    { "%svn_label_old",  label1 },
++    { "%svn_label_new",  label2 },
++    { "%svn_label_base", label3 },
++    { "%svn_old",  from },  
++    { "%svn_new",  to   },    
++    { "%svn_base", base },    
++    { NULL, NULL }
++  };
 + 
-+   words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
++  if (label3) /* Merge terminology */
++    {
++      tokens_tab[0].delimiter = "%svn_label_mine";
++      tokens_tab[1].delimiter = "%svn_label_yours";
++      tokens_tab[3].delimiter = "%svn_mine";
++      tokens_tab[4].delimiter = "%svn_yours";
++    }
++
++  words = svn_cstring_split(cmd, " ", TRUE, scratch_pool);
++
++  result = apr_palloc(pool, 
++                      (words->nelts+1) * words->elt_size * sizeof(char *) );
++
++  for (item = 0, argv = 0; item < words->nelts; argv++, item++)
++    {
++      svn_stringbuf_t *word;
++
++      word = svn_stringbuf_create_empty(scratch_pool);
++      svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, item, char *));
++
++      if ( (word->data[0] == '"') && (word->data[word->len-1] != '"') )
++        {
++          svn_stringbuf_t * complete = svn_stringbuf_create_empty(scratch_pool);
++          int done = 0;
++
++          while( (!done) && item < words->nelts)
++            {
++              svn_stringbuf_appendcstr(complete, 
++                                       APR_ARRAY_IDX(words, item, char *)); 
++
++              if ( (complete->data[complete->len-1] == '"') 
++                   || (item == words->nelts - 1) )
++                {
++                  word->data = complete->data;
++                  done = 1;
++                }
++              else 
++                { 
++                  svn_stringbuf_appendcstr(complete, " ");
++                  item++;
++                }
++            }
++        }
++      i = 0;
++      while (i < delimiters)
++        {
++          char *found = strstr(word->data, tokens_tab[i].delimiter);
++
++          if (!found)
++            {
++              i++;
++              continue;
++            }
++            
++          svn_stringbuf_replace(word, found - word->data,
++                                strlen(tokens_tab[i].delimiter),
++                                tokens_tab[i].replace,
++                                strlen(tokens_tab[i].replace));
++        }
++      result[argv] = apr_pstrdup(pool,word->data);
++    }  
++  result[argv] = NULL;
++  svn_pool_destroy(scratch_pool);
++  return result;
++}
++
+ svn_error_t *
++svn_io_run_external_diff(const char *dir,
++                         const char *label1,
++                         const char *label2,
++                         const char *tmpfile1,
++                         const char *tmpfile2,
++                         int *pexitcode,
++                         apr_file_t *outfile,
++                         apr_file_t *errfile,
++                         const char *external_diff_cmd,
++                         apr_pool_t *pool)
++{
++  int exitcode;
++  const char ** cmd;
++
++  apr_pool_t *scratch_pool = svn_pool_create(pool); 
++
++  if (0 == strlen(external_diff_cmd)) 
++     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
++
++  cmd = svn_io__create_custom_diff_cmd(label1, label2, NULL, 
++                                 tmpfile1, tmpfile2, NULL, 
++                                 external_diff_cmd, scratch_pool);
++  if (pexitcode == NULL)
++     pexitcode = &exitcode;
++  
++  SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, pexitcode, NULL, TRUE,
++                         NULL, outfile, errfile, scratch_pool));
++  
++  /* The man page for (GNU) diff describes the return value as:
++
++      "An exit status of 0 means no differences were found, 1 means
++      some differences were found, and 2 means trouble."
++     
++     A return value of 2 typically occurs when diff cannot read its input
++     or write to its output, but in any case we probably ought to return an
++     error for anything other than 0 or 1 as the output is likely to be
++     corrupt.
++   */
++  if (*pexitcode != 0 && *pexitcode != 1)
++    {
++      int i;
++      const char *failed_command = "";
++
++      for (i = 0; cmd[i]; ++i)
++          failed_command = apr_pstrcat(pool, failed_command, 
++                                       cmd[i], " ", (char*) NULL);
++      svn_pool_destroy(scratch_pool);
++      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
++                               _("'%s' was expanded to '%s' and returned %d"),
++                               external_diff_cmd,
++                               failed_command,
++                               *pexitcode);
++    }
++  else
++    svn_pool_destroy(scratch_pool);
++  return SVN_NO_ERROR;
++}
++
++svn_error_t *
+ svn_io_run_diff2(const char *dir,
+                  const char *const *user_args,
+                  int num_user_args,
+@@ -3008,6 +3166,11 @@ svn_io_run_diff2(const char *dir,
+                  const char *diff_cmd,
+                  apr_pool_t *pool)
+ {
++  /* 
++  This function can be tested by using the test 
++  /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
++  */
++
+   const char **args;
+   int i;
+   int exitcode;
+@@ -3082,7 +3245,6 @@ svn_io_run_diff2(const char *dir,
+   return SVN_NO_ERROR;
+ }
+ 
+-
+ svn_error_t *
+ svn_io_run_diff3_3(int *exitcode,
+                    const char *dir,
+Index: libsvn_subr/config_file.c
+===================================================================
+--- libsvn_subr/config_file.c	(.../trunk/subversion)	(revision 1542732)
++++ libsvn_subr/config_file.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -1200,6 +1200,11 @@ svn_config_ensure(const char *config_dir, apr_pool
+         "### Set diff3-has-program-arg to 'yes' if your 'diff3' program"     NL
+         "###   accepts the '--diff-program' option."                         NL
+         "# diff3-has-program-arg = [yes | no]"                               NL
++        "### Set invoke-diff-cmd to the absolute path of your 'diff'"        NL
++        "### program."                                                       NL
++        "###   This will override the compile-time default, which is to use" NL
++        "###   Subversion's internal diff implementation."                   NL
++        "# invoke-diff-cmd = (see svn help diff for examples)"               NL
+         "### Set merge-tool-cmd to the command used to invoke your external" NL
+         "### merging tool of choice. Subversion will pass 5 arguments to"    NL
+         "### the specified command: base theirs mine merged wcfile"          NL
+Index: tests/cmdline/diff_tests.py
+===================================================================
+--- tests/cmdline/diff_tests.py	(.../trunk/subversion)	(revision 1542732)
++++ tests/cmdline/diff_tests.py	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -3237,6 +3237,7 @@ def diff_wrong_extension_type(sbox):
+   svntest.actions.run_and_verify_svn(None, [], err.INVALID_DIFF_OPTION,
+                                      'diff', '-x', sbox.wc_dir, '-r', '1')
+ 
++#----------------------------------------------------------------------
+ # Check the order of the arguments for an external diff tool
+ def diff_external_diffcmd(sbox):
+   "svn diff --diff-cmd provides the correct arguments"
+@@ -3274,7 +3275,54 @@ def diff_external_diffcmd(sbox):
+                                      'diff', '--diff-cmd', diff_script_path,
+                                      iota_path)
+ 
++# Check the correct parsing of arguments for an external diff tool
++def diff_invoke_external_diffcmd(sbox):
++  "svn diff --invoke-diff-cmd passes correct args"
+ 
++  diff_script_path = os.path.abspath(".")+"/diff"
++
++  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
++    'for arg in sys.argv[1:]:\n  print(arg)\n')
++
++  if sys.platform == 'win32':
++     diff_script_path = "%s.bat" % diff_script_path
++
++  sbox.build(read_only = True)
++  os.chdir(sbox.wc_dir)
++
++  iota_path = 'iota'
++  svntest.main.file_append(iota_path, "new text in iota")
++
++  expected_output = svntest.verify.ExpectedOutput([
++      "Index: iota\n",
++      "===================================================================\n",
++      # correct label %svn_label_old -> label 1
++      "iota	(revision 1)\n",   
++
++      # correct file %svn_old -> old
++      os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
++
++      # correct label %svn_label_new -> label 2
++      "iota	(working copy)\n",
++
++      # correct file %svn_new -> new
++      os.path.abspath("iota") + "\n",
++
++      # preservation of quoted string  "X Y Z"-> "X Y Z"
++      "\"X Y Z\"\n",
++
++      # correct insertion of filename into string "+%svn_new+" -> "+" + new + "+"
++      "+" + os.path.abspath("iota") + "+\n",
++
++      ])
++  
++  svntest.actions.run_and_verify_svn(None, expected_output, [],
++   'diff',
++   '--invoke-diff-cmd='+diff_script_path+
++   ' %svn_label_old %svn_old %svn_label_new %svn_new \"X Y Z\" +%svn_new+',
++  iota_path)
++
++
+ #----------------------------------------------------------------------
+ # Diffing an unrelated repository URL against working copy with
+ # local modifications (i.e. not committed). This is issue #3295 (diff
+@@ -4722,6 +4770,7 @@ test_list = [ None,
+               diff_file_depth_empty,
+               diff_wrong_extension_type,
+               diff_external_diffcmd,
++              diff_invoke_external_diffcmd,
+               diff_url_against_local_mods,
+               diff_preexisting_rev_against_local_add,
+               diff_git_format_wc_wc,
+Index: tests/cmdline/getopt_tests_data/svn_help_log_switch_stdout
+===================================================================
+--- tests/cmdline/getopt_tests_data/svn_help_log_switch_stdout	(.../trunk/subversion)	(revision 1542732)
++++ tests/cmdline/getopt_tests_data/svn_help_log_switch_stdout	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -111,6 +111,20 @@ Valid options:
+                                -w, --ignore-all-space: Ignore all white space
+                                --ignore-eol-style: Ignore changes in EOL style
+                                -p, --show-c-function: Show C function name
++  --invoke-diff-cmd ARG    : use ARG as format string for external diff command
++                             invocation.
++                             The following reserved keywords are replaced:
++                                 %svn_new -- new file
++                                 %svn_old -- old file
++                                 %svn_label_new -- label of the new file
++                                 %svn_label_old -- label of the old file
++                             Examples:
++                             --invoke-diff-cmd='diff -y %svn_new %svn_old'
++                             --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \
++                                   %svn_new %svn_old --L1 %svn_label_new \
++                                  --L2 "Custom Label" '
++                             Reserved keywords may be embedded in strings:
++                             +%svn_new  %svn_new- and file=%svn_label_new+
+   --search ARG             : use ARG as search pattern (glob syntax)
+   --search-and ARG         : combine ARG with the previous search pattern
+ 
+Index: svn/log-cmd.c
+===================================================================
+--- svn/log-cmd.c	(.../trunk/subversion)	(revision 1542732)
++++ svn/log-cmd.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -67,6 +67,9 @@ struct log_receiver_baton
+   /* Diff arguments received from command line. */
+   const char *diff_extensions;
+ 
++  /* Custom diff command. */
++  const char *invoke_diff_cmd;
++
+   /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
+   apr_array_header_t *merge_stack;
+ 
+@@ -102,6 +105,7 @@ display_diff(const svn_log_entry_t *log_entry,
+              const char *diff_extensions,
+              svn_stream_t *outstream,
+              svn_stream_t *errstream,
++             const char *invoke_diff_cmd,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool)
+ {
+@@ -122,7 +126,7 @@ display_diff(const svn_log_entry_t *log_entry,
+   end_revision.value.number = log_entry->revision;
+ 
+   SVN_ERR(svn_stream_puts(outstream, "\n"));
+-  SVN_ERR(svn_client_diff_peg6(diff_options,
++  SVN_ERR(svn_client_diff_peg7(diff_options,
+                                target_path_or_url,
+                                target_peg_revision,
+                                &start_revision, &end_revision,
+@@ -140,6 +144,7 @@ display_diff(const svn_log_entry_t *log_entry,
+                                outstream,
+                                errstream,
+                                NULL,
++                               invoke_diff_cmd,
+                                ctx, pool));
+   SVN_ERR(svn_stream_puts(outstream, _("\n")));
+   return SVN_NO_ERROR;
+@@ -466,6 +471,7 @@ log_entry_receiver(void *baton,
+                            lb->target_path_or_url, &lb->target_peg_revision,
+                            lb->depth, lb->diff_extensions,
+                            outstream, errstream,
++                           lb->invoke_diff_cmd,
+                            lb->ctx, pool));
+ 
+       SVN_ERR(svn_stream_close(outstream));
+@@ -706,25 +712,38 @@ svn_cl__log(apr_getopt_t *os,
+         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'diff' option is not supported in "
+                                   "XML mode"));
+-    }
++    } 
+ 
++  if (opt_state->diff.diff_cmd && opt_state->diff.diff_cmd)
++    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
++                            _("'diff-cmd' and 'invoke-diff-cmd' options are "
++                              "mutually exclusive"));
 + 
-+   result = apr_palloc(pool, 
-+                       (words->nelts+1) * words->elt_size * sizeof(char *) );
-+ 
-+   for (item = 0, argv = 0; item < words->nelts; argv++, item++)
-+     {
-+       svn_stringbuf_t *word;
-+ 
-+       word = svn_stringbuf_create_empty(scratch_pool);
-+       svn_stringbuf_appendcstr(word, APR_ARRAY_IDX(words, item, char *));
-+ 
-+       if ( (word->data[0] == '"') && (word->data[word->len-1] != '"') )
-+         {
-+           svn_stringbuf_t * complete = svn_stringbuf_create_empty(scratch_pool);
-+           int done = 0;
-+ 
-+           while( (!done) && item < words->nelts)
-+             {
-+               svn_stringbuf_appendcstr(complete, 
-+                                        APR_ARRAY_IDX(words, item, char *)); 
-+ 
-+               if ( (complete->data[complete->len-1] == '"') 
-+                    || (item == words->nelts - 1) )
-+                 {
-+                   word->data = complete->data;
-+                   done = 1;
-+                 }
-+               else 
-+                 { 
-+                   svn_stringbuf_appendcstr(complete, " ");
-+                   item++;
-+                 }
-+             }
-+         }
-+       i = 0;
-+       while (i < delimiters)
-+         {
-+           char *found = strstr(word->data, tokens_tab[i].delimiter);
-+ 
-+           if (!found)
-+             {
-+               i++;
-+               continue;
-+             }
-+             
-+           svn_stringbuf_replace(word, found - word->data,
-+                                 strlen(tokens_tab[i].delimiter),
-+                                 tokens_tab[i].replace,
-+                                 strlen(tokens_tab[i].replace));
-+         }
-+       result[argv] = apr_pstrdup(pool,word->data);
-+     }  
-+   result[argv] = NULL;
-+   svn_pool_destroy(scratch_pool);
-+   return result;
-+ }
-+ 
-+ svn_error_t *
-+ svn_io_run_external_diff(const char *dir,
-+                          const char *label1,
-+                          const char *label2,
-+                          const char *tmpfile1,
-+                          const char *tmpfile2,
-+                          int *pexitcode,
-+                          apr_file_t *outfile,
-+                          apr_file_t *errfile,
-+                          const char *external_diff_cmd,
-+                          apr_pool_t *pool)
-+ {
-+   int exitcode;
-+   const char ** cmd;
-+ 
-+   apr_pool_t *scratch_pool = svn_pool_create(pool); 
-+ 
-+   if (0 == strlen(external_diff_cmd)) 
-+      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, NULL);
-+ 
-+   cmd = svn_io__create_custom_diff_cmd(label1, label2, NULL, 
-+                                  tmpfile1, tmpfile2, NULL, 
-+                                  external_diff_cmd, scratch_pool);
-+   if (pexitcode == NULL)
-+      pexitcode = &exitcode;
-+   
-+   SVN_ERR(svn_io_run_cmd(dir, cmd[0], cmd, pexitcode, NULL, TRUE,
-+                          NULL, outfile, errfile, scratch_pool));
-+   
-+   /* The man page for (GNU) diff describes the return value as:
-+ 
-+       "An exit status of 0 means no differences were found, 1 means
-+       some differences were found, and 2 means trouble."
+   if (opt_state->quiet && opt_state->show_diff)
+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'quiet' and 'diff' options are "
+                               "mutually exclusive"));
++
+   if (opt_state->diff.diff_cmd && (! opt_state->show_diff))
+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'diff-cmd' option requires 'diff' "
+                               "option"));
++
+   if (opt_state->diff.internal_diff && (! opt_state->show_diff))
+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'internal-diff' option requires "
+                               "'diff' option"));
++
+   if (opt_state->extensions && (! opt_state->show_diff))
+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'extensions' option requires 'diff' "
+                               "option"));
+ 
++  if (opt_state->diff.invoke_diff_cmd && (! opt_state->show_diff))
++    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
++                            _("'invoke-diff-cmd' option requires 'diff' "
++                              "option"));
++
+   if (opt_state->depth != svn_depth_unknown && (! opt_state->show_diff))
+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'depth' option requires 'diff' option"));
+@@ -788,6 +807,7 @@ svn_cl__log(apr_getopt_t *os,
+   lb.depth = opt_state->depth == svn_depth_unknown ? svn_depth_infinity
+                                                    : opt_state->depth;
+   lb.diff_extensions = opt_state->extensions;
++  lb.invoke_diff_cmd = opt_state->diff.invoke_diff_cmd;
+   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+   lb.search_patterns = opt_state->search_patterns;
+   lb.pool = pool;
+Index: svn/cl.h
+===================================================================
+--- svn/cl.h	(.../trunk/subversion)	(revision 1542732)
++++ svn/cl.h	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -184,6 +184,8 @@ typedef struct svn_cl__opt_state_t
+     {
+   const char *diff_cmd;              /* the external diff command to use
+                                         (not converted to UTF-8) */
++  const char *invoke_diff_cmd;       /* the format string to specify args   */
++                                     /* for the external diff cmd           */
+   svn_boolean_t internal_diff;       /* override diff_cmd in config file */
+   svn_boolean_t no_diff_added;       /* do not show diffs for deleted files */
+   svn_boolean_t no_diff_deleted;     /* do not show diffs for deleted files */
+Index: svn/svn.c
+===================================================================
+--- svn/svn.c	(.../trunk/subversion)	(revision 1542732)
++++ svn/svn.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -83,6 +83,7 @@ typedef enum svn_cl__longopt_t {
+   opt_ignore_properties,
+   opt_properties_only,
+   opt_patch_compatible,
++  opt_invoke_diff_cmd,
+   /* end of diff options */
+   opt_dry_run,
+   opt_editor_cmd,
+@@ -344,6 +345,34 @@ const apr_getopt_option_t svn_cl__options[] =
+   {"diff", opt_diff, 0, N_("produce diff output")}, /* maps to show_diff */
+   /* diff options */
+   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
++  {"invoke-diff-cmd", opt_invoke_diff_cmd, 1, 
++                   N_("use ARG as format string for external diff command\n"
++                      "                             "
++                      "invocation.\n" 
++                      "                             "
++                      "The following reserved keywords are replaced:\n"
++                      "                             "
++                      "    %svn_new -- new file\n"
++                      "                             "
++                      "    %svn_old -- old file\n"
++                      "                             "
++                      "    %svn_label_new -- label of the new file\n"
++                      "                             "
++                      "    %svn_label_old -- label of the old file\n"
++                      "                             "
++                      "Examples:\n"
++                      "                             "
++                      "--invoke-diff-cmd=\'diff -y %svn_new %svn_old\'\n"          
++                      "                             "
++                      "--invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\\n"
++                      "                             "
++                      "      %svn_new %svn_old --L1 %svn_label_new \\\n"
++                      "                             "
++                      "     --L2 \"Custom Label\" \'\n"
++                      "                             "
++                      "Reserved keywords may be embedded in strings:\n"
++                      "                             "
++                      "+%svn_new  %svn_new- and file=%svn_label_new+")},
+   {"internal-diff", opt_internal_diff, 0,
+                        N_("override diff-cmd specified in config file")},
+   {"no-diff-added", opt_no_diff_added, 0,
+@@ -610,7 +639,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table
+      opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
+      opt_ignore_properties, opt_properties_only,
+      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
+-     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
++     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible,
++     opt_invoke_diff_cmd} },
+   { "export", svn_cl__export, {0}, N_
+     ("Create an unversioned copy of a tree.\n"
+      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
+@@ -774,7 +804,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table
+     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
+      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops,
+      opt_with_revprop, opt_auto_moves, opt_depth, opt_diff, opt_diff_cmd,
+-     opt_internal_diff, 'x', opt_search, opt_search_and },
++     opt_internal_diff, 'x', opt_invoke_diff_cmd, opt_search, opt_search_and },
+     {{opt_with_revprop, N_("retrieve revision property ARG")},
+      {'c', N_("the change made in revision ARG")}} },
+ 
+@@ -2138,6 +2168,9 @@ sub_main(int argc, const char *argv[], apr_pool_t
+       case opt_diff_cmd:
+         opt_state.diff.diff_cmd = apr_pstrdup(pool, opt_arg);
+         break;
++      case opt_invoke_diff_cmd:
++        opt_state.diff.invoke_diff_cmd = apr_pstrdup(pool, opt_arg);
++        break;
+       case opt_merge_cmd:
+         opt_state.merge_cmd = apr_pstrdup(pool, opt_arg);
+         break;
+@@ -2552,7 +2585,7 @@ sub_main(int argc, const char *argv[], apr_pool_t
+       return EXIT_ERROR(err);
+     }
+ 
+-  /* Disallow simultaneous use of both --diff-cmd and
++  /* Disallow simultaneous use of --diff-cmd, --invoke-diff-cmd and
+      --internal-diff.  */
+   if (opt_state.diff.diff_cmd && opt_state.diff.internal_diff)
+     {
+@@ -2562,6 +2595,22 @@ sub_main(int argc, const char *argv[], apr_pool_t
+       return EXIT_ERROR(err);
+     }
+ 
++  if (opt_state.diff.invoke_diff_cmd && opt_state.diff.internal_diff)
++    {
++      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
++                             _("--invoke-diff-cmd and --internal-diff "
++                               "are mutually exclusive"));
++      return EXIT_ERROR(err);
++    }
++
++  if ((opt_state.diff.diff_cmd) && (opt_state.diff.invoke_diff_cmd))
++    {
++      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
++                             _("--invoke-diff-cmd and --diff-cmd "
++                               "are mutually exclusive"));
++      return EXIT_ERROR(err);
++    }
++
+   /* Ensure that 'revision_ranges' has at least one item, and make
+      'start_revision' and 'end_revision' match that item. */
+   if (opt_state.revision_ranges->nelts == 0)
+@@ -2774,9 +2823,12 @@ sub_main(int argc, const char *argv[], apr_pool_t
+ 
+   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
+      opt_state altogether? */
+-  if (opt_state.diff.diff_cmd)
++  if (opt_state.diff.diff_cmd) 
+     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF_CMD, opt_state.diff.diff_cmd);
++  if (opt_state.diff.invoke_diff_cmd)
++    svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
++                   SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
+   if (opt_state.merge_cmd)
+     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
+                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
+Index: svn/diff-cmd.c
+===================================================================
+--- svn/diff-cmd.c	(.../trunk/subversion)	(revision 1542732)
++++ svn/diff-cmd.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -403,7 +403,7 @@ svn_cl__diff(apr_getopt_t *os,
+                                 ctx, iterpool));
+             }
+           else
+-            SVN_ERR(svn_client_diff6(
++            SVN_ERR(svn_client_diff7(
+                      options,
+                      target1,
+                      &(opt_state->start_revision),
+@@ -423,6 +423,7 @@ svn_cl__diff(apr_getopt_t *os,
+                      outstream,
+                      errstream,
+                      opt_state->changelists,
++                     opt_state->diff.invoke_diff_cmd,                        
+                      ctx, iterpool));
+         }
+       else
+@@ -454,7 +455,7 @@ svn_cl__diff(apr_getopt_t *os,
+                                 ctx, iterpool));
+             }
+           else
+-            SVN_ERR(svn_client_diff_peg6(
++            SVN_ERR(svn_client_diff_peg7(
+                      options,
+                      truepath,
+                      &peg_revision,
+@@ -474,6 +475,7 @@ svn_cl__diff(apr_getopt_t *os,
+                      outstream,
+                      errstream,
+                      opt_state->changelists,
++                     opt_state->diff.invoke_diff_cmd,
+                      ctx, iterpool));
+         }
+     }
+Index: include/svn_config.h
+===================================================================
+--- include/svn_config.h	(.../trunk/subversion)	(revision 1542732)
++++ include/svn_config.h	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -120,6 +120,8 @@ typedef struct svn_config_t svn_config_t;
+ #define SVN_CONFIG_OPTION_DIFF_EXTENSIONS           "diff-extensions"
+ #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
+ #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
++/** @since New in 1.9. */
++#define SVN_CONFIG_OPTION_INVOKE_DIFF_CMD           "invoke-diff-cmd"
+ #define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
+ #define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
+ #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
+Index: include/svn_io.h
+===================================================================
+--- include/svn_io.h	(.../trunk/subversion)	(revision 1542732)
++++ include/svn_io.h	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -1835,7 +1835,7 @@ svn_io_run_cmd(const char *path,
+  * @a diff_cmd must be non-NULL.
+  *
+  * Do all allocation in @a pool.
+- * @since New in 1.6.0.
++ * @since New in 1.6.0. 
+  */
+ svn_error_t *
+ svn_io_run_diff2(const char *dir,
+@@ -2361,6 +2361,23 @@ svn_io_file_readline(apr_file_t *file,
+ 
+ /** @} */
+ 
++/** Run the external diff command defined by the invoke-diff-cmd
++ *  option.
++ *  
++ *  @since New in 1.9.
++ */
++svn_error_t *
++svn_io_run_external_diff(const char *dir,
++                         const char *label1,
++                         const char *label2,
++                         const char *tmpfile1,
++                         const char *tmpfile2,
++                         int *pexitcode,
++                         apr_file_t *outfile,
++                         apr_file_t *errfile,
++                         const char *external_diff_cmd,
++                         apr_pool_t *scratch_pool);
++
+ #ifdef __cplusplus
+ }
+ #endif /* __cplusplus */
+Index: include/svn_client.h
+===================================================================
+--- include/svn_client.h	(.../trunk/subversion)	(revision 1542732)
++++ include/svn_client.h	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -3057,6 +3057,11 @@ svn_client_blame(const char *path_or_url,
+  * The above two options are mutually exclusive. It is an error to set
+  * both to TRUE.
+  *
++ * @a invoke_diff_cmd is used to call an external diff program but may
++ * not be @c NULL.  The command line invocation will override the
++ * invoke-diff-cmd invocation entry(if any) in the Subversion
++ * configuration file.
++ *
+  * Generated headers are encoded using @a header_encoding.
+  *
+  * Diff output will not be generated for binary files, unless @a
+@@ -3087,8 +3092,38 @@ svn_client_blame(const char *path_or_url,
+  * @note @a relative_to_dir doesn't affect the path index generated by
+  * external diff programs.
+  *
++ * @since New in 1.9.
++ */
++svn_error_t *
++svn_client_diff7(const apr_array_header_t *options,
++                 const char *path_or_url1,
++                 const svn_opt_revision_t *revision1,
++                 const char *path_or_url2,
++                 const svn_opt_revision_t *revision2,
++                 const char *relative_to_dir,
++                 svn_depth_t depth,
++                 svn_boolean_t ignore_ancestry,
++                 svn_boolean_t no_diff_added,
++                 svn_boolean_t no_diff_deleted,
++                 svn_boolean_t show_copies_as_adds,
++                 svn_boolean_t ignore_content_type,
++                 svn_boolean_t ignore_properties,
++                 svn_boolean_t properties_only,
++                 svn_boolean_t use_git_diff_format,
++                 const char *header_encoding,
++                 svn_stream_t *outstream,
++                 svn_stream_t *errstream,
++                 const apr_array_header_t *changelists,
++                 const char *invoke_diff_cmd,
++                 svn_client_ctx_t *ctx,
++                 apr_pool_t *pool);
++
++/** Similar to svn_client_diff7(), but without @a invoke_diff_cmd.
++ *
++ * @deprecated Provided for backward compatibility with the 1.8 API.
+  * @since New in 1.8.
+  */
++SVN_DEPRECATED
+ svn_error_t *
+ svn_client_diff6(const apr_array_header_t *diff_options,
+                  const char *path_or_url1,
+@@ -3246,13 +3281,47 @@ svn_client_diff(const apr_array_header_t *diff_opt
+  * be either a working-copy path or URL.
+  *
+  * If @a peg_revision is #svn_opt_revision_unspecified, behave
+- * identically to svn_client_diff6(), using @a path_or_url for both of that
++ * identically to svn_client_diff7(), using @a path_or_url for both of that 
+  * function's @a path_or_url1 and @a path_or_url2 arguments.
+  *
+- * All other options are handled identically to svn_client_diff6().
++ * All other options are handled identically to svn_client_diff7().
+  *
++ * @since New in 1.9.
++ */
++svn_error_t *
++svn_client_diff_peg7(const apr_array_header_t *diff_options,
++                     const char *path_or_url,
++                     const svn_opt_revision_t *peg_revision,
++                     const svn_opt_revision_t *start_revision,
++                     const svn_opt_revision_t *end_revision,
++                     const char *relative_to_dir,
++                     svn_depth_t depth,
++                     svn_boolean_t ignore_ancestry,
++                     svn_boolean_t no_diff_added,
++                     svn_boolean_t no_diff_deleted,
++                     svn_boolean_t show_copies_as_adds,
++                     svn_boolean_t ignore_content_type,
++                     svn_boolean_t ignore_properties,
++                     svn_boolean_t properties_only,
++                     svn_boolean_t use_git_diff_format,
++                     const char *header_encoding,
++                     svn_stream_t *outstream,
++                     svn_stream_t *errstream,
++                     const apr_array_header_t *changelists,
++                     const char *invoke_diff_cmd,
++                     svn_client_ctx_t *ctx,
++                     apr_pool_t *pool);
++         
++
++/**
++ * Similar to svn_client_peg7(), but without @a no_diff_added set to
++ * FALSE, @a ignore_properties set to FALSE and @a properties_only set
++ * to FALSE.
++ *
++ * @deprecated Provided for backward compatibility with the 1.7 API.
+  * @since New in 1.8.
+  */
++SVN_DEPRECATED
+ svn_error_t *
+ svn_client_diff_peg6(const apr_array_header_t *diff_options,
+                      const char *path_or_url,
+@@ -3276,7 +3345,8 @@ svn_client_diff_peg6(const apr_array_header_t *dif
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+ 
+-/** Similar to svn_client_diff6_peg6(), but with @a outfile and @a errfile,
++/**
++ * Similar to svn_client_diff_peg6(), but with @a outfile and @a errfile,
+  * instead of @a outstream and @a errstream, and with @a
+  * no_diff_added, @a ignore_properties, and @a properties_only always
+  * passed as @c FALSE (which means that additions and property changes
+Index: include/private/svn_io_private.h
+===================================================================
+--- include/private/svn_io_private.h	(.../trunk/subversion)	(revision 1542732)
++++ include/private/svn_io_private.h	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -96,6 +96,51 @@ svn_stream__is_buffered(svn_stream_t *stream);
+ apr_file_t *
+ svn_stream__aprfile(svn_stream_t *stream);
+ 
++/** Parse a user defined command to contain dynamically created labels
++ *  and filenames.  This function serves both diff and diff3 parsing
++ *  requirements.
++ *
++ *  When used in a diff context: (responding parse tokens in braces)
++ *
++ *  @a label1 (%svn_label_old) refers to the label of @a tmpfile1
++ *  (%svn_old) which is the pristine copy.
++ *
++ *  @a label2 (%svn_label_new) refers to the label of @a tmpfile2
++ *  (%svn_new) which is the altered copy.
++ *
++ *  When used in a diff3 context:
++ *
++ *  @a label1 refers to the label of @a tmpfile1 which is the 'mine'
++ *  copy.
++ *
++ *  @a label2 refers to the label of @a tmpfile2 which is the 'older'
++ *  copy.
++ *
++ *  @a label3 (%svn_label_base) refers to the label of @a base
++ *  (%svn_base) which is the 'base' copy.
++ *
++ *  In general:
++ *
++ *  @a cmd is a user defined string containing 0 or more parse tokens
++ *  which are expanded by the required labels and filenames.
++ * 
++ *  @a pool is used for temporary allocations.
++ *
++ *  @return A NULL-terminated character array.
++ * 
++ * @since New in 1.9.
++ */
++const char **
++svn_io__create_custom_diff_cmd(const char *label1,
++                               const char *label2,
++                               const char *label3,
++                               const char *from,
++                               const char *to,
++                               const char *base,
++                               const char *cmd,
++                               apr_pool_t *pool);
++
++
+ #ifdef __cplusplus
+ }
+ #endif /* __cplusplus */
+Index: include/svn_error_codes.h
+===================================================================
+--- include/svn_error_codes.h	(.../trunk/subversion)	(revision 1542732)
++++ include/svn_error_codes.h	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -1204,6 +1204,11 @@ SVN_ERROR_START
+              SVN_ERR_CLIENT_CATEGORY_START + 23,
+              "The operation is forbidden by the server")
+ 
++  /** @since New in 1.9 */
++  SVN_ERRDEF(SVN_ERR_CLIENT_DIFF_CMD,
++             SVN_ERR_CLIENT_CATEGORY_START + 24,
++             "More than one diff command defined")
++
+   /* misc errors */
+ 
+   SVN_ERRDEF(SVN_ERR_BASE,
+Index: libsvn_client/diff.c
+===================================================================
+--- libsvn_client/diff.c	(.../trunk/subversion)	(revision 1542732)
++++ libsvn_client/diff.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -428,7 +428,7 @@ print_git_diff_header(svn_stream_t *os,
+ 
+ /* A helper func that writes out verbal descriptions of property diffs
+    to OUTSTREAM.   Of course, OUTSTREAM will probably be whatever was
+-   passed to svn_client_diff6(), which is probably stdout.
++   passed to svn_client_diff7(), which is probably stdout.
+ 
+    ### FIXME needs proper docstring
+ 
+@@ -536,6 +536,9 @@ struct diff_cmd_baton {
+   /* If non-null, the external diff command to invoke. */
+   const char *diff_cmd;
+ 
++  /* external custom diff command */
++  const char *invoke_diff_cmd;
++
+   /* This is allocated in this struct's pool or a higher-up pool. */
+   union {
+     /* If 'diff_cmd' is null, then this is the parsed options to
+@@ -564,7 +567,7 @@ struct diff_cmd_baton {
+   const char *orig_path_2;
+ 
+   /* These are the numeric representations of the revisions passed to
+-     svn_client_diff6(), either may be SVN_INVALID_REVNUM.  We need these
++     svn_client_diff7(), either may be SVN_INVALID_REVNUM.  We need these
+      because some of the svn_wc_diff_callbacks4_t don't get revision
+      arguments.
+ 
+@@ -612,6 +615,7 @@ struct diff_cmd_baton {
+ 
+   /* Whether the local diff target of a repos->wc diff is a copy. */
+   svn_boolean_t repos_wc_diff_target_is_copy;
++
+ };
+ 
+ /* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
+@@ -786,8 +790,12 @@ diff_content_changed(svn_boolean_t *wrote_header,
+       return SVN_NO_ERROR;
+     }
+ 
++  if (diff_cmd_baton->diff_cmd && diff_cmd_baton->invoke_diff_cmd)
++      return svn_error_create(SVN_ERR_CLIENT_DIFF_CMD, NULL,
++                              _("diff-cmd and invoke-diff-cmd are "
++                                "mutually exclusive."));
+ 
+-  if (diff_cmd_baton->diff_cmd)
++  if (diff_cmd_baton->diff_cmd || diff_cmd_baton->invoke_diff_cmd)
+     {
+       apr_file_t *outfile;
+       apr_file_t *errfile;
+@@ -817,7 +825,6 @@ diff_content_changed(svn_boolean_t *wrote_header,
+         SVN_ERR(svn_io_open_unique_file3(&outfile, &outfilename, NULL,
+                                          svn_io_file_del_on_pool_cleanup,
+                                          scratch_pool, scratch_pool));
+-
+       errfile = svn_stream__aprfile(errstream);
+       if (errfile)
+         errfilename = NULL;
+@@ -826,13 +833,24 @@ diff_content_changed(svn_boolean_t *wrote_header,
+                                          svn_io_file_del_on_pool_cleanup,
+                                          scratch_pool, scratch_pool));
+ 
+-      SVN_ERR(svn_io_run_diff2(".",
+-                               diff_cmd_baton->options.for_external.argv,
+-                               diff_cmd_baton->options.for_external.argc,
+-                               label1, label2,
+-                               tmpfile1, tmpfile2,
+-                               &exitcode, outfile, errfile,
+-                               diff_cmd_baton->diff_cmd, scratch_pool));
++      /* "." is a non-canonical path for the diff process's working directory. */
++      if (diff_cmd_baton->diff_cmd) 
++        SVN_ERR(svn_io_run_diff2(".",
++                                 diff_cmd_baton->options.for_external.argv,
++                                 diff_cmd_baton->options.for_external.argc,
++                                 label1, label2,
++                                 tmpfile1, tmpfile2,
++                                 &exitcode, outfile, errfile,
++                                 diff_cmd_baton->diff_cmd, scratch_pool));
++      else
++        { 
++          SVN_ERR(svn_io_run_external_diff(".", 
++                                           label1, label2,
++                                           tmpfile1, tmpfile2,
++                                           &exitcode, outfile, errfile,
++                                           diff_cmd_baton->invoke_diff_cmd,
++                                           scratch_pool));
++        }
+ 
+       /* Now, open and copy our files to our output streams. */
+       if (outfilename)
+@@ -1534,8 +1552,8 @@ diff_prepare_repos_repos(const char **url1,
+ 
+ /* A Theoretical Note From Ben, regarding do_diff().
+ 
+-   This function is really svn_client_diff6().  If you read the public
+-   API description for svn_client_diff6(), it sounds quite Grand.  It
++   This function is really svn_client_diff7().  If you read the public
++   API description for svn_client_diff7(), it sounds quite Grand.  It
+    sounds really generalized and abstract and beautiful: that it will
+    diff any two paths, be they working-copy paths or URLs, at any two
+    revisions.
+@@ -1559,7 +1577,7 @@ diff_prepare_repos_repos(const char **url1,
+    pigeonholed into one of these use-cases, we currently bail with a
+    friendly apology.
+ 
+-   Perhaps someday a brave soul will truly make svn_client_diff6()
++   Perhaps someday a brave soul will truly make svn_client_diff7()
+    perfectly general.  For now, we live with the 90% case.  Certainly,
+    the commandline client only calls this function in legal ways.
+    When there are other users of svn_client.h, maybe this will become
+@@ -1572,7 +1590,7 @@ static svn_error_t *
+ unsupported_diff_error(svn_error_t *child_err)
+ {
+   return svn_error_create(SVN_ERR_INCORRECT_PARAMS, child_err,
+-                          _("Sorry, svn_client_diff6 was called in a way "
++                          _("Sorry, svn_client_diff7 was called in a way "
+                             "that is not yet supported"));
+ }
+ 
+@@ -1581,7 +1599,7 @@ unsupported_diff_error(svn_error_t *child_err)
+    PATH1 and PATH2 are both working copy paths.  REVISION1 and
+    REVISION2 are their respective revisions.
+ 
+-   All other options are the same as those passed to svn_client_diff6(). */
++   All other options are the same as those passed to svn_client_diff7(). */
+ static svn_error_t *
+ diff_wc_wc(const char *path1,
+            const svn_opt_revision_t *revision1,
+@@ -1664,7 +1682,7 @@ diff_wc_wc(const char *path1,
+    and the actual two paths compared are determined by following copy
+    history from PATH_OR_URL2.
+ 
+-   All other options are the same as those passed to svn_client_diff6(). */
++   All other options are the same as those passed to svn_client_diff7(). */
+ static svn_error_t *
+ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
+                  struct diff_cmd_baton *callback_baton,
+@@ -1809,7 +1827,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *c
+    revision, and the actual repository path to be compared is
+    determined by following copy history.
+ 
+-   All other options are the same as those passed to svn_client_diff6(). */
++   All other options are the same as those passed to svn_client_diff7(). */
+ static svn_error_t *
+ diff_repos_wc(const char *path_or_url1,
+               const svn_opt_revision_t *revision1,
+@@ -2144,7 +2162,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
+    revision, and the actual repository path to be compared is
+    determined by following copy history.
+ 
+-   All other options are the same as those passed to svn_client_diff6(). */
++   All other options are the same as those passed to svn_client_diff7(). */
+ static svn_error_t *
+ diff_summarize_repos_wc(svn_client_diff_summarize_func_t summarize_func,
+                         void *summarize_baton,
+@@ -2188,7 +2206,7 @@ diff_summarize_repos_wc(svn_client_diff_summarize_
+    PATH1 and PATH2 are both working copy paths.  REVISION1 and
+    REVISION2 are their respective revisions.
+ 
+-   All other options are the same as those passed to svn_client_diff6(). */
++   All other options are the same as those passed to svn_client_diff7(). */
+ static svn_error_t *
+ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
+                      void *summarize_baton,
+@@ -2463,15 +2481,17 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton
+ {
+   const char *diff_cmd = NULL;
+ 
+-  /* See if there is a diff command and/or diff arguments. */
++  /* old style diff_cmd has precedence in config file */
+   if (config)
+     {
+       svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 +      
-+      A return value of 2 typically occurs when diff cannot read its input
-+      or write to its output, but in any case we probably ought to return an
-+      error for anything other than 0 or 1 as the output is likely to be
-+      corrupt.
-+    */
-+   if (*pexitcode != 0 && *pexitcode != 1)
-+     {
-+       int i;
-+       const char *failed_command = "";
-+ 
-+       for (i = 0; cmd[i]; ++i)
-+           failed_command = apr_pstrcat(pool, failed_command, 
-+                                        cmd[i], " ", (char*) NULL);
-+       svn_pool_destroy(scratch_pool);
-+       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-+                                _("'%s' was expanded to '%s' and returned %d"),
-+                                external_diff_cmd,
-+                                failed_command,
-+                                *pexitcode);
-+     }
-+   else
-+     svn_pool_destroy(scratch_pool);
-+   return SVN_NO_ERROR;
-+ }
-*************** svn_io_run_diff2(const char *dir,
-*** 3010 ****
---- 3169,3173 ----
-+   /* 
-+   This function can be tested by using the test 
-+   /subversion/tests/cmdline/diff_tests.py diff_external_diffcmd
-+   */
-+ 
-
-================================================================================
-
-*** /home/g/trunk/subversion/svn/cl.h	2013-09-24 21:40:35.782748266 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/svn/cl.h	2013-11-06 19:53:45.955497039 +0000
-*************** typedef struct svn_cl__opt_state_t
-*** 186 ****
---- 187,188 ----
-+   const char *invoke_diff_cmd;       /* the format string to specify args   */
-+                                      /* for the external diff cmd           */
-
-================================================================================
-
-*** /home/g/trunk/subversion/svn/diff-cmd.c	2013-08-07 20:56:48.209220881 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/svn/diff-cmd.c	2013-08-21 15:12:59.268653617 +0100
-*************** svn_cl__diff(apr_getopt_t *os,
-*** 406 ****
-!             SVN_ERR(svn_client_diff6(
---- 406 ----
-!             SVN_ERR(svn_client_diff7(
-*************** svn_cl__diff(apr_getopt_t *os,
-*** 425 ****
---- 426 ----
-+                      opt_state->diff.invoke_diff_cmd,                        
-*************** svn_cl__diff(apr_getopt_t *os,
-*** 457 ****
-!             SVN_ERR(svn_client_diff_peg6(
---- 458 ----
-!             SVN_ERR(svn_client_diff_peg7(
-*************** svn_cl__diff(apr_getopt_t *os,
-*** 476 ****
---- 478 ----
-+                      opt_state->diff.invoke_diff_cmd,
-
-================================================================================
-
-*** /home/g/trunk/subversion/svn/log-cmd.c	2013-09-24 21:40:35.658747651 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/svn/log-cmd.c	2013-09-26 13:50:37.027787119 +0100
-*************** struct log_receiver_baton
-*** 69 ****
---- 70,72 ----
-+   /* Custom diff command. */
-+   const char *invoke_diff_cmd;
-+ 
-*************** display_diff(const svn_log_entry_t *log_
-*** 104 ****
---- 108 ----
-+              const char *invoke_diff_cmd,
-*************** display_diff(const svn_log_entry_t *log_
-*** 125 ****
-!   SVN_ERR(svn_client_diff_peg6(diff_options,
---- 129 ----
-!   SVN_ERR(svn_client_diff_peg7(diff_options,
-*************** display_diff(const svn_log_entry_t *log_
-*** 142 ****
---- 147 ----
-+                                invoke_diff_cmd,
-*************** log_entry_receiver(void *baton,
-*** 468 ****
---- 474 ----
-+                            lb->invoke_diff_cmd,
-*************** svn_cl__log(apr_getopt_t *os,
-*** 710 ****
---- 717,721 ----
-+   if (opt_state->diff.diff_cmd && opt_state->diff.diff_cmd)
-+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-+                             _("'diff-cmd' and 'invoke-diff-cmd' options are "
-+                               "mutually exclusive"));
+       svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
+                      SVN_CONFIG_OPTION_DIFF_CMD, NULL);
+       if (options == NULL)
+         {
+           const char *diff_extensions;
++          
+           svn_config_get(cfg, &diff_extensions, SVN_CONFIG_SECTION_HELPERS,
+                          SVN_CONFIG_OPTION_DIFF_EXTENSIONS, NULL);
+           if (diff_extensions)
+@@ -2478,15 +2498,28 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton
+             options = svn_cstring_split(diff_extensions, " \t\n\r", TRUE, pool);
+         }
+     }
+-
+   if (options == NULL)
+     options = apr_array_make(pool, 0, sizeof(const char *));
+-
 +  
-*************** svn_cl__log(apr_getopt_t *os,
-*** 727 ****
---- 742,746 ----
-+   if (opt_state->diff.invoke_diff_cmd && (! opt_state->show_diff))
-+     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-+                             _("'invoke-diff-cmd' option requires 'diff' "
-+                               "option"));
-+ 
-*************** svn_cl__log(apr_getopt_t *os,
-*** 790 ****
---- 810 ----
-+   lb.invoke_diff_cmd = opt_state->diff.invoke_diff_cmd;
+   if (diff_cmd)
+-    SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
+-                                     pool));
+-  else
+-    diff_cmd_baton->diff_cmd = NULL;
++    SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, 
++				     diff_cmd, pool));
++  else 
++    {
++      if (config) /* check if there is a invoke_diff_cmd in the config file */
++	{
++	  svn_config_t *cfg = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
++	  diff_cmd_baton->diff_cmd = NULL; 
++	  svn_config_get(cfg, &diff_cmd, SVN_CONFIG_SECTION_HELPERS,
++			 SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, NULL);
++	  if (diff_cmd) 
++	    {
++	      SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->invoke_diff_cmd,
++                                               diff_cmd, pool));
++	      return SVN_NO_ERROR;
++	    }
++	}
++    }
+ 
+   /* If there was a command, arrange options to pass to it. */
+   if (diff_cmd_baton->diff_cmd)
+@@ -2493,13 +2526,17 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton
+     {
+       const char **argv = NULL;
+       int argc = options->nelts;
++
+       if (argc)
+         {
+           int i;
++
+           argv = apr_palloc(pool, argc * sizeof(char *));
+           for (i = 0; i < argc; i++)
+             SVN_ERR(svn_utf_cstring_to_utf8(&argv[i],
+-                      APR_ARRAY_IDX(options, i, const char *), pool));
++                                            APR_ARRAY_IDX(options, i, 
++                                                          const char *), 
++                                            pool));
+         }
+       diff_cmd_baton->options.for_external.argv = argv;
+       diff_cmd_baton->options.for_external.argc = argc;
+@@ -2552,7 +2589,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton
+       * These cases require server communication.
+ */
+ svn_error_t *
+-svn_client_diff6(const apr_array_header_t *options,
++svn_client_diff7(const apr_array_header_t *options,
+                  const char *path_or_url1,
+                  const svn_opt_revision_t *revision1,
+                  const char *path_or_url2,
+@@ -2571,6 +2608,7 @@ svn_error_t *
+                  svn_stream_t *outstream,
+                  svn_stream_t *errstream,
+                  const apr_array_header_t *changelists,
++                 const char *invoke_diff_cmd,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+ {
+@@ -2588,7 +2626,8 @@ svn_error_t *
+   /* setup callback and baton */
+   diff_cmd_baton.orig_path_1 = path_or_url1;
+   diff_cmd_baton.orig_path_2 = path_or_url2;
+-
++  diff_cmd_baton.invoke_diff_cmd = invoke_diff_cmd;
++  
+   SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
+                                       ctx->config, pool));
+   diff_cmd_baton.pool = pool;
+@@ -2619,7 +2658,7 @@ svn_error_t *
+ }
+ 
+ svn_error_t *
+-svn_client_diff_peg6(const apr_array_header_t *options,
++svn_client_diff_peg7(const apr_array_header_t *options,
+                      const char *path_or_url,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *start_revision,
+@@ -2638,6 +2677,7 @@ svn_error_t *
+                      svn_stream_t *outstream,
+                      svn_stream_t *errstream,
+                      const apr_array_header_t *changelists,
++                     const char *invoke_diff_cmd,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+ {
+@@ -2651,6 +2691,7 @@ svn_error_t *
+   /* setup callback and baton */
+   diff_cmd_baton.orig_path_1 = path_or_url;
+   diff_cmd_baton.orig_path_2 = path_or_url;
++  diff_cmd_baton.invoke_diff_cmd = invoke_diff_cmd;
+ 
+   SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
+                                       ctx->config, pool));
+Index: libsvn_client/deprecated.c
+===================================================================
+--- libsvn_client/deprecated.c	(.../trunk/subversion)	(revision 1542732)
++++ libsvn_client/deprecated.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -914,6 +914,53 @@ svn_client_delete(svn_client_commit_info_t **commi
+ /*** From diff.c ***/
+ 
+ svn_error_t *
++svn_client_diff6(const apr_array_header_t *options,
++                 const char *path_or_url1,
++                 const svn_opt_revision_t *revision1,
++                 const char *path_or_url2,
++                 const svn_opt_revision_t *revision2,
++                 const char *relative_to_dir,
++                 svn_depth_t depth,
++                 svn_boolean_t ignore_ancestry,
++                 svn_boolean_t no_diff_added,
++                 svn_boolean_t no_diff_deleted,
++                 svn_boolean_t show_copies_as_adds,
++                 svn_boolean_t ignore_content_type,
++                 svn_boolean_t ignore_properties,
++                 svn_boolean_t properties_only,
++                 svn_boolean_t use_git_diff_format,
++                 const char *header_encoding,
++                 svn_stream_t *outstream,
++                 svn_stream_t *errstream,
++                 const apr_array_header_t *changelists,
++                 svn_client_ctx_t *ctx,
++                 apr_pool_t *pool)
++{
++  return svn_client_diff7(options,
++                          path_or_url1,
++                          revision1,
++                          path_or_url2,
++                          revision2,
++                          relative_to_dir,
++                          depth,
++                          ignore_ancestry,
++                          no_diff_added,
++                          no_diff_deleted,
++                          show_copies_as_adds,
++                          ignore_content_type,
++                          ignore_properties,
++                          properties_only,
++                          use_git_diff_format,
++                          header_encoding,
++                          outstream,
++                          errstream,
++                          changelists,
++                          NULL,
++                          ctx, 
++                          pool);
++}
++
++svn_error_t *
+ svn_client_diff5(const apr_array_header_t *diff_options,
+                  const char *path1,
+                  const svn_opt_revision_t *revision1,
+@@ -1036,6 +1083,53 @@ svn_client_diff(const apr_array_header_t *options,
+ }
+ 
+ svn_error_t *
++svn_client_diff_peg6(const apr_array_header_t *options,
++                     const char *path_or_url,
++                     const svn_opt_revision_t *peg_revision,
++                     const svn_opt_revision_t *start_revision,
++                     const svn_opt_revision_t *end_revision,
++                     const char *relative_to_dir,
++                     svn_depth_t depth,
++                     svn_boolean_t ignore_ancestry,
++                     svn_boolean_t no_diff_added,
++                     svn_boolean_t no_diff_deleted,
++                     svn_boolean_t show_copies_as_adds,
++                     svn_boolean_t ignore_content_type,
++                     svn_boolean_t ignore_properties,
++                     svn_boolean_t properties_only,
++                     svn_boolean_t use_git_diff_format,
++                     const char *header_encoding,
++                     svn_stream_t *outstream,
++                     svn_stream_t *errstream,
++                     const apr_array_header_t *changelists,
++                     svn_client_ctx_t *ctx,
++                     apr_pool_t *pool)
++{
++  return svn_client_diff_peg7(options,
++                              path_or_url,
++                              peg_revision,
++                              start_revision,
++                              end_revision,
++                              relative_to_dir,
++                              depth,
++                              ignore_ancestry,
++                              no_diff_added,
++                              no_diff_deleted,
++                              show_copies_as_adds,
++                              ignore_content_type,
++                              ignore_properties,
++                              properties_only,
++                              use_git_diff_format,
++                              header_encoding,
++                              outstream,
++                              errstream,
++                              changelists,
++                              NULL,
++                              ctx,
++                              pool);
++}
++
++svn_error_t *
+ svn_client_diff_peg5(const apr_array_header_t *diff_options,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+Index: svnlook/svnlook.c
+===================================================================
+--- svnlook/svnlook.c	(.../trunk/subversion)	(revision 1542732)
++++ svnlook/svnlook.c	(.../branches/invoke-diff-cmd-feature/subversion)	(revision 1542685)
+@@ -100,6 +100,7 @@ enum
+     svnlook__ignore_properties,
+     svnlook__properties_only,
+     svnlook__diff_cmd,
++    svnlook__invoke_diff_cmd,
+     svnlook__show_inherited_props
+   };
+ 
+@@ -135,6 +136,9 @@ static const apr_getopt_option_t options_table[] =
+   {"diff-cmd",          svnlook__diff_cmd, 1,
+    N_("use ARG as diff command")},
+ 
++  {"invoke-diff-cmd",   svnlook__invoke_diff_cmd, 1,
++   N_("Customizable diff command (see svn help diff)")},
++
+   {"ignore-properties",   svnlook__ignore_properties, 0,
+    N_("ignore properties during the operation")},
+ 
+@@ -224,7 +228,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[
+       "Print GNU-style diffs of changed files and properties.\n"),
+    {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
+     svnlook__diff_copy_from, svnlook__diff_cmd, 'x',
+-    svnlook__ignore_properties, svnlook__properties_only} },
++    svnlook__ignore_properties, svnlook__properties_only,
++    svnlook__invoke_diff_cmd} },
+ 
+   {"dirs-changed", subcommand_dirschanged, {0},
+    N_("usage: svnlook dirs-changed REPOS_PATH\n\n"
+@@ -329,7 +334,8 @@ struct svnlook_opt_state
+   svn_boolean_t quiet;            /* --quiet */
+   svn_boolean_t ignore_properties;  /* --ignore_properties */
+   svn_boolean_t properties_only;    /* --properties-only */
+-  const char *diff_cmd;           /* --diff-cmd */
++  const char *diff_cmd;             /* --diff-cmd */
++  const char *invoke_diff_cmd;      /* --invoke-diff-cmd */
+   svn_boolean_t show_inherited_props; /*  --show-inherited-props */
+ };
+ 
+@@ -353,6 +359,7 @@ typedef struct svnlook_ctxt_t
+   svn_boolean_t ignore_properties;
+   svn_boolean_t properties_only;
+   const char *diff_cmd;
++  const char *invoke_diff_cmd;
+ 
+ } svnlook_ctxt_t;
+ 
+@@ -944,7 +951,7 @@ print_diff_tree(svn_stream_t *out_stream,
+         }
+       else
+         {
+-          if (c->diff_cmd)
++          if (c->diff_cmd || c->invoke_diff_cmd)
+             {
+               apr_file_t *outfile;
+               apr_file_t *errfile;
+@@ -999,14 +1006,31 @@ print_diff_tree(svn_stream_t *out_stream,
+                 SVN_ERR(svn_io_open_unique_file3(&errfile, &errfilename, NULL,
+                           svn_io_file_del_on_pool_cleanup, pool, pool));
+ 
+-              SVN_ERR(svn_io_run_diff2(".",
+-                                       diff_cmd_argv,
+-                                       diff_cmd_argc,
+-                                       orig_label, new_label,
+-                                       orig_path, new_path,
+-                                       &exitcode, outfile, errfile,
+-                                       c->diff_cmd, pool));
++              if (c->diff_cmd)
++                SVN_ERR(svn_io_run_diff2(".",
++                                         diff_cmd_argv,
++                                         diff_cmd_argc,
++                                         orig_label, new_label,
++                                         orig_path, new_path,
++                                         &exitcode, outfile, errfile,
++                                         c->diff_cmd, pool));
+ 
++              else if (c->invoke_diff_cmd)
++                SVN_ERR(svn_io_run_external_diff(".",
++                                                 orig_label,
++                                                 new_label,
++                                                 orig_path,
++                                                 new_path,
++                                                 &exitcode,
++                                                 outfile,
++                                                 errfile,
++                                                 c->invoke_diff_cmd,
++                                                 pool));
++                
++              SVN_ERR(svn_io_file_close(outfile, pool));
++              SVN_ERR(svn_io_file_close(errfile, pool));
++
++
+               /* Now, open and copy our files to our output streams. */
+               if (outfilename)
+                 {
+@@ -2091,6 +2115,7 @@ get_ctxt_baton(svnlook_ctxt_t **baton_p,
+                                           " \t\n\r", TRUE, pool);
+   baton->ignore_properties = opt_state->ignore_properties;
+   baton->properties_only = opt_state->properties_only;
++  baton->invoke_diff_cmd = opt_state->invoke_diff_cmd;
+   baton->diff_cmd = opt_state->diff_cmd;
+ 
+   if (baton->txn_name)
+@@ -2516,7 +2541,6 @@ main(int argc, const char *argv[])
+                            _("Invalid revision number supplied")));
+           }
+           break;
+-
+         case 't':
+           opt_state.txn = opt_arg;
+           break;
+@@ -2609,6 +2633,10 @@ main(int argc, const char *argv[])
+           opt_state.diff_cmd = opt_arg;
+           break;
+ 
++        case svnlook__invoke_diff_cmd:
++          opt_state.invoke_diff_cmd = opt_arg;
++          break;
++
+         case svnlook__show_inherited_props:
+           opt_state.show_inherited_props = TRUE;
+           break;
+@@ -2635,6 +2663,13 @@ main(int argc, const char *argv[])
+                  _("Cannot use the '--show-inherited-props' option with the "
+                    "'--revprop' option")));
+ 
++  /* The --diff-cmd and --invoke-diff-cmd options may not co-exist. */
++  if (opt_state.diff_cmd && opt_state.invoke_diff_cmd)
++    SVN_INT_ERR(svn_error_create
++                (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
++                 _("Cannot use the '--diff-cmd' option with the "
++                   "'--invoke-diff-cmd' option")));
++
+   /* If the user asked for help, then the rest of the arguments are
+      the names of subcommands to get help on (if any), or else they're
+      just typos/mistakes.  Whatever the case, the subcommand to
 
-================================================================================
-
-*** /home/g/trunk/subversion/svnlook/svnlook.c	2013-09-24 21:40:37.690757727 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/svnlook/svnlook.c	2013-10-24 16:04:38.939829801 +0100
-*************** enum
-*** 102 ****
---- 103 ----
-+     svnlook__invoke_diff_cmd,
-*************** static const apr_getopt_option_t options
-*** 137 ****
---- 139,141 ----
-+   {"invoke-diff-cmd",   svnlook__invoke_diff_cmd, 1,
-+    N_("Customizable diff command (see svn help diff)")},
-+ 
-*************** static const svn_opt_subcommand_desc2_t
-*** 227 ****
-!     svnlook__ignore_properties, svnlook__properties_only} },
---- 231,232 ----
-!     svnlook__ignore_properties, svnlook__properties_only,
-!     svnlook__invoke_diff_cmd} },
-*************** struct svnlook_opt_state
-*** 332 ****
---- 338 ----
-+   const char *invoke_diff_cmd;      /* --invoke-diff-cmd */
-*************** typedef struct svnlook_ctxt_t
-*** 355 ****
---- 362 ----
-+   const char *invoke_diff_cmd;
-*************** print_diff_tree(svn_stream_t *out_stream
-*** 947 ****
-!           if (c->diff_cmd)
---- 954 ----
-!           if (c->diff_cmd || c->invoke_diff_cmd)
-*************** print_diff_tree(svn_stream_t *out_stream
-*** 1001 ****
---- 1009 ----
-+               if (c->diff_cmd)
-*************** print_diff_tree(svn_stream_t *out_stream
-*** 1009 ****
---- 1018,1033 ----
-+               else if (c->invoke_diff_cmd)
-+                 SVN_ERR(svn_io_run_external_diff(".",
-+                                                  orig_label,
-+                                                  new_label,
-+                                                  orig_path,
-+                                                  new_path,
-+                                                  &exitcode,
-+                                                  outfile,
-+                                                  errfile,
-+                                                  c->invoke_diff_cmd,
-+                                                  pool));
-+                 
-+               SVN_ERR(svn_io_file_close(outfile, pool));
-+               SVN_ERR(svn_io_file_close(errfile, pool));
-+ 
-+ 
-*************** get_ctxt_baton(svnlook_ctxt_t **baton_p,
-*** 2093 ****
---- 2118 ----
-+   baton->invoke_diff_cmd = opt_state->invoke_diff_cmd;
-*************** main(int argc, const char *argv[])
-*** 2611 ****
---- 2636,2639 ----
-+         case svnlook__invoke_diff_cmd:
-+           opt_state.invoke_diff_cmd = opt_arg;
-+           break;
-+ 
-*************** main(int argc, const char *argv[])
-*** 2636 ****
---- 2665,2671 ----
-+ 
-+   /* The --diff-cmd and --invoke-diff-cmd options may not co-exist. */
-+   if (opt_state.diff_cmd && opt_state.invoke_diff_cmd)
-+     SVN_INT_ERR(svn_error_create
-+                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-+                  _("Cannot use the '--diff-cmd' option with the "
-+                    "'--invoke-diff-cmd' option")));
-
-================================================================================
-
-*** /home/g/trunk/subversion/svn/svn.c	2013-09-24 21:40:35.782748266 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/svn/svn.c	2013-11-06 19:25:49.027181601 +0000
-*************** typedef enum svn_cl__longopt_t {
-*** 85 ****
---- 86 ----
-+   opt_invoke_diff_cmd,
-*************** const apr_getopt_option_t svn_cl__option
-*** 346 ****
---- 348,375 ----
-+   {"invoke-diff-cmd", opt_invoke_diff_cmd, 1, 
-+                    N_("use ARG as format string for external diff command\n"
-+                       "                             "
-+                       "invocation.\n" 
-+                       "                             "
-+                       "The following reserved keywords are replaced:\n"
-+                       "                             "
-+                       "    %svn_new -- new file\n"
-+                       "                             "
-+                       "    %svn_old -- old file\n"
-+                       "                             "
-+                       "    %svn_label_new -- label of the new file\n"
-+                       "                             "
-+                       "    %svn_label_old -- label of the old file\n"
-+                       "                             "
-+                       "Examples:\n"
-+                       "                             "
-+                       "--invoke-diff-cmd=\'diff -y %svn_new %svn_old\'\n"          
-+                       "                             "
-+                       "--invoke-diff-cmd=\"kdiff3 -auto -o /home/u/log \\\n"
-+                       "                             "
-+                       "      %svn_new %svn_old --L1 %svn_label_new \\\n"
-+                       "                             "
-+                       "     --L2 \"Custom Label\" \'\n"
-+                       "                             "
-+                       "Reserved keywords may be embedded in strings:\n"
-+                       "                             "
-+                       "+%svn_new  %svn_new- and file=%svn_label_new+")},
-*************** const svn_opt_subcommand_desc2_t svn_cl_
-*** 613 ****
-!      opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
---- 642,643 ----
-!      opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible,
-!      opt_invoke_diff_cmd} },
-*************** const svn_opt_subcommand_desc2_t svn_cl_
-*** 777 ****
-!      opt_internal_diff, 'x', opt_search, opt_search_and },
---- 807 ----
-!      opt_internal_diff, 'x', opt_invoke_diff_cmd, opt_search, opt_search_and },
-*************** sub_main(int argc, const char *argv[], a
-*** 2140 ****
---- 2171,2173 ----
-+       case opt_invoke_diff_cmd:
-+         opt_state.diff.invoke_diff_cmd = apr_pstrdup(pool, opt_arg);
-+         break;
-*************** sub_main(int argc, const char *argv[], a
-*** 2555 ****
-!   /* Disallow simultaneous use of both --diff-cmd and
---- 2588 ----
-!   /* Disallow simultaneous use of --diff-cmd, --invoke-diff-cmd and
-*************** sub_main(int argc, const char *argv[], a
-*** 2564 ****
---- 2598,2613 ----
-+   if (opt_state.diff.invoke_diff_cmd && opt_state.diff.internal_diff)
-+     {
-+       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-+                              _("--invoke-diff-cmd and --internal-diff "
-+                                "are mutually exclusive"));
-+       return EXIT_ERROR(err);
-+     }
-+ 
-+   if ((opt_state.diff.diff_cmd) && (opt_state.diff.invoke_diff_cmd))
-+     {
-+       err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-+                              _("--invoke-diff-cmd and --diff-cmd "
-+                                "are mutually exclusive"));
-+       return EXIT_ERROR(err);
-+     }
-+ 
-*************** sub_main(int argc, const char *argv[], a
-*** 2779 ****
---- 2829,2831 ----
-+   if (opt_state.diff.invoke_diff_cmd)
-+     svn_config_set(cfg_config, SVN_CONFIG_SECTION_HELPERS,
-+                    SVN_CONFIG_OPTION_INVOKE_DIFF_CMD, opt_state.diff.invoke_diff_cmd);
-
-================================================================================
-
-*** /home/g/trunk/subversion/tests/cmdline/diff_tests.py	2013-11-04 17:30:37.880042145 +0000
---- /home/g/branches/invoke-diff-cmd-feature/subversion/tests/cmdline/diff_tests.py	2013-11-05 12:39:49.421954377 +0000
-*************** def diff_wrong_extension_type(sbox):
-*** 3239 ****
---- 3240 ----
-+ #----------------------------------------------------------------------
-*************** def diff_external_diffcmd(sbox):
-*** 3276 ****
---- 3278,3324 ----
-+ # Check the correct parsing of arguments for an external diff tool
-+ def diff_invoke_external_diffcmd(sbox):
-+   "svn diff --invoke-diff-cmd passes correct args"
-+ 
-+   diff_script_path = os.path.abspath(".")+"/diff"
-+ 
-+   svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
-+     'for arg in sys.argv[1:]:\n  print(arg)\n')
-+ 
-+   if sys.platform == 'win32':
-+      diff_script_path = "%s.bat" % diff_script_path
-+ 
-+   sbox.build(read_only = True)
-+   os.chdir(sbox.wc_dir)
-+ 
-+   iota_path = 'iota'
-+   svntest.main.file_append(iota_path, "new text in iota")
-+ 
-+   expected_output = svntest.verify.ExpectedOutput([
-+       "Index: iota\n",
-+       "===================================================================\n",
-+       # correct label %svn_label_old -> label 1
-+       "iota	(revision 1)\n",   
-+ 
-+       # correct file %svn_old -> old
-+       os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
-+ 
-+       # correct label %svn_label_new -> label 2
-+       "iota	(working copy)\n",
-+ 
-+       # correct file %svn_new -> new
-+       os.path.abspath("iota") + "\n",
-+ 
-+       # preservation of quoted string  "X Y Z"-> "X Y Z"
-+       "\"X Y Z\"\n",
-+ 
-+       # correct insertion of filename into string "+%svn_new+" -> "+" + new + "+"
-+       "+" + os.path.abspath("iota") + "+\n",
-+ 
-+       ])
-+   
-+   svntest.actions.run_and_verify_svn(None, expected_output, [],
-+    'diff',
-+    '--invoke-diff-cmd='+diff_script_path+
-+    ' %svn_label_old %svn_old %svn_label_new %svn_new \"X Y Z\" +%svn_new+',
-+   iota_path)
-+ 
-*************** test_list = [ None,
-*** 4724 ****
---- 4773 ----
-+               diff_invoke_external_diffcmd,
-
-================================================================================
-
-*** /home/g/trunk/subversion/tests/cmdline/getopt_tests_data/svn_help_log_switch_stdout	2013-09-24 21:40:35.638747552 +0100
---- /home/g/branches/invoke-diff-cmd-feature/subversion/tests/cmdline/getopt_tests_data/svn_help_log_switch_stdout	2013-11-06 19:26:55.291510188 +0000
-*************** Valid options:
-*** 113 ****
---- 114,127 ----
-+   --invoke-diff-cmd ARG    : use ARG as format string for external diff command
-+                              invocation.
-+                              The following reserved keywords are replaced:
-+                                  %svn_new -- new file
-+                                  %svn_old -- old file
-+                                  %svn_label_new -- label of the new file
-+                                  %svn_label_old -- label of the old file
-+                              Examples:
-+                              --invoke-diff-cmd='diff -y %svn_new %svn_old'
-+                              --invoke-diff-cmd="kdiff3 -auto -o /home/u/log \
-+                                    %svn_new %svn_old --L1 %svn_label_new \
-+                                   --L2 "Custom Label" '
-+                              Reserved keywords may be embedded in strings:
-+                              +%svn_new  %svn_new- and file=%svn_label_new+
