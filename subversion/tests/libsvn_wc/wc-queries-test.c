@@ -854,9 +854,6 @@ static svn_error_t *
 test_schema_statistics(apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
-  int r;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_error_t *warnings = NULL;
   sqlite3_stmt *stmt;
 
   SVN_ERR(create_memory_db(&sdb, scratch_pool));
