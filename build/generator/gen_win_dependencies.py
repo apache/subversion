@@ -286,6 +286,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       self.find_libraries(False)
       
   def find_libraries(self, show_warnings):
+    "find required and optional libraries"
 
     # Required dependencies
     self._find_apr()
@@ -294,6 +295,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_sqlite(show_warnings)
 
     # Optional dependencies
+    self._find_httpd(show_warnings)
     self._find_bdb(show_warnings)
     self._find_openssl(show_warnings)
     self._find_serf(show_warnings)
@@ -561,6 +563,116 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                libname, xml_version,
                                                debug_lib_dir = debug_lib_dir,
                                                defines=['XML_STATIC'])
+
+  def _find_httpd(self, show_warning):
+    "Find Apache HTTPD and version"
+
+    minimal_httpd_version = (2, 0, 0)
+    if not self.httpd_path:
+      return
+
+    inc_base = os.path.join(self.httpd_path, 'include')
+
+    if os.path.isfile(os.path.join(inc_base, 'apache26', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache26')
+    elif os.path.isfile(os.path.join(inc_base, 'apache24', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache24')
+    elif os.path.isfile(os.path.join(inc_base, 'apache22', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache22')
+    elif os.path.isfile(os.path.join(inc_base, 'apache20', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache20')
+    elif os.path.isfile(os.path.join(inc_base, 'apache2', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache2')
+    elif os.path.isfile(os.path.join(inc_base, 'apache', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache')
+    elif os.path.isfile(os.path.join(inc_base, 'ap_release.h')):
+      inc_path = inc_base
+    else:
+      if show_warning:
+        print('WARNING: \'ap_release.h\' not found')
+        print("Use '--with-httpd' to configure openssl location.");
+      return
+
+    version_file_path = os.path.join(inc_path, 'ap_release.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MAJORVERSION_NUMBER\s+(\d+)',
+                         txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MINORVERSION_NUMBER\s+(\d+)',
+                         txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+AP_SERVER_PATCHLEVEL_NUMBER\s+(\d+)',
+                         txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    httpd_version = '%d.%d.%d' % version
+
+    if version < minimal_httpd_version:
+      if show_warning:
+        print("WARNING: httpd %s or higher is required "
+                        "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_httpd_version),
+                          httpd_version))
+      return
+
+    lib_name = 'libhttpd.lib'
+    lib_base = self.httpd_path
+
+    debug_lib_dir = None
+
+    if os.path.isfile(os.path.join(lib_base, 'lib', lib_name)):
+      # Install location
+      lib_dir = os.path.join(lib_base, 'lib')
+    elif os.path.isfile(os.path.join(lib_base, 'Release', lib_name)):
+      # Source location
+      lib_dir = os.path.join(lib_base, 'Release')
+      if os.path.isfile(os.path.join(lib_base, 'Debug', lib_name)):
+        debug_lib_dir = os.path.join(lib_base, 'Debug')
+
+    # Our modules run inside httpd, so we don't have to find binaries
+
+    self._libraries['httpd'] = SVNCommonLibrary('httpd', inc_path, lib_dir, lib_name,
+                                                httpd_version,
+                                                debug_lib_dir=debug_lib_dir,
+                                                defines=['AP_DECLARE_EXPORT'])
+
+    # And now find mod_dav
+
+    if os.path.isfile(os.path.join(inc_path, 'mod_dav.h')):
+      # Install location, we are lucky
+      inc_path = inc_path
+    elif os.path.isfile(os.path.join(lib_base, 'modules/dav/main/mod_dav.h')):
+      # Source location
+      inc_path = os.path.join(lib_base, 'modules/dav/main')
+    else:
+      if show_warning:
+        print("WARNING: Can't find mod_dav.h in the httpd directory")
+        return
+
+    lib_name = 'mod_dav.lib'
+    if os.path.isfile(os.path.join(lib_dir, lib_name)):
+      # Same location as httpd
+      lib_dir = lib_dir
+    elif os.path.isfile(os.path.join(lib_base, 'modules/dav/main/Release', lib_name)):
+      # Source location
+      lib_dir = os.path.join(lib_base, 'modules/dav/main/Release')
+
+      if os.path.isfile(os.path.join(lib_base, 'modules/dav/main/Debug', lib_name)):
+        debug_lib_dir = os.path.join(lib_base, 'modules/dav/main/Debug')
+      else:
+        debug_lib_dir = None
+    else:
+      if show_warning:
+        print("WARNING: Can't find mod_dav.lib in the httpd directory")
+        return
+
+    self._libraries['mod_dav'] = SVNCommonLibrary('mod_dav', inc_path, lib_dir, lib_name,
+                                                  httpd_version,
+                                                  debug_lib_dir=debug_lib_dir)
 
   def _find_zlib(self):
     "Find the ZLib library and version"
