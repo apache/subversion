@@ -91,7 +91,7 @@ Candidate changes:
      has changed between various sasl versions, but the
      implementation still uses the real prototype when calling.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
 Veto-blocked changes:
 =====================
