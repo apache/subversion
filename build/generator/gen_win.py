@@ -768,8 +768,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
   def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
 
-    fakeincludes = [ "subversion/include",
-                     "subversion" ]
+    fakeincludes = [ "subversion/include" ]
                      
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
@@ -781,12 +780,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           fakeincludes.extend(lib.include_dirs)
 
-    if target.name == 'mod_authz_svn':
-      fakeincludes.extend([ os.path.join(self.httpd_path, "modules/aaa") ])
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ os.path.join(self.httpd_path, "include") ])
-    elif (isinstance(target, gen_base.TargetSWIG)
+    if (isinstance(target, gen_base.TargetSWIG)
           or isinstance(target, gen_base.TargetSWIGLib)):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
@@ -846,12 +840,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             continue # Dependency without library (E.g. JDK)
 
           fakelibdirs.append(lib_dir)
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      fakelibdirs.append(self.apath(self.httpd_path, cfg))
-      if target.name == 'mod_dav_svn':
-        fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main",
-                                      cfg))
 
     return gen_base.unique(fakelibdirs)
 
