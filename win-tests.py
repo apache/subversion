@@ -480,15 +480,9 @@ class Httpd:
     self._create_mime_types_file()
     self._create_dontdothat_file()
 
-    # Determine version.
-    if os.path.exists(os.path.join(self.httpd_dir,
-                                   'modules', 'mod_access_compat.so')):
-      self.httpd_ver = 2.3
-    elif os.path.exists(os.path.join(self.httpd_dir,
-                                     'modules', 'mod_auth_basic.so')):
-      self.httpd_ver = 2.2
-    else:
-      self.httpd_ver = 2.0
+    # Obtain version.
+    version_vals = gen_obj._libraries['httpd'].version.split('.')
+    self.httpd_ver = float('%s.%s' % (version_vals[0], version_vals[1]))
 
     # Create httpd config file
     fp = open(self.httpd_config, 'w')
