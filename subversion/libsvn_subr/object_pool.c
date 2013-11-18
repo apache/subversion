@@ -237,6 +237,25 @@ object_ref_cleanup(void *baton)
   object_ref_t *object = baton;
   svn_object_pool__t *object_pool = object->object_pool;
 
+  /* if we don't share objects and we are not allowed to hold on to
+   * unused object, delete them immediately. */
+  if (!object_pool->share_objects && object_pool->max_unused == 0)
+    {
+       /* there must only be the one references we are releasing right now */
+      assert(object->ref_count == 1);
+      svn_pool_destroy(object->pool);
+
+      /* see below for a more info on this final cleanup check */
+      if (   svn_atomic_dec(&object_pool->used_count) == 0
+          && svn_atomic_cas(&object_pool->ready_for_cleanup, FALSE, TRUE)
+             == TRUE)
+        {
+          destroy_object_pool(object_pool);
+        }
+
+     return APR_SUCCESS;
+    }
+
   SVN_INT_ERR(svn_mutex__lock(object_pool->mutex));
 
   /* put back into "available" container */
