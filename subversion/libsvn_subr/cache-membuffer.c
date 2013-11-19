@@ -2371,7 +2371,7 @@ typedef struct last_access_key_t
   entry_key_t combined_key;
 
   /* length of the key (or APR_HASH_KEY_STRING if not used) */
-  apr_size_t key_len;
+  apr_ssize_t key_len;
 
   /* the original key.  Only KEY_LEN bytes are valid.  We use uint32 for
    * better compatibility with pseudo-md5 functions. */
