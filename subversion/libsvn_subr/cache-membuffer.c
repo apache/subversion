@@ -791,7 +791,7 @@ free_spare_group(svn_membuffer_t *cache,
 {
   assert(group->header.used == 0);
   assert(group->header.previous != NO_INDEX);
-  assert(group - cache->directory >= cache->group_count);
+  assert(group - cache->directory >= (apr_ssize_t)cache->group_count);
 
   /* unchain */
   cache->directory[group->header.previous].header.next = NO_INDEX;
