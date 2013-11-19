@@ -299,7 +299,7 @@ svn_cl__proplist(apr_getopt_t *os,
                    errors, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,
-                   SVN_NO_ERROR));
+                   0));
         }
       svn_pool_destroy(iterpool);
 

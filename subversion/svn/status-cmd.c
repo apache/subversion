@@ -359,7 +359,7 @@ svn_cl__status(apr_getopt_t *os,
                           /* not versioned: */
                           SVN_ERR_WC_NOT_WORKING_COPY,
                           SVN_ERR_WC_PATH_NOT_FOUND,
-                          SVN_NO_ERROR));
+                          0));
 
       if (opt_state->xml)
         SVN_ERR(print_finish_target_xml(repos_rev, iterpool));
