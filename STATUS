@@ -136,7 +136,7 @@ Candidate changes:
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1542765, r1542767, r1542774
    Add or update an 'sqlite_stat1' table when creating or upgrading a database
