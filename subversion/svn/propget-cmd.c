@@ -99,7 +99,7 @@ print_properties_xml(const char *pname,
             name_local = svn_dirent_local_style(iprop->path_or_url, iterpool);
 
           svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
-                            "path", name_local, NULL);
+                            "path", name_local, SVN_VA_NULL);
 
           svn_cmdline__print_xml_prop(&sb, pname, propval, TRUE, iterpool);
           svn_xml_make_close_tag(&sb, iterpool, "target");
@@ -122,7 +122,7 @@ print_properties_xml(const char *pname,
       svn_pool_clear(iterpool);
 
       svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
-                        "path", filename, NULL);
+                        "path", filename, SVN_VA_NULL);
       svn_cmdline__print_xml_prop(&sb, pname, propval, FALSE, iterpool);
       svn_xml_make_close_tag(&sb, iterpool, "target");
 
@@ -375,7 +375,7 @@ svn_cl__propget(apr_getopt_t *os,
 
               svn_xml_make_open_tag(&sb, pool, svn_xml_normal,
                                     "revprops",
-                                    "rev", revstr, NULL);
+                                    "rev", revstr, SVN_VA_NULL);
 
               svn_cmdline__print_xml_prop(&sb, pname_utf8, propval, FALSE,
                                           pool);

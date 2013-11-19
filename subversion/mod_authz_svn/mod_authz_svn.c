@@ -132,7 +132,7 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   conf->access_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
   if (!conf->access_file)
-    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, NULL);
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }
@@ -153,7 +153,7 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
                                                              cmd->pool);
 
   if (!conf->repo_relative_access_file)
-    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, NULL);
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }
@@ -166,7 +166,7 @@ AuthzSVNGroupsFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
   conf->groups_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
 
   if (!conf->groups_file)
-    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, NULL);
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }

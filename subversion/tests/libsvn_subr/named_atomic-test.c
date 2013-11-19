@@ -57,7 +57,7 @@ adjust_proc_path(const char **proc, const char **directory, apr_pool_t *pool)
   char path [MAX_PATH] = { 0 };
   GetModuleFileNameA(NULL, path, sizeof(path));
   *(strrchr(path, '\\') + 1) = 0;
-  *proc = apr_pstrcat(pool, path, *proc, ".exe", NULL);
+  *proc = apr_pstrcat(pool, path, *proc, ".exe", SVN_VA_NULL);
 
   /* And we need to set the working dir to our working dir to make
    * our sub-processes find all DLLs. */
@@ -215,7 +215,7 @@ init_concurrency_test_shm(apr_pool_t *pool, int count)
                                     apr_pstrcat(pool,
                                                 ATOMIC_NAME,
                                                 apr_itoa(pool, i),
-                                                NULL),
+                                                SVN_VA_NULL),
                                     TRUE));
       SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
     }

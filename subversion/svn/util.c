@@ -626,7 +626,7 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
   if (string)
     {
       svn_xml_make_open_tag(sb, pool, svn_xml_protect_pcdata,
-                            tagname, NULL);
+                            tagname, SVN_VA_NULL);
       svn_xml_escape_cdata_cstring(sb, string, pool);
       svn_xml_make_close_tag(sb, pool, tagname);
     }
@@ -643,7 +643,7 @@ svn_cl__print_xml_commit(svn_stringbuf_t **sb,
   /* "<commit ...>" */
   svn_xml_make_open_tag(sb, pool, svn_xml_normal, "commit",
                         "revision",
-                        apr_psprintf(pool, "%ld", revision), NULL);
+                        apr_psprintf(pool, "%ld", revision), SVN_VA_NULL);
 
   /* "<author>xx</author>" */
   if (author)
@@ -664,7 +664,7 @@ svn_cl__print_xml_lock(svn_stringbuf_t **sb,
                        apr_pool_t *pool)
 {
   /* "<lock>" */
-  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", NULL);
+  svn_xml_make_open_tag(sb, pool, svn_xml_normal, "lock", SVN_VA_NULL);
 
   /* "<token>xx</token>" */
   svn_cl__xml_tagged_cdata(sb, pool, "token", lock->token);
@@ -699,7 +699,7 @@ svn_cl__xml_print_header(const char *tagname,
   svn_xml_make_header2(&sb, "UTF-8", pool);
 
   /* "<TAGNAME>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
+  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, SVN_VA_NULL);
 
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }
