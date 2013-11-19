@@ -89,7 +89,7 @@ read_config(svn_memcache_t **memcache_p,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
-                                              fs->pool));
+                                               fs->pool));
 
   /* No cache namespace by default.  I.e. all FS instances share the
    * cached data.  If you specify different namespaces, the data will
@@ -143,8 +143,8 @@ read_config(svn_memcache_t **memcache_p,
                                    ""), "2"))
     *cache_revprops
       = svn_hash__get_bool(fs->config,
-                          SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                          FALSE);
+                           SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+                           FALSE);
   else
     *cache_revprops = svn_named_atomic__is_efficient();
 
