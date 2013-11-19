@@ -992,6 +992,8 @@ int main(int argc, const char *argv[])
                                      params.error_check_interval,
                                      connection_pool);
       svn_error_clear(serve(conn, &params, connection_pool));
+      svn_pool_destroy(connection_pool);
+
       exit(0);
     }
 
