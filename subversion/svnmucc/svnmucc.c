@@ -174,8 +174,8 @@ struct operation {
 };
 
 
-/* An iterator (for use via apr_table_do) which sets node properties.
-   REC is a pointer to a struct driver_state. */
+/* Set node properties.
+   ... */
 static svn_error_t *
 change_props(const svn_delta_editor_t *editor,
              void *baton,
