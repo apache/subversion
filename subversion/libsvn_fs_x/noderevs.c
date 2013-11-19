@@ -710,9 +710,9 @@ read_reps(apr_array_header_t **reps_p,
     {
       binary_representation_t rep;
 
-      rep.has_sha1 = svn_packed__get_uint(rep_stream);
+      rep.has_sha1 = (svn_boolean_t)svn_packed__get_uint(rep_stream);
 
-      rep.revision = svn_packed__get_uint(rep_stream);
+      rep.revision = (svn_revnum_t)svn_packed__get_uint(rep_stream);
       rep.item_index = svn_packed__get_uint(rep_stream);
       rep.size = svn_packed__get_uint(rep_stream);
       rep.expanded_size = svn_packed__get_uint(rep_stream);
@@ -793,11 +793,11 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
     {
       binary_id_t id;
 
-      id.node_id.revision = svn_packed__get_uint(ids_stream);
+      id.node_id.revision = (svn_revnum_t)svn_packed__get_uint(ids_stream);
       id.node_id.number = svn_packed__get_uint(ids_stream);
-      id.copy_id.revision = svn_packed__get_uint(ids_stream);
+      id.copy_id.revision = (svn_revnum_t)svn_packed__get_uint(ids_stream);
       id.copy_id.number = svn_packed__get_uint(ids_stream);
-      id.rev_id.revision = svn_packed__get_uint(ids_stream);
+      id.rev_id.revision = (svn_revnum_t)svn_packed__get_uint(ids_stream);
       id.rev_id.number = svn_packed__get_uint(ids_stream);
 
       APR_ARRAY_PUSH(noderevs->ids, binary_id_t) = id;
@@ -818,28 +818,29 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
     {
       binary_noderev_t noderev;
 
-      noderev.flags = svn_packed__get_uint(noderevs_stream);
+      noderev.flags = (apr_uint32_t)svn_packed__get_uint(noderevs_stream);
 
-      noderev.id = svn_packed__get_uint(noderevs_stream);
-      noderev.predecessor_id = svn_packed__get_uint(noderevs_stream);
-      noderev.predecessor_count = svn_packed__get_uint(noderevs_stream);
+      noderev.id = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.predecessor_id = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.predecessor_count = (int)svn_packed__get_uint(noderevs_stream);
 
-      noderev.copyfrom_path = svn_packed__get_uint(noderevs_stream);
-      noderev.copyfrom_rev = svn_packed__get_uint(noderevs_stream);
-      noderev.copyroot_path = svn_packed__get_uint(noderevs_stream);
-      noderev.copyroot_rev = svn_packed__get_uint(noderevs_stream);
+      noderev.copyfrom_path = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.copyfrom_rev = (svn_revnum_t)svn_packed__get_uint(noderevs_stream);
+      noderev.copyroot_path = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.copyroot_rev = (svn_revnum_t)svn_packed__get_uint(noderevs_stream);
 
-      noderev.prop_rep = svn_packed__get_uint(noderevs_stream);
-      noderev.data_rep.representation = svn_packed__get_uint(noderevs_stream);
+      noderev.prop_rep = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.data_rep.representation
+        = (int)svn_packed__get_uint(noderevs_stream);
 
       noderev.data_rep.uniquifier.txn_id.revision
-        = svn_packed__get_uint(noderevs_stream);
+        = (svn_revnum_t)svn_packed__get_uint(noderevs_stream);
       noderev.data_rep.uniquifier.txn_id.number
         = svn_packed__get_uint(noderevs_stream);
       noderev.data_rep.uniquifier.number
         = svn_packed__get_uint(noderevs_stream);
 
-      noderev.created_path = svn_packed__get_uint(noderevs_stream);
+      noderev.created_path = (int)svn_packed__get_uint(noderevs_stream);
       noderev.mergeinfo_count = svn_packed__get_uint(noderevs_stream);
 
       APR_ARRAY_PUSH(noderevs->noderevs, binary_noderev_t) = noderev;
