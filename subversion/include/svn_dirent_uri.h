@@ -218,7 +218,7 @@ svn_dirent_join(const char *base,
 char *
 svn_dirent_join_many(apr_pool_t *result_pool,
                      const char *base,
-                     ...);
+                     ...) SVN_NEEDS_SENTINEL_NULL;
 
 /** Join a base relpath (@a base) with a component (@a component).
  * @a component need not be a single component.
