@@ -2159,7 +2159,7 @@ get_resource(request_rec *r,
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                     dav_svn__get_fulltext_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                    dav_svn__get_revprop_cache_flag(r) ? "1" :"0");
+                    dav_svn__get_revprop_cache_flag(r) ? "2" :"0");
 
       /* Disallow BDB/event until issue 4157 is fixed. */
       if (!strcmp(ap_show_mpm(), "event"))
