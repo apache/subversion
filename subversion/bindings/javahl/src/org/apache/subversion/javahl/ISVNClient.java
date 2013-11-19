@@ -314,6 +314,7 @@ public interface ISVNClient
      * @param handler   the commit message callback, may be <code>null</code>
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
+     * @throws NullPointerException if the <code>sources</code> list is empty.
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
