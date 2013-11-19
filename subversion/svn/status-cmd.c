@@ -115,7 +115,7 @@ print_start_target_xml(const char *target, apr_pool_t *pool)
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
-                        "path", target, NULL);
+                        "path", target, SVN_VA_NULL);
 
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }
@@ -135,7 +135,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
       const char *repos_rev_str;
       repos_rev_str = apr_psprintf(pool, "%ld", repos_rev);
       svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "against",
-                            "revision", repos_rev_str, NULL);
+                            "revision", repos_rev_str, SVN_VA_NULL);
     }
 
   svn_xml_make_close_tag(&sb, pool, "target");
@@ -390,7 +390,7 @@ svn_cl__status(apr_getopt_t *os,
               svn_stringbuf_setempty(buf);
               svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                                     "changelist", "name", changelist_name,
-                                    NULL);
+                                    SVN_VA_NULL);
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
           else

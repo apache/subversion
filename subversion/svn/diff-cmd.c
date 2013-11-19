@@ -117,7 +117,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
                         "kind", svn_cl__node_kind_str_xml(summary->node_kind),
                         "item", kind_to_word(summary->summarize_kind),
                         "props", summary->prop_changed ? "modified" : "none",
-                        NULL);
+                        SVN_VA_NULL);
 
   svn_xml_escape_cdata_cstring(&sb, path, pool);
   svn_xml_make_close_tag(&sb, pool, "path");
@@ -212,7 +212,7 @@ svn_cl__diff(apr_getopt_t *os,
       SVN_ERR(svn_cl__xml_print_header("diff", pool));
 
       sb = svn_stringbuf_create_empty(pool);
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths", SVN_VA_NULL);
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
     }
 

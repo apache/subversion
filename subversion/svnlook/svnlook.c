@@ -1875,7 +1875,8 @@ do_plist(svnlook_ctxt_t *c,
       svn_xml_make_header2(&sb, "UTF-8", pool);
 
       /* "<properties>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "properties", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "properties",
+                            SVN_VA_NULL);
     }
 
   if (inherited_props)
@@ -1894,7 +1895,7 @@ do_plist(svnlook_ctxt_t *c,
               svn_xml_make_open_tag(
                 &sb, pool, svn_xml_normal, "target", "path",
                 svn_fspath__canonicalize(elt->path_or_url, pool),
-                NULL);
+                SVN_VA_NULL);
               SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, elt->prop_hash,
                                                        !verbose, TRUE,
                                                        pool));
@@ -1921,19 +1922,19 @@ do_plist(svnlook_ctxt_t *c,
               char *revstr = apr_psprintf(pool, "%ld", c->rev_id);
 
               svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
-                                    "rev", revstr, NULL);
+                                    "rev", revstr, SVN_VA_NULL);
             }
           else
             {
               svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
-                                    "txn", c->txn_name, NULL);
+                                    "txn", c->txn_name, SVN_VA_NULL);
             }
         }
       else
         {
           /* "<target ...>" */
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
-                                "path", path, NULL);
+                                "path", path, SVN_VA_NULL);
         }
     }
 
@@ -1980,7 +1981,7 @@ do_plist(svnlook_ctxt_t *c,
         }
       else if (xml)
         svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
-                              "name", pname, NULL);
+                              "name", pname, SVN_VA_NULL);
       else
         printf("  %s\n", pname);
     }

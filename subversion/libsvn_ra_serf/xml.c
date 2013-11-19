@@ -369,7 +369,7 @@ void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
                                   const char *value,
                                   serf_bucket_alloc_t *bkt_alloc)
 {
-  svn_ra_serf__add_open_tag_buckets(agg_bucket, bkt_alloc, tag, NULL);
+  svn_ra_serf__add_open_tag_buckets(agg_bucket, bkt_alloc, tag, SVN_VA_NULL);
 
   if (value)
     {

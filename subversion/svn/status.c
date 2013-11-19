@@ -492,7 +492,8 @@ svn_cl__print_status_xml(const char *target_abspath,
   path = make_relpath(target_abspath, target_path, path, pool, pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_dirent_local_style(path, pool), NULL);
+                        "path", svn_dirent_local_style(path, pool),
+                        SVN_VA_NULL);
 
   att_hash = apr_hash_make(pool);
   svn_hash_sets(att_hash, "item",
@@ -562,7 +563,7 @@ svn_cl__print_status_xml(const char *target_abspath,
                             generate_status_desc(combined_repos_status(status)),
                             "props",
                             generate_status_desc(status->repos_prop_status),
-                            NULL);
+                            SVN_VA_NULL);
       if (status->repos_lock)
         svn_cl__print_xml_lock(&sb, status->repos_lock, pool);
 

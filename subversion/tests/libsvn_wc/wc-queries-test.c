@@ -601,7 +601,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
                              apr_pstrcat(iterpool,
                                          "EXPLAIN QUERY PLAN ",
                                          wc_queries[i],
-                                         NULL),
+                                         SVN_VA_NULL),
                              -1, &stmt, &tail);
 
       if (r != SQLITE_OK)
@@ -787,7 +787,7 @@ test_query_duplicates(apr_pool_t *scratch_pool)
                              apr_pstrcat(iterpool,
                              "EXPLAIN ",
                              wc_queries[i],
-                             NULL),
+                             SVN_VA_NULL),
                              -1, &stmt, &tail);
 
       if (r != SQLITE_OK)

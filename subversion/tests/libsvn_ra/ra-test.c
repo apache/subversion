@@ -126,7 +126,7 @@ open_tunnel(apr_file_t **request, apr_file_t **response,
 
   SVN_ERR(svn_dirent_get_absolute(&svnserve, "../../svnserve/svnserve", pool));
 #ifdef WIN32
-  svnserve = apr_pstrcat(pool, svnserve, ".exe", NULL);
+  svnserve = apr_pstrcat(pool, svnserve, ".exe", SVN_VA_NULL);
 #endif
   SVN_ERR(svn_io_check_path(svnserve, &kind, pool));
   if (kind != svn_node_file)
@@ -288,7 +288,8 @@ tunel_callback_test(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_test__create_repos(&repos, tunnel_repos_name, opts, pool));
 
-  url = apr_pstrcat(pool, "svn+test://localhost/", tunnel_repos_name, NULL);
+  url = apr_pstrcat(pool, "svn+test://localhost/", tunnel_repos_name,
+                    SVN_VA_NULL);
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
