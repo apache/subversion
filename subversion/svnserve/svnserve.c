@@ -919,7 +919,7 @@ int main(int argc, const char *argv[])
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                 cache_fulltexts ? "1" :"0");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                cache_revprops ? "1" :"0");
+                cache_revprops ? "2" :"0");
 
   SVN_INT_ERR(svn_repos__config_pool_create(&params.config_pool,
                                             is_multi_threaded,
