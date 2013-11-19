@@ -320,7 +320,7 @@ extern const apr_getopt_option_t svn_cl__options[];
  *
  * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
  * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
- * forget to terminate the argument list with SVN_NO_ERROR.
+ * forget to terminate the argument list with 0 (or APR_SUCCESS).
  */
 svn_error_t *
 svn_cl__try(svn_error_t *err,
