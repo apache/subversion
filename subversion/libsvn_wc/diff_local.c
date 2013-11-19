@@ -126,12 +126,12 @@ ensure_state(struct diff_baton *eb,
             svn_dirent_dirname("C:/",...) -> "C:/" (Windows) */
       if (*relpath)
         SVN_ERR(ensure_state(eb,
-                             svn_dirent_dirname(local_abspath,scratch_pool),
+                             svn_dirent_dirname(local_abspath, scratch_pool),
                              FALSE,
                              scratch_pool));
     }
   else if (svn_dirent_is_child(eb->cur->local_abspath, local_abspath, NULL))
-    SVN_ERR(ensure_state(eb, svn_dirent_dirname(local_abspath,scratch_pool),
+    SVN_ERR(ensure_state(eb, svn_dirent_dirname(local_abspath, scratch_pool),
                          FALSE,
                          scratch_pool));
   else
