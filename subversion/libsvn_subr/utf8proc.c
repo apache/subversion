@@ -424,7 +424,7 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
               len = utf8proc_utf8class[(uint8_t)*p];
 
               /* Check if the multi-byte sequence is valid UTF-8. */
-              if (len > 1 && len <= length - done)
+              if (len > 1 && len <= (apr_ssize_t)(length - done))
                 last = svn_utf__last_valid(p, len);
               else
                 last = NULL;
