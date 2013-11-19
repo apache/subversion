@@ -413,17 +413,17 @@ svn_fs_x__read_changes_container(svn_fs_x__changes_t **changes_p,
     {
       binary_change_t change;
 
-      change.flags = svn_packed__get_uint(changes_stream);
-      change.path = svn_packed__get_uint(changes_stream);
+      change.flags = (int)svn_packed__get_uint(changes_stream);
+      change.path = (apr_size_t)svn_packed__get_uint(changes_stream);
 
-      change.copyfrom_rev = svn_packed__get_uint(changes_stream);
-      change.copyfrom_path = svn_packed__get_uint(changes_stream);
+      change.copyfrom_rev = (svn_revnum_t)svn_packed__get_uint(changes_stream);
+      change.copyfrom_path = (apr_size_t)svn_packed__get_uint(changes_stream);
 
-      change.node_id.revision = svn_packed__get_uint(changes_stream);
+      change.node_id.revision = (svn_revnum_t)svn_packed__get_uint(changes_stream);
       change.node_id.number = svn_packed__get_uint(changes_stream);
-      change.copy_id.revision = svn_packed__get_uint(changes_stream);
+      change.copy_id.revision = (svn_revnum_t)svn_packed__get_uint(changes_stream);
       change.copy_id.number = svn_packed__get_uint(changes_stream);
-      change.rev_id.revision = svn_packed__get_uint(changes_stream);
+      change.rev_id.revision = (svn_revnum_t)svn_packed__get_uint(changes_stream);
       change.rev_id.number = svn_packed__get_uint(changes_stream);
 
       APR_ARRAY_PUSH(changes->changes, binary_change_t) = change;
