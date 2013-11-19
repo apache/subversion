@@ -244,7 +244,7 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 "Rsp=%016I64x Rbp=%016I64x Rsi=%016I64x Rdi=%016I64x\n",
                 context->Rsp, context->Rbp, context->Rsi, context->Rdi);
   fprintf(log_file,
-                "R8= %016I64x R9= %016I64x R10= %016I64x R11=%016I64x\n",
+                "R8= %016I64x R9= %016I64x R10=%016I64x R11=%016I64x\n",
                 context->R8, context->R9, context->R10, context->R11);
   fprintf(log_file,
                 "R12=%016I64x R13=%016I64x R14=%016I64x R15=%016I64x\n",
