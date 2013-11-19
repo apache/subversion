@@ -50,7 +50,7 @@ extern "C" {
  * @since New in 1.6.
  */
 #ifndef SVN_DEPRECATED
-# if !defined(SWIG)
+# if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
 #  if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
 #   define SVN_DEPRECATED __attribute__((deprecated))
 #  elif defined(_MSC_VER) && _MSC_VER >= 1300
@@ -69,7 +69,7 @@ extern "C" {
  * @since New in 1.9.
  */
 #ifndef SVN_EXPERIMENTAL
-# if !defined(SWIG)
+# if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
 #  if defined(__has_attribute)
 #    if __has_attribute(__warning__)
 #      define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
