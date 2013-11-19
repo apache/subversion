@@ -132,15 +132,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1541635
-   Allow using 'svn diff F:/' for those poor Windows users that have a working
-   copy in the root of the drive.
-   Justification:
-     Endless recursion is bad, especially in case some users might get into
-     this in a pretty normal code path.
-   Votes:
-     +1: rhuijben, philip
-
  * r1542610
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
@@ -208,3 +199,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1541635
+   Allow using 'svn diff F:/' for those poor Windows users that have a working
+   copy in the root of the drive.
+   Justification:
+     Endless recursion is bad, especially in case some users might get into
+     this in a pretty normal code path.
+   Votes:
+     +1: rhuijben, philip
