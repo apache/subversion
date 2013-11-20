@@ -2970,20 +2970,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                          "Subversion"));
         }
 
-      /* Ensure that stdout is flushed, so the user will see any write errors.
-         This makes sure that output is not silently lost. */
-      err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
-
       return err;
     }
-  else
-    {
-      /* Ensure that stdout is flushed, so the user will see any write errors.
-         This makes sure that output is not silently lost. */
-      SVN_ERR(svn_cmdline_fflush(stdout));
 
-      return SVN_NO_ERROR;
-    }
+  return SVN_NO_ERROR;
 }
 
 int
@@ -3003,6 +2993,11 @@ main(int argc, const char *argv[])
   pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
   if (err)
     {
       exit_code = EXIT_FAILURE;
