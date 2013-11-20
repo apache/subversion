@@ -302,7 +302,8 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
         svn_string_t* const description_contents =
           Java::ByteArray::Contents(description).get_string(pool);
 
-        SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+        SVN_JAVAHL_CHECK(env,
+                         svn_wc_parse_externals_description3(
                              &externals,
                              Java::String::Contents(parent_dir).c_str(),
                              description_contents->data,
@@ -355,7 +356,8 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
 
       // Validate the result. Even though we generated the string
       // ourselves, we did not validate the input paths and URLs.
-      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+      SVN_JAVAHL_CHECK(env,
+                       svn_wc_parse_externals_description3(
                            NULL,
                            Java::String::Contents(parent_dir).c_str(),
                            description.c_str(),
@@ -385,7 +387,8 @@ Java_org_apache_subversion_javahl_util_PropLib_resolveExternalsUrl(
       SVN::Pool pool;
 
       const char* resolved_url;
-      SVN_JAVAHL_CHECK(svn_wc__resolve_relative_external_url(
+      SVN_JAVAHL_CHECK(env,
+                       svn_wc__resolve_relative_external_url(
                            &resolved_url,
                            item.get_external_item(pool),
                            Java::String::Contents(repos_root_url).c_str(),

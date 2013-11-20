@@ -24,9 +24,21 @@
 #ifndef SVN_JAVAHL_JNIWRAPPER_STACK_HPP
 #define SVN_JAVAHL_JNIWRAPPER_STACK_HPP
 
+#ifdef SVN_JAVAHL_DEBUG
+#  ifndef SVN_JAVAHL_ASSERT_EXCEPTION_THROWN
+#    include <cassert>
+#    define SVN_JAVAHL_ASSERT_EXCEPTION_THROWN(E) \
+       assert((E).ExceptionCheck())
+#  endif // SVN_JAVAHL_ASSERT_EXCEPTION_THROWN
+#else
+#  define SVN_JAVAHL_ASSERT_EXCEPTION_THROWN(E)
+# endif // SVN_JAVAHL_DEBUG
+
 #include "../JNIStackElement.h"
 #include "jni_env.hpp"
 #include "jni_exception.hpp"
+
+#include "svn_error.h"
 
 /**
  * Boilerplate for the native method implementation entry point.
@@ -36,7 +48,7 @@
  * try/catch block of the function body.
  *
  * @param C The name of the Java class that declares this method.
- * @param M The (Java) name of the method
+ * @param M The (Java) name of the method.
  *
  * This macro expects two additional parameters to be available
  * (either as function arguments or local variables):
@@ -47,10 +59,22 @@
 #define SVN_JAVAHL_JNI_TRY(C, M)                                \
   ::JNIStackElement st_ac_ke_le_me_nt_(jenv, #C, #M, jthis);    \
   try
+
 /**
  * Boilerplate for the native method implementation entry point.
  *
- * Like SVN_JAVAHL_JNI_TRY, but for static methods where the @c jthis
+ * Initializes local variable named @a V as a pointer to an instance
+ * of the native-bound class @a C.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_JAVAHL_GET_BOUND_OBJECT(C, V)               \
+  C* const V = C::get_self(::Java::Env(jenv), jthis)
+
+/**
+ * Boilerplate for the native method implementation entry point.
+ *
+ * Like #SVN_JAVAHL_JNI_TRY, but for static methods where the @c jthis
  * argument is not available.
  *
  * This macro expects two additional parameters to be available
@@ -63,6 +87,7 @@
   ::JNIStackElement st_ac_ke_le_me_nt_(jenv, #C, #M, jclazz);   \
   try
 
+
 /**
  * Boilerplate for the native method implementation exit point.
  *
@@ -70,35 +95,97 @@
  * macro to close the try/catch block of the function body and handle
  * any exceptions thrown by the method implementation.
  *
+ * This boilerplate variant converts C++ exceptions to the Java
+ * exception type @a X, but retains exceptions that are already in
+ * progress.
+ *
  * @since New in 1.9.
  */
-#define SVN_JAVAHL_JNI_CATCH                                            \
+#define SVN_JAVAHL_JNI_CATCH_TO_EXCEPTION(X)                            \
   catch (const ::JavaHL::JavaException&)                                \
-    {}                                                                  \
+    {                                                                   \
+      SVN_JAVAHL_ASSERT_EXCEPTION_THROWN(::Java::Env(jenv));            \
+    }                                                                   \
   catch (const ::std::exception& ex)                                    \
     {                                                                   \
-      ::Java::RuntimeException(::Java::Env(jenv))                       \
-        .throw_java_exception(ex.what());                               \
+      X(::Java::Env(jenv)).throw_java_exception(ex.what());             \
     }                                                                   \
   catch (...)                                                           \
     {                                                                   \
-      ::Java::RuntimeException(::Java::Env(jenv))                       \
+      X(::Java::Env(jenv))                                              \
         .throw_java_exception(_("Caught unknown C++ exception"));       \
     }
 
 /**
- * Invocation wrapper for functions that return an @c svn_error_t *.
+ * Boilerplate for the native method implementation exit point.
+ *
+ * Invokes #SVN_JAVAHL_JNI_CATCH_TO_EXCEPTION to throw a
+ * @c RuntimeException.
  *
  * @since New in 1.9.
  */
-#define SVN_JAVAHL_CHECK(e)                             \
-  do {                                                  \
-    svn_error_t* javahl__err__temp = (e);               \
-    if (javahl__err__temp)                              \
-      {                                                 \
-        JNIUtil::handleSVNError(javahl__err__temp);     \
-        throw JavaHL::JavaException();                  \
-    }                                                   \
+#define SVN_JAVAHL_JNI_CATCH                                            \
+  SVN_JAVAHL_JNI_CATCH_TO_EXCEPTION(::Java::RuntimeException)
+
+/**
+ * Invocation wrapper for functions that return an @c svn_error_t *.
+ *
+ * @param E A wrapped environment (@c Java::Env) instance.
+ * @param S The statement to execute in the checked context.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_JAVAHL_CHECK(E, S)                                          \
+  do {                                                                  \
+    svn_error_t* const ja_va_hl_err_te_mp_ = (S);                       \
+    if (ja_va_hl_err_te_mp_)                                            \
+      ::Java::handle_svn_error((E), ja_va_hl_err_te_mp_);               \
   } while(0)
+
+/**
+ * Invocation wrapper for calling Java methods that may throw an
+ * exception from within a native callback that is expected to return
+ * an @c svn_error_t*.
+ *
+ * @param E A wrapped environment (@c Java::Env) instance.
+ * @param C A Subversion or APR error code.
+ * @param S The statement to execute in the checked context.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_JAVAHL_CATCH(E, C, S)                                       \
+  try                                                                   \
+    {                                                                   \
+      S;                                                                \
+    }                                                                   \
+  catch (const ::JavaHL::JavaException&)                                \
+    {                                                                   \
+      SVN_JAVAHL_ASSERT_EXCEPTION_THROWN((E));                          \
+      return svn_error_create((C), NULL, _("Java exception"));          \
+    }                                                                   \
+  catch (const ::std::exception& ex)                                    \
+    {                                                                   \
+      const char* const msg = ex.what();                                \
+      ::Java::RuntimeException((E)).throw_java_exception(msg);          \
+      return svn_error_create((C), NULL, msg);                          \
+    }                                                                   \
+  catch (...)                                                           \
+    {                                                                   \
+      const char* const msg = _("Caught unknown C++ exception");        \
+      ::Java::RuntimeException((E)).throw_java_exception(msg);          \
+      return svn_error_create((C), NULL, msg);                          \
+    }
+
+namespace Java {
+
+/**
+ * Handle an error @a err returned from a native function and throws
+ * an appropriate Java exception.
+ *
+ * @since New in 1.9.
+ */
+void handle_svn_error(Env env, svn_error_t* err);
+
+} // namespace Java
 
 #endif // SVN_JAVAHL_JNIWRAPPER_STACK_HPP

@@ -21,6 +21,9 @@
  * @endcopyright
  */
 
+#include <stdexcept>
+
+#define SVN_JAVAHL_JNIWRAPPER_LOG(expr)
 #include "jni_env.hpp"
 #include "jni_globalref.hpp"
 #include "jni_exception.hpp"
@@ -35,7 +38,40 @@ const ClassCache* ClassCache::m_instance = NULL;
 
 void ClassCache::create()
 {
-  new ClassCache(Env());
+  const char* exception_message = NULL;
+
+  try
+    {
+      new ClassCache(Env());
+    }
+  catch (const std::exception& ex)
+    {
+      exception_message = ex.what();
+    }
+  catch (...)
+    {
+      exception_message = "Caught unknown C++ exception";
+    }
+
+  // Use the raw environment without exception checks here
+  ::JNIEnv* const jenv = Env().get();
+  if (exception_message || jenv->ExceptionCheck())
+    {
+      const jclass rtx = jenv->FindClass("java/lang/RuntimeException");
+      const jmethodID ctor = jenv->GetMethodID(rtx, "<init>",
+                                               "(Ljava/lang/String;"
+                                               "Ljava/lang/Throwable;)V");
+      jobject cause = jenv->ExceptionOccurred();
+      if (!cause && exception_message)
+        {
+          const jstring msg = jenv->NewStringUTF(exception_message);
+          cause = jenv->NewObject(rtx, ctor, msg, jthrowable(0));
+        }
+      const jstring reason =
+        jenv->NewStringUTF("JavaHL native library initialization failed");
+      const jobject exception = jenv->NewObject(rtx, ctor, reason, cause);
+      jenv->Throw(jthrowable(exception));
+    }
 }
 
 void ClassCache::destroy()

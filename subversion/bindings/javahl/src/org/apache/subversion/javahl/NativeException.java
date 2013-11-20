@@ -58,9 +58,10 @@ class NativeException extends SubversionException
      * @param aprError Any associated APR error code for a wrapped
      * <code>svn_error_t</code>.
      */
-    NativeException(String message, String source, int aprError)
+    NativeException(String message, String source, Throwable cause,
+                    int aprError)
     {
-        super(message);
+        super(message, cause);
         this.source = source;
         this.aprError = aprError;
     }

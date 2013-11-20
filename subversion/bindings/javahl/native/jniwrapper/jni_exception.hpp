@@ -168,6 +168,7 @@ private:
   static const char* const m_class_name;
 };
 
+
 /**
  * Generator class for exceptions of type @c java.lang.NullPointerException.
  *
@@ -199,6 +200,26 @@ public:
    * Constructs an exception generator object.
    */
   explicit OutOfMemoryError(Env env)
+    : Exception(env, m_class_name)
+    {}
+
+private:
+  static const char* const m_class_name;
+};
+
+/**
+ * Generator class for exceptions of type
+ * @c java.lang.IndexOutOfBoundsException.
+ *
+ * @since New in 1.9.
+ */
+class IndexOutOfBoundsException : public Exception
+{
+public:
+  /**
+   * Constructs an exception generator object.
+   */
+  explicit IndexOutOfBoundsException(Env env)
     : Exception(env, m_class_name)
     {}
 
