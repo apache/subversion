@@ -872,24 +872,13 @@ subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-/* Report and clear the error ERR, and return EXIT_FAILURE. */
-#define EXIT_ERROR(err)                                                 \
-  svn_cmdline_handle_exit_error(err, NULL, "svnauth: ")
-
-/* A redefinition of the public SVN_INT_ERR macro, that suppresses the
- * error message if it is SVN_ERR_IO_PIPE_WRITE_ERROR, amd with the
- * program name 'svnauth' instead of 'svn'. */
-#undef SVN_INT_ERR
-#define SVN_INT_ERR(expr)                                        \
-  do {                                                           \
-    svn_error_t *svn_err__temp = (expr);                         \
-    if (svn_err__temp)                                           \
-      return EXIT_ERROR(svn_err__temp);                          \
-  } while (0)
-
-
-static int
-sub_main(int argc, const char *argv[], apr_pool_t *pool)
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err;
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
@@ -898,12 +887,13 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   if (argc <= 1)
     {
-      SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-      return EXIT_FAILURE;
+      SVN_ERR(subcommand_help(NULL, NULL, pool));
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   /* Parse options. */
-  SVN_INT_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
   os->interleave = 1;
 
   while (1)
@@ -919,8 +909,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       else if (apr_err)
         {
-          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-          return EXIT_FAILURE;
+          SVN_ERR(subcommand_help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       switch (opt_id) {
@@ -929,7 +920,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.help = TRUE;
         break;
       case opt_config_dir:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
         break;
       case opt_show_passwords:
@@ -940,8 +931,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       default:
         {
-          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-          return EXIT_FAILURE;
+          SVN_ERR(subcommand_help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
       }
     }
@@ -970,8 +962,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             {
               svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                         _("subcommand argument required\n")));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -981,19 +974,20 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           if (subcommand == NULL)
             {
               const char *first_arg_utf8;
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                                  first_arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
+                                              first_arg, pool));
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     _("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
 
-  SVN_INT_ERR(svn_config_ensure(opt_state.config_dir, pool));
+  SVN_ERR(svn_config_ensure(opt_state.config_dir, pool));
 
   /* Run the subcommand. */
   err = (*subcommand->cmd_func)(os, &opt_state, pool);
@@ -1007,28 +1001,25 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           err = svn_error_quick_wrap(err,
                                      _("Try 'svnauth help' for more info"));
         }
-      return EXIT_ERROR(err);
+      return err;
     }
   else
     {
       /* Ensure that everything is written to stdout, so the user will
          see any print errors. */
-      err = svn_cmdline_fflush(stdout);
-      if (err)
-        {
-          return EXIT_ERROR(err);
-        }
-      return EXIT_SUCCESS;
+      SVN_ERR(svn_cmdline_fflush(stdout));
+      return SVN_NO_ERROR;
     }
 
-  return EXIT_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 int
 main(int argc, const char *argv[])
 {
   apr_pool_t *pool;
-  int exit_code;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svnauth", stderr) != EXIT_SUCCESS)
@@ -1039,7 +1030,12 @@ main(int argc, const char *argv[])
    */
   pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
-  exit_code = sub_main(argc, argv, pool);
+  err = sub_main(&exit_code, argc, argv, pool);
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnauth: ");
+    }
 
   svn_pool_destroy(pool);
   return exit_code;
