@@ -2990,7 +2990,7 @@ int
 main(int argc, const char *argv[])
 {
   apr_pool_t *pool;
-  int exit_code;
+  int exit_code = EXIT_SUCCESS;
   svn_error_t *err;
 
   /* Initialize the app. */
