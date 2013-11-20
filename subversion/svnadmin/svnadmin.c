@@ -2511,13 +2511,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       return err;
     }
-  else
-    {
-      /* Ensure that everything is written to stdout, so the user will
-         see any print errors. */
-      SVN_ERR(svn_cmdline_fflush(stdout));
-      return EXIT_SUCCESS;
-    }
+
+  return SVN_NO_ERROR;
 }
 
 int
@@ -2537,6 +2532,11 @@ main(int argc, const char *argv[])
   pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
   err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
   if (err)
     {
       exit_code = EXIT_FAILURE;

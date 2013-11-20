@@ -1333,6 +1333,11 @@ main(int argc, const char *argv[])
   pool = svn_pool_create(NULL);
 
   err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
   if (err)
     {
       exit_code = EXIT_FAILURE;
