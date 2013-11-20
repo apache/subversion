@@ -592,14 +592,19 @@ check_lib_versions(void)
 }
 
 
-int main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
-  apr_pool_t *pool;
   svn_error_t *err;
   apr_getopt_t *os;
   int opt;
@@ -640,30 +645,17 @@ int main(int argc, const char *argv[])
   svn_node_kind_t kind;
   svn_root_pools__t *socket_pools;
 
-  /* Initialize the app. */
-  if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool. */
-  pool = svn_pool_create(NULL);
-
 #ifdef SVN_HAVE_SASL
-  SVN_INT_ERR(cyrus_init(pool));
+  SVN_ERR(cyrus_init(pool));
 #endif
 
   /* Check library versions */
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  SVN_ERR(check_lib_versions());
 
   /* Initialize the FS library. */
-  err = svn_fs_initialize(pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  SVN_ERR(svn_fs_initialize(pool));
 
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   params.root = "/";
   params.tunnel = FALSE;
@@ -741,10 +733,8 @@ int main(int argc, const char *argv[])
 
             err = svn_cstring_strtoui64(&val, arg, 0, APR_UINT16_MAX, 10);
             if (err)
-              return svn_cmdline_handle_exit_error(
-                       svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                                         _("Invalid port '%s'"), arg),
-                       pool, "svnserve: ");
+              return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                                       _("Invalid port '%s'"), arg);
             port = (apr_uint16_t)val;
           }
           break;
@@ -774,11 +764,9 @@ int main(int argc, const char *argv[])
           break;
 
         case 'r':
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&params.root, arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&params.root, arg, pool));
 
-          err = svn_io_check_resolved_path(params.root, &kind, pool);
-          if (err)
-            return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+          SVN_ERR(svn_io_check_resolved_path(params.root, &kind, pool));
           if (kind != svn_node_dir)
             {
               svn_error_clear
@@ -786,11 +774,12 @@ int main(int argc, const char *argv[])
                    (stderr, pool,
                     _("svnserve: Root path '%s' does not exist "
                       "or is not a directory.\n"), params.root));
-              return EXIT_FAILURE;
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
 
           params.root = svn_dirent_internal_style(params.root, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&params.root, params.root, pool));
+          SVN_ERR(svn_dirent_get_absolute(&params.root, params.root, pool));
           break;
 
         case 'R':
@@ -854,17 +843,16 @@ int main(int argc, const char *argv[])
 #endif
 
         case SVNSERVE_OPT_CONFIG_FILE:
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
           config_filename = svn_dirent_internal_style(config_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
-                                              pool));
+          SVN_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
+                                          pool));
           break;
 
         case SVNSERVE_OPT_PID_FILE:
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
           pid_filename = svn_dirent_internal_style(pid_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename,
-                                              pool));
+          SVN_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename, pool));
           break;
 
          case SVNSERVE_OPT_VIRTUAL_HOST:
@@ -872,10 +860,9 @@ int main(int argc, const char *argv[])
            break;
 
          case SVNSERVE_OPT_LOG_FILE:
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
           log_filename = svn_dirent_internal_style(log_filename, pool);
-          SVN_INT_ERR(svn_dirent_get_absolute(&log_filename, log_filename,
-                                              pool));
+          SVN_ERR(svn_dirent_get_absolute(&log_filename, log_filename, pool));
           break;
 
         }
@@ -883,7 +870,7 @@ int main(int argc, const char *argv[])
 
   if (is_version)
     {
-      SVN_INT_ERR(version(quiet, pool));
+      SVN_ERR(version(quiet, pool));
       exit(0);
     }
 
@@ -921,35 +908,35 @@ int main(int argc, const char *argv[])
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
 
-  SVN_INT_ERR(svn_repos__config_pool_create(&params.config_pool,
-                                            is_multi_threaded,
-                                            pool));
-  SVN_INT_ERR(svn_repos__authz_pool_create(&params.authz_pool,
-                                           params.config_pool,
-                                           is_multi_threaded,
-                                           pool));
-  SVN_INT_ERR(svn_repos__repos_pool_create(&params.repos_pool,
-                                           fs_config,
-                                           is_multi_threaded,
-                                           pool));
-  
+  SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
+                                        is_multi_threaded,
+                                        pool));
+  SVN_ERR(svn_repos__authz_pool_create(&params.authz_pool,
+                                       params.config_pool,
+                                       is_multi_threaded,
+                                       pool));
+  SVN_ERR(svn_repos__repos_pool_create(&params.repos_pool,
+                                       fs_config,
+                                       is_multi_threaded,
+                                       pool));
+
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
   if (config_filename)
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_INT_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
-                                             params.config_pool,
-                                             config_filename, 
-                                             TRUE, /* must_exist */
-                                             FALSE, /* names_case_sensitive */
-                                             NULL,
-                                             pool));
+      SVN_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
+                                         params.config_pool,
+                                         config_filename, 
+                                         TRUE, /* must_exist */
+                                         FALSE, /* names_case_sensitive */
+                                         NULL,
+                                         pool));
     }
 
   if (log_filename)
-    SVN_INT_ERR(logger__create(&params.logger, log_filename, pool));
+    SVN_ERR(logger__create(&params.logger, log_filename, pool));
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
@@ -971,15 +958,13 @@ int main(int argc, const char *argv[])
       status = apr_file_open_stdin(&in_file, pool);
       if (status)
         {
-          err = svn_error_wrap_apr(status, _("Can't open stdin"));
-          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+          return svn_error_wrap_apr(status, _("Can't open stdin"));
         }
 
       status = apr_file_open_stdout(&out_file, pool);
       if (status)
         {
-          err = svn_error_wrap_apr(status, _("Can't open stdout"));
-          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+          return svn_error_wrap_apr(status, _("Can't open stdout"));
         }
 
       /* Use a subpool for the connection to ensure that if SASL is used
@@ -1084,8 +1069,7 @@ int main(int argc, const char *argv[])
                                  sockaddr_info_flags, pool);
   if (status)
     {
-      err = svn_error_wrap_apr(status, _("Can't get address info"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+      return svn_error_wrap_apr(status, _("Can't get address info"));
     }
 
 
@@ -1098,8 +1082,7 @@ int main(int argc, const char *argv[])
 #endif
   if (status)
     {
-      err = svn_error_wrap_apr(status, _("Can't create server socket"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+      return svn_error_wrap_apr(status, _("Can't create server socket"));
     }
 
   /* Prevents "socket in use" errors when server is killed and quickly
@@ -1109,8 +1092,7 @@ int main(int argc, const char *argv[])
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      err = svn_error_wrap_apr(status, _("Can't bind server socket"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+      return svn_error_wrap_apr(status, _("Can't bind server socket"));
     }
 
   apr_socket_listen(sock, ACCEPT_BACKLOG);
@@ -1135,7 +1117,7 @@ int main(int argc, const char *argv[])
 #endif
 
   if (pid_filename)
-    SVN_INT_ERR(write_pid_file(pid_filename, pool));
+    SVN_ERR(write_pid_file(pid_filename, pool));
 
 #ifdef WIN32
   status = apr_os_sock_get(&winservice_svnserve_accept_socket, sock);
@@ -1177,14 +1159,10 @@ int main(int argc, const char *argv[])
 
   /* we use (and recycle) separate pools for sockets (many small ones)
      and connections (fewer but larger ones) */
-  err = svn_root_pools__create(&socket_pools);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  SVN_ERR(svn_root_pools__create(&socket_pools));
 
 #if APR_HAS_THREADS
-  err = svn_root_pools__create(&connection_pools);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  SVN_ERR(svn_root_pools__create(&connection_pools));
 #endif
 
 #if HAVE_THREADPOOLS
@@ -1197,8 +1175,7 @@ int main(int argc, const char *argv[])
                                       pool);
       if (status)
         {
-          err = svn_error_wrap_apr (status, _("Can't create thread pool"));
-          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+          return svn_error_wrap_apr(status, _("Can't create thread pool"));
         }
 
       /* let idle threads linger for a while in case more requests are
@@ -1242,9 +1219,8 @@ int main(int argc, const char *argv[])
         }
       if (status)
         {
-          err = svn_error_wrap_apr
-            (status, _("Can't accept client connection"));
-          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+          return svn_error_wrap_apr(status,
+                                    _("Can't accept client connection"));
         }
 
       if (run_mode == run_mode_listen_once)
@@ -1340,4 +1316,29 @@ int main(int argc, const char *argv[])
     }
 
   /* NOTREACHED */
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool. */
+  pool = svn_pool_create(NULL);
+
+  err = sub_main(&exit_code, argc, argv, pool);
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnserve: ");
+    }
+
+  svn_pool_destroy(pool);
+  return exit_code;
 }

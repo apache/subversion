@@ -1875,8 +1875,13 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /*** Main ***/
 
-int
-main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   apr_array_header_t *received_opts;
@@ -1884,7 +1889,6 @@ main(int argc, const char *argv[])
   svn_config_t *config;
   apr_status_t apr_err;
   apr_getopt_t *os;
-  apr_pool_t *pool;
   svn_error_t *err;
   int opt_id, i;
   const char *username = NULL, *source_username = NULL, *sync_username = NULL;
@@ -1893,23 +1897,10 @@ main(int argc, const char *argv[])
   const char *source_prop_encoding = NULL;
   svn_boolean_t force_interactive = FALSE;
 
-  if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
-    {
-      return EXIT_FAILURE;
-    }
+  /* Check library versions */
+  SVN_ERR(check_lib_versions());
 
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, NULL, "svnsync: ");
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
-  err = svn_ra_initialize(pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+  SVN_ERR(svn_ra_initialize(pool));
 
   /* Initialize the option baton. */
   memset(&opt_baton, 0, sizeof(opt_baton));
@@ -1920,14 +1911,12 @@ main(int argc, const char *argv[])
 
   if (argc <= 1)
     {
-      SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      SVN_ERR(help_cmd(NULL, NULL, pool));
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   os->interleave = 1;
 
@@ -1941,9 +1930,9 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          SVN_ERR(help_cmd(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       APR_ARRAY_PUSH(received_opts, int) = opt_id;
@@ -2005,12 +1994,9 @@ main(int argc, const char *argv[])
                     apr_array_make(pool, 1,
                                    sizeof(svn_cmdline__config_argument_t*));
 
-            err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
-            if (!err)
-              err = svn_cmdline__parse_config_option(config_options,
-                                                     opt_arg, pool);
-            if (err)
-              return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+            SVN_ERR(svn_cmdline__parse_config_option(config_options,
+                                                     opt_arg, pool));
             break;
 
           case svnsync_opt_source_prop_encoding:
@@ -2044,13 +2030,11 @@ main(int argc, const char *argv[])
                                        opt_arg, pool) != 0)
               {
                 const char *utf8_opt_arg;
-                err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
-                if (! err)
-                  err = svn_error_createf(
+                SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+                return svn_error_createf(
                             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Syntax error in revision argument '%s'"),
                             utf8_opt_arg);
-                return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
               }
 
             /* We only allow numbers and 'HEAD'. */
@@ -2060,10 +2044,9 @@ main(int argc, const char *argv[])
                     (opt_baton.end_rev.kind != svn_opt_revision_head) &&
                     (opt_baton.end_rev.kind != svn_opt_revision_unspecified)))
               {
-                err = svn_error_createf(
+                return svn_error_createf(
                           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                           _("Invalid revision range '%s' provided"), opt_arg);
-                return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
               }
             break;
 
@@ -2074,14 +2057,14 @@ main(int argc, const char *argv[])
 
           default:
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(help_cmd(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
 
-      if(opt_err)
-        return svn_cmdline_handle_exit_error(opt_err, pool, "svnsync: ");
+      if (opt_err)
+        return opt_err;
     }
 
   if (opt_baton.help)
@@ -2091,10 +2074,9 @@ main(int argc, const char *argv[])
    * exclusive. */
   if (opt_baton.non_interactive && force_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--non-interactive and --force-interactive "
-                               "are mutually exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--non-interactive and --force-interactive "
+                                "are mutually exclusive"));
     }
   else
     opt_baton.non_interactive = !svn_cmdline__be_interactive(
@@ -2108,12 +2090,11 @@ main(int argc, const char *argv[])
       && (source_username || sync_username
           || source_password || sync_password))
     {
-      err = svn_error_create
+      return svn_error_create
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
          _("Cannot use --username or --password with any of "
            "--source-username, --source-password, --sync-username, "
            "or --sync-password.\n"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
     }
   if (username)
     {
@@ -2133,24 +2114,20 @@ main(int argc, const char *argv[])
   /* Disallow mixing of --steal-lock and --disable-locking. */
   if (opt_baton.steal_lock && opt_baton.disable_locking)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--disable-locking and --steal-lock are "
-                               "mutually exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--disable-locking and --steal-lock are "
+                                "mutually exclusive"));
     }
 
   /* --trust-server-cert can only be used with --non-interactive */
   if (opt_baton.trust_server_cert && !opt_baton.non_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--trust-server-cert requires "
-                               "--non-interactive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--trust-server-cert requires "
+                                "--non-interactive"));
     }
 
-  err = svn_config_ensure(opt_baton.config_dir, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "synsync: ");
+  SVN_ERR(svn_config_ensure(opt_baton.config_dir, pool));
 
   if (subcommand == NULL)
     {
@@ -2169,9 +2146,9 @@ main(int argc, const char *argv[])
             }
           else
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(help_cmd(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -2181,9 +2158,9 @@ main(int argc, const char *argv[])
                                                          first_arg);
           if (subcommand == NULL)
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(help_cmd(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -2204,23 +2181,20 @@ main(int argc, const char *argv[])
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
             {
-              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
+              SVN_ERR(help_cmd(NULL, NULL, pool));
             }
           else
             {
-              err = svn_error_createf
+              return svn_error_createf
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Subcommand '%s' doesn't accept option '%s'\n"
                    "Type 'svnsync help %s' for usage.\n"),
                  subcommand->name, optstr, subcommand->name);
-              return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
             }
         }
     }
 
-  err = svn_config_get_config(&opt_baton.config, opt_baton.config_dir, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+  SVN_ERR(svn_config_get_config(&opt_baton.config, opt_baton.config_dir, pool));
 
   /* Update the options in the config */
   if (config_options)
@@ -2296,10 +2270,35 @@ main(int argc, const char *argv[])
                                      _("Try 'svnsync help' for more info"));
         }
 
-      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+      return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnsync: ");
     }
 
   svn_pool_destroy(pool);
-
-  return EXIT_SUCCESS;
+  return exit_code;
 }

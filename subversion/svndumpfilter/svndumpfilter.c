@@ -1355,12 +1355,16 @@ subcommand_include(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /** Main. **/
 
-int
-main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   struct svndumpfilter_opt_state opt_state;
@@ -1369,33 +1373,19 @@ main(int argc, const char *argv[])
   apr_array_header_t *received_opts;
   int i;
 
-
-  /* Initialize the app. */
-  if (svn_cmdline_init("svndumpfilter", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
   /* Check library versions */
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
+  SVN_ERR(check_lib_versions());
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Initialize the FS library. */
-  err = svn_fs_initialize(pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
+  SVN_ERR(svn_fs_initialize(pool));
 
   if (argc <= 1)
     {
-      SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      SVN_ERR(subcommand_help(NULL, NULL, pool));
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   /* Initialize opt_state. */
@@ -1404,9 +1394,7 @@ main(int argc, const char *argv[])
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
 
   /* Parse options. */
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   os->interleave = 1;
   while (1)
@@ -1419,9 +1407,9 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          SVN_ERR(subcommand_help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       /* Stash the option code in an array before parsing it. */
@@ -1462,9 +1450,9 @@ main(int argc, const char *argv[])
           break;
         default:
           {
-            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-            svn_pool_destroy(pool);
-            return EXIT_FAILURE;
+            SVN_ERR(subcommand_help(NULL, NULL, pool));
+            *exit_code = EXIT_FAILURE;
+            return SVN_NO_ERROR;
           }
         }  /* close `switch' */
     }  /* close `while' */
@@ -1473,10 +1461,10 @@ main(int argc, const char *argv[])
      --drop-all-empty-revs. */
   if (opt_state.drop_empty_revs && opt_state.drop_all_empty_revs)
     {
-      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                             _("--drop-empty-revs cannot be used with "
-                               "--drop-all-empty-revs"));
-      return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
+      return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
+                              NULL,
+                              _("--drop-empty-revs cannot be used with "
+                                "--drop-all-empty-revs"));
     }
 
   /* If the user asked for help, then the rest of the arguments are
@@ -1508,9 +1496,9 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf
                               (stderr, pool,
                                _("Subcommand argument required\n")));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -1520,18 +1508,16 @@ main(int argc, const char *argv[])
           if (subcommand == NULL)
             {
               const char* first_arg_utf8;
-              if ((err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
-                                                 pool)))
-                return svn_cmdline_handle_exit_error(err, pool,
-                                                     "svndumpfilter: ");
+              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
+                                              pool));
 
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     _("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -1551,7 +1537,7 @@ main(int argc, const char *argv[])
 
           /* Ensure that each prefix is UTF8-encoded, in internal
              style, and absolute. */
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
           prefix = svn_relpath__internal_style(prefix, pool);
           if (prefix[0] != '/')
             prefix = apr_pstrcat(pool, "/", prefix, SVN_VA_NULL);
@@ -1569,12 +1555,12 @@ main(int argc, const char *argv[])
              the targets into an array, because otherwise we wouldn't
              know what delimiter to use for svn_cstring_split().  */
 
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_targets_file,
-                                              opt_state.targets_file, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_targets_file,
+                                          opt_state.targets_file, pool));
 
-          SVN_INT_ERR(svn_stringbuf_from_file2(&buffer, utf8_targets_file,
-                                               pool));
-          SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
+          SVN_ERR(svn_stringbuf_from_file2(&buffer, utf8_targets_file,
+                                           pool));
+          SVN_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
 
           targets = apr_array_append(pool,
                          svn_cstring_split(buffer_utf8->data, "\n\r",
@@ -1595,8 +1581,8 @@ main(int argc, const char *argv[])
           svn_error_clear(svn_cmdline_fprintf
                           (stderr, pool,
                            _("\nError: no prefixes supplied.\n")));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -1621,15 +1607,15 @@ main(int argc, const char *argv[])
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+            SVN_ERR(subcommand_help(NULL, NULL, pool));
           else
             svn_error_clear(svn_cmdline_fprintf
                             (stderr, pool,
                              _("Subcommand '%s' doesn't accept option '%s'\n"
                                "Type 'svndumpfilter help %s' for usage.\n"),
                              subcommand->name, optstr, subcommand->name));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -1646,14 +1632,39 @@ main(int argc, const char *argv[])
                                      _("Try 'svndumpfilter help' for more "
                                        "info"));
         }
-      return svn_cmdline_handle_exit_error(err, pool, "svndumpfilter: ");
+      return err;
     }
   else
     {
-      svn_pool_destroy(pool);
-
       /* Flush stdout, making sure the user will see any print errors. */
-      SVN_INT_ERR(svn_cmdline_fflush(stdout));
-      return EXIT_SUCCESS;
+      SVN_ERR(svn_cmdline_fflush(stdout));
+      return SVN_NO_ERROR;
     }
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svndumpfilter", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svndumpfilter: ");
+    }
+
+  svn_pool_destroy(pool);
+  return exit_code;
 }
