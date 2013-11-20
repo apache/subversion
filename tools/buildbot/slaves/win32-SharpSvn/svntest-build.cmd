@@ -30,7 +30,7 @@ IF ERRORLEVEL 1 EXIT /B 1
 
 POPD
 
-msbuild subversion_vcnet.sln /m /p:Configuration=Debug /p:Platform=win32 /t:__ALL_TESTS__
+msbuild subversion_vcnet.sln /m /v:m /p:Configuration=Debug /p:Platform=Win32 /t:__ALL_TESTS__
 IF ERRORLEVEL 1 EXIT /B 1
 
 EXIT /B 0
