@@ -1351,12 +1351,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
               && svn_prop_needs_translation(action->prop_name))
             {
               svn_string_t *translated_value;
-              SVN_ERR(svn_error_quick_wrap(
-                            svn_subst_translate_string2(
-                                                &translated_value, NULL,
-                                                NULL, action->prop_value, NULL,
-                                                FALSE, pool, pool),
-                            "Error normalizing property value"));
+              SVN_ERR_W(svn_subst_translate_string2(&translated_value, NULL,
+                                                    NULL, action->prop_value,
+                                                    NULL, FALSE, pool, pool),
+                        "Error normalizing property value");
               action->prop_value = translated_value;
             }
         }
