@@ -69,26 +69,20 @@ static void handle_error(svn_error_t *err, apr_pool_t *pool)
   exit(EXIT_FAILURE);
 }
 
-static apr_pool_t *
-init(const char *application)
+/* Version compatibility check */
+static svn_error_t *
+check_lib_versions(void)
 {
-  svn_error_t *err;
-  const svn_version_checklist_t checklist[] = {
-    {"svn_client", svn_client_version},
-    {"svn_subr", svn_subr_version},
-    {"svn_ra", svn_ra_version},
-    {NULL, NULL}
-  };
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_client", svn_client_version },
+      { "svn_subr",   svn_subr_version },
+      { "svn_ra",     svn_ra_version },
+      { NULL, NULL }
+    };
   SVN_VERSION_DEFINE(my_version);
 
-  if (svn_cmdline_init(application, stderr))
-    exit(EXIT_FAILURE);
-
-  err = svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
-  if (err)
-    handle_error(err, NULL);
-
-  return apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+  return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
 static svn_error_t *
@@ -1040,10 +1034,14 @@ sanitize_log_sources(apr_hash_t *revprops,
   return SVN_NO_ERROR;
 }
 
-int
-main(int argc, const char **argv)
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
-  apr_pool_t *pool = init("svnmucc");
   apr_array_header_t *actions = apr_array_make(pool, 1,
                                                sizeof(struct action *));
   const char *anchor = NULL;
@@ -1094,6 +1092,9 @@ main(int argc, const char **argv)
   apr_hash_t *revprops = apr_hash_make(pool);
   int i;
 
+  /* Check library versions */
+  SVN_ERR(check_lib_versions());
+
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
@@ -1113,18 +1114,13 @@ main(int argc, const char **argv)
       switch(opt)
         {
         case 'm':
-          err = svn_utf_cstring_to_utf8(&message, arg, pool);
-          if (err)
-            handle_error(err, pool);
+          SVN_ERR(svn_utf_cstring_to_utf8(&message, arg, pool));
           break;
         case 'F':
           {
             const char *arg_utf8;
-            err = svn_utf_cstring_to_utf8(&arg_utf8, arg, pool);
-            if (! err)
-              err = svn_stringbuf_from_file2(&filedata, arg, pool);
-            if (err)
-              handle_error(err, pool);
+            SVN_ERR(svn_utf_cstring_to_utf8(&arg_utf8, arg, pool));
+            SVN_ERR(svn_stringbuf_from_file2(&filedata, arg, pool));
           }
           break;
         case 'u':
@@ -1134,9 +1130,7 @@ main(int argc, const char **argv)
           password = apr_pstrdup(pool, arg);
           break;
         case 'U':
-          err = svn_utf_cstring_to_utf8(&root_url, arg, pool);
-          if (err)
-            handle_error(err, pool);
+          SVN_ERR(svn_utf_cstring_to_utf8(&root_url, arg, pool));
           if (! svn_path_is_url(root_url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                            "'%s' is not a URL\n", root_url),
@@ -1161,9 +1155,7 @@ main(int argc, const char **argv)
           }
           break;
         case with_revprop_opt:
-          err = svn_opt_parse_revprop(&revprops, arg, pool);
-          if (err != SVN_NO_ERROR)
-            handle_error(err, pool);
+          SVN_ERR(svn_opt_parse_revprop(&revprops, arg, pool));
           break;
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
@@ -1178,25 +1170,18 @@ main(int argc, const char **argv)
           trust_server_cert = TRUE;
           break;
         case config_dir_opt:
-          err = svn_utf_cstring_to_utf8(&config_dir, arg, pool);
-          if (err)
-            handle_error(err, pool);
+          SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
           break;
         case config_inline_opt:
-          err = svn_utf_cstring_to_utf8(&opt_arg, arg, pool);
-          if (err)
-            handle_error(err, pool);
-
-          err = svn_cmdline__parse_config_option(config_options, opt_arg,
-                                                 pool);
-          if (err)
-            handle_error(err, pool);
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
+          SVN_ERR(svn_cmdline__parse_config_option(config_options, opt_arg,
+                                                   pool));
           break;
         case no_auth_cache_opt:
           no_auth_cache = TRUE;
           break;
         case version_opt:
-          SVN_INT_ERR(display_version(opts, pool));
+          SVN_ERR(display_version(opts, pool));
           exit(EXIT_SUCCESS);
           break;
         case 'h':
@@ -1208,10 +1193,9 @@ main(int argc, const char **argv)
 
   if (non_interactive && force_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--non-interactive and --force-interactive "
-                               "are mutually exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnmucc: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--non-interactive and --force-interactive "
+                                "are mutually exclusive"));
     }
   else
     non_interactive = !svn_cmdline__be_interactive(non_interactive,
@@ -1219,16 +1203,13 @@ main(int argc, const char **argv)
 
   if (trust_server_cert && !non_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--trust-server-cert requires "
-                               "--non-interactive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnmucc: ");
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--trust-server-cert requires "
+                                "--non-interactive"));
     }
 
   /* Make sure we have a log message to use. */
-  err = sanitize_log_sources(revprops, message, filedata);
-  if (err)
-    handle_error(err, pool);
+  SVN_ERR(sanitize_log_sources(revprops, message, filedata));
 
   /* Copy the rest of our command-line arguments to an array,
      UTF-8-ing them along the way. */
@@ -1236,10 +1217,9 @@ main(int argc, const char **argv)
   while (opts->ind < opts->argc)
     {
       const char *arg = opts->argv[opts->ind++];
-      if ((err = svn_utf_cstring_to_utf8(&(APR_ARRAY_PUSH(action_args,
-                                                          const char *)),
-                                         arg, pool)))
-        handle_error(err, pool);
+      SVN_ERR(svn_utf_cstring_to_utf8(&APR_ARRAY_PUSH(action_args,
+                                                      const char *),
+                                      arg, pool));
     }
 
   /* If there are extra arguments in a supplementary file, tack those
@@ -1249,14 +1229,10 @@ main(int argc, const char **argv)
       const char *extra_args_file_utf8;
       svn_stringbuf_t *contents, *contents_utf8;
 
-      err = svn_utf_cstring_to_utf8(&extra_args_file_utf8,
-                                    extra_args_file, pool);
-      if (! err)
-        err = svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool);
-      if (! err)
-        err = svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool);
-      if (err)
-        handle_error(err, pool);
+      SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file_utf8,
+                                      extra_args_file, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool));
+      SVN_ERR(svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool));
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);
     }
@@ -1365,10 +1341,8 @@ main(int argc, const char **argv)
               if (++i == action_args->nelts)
                 insufficient(pool);
 
-              err = read_propvalue_file(&(action->prop_value),
-                                        propval_file, pool);
-              if (err)
-                handle_error(err, pool);
+              SVN_ERR(read_propvalue_file(&(action->prop_value),
+                                          propval_file, pool));
 
               action->action = ACTION_PROPSET;
             }
@@ -1377,14 +1351,12 @@ main(int argc, const char **argv)
               && svn_prop_needs_translation(action->prop_name))
             {
               svn_string_t *translated_value;
-              err = svn_subst_translate_string2(&translated_value, NULL,
+              SVN_ERR(svn_error_quick_wrap(
+                            svn_subst_translate_string2(
+                                                &translated_value, NULL,
                                                 NULL, action->prop_value, NULL,
-                                                FALSE, pool, pool);
-              if (err)
-                handle_error(
-                    svn_error_quick_wrap(err,
-                                         "Error normalizing property value"),
-                    pool);
+                                                FALSE, pool, pool),
+                            "Error normalizing property value"));
               action->prop_value = translated_value;
             }
         }
@@ -1467,6 +1439,32 @@ main(int argc, const char **argv)
   /* Ensure that stdout is flushed, so the user will see all results. */
   svn_error_clear(svn_cmdline_fflush(stdout));
 
+  return SVN_NO_ERROR;
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svnmucc", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnmucc: ");
+    }
+
   svn_pool_destroy(pool);
-  return EXIT_SUCCESS;
+  return exit_code;
 }

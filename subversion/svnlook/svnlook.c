@@ -2433,12 +2433,16 @@ subcommand_uuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /*** Main. ***/
 
-int
-main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t apr_err;
-  apr_pool_t *pool;
 
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   struct svnlook_opt_state opt_state;
@@ -2447,32 +2451,19 @@ main(int argc, const char *argv[])
   apr_array_header_t *received_opts;
   int i;
 
-  /* Initialize the app. */
-  if (svn_cmdline_init("svnlook", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+  SVN_ERR(check_lib_versions());
 
   /* Initialize the FS library. */
-  err = svn_fs_initialize(pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+  SVN_ERR(svn_fs_initialize(pool));
 
   if (argc <= 1)
     {
-      SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      return EXIT_FAILURE;
+      SVN_ERR(subcommand_help(NULL, NULL, pool));
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   /* Initialize opt_state. */
@@ -2480,9 +2471,7 @@ main(int argc, const char *argv[])
   opt_state.rev = SVN_INVALID_REVNUM;
 
   /* Parse options. */
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   os->interleave = 1;
   while (1)
@@ -2495,9 +2484,9 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          SVN_ERR(subcommand_help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       /* Stash the option code in an array before parsing it. */
@@ -2512,9 +2501,8 @@ main(int argc, const char *argv[])
             if ((! SVN_IS_VALID_REVNUM(opt_state.rev))
                 || (! digits_end)
                 || *digits_end)
-              SVN_INT_ERR(svn_error_create
-                          (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                           _("Invalid revision number supplied")));
+              return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Invalid revision number supplied"));
           }
           break;
 
@@ -2561,15 +2549,13 @@ main(int argc, const char *argv[])
             opt_state.limit = strtol(opt_arg, &end, 10);
             if (end == opt_arg || *end != '\0')
               {
-                err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                       _("Non-numeric limit argument given"));
-                return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+                return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                        _("Non-numeric limit argument given"));
               }
             if (opt_state.limit <= 0)
               {
-                err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                                     _("Argument to --limit must be positive"));
-                return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
               }
           }
           break;
@@ -2615,26 +2601,26 @@ main(int argc, const char *argv[])
           break;
 
         default:
-          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          SVN_ERR(subcommand_help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
 
         }
     }
 
   /* The --transaction and --revision options may not co-exist. */
   if ((opt_state.rev != SVN_INVALID_REVNUM) && opt_state.txn)
-    SVN_INT_ERR(svn_error_create
+    return svn_error_create
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("The '--transaction' (-t) and '--revision' (-r) arguments "
-                   "cannot co-exist")));
+                   "cannot co-exist"));
 
   /* The --show-inherited-props and --revprop options may not co-exist. */
   if (opt_state.show_inherited_props && opt_state.revprop)
-    SVN_INT_ERR(svn_error_create
+    return svn_error_create
                 (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                  _("Cannot use the '--show-inherited-props' option with the "
-                   "'--revprop' option")));
+                   "'--revprop' option"));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -2665,9 +2651,9 @@ main(int argc, const char *argv[])
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Subcommand argument required\n")));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -2677,15 +2663,13 @@ main(int argc, const char *argv[])
           if (subcommand == NULL)
             {
               const char *first_arg_utf8;
-              err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
-                                            pool);
-              if (err)
-                return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
+                                              pool));
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     _("Unknown subcommand: '%s'\n"),
                                     first_arg_utf8));
-              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+              SVN_ERR(subcommand_help(NULL, NULL, pool));
 
               /* Be kind to people who try 'svnlook verify'. */
               if (strcmp(first_arg_utf8, "verify") == 0)
@@ -2695,9 +2679,8 @@ main(int argc, const char *argv[])
                                         _("Try 'svnadmin verify' instead.\n")));
                 }
 
-
-              svn_pool_destroy(pool);
-              return EXIT_FAILURE;
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -2716,9 +2699,9 @@ main(int argc, const char *argv[])
       /* Get the repository. */
       if (os->ind < os->argc)
         {
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&repos_path,
-                                              os->argv[os->ind++],
-                                              pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&repos_path,
+                                          os->argv[os->ind++],
+                                          pool));
           repos_path = svn_dirent_internal_style(repos_path, pool);
         }
 
@@ -2727,9 +2710,9 @@ main(int argc, const char *argv[])
           svn_error_clear
             (svn_cmdline_fprintf(stderr, pool,
                                  _("Repository argument required\n")));
-          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          SVN_ERR(subcommand_help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
       else if (svn_path_is_url(repos_path))
         {
@@ -2737,8 +2720,8 @@ main(int argc, const char *argv[])
             (svn_cmdline_fprintf(stderr, pool,
                                  _("'%s' is a URL when it should be a path\n"),
                                  repos_path));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       opt_state.repos_path = repos_path;
@@ -2746,8 +2729,7 @@ main(int argc, const char *argv[])
       /* Get next arg (arg1), if any. */
       if (os->ind < os->argc)
         {
-          SVN_INT_ERR(svn_utf_cstring_to_utf8
-                      (&arg1, os->argv[os->ind++], pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&arg1, os->argv[os->ind++], pool));
           arg1 = svn_dirent_internal_style(arg1, pool);
         }
       opt_state.arg1 = arg1;
@@ -2755,8 +2737,7 @@ main(int argc, const char *argv[])
       /* Get next arg (arg2), if any. */
       if (os->ind < os->argc)
         {
-          SVN_INT_ERR(svn_utf_cstring_to_utf8
-                      (&arg2, os->argv[os->ind++], pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&arg2, os->argv[os->ind++], pool));
           arg2 = svn_dirent_internal_style(arg2, pool);
         }
       opt_state.arg2 = arg2;
@@ -2782,7 +2763,7 @@ main(int argc, const char *argv[])
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
+            SVN_ERR(subcommand_help(NULL, NULL, pool));
           else
             svn_error_clear
               (svn_cmdline_fprintf
@@ -2790,8 +2771,8 @@ main(int argc, const char *argv[])
                 _("Subcommand '%s' doesn't accept option '%s'\n"
                   "Type 'svnlook help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -2832,14 +2813,40 @@ main(int argc, const char *argv[])
           err = svn_error_quick_wrap(err,
                                      _("Try 'svnlook help' for more info"));
         }
-      return svn_cmdline_handle_exit_error(err, pool, "svnlook: ");
+      return err;
     }
   else
     {
-      svn_pool_destroy(pool);
       /* Ensure everything is printed on stdout, so the user sees any
          print errors. */
-      SVN_INT_ERR(svn_cmdline_fflush(stdout));
-      return EXIT_SUCCESS;
+      SVN_ERR(svn_cmdline_fflush(stdout));
+      return SVN_NO_ERROR;
     }
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svnlook", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svnlook: ");
+    }
+
+  svn_pool_destroy(pool);
+  return exit_code;
 }
