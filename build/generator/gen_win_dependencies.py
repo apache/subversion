@@ -880,8 +880,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       line = fp.readline()
       if line:
         perl_version = line.strip()
-        perlv = perl_version.split('.')
-        perl_lib = 'perl%s%s.lib' % (perlv[0], perlv[1])
+        perl_ver = perl_version.split('.')
+        perl_lib = 'perl%s%s.lib' % (perl_ver[0], perl_ver[1])
       else:
         return
 
@@ -892,8 +892,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     finally:
       fp.close()
 
+    perl_ver = tuple(map(int, perl_ver))
+    forced_includes = []
+
+    if perl_ver >= (5, 18, 0):
+      forced_includes.append('swigutil_pl__pre_perl.h')
+
     self._libraries['perl'] = SVNCommonLibrary('perl', inc_dir, lib_dir,
-                                               perl_lib, perl_version)
+                                               perl_lib, perl_version,
+                                               forced_includes=forced_includes)
 
   def _find_ruby(self, show_warnings):
     "Find the right Ruby library name to link swig bindings with"
