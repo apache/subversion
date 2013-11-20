@@ -227,8 +227,12 @@ const char* JavaException::what() const throw()
   return "";
 }
 
+} // namespace JavaHL
+
 
 // Implementation of jni_stack.hpp
+
+namespace Java {
 
 void handle_svn_error(::Java::Env env, ::svn_error_t* err)
 {
