@@ -85,6 +85,10 @@ typedef unsigned __int64   uint64_t;
 #undef HAVE_INTTYPES_H
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4702) /* warning C4702: unreachable code */
+#endif
+
 #endif /* defined(SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG) && defined(_MSC_VER) */
 
 #endif /* SVN_SWIG_SWIGUTIL_RB__PRE_RUBY_H */
