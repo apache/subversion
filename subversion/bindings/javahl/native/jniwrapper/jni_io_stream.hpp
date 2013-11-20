@@ -147,7 +147,12 @@ public:
   /**
    * Implements @c InputStream.skip(long)
    */
-  jlong skip(jlong count);
+  jlong skip(jlong count)
+    {
+      if (!m_mid_skip)
+        m_mid_skip = m_env.GetMethodID(m_class, "skip", "(J)J");
+      return m_env.CallLongMethod(m_jthis, m_mid_skip, count);
+    }
 
 private:
   static const char* const m_class_name;
@@ -157,6 +162,7 @@ private:
   MethodID m_mid_reset;
   MethodID m_mid_read_byte;
   MethodID m_mid_read_bytearray;
+  MethodID m_mid_skip;
 };
 
 
