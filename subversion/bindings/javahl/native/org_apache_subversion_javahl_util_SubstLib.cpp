@@ -77,7 +77,8 @@ Java_org_apache_subversion_javahl_util_SubstLib_buildKeywords(
       const Java::String::Contents author_contents(author);
 
       apr_hash_t* kw = NULL;
-      SVN_JAVAHL_CHECK(svn_subst_build_keywords3(
+      SVN_JAVAHL_CHECK(env,
+                       svn_subst_build_keywords3(
                            &kw,
                            keywords_string->data,
                            revision,

@@ -27,10 +27,6 @@
 #include <exception>
 #include <stdexcept>
 
-namespace Java {
-class Env;                      // Forward declaration; see below.
-} // namespace Java
-
 namespace JavaHL {
 
 /**
@@ -51,18 +47,6 @@ public:
   virtual ~JavaException() throw();
 
   virtual const char* what() const throw();
-
-  /**
-   * Returns a local reference to the Java exception object,
-   * retreiving the JNI environment reference from the global JVM
-   * reference.
-   */
-  jthrowable get_java_exception() const;
-
-  /**
-   * Returns a local reference to the Java exception object.
-   */
-  jthrowable get_java_exception(const ::Java::Env& env) const;
 };
 
 } // namespace JavaHL

@@ -643,7 +643,7 @@ std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
   return buffer;
 }
 
-void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
+void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
 {
   jstring jmessage;
   jobject jstack;
@@ -700,12 +700,14 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;"
+                                   "Ljava/lang/Throwable;"
                                    "Ljava/lang/String;I"
                                    "Ljava/util/List;)V");
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
-  jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           jint(err->apr_err), jstack);
+  jobject nativeException = env->NewObject(clazz, mid, jmessage, jcause,
+                                           jsource, jint(err->apr_err),
+                                           jstack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -776,10 +778,10 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
 
-void JNIUtil::handleSVNError(svn_error_t *err)
+void JNIUtil::handleSVNError(svn_error_t *err, jthrowable jcause)
 {
   try {
-    wrappedHandleSVNError(err);
+    wrappedHandleSVNError(err, jcause);
   } catch (...) {
     svn_error_clear(err);
     throw;
