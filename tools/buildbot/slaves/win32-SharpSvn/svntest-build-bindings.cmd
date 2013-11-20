@@ -28,21 +28,21 @@ IF "%SVN_BRANCH%" LEQ "1.6.x" (
   EXIT /B 0
 )
 
-SET DEBUG_TARGETS=/t:__JAVAHL__ /t:__JAVAHL_TESTS__
+SET DEBUG_TARGETS=/t:__ALL_TESTS__ /t:__JAVAHL__ /t:__JAVAHL_TESTS__
 SET RELEASE_TARGETS=/t:__SWIG_PYTHON__
 
 if "%SVN_BRANCH%" GTR "1.8." (
-  SET DEBUG_TARGETS=%DEBUG_TARGETS% /t:__SWIG_PERL__
+  REM SET DEBUG_TARGETS=%DEBUG_TARGETS% /t:__SWIG_PERL__
 )
 
 if "%SVN_BRANCH%" GTR "1.9." (
   SET DEBUG_TARGETS=%DEBUG_TARGETS% /t:__SWIG_RUBY__
 )
 
-msbuild subversion_vcnet.sln /m /p:Configuration=Debug /p:Platform=win32 %DEBUG_TARGETS%
+msbuild subversion_vcnet.sln /m /v:m /p:Configuration=Debug /p:Platform=win32 %DEBUG_TARGETS%
 IF ERRORLEVEL 1 EXIT /B 1
 
-msbuild subversion_vcnet.sln /m /p:Configuration=Release /p:Platform=win32 %RELEASE_TARGETS%
+msbuild subversion_vcnet.sln /m /v:m /p:Configuration=Release /p:Platform=win32 %RELEASE_TARGETS%
 IF ERRORLEVEL 1 EXIT /B 1
 
 EXIT /B 0

@@ -50,6 +50,7 @@ IF NOT ERRORLEVEL 1 (
 POPD
 
 
+taskkill /im msbuild.exe /f 2> nul:
 taskkill /im svn.exe /f 2> nul:
 taskkill /im svnlook.exe /f 2> nul:
 taskkill /im svnadmin.exe /f 2> nul:
@@ -57,12 +58,14 @@ taskkill /im svnserve.exe /f 2> nul:
 taskkill /im svnrdump.exe /f 2> nul:
 taskkill /im svnsync.exe /f 2> nul:
 taskkill /im httpd.exe /f 2> nul:
+taskkill /im client-test.exe /f 2> nul:
 taskkill /im fs-test.exe /f 2> nul:
 taskkill /im op-depth-test.exe /f 2> nul:
 taskkill /im atomic-ra-revprop-change.exe /f 2> nul:
 taskkill /im java.exe /f 2> nul:
 taskkill /im perl.exe /f 2> nul:
 taskkill /im mspdbsrv.exe /f 2> nul:
+
 IF EXIST "%TESTDIR%\tests\subversion\tests\cmdline\httpd\" (
   rmdir /s /q  "%TESTDIR%\tests\subversion\tests\cmdline\httpd"
 )
