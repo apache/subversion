@@ -1,0 +1,240 @@
+/**
+ * @copyright
+ * ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
+ * @endcopyright
+ */
+
+#include "jni_globalref.hpp"
+#include "jni_io_stream.hpp"
+#include "jni_stack.hpp"
+
+#include "svn_private_config.h"
+
+// Stream-wrapper-specific mark object type
+struct svn_stream_mark_t
+{
+  void* m_baton;
+};
+
+namespace Java {
+
+namespace {
+svn_error_t* stream_close_input(void* baton)
+{
+  InputStream* const self = static_cast<InputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_BASE, self->close());
+  return SVN_NO_ERROR;
+}
+
+svn_error_t* stream_mark(void* baton, svn_stream_mark_t** mark,
+                         apr_pool_t* result_pool)
+{
+  InputStream* const self = static_cast<InputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+                   self->mark(16384)); // FIXME: invent better readlimit
+
+  *mark = static_cast<svn_stream_mark_t*>(
+      apr_palloc(result_pool, sizeof(**mark)));
+  (*mark)->m_baton = baton;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t* stream_seek(void* baton, const svn_stream_mark_t* mark)
+{
+  if (mark->m_baton != baton)
+    return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+                            NULL, _("Invalid mark"));
+
+  InputStream* const self = static_cast<InputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+                   self->reset());
+  return SVN_NO_ERROR;
+}
+
+svn_error_t* stream_read(void* baton, char* buffer, apr_size_t* len)
+{
+  InputStream* const self = static_cast<InputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_BASE,
+                   *len = self->read(buffer, jint(*len)));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t* stream_skip(void* baton, apr_size_t len)
+{
+  InputStream* const self = static_cast<InputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(),  SVN_ERR_BASE, self->skip(jlong(len)));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t* stream_close_output(void* baton)
+{
+  OutputStream* const self = static_cast<OutputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_BASE, self->close());
+  return SVN_NO_ERROR;
+}
+
+svn_error_t* stream_write(void* baton, const char* data, apr_size_t* len)
+{
+  OutputStream* const self = static_cast<OutputStream*>(baton);
+  SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_BASE,
+                   self->write(data, jint(*len)));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t*
+global_stream_close_input(void* baton)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  InputStream stream(Env(), ref->get());
+  return stream_close_input(&stream);
+}
+
+svn_error_t*
+global_stream_mark(void* baton, svn_stream_mark_t** mark,
+                   apr_pool_t* result_pool)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  InputStream stream(Env(), ref->get());
+  return stream_mark(&stream, mark, result_pool);
+}
+
+svn_error_t*
+global_stream_seek(void* baton, const svn_stream_mark_t* mark)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  InputStream stream(Env(), ref->get());
+  return stream_seek(&stream, mark);
+}
+
+svn_error_t*
+global_stream_read(void* baton, char* buffer, apr_size_t* len)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  InputStream stream(Env(), ref->get());
+  return stream_read(&stream, buffer, len);
+}
+
+svn_error_t*
+global_stream_skip(void* baton, apr_size_t len)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  InputStream stream(Env(), ref->get());
+  return stream_skip(&stream, len);
+}
+
+svn_error_t*
+global_stream_close_output(void* baton)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  OutputStream stream(Env(), ref->get());
+  return stream_close_output(&stream);
+}
+
+svn_error_t*
+global_stream_write(void* baton, const char* data, apr_size_t* len)
+{
+  GlobalObject* ref = static_cast<GlobalObject*>(baton);
+  OutputStream stream(Env(), ref->get());
+  return stream_write(&stream, data, len);
+}
+
+apr_status_t cleanup_global_object(void* baton)
+{
+  delete static_cast<GlobalObject*>(baton);
+  return APR_SUCCESS;
+}
+} // anonymous namespace
+
+
+// Class Java::InputStream
+
+const char* const InputStream::m_class_name = "java/io/InputStream";
+
+svn_stream_t*
+InputStream::get_global_stream(Env env, jobject jstream,
+                               const SVN::Pool& pool)
+{
+  const bool has_mark = InputStream(env, jstream).mark_supported();
+
+  std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
+
+  svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
+  svn_stream_set_read(stream, global_stream_read);
+  svn_stream_set_skip(stream, global_stream_skip);
+  svn_stream_set_close(stream, global_stream_close_input);
+  if (has_mark)
+    {
+      svn_stream_set_mark(stream, global_stream_mark);
+      svn_stream_set_seek(stream, global_stream_seek);
+    }
+
+  apr_pool_cleanup_register(pool.getPool(), baton.release(),
+                            cleanup_global_object,
+                            apr_pool_cleanup_null);
+  return stream;
+}
+
+svn_stream_t* InputStream::get_stream(const SVN::Pool& pool)
+{
+  const bool has_mark = mark_supported();
+
+  svn_stream_t* const stream = svn_stream_create(this, pool.getPool());
+  svn_stream_set_read(stream, stream_read);
+  svn_stream_set_skip(stream, stream_skip);
+  svn_stream_set_close(stream, stream_close_input);
+  if (has_mark)
+    {
+      svn_stream_set_mark(stream, stream_mark);
+      svn_stream_set_seek(stream, stream_seek);
+    }
+  return stream;
+}
+
+
+// Class Java::OutputStream
+
+const char* const OutputStream::m_class_name = "java/io/OutputStream";
+
+svn_stream_t*
+OutputStream::get_global_stream(Env env, jobject jstream,
+                               const SVN::Pool& pool)
+{
+  std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
+
+  svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
+  svn_stream_set_write(stream, global_stream_write);
+  svn_stream_set_close(stream, global_stream_close_output);
+
+  apr_pool_cleanup_register(pool.getPool(), baton.release(),
+                            cleanup_global_object,
+                            apr_pool_cleanup_null);
+  return stream;
+}
+
+svn_stream_t* OutputStream::get_stream(const SVN::Pool& pool)
+{
+  svn_stream_t* const stream = svn_stream_create(this, pool.getPool());
+  svn_stream_set_write(stream, stream_write);
+  svn_stream_set_close(stream, stream_close_output);
+  return stream;
+}
+
+} // namespace Java
