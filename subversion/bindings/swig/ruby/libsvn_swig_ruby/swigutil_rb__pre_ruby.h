@@ -30,8 +30,6 @@
  */
 
 #include <ruby/config.h>
-#ifdef _MSC_VER
-#endif
 
 #undef NORETURN
 #undef DEPRECATED
