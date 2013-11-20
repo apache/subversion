@@ -771,42 +771,59 @@ if not test_javahl and not test_swig:
     os.chdir(old_cwd)
 elif test_javahl:
   failed = False
-  args = (
-          'java.exe',
-          '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
-          '-Dtest.srcdir=' + os.path.join(abs_srcdir,
-                                          'subversion/bindings/javahl'),
-          '-Dtest.rooturl=',
-          '-Dtest.fstype=' + fs_type ,
-          '-Dtest.tests=',
 
-          '-Djava.library.path='
-                    + os.path.join(abs_objdir,
-                                   'subversion/bindings/javahl/native'),
-          '-classpath',
-          os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
-            gen_obj.junit_path
-         )
+  java_exe = None
 
-  sys.stderr.flush()
-  print('Running org.apache.subversion tests:')
-  sys.stdout.flush()
+  for path in os.environ["PATH"].split(os.pathsep):
+    if os.path.isfile(os.path.join(path, 'java.exe')):
+      java_exe = os.path.join(path, 'java.exe')
+      break
 
-  r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
-  sys.stdout.flush()
-  sys.stderr.flush()
-  if (r != 0):
-    print('[Test runner reported failure]')
-    failed = True
+  if not java_exe and 'java_sdk' in gen_obj._libraries:
+    jdk = gen_obj._libraries['java_sdk']
 
-  print('Running org.tigris.subversion tests:')
-  sys.stdout.flush()
-  r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
-  sys.stdout.flush()
-  sys.stderr.flush()
-  if (r != 0):
-    print('[Test runner reported failure]')
-    failed = True
+    if os.path.isfile(os.path.join(jdk.lib_dir, '../bin/java.exe')):
+      java_exe = os.path.join(jdk.lib_dir, '../bin/java.exe')
+
+  if not java_exe:
+    print('Java not found. Skipping Java tests')
+  else:
+    args = (
+            os.path.abspath(java_exe),
+            '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
+            '-Dtest.srcdir=' + os.path.join(abs_srcdir,
+                                            'subversion/bindings/javahl'),
+            '-Dtest.rooturl=',
+            '-Dtest.fstype=' + fs_type ,
+            '-Dtest.tests=',
+  
+            '-Djava.library.path='
+                      + os.path.join(abs_objdir,
+                                     'subversion/bindings/javahl/native'),
+            '-classpath',
+            os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
+              gen_obj.junit_path
+           )
+
+    sys.stderr.flush()
+    print('Running org.apache.subversion tests:')
+    sys.stdout.flush()
+
+    r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if (r != 0):
+      print('[Test runner reported failure]')
+      failed = True
+
+    print('Running org.tigris.subversion tests:')
+    sys.stdout.flush()
+    r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if (r != 0):
+      print('[Test runner reported failure]')
+      failed = True
 elif test_swig == 'perl':
   failed = False
   swig_dir = os.path.join(abs_builddir, 'swig')
