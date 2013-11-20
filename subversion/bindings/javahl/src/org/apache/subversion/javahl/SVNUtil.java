@@ -517,9 +517,10 @@ public class SVNUtil
      * Return a stream which performs end-of-line translation and
      * keyword expansion when read from.
      *<p>
-     * Make sure you close the reurned stream stream to ensure all
-     * data are flushed and cleaned up (this will also close the
-     * provided stream).
+     * <b>Important:</b> Make sure you close the reurned stream to
+     * ensure all data are flushed and cleaned up (this will also
+     * close the provided stream and dispose the related netive
+     * object).
      *<p>
      * If <code>eolMarker</code> is not <code>null</code>, replace
      * whatever any end-of-line sequences in the input with
@@ -531,7 +532,8 @@ public class SVNUtil
      *       generate an error when the inconsistency is detected;</li>
      *   <li>if <code>repaorEol</code> is <code>true</code>, convert any
      *       line ending to <code>eolMarker</code>.<br/>
-     *       Recognized line endings are: "\n", "\r", and "\r\n".</li>
+     *       Recognized line endings are: "<code>\n</code>",
+     *       "<code>\r</code>", and "<code>\r\n</code>".</li>
      * </ul>
      *<p>
      * Expand or contract keywords using the contents of
