@@ -83,7 +83,7 @@ class JNIUtil
   static bool isExceptionThrown() { return isJavaExceptionThrown(); }
   static bool isJavaExceptionThrown()
     {
-      return (bool)getEnv()->ExceptionCheck();
+      return getEnv()->ExceptionCheck();
     }
 
   static void handleAPRError(int error, const char *op);
