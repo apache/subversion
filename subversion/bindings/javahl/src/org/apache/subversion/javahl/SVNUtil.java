@@ -431,7 +431,7 @@ public class SVNUtil
      * @see translateStream
      * @see untranslateStream
      */
-    public static final byte[] EOL_LF = substLib.EOL_LF;
+    public static final byte[] EOL_LF = SubstLib.EOL_LF;
 
     /**
      * Use the carraige-return code point ('<code>\x0d</code>')
@@ -439,7 +439,7 @@ public class SVNUtil
      * @see translateStream
      * @see untranslateStream
      */
-    public static final byte[] EOL_CR = substLib.EOL_CR;
+    public static final byte[] EOL_CR = SubstLib.EOL_CR;
 
     /**
      * Use carriage-return/linefeed sequence ('<code>\x0d\x0a</code>')
@@ -447,7 +447,7 @@ public class SVNUtil
      * @see translateStream
      * @see untranslateStream
      */
-    public static final byte[] EOL_CRLF = substLib.EOL_CRLF;
+    public static final byte[] EOL_CRLF = SubstLib.EOL_CRLF;
 
 
     /**
