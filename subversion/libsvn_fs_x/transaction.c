@@ -812,7 +812,7 @@ fold_change(apr_hash_t *changes,
 
 /* Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data. Do all allocations in POOL. */
+   data. Do all allocations in POOL. */
 static svn_error_t *
 process_changes(apr_hash_t *changed_paths,
                 apr_array_header_t *changes,
@@ -2775,8 +2775,8 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Verify that the user registed with FS has all the locks necessary to
-   permit all the changes associate with TXN_NAME.
+/* Verify that the user registered with FS has all the locks necessary to
+   permit all the changes associated with TXN_NAME.
    The FS write lock is assumed to be held by the caller. */
 static svn_error_t *
 verify_locks(svn_fs_t *fs,
