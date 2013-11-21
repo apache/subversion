@@ -130,6 +130,15 @@ public class ExternalItem implements java.io.Serializable
     /* Exception class for failed revision kind validation. */
     private static class BadRevisionKindException extends SubversionException
     {
+        // Update the serialVersionUID when there is a incompatible change
+        // made to this class.  See any of the following, depending upon
+        // the Java release.
+        // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
+        // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
+        // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
+        // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
         public BadRevisionKindException(String param)
         {
             super("the '" + param + "' constructor argument" +
