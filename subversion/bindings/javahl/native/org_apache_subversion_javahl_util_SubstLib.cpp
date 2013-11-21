@@ -91,8 +91,10 @@ public:
 
   void operator()(const std::string& key, const Java::ByteArray& value)
     {
+      const char* const safe_key =
+        apr_pstrmemdup(m_pool.getPool(), key.c_str(), key.size() + 1);
       Java::ByteArray::Contents val(value);
-      apr_hash_set(m_hash, key.c_str(), key.size(), val.get_string(m_pool));
+      apr_hash_set(m_hash, safe_key, key.size(), val.get_string(m_pool));
     }
 
   apr_hash_t* get() const
