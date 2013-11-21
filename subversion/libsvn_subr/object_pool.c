@@ -229,6 +229,15 @@ remove_unused_objects(svn_object_pool__t *object_pool)
   object_pool->objects_hash_pool = new_pool;
 }
 
+/* If ERR is not 0, handle it and terminate the application.
+ */
+static void
+exit_on_error(svn_error_t *err)
+{
+  if (err)
+    svn_handle_error2(err, stderr, TRUE, "svn: ");
+}
+
 /* Cleanup function called when an object_ref_t gets released.
  */
 static apr_status_t
@@ -256,7 +265,8 @@ object_ref_cleanup(void *baton)
      return APR_SUCCESS;
     }
 
-  SVN_INT_ERR(svn_mutex__lock(object_pool->mutex));
+  /* begin critical section */
+  exit_on_error(svn_error_trace(svn_mutex__lock(object_pool->mutex)));
 
   /* put back into "available" container */
   if (!object_pool->share_objects)
@@ -275,7 +285,8 @@ object_ref_cleanup(void *baton)
       remove_unused_objects(object_pool);
     }
 
-  SVN_INT_ERR(svn_mutex__unlock(object_pool->mutex, NULL));
+  /* end critical section */
+  exit_on_error(svn_error_trace(svn_mutex__unlock(object_pool->mutex, NULL)));
 
   /* Maintain reference counters and handle object cleanup */
   if (svn_atomic_dec(&object->ref_count) == 0)
