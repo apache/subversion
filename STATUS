@@ -201,12 +201,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1499470, r1543413
-   Flush stdout before exiting svn with an error.
-   Justification:
-      Without this patch merge_tests.py 135 may fail to output its required
-      output.
-   Votes:
-     +1: ivan (without r1543413)
-     +1: rhuijben, stsp, pburba
