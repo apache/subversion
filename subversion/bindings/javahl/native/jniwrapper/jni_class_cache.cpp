@@ -53,24 +53,23 @@ void ClassCache::create()
       exception_message = "Caught unknown C++ exception";
     }
 
-  // Use the raw environment without exception checks here
-  ::JNIEnv* const jenv = Env().get();
-  if (exception_message || jenv->ExceptionCheck())
+  const ::Java::Env env;
+  if (exception_message || env.ExceptionCheck())
     {
-      const jclass rtx = jenv->FindClass("java/lang/RuntimeException");
-      const jmethodID ctor = jenv->GetMethodID(rtx, "<init>",
-                                               "(Ljava/lang/String;"
-                                               "Ljava/lang/Throwable;)V");
-      jobject cause = jenv->ExceptionOccurred();
+      const jclass rtx = env.FindClass("java/lang/RuntimeException");
+      const jmethodID ctor = env.GetMethodID(rtx, "<init>",
+                                             "(Ljava/lang/String;"
+                                             "Ljava/lang/Throwable;)V");
+      jobject cause = env.ExceptionOccurred();
       if (!cause && exception_message)
         {
-          const jstring msg = jenv->NewStringUTF(exception_message);
-          cause = jenv->NewObject(rtx, ctor, msg, jthrowable(0));
+          const jstring msg = env.NewStringUTF(exception_message);
+          cause = env.NewObject(rtx, ctor, msg, jthrowable(0));
         }
       const jstring reason =
-        jenv->NewStringUTF("JavaHL native library initialization failed");
-      const jobject exception = jenv->NewObject(rtx, ctor, reason, cause);
-      jenv->Throw(jthrowable(exception));
+        env.NewStringUTF("JavaHL native library initialization failed");
+      const jobject exception = env.NewObject(rtx, ctor, reason, cause);
+      env.Throw(jthrowable(exception));
     }
 }
 

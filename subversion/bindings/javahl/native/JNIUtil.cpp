@@ -217,24 +217,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_initEnv = env;
 
   svn_error_t *err;
-  apr_status_t status;
-
-
-  /* Initialize the APR subsystem, and register an atexit() function
-   * to Uninitialize that subsystem at program exit. */
-  status = apr_initialize();
-  if (status)
-    {
-      if (stderr)
-        {
-          char buf[1024];
-          apr_strerror(status, buf, sizeof(buf) - 1);
-          fprintf(stderr,
-                  "%s: error: cannot initialize APR: %s\n",
-                  "svnjavahl", buf);
-        }
-      return FALSE;
-    }
 
   /* This has to happen before any pools are created. */
   if ((err = svn_dso_initialize2()))
@@ -246,16 +228,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
-  if (0 > atexit(apr_terminate))
-    {
-      if (stderr)
-        fprintf(stderr,
-                "%s: error: atexit registration failed\n",
-                "svnjavahl");
-      return FALSE;
-    }
-
-  /* Create our top-level pool. */
+  /* Create our top-level pool.
+     N.B.: APR was initialized by JNI_OnLoad. */
   g_pool = svn_pool_create(NULL);
 
   apr_allocator_t* allocator = apr_pool_allocator_get(g_pool);

@@ -21,6 +21,9 @@
  * @endcopyright
  */
 
+#include <cstring>
+#include <apr.h>
+
 #include "jni_env.hpp"
 #include "jni_globalref.hpp"
 #include "jni_exception.hpp"
@@ -42,7 +45,19 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM* jvm, void*)
 {
   ::Java::Env::static_init(jvm);
-  ::Java::ClassCache::create();
+
+  const apr_status_t status = apr_initialize();
+  if (!status)
+    ::Java::ClassCache::create();
+  else
+    {
+      char buf[2048];
+      std::strcpy(buf, "Could not initialize APR: ");
+      const std::size_t offset = std::strlen(buf);
+      apr_strerror(status, buf + offset, sizeof(buf) - offset - 1);
+      const ::Java::Env env;
+      env.ThrowNew(env.FindClass("java/lang/Error"), buf);
+    }
   return JNI_VERSION_1_2;
 }
 
@@ -54,6 +69,7 @@ JNIEXPORT void JNICALL
 JNI_OnUnload(JavaVM*, void*)
 {
   ::Java::ClassCache::destroy();
+  apr_terminate();
 }
 
 
