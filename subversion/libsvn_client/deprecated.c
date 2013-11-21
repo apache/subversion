@@ -2461,6 +2461,21 @@ svn_client_switch(svn_revnum_t *result_rev,
 
 /*** From cat.c ***/
 svn_error_t *
+svn_client_cat2(svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_cat3(NULL /* props */,
+                         out, path_or_url, peg_revision, revision,
+                         TRUE /* expand_keywords */,
+                         ctx, pool, pool);
+}
+
+
+svn_error_t *
 svn_client_cat(svn_stream_t *out,
                const char *path_or_url,
                const svn_opt_revision_t *revision,
