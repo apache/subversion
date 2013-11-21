@@ -31,8 +31,8 @@ import java.util.Map;
 
 /**
  * Editor interface (implements the EV2 abstraction).
- * @see <a href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/private/svn_editor.h"
- *      >svn_editor.h</a> for all restrictions on driving an editor.
+ * @see <a href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/private/svn_editor.h">svn_editor.h</a>
+ *      for all restrictions on driving an editor.
  * @since 1.9
  */
 public interface ISVNEditor
