@@ -823,6 +823,16 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     fakelibdirs = []
 
+    if (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang in self._libraries:
+        lib = self._libraries[target.lang]
+
+        if debug and lib.debug_lib_dir:
+          nondeplibs.append(lib.debug_lib_dir)
+        elif lib.lib_dir:
+          nondeplibs.append(lib.lib_dir)
+
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib:
         for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
@@ -859,6 +869,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
+
+    if (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang in self._libraries:
+        lib = self._libraries[target.lang]
+        if debug and lib.debug_lib_name:
+          nondeplibs.append(lib.debug_lib_name)
+        elif lib.lib_name:
+          nondeplibs.append(lib.lib_name)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
