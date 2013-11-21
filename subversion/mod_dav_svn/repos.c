@@ -2191,9 +2191,16 @@ get_resource(request_rec *r,
              leak that path back to the client, because that would be
              a security risk, but we do want to log the real error on
              the server side. */
-          return dav_svn__sanitize_error(serr, "Could not open the requested "
-                                         "SVN filesystem",
-                                         HTTP_INTERNAL_SERVER_ERROR, r);
+
+          apr_status_t cause = svn_error_root_cause(serr)->apr_err;
+          if (APR_STATUS_IS_ENOENT(cause) || APR_STATUS_IS_ENOTDIR(cause))
+            return dav_svn__sanitize_error(
+                serr, "Could not find the requested SVN filesystem",
+                HTTP_NOT_FOUND, r);
+          else
+            return dav_svn__sanitize_error(
+                serr, "Could not open the requested SVN filesystem",
+                HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
       /* Cache the open repos for the next request on this connection */
