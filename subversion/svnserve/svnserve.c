@@ -771,13 +771,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_io_check_resolved_path(params.root, &kind, pool));
           if (kind != svn_node_dir)
             {
-              svn_error_clear
-                (svn_cmdline_fprintf
-                   (stderr, pool,
-                    _("svnserve: Root path '%s' does not exist "
-                      "or is not a directory.\n"), params.root));
-              *exit_code = EXIT_FAILURE;
-              return SVN_NO_ERROR;
+              return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                       _("Root path '%s' does not exist "
+                         "or is not a directory"), params.root);
             }
 
           params.root = svn_dirent_internal_style(params.root, pool);
@@ -950,12 +946,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
-      svn_error_clear
-        (svn_cmdline_fprintf
-           (stderr, pool,
-            _("Option --tunnel-user is only valid in tunnel mode.\n")));
-      *exit_code = EXIT_FAILURE;
-      return SVN_NO_ERROR;
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+               _("Option --tunnel-user is only valid in tunnel mode"));
     }
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
@@ -1239,13 +1231,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           err = serve_socket(usock, &params, socket_pool);
 
-          if (err)
-            svn_handle_error2(err, stdout, FALSE, "svnserve: ");
-          svn_error_clear(err);
-
           apr_socket_close(usock);
           apr_socket_close(sock);
-          return SVN_NO_ERROR;
+          return err;
         }
 
       switch (handling_mode)
