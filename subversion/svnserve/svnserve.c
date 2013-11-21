@@ -979,10 +979,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                      params.zero_copy_limit,
                                      params.error_check_interval,
                                      connection_pool);
-      svn_error_clear(serve(conn, &params, connection_pool));
+      err = serve(conn, &params, connection_pool);
       svn_pool_destroy(connection_pool);
 
-      return SVN_NO_ERROR;
+      return err;
     }
 
 #ifdef WIN32
