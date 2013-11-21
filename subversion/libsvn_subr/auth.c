@@ -177,14 +177,18 @@ svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
                        const char *name,
                        const void *value)
 {
-  svn_hash_sets(auth_baton->parameters, name, value);
+  if (auth_baton)
+    svn_hash_sets(auth_baton->parameters, name, value);
 }
 
 const void *
 svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
                        const char *name)
 {
-  return svn_hash_gets(auth_baton->parameters, name);
+  if (auth_baton)
+    return svn_hash_gets(auth_baton->parameters, name);
+  else
+    return NULL;
 }
 
 
@@ -214,6 +218,10 @@ svn_auth_first_credentials(void **credentials,
   svn_boolean_t got_first = FALSE;
   svn_auth_iterstate_t *iterstate;
   const char *cache_key;
+
+  if (! auth_baton)
+    return svn_error_create(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
+                            _("No authentication providers registered"));
 
   /* Get the appropriate table of providers for CRED_KIND. */
   table = svn_hash_gets(auth_baton->tables, cred_kind);
