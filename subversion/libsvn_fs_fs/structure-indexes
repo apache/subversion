@@ -66,7 +66,7 @@ as follows:
   0x100000000     -> 0x80 0x80 0x80 0x80 0x10   (35 bits stored in 40 bits)
 
   Technically, we can represent integers of arbitrary lengths.  Currently,
-  we only generate and parse up to 64 bits only.
+  we only generate and parse up to 64 bits.
 
 * Signed integers are mapped onto the unsigned value space as follows:
 
