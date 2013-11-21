@@ -31,12 +31,6 @@ IF "%SVN_BRANCH%" LEQ "1.6.x" (
 PATH %PATH%;%TESTDIR%\bin
 SET result=0
 
-python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
-IF ERRORLEVEL 1 (
-  echo [Test runner reported error !ERRORLEVEL!]
-  SET result=1
-)
-
 if "%SVN_BRANCH%" GTR "1.9." (
 
     python win-tests.py -r -f fsfs --swig=python "%TESTDIR%\tests"
