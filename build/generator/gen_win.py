@@ -829,9 +829,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         lib = self._libraries[target.lang]
 
         if debug and lib.debug_lib_dir:
-          nondeplibs.append(lib.debug_lib_dir)
+          fakelibdirs.append(lib.debug_lib_dir)
         elif lib.lib_dir:
-          nondeplibs.append(lib.lib_dir)
+          fakelibdirs.append(lib.lib_dir)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib:
