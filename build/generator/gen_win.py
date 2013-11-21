@@ -719,7 +719,9 @@ class WinGeneratorBase(GeneratorBase):
 
     # Build ZLib as a dependency of Neon or Serf if we have it
     if self.zlib_path and (name == 'neon' or name == 'serf'):
-      depends.extend(self.sections['zlib'].get_targets())
+      # Don't add a dependency to zlib, when we don't build zlib.
+      if not self.serf_lib or (self.serf_ver_maj, self.serf_ver_min) < (1, 3):
+        depends.extend(self.sections['zlib'].get_targets())
 
     # To set the correct build order of the JavaHL targets, the javahl-javah
     # and libsvnjavahl targets are defined with extra dependencies in build.conf
@@ -1519,10 +1521,7 @@ class WinGeneratorBase(GeneratorBase):
       if os.path.isfile(version_path):
         # We have an OpenSSL Source location (legacy handling)
         self.openssl_inc_dir = os.path.join(self.openssl_path, 'inc32')
-        if self.static_openssl:
-          self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32')
-        else:
-          self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32dll')
+        self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32dll')
       elif os.path.isfile(os.path.join(self.openssl_path,
                           'include/openssl/opensslv.h')):
         self.openssl_inc_dir = os.path.join(self.openssl_path, 'include')
