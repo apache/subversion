@@ -399,16 +399,19 @@ public class UtilTests extends SVNTests
 
     public void testBuildKeywords() throws Throwable
     {
-        final byte[] kwval = "TEST=%H%_%b%_%u".getBytes();
+        final byte[] kwval = "Id TEST=%H%_%b%_%u".getBytes();
 
         Map<String, byte[]> result;
 
         result = SVNUtil.buildKeywords(kwval, Revision.SVN_INVALID_REVNUM,
                                        null, null, null, null);
+        assertEquals("   ", new String(result.get("Id")));
         assertEquals("     ", new String(result.get("TEST")));
 
         result = SVNUtil.buildKeywords(kwval, 42, "http://a/b/c",
                                        "http://a", new Date(1), "X");
+        assertEquals("c 42 1970-01-01 00:00:00Z X",
+                     new String(result.get("Id")));
         assertEquals("b/c 42 1970-01-01 00:00:00Z X c http://a/b/c",
                      new String(result.get("TEST")));
     }
