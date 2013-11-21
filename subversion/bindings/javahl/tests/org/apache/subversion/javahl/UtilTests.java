@@ -436,7 +436,8 @@ public class UtilTests extends SVNTests
             testin.close();
             testin = null;
 
-            assertEquals(new String(contentsExpanded),
+            assertEquals("expand InputStream with concrete keywords",
+                         new String(contentsExpanded),
                          new String(buffer, 0, size));
         } finally {
             if (testin != null) {
@@ -455,7 +456,8 @@ public class UtilTests extends SVNTests
             testin.close();
             testin = null;
 
-            assertEquals(new String(contentsExpanded),
+            assertEquals("expand InputStream with implied keywords",
+                         new String(contentsExpanded),
                          new String(buffer, 0, size));
         } finally {
             if (testin != null) {
@@ -473,7 +475,8 @@ public class UtilTests extends SVNTests
             testin.close();
             testin = null;
 
-            assertEquals(new String(contentsContracted),
+            assertEquals("contract InputStream with concrete keywords",
+                         new String(contentsContracted),
                          new String(buffer, 0, size));
         } finally {
             if (testin != null) {
@@ -492,7 +495,8 @@ public class UtilTests extends SVNTests
             testin.close();
             testin = null;
 
-            assertEquals(new String(contentsContracted),
+            assertEquals("contract InputStream with implied keywords",
+                         new String(contentsContracted),
                          new String(buffer, 0, size));
         } finally {
             if (testin != null) {
@@ -512,7 +516,8 @@ public class UtilTests extends SVNTests
             testout.close();
             testout = null;
 
-            assertEquals(new String(contentsExpanded), result.toString());
+            assertEquals("expand OutputStream with concrete keywords",
+                         new String(contentsExpanded), result.toString());
         } finally {
             if (testout != null) {
                 testout.close();
@@ -530,7 +535,8 @@ public class UtilTests extends SVNTests
             testout.close();
             testout = null;
 
-            assertEquals(new String(contentsExpanded), result.toString());
+            assertEquals("expand OutputStream with implied keywords",
+                         new String(contentsExpanded), result.toString());
         } finally {
             if (testout != null) {
                 testout.close();
@@ -547,7 +553,8 @@ public class UtilTests extends SVNTests
             testout.close();
             testout = null;
 
-            assertEquals(new String(contentsContracted), result.toString());
+            assertEquals("contract OutputStream with concrete keywords",
+                         new String(contentsContracted), result.toString());
         } finally {
             if (testout != null) {
                 testout.close();
@@ -565,7 +572,8 @@ public class UtilTests extends SVNTests
             testout.close();
             testout = null;
 
-            assertEquals(new String(contentsContracted), result.toString());
+            assertEquals("contract OutputStream with implied keywords",
+                         new String(contentsContracted), result.toString());
         } finally {
             if (testout != null) {
                 testout.close();
