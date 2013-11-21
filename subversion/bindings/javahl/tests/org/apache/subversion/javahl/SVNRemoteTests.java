@@ -162,9 +162,13 @@ public class SVNRemoteTests extends SVNTests
         }
         catch (ClientException ex)
         {
-            svnErrorCode = ex.getAllMessages().get(0).getCode();
+            List<ClientException.ErrorMessage> msgs = ex.getAllMessages();
+            svnErrorCode = msgs.get(msgs.size() - 1).getCode();
         }
-        assertEquals(180001, svnErrorCode);
+
+        assertTrue(svnErrorCode == 180001    // file:
+                   || svnErrorCode == 210005 // svn:
+                   || svnErrorCode == 2);    // http:
     }
 
     public void testDatedRev() throws Exception
