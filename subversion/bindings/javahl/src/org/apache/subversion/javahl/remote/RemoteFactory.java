@@ -54,14 +54,23 @@ public class RemoteFactory
     public RemoteFactory() {}
 
     /**
-     * Initializing constructor. Any or all of its arguments may be null.
+     * Initializing constructor. Any or all of its arguments may be
+     * <code>null</code>.
+     * @note The <code>TunnelAgent</code> parameter is not used and
+     * <b>must</b> be <code>null</code> in the 1.8 backport.
+     * @throws UnsatisfiedLinkError if <code>TunnelAgent</code> is not
+     *         <code>null</code>.
      */
     public RemoteFactory(String configDirectory,
                          String username, String password,
                          UserPasswordCallback prompt,
                          ProgressCallback progress,
-                         ConfigEvent configHandler)
+                         ConfigEvent configHandler,
+                         TunnelAgent tunnelAgent)
     {
+        if (tunnelAgent != null)
+            throw new UnsatisfiedLinkError(
+                "RemoteFactory.<init>(tunnelAgent != null)");
         setConfigDirectory(configDirectory);
         setUsername(username);
         setPassword(password);
@@ -134,6 +143,15 @@ public class RemoteFactory
     public void setConfigEventHandler(ConfigEvent configHandler)
     {
         this.configHandler = configHandler;
+    }
+
+    /**
+     * Set callbacks for ra_svn tunnel handling.
+     * @throws UnsatisfiedLinkError in the 1.8 backport.
+     */
+    public void setTunnelAgent(TunnelAgent tunnelAgent)
+    {
+        throw new UnsatisfiedLinkError("RemoteFactory.setTunnelAgent");
     }
 
     /**

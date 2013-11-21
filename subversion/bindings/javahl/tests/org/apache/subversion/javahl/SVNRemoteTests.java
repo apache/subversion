@@ -111,7 +111,7 @@ public class SVNRemoteTests extends SVNTests
             session = new RemoteFactory(
                 super.conf.getAbsolutePath(),
                 USERNAME, PASSWORD,
-                new DefaultPromptUserPassword(), null, null)
+                new DefaultPromptUserPassword(), null, null, null)
                 .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)
@@ -138,7 +138,7 @@ public class SVNRemoteTests extends SVNTests
                 new RemoteFactory(
                     super.conf.getAbsolutePath(),
                     USERNAME, PASSWORD,
-                    new DefaultPromptUserPassword(), null, null)
+                    new DefaultPromptUserPassword(), null, null, null)
                     .openRemoteSession(prefix + "repositorydoesnotexisthere");
             }
             finally
@@ -851,7 +851,7 @@ public class SVNRemoteTests extends SVNTests
                 super.conf.getAbsolutePath(),
                 USERNAME, PASSWORD,
                 new DefaultPromptUserPassword(),
-                null, handler)
+                null, handler, null)
                 .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)

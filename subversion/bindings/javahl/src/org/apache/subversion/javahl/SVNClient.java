@@ -132,6 +132,11 @@ public class SVNClient implements ISVNClient
 
     public native void setPrompt(UserPasswordCallback prompt);
 
+    public void setTunnelAgent(TunnelAgent tunnelAgent)
+    {
+        throw new UnsatisfiedLinkError("SVNClient.setTunnelAgent");
+    }
+
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
                                    boolean stopOnCopy, boolean discoverPath,
