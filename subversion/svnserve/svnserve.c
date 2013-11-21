@@ -1091,7 +1091,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* Prevents "socket in use" errors when server is killed and quickly
    * restarted. */
-  apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
+  status = apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
+  if (status)
+    {
+      return svn_error_wrap_apr(status, _("Can't set options on server socket"));
+    }
 
   status = apr_socket_bind(sock, sa);
   if (status)
@@ -1099,10 +1103,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       return svn_error_wrap_apr(status, _("Can't bind server socket"));
     }
 
-  apr_socket_listen(sock, ACCEPT_BACKLOG);
+  status = apr_socket_listen(sock, ACCEPT_BACKLOG);
+  if (status)
+    {
+      return svn_error_wrap_apr(status, _("Can't listen on server socket"));
+    }
 
 #if APR_HAS_FORK
   if (run_mode != run_mode_listen_once && !foreground)
+    /* ### ignoring errors... */
     apr_proc_detach(APR_PROC_DETACH_DAEMONIZE);
 
   apr_signal(SIGCHLD, sigchld_handler);
