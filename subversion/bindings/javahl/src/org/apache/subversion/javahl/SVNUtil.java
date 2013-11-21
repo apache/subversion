@@ -402,7 +402,7 @@ public class SVNUtil
      *  <dd>relative to the server's hostname</dd>
      * </dl>
      *<p>
-     * The <code>../<code> and ^/ relative URLs may use <code>..<code>
+     * The <code>../<code> and ^/ relative URLs may use <code>..</code>
      * to remove path elements up to the server root.
      *<p>
      * The external URL should not be canonicalized before calling
