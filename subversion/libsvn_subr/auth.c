@@ -511,19 +511,19 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
       if (strcmp(provider_name, "gpg_agent") == 0 &&
           strcmp(provider_type, "simple") == 0)
         {
-          svn_auth_get_gpg_agent_simple_provider(provider, pool);
+          svn_auth__get_gpg_agent_simple_provider(provider, pool);
         }
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
       if (strcmp(provider_name, "keychain") == 0 &&
           strcmp(provider_type, "simple") == 0)
         {
-          svn_auth_get_keychain_simple_provider(provider, pool);
+          svn_auth__get_keychain_simple_provider(provider, pool);
         }
       else if (strcmp(provider_name, "keychain") == 0 &&
                strcmp(provider_type, "ssl_client_cert_pw") == 0)
         {
-          svn_auth_get_keychain_ssl_client_cert_pw_provider(provider, pool);
+          svn_auth__get_keychain_ssl_client_cert_pw_provider(provider, pool);
         }
 #endif
 
@@ -531,17 +531,17 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
       if (strcmp(provider_name, "windows") == 0 &&
           strcmp(provider_type, "simple") == 0)
         {
-          svn_auth_get_windows_simple_provider(provider, pool);
+          svn_auth__get_windows_simple_provider(provider, pool);
         }
       else if (strcmp(provider_name, "windows") == 0 &&
                strcmp(provider_type, "ssl_client_cert_pw") == 0)
         {
-          svn_auth_get_windows_ssl_client_cert_pw_provider(provider, pool);
+          svn_auth__get_windows_ssl_client_cert_pw_provider(provider, pool);
         }
       else if (strcmp(provider_name, "windows") == 0 &&
                strcmp(provider_type, "ssl_server_trust") == 0)
         {
-          svn_auth_get_windows_ssl_server_trust_provider(provider, pool);
+          svn_auth__get_windows_ssl_server_trust_provider(provider, pool);
         }
       else if (strcmp(provider_name, "windows") == 0 &&
                strcmp(provider_type, "ssl_server_authority") == 0)
