@@ -229,13 +229,26 @@ remove_unused_objects(svn_object_pool__t *object_pool)
   object_pool->objects_hash_pool = new_pool;
 }
 
-/* If ERR is not 0, handle it and terminate the application.
+/* If ERR is not SVN_NO_ERROR, handle it and terminate the application.
+ *
+ * Please make this generic if necessary instead of duplicating this code.
  */
 static void
-exit_on_error(svn_error_t *err)
+exit_on_error(const char *file, int line, svn_error_t *err)
 {
   if (err)
-    svn_handle_error2(err, stderr, TRUE, "svn: ");
+    {
+      char buffer[1024];
+
+      /* The svn_error_clear() is to make static analyzers happy.
+         svn_error__malfunction() will never return */
+      svn_error_clear(
+            svn_error__malfunction(FALSE /* can_return */, file, line,
+                                   svn_err_best_message(err, buffer,
+                                                        sizeof(buffer))
+                                   ));
+      abort(); /* Only reached by broken malfunction handlers */
+    }
 }
 
 /* Cleanup function called when an object_ref_t gets released.
@@ -266,7 +279,8 @@ object_ref_cleanup(void *baton)
     }
 
   /* begin critical section */
-  exit_on_error(svn_error_trace(svn_mutex__lock(object_pool->mutex)));
+  exit_on_error(__FILE__, __LINE__,
+                svn_error_trace(svn_mutex__lock(object_pool->mutex)));
 
   /* put back into "available" container */
   if (!object_pool->share_objects)
@@ -286,7 +300,8 @@ object_ref_cleanup(void *baton)
     }
 
   /* end critical section */
-  exit_on_error(svn_error_trace(svn_mutex__unlock(object_pool->mutex, NULL)));
+  exit_on_error(__FILE__, __LINE__,
+                svn_error_trace(svn_mutex__unlock(object_pool->mutex, NULL)));
 
   /* Maintain reference counters and handle object cleanup */
   if (svn_atomic_dec(&object->ref_count) == 0)

@@ -268,6 +268,10 @@ svn_error__locate(const char *file,
  * what code that used to call svn_handle_error() and now calls
  * svn_handle_error2() does.
  *
+ * Note that this should only be used from commandline specific code, or
+ * code that knows that @a stream is really where the application wants
+ * to receive its errors on.
+ *
  * @since New in 1.2.
  */
 void
