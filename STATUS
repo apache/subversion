@@ -98,7 +98,7 @@ Candidate changes:
    Notes:
      Rough backport of the 1.8.x branch fixes. Needs testing.
    Votes:
-     +0.5: rhuijben
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
