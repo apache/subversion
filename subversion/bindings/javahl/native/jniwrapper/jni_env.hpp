@@ -204,7 +204,7 @@ public:
     }
 
   /** Wrapped JNI function. */
-  void DeleteGlobalRef(jobject obj) const
+  void DeleteGlobalRef(jobject obj) const throw()
     {
       m_env->DeleteGlobalRef(obj);
     }
@@ -217,7 +217,7 @@ public:
     }
 
   /** Wrapped JNI function. */
-  void PopLocalFrame() const
+  void PopLocalFrame() const throw()
     {
       m_env->PopLocalFrame(NULL);
     }
@@ -280,7 +280,7 @@ public:
     }
 
   /** Wrapped JNI function. */
-  jboolean IsInstanceOf(jobject obj, jclass cls) const
+  jboolean IsInstanceOf(jobject obj, jclass cls) const throw()
     {
       return m_env->IsInstanceOf(obj, cls);
     }
@@ -346,7 +346,7 @@ public:
       const char* text = m_env->GetStringUTFChars(str, is_copy);
       check_java_exception();
       if (!text)
-        throw std::runtime_error(
+        throw_java_out_of_memory(
               _("Could not get contents of Java String"));
       return text;
     }
@@ -358,7 +358,6 @@ public:
         throw std::logic_error(
               _("Can not release contents of a null String"));
       m_env->ReleaseStringUTFChars(str, new_text);
-      check_java_exception();
     }
 
   /** Wrapped JNI function. */
@@ -471,7 +470,7 @@ public:
   jsize GetArrayLength(jarray array) const
     {
       if (!array)
-        return -1;
+        return 0;
       return m_env->GetArrayLength(array);
     }
 
@@ -479,9 +478,8 @@ public:
   jobjectArray NewObjectArray(jsize length, jclass cls, jobject init) const
     {
       jobjectArray array = m_env->NewObjectArray(length, cls, init);
-      check_java_exception();
       if (!array)
-        throw std::runtime_error(_("Could not create Object array"));
+        throw_java_out_of_memory(_("Could not create Object array"));
       return array;
     }
 
@@ -506,24 +504,28 @@ public:
   T##Array New##N##Array(jsize length) const                            \
     {                                                                   \
       T##Array array = m_env->New##N##Array(length);                    \
-      check_java_exception();                                           \
       if (!array)                                                       \
         throw_java_out_of_memory(_("Could not create "#T" array"));     \
       return array;                                                     \
     }                                                                   \
   T* Get##N##ArrayElements(T##Array array, jboolean* is_copy) const     \
     {                                                                   \
+      if (!array)                                                       \
+        return NULL;                                                    \
+                                                                        \
       T* data = m_env->Get##N##ArrayElements(array, is_copy);           \
       check_java_exception();                                           \
       if (!data)                                                        \
-        throw std::runtime_error(                                       \
-            _("Could not get "#T" array contents"));                    \
+        throw_java_out_of_memory(                                       \
+            _("Could not get "#N" array contents"));                    \
       return data;                                                      \
     }                                                                   \
   void Release##N##ArrayElements(T##Array array, T* data, jint mode) const \
     {                                                                   \
+      if (!array)                                                       \
+        throw std::logic_error(                                         \
+            _("Can not release contents of a null "#T"Array"));         \
       m_env->Release##N##ArrayElements(array, data, mode);              \
-      check_java_exception();                                           \
     }
 
   SVN_JAVAHL_JNIWRAPPER_PRIMITIVE_TYPE_ARRAY(jboolean, Boolean)
