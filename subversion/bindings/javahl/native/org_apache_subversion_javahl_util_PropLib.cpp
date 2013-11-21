@@ -225,8 +225,7 @@ Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
       const Java::Env env(jenv);
 
       const svn_node_kind_t kind = EnumMapper::toNodeKind(jkind);
-      if (env.ExceptionCheck())
-        throw Java::SignalExceptionThrown();
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
 
       const Java::String name_str(env, jname);
       const Java::ByteArray value(env, jvalue);
