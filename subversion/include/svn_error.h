@@ -387,10 +387,17 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
   } while (0)
 
 
-/** A statement macro, similar to @c SVN_ERR, but returns an integer.
+/** A statement macro intended for the main() function of the 'svn' program.
  *
- * Evaluate @a expr. If it yields an error, handle that error and
- * return @c EXIT_FAILURE.
+ * Evaluate @a expr. If it yields an error, display the error on stdout
+ * and return @c EXIT_FAILURE.
+ *
+ * @note Not for use in the library, as it prints to stderr. This macro
+ * no longer suits the needs of the 'svn' program, and is not generally
+ * suitable for third-party use as it assumes the program name is 'svn'.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API. Consider
+ * using svn_handle_error2() or svn_cmdline_handle_exit_error() instead.
  */
 #define SVN_INT_ERR(expr)                                        \
   do {                                                           \
