@@ -23,14 +23,18 @@ SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
 CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
-PUSHD ..\deps
+IF "%SVN_BRANCH%" LEQ "1.6.x" (
+  ECHO --- Building 1.6.x or older: Skipping bindings ---
+  EXIT /B 0
+)
 
-nant gen-dev -D:wc=..\build -D:impBase=../deps/build/win32 -D:botBuild=true %SVN_NANT_ARGS%
-IF ERRORLEVEL 1 EXIT /B 1
+PATH %PATH%;%TESTDIR%\bin
+SET result=0
 
-POPD
+python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
+IF ERRORLEVEL 1 (
+  echo [Test runner reported error !ERRORLEVEL!]
+  SET result=1
+)
 
-msbuild subversion_vcnet.sln /m /v:m /p:Configuration=Debug /p:Platform=Win32 /t:__ALL_TESTS__ %SVN_MSBUILD_ARGS%
-IF ERRORLEVEL 1 EXIT /B 1
-
-EXIT /B 0
+exit /b %result%
