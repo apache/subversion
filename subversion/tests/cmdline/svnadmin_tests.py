@@ -245,18 +245,77 @@ def load_dumpstream(sbox, dump, *varargs):
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
-def set_changed_path_list(filename, changes):
-  """ Replace the changed paths list in the file given by FILENAME
+def read_l2p(sbox, revision, item):
+  """ For the format 7+ repository in SBOX, return the physical offset
+      of ITEM in REVISION.  This code supports only small, nonpacked revs. """
+
+  filename = fsfs_file(sbox.repo_dir, 'revs', str(revision) + ".l2p")
+
+  fp = open(filename, 'rb')
+  contents = fp.read()
+  length = len(contents)
+  fp.close()
+
+  # decode numbers
+  numbers = []
+  value = 0
+  shift = 0
+  for c in contents:
+    char = ord(c)
+    value += (char & 127) << shift
+    if char < 128:
+      numbers.append(value)
+      shift = 0
+      value = 0
+    else:
+      shift += 7
+
+  # decode offsets
+  numbers[7] = -1
+  for i in range(8, len(numbers)):
+    if numbers[i] & 1 == 1:
+      numbers[i] = - (numbers[i] + 1) / 2
+    else:
+      numbers[i] = numbers[i] / 2
+    numbers[i] += numbers[i-1]
+
+  # we support only small, unpacked rev files
+  if numbers[1] < len(numbers) or numbers[3] != 1 :
+    raise svntest.Failure("More than 1 page in %s" % filename)
+  if numbers[2] != 1:
+    raise svntest.Failure("More than 1 rev in %s" % filename)
+
+  return numbers[item + 7]
+
+def repo_format(sbox):
+  """ Return the repository format number for SBOX."""
+
+  format_file = open(os.path.join(sbox.repo_dir, "db", "format"))
+  format = int(format_file.read()[:1])
+  format_file.close()
+
+  return format
+
+def set_changed_path_list(sbox, revision, changes):
+  """ Replace the changed paths list in the revision file REVISION in SBOX
       with the text CHANGES."""
 
   # read full file
-  fp = open(filename, 'r+b')
+  fp = open(fsfs_file(sbox.repo_dir, 'revs', str(revision)), 'r+b')
   contents = fp.read()
 
-  # replace the changed paths list
-  length = len(contents)
-  header = contents[contents.rfind('\n', length - 64, length - 1):]
-  body_len = long(header.split(' ')[1])
+  if repo_format(sbox) < 7:
+    # replace the changed paths list
+    length = len(contents)
+    header = contents[contents.rfind('\n', length - 64, length - 1):]
+    body_len = long(header.split(' ')[1])
+
+  else:
+    # we will invalidate the l2p index but that's ok for the
+    # kind of tests we run here. The p2l index remains valid
+    # because the offset of the last item does not change
+    body_len = read_l2p(sbox, revision, 1)
+    header = '\n'
 
   contents = contents[:body_len] + changes + header
 
@@ -1968,41 +2027,41 @@ def verify_invalid_path_changes(sbox):
   # "carried over" but that all corrupts we get detected independently
 
   # add existing node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '2'),
+  set_changed_path_list(sbox, 2,
                         "_0.0.t1-1 add-dir false false /A\n\n")
 
   # add into non-existent parent
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '4'),
+  set_changed_path_list(sbox, 4,
                         "_0.0.t3-2 add-dir false false /C/X\n\n")
 
   # del non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '6'),
+  set_changed_path_list(sbox, 6,
                         "_0.0.t5-2 del-dir false false /C\n\n")
 
   # del existent node of the wrong kind
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '8'),
+  set_changed_path_list(sbox, 8,
                         "_0.0.t7-2 dev-file false false /B3\n\n")
 
   # copy from non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '10'),
+  set_changed_path_list(sbox, 10,
                         "_0.0.t9-2 add-dir false false /B10\n"
                         "6 /B8\n")
 
   # copy from existing node of the wrong kind
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '12'),
+  set_changed_path_list(sbox, 12,
                         "_0.0.t11-2 add-file false false /B12\n"
                         "9 /B8\n")
 
   # modify non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '14'),
+  set_changed_path_list(sbox, 14,
                         "_0.0.t13-2 modify-file false false /A/D/H/foo\n\n")
 
   # modify existent node of the wrong kind
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '16'),
+  set_changed_path_list(sbox, 16,
                         "_0.0.t15-2 modify-file false false /B12\n\n")
 
   # replace non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '18'),
+  set_changed_path_list(sbox, 18,
                         "_0.0.t17-2 replace-file false false /A/D/H/foo\n\n")
 
   # find corruptions
@@ -2010,7 +2069,12 @@ def verify_invalid_path_changes(sbox):
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+  if repo_format(sbox) < 7:
+    first_line = ".*Verifying repository metadata"
+  else:
+    first_line = ".*Verifying metadata at revision 0"
+
+  exp_out = svntest.verify.RegexListOutput([first_line,
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
                                            ".*Error verifying revision 2.",
@@ -2043,10 +2107,15 @@ def verify_invalid_path_changes(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                           ".*Verified revision 0.",
-                                           ".*Verified revision 1.",
-                                           ".*Error verifying revision 2."])
+  if repo_format(sbox) < 7:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                            ".*Verified revision 0.",
+                                            ".*Verified revision 1.",
+                                            ".*Error verifying revision 2."])
+  else:
+    exp_out = svntest.verify.RegexListOutput([first_line])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160058:.*",
+                                              "svnadmin: E165011:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
