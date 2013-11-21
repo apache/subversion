@@ -385,11 +385,20 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "%s -g -Xlint -Xlint:-deprecation -Xlint:-dep-ann " \
-                   "-target 1.5 -source 1.5 -classpath %s -d %s " \
-                   "-sourcepath %s $(InputPath)" \
+          per_project_flags = ""
+
+          if target.name.find("-compat-"):
+            per_project_flags += "-Xlint:-deprecation -Xlint:-dep-ann" \
+                                 " -Xlint:-rawtypes"
+
+          cbuild = ("%s -g -Xlint -Xlint:-options " +
+                    per_project_flags +
+                    " -target 1.5 -source 1.5 -classpath "
+                    " %s -d %s "
+                    " -sourcepath %s $(InputPath)") \
                    % tuple(map(self.quote, (javac_exe, classes,
                                             targetdir, sourcepath)))
+
 
           ctarget = self.path(object.filename)
           cdesc = "Compiling %s" % (source)
