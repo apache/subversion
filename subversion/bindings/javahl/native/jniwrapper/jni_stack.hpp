@@ -176,6 +176,21 @@
       return svn_error_create((C), NULL, msg);                          \
     }
 
+/**
+ * Exception checker for the oldstyle implementation that does not use
+ * the @c Java::Env environment wrapper.
+ *
+ * @param E A wrapped environment (@c Java::Env) instance.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(E)  \
+  do {                                          \
+    if ((E).ExceptionCheck())                   \
+      throw ::Java::SignalExceptionThrown();    \
+  } while(0)
+
+
 namespace Java {
 
 /**
