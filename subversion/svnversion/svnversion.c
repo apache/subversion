@@ -47,7 +47,6 @@ usage(apr_pool_t *pool)
 {
   svn_error_clear(svn_cmdline_fprintf
                   (stderr, pool, _("Type 'svnversion --help' for usage.\n")));
-  exit(1);
 }
 
 
@@ -97,7 +96,6 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
       ++options;
     }
   svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
-  exit(0);
 }
 
 
@@ -171,7 +169,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        usage(pool);  /* this will exit() */
+        {
+          *exit_code = EXIT_FAILURE;
+          usage(pool);
+          return SVN_NO_ERROR;
+        }
 
       switch (opt)
         {
@@ -186,22 +188,28 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case 'h':
           help(options, pool);
-          break;
+          return SVN_NO_ERROR;
         case SVNVERSION_OPT_VERSION:
           is_version = TRUE;
           break;
         default:
-          usage(pool);  /* this will exit() */
+          *exit_code = EXIT_FAILURE;
+          usage(pool);
+          return SVN_NO_ERROR;
         }
     }
 
   if (is_version)
     {
       SVN_ERR(version(quiet, pool));
-      exit(0);
+      return SVN_NO_ERROR;
     }
   if (os->ind > argc || os->ind < argc - 2)
-    usage(pool);  /* this will exit() */
+    {
+      *exit_code = EXIT_FAILURE;
+      usage(pool);
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_utf_cstring_to_utf8(&wc_path,
                                   (os->ind < argc) ? os->argv[os->ind] : ".",
