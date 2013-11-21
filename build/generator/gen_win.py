@@ -386,7 +386,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           sourcepath = self.path(source.sourcepath)
 
           cbuild = "%s -g -Xlint " \
-                   "-target 1.5 -source 1.5 -classpath %s -d %s" \
+                   "-target 1.5 -source 1.5 -classpath %s -d %s " \
                    "-sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (javac_exe, classes,
                                             targetdir, sourcepath)))
