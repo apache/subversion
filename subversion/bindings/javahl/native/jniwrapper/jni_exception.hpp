@@ -27,7 +27,6 @@
 
 #include "jni_env.hpp"
 #include "jni_object.hpp"
-#include "jni_javahl_exception.hpp"
 
 namespace Java {
 
@@ -60,7 +59,7 @@ public:
   void raise() const
     {
       throw_java_exception();
-      throw ::JavaHL::JavaException();
+      throw SignalExceptionThrown();
     }
 
   /**
@@ -73,7 +72,7 @@ public:
   void raise(const char* message) const
     {
       throw_java_exception(message);
-      throw ::JavaHL::JavaException();
+      throw SignalExceptionThrown();
     }
 
   /**

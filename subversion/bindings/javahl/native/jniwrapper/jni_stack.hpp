@@ -102,7 +102,7 @@
  * @since New in 1.9.
  */
 #define SVN_JAVAHL_JNI_CATCH_TO_EXCEPTION(X)                            \
-  catch (const ::JavaHL::JavaException&)                                \
+  catch (const ::Java::SignalExceptionThrown&)                          \
     {                                                                   \
       SVN_JAVAHL_ASSERT_EXCEPTION_THROWN(::Java::Env(jenv));            \
     }                                                                   \
@@ -158,7 +158,7 @@
     {                                                                   \
       S;                                                                \
     }                                                                   \
-  catch (const ::JavaHL::JavaException&)                                \
+  catch (const ::Java::SignalExceptionThrown&)                          \
     {                                                                   \
       SVN_JAVAHL_ASSERT_EXCEPTION_THROWN((E));                          \
       return svn_error_create((C), NULL, _("Java exception"));          \

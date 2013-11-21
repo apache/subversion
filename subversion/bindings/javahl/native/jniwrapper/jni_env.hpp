@@ -30,8 +30,6 @@
 
 #include "svn_private_config.h"
 
-#include "jni_javahl_exception.hpp"
-
 #ifdef SVN_JAVAHL_DEBUG
 #  ifndef SVN_JAVAHL_JNIWRAPPER_LOG
 #    include <iostream>
@@ -43,6 +41,17 @@
 #endif // SVN_JAVAHL_DEBUG
 
 namespace Java {
+
+/**
+ * A C++ exception object for signalling that a Java exception has
+ * been thrown.
+ *
+ * Thrown to unwind the stack while avoiding code clutter when a Java
+ * exception is detected in the JNI environment.
+ *
+ * @since New in 1.9.
+ */
+class SignalExceptionThrown {};
 
 /**
  * Auto-initializing proxy for the JNI method ID.
@@ -542,13 +551,13 @@ private:
 
   void throw_java_exception() const
     {
-      throw ::JavaHL::JavaException();
+      throw SignalExceptionThrown();
     }
 
   void check_java_exception() const
     {
       if (m_env->ExceptionCheck())
-        throw ::JavaHL::JavaException();
+        throw SignalExceptionThrown();
     }
 
   void throw_java_out_of_memory(const char* message) const;

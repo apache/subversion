@@ -212,29 +212,10 @@ const char* const IndexOutOfBoundsException::m_class_name =
 const char* const IOException::m_class_name =
   "java/io/IOException";
 
-} // namespace Java
-
-
-namespace JavaHL {
-
-// class JavaHL::JavaException
-
-JavaException::~JavaException() throw() {}
-
-const char* JavaException::what() const throw()
-{
-  // FIXME: Implement this?
-  return "";
-}
-
-} // namespace JavaHL
-
 
 // Implementation of jni_stack.hpp
 
-namespace Java {
-
-void handle_svn_error(::Java::Env env, ::svn_error_t* err)
+void handle_svn_error(Env env, ::svn_error_t* err)
 {
   jthrowable cause = NULL;
 
@@ -244,14 +225,13 @@ void handle_svn_error(::Java::Env env, ::svn_error_t* err)
   if (env.ExceptionCheck())
     {
       cause = env.ExceptionOccurred();
-      const jclass excls = ::Java::ClassCache::get_subversion_exception();
-      if (env.IsInstanceOf(cause, excls))
+      if (env.IsInstanceOf(cause, ClassCache::get_subversion_exception()))
         {
           // XXX FIXME: Should really have a special error code
           // specifically for propagating Java exceptions from
           // callbacks through native code.
           svn_error_clear(err);
-          throw ::JavaHL::JavaException();
+          throw SignalExceptionThrown();
         }
     }
 
@@ -260,7 +240,7 @@ void handle_svn_error(::Java::Env env, ::svn_error_t* err)
     env.ExceptionClear();
 
   ::JNIUtil::handleSVNError(err, cause);
-  throw ::JavaHL::JavaException();
+  throw SignalExceptionThrown();
 }
 
 } // namespace Java
