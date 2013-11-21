@@ -172,6 +172,9 @@ svn_stream_t*
 InputStream::get_global_stream(Env env, jobject jstream,
                                const SVN::Pool& pool)
 {
+  if (!jstream)
+    return NULL;
+
   const bool has_mark = InputStream(env, jstream).mark_supported();
 
   std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
@@ -194,6 +197,9 @@ InputStream::get_global_stream(Env env, jobject jstream,
 
 svn_stream_t* InputStream::get_stream(const SVN::Pool& pool)
 {
+  if (!m_jthis)
+    return NULL;
+
   const bool has_mark = mark_supported();
 
   svn_stream_t* const stream = svn_stream_create(this, pool.getPool());
@@ -217,6 +223,9 @@ svn_stream_t*
 OutputStream::get_global_stream(Env env, jobject jstream,
                                const SVN::Pool& pool)
 {
+  if (!jstream)
+    return NULL;
+
   std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
 
   svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
@@ -231,6 +240,9 @@ OutputStream::get_global_stream(Env env, jobject jstream,
 
 svn_stream_t* OutputStream::get_stream(const SVN::Pool& pool)
 {
+  if (!m_jthis)
+    return NULL;
+
   svn_stream_t* const stream = svn_stream_create(this, pool.getPool());
   svn_stream_set_write(stream, stream_write);
   svn_stream_set_close(stream, stream_close_output);
