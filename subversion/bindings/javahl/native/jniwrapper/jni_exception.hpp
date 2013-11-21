@@ -27,7 +27,6 @@
 
 #include "jni_env.hpp"
 #include "jni_object.hpp"
-#include "jni_javahl_exception.hpp"
 
 namespace Java {
 
@@ -60,7 +59,7 @@ public:
   void raise() const
     {
       throw_java_exception();
-      throw ::JavaHL::JavaException();
+      throw SignalExceptionThrown();
     }
 
   /**
@@ -73,7 +72,7 @@ public:
   void raise(const char* message) const
     {
       throw_java_exception(message);
-      throw ::JavaHL::JavaException();
+      throw SignalExceptionThrown();
     }
 
   /**
@@ -168,6 +167,7 @@ private:
   static const char* const m_class_name;
 };
 
+
 /**
  * Generator class for exceptions of type @c java.lang.NullPointerException.
  *
@@ -199,6 +199,26 @@ public:
    * Constructs an exception generator object.
    */
   explicit OutOfMemoryError(Env env)
+    : Exception(env, m_class_name)
+    {}
+
+private:
+  static const char* const m_class_name;
+};
+
+/**
+ * Generator class for exceptions of type
+ * @c java.lang.IndexOutOfBoundsException.
+ *
+ * @since New in 1.9.
+ */
+class IndexOutOfBoundsException : public Exception
+{
+public:
+  /**
+   * Constructs an exception generator object.
+   */
+  explicit IndexOutOfBoundsException(Env env)
     : Exception(env, m_class_name)
     {}
 

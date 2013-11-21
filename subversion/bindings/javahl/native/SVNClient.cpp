@@ -449,12 +449,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     SVN::Pool subPool(pool);
 
     apr_array_header_t *srcs = copySources.array(subPool);
-    if (srcs == NULL)
-    {
-        JNIUtil::throwNativeException(JAVA_PACKAGE "/ClientException",
-                                      "Invalid copy sources");
-        return;
-    }
+    SVN_JNI_NULL_PTR_EX(srcs, "sources", );
     SVN_JNI_NULL_PTR_EX(destPath, "destPath", );
     Path destinationPath(destPath, subPool);
     SVN_JNI_ERR(destinationPath.error_occurred(), );

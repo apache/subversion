@@ -46,10 +46,10 @@ public class ExternalItem implements java.io.Serializable
      *
      * @param targetDir See {@link #getTargetDir}
      * @param url See {@link #getUrl}
--     * @param revision See {@link #getRevision};
--     *     <code>null</code> will be interpreted as <code>pegRevision</code>
--     * @param pegRevision See {@link #getPegRevision};
--     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
+     * @param revision See {@link #getRevision};
+     *     <code>null</code> will be interpreted as <code>pegRevision</code>
+     * @param pegRevision See {@link #getPegRevision};
+     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
      */
     public ExternalItem(String targetDir, String url,
                         Revision revision, Revision pegRevision)

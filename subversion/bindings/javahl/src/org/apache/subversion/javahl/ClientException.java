@@ -79,10 +79,10 @@ public class ClientException extends NativeException
      * @param messageStack The whole stack of error messages
      * @since 1.9
      */
-    ClientException(String message, String source, int aprError,
-                    List<ErrorMessage> messageStack)
+    ClientException(String message, Throwable cause, String source,
+                    int aprError, List<ErrorMessage> messageStack)
     {
-        super(message, source, aprError);
+        super(message, source, cause, aprError);
         this.messageStack = messageStack;
     }
 
@@ -96,7 +96,7 @@ public class ClientException extends NativeException
      */
     ClientException(String message, String source, int aprError)
     {
-        this(message, source, aprError, null);
+        this(message, null, source, aprError, null);
     }
 
     public List<ErrorMessage> getAllMessages()

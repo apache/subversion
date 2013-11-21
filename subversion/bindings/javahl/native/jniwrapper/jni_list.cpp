@@ -92,7 +92,7 @@ jint BaseMutableList::length() const
 {
   if (!m_mid_size)
     m_mid_size = m_env.GetMethodID(m_class, "size", "()I");
-  return m_env.CallIntMethod(m_jthis, m_mid_add);
+  return m_env.CallIntMethod(m_jthis, m_mid_size);
 }
 
 } // namespace Java

@@ -98,7 +98,7 @@ ExternalItem::get_external_item(SVN::Pool& svnpool) const
 {
   svn_wc_external_item2_t* item;
   apr_pool_t* const pool = svnpool.getPool();
-  SVN_JAVAHL_CHECK(svn_wc_external_item2_create(&item, pool));
+  SVN_JAVAHL_CHECK(m_env, svn_wc_external_item2_create(&item, pool));
 
   item->target_dir = apr_pstrdup(
       pool, Java::String::Contents(m_target_dir).c_str());
@@ -135,7 +135,8 @@ jobject Revision::makeJRevision(const svn_opt_revision_t& rev)
     {
       const jclass cls = env.FindClass(
           JAVA_PACKAGE"/types/Revision$DateSpec");
-      return env.NewObject(cls, env.GetMethodID(cls, "<init>", "(J)V"));
+      return env.NewObject(cls, env.GetMethodID(cls, "<init>", "(J)V"),
+                           jlong(rev.value.date / 1000));
     }
 
   const jclass cls = env.FindClass(JAVA_PACKAGE"/types/Revision");

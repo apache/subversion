@@ -30,19 +30,28 @@
 
 #include "svn_private_config.h"
 
-#include "jni_javahl_exception.hpp"
-
 #ifdef SVN_JAVAHL_DEBUG
-#include <iostream>
-#define SVN_JAVAHL_JNIWRAPPER_LOG(expr)       \
-  do {                                        \
-    std::cerr << expr << std::endl;           \
-  } while(0)
+#  ifndef SVN_JAVAHL_JNIWRAPPER_LOG
+#    include <iostream>
+#    define SVN_JAVAHL_JNIWRAPPER_LOG(expr)      \
+       (std::cerr << expr << std::endl)
+#  endif // SVN_JAVAHL_JNIWRAPPER_LOG
 #else
-#define SVN_JAVAHL_JNIWRAPPER_LOG(expr)
+#  define SVN_JAVAHL_JNIWRAPPER_LOG(expr)
 #endif // SVN_JAVAHL_DEBUG
 
 namespace Java {
+
+/**
+ * A C++ exception object for signalling that a Java exception has
+ * been thrown.
+ *
+ * Thrown to unwind the stack while avoiding code clutter when a Java
+ * exception is detected in the JNI environment.
+ *
+ * @since New in 1.9.
+ */
+class SignalExceptionThrown {};
 
 /**
  * Auto-initializing proxy for the JNI method ID.
@@ -214,21 +223,33 @@ public:
     }
 
   /** Wrapped JNI function. */
-  jint Throw(jthrowable exc) const
+  jint Throw(jthrowable exc) const throw()
     {
       return m_env->Throw(exc);
     }
 
   /** Wrapped JNI function. */
-  jint ThrowNew(jclass cls, const char* message) const
+  jint ThrowNew(jclass cls, const char* message) const throw()
     {
       return m_env->ThrowNew(cls, message);
+    }
+
+  /** Wrapped JNI function. */
+  jboolean ExceptionCheck() const throw()
+    {
+      return m_env->ExceptionCheck();
     }
 
   /** Wrapped JNI function. */
   jthrowable ExceptionOccurred() const throw()
     {
       return m_env->ExceptionOccurred();
+    }
+
+  /** Wrapped JNI function. */
+  void ExceptionClear() const throw()
+    {
+      m_env->ExceptionClear();
     }
 
   /** Wrapped JNI function. */
@@ -256,6 +277,12 @@ public:
       jclass cls = m_env->GetObjectClass(obj);
       check_java_exception();
       return cls;
+    }
+
+  /** Wrapped JNI function. */
+  jboolean IsInstanceOf(jobject obj, jclass cls) const
+    {
+      return m_env->IsInstanceOf(obj, cls);
     }
 
   /** Wrapped JNI function. */
@@ -524,13 +551,13 @@ private:
 
   void throw_java_exception() const
     {
-      throw ::JavaHL::JavaException();
+      throw SignalExceptionThrown();
     }
 
   void check_java_exception() const
     {
       if (m_env->ExceptionCheck())
-        throw ::JavaHL::JavaException();
+        throw SignalExceptionThrown();
     }
 
   void throw_java_out_of_memory(const char* message) const;
