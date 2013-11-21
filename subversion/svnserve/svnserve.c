@@ -361,7 +361,6 @@ static void usage(const char *progname, apr_pool_t *pool)
   svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                       _("Type '%s --help' for usage.\n"),
                                       progname));
-  exit(1);
 }
 
 static void help(apr_pool_t *pool)
@@ -394,7 +393,6 @@ static void help(apr_pool_t *pool)
       svn_error_clear(svn_cmdline_fprintf(stdout, pool, "  %s\n", optstr));
     }
   svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
-  exit(0);
 }
 
 static svn_error_t * version(svn_boolean_t quiet, apr_pool_t *pool)
@@ -680,7 +678,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        usage(argv[0], pool);
+        {
+          usage(argv[0], pool);
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
+        }
       switch (opt)
         {
         case '6':
@@ -692,7 +694,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         case 'h':
           help(pool);
-          break;
+          return SVN_NO_ERROR;
 
         case 'q':
           quiet = TRUE;
@@ -871,11 +873,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   if (is_version)
     {
       SVN_ERR(version(quiet, pool));
-      exit(0);
+      return SVN_NO_ERROR;
     }
 
   if (os->ind != argc)
-    usage(argv[0], pool);
+    {
+      usage(argv[0], pool);
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
+    }
 
   if (mode_opt_count != 1)
     {
@@ -888,6 +894,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 #endif
                        stderr, pool));
       usage(argv[0], pool);
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   if (handling_opt_count > 1)
@@ -896,6 +904,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                       _("You may only specify one of -T or --single-thread\n"),
                       stderr, pool));
       usage(argv[0], pool);
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   /* construct object pools */
@@ -944,7 +954,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         (svn_cmdline_fprintf
            (stderr, pool,
             _("Option --tunnel-user is only valid in tunnel mode.\n")));
-      exit(1);
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
@@ -979,7 +990,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       svn_error_clear(serve(conn, &params, connection_pool));
       svn_pool_destroy(connection_pool);
 
-      exit(0);
+      return SVN_NO_ERROR;
     }
 
 #ifdef WIN32
@@ -1024,7 +1035,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             }
 
           svn_error_clear(err);
-          exit(1);
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       /* The service is now in the "starting" state.  Before the SCM will
@@ -1233,7 +1245,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           apr_socket_close(usock);
           apr_socket_close(sock);
-          exit(0);
+          return SVN_NO_ERROR;
         }
 
       switch (handling_mode)
@@ -1246,7 +1258,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
               apr_socket_close(sock);
               svn_error_clear(serve_socket(usock, &params, socket_pool));
               apr_socket_close(usock);
-              exit(0);
+              return SVN_NO_ERROR;
             }
           else if (status == APR_INPARENT)
             {
@@ -1281,28 +1293,19 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           status = apr_threadattr_create(&tattr, socket_pool);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't create threadattr"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
-              exit(1);
+              return svn_error_wrap_apr(status, _("Can't create threadattr"));
             }
           status = apr_threadattr_detach_set(tattr, 1);
           if (status)
             {
-              err = svn_error_wrap_apr(status, _("Can't set detached state"));
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
-              exit(1);
+              return svn_error_wrap_apr(status, _("Can't set detached state"));
             }
           status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
                                      shared_pool->pool);
 #endif
           if (status)
             {
-              err = svn_error_wrap_apr(status, THREAD_ERROR_MSG);
-              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
-              svn_error_clear(err);
-              exit(1);
+              return svn_error_wrap_apr(status, THREAD_ERROR_MSG);
             }
           release_shared_pool(shared_pool);
 #endif

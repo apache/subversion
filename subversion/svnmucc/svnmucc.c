@@ -59,16 +59,6 @@
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
 
-static void handle_error(svn_error_t *err, apr_pool_t *pool)
-{
-  if (err)
-    svn_handle_error2(err, stderr, FALSE, "svnmucc: ");
-  svn_error_clear(err);
-  if (pool)
-    svn_pool_destroy(pool);
-  exit(EXIT_FAILURE);
-}
-
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions(void)
@@ -911,10 +901,10 @@ sanitize_url(const char *url,
   return svn_uri_canonicalize(url, pool);
 }
 
+/* Print a usage message on STREAM. */
 static void
-usage(apr_pool_t *pool, int exit_val)
+usage(FILE *stream, apr_pool_t *pool)
 {
-  FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
   svn_error_clear(svn_cmdline_fputs(
     _("usage: svnmucc ACTION...\n"
       "Subversion multiple URL command client.\n"
@@ -958,16 +948,13 @@ usage(apr_pool_t *pool, int exit_val)
       "  --no-auth-cache        : do not cache authentication tokens\n"
       "  --version              : print version information\n"),
                   stream, pool));
-  svn_pool_destroy(pool);
-  exit(exit_val);
 }
 
-static void
-insufficient(apr_pool_t *pool)
+static svn_error_t *
+insufficient(void)
 {
-  handle_error(svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                "insufficient arguments"),
-               pool);
+  return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                          "insufficient arguments");
 }
 
 static svn_error_t *
@@ -1110,7 +1097,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (APR_STATUS_IS_EOF(status))
         break;
       if (status != APR_SUCCESS)
-        handle_error(svn_error_wrap_apr(status, "getopt failure"), pool);
+        return svn_error_wrap_apr(status, "getopt failure");
       switch(opt)
         {
         case 'm':
@@ -1132,9 +1119,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         case 'U':
           SVN_ERR(svn_utf_cstring_to_utf8(&root_url, arg, pool));
           if (! svn_path_is_url(root_url))
-            handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not a URL\n", root_url),
-                         pool);
+            return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                     "'%s' is not a URL\n", root_url);
           root_url = sanitize_url(root_url, pool);
           break;
         case 'r':
@@ -1147,11 +1133,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             if ((! SVN_IS_VALID_REVNUM(base_revision))
                 || (! digits_end)
                 || *digits_end)
-              handle_error(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                             NULL,
-                                             _("Invalid revision number '%s'"),
-                                             saved_arg),
-                           pool);
+              return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                       _("Invalid revision number '%s'"),
+                                       saved_arg);
           }
           break;
         case with_revprop_opt:
@@ -1182,12 +1166,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case version_opt:
           SVN_ERR(display_version(opts, pool));
-          exit(EXIT_SUCCESS);
-          break;
+          return SVN_NO_ERROR;
         case 'h':
         case '?':
-          usage(pool, EXIT_SUCCESS);
-          break;
+          usage(stdout, pool);
+          return SVN_NO_ERROR;
         }
     }
 
@@ -1263,13 +1246,16 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         action->action = ACTION_PROPDEL;
       else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
                || ! strcmp(action_string, "help"))
-        usage(pool, EXIT_SUCCESS);
+        {
+          usage(stdout, pool);
+          return SVN_NO_ERROR;
+        }
       else
-        handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                       "'%s' is not an action\n",
-                                       action_string), pool);
+        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                 "'%s' is not an action\n",
+                                 action_string);
       if (++i == action_args->nelts)
-        insufficient(pool);
+        return insufficient();
 
       /* For copies, there should be a revision number next. */
       if (action->action == ACTION_CP)
@@ -1288,12 +1274,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
               action->rev = strtol(rev_str, &end, 0);
               if (*end)
-                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                               "'%s' is not a revision\n",
-                                               rev_str), pool);
+                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                         "'%s' is not a revision\n",
+                                         rev_str);
             }
           if (++i == action_args->nelts)
-            insufficient(pool);
+            return insufficient();
         }
       else
         {
@@ -1307,7 +1293,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             svn_dirent_internal_style(APR_ARRAY_IDX(action_args, i,
                                                     const char *), pool);
           if (++i == action_args->nelts)
-            insufficient(pool);
+            return insufficient();
         }
 
       /* For propset, propsetf, and propdel, a property name (and
@@ -1318,7 +1304,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           action->prop_name = APR_ARRAY_IDX(action_args, i, const char *);
           if (++i == action_args->nelts)
-            insufficient(pool);
+            return insufficient();
 
           if (action->action == ACTION_PROPDEL)
             {
@@ -1330,7 +1316,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                 svn_string_create(APR_ARRAY_IDX(action_args, i,
                                                 const char *), pool);
               if (++i == action_args->nelts)
-                insufficient(pool);
+                return insufficient();
             }
           else
             {
@@ -1339,7 +1325,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                                         const char *), pool);
 
               if (++i == action_args->nelts)
-                insufficient(pool);
+                return insufficient();
 
               SVN_ERR(read_propvalue_file(&(action->prop_value),
                                           propval_file, pool));
@@ -1382,10 +1368,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (! svn_path_is_url(url))
             {
               if (! root_url)
-                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                               "'%s' is not a URL, and "
-                                               "--root-url (-U) not provided\n",
-                                               url), pool);
+                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                         "'%s' is not a URL, and "
+                                         "--root-url (-U) not provided\n",
+                                         url);
               /* ### These relpaths are already URI-encoded. */
               url = apr_pstrcat(pool, root_url, "/",
                                 svn_relpath_canonicalize(url, pool),
@@ -1407,20 +1393,23 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             {
               anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
               if (!anchor || !anchor[0])
-                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                               "URLs in the action list do not "
-                                               "share a common ancestor"),
-                             pool);
+                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                         "URLs in the action list do not "
+                                         "share a common ancestor");
             }
 
           if ((++i == action_args->nelts) && (j + 1 < num_url_args))
-            insufficient(pool);
+            return insufficient();
         }
       APR_ARRAY_PUSH(actions, struct action *) = action;
     }
 
   if (! actions->nelts)
-    usage(pool, EXIT_FAILURE);
+    {
+      *exit_code = EXIT_FAILURE;
+      usage(stderr, pool);
+      return SVN_NO_ERROR;
+    }
 
   if ((err = execute(actions, anchor, revprops, username, password,
                      config_dir, config_options, non_interactive,
@@ -1431,7 +1420,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                    _("Authentication failed and interactive"
                                      " prompting is disabled; see the"
                                      " --force-interactive option"));
-      handle_error(err, pool);
+      return err;
     }
 
   return SVN_NO_ERROR;
