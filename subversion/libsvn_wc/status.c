@@ -576,19 +576,21 @@ assemble_status(svn_wc_status3_t **status,
       && prop_status != svn_wc_status_none)
     node_status = prop_status;
 
-  /* 5. Easy out:  unless we're fetching -every- entry, don't bother
-     to allocate a struct for an uninteresting entry. */
+  /* 5. Easy out:  unless we're fetching -every- node, don't bother
+     to allocate a struct for an uninteresting node.
 
+     This filter should match the filter in is_sendable_status() */
   if (! get_all)
     if (((node_status == svn_wc_status_none)
          || (node_status == svn_wc_status_normal))
 
         && (! switched_p)
-        && (! info->locked )
+        && (! info->locked)
         && (! info->lock)
         && (! repos_lock)
         && (! info->changelist)
-        && (! conflicted))
+        && (! conflicted)
+        && (! info->moved_to))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -1769,6 +1771,8 @@ make_file_baton(struct dir_baton *parent_dir_baton,
  * Return a boolean answer to the question "Is @a status something that
  * should be reported?".  @a no_ignore and @a get_all are the same as
  * svn_wc_get_status_editor4().
+ *
+ * This implementation should match the filter in assemble_status()
  */
 static svn_boolean_t
 is_sendable_status(const svn_wc_status3_t *status,
@@ -1814,6 +1818,9 @@ is_sendable_status(const svn_wc_status3_t *status,
 
   /* If the entry is associated with a changelist, send it. */
   if (status->changelist)
+    return TRUE;
+
+  if (status->moved_to_abspath)
     return TRUE;
 
   /* Otherwise, don't send it. */
