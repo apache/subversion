@@ -31,39 +31,53 @@ namespace JavaHL {
 const char* const ExternalItem::m_class_name =
   JAVA_PACKAGE"/types/ExternalItem";
 
-namespace {
-jstring get_string_field(::Java::Env env, jclass cls, jobject jthis,
-                         const char* field_name)
-{
-  return jstring(
-      env.GetObjectField(
-          jthis, env.GetFieldID(cls, field_name, "Ljava/lang/String;")));
-}
+::Java::MethodID ExternalItem::m_mid_ctor;
+::Java::FieldID ExternalItem::m_fid_target_dir;
+::Java::FieldID ExternalItem::m_fid_url;
+::Java::FieldID ExternalItem::m_fid_revision;
+::Java::FieldID ExternalItem::m_fid_peg_revision;
 
-svn_opt_revision_t get_revision_field(::Java::Env env,
-                                      jclass cls, jobject jthis,
-                                      const char* field_name)
+void ExternalItem::static_init(::Java::Env env)
 {
-  const jobject rev =  env.GetObjectField(
-      jthis, env.GetFieldID(cls, field_name,
-                            "L"JAVA_PACKAGE"/types/Revision;"));
-  return *Revision(rev).revision();
-}
-
-jobject make_external_item(::Java::Env env,
-                           const char* class_name,
-                           const char* target_dir,
-                           const char* url,
-                           const svn_opt_revision_t* revision,
-                           const svn_opt_revision_t* peg_revision)
-{
-  const jclass cls = env.FindClass(class_name);
-  const jmethodID mid_ctor =
+  const jclass cls = ::Java::ClassCache::get_external_item();
+  m_mid_ctor =
     env.GetMethodID(cls, "<init>",
                     "(ZLjava/lang/String;Ljava/lang/String;"
                     "L"JAVA_PACKAGE"/types/Revision;"
                     "L"JAVA_PACKAGE"/types/Revision;)V");
-  return env.NewObject(cls, mid_ctor, JNI_FALSE,
+  m_fid_target_dir = env.GetFieldID(cls, "targetDir", "Ljava/lang/String;");
+  m_fid_url = env.GetFieldID(cls, "url", "Ljava/lang/String;");
+  m_fid_revision = env.GetFieldID(cls, "revision",
+                                  "L"JAVA_PACKAGE"/types/Revision;");
+  m_fid_peg_revision = env.GetFieldID(cls, "pegRevision",
+                                      "L"JAVA_PACKAGE"/types/Revision;");
+}
+
+namespace {
+inline jstring
+get_string_field(::Java::Env env, jobject jthis,
+                 const ::Java::FieldID& fid)
+{
+  return jstring(env.GetObjectField(jthis, fid));
+}
+
+inline svn_opt_revision_t
+get_revision_field(::Java::Env env, jobject jthis,
+                   const ::Java::FieldID& fid)
+{
+  const jobject rev =  env.GetObjectField(jthis, fid);
+  return *Revision(rev).revision();
+}
+
+inline jobject
+make_external_item(::Java::Env env, const ::Java::MethodID& mid_ctor,
+                   const char* target_dir,
+                   const char* url,
+                   const svn_opt_revision_t* revision,
+                   const svn_opt_revision_t* peg_revision)
+{
+  return env.NewObject(::Java::ClassCache::get_external_item(), mid_ctor,
+                       JNI_FALSE,
                        env.NewStringUTF(target_dir),
                        env.NewStringUTF(url),
                        Revision::makeJRevision(*revision),
@@ -72,11 +86,11 @@ jobject make_external_item(::Java::Env env,
 } // anonymous namespace
 
 ExternalItem::ExternalItem(::Java::Env env, jobject jthis)
-  : Object(env, m_class_name, jthis),
-    m_target_dir(env, get_string_field(env, m_class, jthis, "targetDir")),
-    m_url(env, get_string_field(env, m_class, jthis, "url")),
-    m_revision(get_revision_field(env, m_class, jthis, "revision")),
-    m_peg_revision(get_revision_field(env, m_class, jthis, "pegRevision"))
+  : Object(env, ::Java::ClassCache::get_external_item(), jthis),
+    m_target_dir(env, get_string_field(env, jthis, m_fid_target_dir)),
+    m_url(env, get_string_field(env, jthis, m_fid_url)),
+    m_revision(get_revision_field(env, jthis, m_fid_revision)),
+    m_peg_revision(get_revision_field(env, jthis, m_fid_peg_revision))
 {}
 
 ExternalItem::ExternalItem(::Java::Env env,
@@ -84,8 +98,8 @@ ExternalItem::ExternalItem(::Java::Env env,
                            const char* url,
                            const svn_opt_revision_t* revision,
                            const svn_opt_revision_t* peg_revision)
-  : Object(env, m_class_name,
-           make_external_item(env, m_class_name, target_dir, url,
+  : Object(env, ::Java::ClassCache::get_external_item(),
+           make_external_item(env, m_mid_ctor, target_dir, url,
                               revision, peg_revision)),
     m_target_dir(env, target_dir),
     m_url(env, url),

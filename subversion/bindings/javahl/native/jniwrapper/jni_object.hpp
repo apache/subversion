@@ -161,6 +161,7 @@ class ClassCache
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(byte_buffer);
 
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(subversion_exception);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(external_item);
 #undef SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS
 
 public:

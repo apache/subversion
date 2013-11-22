@@ -36,6 +36,7 @@
 #include "jni_string_map.hpp"
 
 #include "../SubversionException.hpp"
+#include "../ExternalItem.hpp"
 
 namespace Java {
 
@@ -111,7 +112,9 @@ ClassCache::ClassCache(Env env)
                                            ByteChannel::ByteBuffer),
 
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
-                                           ::JavaHL::SubversionException)
+                                           ::JavaHL::SubversionException),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
+                                           ::JavaHL::ExternalItem)
 {
   m_instance = this;
   // no-op: Object::static_init(env);
@@ -134,6 +137,7 @@ ClassCache::ClassCache(Env env)
   ByteChannel::ByteBuffer::static_init(env);
 
   // no-op: ::JavaHL::SubversionException::static_init(env);
+  ::JavaHL::ExternalItem::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT
 
