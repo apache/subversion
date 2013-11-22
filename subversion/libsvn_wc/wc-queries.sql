@@ -424,6 +424,12 @@ LEFT OUTER JOIN nodes AS moved
 WHERE work.wc_id = ?1 AND work.local_relpath = ?2 AND work.op_depth > 0
 LIMIT 1
 
+-- STMT_SELECT_MOVED_TO_NODE
+SELECT op_depth, moved_to
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND moved_to IS NOT NULL
+ORDER BY op_depth DESC
+
 -- STMT_SELECT_OP_DEPTH_MOVED_TO
 SELECT n.op_depth, n.moved_to, p.repos_path, p.revision
 FROM nodes p
