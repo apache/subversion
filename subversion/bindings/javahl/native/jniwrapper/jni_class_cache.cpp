@@ -30,6 +30,8 @@
 #include "jni_object.hpp"
 #include "jni_string.hpp"
 
+#include "jni_channel.hpp"
+#include "jni_io_stream.hpp"
 #include "jni_list.hpp"
 #include "jni_string_map.hpp"
 
@@ -102,6 +104,12 @@ ClassCache::ClassCache(Env env)
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map_entry, BaseMap::Entry),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(hash_map, BaseMutableMap),
 
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(input_stream, InputStream),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(output_stream, OutputStream),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(byte_buffer,
+                                           ByteChannel::ByteBuffer),
+
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
                                            ::JavaHL::SubversionException)
 {
@@ -119,6 +127,11 @@ ClassCache::ClassCache(Env env)
   BaseMap::Iterator::static_init(env);
   BaseMap::Entry::static_init(env);
   BaseMutableMap::static_init(env);
+
+  InputStream::static_init(env);
+  OutputStream::static_init(env);
+
+  ByteChannel::ByteBuffer::static_init(env);
 
   // no-op: ::JavaHL::SubversionException::static_init(env);
 }
