@@ -81,8 +81,7 @@ public:
   explicit ByteChannel(Env env, ChannelReader& reader, ChannelWriter& writer)
     : m_env(env),
       m_reader(reader),
-      m_writer(writer),
-      m_cls_byte_buffer(env.FindClass(m_byte_buffer_class_name))
+      m_writer(writer)
     {}
 
   /**
@@ -106,8 +105,7 @@ protected:
   explicit ByteChannel(Env env, ChannelReader& reader)
     : m_env(env),
       m_reader(reader),
-      m_writer(m_null_writer),
-      m_cls_byte_buffer(env.FindClass(m_byte_buffer_class_name))
+      m_writer(m_null_writer)
     {}
 
   /**
@@ -116,8 +114,7 @@ protected:
   explicit ByteChannel(Env env, ChannelWriter& writer)
     : m_env(env),
       m_reader(m_null_reader),
-      m_writer(writer),
-      m_cls_byte_buffer(env.FindClass(m_byte_buffer_class_name))
+      m_writer(writer)
     {}
 
 private:
@@ -129,16 +126,20 @@ private:
   static ChannelWriter& m_null_writer;
 
   // Private references for the java.nio.ByteBuffer class.
-  static const char* const m_byte_buffer_class_name;
-  const jclass m_cls_byte_buffer;
-  MethodID m_mid_byte_buffer_has_array;
-  MethodID m_mid_byte_buffer_get_array;
-  MethodID m_mid_byte_buffer_get_array_offset;
-  MethodID m_mid_byte_buffer_get_remaining;
-  MethodID m_mid_byte_buffer_get_position;
-  MethodID m_mid_byte_buffer_set_position;
-  MethodID m_mid_byte_buffer_get_bytearray;
-  MethodID m_mid_byte_buffer_put_bytearray;
+  friend class ClassCache;
+  struct ByteBuffer
+  {
+    static const char* const m_class_name;
+    static void static_init(Env env);
+    static MethodID m_mid_has_array;
+    static MethodID m_mid_get_array;
+    static MethodID m_mid_get_array_offset;
+    static MethodID m_mid_get_remaining;
+    static MethodID m_mid_get_position;
+    static MethodID m_mid_set_position;
+    static MethodID m_mid_get_bytearray;
+    static MethodID m_mid_put_bytearray;
+  };
 };
 
 

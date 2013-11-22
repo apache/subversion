@@ -49,7 +49,7 @@ public:
    * Constructs a wrapper around an existing @c InputStream @a jstream.
    */
   explicit InputStream(Env env, jobject jstream)
-    : Object(env, m_class_name, jstream)
+    : Object(env, ClassCache::get_input_stream(), jstream)
     {}
 
   /**
@@ -73,8 +73,6 @@ public:
    */
   void close()
     {
-      if (!m_mid_close)
-        m_mid_close = m_env.GetMethodID(m_class, "close", "()V");
       m_env.CallVoidMethod(m_jthis, m_mid_close);
     }
 
@@ -83,9 +81,6 @@ public:
    */
   bool mark_supported()
     {
-      if (!m_mid_mark_supported)
-        m_mid_mark_supported = m_env.GetMethodID(m_class,
-                                                 "markSupported", "()Z");
       return m_env.CallBooleanMethod(m_jthis, m_mid_mark_supported);
     }
 
@@ -94,8 +89,6 @@ public:
    */
   void mark(jint readlimit)
     {
-      if (!m_mid_mark)
-        m_mid_mark = m_env.GetMethodID(m_class, "mark", "(I)V");
       m_env.CallVoidMethod(m_jthis, m_mid_mark, readlimit);
     }
 
@@ -104,8 +97,6 @@ public:
    */
   void reset()
     {
-      if (!m_mid_reset)
-        m_mid_reset = m_env.GetMethodID(m_class, "reset", "()V");
       m_env.CallVoidMethod(m_jthis, m_mid_reset);
     }
 
@@ -114,8 +105,6 @@ public:
    */
   jint read()
     {
-      if (!m_mid_read_byte)
-        m_mid_read_byte = m_env.GetMethodID(m_class, "read", "()I");
       return m_env.CallIntMethod(m_jthis, m_mid_read_byte);
     }
 
@@ -124,8 +113,6 @@ public:
    */
   jint read(ByteArray& dst, jint length = -1, jint offset = 0)
     {
-      if (!m_mid_read_bytearray)
-        m_mid_read_bytearray = m_env.GetMethodID(m_class, "read", "([BII)I");
       return m_env.CallIntMethod(m_jthis, m_mid_read_bytearray,
                                  dst.get(), offset,
                                  (length >= 0 ? length
@@ -149,20 +136,20 @@ public:
    */
   jlong skip(jlong count)
     {
-      if (!m_mid_skip)
-        m_mid_skip = m_env.GetMethodID(m_class, "skip", "(J)J");
       return m_env.CallLongMethod(m_jthis, m_mid_skip, count);
     }
 
 private:
+  friend class ClassCache;
+  static void static_init(Env env);
   static const char* const m_class_name;
-  MethodID m_mid_close;
-  MethodID m_mid_mark_supported;
-  MethodID m_mid_mark;
-  MethodID m_mid_reset;
-  MethodID m_mid_read_byte;
-  MethodID m_mid_read_bytearray;
-  MethodID m_mid_skip;
+  static MethodID m_mid_close;
+  static MethodID m_mid_mark_supported;
+  static MethodID m_mid_mark;
+  static MethodID m_mid_reset;
+  static MethodID m_mid_read_byte;
+  static MethodID m_mid_read_bytearray;
+  static MethodID m_mid_skip;
 };
 
 
@@ -178,7 +165,7 @@ public:
    * Constructs a wrapper around an existing @c OutputStream @a jstream.
    */
   explicit OutputStream(Env env, jobject jstream)
-    : Object(env, m_class_name, jstream)
+    : Object(env, ClassCache::get_output_stream(), jstream)
     {}
 
   /**
@@ -202,8 +189,6 @@ public:
    */
   void close()
     {
-      if (!m_mid_close)
-        m_mid_close = m_env.GetMethodID(m_class, "close", "()V");
       m_env.CallVoidMethod(m_jthis, m_mid_close);
     }
 
@@ -212,8 +197,6 @@ public:
    */
   void write(jint byte)
     {
-      if (!m_mid_write_byte)
-        m_mid_write_byte = m_env.GetMethodID(m_class, "write", "(I)V");
       m_env.CallVoidMethod(m_jthis, m_mid_write_byte, byte);
     }
 
@@ -222,8 +205,6 @@ public:
    */
   void write(const ByteArray& src, jint length = -1, jint offset = 0)
     {
-      if (!m_mid_write_bytearray)
-        m_mid_write_bytearray = m_env.GetMethodID(m_class, "write", "([BII)V");
       m_env.CallVoidMethod(m_jthis, m_mid_write_bytearray,
                            src.get(), offset,
                            (length >= 0 ? length
@@ -255,10 +236,12 @@ public:
     }
 
 private:
+  friend class ClassCache;
+  static void static_init(Env env);
   static const char* const m_class_name;
-  MethodID m_mid_close;
-  MethodID m_mid_write_byte;
-  MethodID m_mid_write_bytearray;
+  static MethodID m_mid_close;
+  static MethodID m_mid_write_byte;
+  static MethodID m_mid_write_bytearray;
 };
 
 } // namespace Java
