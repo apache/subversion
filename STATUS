@@ -137,6 +137,7 @@ Candidate changes:
    resource (including icon) for this executable on Windows.
    Votes:
      +1: rhuijben, stsp
+     -0: brane (horrible grammar; suggest translation to English)
 
  * r1542765, r1542767, r1542774
    Add or update an 'sqlite_stat1' table when creating or upgrading a database
@@ -148,29 +149,18 @@ Candidate changes:
      r1542767 and r1542774 are test suite tweaks to improve test coverage and
      to make sure we don't have false positive test failures on Sqlite 3.8.X.
    Votes:
-     +1: rhuijben
-
- * r1543145
-   Properly end the list of errors we want to handle as warnings in svn's
-   status handling. Without this patch we read invalid stack locations
-   until we find a NULL.
-   Justification:
-     Regression since 1.8.
-     https://bugzilla.redhat.com/show_bug.cgi?id=985582#c5
-     (And the report from astieger on irc)
-   Votes:
-     +1: rhuijben, stsp
+     +1: rhuijben, brane
 
  * r1543961
    Fix SWIG bindings building on OS X out of the tarball.
    Justification:
-     Regression since 1.8 
+     Regression since 1.8
    Notes:
      Test by running ./autogen.sh --release and then building bindings
      on OS X.  Even if you run ./autogen.sh on a Mac the issue will
      still replicate.
    Votes:
-     +1: breser
+     +1: breser, brane
 
 Veto-blocked changes:
 =====================
@@ -201,3 +191,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1543145
+   Properly end the list of errors we want to handle as warnings in svn's
+   status handling. Without this patch we read invalid stack locations
+   until we find a NULL.
+   Justification:
+     Regression since 1.8.
+     https://bugzilla.redhat.com/show_bug.cgi?id=985582#c5
+     (And the report from astieger on irc)
+   Votes:
+     +1: rhuijben, stsp, brane
