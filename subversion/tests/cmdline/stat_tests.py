@@ -2206,7 +2206,7 @@ test_list = [ None,
               status_case_changed,
               move_update_timestamps,
               status_path_handling,
-              status_move_missing_via_root,
+              status_move_missing_direct,
              ]
 
 if __name__ == '__main__':
