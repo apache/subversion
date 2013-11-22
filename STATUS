@@ -189,6 +189,22 @@ Veto-blocked changes:
      -1: breser (includes a --keep-going test which fails on 1.8.x since no
                  such option in 1.8.x)
 
+ * r1544597, r1544600, r1544688, r1544690
+   Fix a specific case where the api behind status would report a different
+   move status for A depending on whether the user called 'svn status A' or
+   'svn status wc/A'.
+   Justification:
+     Api users such as AnkhSVN rely in the result of svn status and this
+     breaks their assumptions.
+     This change has the nice side effect that it resolves the most common
+     user triggerable assertion in AnkhSVN, which is really caused by a
+     broken move. (See other nomination for a fix). But even then it shouldn't
+     matter how status is called: on the node or an ancestor.
+     (It also improves status performance a tiny bit, by reducing the number
+      of sqlite transactions used)
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
 
