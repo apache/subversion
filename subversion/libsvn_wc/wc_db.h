@@ -2685,7 +2685,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          apr_pool_t *scratch_pool);
 
 /* Scan the working copy for move information of the node LOCAL_ABSPATH.
- * If LOCAL_ABSPATH return a SVN_ERR_WC_PATH_UNEXPECTED_STATUS error.
+ * If LOCAL_ABSPATH is not moved here return an
+ * SVN_ERR_WC_PATH_UNEXPECTED_STATUS error.
  *
  * If not NULL *MOVED_FROM_ABSPATH will be set to the previous location
  * of LOCAL_ABSPATH, before it or an ancestror was moved.
