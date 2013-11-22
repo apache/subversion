@@ -202,6 +202,7 @@ public class ClientNotifyInformation extends EventObject
      * @deprecated Constructor compatible with teh 1.8 API; uses
      * <code>null</code> URL and errMsgStack values.
      */
+    @Deprecated
     public ClientNotifyInformation(String path, Action action, NodeKind kind,
                              String mimeType, Lock lock, String errMsg,
                              Status contentState, Status propState,
