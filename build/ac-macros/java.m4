@@ -193,6 +193,9 @@ AC_DEFUN(SVN_FIND_JDK,
       JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.5"
       if test "$enable_debugging" = "yes"; then
         JAVAC_FLAGS="-g -Xlint -Xlint:unchecked -Xlint:serial -Xlint:path $JAVAC_FLAGS"
+        if test -z "$JAVAC_COMPAT_FLAGS"; then
+          JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann"
+        fi
       fi
     fi
 
@@ -208,6 +211,7 @@ AC_DEFUN(SVN_FIND_JDK,
   AC_SUBST(JAVA)
   AC_SUBST(JAVAC)
   AC_SUBST(JAVAC_FLAGS)
+  AC_SUBST(JAVAC_COMPAT_FLAGS)
   AC_SUBST(JAVADOC)
   AC_SUBST(JAVAH)
   AC_SUBST(JAR)
