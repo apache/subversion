@@ -30,6 +30,9 @@
 #include "jni_object.hpp"
 #include "jni_string.hpp"
 
+#include "jni_list.hpp"
+#include "jni_string_map.hpp"
+
 #include "../SubversionException.hpp"
 
 namespace Java {
@@ -90,6 +93,15 @@ ClassCache::ClassCache(Env env)
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(throwable, Exception),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(string, String),
 
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(list, BaseList),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(array_list, BaseMutableList),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map, BaseMap),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(set, BaseMap::Set),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(iterator, BaseMap::Iterator),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map_entry, BaseMap::Entry),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(hash_map, BaseMutableMap),
+
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
                                            ::JavaHL::SubversionException)
 {
@@ -98,6 +110,16 @@ ClassCache::ClassCache(Env env)
   Class::static_init(env);
   Exception::static_init(env);
   // no-op: String::static_init(env);
+
+  BaseList::static_init(env);
+  BaseMutableList::static_init(env);
+
+  BaseMap::static_init(env);
+  BaseMap::Set::static_init(env);
+  BaseMap::Iterator::static_init(env);
+  BaseMap::Entry::static_init(env);
+  BaseMutableMap::static_init(env);
+
   // no-op: ::JavaHL::SubversionException::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT

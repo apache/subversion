@@ -29,22 +29,29 @@ namespace Java {
 
 const char* const BaseList::m_class_name = "java/util/List";
 
-BaseList::ovector
-BaseList::convert_to_vector(Env env, jclass cls, jobject jlist)
+MethodID BaseList::m_mid_size;
+MethodID BaseList::m_mid_get;
+
+void BaseList::static_init(Env env)
 {
-  const jint length = env.CallIntMethod(
-      jlist, env.GetMethodID(cls, "size", "()I"));
+  const jclass cls = ClassCache::get_list();
+  m_mid_size = env.GetMethodID(cls, "size", "()I");
+  m_mid_get = env.GetMethodID(cls, "get", "(I)Ljava/lang/Object;");
+}
+
+BaseList::ovector
+BaseList::convert_to_vector(Env env, jobject jlist)
+{
+  const jint length = env.CallIntMethod(jlist, m_mid_size);
 
   if (!length)
     return ovector();
 
-  const jmethodID mid_get = env.GetMethodID(cls, "get",
-                                            "(I)Ljava/lang/Object;");
   ovector contents(length);
   ovector::iterator it;
   jint i;
   for (i = 0, it = contents.begin(); it != contents.end(); ++it, ++i)
-    *it = env.CallObjectMethod(jlist, mid_get, i);
+    *it = env.CallObjectMethod(jlist, m_mid_get, i);
   return contents;
 }
 
@@ -53,46 +60,20 @@ BaseList::convert_to_vector(Env env, jclass cls, jobject jlist)
 
 const char* const BaseMutableList::m_class_name = "java/util/ArrayList";
 
-namespace {
-jobject make_array_list(Env env, const char* class_name, jint length)
-{
-  const jclass cls = env.FindClass(class_name);
-  const jmethodID mid_ctor = env.GetMethodID(cls, "<init>", "(I)V");
-  return env.NewObject(cls, mid_ctor, length);
-}
-} // anonymous namespace
+MethodID BaseMutableList::m_mid_ctor;
+MethodID BaseMutableList::m_mid_add;
+MethodID BaseMutableList::m_mid_clear;
+MethodID BaseMutableList::m_mid_get;
+MethodID BaseMutableList::m_mid_size;
 
-BaseMutableList::BaseMutableList(Env env, jint length)
-  : Object(env, m_class_name,
-           make_array_list(env, m_class_name, length))
-{}
-
-void BaseMutableList::add(jobject obj)
+void BaseMutableList::static_init(Env env)
 {
-  if (!m_mid_add)
-    m_mid_add = m_env.GetMethodID(m_class, "add", "(Ljava/lang/Object;)Z");
-  m_env.CallBooleanMethod(m_jthis, m_mid_add, obj);
-}
-
-void BaseMutableList::clear()
-{
-  if (!m_mid_clear)
-    m_mid_clear = m_env.GetMethodID(m_class, "clear", "()V");
-  m_env.CallVoidMethod(m_jthis, m_mid_clear);
-}
-
-jobject BaseMutableList::operator[](jint index) const
-{
-  if (!m_mid_get)
-    m_mid_get = m_env.GetMethodID(m_class, "get", "(I)Ljava/lang/Object;");
-  return m_env.CallObjectMethod(m_jthis, m_mid_get, index);
-}
-
-jint BaseMutableList::length() const
-{
-  if (!m_mid_size)
-    m_mid_size = m_env.GetMethodID(m_class, "size", "()I");
-  return m_env.CallIntMethod(m_jthis, m_mid_size);
+  const jclass cls = ClassCache::get_array_list();
+  m_mid_ctor = env.GetMethodID(cls, "<init>", "(I)V");
+  m_mid_add = env.GetMethodID(cls, "add", "(Ljava/lang/Object;)Z");
+  m_mid_clear = env.GetMethodID(cls, "clear", "()V");
+  m_mid_get = env.GetMethodID(cls, "get", "(I)Ljava/lang/Object;");
+  m_mid_size = env.GetMethodID(cls, "size", "()I");
 }
 
 } // namespace Java
