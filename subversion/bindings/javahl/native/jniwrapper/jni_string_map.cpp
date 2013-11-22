@@ -31,6 +31,43 @@ namespace Java {
 // Class Java::BaseMap
 
 const char* const BaseMap::m_class_name = "java/util/Map";
+MethodID BaseMap::m_mid_size;
+MethodID BaseMap::m_mid_entry_set;
+void BaseMap::static_init(Env env)
+{
+  const jclass cls = ClassCache::get_map();
+  m_mid_size = env.GetMethodID(cls, "size", "()I");
+  m_mid_entry_set = env.GetMethodID(cls, "entrySet", "()Ljava/util/Set;");
+}
+
+const char* const BaseMap::Set::m_class_name = "java/util/Set";
+MethodID BaseMap::Set::m_mid_iterator;
+void BaseMap::Set::static_init(Env env)
+{
+  m_mid_iterator = env.GetMethodID(ClassCache::get_set(), "iterator",
+                                   "()Ljava/util/Iterator;");
+}
+
+const char* const BaseMap::Iterator::m_class_name = "java/util/Iterator";
+MethodID BaseMap::Iterator::m_mid_has_next;
+MethodID BaseMap::Iterator::m_mid_next;
+void BaseMap::Iterator::static_init(Env env)
+{
+  const jclass cls = ClassCache::get_iterator();
+  m_mid_has_next = env.GetMethodID(cls, "hasNext", "()Z");
+  m_mid_next = env.GetMethodID(cls, "next", "()Ljava/lang/Object;");
+}
+
+const char* const BaseMap::Entry::m_class_name = "java/util/Map$Entry";
+MethodID BaseMap::Entry::m_mid_get_key;
+MethodID BaseMap::Entry::m_mid_get_value;
+void BaseMap::Entry::static_init(Env env)
+{
+  const jclass cls = ClassCache::get_map_entry();
+  m_mid_get_key = env.GetMethodID(cls, "getKey", "()Ljava/lang/Object;");
+  m_mid_get_value = env.GetMethodID(cls, "getValue", "()Ljava/lang/Object;");
+}
+
 
 jobject BaseMap::operator[](const std::string& index) const
 {
@@ -44,37 +81,25 @@ jobject BaseMap::operator[](const std::string& index) const
   return it->second;
 }
 
-BaseMap::somap BaseMap::convert_to_map(Env env, jclass cls, jobject jmap)
+BaseMap::somap BaseMap::convert_to_map(Env env, jobject jmap)
 {
-  if (!env.CallIntMethod(jmap, env.GetMethodID(cls, "size", "()I")))
+  if (!env.CallIntMethod(jmap, m_mid_size))
     return somap();
 
   // Get an iterator over the map's entry set
-  const jobject entries = env.CallObjectMethod(
-      jmap, env.GetMethodID(cls, "entrySet", "()Ljava/util/Set;"));
-  const jobject iterator = env.CallObjectMethod(
-      entries, env.GetMethodID(env.GetObjectClass(entries), "iterator",
-                               "()Ljava/util/Iterator;"));
-  const jclass cls_iterator = env.GetObjectClass(iterator);
-  const jmethodID mid_it_has_next = env.GetMethodID(cls_iterator,
-                                                    "hasNext", "()Z");
-  const jmethodID mid_it_next = env.GetMethodID(cls_iterator, "next",
-                                                "()Ljava/lang/Object;");
+  const jobject entries = env.CallObjectMethod(jmap, m_mid_entry_set);
+  const jobject iterator = env.CallObjectMethod(entries, Set::m_mid_iterator);
 
-  // Find the methods for retreiving the key and value from an entry
-  const jclass cls_entry = env.FindClass("java/util/Map$Entry");
-  const jmethodID mid_get_key = env.GetMethodID(cls_entry, "getKey",
-                                                "()Ljava/lang/Object;");
-  const jmethodID mid_get_value = env.GetMethodID(cls_entry, "getValue",
-                                                  "()Ljava/lang/Object;");
-
-  // And finally ... iterate over the map, filling the native map
+  // Yterate over the map, filling the native map
   somap contents;
-  while (env.CallBooleanMethod(iterator, mid_it_has_next))
+  while (env.CallBooleanMethod(iterator, Iterator::m_mid_has_next))
     {
-      const jobject e = env.CallObjectMethod(iterator, mid_it_next);
-      const String keystr(env, jstring(env.CallObjectMethod(e, mid_get_key)));
-      const jobject value(env.CallObjectMethod(e, mid_get_value));
+      const jobject entry =
+        env.CallObjectMethod(iterator, Iterator::m_mid_next);
+      const String keystr(
+          env, jstring(env.CallObjectMethod(entry, Entry::m_mid_get_key)));
+      const jobject value(
+          env.CallObjectMethod(entry, Entry::m_mid_get_value));
       const String::Contents key(keystr);
       contents.insert(somap::value_type(key.c_str(), value));
     }
@@ -85,49 +110,31 @@ BaseMap::somap BaseMap::convert_to_map(Env env, jclass cls, jobject jmap)
 
 const char* const BaseMutableMap::m_class_name = "java/util/HashMap";
 
-namespace {
-jobject make_hash_map(Env env, const char* class_name, jint length)
-{
-  const jclass cls = env.FindClass(class_name);
-  const jmethodID mid_ctor = env.GetMethodID(cls, "<init>", "(I)V");
-  return env.NewObject(cls, mid_ctor, length);
-}
-} // anonymous namespace
+MethodID BaseMutableMap::m_mid_ctor;
+MethodID BaseMutableMap::m_mid_put;
+MethodID BaseMutableMap::m_mid_clear;
+MethodID BaseMutableMap::m_mid_has_key;
+MethodID BaseMutableMap::m_mid_get;
+MethodID BaseMutableMap::m_mid_size;
 
-BaseMutableMap::BaseMutableMap(Env env, jint length)
-  : Object(env, m_class_name,
-           make_hash_map(env, m_class_name, length))
-{}
-
-void BaseMutableMap::clear()
+void BaseMutableMap::static_init(Env env)
 {
-  if (!m_mid_clear)
-    m_mid_clear = m_env.GetMethodID(m_class, "clear", "()V");
-  m_env.CallVoidMethod(m_jthis, m_mid_clear);
-}
-
-jint BaseMutableMap::length() const
-{
-  if (!m_mid_size)
-    m_mid_size = m_env.GetMethodID(m_class, "size", "()I");
-  return m_env.CallIntMethod(m_jthis, m_mid_size);
+  const jclass cls = ClassCache::get_hash_map();
+  m_mid_ctor = env.GetMethodID(cls, "<init>", "(I)V");
+  m_mid_put = env.GetMethodID(cls, "put",
+                              "(Ljava/lang/Object;Ljava/lang/Object;)"
+                              "Ljava/lang/Object;");
+  m_mid_clear = env.GetMethodID(cls, "clear", "()V");
+  m_mid_has_key = env.GetMethodID(cls, "containsKey",
+                                  "(Ljava/lang/Object;)Z");
+  m_mid_get = env.GetMethodID(cls, "get",
+                              "(Ljava/lang/Object;)Ljava/lang/Object;");
+  m_mid_size = env.GetMethodID(cls, "size", "()I");
 }
 
-void BaseMutableMap::put(const std::string& key, jobject obj)
-{
-  if (!m_mid_put)
-    m_mid_put = m_env.GetMethodID(m_class, "put",
-                                  "(Ljava/lang/Object;Ljava/lang/Object;)"
-                                  "Ljava/lang/Object;");
-  m_env.CallObjectMethod(m_jthis, m_mid_put, String(m_env, key).get(), obj);
-}
 
 jobject BaseMutableMap::operator[](const std::string& index) const
 {
-  if (!m_mid_has_key)
-    m_mid_has_key = m_env.GetMethodID(m_class, "containsKey",
-                                      "(Ljava/lang/Object;)Z");
-
   const String key(m_env, index);
   if (!m_env.CallBooleanMethod(m_jthis, m_mid_has_key, key.get()))
     {
@@ -135,10 +142,6 @@ jobject BaseMutableMap::operator[](const std::string& index) const
       msg += index;
       throw std::out_of_range(msg.c_str());
     }
-
-  if (!m_mid_get)
-    m_mid_get = m_env.GetMethodID(m_class, "get",
-                                  "(Ljava/lang/Object;)Ljava/lang/Object;");
   return m_env.CallObjectMethod(m_jthis, m_mid_get, key.get());
 }
 
