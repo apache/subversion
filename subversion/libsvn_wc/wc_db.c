@@ -8747,6 +8747,7 @@ struct read_children_info_item_t
   int nr_layers;
 };
 
+/* Implementation of svn_wc__db_read_children_info */
 static svn_error_t *
 read_children_info(svn_wc__db_wcroot_t *wcroot,
                    const char *dir_relpath,
@@ -9062,6 +9063,18 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
   return SVN_NO_ERROR;
 }
 
+/* Implementation of svn_wc__db_read_single_info.
+
+   ### This function is very similar to a lot of code inside
+   read_children_info, but that performs some tricks to re-use data between
+   different siblings.
+
+   ### We read the same few NODES records a few times via different helper
+   functions, so this could be optimized bit, but everything is within
+   a sqlite transaction and all queries are backed by an index, so generally
+   everything (including the used indexes) should be in the sqlite page cache
+   after the first query.
+*/
 static svn_error_t *
 read_single_info(const struct svn_wc__db_info_t **info,
                  svn_wc__db_wcroot_t *wcroot,
