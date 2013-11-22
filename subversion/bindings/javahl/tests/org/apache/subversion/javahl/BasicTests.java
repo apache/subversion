@@ -2350,7 +2350,7 @@ public class BasicTests extends SVNTests
         List<RevisionRange> ranges = mergeInfo.getRevisions(mergeSrc);
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
-        RevisionRange range = (RevisionRange) ranges.get(0);
+        RevisionRange range = ranges.get(0);
         String expectedMergedRevs = expectedMergeStart + "-" + expectedMergeEnd;
         assertEquals("Unexpected first merged revision range for '" +
                      mergeSrc + "' on '" + targetPath + '\'',
@@ -2613,6 +2613,7 @@ public class BasicTests extends SVNTests
      * @throws Throwable
      * @since 1.5
      */
+    @SuppressWarnings("deprecation")
     public void testMergeReintegrate() throws Throwable
     {
         OneTest thisTest = setupAndPerformMerge();
@@ -3269,7 +3270,7 @@ public class BasicTests extends SVNTests
 
         // Rigorously inspect one of our DiffSummary notifications.
         final String BETA_PATH = "A/B/E/beta";
-        DiffSummary betaDiff = (DiffSummary) summaries.get(BETA_PATH);
+        DiffSummary betaDiff = summaries.get(BETA_PATH);
         assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
         assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
                      betaDiff.getPath());
