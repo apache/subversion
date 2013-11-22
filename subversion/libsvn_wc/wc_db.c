@@ -8760,6 +8760,7 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
   const char *repos_root_url = NULL;
   const char *repos_uuid = NULL;
   apr_int64_t last_repos_id = INVALID_REPOS_ID;
+  const char *last_repos_root_url = NULL;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_CHILDREN_INFO));
@@ -8824,8 +8825,6 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
             }
           else
             {
-              const char *last_repos_root_url = NULL;
-
               apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
               if (!repos_root_url ||
                   (last_repos_id != INVALID_REPOS_ID &&
@@ -8875,8 +8874,14 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
               child->depth = svn_sqlite__column_token_null(stmt, 11, depth_map,
                                                            svn_depth_unknown);
               if (new_child)
-                SVN_ERR(is_wclocked(&child->locked, wcroot, child_relpath,
-                                    scratch_pool));
+                {
+                  err = is_wclocked(&child->locked, wcroot, child_relpath,
+                                    scratch_pool);
+
+                  if (err)
+                    SVN_ERR(svn_error_compose_create(err,
+                                                     svn_sqlite__reset(stmt)));
+                }
             }
 
           child->recorded_time = svn_sqlite__column_int64(stmt, 13);
