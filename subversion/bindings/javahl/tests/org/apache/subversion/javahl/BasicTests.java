@@ -3963,6 +3963,8 @@ public class BasicTests extends SVNTests
         extends HashMap<String, Collection<String>>
         implements ChangelistCallback
     {
+        private static final long serialVersionUID = 1L;
+
         public void doChangelist(String path, String changelist)
         {
             path = fileToSVNPath(new File(path), true);

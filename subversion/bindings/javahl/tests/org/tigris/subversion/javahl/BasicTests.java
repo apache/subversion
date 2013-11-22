@@ -3360,6 +3360,8 @@ public class BasicTests extends SVNTests
     private class MyChangelistCallback extends HashMap
         implements ChangelistCallback
     {
+        private static final long serialVersionUID = 1L;
+
         @SuppressWarnings("unchecked")
         public void doChangelist(String path, String changelist)
         {

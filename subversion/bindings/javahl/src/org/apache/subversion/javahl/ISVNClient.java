@@ -354,6 +354,7 @@ public interface ISVNClient
      * @deprecated Provided for backward compatibility with 1.7. Passes
      *             metadataOnly false and allowMixRev true.
      */
+    @Deprecated
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
               Map<String, String> revpropTable,
@@ -634,6 +635,7 @@ public interface ISVNClient
      * @throws ClientException
      * @deprecated Will be removed in a future release
      */
+    @Deprecated
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
              throws ClientException;
