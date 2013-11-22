@@ -482,6 +482,8 @@ release_shared_pool(struct shared_pool_t *shared)
 
 /* Wrapper around serve() that takes a socket instead of a connection.
  * This is to off-load work from the main thread in threaded and fork modes.
+ *
+ * If an error occurs, log it and also return it.
  */
 static svn_error_t *
 serve_socket(apr_socket_t *usock,
@@ -542,6 +544,7 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
   struct serve_thread_t *d = data;
 
   apr_pool_t *pool = svn_root_pools__acquire_pool(connection_pools);
+  /* serve_socket() logs any error it returns, so ignore it. */
   svn_error_clear(serve_socket(d->usock, d->params, pool));
   svn_root_pools__release_pool(pool, connection_pools);
 
@@ -1253,6 +1256,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (status == APR_INCHILD)
             {
               apr_socket_close(sock);
+              /* serve_socket() logs any error it returns, so ignore it. */
               svn_error_clear(serve_socket(usock, &params, socket_pool));
               apr_socket_close(usock);
               return SVN_NO_ERROR;
@@ -1310,6 +1314,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         case connection_mode_single:
           /* Serve one connection at a time. */
+          /* serve_socket() logs any error it returns, so ignore it. */
           svn_error_clear(serve_socket(usock, &params, socket_pool));
           svn_root_pools__release_pool(socket_pool, socket_pools);
         }
