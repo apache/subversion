@@ -2119,7 +2119,6 @@ def status_path_handling(sbox):
   expected_status = svntest.actions.get_virginal_state(rel_wc_dir, 1)
   svntest.actions.run_and_verify_status(rel_wc_dir, expected_status)
 
-@XFail()
 def status_move_missing_direct(sbox):
   "move information when status is called directly"
   
