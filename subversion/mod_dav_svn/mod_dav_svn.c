@@ -1097,7 +1097,8 @@ static int dav_svn__handler(request_rec *r)
 
 /* Fill the filename on the request with a bogus path since we aren't serving
  * a file off the disk.  This means that <Directory> blocks will not match and
- * that %f in logging formats will show as "svn:/path/to/repo/path/in/repo". */
+ * %f in logging formats will show as "dav_svn:/path/to/repo/path/in/repo".
+ */
 static int dav_svn__translate_name(request_rec *r)
 {
   const char *fs_path, *repos_basename, *repos_path;
@@ -1146,7 +1147,7 @@ static int dav_svn__translate_name(request_rec *r)
   if (repos_path && '/' == repos_path[0] && '\0' == repos_path[1])
     repos_path = NULL;
 
-  /* Combine 'svn:', fs_path and repos_path to produce the bogus path we're
+  /* Combine 'dav_svn:', fs_path and repos_path to produce the bogus path we're
    * placing in r->filename.  We can't use our standard join helpers such
    * as svn_dirent_join.  fs_path is a dirent and repos_path is a fspath
    * (that can be trivially converted to a relpath by skipping the leading
@@ -1154,7 +1155,7 @@ static int dav_svn__translate_name(request_rec *r)
    * repository is 'trunk/c:hi' this results in a non canonical dirent on
    * Windows. Instead we just cat them together. */
   r->filename = apr_pstrcat(r->pool,
-                            "svn:", fs_path, repos_path, SVN_VA_NULL);
+                            "dav_svn:", fs_path, repos_path, SVN_VA_NULL);
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
