@@ -75,7 +75,7 @@ Candidate changes:
      The extended regression test relied on test suite behavior in 1.8+,
      by not passing a disk tree. The easy fix is to just pass a disk tree.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, jcorvel
 
  * r1542610
    Add missing description to build.conf, to properly generate a version
