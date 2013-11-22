@@ -125,8 +125,9 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
      ORDER BY local_relpath, op_depth DESC
-   turns out to be slower than getting rows in a random order and making the
-   C code handle it. */
+   doesn't work as the index is created without the DESC keyword.
+   Using both local_relpath and op_depth descending does work without any
+   performance penalty. */
 SELECT op_depth, nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
   depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
@@ -135,6 +136,7 @@ FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath AND op_depth = 0
 WHERE wc_id = ?1 AND parent_relpath = ?2
+ORDER BY local_relpath DESC, op_depth DESC
 
 -- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
 SELECT local_relpath, op_depth, presence, kind
