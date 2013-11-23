@@ -24,11 +24,17 @@ CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
 IF "%SVN_BRANCH%" LEQ "1.6.x" (
-  ECHO --- Building 1.6.x or older: Skipping bindings ---
-  EXIT /B 0
+    ECHO --- Building 1.6.x or older: Skipping bindings ---
+    EXIT /B 0
 )
 
-PATH %PATH%;%TESTDIR%\bin
+IF "%SVN_BRANCH%" LSS "1.9." (
+    IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
+    xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
+
+    PATH %TESTDIR%\bin;!PATH!
+)
+
 SET result=0
 
 if "%SVN_BRANCH%" GTR "1.9." (
@@ -36,8 +42,10 @@ if "%SVN_BRANCH%" GTR "1.9." (
     python win-tests.py -r -f fsfs --swig=python "%TESTDIR%\tests"
 
     IF ERRORLEVEL 1 (
-        echo [Test runner reported error !ERRORLEVEL!]
+        echo [Python tests reported error !ERRORLEVEL!] 1>&2
         SET result=1
+    ) ELSE (
+        echo Done.
     )
 
 ) ELSE (
@@ -54,18 +62,22 @@ if "%SVN_BRANCH%" GTR "1.9." (
 
     python subversion\bindings\swig\python\tests\run_all.py
     IF ERRORLEVEL 1 (
-        echo [Test runner reported error !ERRORLEVEL!]
+        echo [Python tests reported error !ERRORLEVEL!] 1>&2
         SET result=1
+    ) ELSE (
+        echo Done.
     )
 )
 
 if "%SVN_BRANCH%" GTR "1.9." (
 
-REM python win-tests.py -d -f fsfs --swig=perl "%TESTDIR%\tests"
+    python win-tests.py -d -f fsfs --swig=perl "%TESTDIR%\tests"
 
     IF ERRORLEVEL 1 (
-        echo [Test runner reported error !ERRORLEVEL!]
-        SET result=1
+        echo [Perl tests reported error !ERRORLEVEL!] 1>&2
+        REM SET result=1
+    ) ELSE (
+        echo Done.
     )
 
 ) ELSE IF "%SVN_BRANCH%" GTR "1.8." (
@@ -94,12 +106,15 @@ REM python win-tests.py -d -f fsfs --swig=perl "%TESTDIR%\tests"
 )
 
 if "%SVN_BRANCH%" GTR "1.9." (
-  python win-tests.py -d -f fsfs --swig=ruby "%TESTDIR%\tests"
+    python win-tests.py -d -f fsfs --swig=ruby "%TESTDIR%\tests"
 
-  IF ERRORLEVEL 1 (
-        echo [Test runner reported error !ERRORLEVEL!]
-    REM SET result=1
-  )
+    IF ERRORLEVEL 1 (
+        echo [Ruby tests reported error !ERRORLEVEL!] 1>&2
+        REM SET result=1
+    ) ELSE (
+        echo Done.
+    )
+
   taskkill /im svnserve.exe /f
 )
 
