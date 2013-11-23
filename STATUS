@@ -162,6 +162,13 @@ Candidate changes:
    Votes:
      +1: breser, brane
 
+ * r1544878
+   Fix output of svn --version -v to not cut info off.
+   Justification:
+     Obviously wrong.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
