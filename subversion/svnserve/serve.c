@@ -3694,26 +3694,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       return svn_ra_svn__flush(conn, pool);
     }
 
-  /* Log the open. */
-  if (ra_client_string == NULL || ra_client_string[0] == '\0')
-    ra_client_string = "-";
-  else
-    ra_client_string = svn_path_uri_encode(ra_client_string, pool);
-  if (client_string == NULL || client_string[0] == '\0')
-    client_string = "-";
-  else
-    client_string = svn_path_uri_encode(client_string, pool);
-  SVN_ERR(log_command(&b, conn, pool,
-                      "open %" APR_UINT64_T_FMT " cap=(%s) %s %s %s",
-                      ver, cap_log->data,
-                      svn_path_uri_encode(b.repository->fs_path->data, pool),
-                      ra_client_string, client_string));
-
-  warn_baton.server = &b;
-  warn_baton.conn = conn;
-  warn_baton.pool = svn_pool_create(pool);
-  svn_fs_set_warning_func(b.repository->fs, fs_warning_func, &warn_baton);
-
   SVN_ERR(svn_fs_get_uuid(b.repository->fs, &uuid, pool));
 
   /* We can't claim mergeinfo capability until we know whether the
@@ -3733,7 +3713,28 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     if (supports_mergeinfo)
       SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
     SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
+    SVN_ERR(svn_ra_svn__flush(conn, pool));
   }
+
+  /* Log the open. */
+  if (ra_client_string == NULL || ra_client_string[0] == '\0')
+    ra_client_string = "-";
+  else
+    ra_client_string = svn_path_uri_encode(ra_client_string, pool);
+  if (client_string == NULL || client_string[0] == '\0')
+    client_string = "-";
+  else
+    client_string = svn_path_uri_encode(client_string, pool);
+  SVN_ERR(log_command(&b, conn, pool,
+                      "open %" APR_UINT64_T_FMT " cap=(%s) %s %s %s",
+                      ver, cap_log->data,
+                      svn_path_uri_encode(b.repository->fs_path->data, pool),
+                      ra_client_string, client_string));
+
+  warn_baton.server = &b;
+  warn_baton.conn = conn;
+  warn_baton.pool = svn_pool_create(pool);
+  svn_fs_set_warning_func(b.repository->fs, fs_warning_func, &warn_baton);
 
   /* Set up editor shims. */
   {
