@@ -946,6 +946,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (log_filename)
     SVN_ERR(logger__create(&params.logger, log_filename, pool));
+  else if (run_mode == run_mode_listen_once)
+    SVN_INT_ERR(logger__create_for_stderr(&params.logger, pool));
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
