@@ -83,7 +83,7 @@ Candidate changes:
      Backport of the 1.8 fixes, plus a few more fixes in order not to
      break the neon compilation which also hooks into zlib.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, jcorvel
 
 Veto-blocked changes:
 =====================
