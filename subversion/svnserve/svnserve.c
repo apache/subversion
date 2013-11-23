@@ -1280,7 +1280,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           status = apr_thread_pool_push(threads, serve_thread, connection,
                                         0, NULL);
 #else
-          status = apr_threadattr_create(&tattr, socket_pool);
+          status = apr_threadattr_create(&tattr, connection->pool);
           if (status)
             {
               return svn_error_wrap_apr(status, _("Can't create threadattr"));
@@ -1290,8 +1290,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             {
               return svn_error_wrap_apr(status, _("Can't set detached state"));
             }
-          status = apr_thread_create(&tid, tattr, serve_thread, thread_data,
-                                     shared_pool->pool);
+          status = apr_thread_create(&tid, tattr, serve_thread, connection,
+                                     connection->pool);
 #endif
           if (status)
             {
