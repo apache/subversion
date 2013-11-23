@@ -185,7 +185,21 @@ skip_to_eoln(parse_context_t *ctx, int *c)
 
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != '\n' && ch != EOF)
-    SVN_ERR(parser_getc_plain(ctx, &ch));
+    {
+      /* This is much faster than checking individual bytes.
+       * We use this function a lot when skipping comment lines. */
+      const char *newline = memchr(ctx->parser_buffer + ctx->buffer_pos,
+                                   '\n', ctx->buffer_size);
+      if (newline)
+        {
+          ch = '\n';
+          ctx->buffer_pos = newline - ctx->parser_buffer + 1;
+          break;
+        }
+
+      /* refill buffer, check for EOF */
+      SVN_ERR(parser_getc_plain(ctx, &ch));
+    }
 
   *c = ch;
   return SVN_NO_ERROR;
