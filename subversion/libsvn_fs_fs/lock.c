@@ -252,24 +252,23 @@ read_digest_file(apr_hash_t **children_p,
   apr_hash_t *hash;
   svn_stream_t *stream;
   const char *val;
+  svn_node_kind_t kind;
 
   if (lock_p)
     *lock_p = NULL;
   if (children_p)
     *children_p = apr_hash_make(pool);
 
-  err = svn_stream_open_readonly(&stream, digest_path, pool, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
+  SVN_ERR(svn_io_check_path(digest_path, &kind, pool));
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
 
   /* If our caller doesn't care about anything but the presence of the
      file... whatever. */
-  if (! (lock_p || children_p))
-    return svn_stream_close(stream);
+  if (kind == svn_node_file && !lock_p && !children_p)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_stream_open_readonly(&stream, digest_path, pool, pool));
 
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool)))
