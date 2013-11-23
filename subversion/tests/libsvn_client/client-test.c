@@ -735,7 +735,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
-  wc_path = svn_test_data_path("test-wc-add", pool);
+  wc_path = svn_test_data_path("test-foreign-repos-copy", pool);
 
   wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
 

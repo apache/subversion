@@ -193,7 +193,7 @@ changes_fetch_raw(const svn_test_opts_t *opts,
   struct changes_args args;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch", opts,
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch-raw", opts,
                                   pool));
 
   /* First, verify that we can request changes for an arbitrary key

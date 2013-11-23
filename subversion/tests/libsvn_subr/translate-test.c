@@ -862,7 +862,7 @@ static svn_error_t *
 mixed_to_lf(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("cr_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, 1, pool);
+          ("mixed_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
@@ -1096,10 +1096,10 @@ static svn_error_t *
 unexpand_author(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
+          ("unexpand_author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author", "\r\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
+          ("unexpand_author", "\r\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1109,11 +1109,11 @@ static svn_error_t *
 unexpand_date(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("date", "\n", NULL, 0,
+          ("unexpand_date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("date", "\r\n", NULL, 0,
+          ("unexpand_date", "\r\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1124,11 +1124,11 @@ static svn_error_t *
 unexpand_author_date(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author_date", "\n", NULL, 0,
+          ("unexpand_author_date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author_date", "\r\n", NULL, 0,
+          ("unexpand_author_date", "\r\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1139,11 +1139,11 @@ static svn_error_t *
 unexpand_author_rev(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author_rev", "\n", NULL, 0,
+          ("unexpand_author_rev", "\n", NULL, 0,
            "1729", NULL, "jrandom", NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author_rev", "\r\n", NULL, 0,
+          ("unexpand_author_rev", "\r\n", NULL, 0,
            "1729", NULL, "jrandom", NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1154,11 +1154,11 @@ static svn_error_t *
 unexpand_rev(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("rev", "\n", NULL, 0,
+          ("unexpand_rev", "\n", NULL, 0,
            "1729", NULL, NULL, NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("rev", "\r\n", NULL, 0,
+          ("unexpand_rev", "\r\n", NULL, 0,
            "1729", NULL, NULL, NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1169,11 +1169,11 @@ static svn_error_t *
 unexpand_rev_url(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("rev_url", "\n", NULL, 0,
+          ("unexpand_rev_url", "\n", NULL, 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("rev_url", "\r\n", NULL, 0,
+          ("unexpand_rev_url", "\r\n", NULL, 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
 
   return SVN_NO_ERROR;
@@ -1184,7 +1184,7 @@ static svn_error_t *
 unexpand_author_date_rev_url(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author_date_rev_url", "\n", NULL, 0,
+          ("unexpand_author_date_rev_url", "\n", NULL, 0,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
@@ -1192,7 +1192,7 @@ unexpand_author_date_rev_url(apr_pool_t *pool)
            1, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author_date_rev_url", "\r\n", NULL, 0,
+          ("unexpand_author_date_rev_url", "\r\n", NULL, 0,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
@@ -1210,7 +1210,7 @@ static svn_error_t *
 lf_to_crlf_unexpand_author(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("lf_to_crlf_author", "\n", "\r\n", 0,
+          ("lf_to_crlf_unexpand_author", "\n", "\r\n", 0,
            NULL, NULL, "jrandom", NULL, 0, pool);
 }
 
@@ -1219,7 +1219,7 @@ static svn_error_t *
 mixed_to_lf_unexpand_author_date(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("mixed_to_lf_author_date", NULL, "\n", 1,
+          ("mixed_to_lf_unexpand_author_date", NULL, "\n", 1,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool);
 }
 
@@ -1228,7 +1228,7 @@ static svn_error_t *
 crlf_to_cr_unexpand_author_rev(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("crlf_to_cr_author_rev", "\r\n", "\r", 0,
+          ("crlf_to_cr_unexpand_author_rev", "\r\n", "\r", 0,
            "1729", NULL, "jrandom", NULL, 0, pool);
 }
 
@@ -1237,7 +1237,7 @@ static svn_error_t *
 cr_to_crlf_unexpand_rev(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("cr_to_crlf_rev", "\r", "\r\n", 0,
+          ("cr_to_crlf_unexpand_rev", "\r", "\r\n", 0,
            "1729", NULL, NULL, NULL, 0, pool);
 }
 
@@ -1246,7 +1246,7 @@ static svn_error_t *
 cr_to_crlf_unexpand_rev_url(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("cr_to_crlf_rev_url", "\r", "\r\n", 0,
+          ("cr_to_crlf_unexpand_rev_url", "\r", "\r\n", 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool);
 }
 
@@ -1255,7 +1255,7 @@ static svn_error_t *
 mixed_to_crlf_unexpand_author_date_rev_url(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("mixed_to_crlf_author_date_rev_url", NULL, "\r\n", 1,
+          ("mixed_to_crlf_unexpand_author_date_rev_url", NULL, "\r\n", 1,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
