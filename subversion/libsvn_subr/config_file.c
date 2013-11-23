@@ -187,9 +187,13 @@ skip_to_eoln(parse_context_t *ctx, int *c)
   while (ch != '\n' && ch != EOF)
     {
       /* This is much faster than checking individual bytes.
-       * We use this function a lot when skipping comment lines. */
-      const char *newline = memchr(ctx->parser_buffer + ctx->buffer_pos,
-                                   '\n', ctx->buffer_size);
+       * We use this function a lot when skipping comment lines.
+       *
+       * This assumes that the ungetc buffer is empty, but that is a
+       * safe assumption right after reading a character (which would
+       * clear the buffer. */
+      const char *newline = memchr(ctx->parser_buffer + ctx->buffer_pos, '\n',
+                                   ctx->buffer_size - ctx->buffer_pos);
       if (newline)
         {
           ch = '\n';
