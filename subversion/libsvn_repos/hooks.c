@@ -417,21 +417,21 @@ svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_config_t *cfg;
   struct parse_hooks_env_section_baton b;
-
   if (local_abspath)
     {
       svn_node_kind_t kind;
       SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
-      b.cfg = cfg;
       b.hooks_env = apr_hash_make(result_pool);
 
       if (kind != svn_node_none)
         {
+          svn_config_t *cfg;
           SVN_ERR(svn_config_read3(&cfg, local_abspath, FALSE,
                                   TRUE, TRUE, scratch_pool));
+          b.cfg = cfg;
+
           (void)svn_config_enumerate_sections2(cfg, parse_hooks_env_section,
                                                &b, scratch_pool);
         }
