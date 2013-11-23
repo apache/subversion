@@ -59,7 +59,6 @@ fail(apr_pool_t *pool, const char *fmt, ...)
 
 /* Some of our own global variables, for simplicity.  Yes,
    simplicity. */
-svn_stringbuf_t *a = NULL, *b = NULL, *c = NULL;
 const char *phrase_1 = "hello, ";
 const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
@@ -69,7 +68,7 @@ const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 static svn_error_t *
 test1(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
 
   /* Test that length, data, and null-termination are correct. */
   if ((a->len == strlen(phrase_1)) && ((strcmp(a->data, phrase_1)) == 0))
@@ -82,7 +81,7 @@ test1(apr_pool_t *pool)
 static svn_error_t *
 test2(apr_pool_t *pool)
 {
-  b = svn_stringbuf_ncreate(phrase_2, 16, pool);
+  svn_stringbuf_t *b = svn_stringbuf_ncreate(phrase_2, 16, pool);
 
   /* Test that length, data, and null-termination are correct. */
   if ((b->len == 16) && ((strncmp(b->data, phrase_2, 16)) == 0))
@@ -98,8 +97,8 @@ test3(apr_pool_t *pool)
   char *tmp;
   size_t old_len;
 
-  a = svn_stringbuf_create(phrase_1, pool);
-  b = svn_stringbuf_ncreate(phrase_2, 16, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *b = svn_stringbuf_ncreate(phrase_2, 16, pool);
 
   tmp = apr_palloc(pool, (a->len + b->len + 1));
   strcpy(tmp, a->data);
@@ -118,7 +117,7 @@ test3(apr_pool_t *pool)
 static svn_error_t *
 test4(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
   svn_stringbuf_appendcstr(a, "new bytes to append");
 
   /* Test that length, data, and null-termination are correct. */
@@ -133,7 +132,7 @@ test4(apr_pool_t *pool)
 static svn_error_t *
 test5(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
   svn_stringbuf_appendbytes(a, "new bytes to append", 9);
 
   /* Test that length, data, and null-termination are correct. */
@@ -148,9 +147,9 @@ test5(apr_pool_t *pool)
 static svn_error_t *
 test6(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
-  b = svn_stringbuf_create(phrase_2, pool);
-  c = svn_stringbuf_dup(a, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *b = svn_stringbuf_create(phrase_2, pool);
+  svn_stringbuf_t *c = svn_stringbuf_dup(a, pool);
 
   /* Test that length, data, and null-termination are correct. */
   if ((svn_stringbuf_compare(a, c)) && (! svn_stringbuf_compare(b, c)))
@@ -166,7 +165,7 @@ test7(apr_pool_t *pool)
   char *tmp;
   size_t tmp_len;
 
-  c = svn_stringbuf_create(phrase_2, pool);
+  svn_stringbuf_t *c = svn_stringbuf_create(phrase_2, pool);
 
   tmp_len = c->len;
   tmp = apr_palloc(pool, c->len + 1);
@@ -186,7 +185,7 @@ test7(apr_pool_t *pool)
 static svn_error_t *
 test8(apr_pool_t *pool)
 {
-  c = svn_stringbuf_create(phrase_2, pool);
+  svn_stringbuf_t *c = svn_stringbuf_create(phrase_2, pool);
 
   svn_stringbuf_setempty(c);
 
@@ -200,7 +199,7 @@ test8(apr_pool_t *pool)
 static svn_error_t *
 test9(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(phrase_1, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(phrase_1, pool);
 
   svn_stringbuf_fillchar(a, '#');
 
@@ -380,7 +379,7 @@ test_find_char_backward(const char* data,
 {
   apr_size_t i;
 
-  a = svn_stringbuf_create(data, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(data, pool);
   i = svn_stringbuf_find_char_backward(a, ch);
 
   if (i == pos)
@@ -392,7 +391,7 @@ test_find_char_backward(const char* data,
 static svn_error_t *
 test13(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("test, test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("test, test", pool);
 
   return test_find_char_backward(a->data, a->len, ',', 4, pool);
 }
@@ -400,7 +399,7 @@ test13(apr_pool_t *pool)
 static svn_error_t *
 test14(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(",test test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(",test test", pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
@@ -408,7 +407,7 @@ test14(apr_pool_t *pool)
 static svn_error_t *
 test15(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("testing,", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("testing,", pool);
 
   return test_find_char_backward(a->data,
                                  a->len,
@@ -420,7 +419,7 @@ test15(apr_pool_t *pool)
 static svn_error_t *
 test16(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *a = svn_stringbuf_create_empty(pool);
 
   return test_find_char_backward(a->data, a->len, ',', 0, pool);
 }
@@ -428,7 +427,7 @@ test16(apr_pool_t *pool)
 static svn_error_t *
 test17(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("test test test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("test test test", pool);
 
   return test_find_char_backward(a->data,
                                  a->len,
@@ -444,7 +443,7 @@ test_first_non_whitespace(const char *str,
 {
   apr_size_t i;
 
-  a = svn_stringbuf_create(str, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(str, pool);
 
   i = svn_stringbuf_first_non_whitespace(a);
 
@@ -475,8 +474,8 @@ test20(apr_pool_t *pool)
 static svn_error_t *
 test21(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("    \ttest\t\t  \t  ", pool);
-  b = svn_stringbuf_create("test", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("    \ttest\t\t  \t  ", pool);
+  svn_stringbuf_t *b = svn_stringbuf_create("test", pool);
 
   svn_stringbuf_strip_whitespace(a);
 
@@ -491,8 +490,8 @@ test_stringbuf_unequal(const char* str1,
                        const char* str2,
                        apr_pool_t *pool)
 {
-  a = svn_stringbuf_create(str1, pool);
-  b = svn_stringbuf_create(str2, pool);
+  svn_stringbuf_t *a = svn_stringbuf_create(str1, pool);
+  svn_stringbuf_t *b = svn_stringbuf_create(str2, pool);
 
   if (svn_stringbuf_compare(a, b))
     return fail(pool, "test failed");
@@ -590,7 +589,7 @@ expect_stringbuf_equal(const svn_stringbuf_t* str1,
 static svn_error_t *
 test_stringbuf_insert(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("st , ", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("st , ", pool);
 
   svn_stringbuf_insert(a, 0, "teflon", 2);
   SVN_TEST_STRING_ASSERT(a->data, "test , ");
@@ -611,7 +610,7 @@ test_stringbuf_insert(apr_pool_t *pool)
 static svn_error_t *
 test_stringbuf_remove(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("test hello, world!", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("test hello, world!", pool);
 
   svn_stringbuf_remove(a, 0, 2);
   SVN_TEST_STRING_ASSERT(a->data, "st hello, world!");
@@ -629,7 +628,7 @@ test_stringbuf_remove(apr_pool_t *pool)
 static svn_error_t *
 test_stringbuf_replace(apr_pool_t *pool)
 {
-  a = svn_stringbuf_create("odd with some world?", pool);
+  svn_stringbuf_t *a = svn_stringbuf_create("odd with some world?", pool);
 
   svn_stringbuf_replace(a, 0, 3, "tester", 4);
   SVN_TEST_STRING_ASSERT(a->data, "test with some world?");

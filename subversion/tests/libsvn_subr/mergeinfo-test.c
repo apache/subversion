@@ -115,10 +115,6 @@ verify_mergeinfo_parse(const char *input,
 }
 
 
-/* Some of our own global variables (for simplicity), which map paths
-   -> merge ranges. */
-static apr_hash_t *info1, *info2;
-
 #define NBR_MERGEINFO_VALS 24
 
 /* Valid mergeinfo values. */
@@ -269,6 +265,7 @@ test_parse_combine_rangeinfo(apr_pool_t *pool)
 {
   apr_array_header_t *result;
   svn_merge_range_t *resultrange;
+  apr_hash_t *info1;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, single_mergeinfo, pool));
 
@@ -347,6 +344,7 @@ test_parse_broken_mergeinfo(apr_pool_t *pool)
 {
   int i;
   svn_error_t *err;
+  apr_hash_t *info1;
 
   /* Trigger some error(s) with mal-formed input. */
   for (i = 0; i < NBR_BROKEN_MERGEINFO_VALS; i++)
@@ -566,6 +564,7 @@ test_mergeinfo_intersect(apr_pool_t *pool)
     { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE} };
   svn_rangelist_t *rangelist;
   apr_hash_t *intersection;
+  apr_hash_t *info1, *info2;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16\n/foo: 31", pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12", pool));
@@ -702,6 +701,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
     {
       int j;
       svn_string_t *info2_starting, *info2_ending;
+      apr_hash_t *info1, *info2;
 
       SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo[i].mergeinfo1, pool));
       SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo[i].mergeinfo2, pool));
@@ -1110,6 +1110,7 @@ test_rangelist_to_string(apr_pool_t *pool)
   svn_rangelist_t *result;
   svn_string_t *output;
   svn_string_t *expected = svn_string_create("3,5,7-11,13-14", pool);
+  apr_hash_t *info1;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
 
@@ -1130,6 +1131,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
 {
   svn_string_t *output;
   svn_string_t *expected;
+  apr_hash_t *info1, *info2;
   expected = svn_string_create("/fred:8-10\n/trunk:3,5,7-11,13-14", pool);
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
