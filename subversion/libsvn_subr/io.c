@@ -2307,12 +2307,11 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
      efficient memory handling, we'll try to do so. */
   if (check_size)
     {
-      apr_finfo_t finfo;
+      apr_finfo_t finfo = { 0 };
 
       /* In some cases we get size 0 and no error for non files,
           so we also check for the name. (= cached in apr_file_t) */
-      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_NAME, file)
-          && finfo.name != NULL)
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file) && finfo.fname)
         {
           /* we've got the file length. Now, read it in one go. */
           svn_boolean_t eof;
