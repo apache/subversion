@@ -71,7 +71,7 @@ IF EXIST "%TESTDIR%\swig\" (
     rmdir /s /q "%TESTDIR%\swig"
 )
 
-IF EXISTS "%TESTDIR%\tests\" (
+IF EXIST "%TESTDIR%\tests\" (
     PUSHD "%TESTDIR%\tests\"
     rmdir /s /q "%TESTDIR%\tests\" 2> nul:
     POPD
