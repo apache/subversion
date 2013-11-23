@@ -24,17 +24,23 @@ CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
 IF "%SVN_BRANCH%" LEQ "1.6.x" (
-  ECHO --- Building 1.6.x or older: Skipping bindings ---
-  EXIT /B 0
+    ECHO --- Building 1.6.x or older: Skipping bindings ---
+    EXIT /B 0
 )
 
-PATH %PATH%;%TESTDIR%\bin
+IF "%SVN_BRANCH%" LSS "1.9." (
+    IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
+    xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
+
+    PATH %TESTDIR%\bin;!PATH!
+)
+
 SET result=0
 
 python win-tests.py -d -f fsfs --javahl "%TESTDIR%\tests"
 IF ERRORLEVEL 1 (
-  echo [Test runner reported error !ERRORLEVEL!]
-  SET result=1
+    ECHO [JavaHL test runner reported error !ERRORLEVEL!] 1>&2
+    SET result=1
 )
 
-exit /b %result%
+EXIT /b %result%
