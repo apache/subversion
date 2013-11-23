@@ -904,7 +904,7 @@ test_adds_change_kind(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "adds", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "test_adds_change_kind", opts, pool));
   SVN_ERR(sbox_add_and_commit_greek_tree(&b));
 
   /* replace dir with file */
@@ -7249,7 +7249,7 @@ movedto_opdepth(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "moved_to_op_depth",
+  SVN_ERR(svn_test__sandbox_create(&b, "movedto_opdepth",
                                    opts, pool));
 
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
@@ -9015,7 +9015,7 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_edit_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_edit_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9035,7 +9035,7 @@ del4_update_delete_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_delete_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_delete_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9055,7 +9055,7 @@ del4_update_add_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_add_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_add_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9075,7 +9075,7 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_delself_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_delself_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
