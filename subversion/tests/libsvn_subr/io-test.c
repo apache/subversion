@@ -39,7 +39,7 @@
 
 /* Helpers to create the test data directory. */
 
-#define TEST_DIR "io-test-temp"
+#define TEST_DIR_PREFIX "io-test-temp"
 
 /* The definition for the test data files. */
 struct test_file_definition_t
@@ -66,7 +66,7 @@ struct test_file_definition_t
     char* created_path;
   };
 
-struct test_file_definition_t test_file_definitions[] =
+struct test_file_definition_t test_file_definitions_template[] =
   {
     {"empty",                 "",      0},
     {"single_a",              "a",     1},
@@ -121,6 +121,7 @@ struct test_file_definition_t test_file_definitions[] =
 
 static svn_error_t *
 create_test_file(struct test_file_definition_t* definition,
+                 const char *testname,
                  apr_pool_t *pool,
                  apr_pool_t *scratch_pool)
 {
@@ -129,6 +130,7 @@ create_test_file(struct test_file_definition_t* definition,
   apr_off_t midpos = definition->size / 2;
   svn_error_t *err = NULL;
   int i;
+  const char *test_dir = apr_pstrcat(pool, TEST_DIR_PREFIX, testname, NULL);
 
   if (definition->size < 5)
     SVN_ERR_ASSERT(strlen(definition->data) >= (apr_size_t)definition->size);
@@ -136,9 +138,9 @@ create_test_file(struct test_file_definition_t* definition,
     SVN_ERR_ASSERT(strlen(definition->data) >= 5);
 
 
-  definition->created_path = svn_dirent_join(TEST_DIR,
-                                  definition->name,
-                                  pool);
+  definition->created_path = svn_dirent_join(test_dir,
+                                             definition->name,
+                                             pool);
 
   SVN_ERR(svn_io_file_open(&file_h,
                            definition->created_path,
@@ -176,37 +178,47 @@ create_test_file(struct test_file_definition_t* definition,
 
 /* Function to prepare the whole set of on-disk files to be compared. */
 static svn_error_t *
-create_comparison_candidates(apr_pool_t *scratch_pool)
+create_comparison_candidates(struct test_file_definition_t **definitions,
+                             const char *testname,
+                             apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   struct test_file_definition_t *candidate;
   svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t count = 0;
+  const char *test_dir = apr_pstrcat(pool, TEST_DIR_PREFIX,
+                                     testname, NULL);
 
   /* If there's already a directory named io-test-temp, delete it.
      Doing things this way means that repositories stick around after
      a failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  SVN_ERR(svn_io_check_path(TEST_DIR, &kind, scratch_pool));
+  SVN_ERR(svn_io_check_path(test_dir, &kind, pool));
 
   if (kind == svn_node_dir)
-    SVN_ERR(svn_io_remove_dir2(TEST_DIR, TRUE, NULL, NULL, scratch_pool));
+    SVN_ERR(svn_io_remove_dir2(test_dir, TRUE, NULL, NULL, pool));
   else if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "There is already a file named '%s'",
-                             TEST_DIR);
+                             test_dir);
 
-  SVN_ERR(svn_io_dir_make(TEST_DIR, APR_OS_DEFAULT, scratch_pool));
+  SVN_ERR(svn_io_dir_make(test_dir, APR_OS_DEFAULT, pool));
 
-  svn_test_add_dir_cleanup(TEST_DIR);
+  svn_test_add_dir_cleanup(test_dir);
 
-  for (candidate = test_file_definitions;
+  for (candidate = test_file_definitions_template;
        candidate->name != NULL;
        candidate += 1)
+    count++;
+
+  *definitions = apr_pmemdup(pool, test_file_definitions_template,
+                             (count + 1) * sizeof(**definitions));
+  for (candidate = *definitions; candidate->name != NULL; candidate += 1)
     {
       svn_pool_clear(iterpool);
-      err = create_test_file(candidate, scratch_pool, iterpool);
+      err = create_test_file(candidate, testname, pool, iterpool);
       if (err)
         break;
     }
@@ -229,8 +241,11 @@ test_two_file_size_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_two_file_size_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -280,8 +295,11 @@ test_two_file_content_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_two_file_content_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -333,8 +351,11 @@ test_three_file_size_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_three_file_size_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
@@ -413,8 +434,11 @@ test_three_file_content_comparison(apr_pool_t *scratch_pool)
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *cmp_err;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct test_file_definition_t *test_file_definitions;
 
-  SVN_ERR(create_comparison_candidates(scratch_pool));
+  SVN_ERR(create_comparison_candidates(&test_file_definitions,
+                                       "test_three_file_content_comparison",
+                                       scratch_pool));
 
   for (outer = test_file_definitions; outer->name != NULL; outer += 1)
     {
