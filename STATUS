@@ -207,14 +207,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1543145
-   Properly end the list of errors we want to handle as warnings in svn's
-   status handling. Without this patch we read invalid stack locations
-   until we find a NULL.
-   Justification:
-     Regression since 1.8.
-     https://bugzilla.redhat.com/show_bug.cgi?id=985582#c5
-     (And the report from astieger on irc)
-   Votes:
-     +1: rhuijben, stsp, brane
