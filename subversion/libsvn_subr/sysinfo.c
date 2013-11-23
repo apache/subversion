@@ -285,7 +285,7 @@ stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
   key = buffer->data;
   end = strchr(key, delim);
   *end = '\0';
-  buffer->len = 1 + end - key;
+  buffer->len -= 1 + end - key;
   buffer->data = end + 1;
   svn_stringbuf_strip_whitespace(buffer);
 
