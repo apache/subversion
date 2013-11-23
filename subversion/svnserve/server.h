@@ -36,8 +36,10 @@ extern "C" {
 #include "svn_repos.h"
 #include "svn_ra_svn.h"
 
+#include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_subr_private.h"
   
 enum username_case_type { CASE_FORCE_UPPER, CASE_FORCE_LOWER, CASE_ASIS };
 
@@ -147,6 +149,42 @@ typedef struct serve_params_t {
   /* Use virtual-host-based path to repo. */
   svn_boolean_t vhost;
 } serve_params_t;
+
+/* This structure contains all data that describes a client / server
+   connection.  Their lifetime is separated from the thread-local
+   serving pools. */
+typedef struct connection_t
+{
+  /* socket return by accept() */
+  apr_socket_t *usock;
+
+  /* server-global parameters */
+  serve_params_t *params;
+
+  /* connection-specific objects */
+  server_baton_t *baton;
+
+  /* buffered connection object used by the marshaller */
+  svn_ra_svn_conn_t *conn;
+
+  /* memory pool for objects with connection lifetime */
+  apr_pool_t *pool;
+
+  /* source and ultimate destiny for POOL */
+  svn_root_pools__t *root_pools;
+  
+  /* Number of threads using the pool.
+     The pool passed to apr_thread_create can only be released when both
+
+        A: the call to apr_thread_create has returned to the calling thread
+        B: the new thread has started running and reached apr_thread_start_t
+
+     So we set the atomic counter to 2 then both the calling thread and
+     the new thread decrease it and when it reaches 0 the pool can be
+     released.  */
+  svn_atomic_t ref_count;
+  
+} connection_t;
 
 /* Return a client_info_t structure allocated in POOL and initialize it
  * with data from CONN. */
