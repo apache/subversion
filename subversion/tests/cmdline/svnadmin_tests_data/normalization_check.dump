@@ -13,13 +13,13 @@ V 27
 PROPS-END
 
 Revision-number: 1
-Prop-content-length: 124
-Content-length: 124
+Prop-content-length: 126
+Content-length: 126
 
 K 10
 svn:author
-V 5
-brane
+V 7
+jrandom
 K 8
 svn:date
 V 27
@@ -42,9 +42,13 @@ PROPS-END
 Node-path: A/É
 Node-kind: dir
 Node-action: add
-Prop-content-length: 10
-Content-length: 10
+Prop-content-length: 47
+Content-length: 47
 
+K 13
+svn:mergeinfo
+V 12
+/Q/ålpha:69
 PROPS-END
 
 
@@ -73,13 +77,13 @@ PROPS-END
 
 
 Revision-number: 2
-Prop-content-length: 126
-Content-length: 126
+Prop-content-length: 128
+Content-length: 128
 
 K 10
 svn:author
-V 5
-brane
+V 7
+jrandom
 K 8
 svn:date
 V 27
@@ -102,13 +106,13 @@ modified
 
 
 Revision-number: 3
-Prop-content-length: 124
-Content-length: 124
+Prop-content-length: 126
+Content-length: 126
 
 K 10
 svn:author
-V 5
-brane
+V 7
+jrandom
 K 8
 svn:date
 V 27
@@ -131,13 +135,13 @@ modified
 
 
 Revision-number: 4
-Prop-content-length: 122
-Content-length: 122
+Prop-content-length: 124
+Content-length: 124
 
 K 10
 svn:author
-V 5
-brane
+V 7
+jrandom
 K 8
 svn:date
 V 27
@@ -161,13 +165,13 @@ PROPS-END
 
 
 Revision-number: 5
-Prop-content-length: 123
-Content-length: 123
+Prop-content-length: 125
+Content-length: 125
 
 K 10
 svn:author
-V 5
-brane
+V 7
+jrandom
 K 8
 svn:date
 V 27
@@ -187,5 +191,37 @@ Text-content-sha1: e2fb5f2139d086ded2cb600d5a91a196e76bf020
 Content-length: 9
 
 modified
+
+
+Revision-number: 6
+Prop-content-length: 127
+Content-length: 127
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2013-11-24T18:04:43.128158Z
+K 7
+svn:log
+V 25
+Update mergeinfo on A/É
+PROPS-END
+
+Node-path: A/É
+Node-kind: dir
+Node-action: change
+Prop-content-length: 61
+Content-length: 61
+
+K 13
+svn:mergeinfo
+V 26
+/Q/ålpha:71
+/Q/ålpha:69
+PROPS-END
 
 
