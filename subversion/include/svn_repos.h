@@ -284,8 +284,24 @@ typedef enum svn_repos_notify_warning_t
    * @see svn_fs.h:"Directory entry names and directory paths" */
   /* ### TODO(doxygen): make that a proper doxygen link */
   /* See svn_fs__path_valid(). */
-  svn_repos_notify_warning_invalid_fspath
+  svn_repos_notify_warning_invalid_fspath,
 
+  /**
+   * Found a denormalized name. Reported when the name of a directoy
+   * entry is not normalized to Unicode Normalization Form C.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_denormalized_name,
+
+  /**
+   * Detected a name collision. Reported when the names of two or more
+   * entries in the same directory differ only in character
+   * representation (normalization), but are otherwise identical.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_name_collision
 } svn_repos_notify_warning_t;
 
 /**
@@ -2659,6 +2675,12 @@ svn_repos_info_format(int *repos_format,
  * not notified. Finally, return an error if there were any failures during
  * verification, or SVN_NO_ERROR if there were no failures.
  *
+ * If @a check_ucs_norm is @c TRUE, verify that all path names in the
+ * repository are normaized to Unicode Normalization Form C, and
+ * report any name collisions within the same directory where the
+ * names differ only in character representation, but are otherwise
+ * identical.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -2666,6 +2688,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
+                     svn_boolean_t check_ucs_norm,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel,
@@ -2673,7 +2696,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      apr_pool_t *scratch_pool);
 
 /**
- * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
+ * Like svn_repos_verify_fs3(), but with @a keep_going and
+ * @a check_ucs_norm set to @c FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.

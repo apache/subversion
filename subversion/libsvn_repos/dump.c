@@ -38,6 +38,7 @@
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_utf_private.h"
 #include "private/svn_cache.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
@@ -380,6 +381,9 @@ struct edit_baton
   /* True if this "dump" is in fact a verify. */
   svn_boolean_t verify;
 
+  /* True if checking UCS normalization during a verify. */
+  svn_boolean_t check_ucs_norm;
+
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
 
@@ -434,6 +438,12 @@ struct dir_baton
      really, they're all within this directory.) */
   apr_hash_t *deleted_entries;
 
+  /* A flag indicating that new entries have been added to this
+     directory in this revision. Used to optimize detection of UCS
+     representation collisions; we will only check for that in
+     revisions where new names appear in the directory. */
+  svn_boolean_t check_name_collision;
+
   /* pool to be used for deleting the hash items */
   apr_pool_t *pool;
 };
@@ -486,6 +496,7 @@ make_dir_baton(const char *path,
   new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make(pool);
+  new_db->check_name_collision = FALSE;
   new_db->pool = pool;
 
   return new_db;
@@ -578,6 +589,39 @@ node_must_not_exist(struct edit_baton *eb,
                              _("Path '%s' exists in r%ld."),
                              path, revision);
 
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+check_ucs_normalization(const char *path,
+                        svn_node_kind_t kind,
+                        svn_repos_notify_func_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool)
+{
+  const char *const basename = svn_relpath_basename(path, scratch_pool);
+  if (!svn_utf__is_normalized(basename, scratch_pool))
+    {
+      svn_repos_notify_t *const notify =
+        svn_repos_notify_create(svn_repos_notify_warning, scratch_pool);
+      notify->warning = svn_repos_notify_warning_denormalized_name;
+      switch (kind)
+        {
+        case svn_node_dir:
+          notify->warning_str = apr_psprintf(
+              scratch_pool, _("Denormalized directory name '%s'"), path);
+          break;
+        case svn_node_file:
+          notify->warning_str = apr_psprintf(
+              scratch_pool, _("Denormalized file name '%s'"), path);
+          break;
+        default:
+          notify->warning_str = apr_psprintf(
+              scratch_pool, _("Denormalized entry name '%s'"), path);
+        }
+      notify_func(notify_baton, notify, scratch_pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1116,6 +1160,16 @@ add_directory(const char *path,
     /* Delete the path, it's now been dumped. */
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
+  /* Check for UCS normalization and name clashes, but only if this is
+     actually a new name in the parent, not a replacement. */
+  if (!val && eb->verify && eb->check_ucs_norm && eb->notify_func)
+    {
+      pb->check_name_collision = TRUE;
+      SVN_ERR(check_ucs_normalization(
+                  path, svn_node_file,
+                  eb->notify_func, eb->notify_baton, pool));
+    }
+
   new_db->written_out = TRUE;
 
   *child_baton = new_db;
@@ -1214,6 +1268,16 @@ add_file(const char *path,
                     is_copy ? copyfrom_path : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
+
+  /* Check for UCS normalization and name clashes, but only if this is
+     actually a new name in the parent, not a replacement. */
+  if (!val && eb->verify && eb->check_ucs_norm && eb->notify_func)
+    {
+      pb->check_name_collision = TRUE;
+      SVN_ERR(check_ucs_normalization(
+                  path, svn_node_file,
+                  eb->notify_func, eb->notify_baton, pool));
+    }
 
   if (val)
     /* delete the path, it's now been dumped. */
@@ -1382,6 +1446,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
+                svn_boolean_t check_ucs_norm,
                 svn_cache__t *verified_dirents_cache,
                 apr_pool_t *pool)
 {
@@ -1405,6 +1470,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
   eb->verify = verify;
+  eb->check_ucs_norm = check_ucs_norm;
   eb->found_old_reference = found_old_reference;
   eb->found_old_mergeinfo = found_old_mergeinfo;
   eb->verified_dirents_cache = verified_dirents_cache;
@@ -1612,7 +1678,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                               "", stream, &found_old_reference,
                               &found_old_mergeinfo, NULL,
                               notify_func, notify_baton,
-                              start_rev, use_deltas_for_rev, FALSE,
+                              start_rev, use_deltas_for_rev, FALSE, FALSE,
                               NULL, subpool));
 
       /* Drive the editor in one way or another. */
@@ -1790,9 +1856,57 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
   return SVN_NO_ERROR;
 }
 
+/* Baton used by the check_name_collision hash iterator. */
+struct check_name_baton
+{
+  struct dir_baton *dir_baton;
+  apr_hash_t *normalized;
+  svn_membuf_t buffer;
+};
+
+/* Scan the directory and report all entry names that differ only in
+   Unicode character representaiton. */
 static svn_error_t *
-verify_close_directory(void *dir_baton,
-                apr_pool_t *pool)
+check_name_collision(void *baton, const void *key, apr_ssize_t klen,
+                     void *val, apr_pool_t *pool)
+{
+  static const char unique[] = "unique";
+  static const char collision[] = "collision";
+
+  struct check_name_baton *const check_baton = baton;
+  const char *name;
+  const char *found;
+
+  SVN_ERR(svn_utf__normalize(&name, key, klen, &check_baton->buffer));
+
+  found = svn_hash_gets(check_baton->normalized, name);
+  if (!found)
+    svn_hash_sets(check_baton->normalized, name, unique);
+  else if (found == collision)
+    /* Skip already reported collision */;
+  else
+    {
+      struct dir_baton *const db = check_baton->dir_baton;
+      struct edit_baton *const eb = db->edit_baton;
+      svn_repos_notify_t *notify;
+      const char* normpath;
+
+      svn_hash_sets(check_baton->normalized, name, collision);
+      SVN_ERR(svn_utf__normalize(
+                  &normpath, svn_relpath_join(db->path, name, pool),
+                  SVN_UTF__UNKNOWN_LENGTH, &check_baton->buffer));
+      notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
+      notify->warning = svn_repos_notify_warning_name_collision;
+      notify->warning_str = apr_psprintf(
+          pool, _("Duplicate representation of path '%s'"), normpath);
+      eb->notify_func(eb->notify_baton, notify, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+verify_close_directory(void *dir_baton, apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
   apr_hash_t *dirents;
@@ -1800,6 +1914,17 @@ verify_close_directory(void *dir_baton,
                              db->path, pool));
   SVN_ERR(svn_iter_apr_hash(NULL, dirents, verify_directory_entry,
                             dir_baton, pool));
+
+  if (db->check_name_collision)
+    {
+      struct check_name_baton check_baton;
+      check_baton.dir_baton = db;
+      check_baton.normalized = apr_hash_make(pool);
+      svn_membuf__create(&check_baton.buffer, 0, pool);
+      SVN_ERR(svn_iter_apr_hash(NULL, dirents, check_name_collision,
+                                &check_baton, pool));
+    }
+
   return close_directory(dir_baton, pool);
 }
 
@@ -1828,6 +1953,7 @@ verify_one_revision(svn_fs_t *fs,
                     svn_repos_notify_func_t notify_func,
                     void *notify_baton,
                     svn_revnum_t start_rev,
+                    svn_boolean_t check_ucs_norm,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     svn_cache__t *verified_dirents_cache,
@@ -1849,6 +1975,7 @@ verify_one_revision(svn_fs_t *fs,
                           notify_func, notify_baton,
                           start_rev,
                           FALSE, TRUE, /* use_deltas, verify */
+                          check_ucs_norm,
                           verified_dirents_cache,
                           scratch_pool));
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
@@ -1926,6 +2053,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
+                     svn_boolean_t check_ucs_norm,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -2021,7 +2149,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
 
       /* Wrapper function to catch the possible errors. */
       err = verify_one_revision(fs, rev, notify_func, notify_baton,
-                                start_rev, cancel_func, cancel_baton,
+                                start_rev, check_ucs_norm,
+                                cancel_func, cancel_baton,
                                 verified_dirents_cache, iterpool);
 
       if (err)

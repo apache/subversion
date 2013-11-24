@@ -134,6 +134,22 @@ svn_utf__normcmp(int *result,
                  const char *str2, apr_size_t len2,
                  svn_membuf_t *buf1, svn_membuf_t *buf2);
 
+/* Normalize the UTF-8 string STR to form C, using BUF for temporary
+ * storage. If LEN is SVN_UTF__UNKNOWN_LENGTH, assume STR is
+ * null-terminated; otherwise, consider the string only up to the
+ * given length.
+ *
+ * Return the normalized string in *RESULT, which shares storage with
+ * BUF and is valid only until the next time BUF is modified.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints.
+ */
+svn_error_t*
+svn_utf__normalize(const char **result,
+                   const char *str, apr_size_t len,
+                   svn_membuf_t *buf);
+
 /* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
  * a FALSE return value may indicate that STRING is not valid UTF-8 at
  * all.
