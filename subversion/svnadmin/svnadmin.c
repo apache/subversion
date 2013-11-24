@@ -304,10 +304,11 @@ static const apr_getopt_option_t options_table[] =
     {"file", 'F', 1, N_("read repository paths from file ARG")},
 
     {"check-ucs-normalization", svnadmin__check_ucs_normalization, 0,
-     N_("report path names that are not normalized to UCS\n"
-        "                             Normalization Form C, and and any names within\n"
-        "                             the same directory that differ only in character\n"
-        "                             representation, but are otherwise identical")},
+     N_("report path names that are not normalized to\n"
+        "                             Unicode Normalization Form C, and any names\n"
+        "                             within the same directory that differ only in\n"
+        "                             character representation, but are otherwise\n"
+        "                             identical")},
 
     {NULL}
   };
