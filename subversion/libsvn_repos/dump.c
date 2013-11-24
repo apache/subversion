@@ -1166,7 +1166,7 @@ add_directory(const char *path,
     {
       pb->check_name_collision = TRUE;
       SVN_ERR(check_ucs_normalization(
-                  path, svn_node_file,
+                  path, svn_node_dir,
                   eb->notify_func, eb->notify_baton, pool));
     }
 
