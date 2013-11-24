@@ -2056,8 +2056,8 @@ def verify_denormalized_names(sbox):
   exp_out = svntest.verify.RegexListOutput([
     ".*Verifying repository metadata",
     ".*Verified revision 0.",
-                                       # A/{Eacute}
-    "WARNING .*: Denormalized file name 'A/.*'",
+                                            # A/{Eacute}
+    "WARNING .*: Denormalized directory name 'A/.*'",
                                        # A/{icircumflex}{odiaeresis}ta
     "WARNING .*: Denormalized file name 'A/.*ta'",
     ".*Verified revision 1.",
