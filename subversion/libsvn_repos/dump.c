@@ -600,8 +600,8 @@ check_ucs_normalization(const char *path,
                         void *notify_baton,
                         apr_pool_t *scratch_pool)
 {
-  const char *const basename = svn_relpath_basename(path, scratch_pool);
-  if (!svn_utf__is_normalized(basename, scratch_pool))
+  const char *const name = svn_relpath_basename(path, scratch_pool);
+  if (!svn_utf__is_normalized(name, scratch_pool))
     {
       svn_repos_notify_t *const notify =
         svn_repos_notify_create(svn_repos_notify_warning, scratch_pool);
