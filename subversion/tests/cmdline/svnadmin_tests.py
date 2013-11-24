@@ -2037,6 +2037,44 @@ def verify_invalid_path_changes(sbox):
                                    None, errput, None, "svnadmin: E165011:.*"):
     raise svntest.Failure
 
+
+def verify_denormalized_names(sbox):
+  "detect denormalized names and name collisions"
+
+  sbox.build(create_wc = False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'normalization_check.dump')
+  load_dumpstream(sbox, open(dumpfile_location).read())
+
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    "verify", "--check-ucs-normalization", sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([
+    ".*Verifying repository metadata",
+    ".*Verified revision 0.",
+                                       # A/{Eacute}
+    "WARNING .*: Denormalized file name 'A/.*'",
+                                       # A/{icircumflex}{odiaeresis}ta
+    "WARNING .*: Denormalized file name 'A/.*ta'",
+    ".*Verified revision 1.",
+    ".*Verified revision 2.",
+    ".*Verified revision 3.",
+                                       # A/{Eacute}/{aring}lpha
+    "WARNING .*: Denormalized file name 'A/.*/.*lpha'",
+    "WARNING .*: Duplicate representation of path 'A/.*/.*lpha'",
+    ".*Verified revision 4.",
+    ".*Verified revision 5."])
+
+  if svntest.verify.verify_outputs(
+      "Unexpected error while running 'svnadmin verify'.",
+      output, errput, exp_out, None):
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -2075,6 +2113,7 @@ test_list = [ None,
               recover_old,
               verify_keep_going,
               verify_invalid_path_changes,
+              verify_denormalized_names,
              ]
 
 if __name__ == '__main__':

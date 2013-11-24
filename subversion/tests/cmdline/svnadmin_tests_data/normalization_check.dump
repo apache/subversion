@@ -1,0 +1,191 @@
+SVN-fs-dump-format-version: 2
+
+UUID: bf695de5-cd61-4024-8cb3-a12d299c7c62
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2013-11-24T02:29:36.942478Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 124
+Content-length: 124
+
+K 10
+svn:author
+V 5
+brane
+K 8
+svn:date
+V 27
+2013-11-24T02:34:17.982927Z
+K 7
+svn:log
+V 24
+Denormalized tree import
+PROPS-END
+
+Node-path: A
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/É
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/É/ålpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: A/îöta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 126
+Content-length: 126
+
+K 10
+svn:author
+V 5
+brane
+K 8
+svn:date
+V 27
+2013-11-24T02:34:39.316466Z
+K 7
+svn:log
+V 26
+Modified denormalized file
+PROPS-END
+
+Node-path: A/îöta
+Node-kind: file
+Node-action: change
+Text-content-length: 9
+Text-content-md5: d2508118d0d39e198d1129d87d692d59
+Text-content-sha1: e2fb5f2139d086ded2cb600d5a91a196e76bf020
+Content-length: 9
+
+modified
+
+
+Revision-number: 3
+Prop-content-length: 124
+Content-length: 124
+
+K 10
+svn:author
+V 5
+brane
+K 8
+svn:date
+V 27
+2013-11-24T02:35:09.976189Z
+K 7
+svn:log
+V 24
+Modified normalized file
+PROPS-END
+
+Node-path: A/É/ålpha
+Node-kind: file
+Node-action: change
+Text-content-length: 9
+Text-content-md5: d2508118d0d39e198d1129d87d692d59
+Text-content-sha1: e2fb5f2139d086ded2cb600d5a91a196e76bf020
+Content-length: 9
+
+modified
+
+
+Revision-number: 4
+Prop-content-length: 122
+Content-length: 122
+
+K 10
+svn:author
+V 5
+brane
+K 8
+svn:date
+V 27
+2013-11-24T02:36:11.674695Z
+K 7
+svn:log
+V 22
+Created name collision
+PROPS-END
+
+Node-path: A/É/ålpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 5
+Prop-content-length: 123
+Content-length: 123
+
+K 10
+svn:author
+V 5
+brane
+K 8
+svn:date
+V 27
+2013-11-24T02:36:52.182891Z
+K 7
+svn:log
+V 23
+Modified colliding file
+PROPS-END
+
+Node-path: A/É/ålpha
+Node-kind: file
+Node-action: change
+Text-content-length: 9
+Text-content-md5: d2508118d0d39e198d1129d87d692d59
+Text-content-sha1: e2fb5f2139d086ded2cb600d5a91a196e76bf020
+Content-length: 9
+
+modified
+
+
