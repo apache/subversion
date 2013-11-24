@@ -167,8 +167,8 @@ Candidate changes:
    move status for A depending on whether the user called 'svn status A' or
    'svn status wc/A'.
    Justification:
-     Api users such as AnkhSVN rely in the result of svn status and this
-     breaks their assumptions.
+     Api users such as AnkhSVN rely on the result of svn status to match and
+     this breaks their assumptions.
      This change has the nice side effect that it resolves the most common
      user triggerable assertion in AnkhSVN, which is really caused by a
      broken move. (See other nomination for a fix). But even then it shouldn't
