@@ -9086,6 +9086,7 @@ read_single_info(const struct svn_wc__db_info_t **info,
   apr_int64_t repos_id;
   const svn_checksum_t *checksum;
   const char *original_repos_relpath;
+  svn_boolean_t have_work;
 
   mtb = apr_pcalloc(result_pool, sizeof(*mtb));
 
@@ -9096,27 +9097,67 @@ read_single_info(const struct svn_wc__db_info_t **info,
                     &mtb->lock, &mtb->recorded_size, &mtb->recorded_time,
                     &mtb->changelist, &mtb->conflicted, &mtb->op_root,
                     &mtb->had_props, &mtb->props_mod, &mtb->have_base,
-                    &mtb->have_more_work, NULL,
+                    &mtb->have_more_work, &have_work,
                     wcroot, local_relpath,
                     result_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_fetch_repos_info(&mtb->repos_root_url, &mtb->repos_uuid,
-                                      wcroot->sdb, repos_id, result_pool));
+  /* Query the same rows in the database again for move information */
+  if (have_work && (mtb->have_base || mtb->have_more_work))
+    {
+      svn_sqlite__stmt_t *stmt;
+      svn_boolean_t have_row;
+      const char *cur_relpath = NULL;
+      int cur_op_depth;
 
-  SVN_ERR(is_wclocked(&mtb->locked, wcroot, local_relpath, scratch_pool));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_MOVED_TO_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      while (have_row)
+        {
+          struct svn_wc__db_moved_to_info_t *move;
+          int op_depth = svn_sqlite__column_int(stmt, 0);
+          const char *moved_to_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+
+          move = apr_pcalloc(result_pool, sizeof(*move));
+          move->moved_to_abspath = svn_dirent_join(wcroot->abspath,
+                                                   moved_to_relpath,
+                                                   scratch_pool);
+
+          if (!cur_relpath)
+            {
+              cur_relpath = local_relpath;
+              cur_op_depth = relpath_depth(cur_relpath);
+            }
+          while (cur_op_depth > op_depth)
+            {
+              cur_relpath = svn_relpath_dirname(cur_relpath, scratch_pool);
+              cur_op_depth--;
+            }
+          move->shadow_op_root_abspath = svn_dirent_join(wcroot->abspath,
+                                                         cur_relpath,
+                                                         scratch_pool);
+
+          move->next = mtb->moved_to;
+          mtb->moved_to = move;
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
 
   /* Maybe we have to get some shadowed lock from BASE to make our test suite
-     happy... (It might be completely unrelated, but...) */
-  if (mtb->have_base
-      && (mtb->status == svn_wc__db_status_added
-          || mtb->status == svn_wc__db_status_deleted
-          || mtb->kind == svn_node_file))
+     happy... (It might be completely unrelated, but...)
+     This queries the same BASE row again, joined to the lock table */
+  if (mtb->have_base && (have_work || mtb->kind == svn_node_file))
     {
       svn_boolean_t update_root;
       svn_wc__db_lock_t **lock_arg = NULL;
 
-      if (mtb->status == svn_wc__db_status_added
-          || mtb->status == svn_wc__db_status_deleted)
+      if (have_work)
         lock_arg = &mtb->lock;
 
       SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL, NULL, NULL,
@@ -9128,52 +9169,6 @@ read_single_info(const struct svn_wc__db_info_t **info,
 
       mtb->file_external = (update_root && mtb->kind == svn_node_file);
     }
-
-  {
-    svn_sqlite__stmt_t *stmt;
-    svn_boolean_t have_row;
-    const char *cur_relpath = NULL;
-    int cur_op_depth;
-
-    SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                      STMT_SELECT_MOVED_TO_NODE));
-    SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-
-    SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-    while (have_row)
-      {
-        struct svn_wc__db_moved_to_info_t *move;
-        int op_depth = svn_sqlite__column_int(stmt, 0);
-        const char *moved_to_relpath = svn_sqlite__column_text(stmt, 1, NULL);
-
-        move = apr_pcalloc(result_pool, sizeof(*move));
-        move->moved_to_abspath = svn_dirent_join(wcroot->abspath,
-                                                 moved_to_relpath,
-                                                 scratch_pool);
-
-        if (!cur_relpath)
-          {
-            cur_relpath = local_relpath;
-            cur_op_depth = relpath_depth(cur_relpath);
-          }
-        while (cur_op_depth > op_depth)
-          {
-            cur_relpath = svn_relpath_dirname(cur_relpath, scratch_pool);
-            cur_op_depth--;
-          }
-        move->shadow_op_root_abspath = svn_dirent_join(wcroot->abspath,
-                                                       cur_relpath,
-                                                       scratch_pool);
-
-        move->next = mtb->moved_to;
-        mtb->moved_to = move;
-
-        SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      }
-
-    SVN_ERR(svn_sqlite__reset(stmt));
-  }
 
   if (mtb->status == svn_wc__db_status_added)
     {
@@ -9187,9 +9182,6 @@ read_single_info(const struct svn_wc__db_info_t **info,
       mtb->moved_here = (status == svn_wc__db_status_moved_here);
       mtb->incomplete = (status == svn_wc__db_status_incomplete);
     }
-
-  mtb->has_checksum = (checksum != NULL);
-  mtb->copied = (original_repos_relpath != NULL);
 
 #ifdef HAVE_SYMLINK
   if (mtb->kind == svn_node_file
@@ -9209,6 +9201,16 @@ read_single_info(const struct svn_wc__db_info_t **info,
       mtb->special = (NULL != svn_hash_gets(properties, SVN_PROP_SPECIAL));
     }
 #endif
+
+  mtb->has_checksum = (checksum != NULL);
+  mtb->copied = (original_repos_relpath != NULL);
+
+  SVN_ERR(svn_wc__db_fetch_repos_info(&mtb->repos_root_url, &mtb->repos_uuid,
+                                      wcroot->sdb, repos_id, result_pool));
+
+  if (mtb->kind == svn_node_dir)
+    SVN_ERR(is_wclocked(&mtb->locked, wcroot, local_relpath, scratch_pool));
+
   *info = mtb;
 
   return SVN_NO_ERROR;
