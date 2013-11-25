@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Tests the JavaHL SVNUtil APIs.
@@ -427,7 +428,11 @@ public class UtilTests extends SVNTests
         final Map<String, byte[]> keywords =
             SVNUtil.buildKeywords(keywordsValue, 42, "http://a/b/c",
                                   "http://a", new Date(1), "X");
+        final Map<String, byte[]> null_keywords = new HashMap<String, byte[]>();
         byte[] buffer = new byte[1024];
+
+        for (Map.Entry<String, byte[]> e : keywords.entrySet())
+            null_keywords.put(e.getKey(), null);
 
         // InputStream; expand
         InputStream testin = null;
@@ -473,7 +478,7 @@ public class UtilTests extends SVNTests
         try {
             testin = SVNUtil.translateStream(
                          new ByteArrayInputStream(contentsExpanded),
-                         SVNUtil.EOL_LF, true, keywords, false);
+                         SVNUtil.EOL_LF, true, null_keywords, false);
             final int size = testin.read(buffer);
             testin.close();
             testin = null;
@@ -492,8 +497,7 @@ public class UtilTests extends SVNTests
             testin = SVNUtil.translateStream(
                          new ByteArrayInputStream(contentsExpanded),
                          SVNUtil.EOL_LF, true, false,
-                         keywordsValue, 42, "http://a/b/c",
-                         "http://a", new Date(1), "X");
+                         keywordsValue, 0, "", "", new Date(1), "");
             final int size = testin.read(buffer);
             testin.close();
             testin = null;
@@ -551,7 +555,7 @@ public class UtilTests extends SVNTests
         try {
             ByteArrayOutputStream result = new ByteArrayOutputStream();
             testout = SVNUtil.translateStream(
-                         result, SVNUtil.EOL_LF, true, keywords, false);
+                         result, SVNUtil.EOL_LF, true, null_keywords, false);
             testout.write(contentsExpanded);
             testout.close();
             testout = null;
@@ -569,8 +573,7 @@ public class UtilTests extends SVNTests
             ByteArrayOutputStream result = new ByteArrayOutputStream();
             testout = SVNUtil.translateStream(
                          result, SVNUtil.EOL_LF, true, false,
-                         keywordsValue, 42, "http://a/b/c",
-                         "http://a", new Date(1), "X");
+                         keywordsValue, 0, "", "", new Date(1), "");
             testout.write(contentsExpanded);
             testout.close();
             testout = null;

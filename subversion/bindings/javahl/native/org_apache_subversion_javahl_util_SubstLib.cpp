@@ -86,15 +86,21 @@ class KeywordHashBuilder
 public:
   explicit KeywordHashBuilder(const SVN::Pool& pool)
     : m_pool(pool),
-      m_hash(apr_hash_make(pool.getPool()))
+      m_hash(apr_hash_make(pool.getPool())),
+      m_empty(svn_string_create_empty(pool.getPool()))
     {}
 
   void operator()(const std::string& key, const Java::ByteArray& value)
     {
       const char* const safe_key =
         apr_pstrmemdup(m_pool.getPool(), key.c_str(), key.size() + 1);
-      Java::ByteArray::Contents val(value);
-      apr_hash_set(m_hash, safe_key, key.size(), val.get_string(m_pool));
+      if (!value.get())
+        apr_hash_set(m_hash, safe_key, key.size(), m_empty);
+      else
+        {
+          Java::ByteArray::Contents val(value);
+          apr_hash_set(m_hash, safe_key, key.size(), val.get_string(m_pool));
+        }
     }
 
   apr_hash_t* get() const
@@ -105,6 +111,7 @@ public:
 private:
   const SVN::Pool& m_pool;
   apr_hash_t* const m_hash;
+  svn_string_t* const m_empty;
 };
 
 inline apr_hash_t*
