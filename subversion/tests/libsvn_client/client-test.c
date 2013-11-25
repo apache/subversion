@@ -781,13 +781,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_client__elide_mergeinfo_catalog"),
     SVN_TEST_PASS2(test_args_to_target_array,
                    "test svn_client_args_to_target_array"),
-    SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
+    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
+    SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_copy_crash, "test a crash in svn_client_copy5"),
 #ifdef TEST16K_ADD
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
-    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
     SVN_TEST_NULL
   };
