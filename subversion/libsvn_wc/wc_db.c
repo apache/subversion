@@ -9124,7 +9124,7 @@ read_single_info(const struct svn_wc__db_info_t **info,
           move = apr_pcalloc(result_pool, sizeof(*move));
           move->moved_to_abspath = svn_dirent_join(wcroot->abspath,
                                                    moved_to_relpath,
-                                                   scratch_pool);
+                                                   result_pool);
 
           if (!cur_relpath)
             {
@@ -9138,7 +9138,7 @@ read_single_info(const struct svn_wc__db_info_t **info,
             }
           move->shadow_op_root_abspath = svn_dirent_join(wcroot->abspath,
                                                          cur_relpath,
-                                                         scratch_pool);
+                                                         result_pool);
 
           move->next = mtb->moved_to;
           mtb->moved_to = move;
