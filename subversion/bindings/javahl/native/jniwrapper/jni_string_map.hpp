@@ -61,8 +61,8 @@ protected:
    * @c std::map.
    */
   explicit BaseMap(Env env, jobject jmap)
-    : Object(env, m_class_name, jmap),
-      m_contents(convert_to_map(env, m_class, m_jthis))
+    : Object(env, ClassCache::get_map(), jmap),
+      m_contents(convert_to_map(env, m_jthis))
     {}
 
   /**
@@ -74,8 +74,36 @@ protected:
   const somap m_contents;
 
 private:
+  friend class ClassCache;
+  static void static_init(Env env);
   static const char* const m_class_name;
-  static somap convert_to_map(Env env, jclass cls, jobject jmap);
+
+  struct Set
+  {
+    static MethodID m_mid_iterator;
+    static void static_init(Env env);
+    static const char* const m_class_name;
+  };
+
+  struct Iterator
+  {
+    static MethodID m_mid_has_next;
+    static MethodID m_mid_next;
+    static void static_init(Env env);
+    static const char* const m_class_name;
+  };
+
+  struct Entry
+  {
+    static MethodID m_mid_get_key;
+    static MethodID m_mid_get_value;
+    static void static_init(Env env);
+    static const char* const m_class_name;
+  };
+
+  static MethodID m_mid_size;
+  static MethodID m_mid_entry_set;
+  static somap convert_to_map(Env env, jobject jmap);
 };
 
 /**
@@ -153,12 +181,18 @@ public:
   /**
    * Clears the contents of the map.
    */
-  void clear();
+  void clear()
+    {
+      m_env.CallVoidMethod(m_jthis, m_mid_clear);
+    }
 
   /**
    * Returns the number of elements in the map.
    */
-  jint length() const;
+  jint length() const
+    {
+      return m_env.CallIntMethod(m_jthis, m_mid_size);
+    }
 
   /**
    * Checks if the map is empty.
@@ -180,12 +214,20 @@ protected:
    * Constructs and wraps an empty map of type @c java.util.HashMap
    * with initial allocation size @a length.
    */
-  explicit BaseMutableMap(Env env, jint length);
+  explicit BaseMutableMap(Env env, jint length)
+    : Object(env, ClassCache::get_hash_map(),
+             env.NewObject(ClassCache::get_hash_map(), m_mid_ctor, length))
+    {}
+
 
   /**
    * Inserts @a obj identified by @a key into the map.
    */
-  void put(const std::string& key, jobject obj);
+  void put(const std::string& key, jobject obj)
+    {
+      m_env.CallObjectMethod(m_jthis, m_mid_put,
+                             String(m_env, key).get(), obj);
+    }
 
   /**
    * Returns the object reference identified by @a index.
@@ -194,12 +236,15 @@ protected:
   jobject operator[](const std::string& index) const;
 
 private:
+  friend class ClassCache;
+  static void static_init(Env env);
   static const char* const m_class_name;
-  MethodID m_mid_put;
-  MethodID m_mid_clear;
-  mutable MethodID m_mid_has_key;
-  mutable MethodID m_mid_get;
-  mutable MethodID m_mid_size;
+  static MethodID m_mid_ctor;
+  static MethodID m_mid_put;
+  static MethodID m_mid_clear;
+  static MethodID m_mid_has_key;
+  static MethodID m_mid_get;
+  static MethodID m_mid_size;
 };
 
 /**

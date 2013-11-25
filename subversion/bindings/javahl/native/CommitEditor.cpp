@@ -488,7 +488,8 @@ CommitEditor::provide_props_cb(apr_hash_t **props,
 
   // FIXME: Getting properties from the youngest revision is in fact
   // not such a bright idea, as the path may have been moved or
-  // deleted in the path.
+  // deleted in the repository. On the other hand, if that happens,
+  // the commit would fail due to a conflict anyway.
   if (kind == svn_node_file)
     return svn_ra_get_file(editor->m_callback_session,
                            repos_relpath, SVN_INVALID_REVNUM,

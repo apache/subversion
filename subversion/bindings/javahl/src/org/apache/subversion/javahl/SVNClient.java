@@ -112,6 +112,7 @@ public class SVNClient implements ISVNClient
     /**
       * @deprecated
       */
+    @Deprecated
     public native String getLastPath();
 
     public native void status(String path, Depth depth, boolean onServer,
@@ -218,6 +219,7 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /** @deprecated */
+    @Deprecated
     public void move(Set<String> srcPaths, String destPath,
                      boolean force, boolean moveAsChild,
                      boolean makeParents,
@@ -326,6 +328,7 @@ public class SVNClient implements ISVNClient
 
 
     /** @deprecated */
+    @Deprecated
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
             throws ClientException;

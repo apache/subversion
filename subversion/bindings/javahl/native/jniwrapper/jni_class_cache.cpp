@@ -30,7 +30,13 @@
 #include "jni_object.hpp"
 #include "jni_string.hpp"
 
+#include "jni_channel.hpp"
+#include "jni_io_stream.hpp"
+#include "jni_list.hpp"
+#include "jni_string_map.hpp"
+
 #include "../SubversionException.hpp"
+#include "../ExternalItem.hpp"
 
 namespace Java {
 
@@ -53,24 +59,23 @@ void ClassCache::create()
       exception_message = "Caught unknown C++ exception";
     }
 
-  // Use the raw environment without exception checks here
-  ::JNIEnv* const jenv = Env().get();
-  if (exception_message || jenv->ExceptionCheck())
+  const ::Java::Env env;
+  if (exception_message || env.ExceptionCheck())
     {
-      const jclass rtx = jenv->FindClass("java/lang/RuntimeException");
-      const jmethodID ctor = jenv->GetMethodID(rtx, "<init>",
-                                               "(Ljava/lang/String;"
-                                               "Ljava/lang/Throwable;)V");
-      jobject cause = jenv->ExceptionOccurred();
+      const jclass rtx = env.FindClass("java/lang/RuntimeException");
+      const jmethodID ctor = env.GetMethodID(rtx, "<init>",
+                                             "(Ljava/lang/String;"
+                                             "Ljava/lang/Throwable;)V");
+      jobject cause = env.ExceptionOccurred();
       if (!cause && exception_message)
         {
-          const jstring msg = jenv->NewStringUTF(exception_message);
-          cause = jenv->NewObject(rtx, ctor, msg, jthrowable(0));
+          const jstring msg = env.NewStringUTF(exception_message);
+          cause = env.NewObject(rtx, ctor, msg, jthrowable(0));
         }
       const jstring reason =
-        jenv->NewStringUTF("JavaHL native library initialization failed");
-      const jobject exception = jenv->NewObject(rtx, ctor, reason, cause);
-      jenv->Throw(jthrowable(exception));
+        env.NewStringUTF("JavaHL native library initialization failed");
+      const jobject exception = env.NewObject(rtx, ctor, reason, cause);
+      env.Throw(jthrowable(exception));
     }
 }
 
@@ -91,15 +96,48 @@ ClassCache::ClassCache(Env env)
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(throwable, Exception),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(string, String),
 
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(list, BaseList),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(array_list, BaseMutableList),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map, BaseMap),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(set, BaseMap::Set),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(iterator, BaseMap::Iterator),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(map_entry, BaseMap::Entry),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(hash_map, BaseMutableMap),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(input_stream, InputStream),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(output_stream, OutputStream),
+
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(byte_buffer,
+                                           ByteChannel::ByteBuffer),
+
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
-                                           ::JavaHL::SubversionException)
+                                           ::JavaHL::SubversionException),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
+                                           ::JavaHL::ExternalItem)
 {
   m_instance = this;
   // no-op: Object::static_init(env);
   Class::static_init(env);
   Exception::static_init(env);
   // no-op: String::static_init(env);
+
+  BaseList::static_init(env);
+  BaseMutableList::static_init(env);
+
+  BaseMap::static_init(env);
+  BaseMap::Set::static_init(env);
+  BaseMap::Iterator::static_init(env);
+  BaseMap::Entry::static_init(env);
+  BaseMutableMap::static_init(env);
+
+  InputStream::static_init(env);
+  OutputStream::static_init(env);
+
+  ByteChannel::ByteBuffer::static_init(env);
+
   // no-op: ::JavaHL::SubversionException::static_init(env);
+  ::JavaHL::ExternalItem::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT
 
