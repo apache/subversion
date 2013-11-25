@@ -625,6 +625,71 @@ check_ucs_normalization(const char *path,
   return SVN_NO_ERROR;
 }
 
+
+/* Baton used by the check_mergeinfo_normalization hash iterator. */
+struct check_mergeinfo_normalization_baton
+{
+  const char* path;
+  apr_hash_t *normalized;
+  svn_membuf_t buffer;
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+};
+
+/* Hash iterator that verifies normalization and collision of paths in
+   an svn:mergeinfo property. */
+static svn_error_t *
+check_mergeinfo_normalization(void *baton, const void *key, apr_ssize_t klen,
+                              void *val, apr_pool_t *pool)
+{
+  static const char unique[] = "unique";
+  static const char collision[] = "collision";
+
+  struct check_mergeinfo_normalization_baton *const check_baton = baton;
+
+  const char *const path = key;
+  const char *normpath;
+  const char *found;
+
+  SVN_ERR(svn_utf__normalize(&normpath, path, klen, &check_baton->buffer));
+
+  found = svn_hash_gets(check_baton->normalized, normpath);
+  if (!found)
+    {
+      if (0 != strcmp(path, normpath))
+        {
+          /* Report denormlized mergeinfo path */
+          svn_repos_notify_t *const notify =
+            svn_repos_notify_create(svn_repos_notify_warning, pool);
+          notify->warning = svn_repos_notify_warning_denormalized_mergeinfo;
+          notify->warning_str = apr_psprintf(
+              pool, _("Denormalized path '%s' in %s property of '%s'"),
+              path, SVN_PROP_MERGEINFO, check_baton->path);
+          check_baton->notify_func(check_baton->notify_baton, notify, pool);
+        }
+      svn_hash_sets(check_baton->normalized,
+                    apr_pstrdup(pool, normpath), unique);
+    }
+  else if (found == collision)
+    /* Skip already reported collision */;
+  else
+    {
+      /* Report path collision in mergeinfo */
+      svn_repos_notify_t *const notify =
+        svn_repos_notify_create(svn_repos_notify_warning, pool);
+      notify->warning = svn_repos_notify_warning_mergeinfo_collision;
+      notify->warning_str = apr_psprintf(
+          pool, _("Duplicate representation of path '%s'"
+                  " in %s property of '%s'"),
+          normpath, SVN_PROP_MERGEINFO, check_baton->path);
+      check_baton->notify_func(check_baton->notify_baton, notify, pool);
+      svn_hash_sets(check_baton->normalized,
+                    apr_pstrdup(pool, normpath), collision);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* This helper is the main "meat" of the editor -- it does all the
    work of writing a node record.
 
@@ -982,76 +1047,20 @@ dump_node(struct edit_baton *eb,
                                                       SVN_PROP_MERGEINFO);
           if (mergeinfo_str)
             {
-              static const char unique[] = "unique";
-              static const char collision[] = "collision";
-
               svn_mergeinfo_t mergeinfo;
-              svn_membuf_t buf;
-              apr_hash_t *normalized;
-              apr_hash_index_t *hi;
-
-              SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_str->data,
-                                          pool));
-              normalized = apr_hash_make(pool);
-              svn_membuf__create(&buf, 0, pool);
-
-              for (hi = apr_hash_first(pool, mergeinfo);
-                   hi; hi = apr_hash_next(hi))
-                {
-                  const void *key;
-                  apr_ssize_t klen;
-                  const char *mipath;
-                  const char *normpath;
-                  const char *found;
-
-                  apr_hash_this(hi, &key, &klen, NULL);
-                  mipath = (const char*)key;
-                  SVN_ERR(svn_utf__normalize(&normpath, mipath, klen, &buf));
-
-                  found = svn_hash_gets(normalized, normpath);
-                  if (!found)
-                    {
-                      if (0 != strcmp(mipath, normpath))
-                        {
-                          /* Report denormlized mergeinfo path */
-                          svn_repos_notify_t *const notify =
-                            svn_repos_notify_create(svn_repos_notify_warning,
-                                                    pool);
-                          notify->warning =
-                            svn_repos_notify_warning_denormalized_mergeinfo;
-                          notify->warning_str = apr_psprintf(
-                              pool,
-                              _("Denormalized path '%s'"
-                                " in %s property of '%s'"),
-                              mipath, SVN_PROP_MERGEINFO, path);
-                          eb->notify_func(eb->notify_baton, notify, pool);
-                        }
-                      svn_hash_sets(normalized,
-                                    apr_pstrdup(pool, normpath), unique);
-                    }
-                  else if (found == collision)
-                    /* Skip already reported collision */;
-                  else
-                    {
-                      /* Report path collision in mergeinfo */
-                      svn_repos_notify_t *const notify =
-                        svn_repos_notify_create(svn_repos_notify_warning,
-                                                pool);
-                      notify->warning =
-                        svn_repos_notify_warning_mergeinfo_collision;
-                      notify->warning_str = apr_psprintf(
-                          pool,
-                          _("Duplicate representation of path '%s'"
-                            " in %s property of '%s'"),
-                          normpath, SVN_PROP_MERGEINFO, path);
-                      eb->notify_func(eb->notify_baton, notify, pool);
-                      svn_hash_sets(normalized,
-                                    apr_pstrdup(pool, normpath), collision);
-                    }
-                }
+              struct check_mergeinfo_normalization_baton check_baton;
+              check_baton.path = path;
+              check_baton.normalized = apr_hash_make(pool);
+              svn_membuf__create(&check_baton.buffer, 0, pool);
+              check_baton.notify_func = eb->notify_func;
+              check_baton.notify_baton = eb->notify_baton;
+              SVN_ERR(svn_mergeinfo_parse(&mergeinfo,
+                                          mergeinfo_str->data, pool));
+              SVN_ERR(svn_iter_apr_hash(NULL, mergeinfo,
+                                        check_mergeinfo_normalization,
+                                        &check_baton, pool));
             }
         }
-
 
       if (eb->use_deltas && compare_root)
         {
@@ -1940,7 +1949,7 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
 }
 
 /* Baton used by the check_name_collision hash iterator. */
-struct check_name_baton
+struct check_name_collision_baton
 {
   struct dir_baton *dir_baton;
   apr_hash_t *normalized;
@@ -1956,7 +1965,7 @@ check_name_collision(void *baton, const void *key, apr_ssize_t klen,
   static const char unique[] = "unique";
   static const char collision[] = "collision";
 
-  struct check_name_baton *const check_baton = baton;
+  struct check_name_collision_baton *const check_baton = baton;
   const char *name;
   const char *found;
 
@@ -2002,7 +2011,7 @@ verify_close_directory(void *dir_baton, apr_pool_t *pool)
 
   if (db->check_name_collision)
     {
-      struct check_name_baton check_baton;
+      struct check_name_collision_baton check_baton;
       check_baton.dir_baton = db;
       check_baton.normalized = apr_hash_make(pool);
       svn_membuf__create(&check_baton.buffer, 0, pool);
