@@ -354,6 +354,19 @@ char *
 svn_relpath_dirname(const char *relpath,
                     apr_pool_t *result_pool);
 
+/** Return a maximum of @a max_components components of @a relpath. This is
+ * an efficient way of calling svn_relpath_dirname() multiple times until only
+ * a specific number of components is left.
+ *
+ * Allocate the result in @a result_pool (or statically in case of 0)
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_relpath_limit(const char *relpath,
+                  int max_components,
+                  apr_pool_t *result_pool);
+
 
 /** Divide the canonicalized @a uri into a uri @a *dirpath and a
  * (URI-decoded) relpath @a *base_name.

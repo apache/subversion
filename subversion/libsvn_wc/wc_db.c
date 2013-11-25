@@ -8945,22 +8945,14 @@ read_children_info(svn_wc__db_wcroot_t *wcroot,
               struct svn_wc__db_moved_to_info_t *moved_to;
               struct svn_wc__db_moved_to_info_t **next;
               const char *shadow_op_relpath;
-              int cur_op_depth;
 
               moved_to = apr_pcalloc(result_pool, sizeof(*moved_to));
               moved_to->moved_to_abspath = svn_dirent_join(wcroot->abspath,
                                                            moved_to_relpath,
                                                            result_pool);
 
-              cur_op_depth = relpath_depth(child_relpath);
-              shadow_op_relpath = child_relpath;
-
-              while (cur_op_depth > op_depth)
-                {
-                  shadow_op_relpath = svn_relpath_dirname(shadow_op_relpath,
-                                                          scratch_pool);
-                  cur_op_depth--;
-                }
+              shadow_op_relpath = svn_relpath_limit(child_relpath, op_depth,
+                                                    scratch_pool);
 
               moved_to->shadow_op_root_abspath =
                         svn_dirent_join(wcroot->abspath, shadow_op_relpath,
@@ -9106,8 +9098,6 @@ read_single_info(const struct svn_wc__db_info_t **info,
     {
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;
-      const char *cur_relpath = NULL;
-      int cur_op_depth;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_MOVED_TO_NODE));
@@ -9120,22 +9110,16 @@ read_single_info(const struct svn_wc__db_info_t **info,
           struct svn_wc__db_moved_to_info_t *move;
           int op_depth = svn_sqlite__column_int(stmt, 0);
           const char *moved_to_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+          const char *cur_relpath;
 
           move = apr_pcalloc(result_pool, sizeof(*move));
           move->moved_to_abspath = svn_dirent_join(wcroot->abspath,
                                                    moved_to_relpath,
                                                    result_pool);
 
-          if (!cur_relpath)
-            {
-              cur_relpath = local_relpath;
-              cur_op_depth = relpath_depth(cur_relpath);
-            }
-          while (cur_op_depth > op_depth)
-            {
-              cur_relpath = svn_relpath_dirname(cur_relpath, scratch_pool);
-              cur_op_depth--;
-            }
+          cur_relpath = svn_relpath_limit(local_relpath, op_depth,
+                                          scratch_pool);
+
           move->shadow_op_root_abspath = svn_dirent_join(wcroot->abspath,
                                                          cur_relpath,
                                                          result_pool);
@@ -12029,8 +12013,7 @@ scan_addition_txn(svn_wc__db_status_t *status,
     svn_boolean_t have_row;
     svn_wc__db_status_t presence;
     int op_depth;
-    const char *repos_prefix_path = "";
-    int i;
+    const char *repos_prefix_path;
 
     /* ### is it faster to fetch fewer columns? */
     SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -12079,17 +12062,9 @@ scan_addition_txn(svn_wc__db_status_t *status,
 
 
     /* Calculate the op root local path components */
-    op_root_relpath = local_relpath;
-
-    for (i = relpath_depth(local_relpath); i > op_depth; --i)
-      {
-        /* Calculate the path of the operation root */
-        repos_prefix_path =
-          svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
-                           repos_prefix_path,
-                           scratch_pool);
-        op_root_relpath = svn_relpath_dirname(op_root_relpath, scratch_pool);
-      }
+    op_root_relpath = svn_relpath_limit(local_relpath, op_depth, scratch_pool);
+    repos_prefix_path = svn_relpath_skip_ancestor(op_root_relpath,
+                                                  local_relpath);
 
     if (op_root_relpath_p)
       *op_root_relpath_p = apr_pstrdup(result_pool, op_root_relpath);
@@ -12183,6 +12158,7 @@ scan_addition_txn(svn_wc__db_status_t *status,
 
     while (TRUE)
       {
+        const char *tmp;
 
         SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -12203,16 +12179,13 @@ scan_addition_txn(svn_wc__db_status_t *status,
         op_depth = svn_sqlite__column_int(stmt, 0);
 
         /* Skip to op_depth */
-        for (i = relpath_depth(op_root_relpath); i > op_depth; i--)
-          {
-            /* Calculate the path of the operation root */
-            repos_prefix_path =
-              svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
-                               repos_prefix_path,
-                               scratch_pool);
-            op_root_relpath =
-              svn_relpath_dirname(op_root_relpath, scratch_pool);
-          }
+        tmp = op_root_relpath;
+
+        op_root_relpath = svn_relpath_limit(op_root_relpath, op_depth,
+                                              scratch_pool);
+        repos_prefix_path = svn_relpath_join(
+                              svn_relpath_skip_ancestor(op_root_relpath, tmp),
+                              repos_prefix_path, scratch_pool);
       }
 
       SVN_ERR(svn_sqlite__reset(stmt));
@@ -12426,12 +12399,8 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
   /* The deleted node is either where we moved from, or one of its ancestors */
   if (moved_from_delete_abspath)
     {
-      const char *tmp = moved_from_op_root_relpath;
-
-      SVN_ERR_ASSERT(moved_from_op_depth >= 0);
-
-      while (relpath_depth(tmp) > moved_from_op_depth)
-        tmp = svn_relpath_dirname(tmp, scratch_pool);
+      const char *tmp = svn_relpath_limit(moved_from_op_root_relpath,
+                                          moved_from_op_depth, scratch_pool);
 
       *moved_from_delete_abspath = svn_dirent_join(wcroot->abspath, tmp,
                                                    scratch_pool);
@@ -12610,9 +12579,9 @@ svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
         = svn_relpath_join(*move_dst_op_root_relpath,
                            svn_relpath_skip_ancestor(relpath, local_relpath),
                            result_pool);
-      while (delete_op_depth < relpath_depth(relpath))
-        relpath = svn_relpath_dirname(relpath, scratch_pool);
-      *move_src_op_root_relpath = apr_pstrdup(result_pool, relpath);
+
+      *move_src_op_root_relpath = svn_relpath_limit(relpath, delete_op_depth,
+                                                    result_pool);
     }
 
   return SVN_NO_ERROR;
