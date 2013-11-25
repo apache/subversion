@@ -10695,71 +10695,22 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 }
 
 
-/* */
+/* Implementation of svn_wc__db_global_relocate */
 static svn_error_t *
 relocate_txn(svn_wc__db_wcroot_t *wcroot,
              const char *local_relpath,
              const char *repos_root_url,
-             const char *repos_uuid,
-             svn_boolean_t have_base_node,
-             apr_int64_t old_repos_id,
              apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   apr_int64_t new_repos_id;
-
-  /* This function affects all the children of the given local_relpath,
-     but the way that it does this is through the repos inheritance mechanism.
-     So, we only need to rewrite the repos_id of the given local_relpath,
-     as well as any children with a non-null repos_id, as well as various
-     repos_id fields in the locks and working_node tables.
-   */
-
-  /* Get the repos_id for the new repository. */
-  SVN_ERR(create_repos_id(&new_repos_id, repos_root_url, repos_uuid,
-                          wcroot->sdb, scratch_pool));
-
-  /* Set the (base and working) repos_ids and clear the dav_caches */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_RECURSIVE_UPDATE_NODE_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            old_repos_id, new_repos_id));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  if (have_base_node)
-    {
-      /* Update any locks for the root or its children. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_LOCK_REPOS_ID));
-      SVN_ERR(svn_sqlite__bindf(stmt, "ii", old_repos_id, new_repos_id));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_global_relocate(svn_wc__db_t *db,
-                           const char *local_dir_abspath,
-                           const char *repos_root_url,
-                           apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
   const char *local_dir_relpath;
   svn_wc__db_status_t status;
   const char *repos_uuid;
   svn_boolean_t have_base_node;
   apr_int64_t old_repos_id;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-  /* ### assert that we were passed a directory?  */
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_dir_relpath,
-                           db, local_dir_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-  local_relpath = local_dir_relpath;
+  local_dir_relpath = local_relpath;
 
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, &old_repos_id,
@@ -10832,12 +10783,59 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_fetch_repos_info(NULL, &repos_uuid, wcroot->sdb,
                                       old_repos_id, scratch_pool));
-  SVN_ERR_ASSERT(repos_uuid);
+  SVN_ERR_ASSERT(repos_uuid);  /* This function affects all the children of the given local_relpath,
+     but the way that it does this is through the repos inheritance mechanism.
+     So, we only need to rewrite the repos_id of the given local_relpath,
+     as well as any children with a non-null repos_id, as well as various
+     repos_id fields in the locks and working_node tables.
+   */
+
+  /* Get the repos_id for the new repository. */
+  SVN_ERR(create_repos_id(&new_repos_id, repos_root_url, repos_uuid,
+                          wcroot->sdb, scratch_pool));
+
+  /* Set the (base and working) repos_ids and clear the dav_caches */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_RECURSIVE_UPDATE_NODE_REPO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
+                            old_repos_id, new_repos_id));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  if (have_base_node)
+    {
+      /* Update any locks for the root or its children. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_LOCK_REPOS_ID));
+      SVN_ERR(svn_sqlite__bindf(stmt, "ii", old_repos_id, new_repos_id));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_global_relocate(svn_wc__db_t *db,
+                           const char *local_dir_abspath,
+                           const char *repos_root_url,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+  /* ### assert that we were passed a directory?  */
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                           db, local_dir_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_WC__DB_WITH_TXN(
-    relocate_txn(wcroot, local_relpath, repos_root_url, repos_uuid,
-                 have_base_node, old_repos_id, scratch_pool),
+    relocate_txn(wcroot, local_relpath, repos_root_url, scratch_pool),
     wcroot);
+
+  SVN_ERR(flush_entries(wcroot, local_dir_abspath, svn_depth_infinity,
+                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
