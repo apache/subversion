@@ -47,8 +47,17 @@
 #include "svn_utf.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_atomic.h"
+#include "private/svn_mutex.h"
 
 #include "svn_private_config.h"
+
+#if APR_HAS_THREADS && APR_VERSION_AT_LEAST(1,3,0)
+#  include <apr_thread_pool.h>
+#  define HAVE_THREADPOOLS 1
+#else
+#  define HAVE_THREADPOOLS 0
+#endif
 
 /* Some Subversion test programs may want to parse options in the
    argument list, so we remember it here. */
@@ -76,6 +85,9 @@ static svn_boolean_t allow_segfaults = FALSE;
    Pass, All). */
 enum svn_test_mode_t mode_filter = svn_test_all;
 
+/* Test option: Allow concurrent execution of tests */
+static svn_boolean_t parallel = FALSE;
+
 /* Option parsing enums and structures */
 enum {
   help_opt = SVN_OPT_FIRST_LONGOPT_ID,
@@ -88,7 +100,8 @@ enum {
   server_minor_version_opt,
   allow_segfault_opt,
   srcdir_opt,
-  mode_filter_opt
+  mode_filter_opt,
+  parallel_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -117,6 +130,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("don't trap seg faults (useful for debugging)")},
   {"srcdir",        srcdir_opt, 1,
                     N_("source directory")},
+  {"parallel",      parallel_opt, 0,
+                    N_("allow concurrent execution of tests")},
   {0,               0, 0, 0}
 };
 
@@ -129,6 +144,9 @@ static svn_boolean_t skip_cleanup = FALSE;
 
 /* All cleanup actions are registered as cleanups on this pool. */
 static apr_pool_t *cleanup_pool = NULL;
+
+/* Used by test_thread to serialize access to stdout. */
+static svn_mutex__t *log_mutex = NULL;
 
 static apr_status_t
 cleanup_rmtree(void *data)
@@ -160,13 +178,34 @@ svn_test_add_dir_cleanup(const char *path)
   if (cleanup_mode)
     {
       const char *abspath;
-      svn_error_t *err = svn_path_get_absolute(&abspath, path, cleanup_pool);
+      svn_error_t *err;
+
+      /* All cleanup functions use the *same* pool (not subpools of it).
+         Thus, we need to synchronize. */
+      err = svn_mutex__lock(log_mutex);
+      if (err)
+        {
+          if (verbose_mode) 
+            printf("FAILED svn_mutex__lock in svn_test_add_dir_cleanup.\n");
+          svn_error_clear(err);
+          return;
+        }
+
+      err = svn_path_get_absolute(&abspath, path, cleanup_pool);
       svn_error_clear(err);
       if (!err)
         apr_pool_cleanup_register(cleanup_pool, abspath, cleanup_rmtree,
                                   apr_pool_cleanup_null);
       else if (verbose_mode)
         printf("FAILED ABSPATH: %s\n", path);
+
+      err = svn_mutex__unlock(log_mutex, NULL);
+      if (err)
+        {
+          if (verbose_mode) 
+            printf("FAILED svn_mutex__unlock in svn_test_add_dir_cleanup.\n");
+          svn_error_clear(err);
+        }
     }
 }
 
@@ -209,6 +248,86 @@ crash_handler(int signum)
   longjmp(jump_buffer, 1);
 }
 
+/* Write the result of test number TEST_NUM to stdout.  Pretty-print test
+   name and dots according to our test-suite spec, and return TRUE if there
+   has been a test failure.
+
+   The parameters are basically the internal state of do_test_num() and
+   test_thread(). */
+/*  */
+static svn_boolean_t
+log_results(const char *progname,
+            int test_num,
+            svn_boolean_t msg_only,
+            svn_boolean_t run_this_test,
+            svn_boolean_t skip,
+            svn_boolean_t xfail,
+            svn_boolean_t wimp,
+            svn_error_t *err,
+            const char *msg,
+            const struct svn_test_descriptor_t *desc)
+{
+  svn_boolean_t test_failed;
+
+  if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      skip = TRUE;
+    }
+
+  /* Failure means unexpected results -- FAIL or XPASS. */
+  test_failed = (!wimp && ((err != SVN_NO_ERROR) != (xfail != 0)));
+
+  /* If we got an error, print it out.  */
+  if (err)
+    {
+      svn_handle_error2(err, stdout, FALSE, "svn_tests: ");
+      svn_error_clear(err);
+    }
+
+  if (msg_only)
+    {
+      if (run_this_test)
+        printf(" %3d    %-5s  %s%s%s%s\n",
+               test_num,
+               (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
+               msg ? msg : "(test did not provide name)",
+               (wimp && verbose_mode) ? " [[" : "",
+               (wimp && verbose_mode) ? desc->wip : "",
+               (wimp && verbose_mode) ? "]]" : "");
+    }
+  else if (run_this_test && ((! quiet_mode) || test_failed))
+    {
+      printf("%s %s %d: %s%s%s%s\n",
+             (err
+              ? (xfail ? "XFAIL:" : "FAIL: ")
+              : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
+             progname,
+             test_num,
+             msg ? msg : "(test did not provide name)",
+             wimp ? " [[WIMP: " : "",
+             wimp ? desc->wip : "",
+             wimp ? "]]" : "");
+    }
+
+  if (msg)
+    {
+      size_t len = strlen(msg);
+      if (len > 50)
+        printf("WARNING: Test docstring exceeds 50 characters\n");
+      if (msg[len - 1] == '.')
+        printf("WARNING: Test docstring ends in a period (.)\n");
+      if (svn_ctype_isupper(msg[0]))
+        printf("WARNING: Test docstring is capitalized\n");
+    }
+  if (desc->msg == NULL)
+    printf("WARNING: New-style test descriptor is missing a docstring.\n");
+
+  fflush(stdout);
+
+  return test_failed;
+}
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code.
@@ -224,7 +343,6 @@ do_test_num(const char *progname,
 {
   svn_boolean_t skip, xfail, wimp;
   svn_error_t *err = NULL;
-  svn_boolean_t test_failed;
   const char *msg = NULL;  /* the message this individual test prints out */
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size();
@@ -296,60 +414,130 @@ do_test_num(const char *progname,
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
-  test_failed = (!wimp && ((err != SVN_NO_ERROR) != (xfail != 0)));
+  skip_cleanup = log_results(progname, test_num, msg_only, run_this_test,
+                             skip, xfail, wimp, err, msg, desc);
 
-  /* If we got an error, print it out.  */
-  if (err)
-    {
-      svn_handle_error2(err, stdout, FALSE, "svn_tests: ");
-      svn_error_clear(err);
-    }
-
-  if (msg_only)
-    {
-      if (run_this_test)
-        printf(" %3d    %-5s  %s%s%s%s\n",
-               test_num,
-               (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
-               msg ? msg : "(test did not provide name)",
-               (wimp && verbose_mode) ? " [[" : "",
-               (wimp && verbose_mode) ? desc->wip : "",
-               (wimp && verbose_mode) ? "]]" : "");
-    }
-  else if (run_this_test && ((! quiet_mode) || test_failed))
-    {
-      printf("%s %s %d: %s%s%s%s\n",
-             (err
-              ? (xfail ? "XFAIL:" : "FAIL: ")
-              : (xfail ? "XPASS:" : (skip ? "SKIP: " : "PASS: "))),
-             progname,
-             test_num,
-             msg ? msg : "(test did not provide name)",
-             wimp ? " [[WIMP: " : "",
-             wimp ? desc->wip : "",
-             wimp ? "]]" : "");
-    }
-
-  if (msg)
-    {
-      size_t len = strlen(msg);
-      if (len > 50)
-        printf("WARNING: Test docstring exceeds 50 characters\n");
-      if (msg[len - 1] == '.')
-        printf("WARNING: Test docstring ends in a period (.)\n");
-      if (svn_ctype_isupper(msg[0]))
-        printf("WARNING: Test docstring is capitalized\n");
-    }
-  if (desc->msg == NULL)
-    printf("WARNING: New-style test descriptor is missing a docstring.\n");
-
-  fflush(stdout);
-
-  skip_cleanup = test_failed;
-
-  return test_failed;
+  return skip_cleanup;
 }
 
+#if HAVE_THREADPOOLS
+
+/* Per-test parameters used by test_thread */
+typedef struct test_params_t
+{
+  /* Name of the application */
+  const char *progname;
+
+  /* Number / index of the test to execute */
+  int test_num;
+
+  /* Global test options as provided by main() */
+  svn_test_opts_t *opts;
+
+  /* Thread-safe parent pool for the test-specific pool.  We expect the
+     test thread to create a sub-pool and destroy it after test completion. */
+  apr_pool_t *pool;
+
+  /* Reference to the global failure flag.  Set this if any test failed. */
+  svn_atomic_t *got_error;
+} test_params_t;
+
+/* Thread function similar to do_test_num() but with fewer options.  We do
+   catch segfaults.  All parameters are given as a test_params_t in DATA.
+ */
+static void * APR_THREAD_FUNC
+test_thread(apr_thread_t *tid, void *data)
+{
+  svn_boolean_t skip, xfail, wimp;
+  svn_error_t *err = NULL;
+  const struct svn_test_descriptor_t *desc;
+  svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
+  test_params_t *params = data;
+
+  apr_pool_t *test_pool = svn_pool_create(params->pool);
+
+  desc = &test_funcs[params->test_num];
+  skip = desc->mode == svn_test_skip;
+  xfail = desc->mode == svn_test_xfail;
+  wimp = xfail && desc->wip;
+  run_this_test = mode_filter == svn_test_all || mode_filter == desc->mode;
+
+  /* Do test */
+  if (skip || !run_this_test)
+    ; /* pass */
+  else if (desc->func2)
+    err = (*desc->func2)(test_pool);
+  else
+    err = (*desc->func_opts)(params->opts, test_pool);
+
+  /* Write results to console */
+  svn_error_clear(svn_mutex__lock(log_mutex));
+  if (log_results(params->progname, params->test_num, FALSE, run_this_test,
+                  skip, xfail, wimp, err, desc->msg, desc))
+    svn_atomic_set(params->got_error, TRUE);
+  svn_error_clear(svn_mutex__unlock(log_mutex, NULL));
+
+  /* release all test memory */
+  svn_pool_destroy(test_pool);
+    
+  return NULL;
+}
+
+/* Execute all ARRAY_SIZE tests concurrently using MAX_THREADS threads.
+   Pass PROGNAME and OPTS to the individual tests.  Return TRUE if at least
+   one of the tests failed.  Allocate all data in POOL.
+
+   Note that cleanups are delayed until all tests have been completed.
+ */
+static svn_boolean_t
+do_tests_concurrently(const char *progname,
+                      int array_size,
+                      int max_threads,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  apr_thread_pool_t *threads;
+  apr_status_t status;
+  svn_atomic_t got_error = FALSE;
+  int i;
+
+  /* Create the thread pool. */
+  status = apr_thread_pool_create(&threads, max_threads, max_threads, pool);
+  if (status)
+    {
+      printf("apr_thread_pool_create() failed.\n");
+      return TRUE;
+    }
+
+  /* Don't queue requests unless we reached the worker thread limit. */
+  apr_thread_pool_threshold_set(threads, 0);
+
+  /* Generate one task per test and queue them in the thread pool. */
+  for (i = 1; i <= array_size; i++)
+    {
+      test_params_t *params = apr_pcalloc(pool, sizeof(*params));
+      params->got_error = &got_error;
+      params->opts = opts;
+      params->pool = pool;
+      params->progname = progname;
+      params->test_num = i;
+
+      apr_thread_pool_push(threads, test_thread, params, 0, NULL);
+    }
+
+  /* Wait for all tasks (tests) to complete.  As it turns out, this is the
+     variant with the least run-time overhead to the test threads. */
+  while (   apr_thread_pool_tasks_count(threads)
+         || apr_thread_pool_busy_count(threads))
+    apr_thread_yield();
+
+  /* Execute all cleanups. */
+  svn_pool_clear(cleanup_pool);
+
+  return got_error != FALSE;
+}
+
+#endif
 
 static void help(const char *progname, apr_pool_t *pool)
 {
@@ -449,6 +637,12 @@ main(int argc, const char *argv[])
    * usage but make it thread-safe to allow for multi-threaded tests.
    */
   pool = apr_allocator_owner_get(svn_pool_create_allocator(TRUE));
+  err = svn_mutex__init(&log_mutex, TRUE, pool);
+  if (err)
+    {
+      svn_handle_error2(err, stderr, TRUE, "svn_tests: ");
+      svn_error_clear(err);
+    }
 
   /* Remember the command line */
   test_argc = argc;
@@ -585,7 +779,13 @@ main(int argc, const char *argv[])
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
               }
+            break;
           }
+#if HAVE_THREADPOOLS
+        case parallel_opt:
+          parallel = TRUE;
+          break;
+#endif
       }
     }
 
@@ -656,15 +856,29 @@ main(int argc, const char *argv[])
   if (! ran_a_test)
     {
       /* just run all tests */
-      for (i = 1; i <= array_size; i++)
-        {
-          if (do_test_num(prog_name, i, FALSE, &opts, NULL, test_pool))
-            got_error = TRUE;
+      if (svn_test_max_threads < 1)
+        svn_test_max_threads = array_size;
 
-          /* Clear the per-function pool */
-          svn_pool_clear(test_pool);
-          svn_pool_clear(cleanup_pool);
+      if (svn_test_max_threads == 1 || !parallel)
+        {
+          for (i = 1; i <= array_size; i++)
+            {
+              if (do_test_num(prog_name, i, FALSE, &opts, NULL, test_pool))
+                got_error = TRUE;
+
+              /* Clear the per-function pool */
+              svn_pool_clear(test_pool);
+              svn_pool_clear(cleanup_pool);
+            }
         }
+#if HAVE_THREADPOOLS
+      else
+        {
+          got_error = do_tests_concurrently(prog_name, array_size,
+                                            svn_test_max_threads,
+                                            &opts, pool);
+        }
+#endif
     }
 
   /* Clean up APR */

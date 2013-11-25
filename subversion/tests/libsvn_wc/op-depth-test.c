@@ -9455,6 +9455,8 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
+int svn_test_max_threads = 2;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,

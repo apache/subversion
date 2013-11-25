@@ -666,6 +666,8 @@ aligned_seek_test(apr_pool_t *pool)
 
 /* The test table.  */
 
+int svn_test_max_threads = 3;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,

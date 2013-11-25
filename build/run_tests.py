@@ -377,6 +377,8 @@ class TestHarness:
       cmdline.append('--list')
     if self.mode_filter is not None:
       cmdline.append('--mode-filter=' + self.mode_filter)
+    if self.parallel is not None:
+      cmdline.append('--parallel')
 
     if test_nums:
       test_nums = test_nums.split(',')
