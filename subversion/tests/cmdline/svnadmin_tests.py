@@ -2053,8 +2053,7 @@ def verify_denormalized_names(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin(
     "verify", "--check-ucs-normalization", sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([
-    ".*Verifying repository metadata",
+  expected_output_regex_list = [
     ".*Verified revision 0.",
                                                 # A/{Eacute}
     "WARNING 0x0003: Denormalized directory name 'A/.*'",
@@ -2076,7 +2075,13 @@ def verify_denormalized_names(sbox):
     "WARNING 0x0006: Duplicate representation of path '/Q/.*lpha'"
                                   # A/{Eacute}
     " in svn:mergeinfo property of 'A/.*'",
-    ".*Verified revision 6."])
+    ".*Verified revision 6."]
+
+  # The BDB backend doesn't do global metadata verification.
+  if not svntest.main.is_fs_type_bdb():
+    expected_output_regex_list.insert(0, ".*Verifying repository metadata")
+
+  exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
 
   if svntest.verify.verify_outputs(
       "Unexpected error while running 'svnadmin verify'.",
