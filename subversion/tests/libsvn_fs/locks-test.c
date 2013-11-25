@@ -797,6 +797,8 @@ int svn_test_max_threads = 2;
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
+    SVN_TEST_OPTS_PASS(lock_expiration,
+                       "test that locks can expire"),
     SVN_TEST_OPTS_PASS(lock_only,
                        "lock only"),
     SVN_TEST_OPTS_PASS(lookup_lock_by_path,
@@ -813,8 +815,6 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test that locking is enforced in final commit step"),
     SVN_TEST_OPTS_PASS(lock_dir_propchange,
                        "dir propchange can be committed with locked child"),
-    SVN_TEST_OPTS_PASS(lock_expiration,
-                       "test that locks can expire"),
     SVN_TEST_OPTS_PASS(lock_break_steal_refresh,
                        "breaking, stealing, refreshing a lock"),
     SVN_TEST_OPTS_PASS(lock_out_of_date,
