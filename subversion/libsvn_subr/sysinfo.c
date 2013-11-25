@@ -270,7 +270,7 @@ release_name_from_uname(apr_pool_t *pool)
 
 #if __linux__
 /* Split a stringbuf into a key/value pair.
-   Return the key, leaving the striped value in the stringbuf. */
+   Return the key, leaving the stripped value in the stringbuf. */
 static const char *
 stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
 {
