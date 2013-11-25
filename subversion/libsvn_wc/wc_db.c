@@ -2615,17 +2615,21 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_wc__db_base_get_info_internal(status, kind, revision,
+  SVN_WC__DB_WITH_TXN4(
+          svn_wc__db_base_get_info_internal(status, kind, revision,
                                             repos_relpath, &repos_id,
                                             changed_rev, changed_date,
                                             changed_author, depth,
                                             checksum, target, lock,
                                             had_props, props, update_root,
                                             wcroot, local_relpath,
-                                            result_pool, scratch_pool));
+                                            result_pool, scratch_pool),
+          svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
+                                      wcroot->sdb, repos_id, result_pool),
+          SVN_NO_ERROR,
+          SVN_NO_ERROR,
+          wcroot);
   SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
-  SVN_ERR(svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
-                                      wcroot->sdb, repos_id, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8715,19 +8719,22 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(read_info(status, kind, revision, repos_relpath, &repos_id,
+  SVN_WC__DB_WITH_TXN4(
+          read_info(status, kind, revision, repos_relpath, &repos_id,
                     changed_rev, changed_date, changed_author,
                     depth, checksum, target, original_repos_relpath,
                     &original_repos_id, original_revision, lock,
                     recorded_size, recorded_time, changelist, conflicted,
                     op_root, have_props, props_mod,
                     have_base, have_more_work, have_work,
-                    wcroot, local_relpath, result_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
-                                      wcroot->sdb, repos_id, result_pool));
-  SVN_ERR(svn_wc__db_fetch_repos_info(original_root_url, original_uuid,
+                    wcroot, local_relpath, result_pool, scratch_pool),
+          svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid,
+                                      wcroot->sdb, repos_id, result_pool),
+          svn_wc__db_fetch_repos_info(original_root_url, original_uuid,
                                       wcroot->sdb, original_repos_id,
-                                      result_pool));
+                                      result_pool),
+        SVN_NO_ERROR,
+        wcroot);
 
   return SVN_NO_ERROR;
 }
