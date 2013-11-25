@@ -140,7 +140,6 @@ def redirected_update(sbox):
   verify_url(wc_dir, sbox.repo_url)
 
 #----------------------------------------------------------------------
-@XFail()
 @SkipUnless(svntest.main.is_ra_type_dav)
 def redirected_nonroot_update(sbox):
   "redirected update of non-repos-root wc"
