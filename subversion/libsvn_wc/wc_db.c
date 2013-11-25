@@ -11968,23 +11968,26 @@ get_moved_from_info(const char **moved_from_relpath,
   return SVN_NO_ERROR;
 }
 
-/* The body of scan_addition().
- */
+/* Like svn_wc__db_scan_addition(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH.
+
+   The output value of *ORIGINAL_REPOS_ID will be INVALID_REPOS_ID if there
+   is no 'copy-from' repository.  */
 static svn_error_t *
-scan_addition_txn(svn_wc__db_status_t *status,
-                  const char **op_root_relpath_p,
-                  const char **repos_relpath,
-                  apr_int64_t *repos_id,
-                  const char **original_repos_relpath,
-                  apr_int64_t *original_repos_id,
-                  svn_revnum_t *original_revision,
-                  const char **moved_from_relpath,
-                  const char **moved_from_op_root_relpath,
-                  int *moved_from_op_depth,
-                  svn_wc__db_wcroot_t *wcroot,
-                  const char *local_relpath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+scan_addition(svn_wc__db_status_t *status,
+              const char **op_root_relpath_p,
+              const char **repos_relpath,
+              apr_int64_t *repos_id,
+              const char **original_repos_relpath,
+              apr_int64_t *original_repos_id,
+              svn_revnum_t *original_revision,
+              const char **moved_from_relpath,
+              const char **moved_from_op_root_relpath,
+              int *moved_from_op_depth,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   const char *op_root_relpath;
   const char *build_relpath = "";
@@ -12246,39 +12249,6 @@ scan_addition_txn(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
-
-/* Like svn_wc__db_scan_addition(), but with WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH.
-
-   The output value of *ORIGINAL_REPOS_ID will be INVALID_REPOS_ID if there
-   is no 'copy-from' repository.  */
-static svn_error_t *
-scan_addition(svn_wc__db_status_t *status,
-              const char **op_root_relpath,
-              const char **repos_relpath,
-              apr_int64_t *repos_id,
-              const char **original_repos_relpath,
-              apr_int64_t *original_repos_id,
-              svn_revnum_t *original_revision,
-              const char **moved_from_relpath,
-              const char **moved_from_op_root_relpath,
-              int *moved_from_op_depth,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
-{
-  SVN_WC__DB_WITH_TXN(
-    scan_addition_txn(status, op_root_relpath, repos_relpath, repos_id,
-                      original_repos_relpath, original_repos_id,
-                      original_revision, moved_from_relpath,
-                      moved_from_op_root_relpath, moved_from_op_depth,
-                      wcroot, local_relpath, result_pool, scratch_pool),
-    wcroot);
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          const char **op_root_abspath,
@@ -12310,7 +12280,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(scan_addition(status,
+  SVN_WC__DB_WITH_TXN(
+          scan_addition(status,
                         op_root_abspath
                                 ? &op_root_relpath
                                 : NULL,
@@ -12318,7 +12289,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                         original_repos_relpath, original_repos_id_p,
                         original_revision,
                         NULL, NULL, NULL,
-                        wcroot, local_relpath, result_pool, scratch_pool));
+                        wcroot, local_relpath, result_pool, scratch_pool),
+          wcroot);
 
   if (op_root_abspath)
     *op_root_abspath = svn_dirent_join(wcroot->abspath, op_root_relpath,
@@ -12359,7 +12331,8 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(scan_addition(&status,
+  SVN_WC__DB_WITH_TXN(
+          scan_addition(&status,
                         op_root_abspath
                                 ? &op_root_relpath
                                 : NULL,
@@ -12375,7 +12348,8 @@ svn_wc__db_scan_moved(const char **moved_from_abspath,
                         moved_from_delete_abspath
                             ? &moved_from_op_depth
                             : NULL,
-                        wcroot, local_relpath, scratch_pool, scratch_pool));
+                        wcroot, local_relpath, scratch_pool, scratch_pool),
+          wcroot);
 
   if (status != svn_wc__db_status_moved_here || !moved_from_relpath)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
