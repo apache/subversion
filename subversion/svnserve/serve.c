@@ -3262,26 +3262,41 @@ repos_path_valid(const char *path)
   return TRUE;
 }
 
+/* APR pool cleanup callback that resets the REPOS pointer in ARG. */
+static apr_status_t
+reset_repos(void *arg)
+{
+  repository_t *repository = arg;
+  repository->repos = NULL;
+
+  return APR_SUCCESS;
+}
+
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, repos_url,
- * and fs_path fields of REPOSITORY.  Set REPOSITORY->repos's client
- * capabilities to CAPABILITIES, which must be at least as long-lived
- * as POOL, and whose elements are SVN_RA_CAPABILITY_*.  VHOST and
- * READ_ONLY flags are the same as in the server baton.
+ * and fs_path fields of REPOSITORY.  REPOSITORY->REPO will be allocated
+ * SCRATCH_POOL because repositories may be closed and re-opened during
+ * the lifetime of a connection.   All other parts in REPOSITORY must
+ * be allocated in RESULT_POOL.  VHOST and READ_ONLY flags are the same
+ * as in the server baton.
  *
  * CONFIG_POOL, AUTHZ_POOL and REPOS_POOL shall be used to load any
  * object of the respective type.
  */
-static svn_error_t *find_repos(const char *url, const char *root,
-                               svn_boolean_t vhost, svn_boolean_t read_only,
-                               svn_config_t *cfg, repository_t *repository,
-                               const apr_array_header_t *capabilities,
-                               svn_repos__config_pool_t *config_pool,
-                               svn_repos__authz_pool_t *authz_pool,
-                               svn_repos__repos_pool_t *repos_pool,
-                               apr_pool_t *pool)
+static svn_error_t *
+find_repos(const char *url,
+           const char *root,
+           svn_boolean_t vhost,
+           svn_boolean_t read_only,
+           svn_config_t *cfg,
+           repository_t *repository,
+           svn_repos__config_pool_t *config_pool,
+           svn_repos__authz_pool_t *authz_pool,
+           svn_repos__repos_pool_t *repos_pool,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
-  const char *path, *full_path, *repos_root, *fs_path, *hooks_env, *val;
+  const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
 
   /* Skip past the scheme and authority part. */
@@ -3296,8 +3311,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
       if (path == NULL)
         path = "";
     }
-  path = svn_relpath_canonicalize(path, pool);
-  path = svn_path_uri_decode(path, pool);
+  path = svn_relpath_canonicalize(path, result_pool);
+  path = svn_path_uri_decode(path, result_pool);
 
   /* Ensure that it isn't possible to escape the root by disallowing
      '..' segments. */
@@ -3306,70 +3321,86 @@ static svn_error_t *find_repos(const char *url, const char *root,
                             "Couldn't determine repository path");
 
   /* Join the server-configured root with the client path. */
-  full_path = svn_dirent_join(svn_dirent_canonicalize(root, pool),
-                              path, pool);
+  full_path = svn_dirent_join(svn_dirent_canonicalize(root, result_pool),
+                              path, result_pool);
 
   /* Search for a repository in the full path. */
-  repos_root = svn_repos_find_root_path(full_path, pool);
-  if (!repos_root)
+  repository->repos_root = svn_repos_find_root_path(full_path, result_pool);
+  if (!repository->repos_root)
     return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos__repos_pool_get(&repository->repos, repos_pool,
-                                    repos_root, "", pool));
+                                    repository->repos_root, "",
+                                    scratch_pool));
   SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
-                                                 capabilities));
+                                                 repository->capabilities));
   repository->fs = svn_repos_fs(repository->repos);
-  fs_path = full_path + strlen(repos_root);
-  repository->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/", pool);
-  url_buf = svn_stringbuf_create(url, pool);
+  fs_path = full_path + strlen(repository->repos_root);
+  repository->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/",
+                                             result_pool);
+  url_buf = svn_stringbuf_create(url, result_pool);
   svn_path_remove_components(url_buf,
                         svn_path_component_count(repository->fs_path->data));
   repository->repos_url = url_buf->data;
-  repository->authz_repos_name = svn_dirent_is_child(root, repos_root, pool);
+  repository->authz_repos_name = svn_dirent_is_child(root,
+                                                     repository->repos_root,
+                                                     result_pool);
   if (repository->authz_repos_name == NULL)
-    repository->repos_name = svn_dirent_basename(repos_root, pool);
+    repository->repos_name = svn_dirent_basename(repository->repos_root,
+                                                 result_pool);
   else
     repository->repos_name = repository->authz_repos_name;
-  repository->repos_name = svn_path_uri_encode(repository->repos_name, pool);
+  repository->repos_name = svn_path_uri_encode(repository->repos_name,
+                                               result_pool);
+
+  /* Reset the REPOS pointer as soon as the REPOS will be returned to the
+     REPOS_POOL. */
+  apr_pool_cleanup_register(scratch_pool, repository, reset_repos,
+                            apr_pool_cleanup_null);
 
   /* If the svnserve configuration has not been loaded then load it from the
    * repository. */
   if (NULL == cfg)
     {
-      repository->base = svn_repos_conf_dir(repository->repos, pool);
+      repository->base = svn_repos_conf_dir(repository->repos, result_pool);
 
       SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
                                          svn_repos_svnserve_conf
-                                            (repository->repos, pool), 
+                                            (repository->repos, result_pool), 
                                          FALSE, FALSE, repository->repos,
-                                         pool));
+                                         result_pool));
     }
 
-  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, pool));
-  SVN_ERR(load_authz_config(repository, repos_root, cfg, authz_pool, pool));
+  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
+  SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
+                            authz_pool, result_pool));
 
 #ifdef SVN_HAVE_SASL
-  /* Should we use Cyrus SASL? */
-  SVN_ERR(svn_config_get_bool(cfg, &repository->use_sasl,
-                              SVN_CONFIG_SECTION_SASL,
-                              SVN_CONFIG_OPTION_USE_SASL, FALSE));
+    {
+      const char *val;
 
-  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
-                 SVN_CONFIG_OPTION_MIN_SSF, "0");
-  SVN_ERR(svn_cstring_atoui(&repository->min_ssf, val));
+      /* Should we use Cyrus SASL? */
+      SVN_ERR(svn_config_get_bool(cfg, &repository->use_sasl,
+                                  SVN_CONFIG_SECTION_SASL,
+                                  SVN_CONFIG_OPTION_USE_SASL, FALSE));
 
-  svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
-                 SVN_CONFIG_OPTION_MAX_SSF, "256");
-  SVN_ERR(svn_cstring_atoui(&repository->max_ssf, val));
+      svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
+                    SVN_CONFIG_OPTION_MIN_SSF, "0");
+      SVN_ERR(svn_cstring_atoui(&repository->min_ssf, val));
 
+      svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
+                    SVN_CONFIG_OPTION_MAX_SSF, "256");
+      SVN_ERR(svn_cstring_atoui(&repository->max_ssf, val));
+    }
 #endif
 
   /* Use the repository UUID as the default realm. */
-  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, pool));
+  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, result_pool));
   svn_config_get(cfg, &repository->realm, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_REALM, repository->realm);
+  repository->realm = apr_pstrdup(result_pool, repository->realm);
 
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
@@ -3381,8 +3412,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
   svn_config_get(cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
-    hooks_env = svn_dirent_internal_style(hooks_env, pool);
-  SVN_ERR(svn_repos_hooks_setenv(repository->repos, hooks_env, pool));
+    hooks_env = svn_dirent_internal_style(hooks_env, scratch_pool);
+
+  repository->hooks_env = apr_pstrdup(result_pool, hooks_env);
 
   return SVN_NO_ERROR;
 }
@@ -3554,37 +3586,44 @@ get_client_info(svn_ra_svn_conn_t *conn,
   return client_info;
 }
 
-svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
-                   apr_pool_t *pool)
+/* Construct the server baton for CONN using PARAMS and return it in *BATON.
+ * It's lifetime is the same as that of CONN.  SCRATCH_POOL
+ */
+static svn_error_t *
+construct_server_baton(server_baton_t **baton,
+                       svn_ra_svn_conn_t *conn,
+                       serve_params_t *params,
+                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
-  const char *uuid, *client_url, *ra_client_string, *client_string;
-  apr_array_header_t *caplist, *cap_words;
-  server_baton_t b = { 0 };
-  repository_t repository = { 0 };
-  fs_warning_baton_t warn_baton;
-  svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(pool);
+  const char *client_url, *ra_client_string, *client_string;
+  apr_array_header_t *caplist;
+  apr_pool_t *conn_pool = svn_ra_svn__get_pool(conn);
+  server_baton_t *b = apr_pcalloc(conn_pool, sizeof(*b));
+  fs_warning_baton_t *warn_baton;
+  svn_stringbuf_t *cap_log = svn_stringbuf_create_empty(scratch_pool);
+  
+  b->repository = apr_pcalloc(conn_pool, sizeof(*b->repository));
+  b->repository->username_case = params->username_case;
+  b->repository->base = params->base;
+  b->repository->pwdb = NULL;
+  b->repository->authzdb = NULL;
+  b->repository->realm = NULL;
+  b->repository->use_sasl = FALSE;
 
-  repository.username_case = params->username_case;
-  repository.base = params->base;
-  repository.pwdb = NULL;
-  repository.authzdb = NULL;
-  repository.realm = NULL;
-  repository.use_sasl = FALSE;
+  b->read_only = params->read_only;
+  b->pool = conn_pool;
+  b->vhost = params->vhost;
 
-  b.read_only = params->read_only;
-  b.pool = pool;
-  b.vhost = params->vhost;
-
-  b.repository = &repository;
-  b.logger = params->logger;
-  b.client_info = get_client_info(conn, params, pool);
+  b->logger = params->logger;
+  b->client_info = get_client_info(conn, params, conn_pool);
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
   if (params->compression_level > 0)
-    SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, "nn()(wwwwwwwwwww)",
+    SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
+                                           "nn()(wwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_SVNDIFF1,
@@ -3599,7 +3638,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                                            SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE
                                            ));
   else
-    SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, "nn()(wwwwwwwwww)",
+    SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
+                                           "nn()(wwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_ABSENT_ENTRIES,
@@ -3616,14 +3656,14 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth
    * request. */
-  SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "nlc?c(?c)",
+  SVN_ERR(svn_ra_svn__read_tuple(conn, scratch_pool, "nlc?c(?c)",
                                  &ver, &caplist, &client_url,
                                  &ra_client_string,
                                  &client_string));
   if (ver != 2)
     return SVN_NO_ERROR;
 
-  client_url = svn_uri_canonicalize(client_url, pool);
+  client_url = svn_uri_canonicalize(client_url, conn_pool);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
   /* All released versions of Subversion support edit-pipeline,
@@ -3644,14 +3684,15 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
     int i;
     svn_ra_svn_item_t *item;
 
-    cap_words = apr_array_make(pool, 1, sizeof(const char *));
+    b->repository->capabilities = apr_array_make(conn_pool, 1,
+                                                 sizeof(const char *));
     for (i = 0; i < caplist->nelts; i++)
       {
         item = &APR_ARRAY_IDX(caplist, i, svn_ra_svn_item_t);
         /* ra_svn_set_capabilities() already type-checked for us */
         if (strcmp(item->u.word, SVN_RA_SVN_CAP_MERGEINFO) == 0)
           {
-            APR_ARRAY_PUSH(cap_words, const char *)
+            APR_ARRAY_PUSH(b->repository->capabilities, const char *)
               = SVN_RA_CAPABILITY_MERGEINFO;
           }
         /* Save for operational log. */
@@ -3661,40 +3702,40 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       }
   }
 
-  err = handle_config_error(find_repos(client_url, params->root,
-                                       b.vhost, b.read_only,
-                                       params->cfg, b.repository,
-                                       cap_words, params->config_pool,
-                                       params->authz_pool, params->repos_pool,
-                                       pool),
-                            &b);
+  err = handle_config_error(find_repos(client_url, params->root, b->vhost,
+                                       b->read_only, params->cfg,
+                                       b->repository, params->config_pool,
+                                       params->authz_pool, params->repos_pool, 
+                                       conn_pool, scratch_pool),
+                            b);
   if (!err)
     {
-      if (repository.anon_access == NO_ACCESS
-          && (repository.auth_access == NO_ACCESS
-              || (!b.client_info->tunnel_user && !repository.pwdb
-                  && !repository.use_sasl)))
+      if (b->repository->anon_access == NO_ACCESS
+          && (b->repository->auth_access == NO_ACCESS
+              || (!b->client_info->tunnel_user && !b->repository->pwdb
+                  && !b->repository->use_sasl)))
         err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                    "No access allowed to this repository",
-                                   &b);
+                                   b);
     }
   if (!err)
     {
-      SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS, FALSE));
-      if (current_access(&b) == NO_ACCESS)
+      SVN_ERR(auth_request(conn, scratch_pool, b, READ_ACCESS, FALSE));
+      if (current_access(b) == NO_ACCESS)
         err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                   "Not authorized for access", &b);
+                                   "Not authorized for access", b);
     }
   if (err)
     {
-      log_error(err, &b);
-      io_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
+      log_error(err, b);
+      io_err = svn_ra_svn__write_cmd_failure(conn, scratch_pool, err);
       svn_error_clear(err);
       SVN_ERR(io_err);
-      return svn_ra_svn__flush(conn, pool);
+      return svn_ra_svn__flush(conn, scratch_pool);
     }
 
-  SVN_ERR(svn_fs_get_uuid(b.repository->fs, &uuid, pool));
+  SVN_ERR(svn_fs_get_uuid(b->repository->fs, &b->repository->uuid,
+                          conn_pool));
 
   /* We can't claim mergeinfo capability until we know whether the
      repository supports mergeinfo (i.e., is not a 1.4 repository),
@@ -3704,50 +3745,67 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
      the client has sent the url. */
   {
     svn_boolean_t supports_mergeinfo;
-    SVN_ERR(svn_repos_has_capability(repository.repos, &supports_mergeinfo,
-                                     SVN_REPOS_CAPABILITY_MERGEINFO, pool));
+    SVN_ERR(svn_repos_has_capability(b->repository->repos,
+                                     &supports_mergeinfo,
+                                     SVN_REPOS_CAPABILITY_MERGEINFO,
+                                     scratch_pool));
 
-    SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(cc(!",
-                                    "success", uuid,
-                                    b.repository->repos_url));
+    SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w(cc(!",
+                                    "success", b->repository->uuid,
+                                    b->repository->repos_url));
     if (supports_mergeinfo)
-      SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
-    SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
-    SVN_ERR(svn_ra_svn__flush(conn, pool));
+      SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                     SVN_RA_SVN_CAP_MERGEINFO));
+    SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "!))"));
+    SVN_ERR(svn_ra_svn__flush(conn, scratch_pool));
   }
 
   /* Log the open. */
   if (ra_client_string == NULL || ra_client_string[0] == '\0')
     ra_client_string = "-";
   else
-    ra_client_string = svn_path_uri_encode(ra_client_string, pool);
+    ra_client_string = svn_path_uri_encode(ra_client_string, scratch_pool);
   if (client_string == NULL || client_string[0] == '\0')
     client_string = "-";
   else
-    client_string = svn_path_uri_encode(client_string, pool);
-  SVN_ERR(log_command(&b, conn, pool,
+    client_string = svn_path_uri_encode(client_string, scratch_pool);
+  SVN_ERR(log_command(b, conn, scratch_pool,
                       "open %" APR_UINT64_T_FMT " cap=(%s) %s %s %s",
                       ver, cap_log->data,
-                      svn_path_uri_encode(b.repository->fs_path->data, pool),
+                      svn_path_uri_encode(b->repository->fs_path->data,
+                                          scratch_pool),
                       ra_client_string, client_string));
 
-  warn_baton.server = &b;
-  warn_baton.conn = conn;
-  warn_baton.pool = svn_pool_create(pool);
-  svn_fs_set_warning_func(b.repository->fs, fs_warning_func, &warn_baton);
+  warn_baton = apr_pcalloc(scratch_pool, sizeof(*warn_baton));
+  warn_baton->server = b;
+  warn_baton->conn = conn;
+  warn_baton->pool = svn_pool_create(scratch_pool);
+  svn_fs_set_warning_func(b->repository->fs, fs_warning_func, warn_baton);
 
   /* Set up editor shims. */
   {
     svn_delta_shim_callbacks_t *callbacks =
-                                svn_delta_shim_callbacks_default(pool);
+                                svn_delta_shim_callbacks_default(conn_pool);
 
     callbacks->fetch_base_func = fetch_base_func;
     callbacks->fetch_props_func = fetch_props_func;
     callbacks->fetch_kind_func = fetch_kind_func;
-    callbacks->fetch_baton = &b;
+    callbacks->fetch_baton = b;
 
     SVN_ERR(svn_ra_svn__set_shim_callbacks(conn, callbacks));
   }
 
-  return svn_ra_svn__handle_commands2(conn, pool, main_commands, &b, FALSE);
+  *baton = b;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *serve(svn_ra_svn_conn_t *conn,
+                   serve_params_t *params,
+                   apr_pool_t *pool)
+{
+  server_baton_t *baton = NULL;
+
+  SVN_ERR(construct_server_baton(&baton, conn, params, pool));
+  return svn_ra_svn__handle_commands2(conn, pool, main_commands, baton, FALSE);
 }

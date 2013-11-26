@@ -49,6 +49,7 @@ enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 typedef struct repository_t {
   svn_repos_t *repos;
   const char *repos_name;  /* URI-encoded name of repository (not for authz) */
+  const char *repos_root;  /* Repository root directory */
   svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
   const char *base;        /* Base directory for config files */
   svn_config_t *pwdb;      /* Parsed password database */
@@ -56,6 +57,10 @@ typedef struct repository_t {
   const char *authz_repos_name; /* The name of the repository for authz */
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
+  const char *hooks_env;   /* Path to the hooks environment file or NULL */
+  const char *uuid;        /* Repository ID */
+  apr_array_header_t *capabilities;
+                           /* Client capabilities (SVN_RA_CAPABILITY_*) */
   svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
   enum username_case_type username_case; /* Case-normalize the username? */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;

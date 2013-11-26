@@ -43,6 +43,12 @@ svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
                                svn_delta_shim_callbacks_t *shim_callbacks);
 
 /**
+ * Return the memory pool used to allocate @a conn.
+ */
+apr_pool_t *
+svn_ra_svn__get_pool(svn_ra_svn_conn_t *conn);
+
+/**
  * @defgroup ra_svn_deprecated ra_svn low-level functions
  * @{
  */
