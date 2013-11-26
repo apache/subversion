@@ -440,6 +440,9 @@ typedef struct test_params_t
 
   /* Reference to the global failure flag.  Set this if any test failed. */
   svn_atomic_t *got_error;
+
+  /* Reference to the global completed test counter. */
+  svn_atomic_t *run_count;
 } test_params_t;
 
 /* Thread function similar to do_test_num() but with fewer options.  We do
@@ -479,6 +482,9 @@ test_thread(apr_thread_t *tid, void *data)
 
   /* release all test memory */
   svn_pool_destroy(test_pool);
+
+  /* one more test completed */
+  svn_atomic_inc(params->run_count);
     
   return NULL;
 }
@@ -500,6 +506,7 @@ do_tests_concurrently(const char *progname,
   apr_status_t status;
   svn_atomic_t got_error = FALSE;
   int i;
+  svn_atomic_t run_count = 0;
 
   /* Create the thread pool. */
   status = apr_thread_pool_create(&threads, max_threads, max_threads, pool);
@@ -521,6 +528,7 @@ do_tests_concurrently(const char *progname,
       params->pool = pool;
       params->progname = progname;
       params->test_num = i;
+      params->run_count = &run_count;
 
       apr_thread_pool_push(threads, test_thread, params, 0, NULL);
     }
@@ -530,6 +538,18 @@ do_tests_concurrently(const char *progname,
   while (   apr_thread_pool_tasks_count(threads)
          || apr_thread_pool_busy_count(threads))
     apr_thread_yield();
+  
+  /* For some unknown reason, cleaning POOL (TEST_POOL in main()) does not
+     call the following reliably for all users. */
+  apr_thread_pool_destroy(threads);
+
+  /* Verify that we didn't skip any tasks. */
+  if (run_count != array_size)
+    {
+      printf("Parallel test failure: only %d of %d tests executed.\n",
+             (int)run_count, array_size);
+      return TRUE;
+    }
 
   return got_error != FALSE;
 }
