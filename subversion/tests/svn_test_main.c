@@ -531,9 +531,6 @@ do_tests_concurrently(const char *progname,
          || apr_thread_pool_busy_count(threads))
     apr_thread_yield();
 
-  /* Execute all cleanups. */
-  svn_pool_clear(cleanup_pool);
-
   return got_error != FALSE;
 }
 
@@ -876,7 +873,11 @@ main(int argc, const char *argv[])
         {
           got_error = do_tests_concurrently(prog_name, array_size,
                                             svn_test_max_threads,
-                                            &opts, pool);
+                                            &opts, test_pool);
+
+          /* Execute all cleanups */
+          svn_pool_clear(test_pool);
+          svn_pool_clear(cleanup_pool);
         }
 #endif
     }
