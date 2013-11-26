@@ -148,6 +148,12 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+apr_pool_t *
+svn_ra_svn__get_pool(svn_ra_svn_conn_t *conn)
+{
+  return conn->pool;
+}
+
 svn_error_t *
 svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
                                svn_delta_shim_callbacks_t *shim_callbacks)
