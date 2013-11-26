@@ -134,7 +134,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
 #include "$APXS_INCLUDE/ap_release.h"
 apache_version=AP_SERVER_BASEREVISION],
                [AC_MSG_RESULT([broken])
-                AC_MSG_ERROR([Apache version includes a broken mod_dav use a newer version of httpd])],
+                AC_MSG_ERROR([Apache httpd version includes a broken mod_dav; use a newer version of httpd])],
                [AC_MSG_RESULT([acceptable])])
   CPPFLAGS="$old_CPPFLAGS"
 fi
