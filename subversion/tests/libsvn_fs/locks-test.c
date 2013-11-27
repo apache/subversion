@@ -608,9 +608,9 @@ lock_expiration(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
   SVN_ERR(svn_fs_set_access(fs, access));
 
-  /* Lock /A/D/G/rho, with an expiration 3 seconds from now. */
+  /* Lock /A/D/G/rho, with an expiration 2 seconds from now. */
   SVN_ERR(svn_fs_lock(&mylock, fs, "/A/D/G/rho", NULL, "", 0,
-                      apr_time_now() + apr_time_from_sec(3),
+                      apr_time_now() + apr_time_from_sec(2),
                       SVN_INVALID_REVNUM, FALSE, pool));
 
   /* Become nobody. */
@@ -640,9 +640,9 @@ lock_expiration(const svn_test_opts_t *opts,
                                        num_expected_paths, pool));
   }
 
-  /* Sleep 5 seconds, so the lock auto-expires.  Anonymous commit
+  /* Sleep 2 seconds, so the lock auto-expires.  Anonymous commit
      should then succeed. */
-  apr_sleep(apr_time_from_sec(5));
+  apr_sleep(apr_time_from_sec(3));
 
   /* Verify that the lock auto-expired even in the recursive case. */
   {
@@ -792,9 +792,13 @@ lock_out_of_date(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
+int svn_test_max_threads = 2;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
+    SVN_TEST_OPTS_PASS(lock_expiration,
+                       "test that locks can expire"),
     SVN_TEST_OPTS_PASS(lock_only,
                        "lock only"),
     SVN_TEST_OPTS_PASS(lookup_lock_by_path,
@@ -811,8 +815,6 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test that locking is enforced in final commit step"),
     SVN_TEST_OPTS_PASS(lock_dir_propchange,
                        "dir propchange can be committed with locked child"),
-    SVN_TEST_OPTS_PASS(lock_expiration,
-                       "test that locks can expire"),
     SVN_TEST_OPTS_PASS(lock_break_steal_refresh,
                        "breaking, stealing, refreshing a lock"),
     SVN_TEST_OPTS_PASS(lock_out_of_date,

@@ -934,7 +934,7 @@ validate_input_revision(svn_revnum_t revision,
                         const dav_resource *resource)
 {
   if (! SVN_IS_VALID_REVNUM(revision))
-    return SVN_NO_ERROR;
+    return NULL;
 
   if (revision > youngest)
     {
@@ -958,7 +958,7 @@ validate_input_revision(svn_revnum_t revision,
                                   "Invalid revision found in update report "
                                   "request.", resource->pool);
     }
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 

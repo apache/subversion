@@ -37,7 +37,8 @@ class RemoteSessionContext : public OperationContext
     RemoteSessionContext(SVN::Pool &pool,
                          const char* jconfigDirectory,
                          const char* jusername, const char* jpassword,
-                         Prompter* prompter, jobject jtunnelcb);
+                         Prompter* prompter,
+                         jobject jcfgcb, jobject jtunnelcb);
     virtual ~RemoteSessionContext();
     void activate(jobject jremoteSession, jobject jprogress);
     void * getCallbackBaton();

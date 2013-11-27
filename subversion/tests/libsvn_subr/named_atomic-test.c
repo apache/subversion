@@ -57,7 +57,7 @@ adjust_proc_path(const char **proc, const char **directory, apr_pool_t *pool)
   char path [MAX_PATH] = { 0 };
   GetModuleFileNameA(NULL, path, sizeof(path));
   *(strrchr(path, '\\') + 1) = 0;
-  *proc = apr_pstrcat(pool, path, *proc, ".exe", NULL);
+  *proc = apr_pstrcat(pool, path, *proc, ".exe", SVN_VA_NULL);
 
   /* And we need to set the working dir to our working dir to make
    * our sub-processes find all DLLs. */
@@ -215,7 +215,7 @@ init_concurrency_test_shm(apr_pool_t *pool, int count)
                                     apr_pstrcat(pool,
                                                 ATOMIC_NAME,
                                                 apr_itoa(pool, i),
-                                                NULL),
+                                                SVN_VA_NULL),
                                     TRUE));
       SVN_ERR(svn_named_atomic__write(NULL, 0, atomic));
     }
@@ -390,9 +390,9 @@ calibrate_iterations(apr_pool_t *pool, int count)
   int calib_iterations;
   double taken = 0.0;
 
-  /* increase iterations until we pass the 100ms mark */
+  /* increase iterations until we pass the 20ms mark */
 
-  for (calib_iterations = 10; taken < 100000.0; calib_iterations *= 2)
+  for (calib_iterations = 10; taken < 20000.0; calib_iterations *= 2)
     {
       apr_pool_t *scratch = svn_pool_create(pool);
       SVN_ERR(init_concurrency_test_shm(scratch, count));
@@ -404,16 +404,19 @@ calibrate_iterations(apr_pool_t *pool, int count)
       svn_pool_destroy(scratch);
     }
 
-  /* scale that to 1s */
+  /* scale that to .1s */
+  suggested_iterations = (int)(100000.0 / taken * calib_iterations);
 
-  suggested_iterations = (int)(1000000.0 / taken * calib_iterations);
+  /* 250k iterations should be plenty in any case. */
+  if (suggested_iterations > 250000)
+    suggested_iterations = 250000;
 
   return SVN_NO_ERROR;
 }
 
 /* Find out how far the system will scale, i.e. how many workers can be
  * run concurrently without experiencing significant slowdowns.
- * Sets HW_THREAD_COUNT to a value of 2 .. 32 (limit the system impact in
+ * Sets HW_THREAD_COUNT to a value of 2 .. 8 (limit the system impact in
  * case our heuristics fail) and determines the number of iterations.
  * Can be called multiple times but will skip the calculations after the
  * first successful run.
@@ -432,7 +435,7 @@ calibrate_concurrency(apr_pool_t *pool)
       if (svn_named_atomic__is_efficient() && proc_found(TEST_PROC, pool))
         {
           SVN_ERR(calibrate_iterations(pool, 2));
-          for (; hw_thread_count < 32; hw_thread_count *= 2)
+          for (; hw_thread_count < 8; hw_thread_count *= 2)
             {
               int saved_suggestion = suggested_iterations;
 
@@ -742,6 +745,9 @@ test_multiprocess(apr_pool_t *pool)
 */
 
 /* An array of all test functions */
+
+int svn_test_max_threads = 1;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,

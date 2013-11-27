@@ -155,7 +155,6 @@ ucs4cmp(const apr_int32_t *bufa, apr_size_t lena,
   return (lena == lenb ? 0 : (lena < lenb ? -1 : 1));
 }
 
-
 svn_error_t *
 svn_utf__normcmp(int *result,
                  const char *str1, apr_size_t len1,
@@ -182,6 +181,16 @@ svn_utf__normcmp(int *result,
   return SVN_NO_ERROR;
 }
 
+svn_error_t*
+svn_utf__normalize(const char **result,
+                   const char *str, apr_size_t len,
+                   svn_membuf_t *buf)
+{
+  apr_size_t result_length;
+  SVN_ERR(normalize_cstring(&result_length, str, len, buf));
+  *result = (const char*)(buf->data);
+  return SVN_NO_ERROR;
+}
 
 /* Decode a single UCS-4 code point to UTF-8, appending the result to BUFFER.
  * Assume BUFFER is already filled to *LENGTH and return the new size there.
@@ -424,7 +433,7 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
               len = utf8proc_utf8class[(uint8_t)*p];
 
               /* Check if the multi-byte sequence is valid UTF-8. */
-              if (len > 1 && len <= length - done)
+              if (len > 1 && len <= (apr_ssize_t)(length - done))
                 last = svn_utf__last_valid(p, len);
               else
                 last = NULL;

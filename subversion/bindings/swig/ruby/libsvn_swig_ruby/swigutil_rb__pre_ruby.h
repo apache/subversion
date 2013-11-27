@@ -30,8 +30,6 @@
  */
 
 #include <ruby/config.h>
-#ifdef _MSC_VER
-#endif
 
 #undef NORETURN
 #undef DEPRECATED
@@ -85,6 +83,10 @@ typedef unsigned __int64   uint64_t;
 /* Visual C++ >= 2013 has <inttypes.h> */
 #if _MSC_VER < 1800
 #undef HAVE_INTTYPES_H
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(disable: 4702) /* warning C4702: unreachable code */
 #endif
 
 #endif /* defined(SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG) && defined(_MSC_VER) */

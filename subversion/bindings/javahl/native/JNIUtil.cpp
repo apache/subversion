@@ -64,6 +64,8 @@
 #include "Pool.h"
 
 
+#include "jniwrapper/jni_env.hpp"
+
 // Static members of JNIUtil are allocated here.
 apr_pool_t *JNIUtil::g_pool = NULL;
 std::list<SVNBase*> JNIUtil::g_finalizedObjects;
@@ -76,34 +78,13 @@ JNIEnv *JNIUtil::g_initEnv;
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
 
-namespace {
-JavaVM *g_jvm = NULL;
-} // anonymous namespace
-
-extern "C" JNIEXPORT jint JNICALL
-JNI_OnLoad(JavaVM *jvm, void*)
-{
-  g_jvm = jvm;
-  return JNI_VERSION_1_2;
-}
-
-extern "C" JNIEXPORT void JNICALL
-JNI_OnUnload(JavaVM*, void*)
-{}
-
 /**
  * Return the JNI environment to use
  * @return the JNI environment
  */
 JNIEnv *JNIUtil::getEnv()
 {
-  // During init -> look into the global variable.
-  if (g_inInit)
-    return g_initEnv;
-
-  void* penv;
-  g_jvm->GetEnv(&penv, JNI_VERSION_1_2);
-  return static_cast<JNIEnv*>(penv);
+  return Java::Env().get();
 }
 
 /**
@@ -236,24 +217,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_initEnv = env;
 
   svn_error_t *err;
-  apr_status_t status;
-
-
-  /* Initialize the APR subsystem, and register an atexit() function
-   * to Uninitialize that subsystem at program exit. */
-  status = apr_initialize();
-  if (status)
-    {
-      if (stderr)
-        {
-          char buf[1024];
-          apr_strerror(status, buf, sizeof(buf) - 1);
-          fprintf(stderr,
-                  "%s: error: cannot initialize APR: %s\n",
-                  "svnjavahl", buf);
-        }
-      return FALSE;
-    }
 
   /* This has to happen before any pools are created. */
   if ((err = svn_dso_initialize2()))
@@ -265,16 +228,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
-  if (0 > atexit(apr_terminate))
-    {
-      if (stderr)
-        fprintf(stderr,
-                "%s: error: atexit registration failed\n",
-                "svnjavahl");
-      return FALSE;
-    }
-
-  /* Create our top-level pool. */
+  /* Create our top-level pool.
+     N.B.: APR was initialized by JNI_OnLoad. */
   g_pool = svn_pool_create(NULL);
 
   apr_allocator_t* allocator = apr_pool_allocator_get(g_pool);
@@ -662,7 +617,7 @@ std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
   return buffer;
 }
 
-void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
+void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
 {
   jstring jmessage;
   jobject jstack;
@@ -719,12 +674,14 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;"
+                                   "Ljava/lang/Throwable;"
                                    "Ljava/lang/String;I"
                                    "Ljava/util/List;)V");
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
-  jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           jint(err->apr_err), jstack);
+  jobject nativeException = env->NewObject(clazz, mid, jmessage, jcause,
+                                           jsource, jint(err->apr_err),
+                                           jstack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -795,10 +752,10 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
 
-void JNIUtil::handleSVNError(svn_error_t *err)
+void JNIUtil::handleSVNError(svn_error_t *err, jthrowable jcause)
 {
   try {
-    wrappedHandleSVNError(err);
+    wrappedHandleSVNError(err, jcause);
   } catch (...) {
     svn_error_clear(err);
     throw;

@@ -270,7 +270,7 @@ release_name_from_uname(apr_pool_t *pool)
 
 #if __linux__
 /* Split a stringbuf into a key/value pair.
-   Return the key, leaving the striped value in the stringbuf. */
+   Return the key, leaving the stripped value in the stringbuf. */
 static const char *
 stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
 {
@@ -282,11 +282,21 @@ stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
     return NULL;
 
   svn_stringbuf_strip_whitespace(buffer);
+
+  /* Now we split the currently allocated buffer in two parts:
+      - a const char * HEAD
+      - the remaining stringbuf_t. */
+
+  /* Create HEAD as '\0' terminated const char * */
   key = buffer->data;
   end = strchr(key, delim);
   *end = '\0';
-  buffer->len = 1 + end - key;
+
+  /* And update the TAIL to be a smaller, but still valid stringbuf */
   buffer->data = end + 1;
+  buffer->len -= 1 + end - key;
+  buffer->blocksize -= 1 + end - key;
+
   svn_stringbuf_strip_whitespace(buffer);
 
   return key;

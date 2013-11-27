@@ -25,6 +25,9 @@
 #include <apr_general.h>
 #include <apr_portable.h>
 
+/* Windows hack: Allow overriding some <perl.h> defaults */
+#include "swigutil_pl__pre_perl.h"
+
 #include <EXTERN.h>
 #include <perl.h>
 #include <XSUB.h>

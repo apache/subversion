@@ -567,58 +567,69 @@ found_gnome_keyring=no
 AC_MSG_CHECKING([whether to look for GNOME Keyring])
 if test "$with_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
-  if test "$svn_enable_shared" = "yes"; then
-    if test "$APR_HAS_DSO" = "yes"; then
-      if test -n "$PKG_CONFIG"; then
-        AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
-        if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
-          AC_MSG_RESULT([yes])
-          old_CPPFLAGS="$CPPFLAGS"
-          SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
-          CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-          AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
-          AC_MSG_CHECKING([for GNOME Keyring])
-          if test "$found_gnome_keyring" = "yes"; then
+  case "$host" in
+  *-*-darwin*)
+    if test "$with_gnome_keyring" = "yes"; then
+      AC_MSG_ERROR([--with-gnome-keyring is not supported on Mac OS X.])
+    else
+      with_gnome_keyring=no
+    fi
+    ;;
+  *)
+    if test "$svn_enable_shared" = "yes"; then
+      if test "$APR_HAS_DSO" = "yes"; then
+        if test -n "$PKG_CONFIG"; then
+          AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+          if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
             AC_MSG_RESULT([yes])
-            AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
-                      [Is GNOME Keyring support enabled?])
-            CPPFLAGS="$old_CPPFLAGS"
-            SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+            old_CPPFLAGS="$CPPFLAGS"
+            SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
+            CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+            AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
+            AC_MSG_CHECKING([for GNOME Keyring])
+            if test "$found_gnome_keyring" = "yes"; then
+              AC_MSG_RESULT([yes])
+              AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
+                        [Is GNOME Keyring support enabled?])
+              CPPFLAGS="$old_CPPFLAGS"
+              SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+            else
+              AC_MSG_RESULT([no])
+              if test "$with_gnome_keyring" = "yes"; then
+                AC_MSG_ERROR([cannot find GNOME Keyring])
+              fi
+            fi
           else
             AC_MSG_RESULT([no])
             if test "$with_gnome_keyring" = "yes"; then
-              AC_MSG_ERROR([cannot find GNOME Keyring])
+              AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
+            else
+              with_gnome_keyring=no
             fi
           fi
         else
-          AC_MSG_RESULT([no])
           if test "$with_gnome_keyring" = "yes"; then
-            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
+            AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
           else
             with_gnome_keyring=no
           fi
         fi
       else
         if test "$with_gnome_keyring" = "yes"; then
-          AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
+          AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
         else
           with_gnome_keyring=no
         fi
       fi
     else
       if test "$with_gnome_keyring" = "yes"; then
-        AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
+        AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
       else
         with_gnome_keyring=no
       fi
     fi
-  else
-    if test "$with_gnome_keyring" = "yes"; then
-      AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
-    else
-      with_gnome_keyring=no
-    fi
-  fi
+    ;;
+  esac
 else
   AC_MSG_RESULT([no])
 fi

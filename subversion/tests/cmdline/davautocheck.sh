@@ -429,9 +429,17 @@ User                $(id -un)
 Group               $(id -gn)
 __EOF__
 else
+HTTPD_LOCK="$HTTPD_ROOT/lock"
+mkdir "$HTTPD_LOCK" \
+  || fail "couldn't create lock directory '$HTTPD_LOCK'"
   cat >> "$HTTPD_CFG" <<__EOF__
-# TODO: maybe uncomment this for prefork,worker MPMs only?
-# Mutex file:lock mpm-accept
+# worker and prefork MUST have a mpm-accept lockfile in 2.3.0+
+<IfModule worker.c>
+  Mutex "file:$HTTPD_LOCK" mpm-accept
+</IfModule>
+<IfModule prefork.c>
+  Mutex "file:$HTTPD_LOCK" mpm-accept
+</IfModule>
 __EOF__
 fi
 
@@ -447,7 +455,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 Listen              $HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
-LogFormat           "%h %l %u %t \"%r\" %>s %b" common
+LogFormat           "%h %l %u %t \"%r\" %>s %b \"%f\"" common
 CustomLog           "$HTTPD_ACCESS_LOG" common
 ErrorLog            "$HTTPD_ERROR_LOG"
 LogLevel            debug

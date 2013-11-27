@@ -699,7 +699,7 @@ svn_error_symbolic_name(apr_status_t statcode)
       return defn->errname;
 
   /* "No error" is not in error_table. */
-  if (statcode == SVN_NO_ERROR)
+  if (statcode == APR_SUCCESS)
     return "SVN_NO_ERROR";
 
 #ifdef SVN_DEBUG

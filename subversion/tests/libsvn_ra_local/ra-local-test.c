@@ -279,6 +279,8 @@ split_url_test(const svn_test_opts_t *opts,
 #define HAS_UNC_HOST 0
 #endif
 
+int svn_test_max_threads = 1;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,

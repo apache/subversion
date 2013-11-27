@@ -132,7 +132,7 @@ public interface ISVNConfig
     /**
      * Interface for reading and modifying configuration
      * categories. Returned by {@link #config()} and
-     * {@link servers()}.
+     * {@link #servers()}.
      */
     public interface Category
     {
@@ -160,7 +160,7 @@ public interface ISVNConfig
 
         /**
          * Returns the long integer value of a configuration option.
-         * @see #get(String,String,Boolean)
+         * @see #get(String,String,boolean)
          */
         long get(String section,
                  String option,
@@ -169,8 +169,8 @@ public interface ISVNConfig
 
         /**
          * Returns the {@link Tristate} value of a configuration option.
-         * @param unknown The value used for {@link Tristate.Unknown}.
-         * @see #get(String,String,Boolean)
+         * @param unknown The value used for {@link Tristate#Unknown}.
+         * @see #get(String,String,boolean)
          */
         Tristate get(String section,
                      String option,
@@ -181,7 +181,7 @@ public interface ISVNConfig
         /**
          * Check that the configuration option's value is true, false
          * or "ask". The boolean representations are the same as those
-         * understood by {@link #get(String,String,Boolean)}. If the
+         * understood by {@link #get(String,String,boolean)}. If the
          * option is not found, the default value will be parsed
          * instead.
          * @return {@link ISVNConfig#TRUE}, {@link ISVNConfig#FALSE}
@@ -207,7 +207,7 @@ public interface ISVNConfig
 
         /**
          * Set the value of a configuration option to represent a boolean.
-         * @see @set(String,String,String)
+         * @see #set(String,String,String)
          */
         void set(String section,
                  String option,
@@ -215,7 +215,7 @@ public interface ISVNConfig
 
         /**
          * Set the value of a configuration option to represent a long integer.
-         * @see @set(String,String,String)
+         * @see #set(String,String,String)
          */
         void set(String section,
                  String option,

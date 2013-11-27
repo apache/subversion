@@ -34,7 +34,8 @@ import java.io.OutputStream;
 
 /**
  * Encapsulates an RA session object and related operations.
- * @see subversion/include/svn_ra.h#svn_ra_open
+ * @see <a href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_ra.h">svn_ra.h</a>,
+ *      the documentation of the <code>svn_ra_open</code> function.
  * @since 1.9
  */
 public interface ISVNRemote
@@ -53,9 +54,11 @@ public interface ISVNRemote
 
     /** Change the URL of the session to point to a new path in the
      * same repository.
+     *<p>
+     * <b>Note:</b> The operation fails if the URL has a different
+     * repository root than the current session URL.
+     *<p>
      * @throws ClientException
-     * @note The operation fails if the URL has a different repository
-     *       root than the current session URL.
      */
     void reparent(String url) throws ClientException;
 
@@ -115,20 +118,22 @@ public interface ISVNRemote
 
     /**
      * Change the value of an unversioned property.
+     *<p>
+     * <b>Note:</b> If the server has Capability.atomic_revprops and
+     * <code>oldValue</code> is not <code>null</code>, and the present
+     * value of the propery is not <code>oldValue</code> (e.g., if
+     * another client changed the property), then the operation will
+     * fail.
+     *<p>
+     * <b>Note:</b> If the server does not adveritse
+     * Capability.atomic_revprops, then <code>oldValue</code>
+     * <em>must</em> be <code>null</code>.
+     *<p>
      * @param revision The revision to which the propery is attached
      * @param propertyName The name of the propery
      * @param oldValue The previous value of the property (see note below)
      * @param newValue The new value of the property. If <code>newValue</code>
      *        is <code>null</code>, the property will be deleted.
-     *
-     * @node If the server has Capability.atomic_revprops and
-     *       <code>oldValue</code> is not <code>null</code>, and the
-     *       present value of the propery is not <code>oldValue</code>
-     *       (e.g., if another client changed the property), then
-     *       the operation will fail.
-     * @note If the server does not adveritse Capability.atomic_revprops,
-     *       then <code>oldValue</code> <em>must</em> be <code>null</code>.
-     *
      * @throws IllegalArgumentException if <code>oldValue</code> is not
      *         <code>null</code> and the server does not advertise the
      *         atomic_revprops capability.
@@ -190,14 +195,35 @@ public interface ISVNRemote
      * locks on committed objects.  Else, automatically release such
      * locks.
      * <p>
+     * The callbacks <code>getBase</code>, <code>getProps</code> and
+     * <code>getCopyfromKind</code> are invoked by the editor to fetch
+     * the contents, preoprties and copyfrom kind of an entry during
+     * the commit drive. They may be <code>null</code>; in that case,
+     * the commit may be less efficient because the client will not be
+     * able to delta-compress the data sent to the server, and more
+     * server connections may have to be opened.
+     * <p>
      * The caller may not perform any remote operations using this session
      * before finishing the edit.
      * @throws ClientException
      */
     ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
                                CommitCallback commitCallback,
-                               Set<Lock> lockTokens,
-                               boolean keepLocks)
+                               Set<Lock> lockTokens, boolean keepLocks,
+                               ISVNEditor.ProvideBaseCallback getBase,
+                               ISVNEditor.ProvidePropsCallback getProps,
+                               ISVNEditor.GetNodeKindCallback getCopyfromKind)
+            throws ClientException;
+
+    /**
+     * Like {@link #getCommitEditor(Map,CommitCallback<Set,boolean,
+     * ISVNEditor.ProvideBaseCallback,ISVNEditor.ProvidePropsCallback,
+     * ISVNEditor.GetNodeKindCallback)}, but with all callbacks set to
+     * <code>null</code>.
+     */
+    ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                               CommitCallback commitCallback,
+                               Set<Lock> lockTokens, boolean keepLocks)
             throws ClientException;
 
     /**
@@ -292,7 +318,7 @@ public interface ISVNRemote
      *
      * @param revision The revision to look for <code>paths</code>
      *                 in. Defaults to the youngest revision when
-     *                 {@link Revision.SVN_INVALID_REVNUM}.
+     *                 {@link Revision#SVN_INVALID_REVNUM}.
      * @param inherit Indicates whether explicit, explicit or
      *                inherited, or only inherited mergeinfo for
      *                <code>paths</code> is retrieved.

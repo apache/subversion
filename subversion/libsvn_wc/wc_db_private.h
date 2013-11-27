@@ -361,6 +361,18 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
   SVN_SQLITE__WITH_LOCK(expr, (wcroot)->sdb)
 
 
+/* Evaluate the expressions EXPR1..EXPR4 within a transaction, returning the
+ * first error if an error occurs.
+ *
+ * Begin a transaction in WCROOT's DB; evaluate the expressions, which would
+ * typically be  function calls that do some work in DB; finally commit
+ * the transaction if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * the transaction.
+ */
+#define SVN_WC__DB_WITH_TXN4(expr1, expr2, expr3, expr4, wcroot) \
+  SVN_SQLITE__WITH_LOCK4(expr1, expr2, expr3, expr4, (wcroot)->sdb)
+
+
 /* Return CHILDREN mapping const char * names to svn_node_kind_t * for the
    children of LOCAL_RELPATH at OP_DEPTH. */
 svn_error_t *
@@ -465,6 +477,23 @@ svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
                              const char *local_relpath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_op_set_props, but updates ACTUAL_NODE directly without
+   comparing with the pristine properties, etc.
+*/
+svn_error_t *
+svn_wc__db_op_set_props_internal(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 apr_hash_t *props,
+                                 svn_boolean_t clear_recorded_info,
+                                 apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_read_props_internal(apr_hash_t **props,
+                               svn_wc__db_wcroot_t *wcroot,
+                               const char *local_relpath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /* Do a post-drive revision bump for the moved-away destination for
    any move sources under LOCAL_RELPATH.  This is called from within

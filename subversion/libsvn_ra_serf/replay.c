@@ -508,7 +508,7 @@ create_replay_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                     "S:replay-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   /* If we have a non-NULL include path, we add it to the body and
      omit the revision; otherwise, the reverse. */

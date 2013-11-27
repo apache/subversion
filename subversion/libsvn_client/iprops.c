@@ -244,6 +244,8 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
   const char *old_session_url;
   svn_error_t *err;
 
+  *wcroot_iprops = NULL;
+
   if (!SVN_IS_VALID_REVNUM(revision))
     return SVN_NO_ERROR;
 

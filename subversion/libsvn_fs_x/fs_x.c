@@ -533,8 +533,8 @@ svn_fs_x__youngest_rev(svn_revnum_t *youngest_p,
 
 svn_error_t *
 svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
-                                  svn_fs_t *fs,
-                                  apr_pool_t *pool)
+                                 svn_fs_t *fs,
+                                 apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
 
@@ -556,7 +556,6 @@ svn_fs_x__ensure_revision_exists(svn_revnum_t rev,
 
   return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                            _("No such revision %ld"), rev);
-  return SVN_NO_ERROR;
 }
 
 /* Open the correct revision file for REV.  If the filesystem FS has

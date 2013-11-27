@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
 #include "svn_auth.h"
+#include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
@@ -184,7 +185,25 @@ skip_to_eoln(parse_context_t *ctx, int *c)
 
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != '\n' && ch != EOF)
-    SVN_ERR(parser_getc_plain(ctx, &ch));
+    {
+      /* This is much faster than checking individual bytes.
+       * We use this function a lot when skipping comment lines.
+       *
+       * This assumes that the ungetc buffer is empty, but that is a
+       * safe assumption right after reading a character (which would
+       * clear the buffer. */
+      const char *newline = memchr(ctx->parser_buffer + ctx->buffer_pos, '\n',
+                                   ctx->buffer_size - ctx->buffer_pos);
+      if (newline)
+        {
+          ch = '\n';
+          ctx->buffer_pos = newline - ctx->parser_buffer + 1;
+          break;
+        }
+
+      /* refill buffer, check for EOF */
+      SVN_ERR(parser_getc_plain(ctx, &ch));
+    }
 
   *c = ch;
   return SVN_NO_ERROR;
@@ -469,6 +488,38 @@ svn_config__is_read_only(svn_config_t *cfg)
   return cfg->read_only;
 }
 
+svn_config_t *
+svn_config__shallow_copy(svn_config_t *src,
+                         apr_pool_t *pool)
+{
+  svn_config_t *cfg = apr_palloc(pool, sizeof(*cfg));
+
+  cfg->sections = src->sections;
+  cfg->pool = pool;
+
+  /* r/o configs are fully expanded and don't need the x_pool anymore */
+  cfg->x_pool = src->read_only ? NULL : svn_pool_create(pool);
+  cfg->x_values = src->x_values;
+  cfg->tmp_key = svn_stringbuf_create_empty(pool);
+  cfg->tmp_value = svn_stringbuf_create_empty(pool);
+  cfg->section_names_case_sensitive = src->section_names_case_sensitive;
+  cfg->option_names_case_sensitive = src->option_names_case_sensitive;
+  cfg->read_only = src->read_only;
+
+  return cfg;
+}
+
+void
+svn_config__shallow_replace_section(svn_config_t *target,
+                                    svn_config_t *source,
+                                    const char *section)
+{
+  if (target->read_only)
+    target->sections = apr_hash_copy(target->pool, target->sections);
+
+  svn_hash_sets(target->sections, section,
+                svn_hash_gets(source->sections, section));
+}
 
 
 svn_error_t *

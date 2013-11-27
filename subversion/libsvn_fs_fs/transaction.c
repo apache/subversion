@@ -630,8 +630,7 @@ replace_change(svn_fs_path_change2_t *old_change,
 
 /* Merge the internal-use-only CHANGE into a hash of public-FS
    svn_fs_path_change2_t CHANGES, collapsing multiple changes into a
-   single summarical (is that real word?) change per path.  Also keep
-   the COPYFROM_CACHE up to date with new adds and replaces.  */
+   single summarical (is that real word?) change per path.  */
 static svn_error_t *
 fold_change(apr_hash_t *changes,
             const change_t *change)
@@ -768,7 +767,7 @@ fold_change(apr_hash_t *changes,
 
 /* Examine all the changed path entries in CHANGES and store them in
    *CHANGED_PATHS.  Folding is done to remove redundant or unnecessary
-   *data. Do all allocations in POOL. */
+   data. Do all allocations in POOL. */
 static svn_error_t *
 process_changes(apr_hash_t *changed_paths,
                 apr_array_header_t *changes,
@@ -1139,6 +1138,31 @@ get_txn_proplist(apr_hash_t *proplist,
   return svn_stream_close(stream);
 }
 
+/* Save the property list PROPS as the revprops for transaction TXN_ID
+   in FS.  Perform temporary allocations in POOL. */
+static svn_error_t *
+set_txn_proplist(svn_fs_t *fs,
+                 const svn_fs_fs__id_part_t *txn_id,
+                 apr_hash_t *props,
+                 apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf;
+  svn_stream_t *stream;
+
+  /* Write out the new file contents to BUF. */
+  buf = svn_stringbuf_create_ensure(1024, pool);
+  stream = svn_stream_from_stringbuf(buf, pool);
+  SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Open the transaction properties file and write new contents to it. */
+  SVN_ERR(svn_io_write_atomic(path_txn_props(fs, txn_id, pool),
+                              buf->data, buf->len,
+                              NULL /* copy_perms_path */, pool));
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
                            const char *name,
@@ -1161,8 +1185,6 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             apr_pool_t *pool)
 {
   fs_txn_data_t *ftd = txn->fsap_data;
-  svn_stringbuf_t *buf;
-  svn_stream_t *stream;
   apr_hash_t *txn_prop = apr_hash_make(pool);
   int i;
   svn_error_t *err;
@@ -1186,13 +1208,8 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
-  buf = svn_stringbuf_create_ensure(1024, pool);
-  stream = svn_stream_from_stringbuf(buf, pool);
-  SVN_ERR(svn_hash_write2(txn_prop, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_io_write_atomic(path_txn_props(txn->fs, &ftd->txn_id, pool),
-                              buf->data, buf->len,
-                              NULL /* copy_perms_path */, pool));
+  SVN_ERR(set_txn_proplist(txn->fs, &ftd->txn_id, txn_prop, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -3128,8 +3145,8 @@ write_final_current(svn_fs_t *fs,
                                   pool);
 }
 
-/* Verify that the user registed with FS has all the locks necessary to
-   permit all the changes associate with TXN_NAME.
+/* Verify that the user registered with FS has all the locks necessary to
+   permit all the changes associated with TXN_NAME.
    The FS write lock is assumed to be held by the caller. */
 static svn_error_t *
 verify_locks(svn_fs_t *fs,
@@ -4097,8 +4114,8 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
                      apr_pool_t *pool)
 {
   svn_string_t date;
-  svn_prop_t prop;
-  apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
+  fs_txn_data_t *ftd;
+  apr_hash_t *props = apr_hash_make(pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -4112,25 +4129,18 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
 
-  prop.name = SVN_PROP_REVISION_DATE;
-  prop.value = &date;
-  APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+  svn_hash_sets(props, SVN_PROP_REVISION_DATE, &date);
 
   /* Set temporary txn props that represent the requested 'flags'
      behaviors. */
   if (flags & SVN_FS_TXN_CHECK_OOD)
-    {
-      prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
-      prop.value = svn_string_create("true", pool);
-      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-    }
+    svn_hash_sets(props, SVN_FS__PROP_TXN_CHECK_OOD,
+                  svn_string_create("true", pool));
 
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
-    {
-      prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
-      prop.value = svn_string_create("true", pool);
-      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-    }
+    svn_hash_sets(props, SVN_FS__PROP_TXN_CHECK_LOCKS,
+                  svn_string_create("true", pool));
 
-  return svn_fs_fs__change_txn_props(*txn_p, props, pool);
+  ftd = (*txn_p)->fsap_data;
+  return svn_error_trace(set_txn_proplist(fs, &ftd->txn_id, props, pool));
 }
