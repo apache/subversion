@@ -36,8 +36,8 @@
 
 #include "JNIUtil.h"
 #include "NativeStream.hpp"
+#include "Utility.hpp"
 
-#include <apr_strings.h>
 #include <apr_hash.h>
 
 #include "svn_subst.h"
@@ -81,46 +81,6 @@ build_keywords_common(Java::Env env, const SVN::Pool& pool,
   return kw;
 }
 
-class KeywordHashBuilder
-{
-public:
-  explicit KeywordHashBuilder(const SVN::Pool& pool)
-    : m_pool(pool),
-      m_hash(apr_hash_make(pool.getPool())),
-      m_empty(svn_string_create_empty(pool.getPool()))
-    {}
-
-  void operator()(const std::string& key, const Java::ByteArray& value)
-    {
-      const char* const safe_key =
-        apr_pstrmemdup(m_pool.getPool(), key.c_str(), key.size() + 1);
-      if (!value.get())
-        apr_hash_set(m_hash, safe_key, key.size(), m_empty);
-      else
-        {
-          Java::ByteArray::Contents val(value);
-          apr_hash_set(m_hash, safe_key, key.size(), val.get_string(m_pool));
-        }
-    }
-
-  apr_hash_t* get() const
-    {
-      return m_hash;
-    }
-
-private:
-  const SVN::Pool& m_pool;
-  apr_hash_t* const m_hash;
-  svn_string_t* const m_empty;
-};
-
-inline apr_hash_t*
-make_keywords_hash(Java::Env env, const SVN::Pool& pool, jobject jkeywords)
-{
-  const Java::Map<Java::ByteArray, jbyteArray> keywords(env, jkeywords);
-  return keywords.for_each(KeywordHashBuilder(pool)).get();
-}
-
 svn_stream_t*
 translate_stream_common(Java::Env env, const SVN::Pool& pool,
                         svn_stream_t* stream,
@@ -133,7 +93,7 @@ translate_stream_common(Java::Env env, const SVN::Pool& pool,
 {
   apr_hash_t* const keywords =
     (juse_keywords
-     ? make_keywords_hash(env, pool, jkeywords)
+     ? JavaHL::Util::make_keyword_hash(env, jkeywords, pool)
      : build_keywords_common(
          env, pool, jkeywords_value, jrevision,
          jurl, jrepos_root_url, jdate, jauthor));
