@@ -10,6 +10,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
   - Minor new features and improvements:
     * new 'diff-ignore-content-type' runtime configuration option.
     * new option for 'svnadmin verify': --check-ucs-normalization.
+    * new option for 'svnadmin verify': --keep-going.
 
   - Client-side bugfixes:
 
