@@ -2174,14 +2174,14 @@ static void
 populate_summary(apr_array_header_t **error_summary,
                  svn_revnum_t rev,
                  svn_error_t *err,
-                 apr_pool_t *scratch_pool)
+                 apr_pool_t *result_pool)
 {
-  struct error_list *el = apr_palloc(scratch_pool, sizeof(*el));
+  struct error_list *el = apr_palloc(result_pool, sizeof(*el));
 
   el->rev = rev;
   el->err = svn_error_dup(err);
 
-  apr_pool_cleanup_register(scratch_pool, el->err, err_cleanup,
+  apr_pool_cleanup_register(result_pool, el->err, err_cleanup,
                             apr_pool_cleanup_null);
   APR_ARRAY_PUSH(*error_summary, struct error_list *) = el;
 }
