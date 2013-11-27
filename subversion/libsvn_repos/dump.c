@@ -2349,7 +2349,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   if (notify_func && keep_going && found_corruption)
     {
       notify_verification_summary(err, notify_func, notify_baton, iterpool);
-      for(i=0; i < error_summary->nelts; i++)
+      for (i = 0; i < error_summary->nelts; i++)
         {
           struct error_list *err_list = APR_ARRAY_IDX(error_summary, i,
                                                       struct error_list *);
