@@ -256,6 +256,33 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
                               apr_pool_t *pool,
                               const char *fmt, ...);
 
+/** Check the receive buffer and socket of @a conn whether there is some
+ * unprocessed incomming data without waiting for new data to come in.
+ * If data is found, set @a *has_command to TRUE.  If the connection does
+ * not contain any more data and has been closed, set @a *terminated to
+ * TRUE.
+ */
+svn_error_t *
+svn_ra_svn__has_command(svn_boolean_t *has_command,
+                        svn_boolean_t *terminated,
+                        svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool);
+
+/** Accept a single command from @a conn and handle them according
+ * to @a cmd_hash.  Command handlers will be passed @a conn, @a pool,
+ * the parameters of the command, and @a baton.  @a *terminate will be
+ * set if either @a error_on_disconnect is FALSE and the connection got
+ * closed, or if the command being handled has the "terminate" flag set
+ * in the command table.
+ */
+svn_error_t *
+svn_ra_svn__handle_command(svn_boolean_t *terminate,
+                           apr_hash_t *cmd_hash,
+                           void *baton,
+                           svn_ra_svn_conn_t *conn,
+                           svn_boolean_t error_on_disconnect,
+                           apr_pool_t *pool);
+
 /** Accept commands over the network and handle them according to @a
  * commands.  Command handlers will be passed @a conn, a subpool of @a
  * pool (cleared after each command is handled), the parameters of the

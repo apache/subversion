@@ -201,6 +201,23 @@ client_info_t * get_client_info(svn_ra_svn_conn_t *conn,
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
                    apr_pool_t *pool);
 
+/* Serve the connection CONNECTION for as long as IS_BUSY does not
+   return TRUE.  If IS_BUSY is NULL, serve the connection until it
+   either gets terminated or there is an error.  If TERMINATE_P is
+   not NULL, set *TERMINATE_P to TRUE if the connection got
+   terminated.
+
+   For the first call, CONNECTION->CONN may be NULL in which case we
+   will create an ra_svn connection object.  Subsequent calls will
+   check for an open repository and automatically re-open the repo
+   in pool if necessary.
+ */
+svn_error_t *
+serve_interruptable(svn_boolean_t *terminate_p,
+                    connection_t *connection,
+                    svn_boolean_t (* is_busy)(connection_t *),
+                    apr_pool_t *pool);
+
 /* Initialize the Cyrus SASL library. POOL is used for allocations. */
 svn_error_t *cyrus_init(apr_pool_t *pool);
 
