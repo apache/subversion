@@ -86,7 +86,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   svn_pool_destroy(iterpool);
 
   /* Commit. */
-  err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
+  err = svn_fs_commit_txn2(conflict_p, new_rev, txn, TRUE, pool);
   if (! SVN_IS_VALID_REVNUM(*new_rev))
     return err;
 

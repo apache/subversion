@@ -1065,7 +1065,10 @@ svn_fs_commit_txn2(const char **conflict_p,
 /*
  * Same as svn_fs_commit_txn2(), but with @a set_timestamp
  * always set to @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
                   svn_revnum_t *new_rev,
