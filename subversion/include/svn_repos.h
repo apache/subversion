@@ -263,13 +263,7 @@ typedef enum svn_repos_notify_action_t
   svn_repos_notify_cleanup_revprops,
 
   /** The repository format got bumped. @since New in 1.9. */
-  svn_repos_notify_format_bumped,
-
-  /** Summary of corrupt revisions. @since New in 1.9. */
-  svn_repos_notify_failure_summary,
-
-  /** Summary title string. @since New in 1.9. */
-  svn_repos_notify_summary
+  svn_repos_notify_format_bumped
 } svn_repos_notify_action_t;
 
 /** The type of error occurring.
