@@ -1741,16 +1741,13 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
 
   if (! opt_state->quiet)
-    {
-      notify_baton.feedback_stream = recode_stream_create(stdout, pool);
+    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
 
-      if (opt_state->keep_going)
-        {
-          notify_baton.error_summary =
-            apr_array_make(pool, 0, sizeof(struct verification_error *));
-          notify_baton.result_pool = pool;
-        }
-    }
+  if (opt_state->keep_going)
+    notify_baton.error_summary =
+      apr_array_make(pool, 0, sizeof(struct verification_error *));
+
+  notify_baton.result_pool = pool;
 
   verify_err = svn_repos_verify_fs3(repos, lower, upper,
                                     opt_state->keep_going,
@@ -1761,8 +1758,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                     NULL, pool);
 
   /* Show the --keep-going error summary. */
-  if (!opt_state->quiet && opt_state->keep_going &&
-      notify_baton.error_summary->nelts > 0)
+  if (opt_state->keep_going && notify_baton.error_summary->nelts > 0)
     {
       apr_pool_t *iterpool;
       int i;
@@ -1781,7 +1777,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           svn_pool_clear(iterpool);
 
           verr = APR_ARRAY_IDX(notify_baton.error_summary, i,
-                                   struct verification_error *);
+                               struct verification_error *);
           rev_str = apr_psprintf(iterpool, "r%ld", verr->rev);
           for (err = svn_error_purge_tracing(verr->err);
                err != SVN_NO_ERROR; err = err->child)
