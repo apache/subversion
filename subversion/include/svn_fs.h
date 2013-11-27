@@ -908,10 +908,9 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
  * pairs.  When you commit a transaction, all of its properties become
  * unversioned revision properties of the new revision.  (There is one
  * exception: the svn:date property will be automatically set on new
- * transactions to the date that the transaction was created, and will
+ * transactions to the date that the transaction was created, and can
  * be overwritten when the transaction is committed by the current
- * time; changes to a transaction's svn:date property will not affect
- * its committed value.)
+ * time; see svn_fs_commit_txn2.)
  *
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
@@ -1006,6 +1005,16 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * a new filesystem revision containing the changes made in @a txn,
  * storing that new revision number in @a *new_rev, and return zero.
  *
+ * If @a set_timestamp is FALSE any svn:date on the transaction will
+ * be become the unversioned property svn:date on the revision.
+ * svn:date can have any value, it does not have to be a timestamp.
+ * If the transaction has no svn:date the revision will have no
+ * svn:date.
+ *
+ * If @a set_timestamp is TRUE the new revision will have svn:date set
+ * to the current time at some point during the commit and any
+ * svn:date on the transaction will be lost.
+ * 
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
  * revisions.  If a conflict occurs, set @a *conflict_p to the path of

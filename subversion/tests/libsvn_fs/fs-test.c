@@ -5074,6 +5074,76 @@ test_fs_info_format(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+commit_timestamp(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_string_t *date = svn_string_create("Yesterday", pool);
+  svn_revnum_t rev = 0;
+  apr_hash_t *proplist;
+  svn_string_t *svn_date;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-commit-timestamp",
+                              opts, pool));
+
+  /* Commit with a specified svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, FALSE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date && !strcmp(svn_date->data, date->data));
+
+  /* Commit that overwrites the specified svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date && strcmp(svn_date->data, date->data));
+
+  /* Commit with a missing svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zag", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, NULL, pool));
+  SVN_ERR(svn_fs_txn_prop(&svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(!svn_date);
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, FALSE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(!svn_date);
+
+  /* Commit that overwites a missing svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zig", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, NULL, pool));
+  SVN_ERR(svn_fs_txn_prop(&svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(!svn_date);
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5162,5 +5232,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "filenames with trailing \\n might be rejected"),
     SVN_TEST_OPTS_PASS(test_fs_info_format,
                        "test svn_fs_info_format"),
+    SVN_TEST_OPTS_PASS(commit_timestamp,
+                       "commit timestamp"),
     SVN_TEST_NULL
   };
