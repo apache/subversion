@@ -805,8 +805,8 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Structure for errors shown in the --keep-going summary. */
-struct error_list
+/* Structure for errors encountered during 'svnadmin verify --keep-going'. */
+struct verification_error
 {
   svn_revnum_t rev;
   svn_error_t *err;
@@ -816,33 +816,23 @@ struct error_list
 static apr_status_t
 err_cleanup(void *data)
 {
-  svn_error_clear(data);
+  svn_error_t *err = data;
+
+  svn_error_clear(err);
 
   return APR_SUCCESS;
 }
 
-/* Add an error to the --keep-going error summary. */
-static void
-populate_summary(apr_array_header_t *error_summary,
-                 svn_revnum_t rev,
-                 svn_error_t *err,
-                 apr_pool_t *result_pool)
-{
-  struct error_list *el = apr_palloc(result_pool, sizeof(*el));
-
-  el->rev = rev;
-  el->err = svn_error_dup(err);
-
-  apr_pool_cleanup_register(result_pool, el->err, err_cleanup,
-                            apr_pool_cleanup_null);
-  APR_ARRAY_PUSH(error_summary, struct error_list *) = el;
-}
-
 struct repos_notify_handler_baton {
+  /* Stream to write progress and other non-error output to. */
   svn_stream_t *feedback_stream;
+
+  /* List of errors encountered during 'svnadmin verify --keep-going'. */
   apr_array_header_t *error_summary;
+
+  /* Pool for data collected during notifications. */
   apr_pool_t *result_pool;
-} repos_notify_handler_baton;
+};
 
 /* Implementation of svn_repos_notify_func_t to wrap the output to a
    response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
@@ -872,8 +862,17 @@ repos_notify_handler(void *baton,
           svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
                             "svnadmin: ");
           if (b->error_summary && notify->revision != SVN_INVALID_REVNUM)
-            populate_summary(b->error_summary, notify->revision,
-                             notify->err, b->result_pool);
+            {
+              struct verification_error *verr;
+              
+              verr = apr_palloc(b->result_pool, sizeof(*verr));
+              verr->rev = notify->revision;
+              verr->err = svn_error_dup(notify->err);
+              apr_pool_cleanup_register(b->result_pool, verr->err, err_cleanup,
+                                        apr_pool_cleanup_null);
+              APR_ARRAY_PUSH(b->error_summary,
+                             struct verification_error *) = verr;
+            }
         }
       return;
 
@@ -1744,9 +1743,13 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     {
       notify_baton.feedback_stream = recode_stream_create(stdout, pool);
-      notify_baton.error_summary = apr_array_make(pool, 0,
-                                                  sizeof(struct error_list *));
-      notify_baton.result_pool = pool;
+
+      if (opt_state->keep_going)
+        {
+          notify_baton.error_summary =
+            apr_array_make(pool, 0, sizeof(struct verification_error *));
+          notify_baton.result_pool = pool;
+        }
     }
 
   verify_err = svn_repos_verify_fs3(repos, lower, upper,
@@ -1757,7 +1760,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                     &notify_baton, check_cancel,
                                     NULL, pool);
 
-  /* Show the error summary. */
+  /* Show the --keep-going error summary. */
   if (!opt_state->quiet && opt_state->keep_going &&
       notify_baton.error_summary->nelts > 0)
     {
@@ -1771,16 +1774,16 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       iterpool = svn_pool_create(pool);
       for (i = 0; i < notify_baton.error_summary->nelts; i++)
         {
-          struct error_list *err_list;
+          struct verification_error *verr;
           svn_error_t *err;
           const char *rev_str;
           
           svn_pool_clear(iterpool);
 
-          err_list = APR_ARRAY_IDX(notify_baton.error_summary, i,
-                                   struct error_list *);
-          rev_str = apr_psprintf(iterpool, "r%ld", err_list->rev);
-          for (err = svn_error_purge_tracing(err_list->err);
+          verr = APR_ARRAY_IDX(notify_baton.error_summary, i,
+                                   struct verification_error *);
+          rev_str = apr_psprintf(iterpool, "r%ld", verr->rev);
+          for (err = svn_error_purge_tracing(verr->err);
                err != SVN_NO_ERROR; err = err->child)
             {
               char buf[512];
