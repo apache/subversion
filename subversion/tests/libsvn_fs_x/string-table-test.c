@@ -197,8 +197,8 @@ static svn_error_t *
 many_strings_table_body(svn_boolean_t do_load_store,
                         apr_pool_t *pool)
 {
-  /* cause multiple sub-tables to be created */
-  enum { COUNT = 1000 };
+  /* cause multiple sub-tables (6 to be exact) to be created */
+  enum { COUNT = 100 };
 
   svn_stringbuf_t *strings[COUNT] = { 0 };
   apr_size_t indexes[COUNT] = { 0 };

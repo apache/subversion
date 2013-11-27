@@ -390,9 +390,9 @@ calibrate_iterations(apr_pool_t *pool, int count)
   int calib_iterations;
   double taken = 0.0;
 
-  /* increase iterations until we pass the 50ms mark */
+  /* increase iterations until we pass the 20ms mark */
 
-  for (calib_iterations = 10; taken < 50000.0; calib_iterations *= 2)
+  for (calib_iterations = 10; taken < 20000.0; calib_iterations *= 2)
     {
       apr_pool_t *scratch = svn_pool_create(pool);
       SVN_ERR(init_concurrency_test_shm(scratch, count));
@@ -404,9 +404,12 @@ calibrate_iterations(apr_pool_t *pool, int count)
       svn_pool_destroy(scratch);
     }
 
-  /* scale that to .2s */
+  /* scale that to .1s */
+  suggested_iterations = (int)(100000.0 / taken * calib_iterations);
 
-  suggested_iterations = (int)(200000.0 / taken * calib_iterations);
+  /* 250k iterations should be plenty in any case. */
+  if (suggested_iterations > 250000)
+    suggested_iterations = 250000;
 
   return SVN_NO_ERROR;
 }
