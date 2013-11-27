@@ -30,13 +30,9 @@ import java.util.List;
  */
 public class ClientException extends NativeException
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 2L;
 
     /**
@@ -79,10 +75,10 @@ public class ClientException extends NativeException
      * @param messageStack The whole stack of error messages
      * @since 1.9
      */
-    ClientException(String message, String source, int aprError,
-                    List<ErrorMessage> messageStack)
+    ClientException(String message, Throwable cause, String source,
+                    int aprError, List<ErrorMessage> messageStack)
     {
-        super(message, source, aprError);
+        super(message, source, cause, aprError);
         this.messageStack = messageStack;
     }
 
@@ -96,7 +92,7 @@ public class ClientException extends NativeException
      */
     ClientException(String message, String source, int aprError)
     {
-        this(message, source, aprError, null);
+        this(message, null, source, aprError, null);
     }
 
     public List<ErrorMessage> getAllMessages()

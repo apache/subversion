@@ -485,6 +485,28 @@ svn_config__is_expanded(svn_config_t *cfg,
                         const char *section,
                         const char *option);
 
+/* Return a shallow copy of SCR in POOL.  If SRC is read-only, different
+ * shallow copies may be used from different threads.
+ *
+ * Any single r/o svn_config_t or shallow copy is not thread-safe because
+ * it contains shared buffers for tempoary data.
+ */
+svn_config_t *
+svn_config__shallow_copy(svn_config_t *src,
+                         apr_pool_t *pool);
+
+/* Add / replace SECTION in TARGET with the same section from SOURCE by
+ * simply adding a reference to it.  If TARGET is read-only, the sections
+ * list in target gets duplicated before the modification.
+ *
+ * This is an API tailored for use by the svn_repos__authz_pool_t API to
+ * prevent breach of encapsulation.
+ */
+void
+svn_config__shallow_replace_section(svn_config_t *target,
+                                    svn_config_t *source,
+                                    const char *section);
+
 /** @} */
 
 #ifdef __cplusplus

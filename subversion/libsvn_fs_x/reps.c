@@ -777,10 +777,10 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
   for (i = 0; i < reps->base_count; ++i)
     {
       base_t *base = bases + i;
-      base->revision = svn_packed__get_int(bases_stream);
+      base->revision = (svn_revnum_t)svn_packed__get_int(bases_stream);
       base->item_index = svn_packed__get_uint(bases_stream);
-      base->priority = svn_packed__get_uint(bases_stream);
-      base->rep = svn_packed__get_uint(bases_stream);
+      base->priority = (int)svn_packed__get_uint(bases_stream);
+      base->rep = (apr_uint32_t)svn_packed__get_uint(bases_stream);
     }
 
   /* de-serialize instructions */
@@ -795,8 +795,10 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
   for (i = 0; i < reps->instruction_count; ++i)
     {
       instruction_t *instruction = instructions + i;
-      instruction->offset = svn_packed__get_int(instructions_stream);
-      instruction->count = svn_packed__get_uint(instructions_stream);
+      instruction->offset
+        = (apr_int32_t)svn_packed__get_int(instructions_stream);
+      instruction->count
+        = (apr_uint32_t)svn_packed__get_uint(instructions_stream);
     }
 
   /* de-serialize reps */
@@ -812,7 +814,7 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
   first_instructions[reps->rep_count] = reps->instruction_count;
 
   /* other elements */
-  reps->base_text_len = svn_packed__get_uint(misc_stream);
+  reps->base_text_len = (apr_size_t)svn_packed__get_uint(misc_stream);
 
   /* return result */
   *container = reps;

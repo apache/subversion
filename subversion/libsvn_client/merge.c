@@ -9425,7 +9425,7 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
     {
       if (!merge_b->record_only)
         {
-          /* Reset cur_ancestor_abspath to null so that subsequent cherry
+          /* Reset the last notification path so that subsequent cherry
              picked revision ranges will be notified upon subsequent
              operative merge. */
           merge_b->notify_begin.last_abspath = NULL;

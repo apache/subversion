@@ -33,7 +33,6 @@ class GlobalConfig
 {
  public:
   static bool useNativeCredentialsStore();
-  static jobject getConfigCallback();
 };
 
 #endif  // JAVAHL_GLOBAL_CONFIG_H

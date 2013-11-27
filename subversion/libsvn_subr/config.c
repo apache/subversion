@@ -421,6 +421,26 @@ make_hash_key(char *key)
   return key;
 }
 
+/* Return the value for KEY in HASH.  If CASE_SENSITIVE is FALSE,
+   BUFFER will be used to construct the normalized hash key. */
+static void *
+get_hash_value(apr_hash_t *hash,
+               svn_stringbuf_t *buffer,
+               const char *key,
+               svn_boolean_t case_sensitive)
+{
+  apr_size_t i;
+  apr_size_t len = strlen(key);
+
+  if (case_sensitive)
+    return apr_hash_get(hash, key, len);
+
+  svn_stringbuf_ensure(buffer, len);
+  for (i = 0; i < len; ++i)
+    buffer->data[i] = (char)apr_tolower(key[i]);
+
+  return apr_hash_get(hash, buffer->data, len);
+}
 
 /* Return a pointer to an option in CFG, or NULL if it doesn't exist.
    if SECTIONP is non-null, return a pointer to the option's section.
@@ -429,30 +449,16 @@ static cfg_option_t *
 find_option(svn_config_t *cfg, const char *section, const char *option,
             cfg_section_t **sectionp)
 {
-  void *sec_ptr;
-
-  /* Canonicalize the hash key */
-  svn_stringbuf_set(cfg->tmp_key, section);
-  if (! cfg->section_names_case_sensitive)
-    make_hash_key(cfg->tmp_key->data);
-
-  sec_ptr = apr_hash_get(cfg->sections, cfg->tmp_key->data,
-                         cfg->tmp_key->len);
+  void *sec_ptr = get_hash_value(cfg->sections, cfg->tmp_key, section,
+                                 cfg->section_names_case_sensitive);
   if (sectionp != NULL)
     *sectionp = sec_ptr;
 
   if (sec_ptr != NULL && option != NULL)
     {
       cfg_section_t *sec = sec_ptr;
-      cfg_option_t *opt;
-
-      /* Canonicalize the option key */
-      svn_stringbuf_set(cfg->tmp_key, option);
-      if (! cfg->option_names_case_sensitive)
-        make_hash_key(cfg->tmp_key->data);
-
-      opt = apr_hash_get(sec->options, cfg->tmp_key->data,
-                         cfg->tmp_key->len);
+      cfg_option_t *opt = get_hash_value(sec->options, cfg->tmp_key, option,
+                                         cfg->option_names_case_sensitive);
       /* NOTE: ConfigParser's sections are case sensitive. */
       if (opt == NULL
           && apr_strnatcasecmp(section, SVN_CONFIG__DEFAULT_SECTION) != 0)
@@ -697,11 +703,11 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
         }
       else
         /* before attempting to expand an option, check for the placeholder.
-         * If none is there, there is no point in calling expand_option_value.
+         * If there is none, there is no point in calling expand_option_value.
          */
         if (default_value && strchr(default_value, '%'))
           {
-            apr_pool_t *tmp_pool = svn_pool_create(cfg->x_pool);
+            apr_pool_t *tmp_pool = svn_pool_create(cfg->pool);
             const char *x_default;
             expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
             if (x_default)
@@ -979,7 +985,7 @@ svn_config_enumerate(svn_config_t *cfg, const char *section,
   if (sec == NULL)
     return 0;
 
-  subpool = svn_pool_create(cfg->x_pool);
+  subpool = svn_pool_create(cfg->pool);
   count = 0;
   for (opt_ndx = apr_hash_first(subpool, sec->options);
        opt_ndx != NULL;
@@ -1246,13 +1252,6 @@ svn_config_get_server_setting_bool(svn_config_t *cfg,
 svn_boolean_t
 svn_config_has_section(svn_config_t *cfg, const char *section)
 {
-  cfg_section_t *sec;
-
-  /* Canonicalize the hash key */
-  svn_stringbuf_set(cfg->tmp_key, section);
-  if (! cfg->section_names_case_sensitive)
-    make_hash_key(cfg->tmp_key->data);
-
-  sec = svn_hash_gets(cfg->sections, cfg->tmp_key->data);
-  return sec != NULL;
+  return NULL != get_hash_value(cfg->sections, cfg->tmp_key, section,
+                                cfg->section_names_case_sensitive);
 }

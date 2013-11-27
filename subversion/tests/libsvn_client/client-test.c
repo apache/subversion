@@ -735,7 +735,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
-  wc_path = svn_test_data_path("test-wc-add", pool);
+  wc_path = svn_test_data_path("test-foreign-repos-copy", pool);
 
   wc_path = svn_dirent_join(wc_path, "foreign-wc", pool);
 
@@ -771,6 +771,9 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
 
 /* ========================================================================== */
 
+
+int svn_test_max_threads = 3;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -778,13 +781,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_client__elide_mergeinfo_catalog"),
     SVN_TEST_PASS2(test_args_to_target_array,
                    "test svn_client_args_to_target_array"),
-    SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
+    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
+    SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_copy_crash, "test a crash in svn_client_copy5"),
 #ifdef TEST16K_ADD
     SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
 #endif
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
-    SVN_TEST_OPTS_PASS(test_foreign_repos_copy, "test foreign repository copy"),
     SVN_TEST_NULL
   };

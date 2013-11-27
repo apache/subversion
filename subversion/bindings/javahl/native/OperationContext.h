@@ -114,6 +114,9 @@ class OperationContext
    */
   apr_hash_t *getConfigData();
 
+  void setConfigEventHandler(jobject jcfgcb);
+  jobject getConfigEventHandler() const;
+
   static svn_error_t * clientName(void *baton, const char **name, apr_pool_t *pool);
   virtual const char * getClientName() const;
 

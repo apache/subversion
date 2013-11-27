@@ -1055,7 +1055,7 @@ void
 svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
                                   serf_bucket_alloc_t *bkt_alloc,
                                   const char *tag,
-                                  ...);
+                                  ...) SVN_NEEDS_SENTINEL_NULL;
 
 /*
  * Add the appropriate serf buckets to AGG_BUCKET representing xml tag close

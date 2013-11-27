@@ -767,9 +767,10 @@ class NodeRev(object):
                   if not os.path.exists(str(nodeId.rev)):
                       print "Can't check %s" % repr(nodeId)
                       continue
-                  with open(str(nodeId.rev),'rb') as tmp:
-                      tmp.seek(nodeId.offset)
-                      idLine = tmp.readline()
+                  tmp = open(str(nodeId.rev),'rb')
+                  tmp.seek(nodeId.offset)
+                  idLine = tmp.readline()
+                  tmp.close()
               else:
                   f.seek(nodeId.offset)
                   idLine = f.readline()

@@ -244,9 +244,11 @@ create_checkout_body(serf_bucket_t **bkt,
   svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:checkout",
                                     "xmlns:D", "DAV:",
-                                    NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set", NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set",
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href",
+                                    SVN_VA_NULL);
 
   SVN_ERR_ASSERT(activity_url != NULL);
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
@@ -733,11 +735,11 @@ proppatch_walker(void *baton,
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
                                       "V:encoding", encoding,
-                                      NULL);
+                                      SVN_VA_NULL);
   else
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
                                       "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
-                                      NULL);
+                                      SVN_VA_NULL);
 
   if (have_old_val)
     {
@@ -764,12 +766,12 @@ proppatch_walker(void *baton,
         svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                           "V:" SVN_DAV__OLD_VALUE,
                                           "V:encoding", encoding2,
-                                          NULL);
+                                          SVN_VA_NULL);
       else
         svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                           "V:" SVN_DAV__OLD_VALUE,
                                           "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
-                                          NULL);
+                                          SVN_VA_NULL);
 
       if (cdata_bkt2)
         serf_bucket_aggregate_append(body_bkt, cdata_bkt2);
@@ -880,7 +882,7 @@ create_proppatch_body(serf_bucket_t **bkt,
                                     "xmlns:V", SVN_DAV_PROP_NS_DAV,
                                     "xmlns:C", SVN_DAV_PROP_NS_CUSTOM,
                                     "xmlns:S", SVN_DAV_PROP_NS_SVN,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   wb.body_bkt = body_bkt;
   wb.body_pool = pbb->body_pool;
@@ -890,8 +892,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 
   if (apr_hash_count(ctx->changed_props) > 0)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
       wb.filter = filter_all_props;
       wb.deleting = FALSE;
@@ -906,8 +908,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 
   if (apr_hash_count(ctx->removed_props) > 0)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
       wb.filter = filter_props_with_old_value;
       wb.deleting = TRUE;
@@ -922,8 +924,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 
   if (apr_hash_count(ctx->removed_props) > 0)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", SVN_VA_NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
       wb.filter = filter_props_without_old_value;
       wb.deleting = TRUE;

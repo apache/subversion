@@ -2119,6 +2119,95 @@ def status_path_handling(sbox):
   expected_status = svntest.actions.get_virginal_state(rel_wc_dir, 1)
   svntest.actions.run_and_verify_status(rel_wc_dir, expected_status)
 
+def status_move_missing_direct(sbox):
+  "move information when status is called directly"
+  
+  sbox.build()
+  sbox.simple_copy('A', 'Z')
+  sbox.simple_commit('')
+  sbox.simple_update('')
+  
+  sbox.simple_move('Z', 'ZZ')
+  sbox.simple_move('A', 'Z')
+  sbox.simple_move('Z/B', 'ZB')
+  sbox.simple_mkdir('Z/B')
+  sbox.simple_move('ZB/E', 'Z/B/E')
+
+  # Somehow 'svn status' now shows different output for 'ZB/E'
+  # when called directly and via an ancestor, as this handles
+  # multi-layer in a different way
+  
+  # Note that the status output may change over different Subversion revisions,
+  # but the status on a node should be identical anyway 'svn status' is called
+  # on it.
+  
+  expected_output = [
+    'A  +    %s\n' % sbox.ospath('ZB'),
+    '        > moved from %s\n' % os.path.join('..', 'Z', 'B'),    
+    'D  +    %s\n' % sbox.ospath('ZB/E'),
+    '        > moved to %s\n' % os.path.join('..', 'Z', 'B', 'E'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+                                     sbox.ospath('ZB'), '--depth', 'immediates')
+
+  # And calling svn status on just 'ZB/E' should have the same result for this node
+  # except that we calculate the relative path from a different base
+  expected_output = [
+    'D  +    %s\n' % sbox.ospath('ZB/E'),
+    '        > moved to %s\n' % os.path.join('..', '..', 'Z', 'B', 'E'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+                                     sbox.ospath('ZB/E'), '--depth', 'empty')
+
+def status_move_missing_direct_base(sbox):
+  "move when status is called directly with base"
+  
+  sbox.build()
+  sbox.simple_copy('A', 'Z')
+  sbox.simple_mkdir('Q')
+  sbox.simple_mkdir('Q/ZB')
+  sbox.simple_mkdir('Q/ZB/E')
+  sbox.simple_commit('')
+  sbox.simple_update('')
+  
+  sbox.simple_rm('Q')
+  sbox.simple_mkdir('Q')
+  
+  sbox.simple_move('Z', 'ZZ')
+  sbox.simple_move('A', 'Z')
+  sbox.simple_move('Z/B', 'Q/ZB')
+  sbox.simple_mkdir('Z/B')
+  sbox.simple_move('Q/ZB/E', 'Z/B/E')
+
+  # Somehow 'svn status' now shows different output for 'Q/ZB/E'
+  # when called directly and via an ancestor, as this handles
+  # multi-layer in a different way
+  
+  # Note that the status output may change over different Subversion revisions,
+  # but the status on a node should be identical anyway 'svn status' is called
+  # on it.
+  
+  # This test had a different result as status_move_missing_direct at the time of
+  # writing this test.
+  
+  expected_output = [
+    'A  +    %s\n' % sbox.ospath('Q/ZB'),
+    '        > moved from %s\n' % os.path.join('..', '..', 'Z', 'B'),
+    'D  +    %s\n' % sbox.ospath('Q/ZB/E'),
+    '        > moved to %s\n' % os.path.join('..', '..', 'Z', 'B', 'E'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+                                     sbox.ospath('Q/ZB'), '--depth', 'immediates')
+
+  # And calling svn status on just 'ZB/E' should have the same result for this node,
+  # except that the moved_to information is calculated from the node itself
+  expected_output = [
+    'D  +    %s\n' % sbox.ospath('Q/ZB/E'),
+    '        > moved to %s\n' % os.path.join('..', '..', '..', 'Z', 'B', 'E'),
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'status',
+                                     sbox.ospath('Q/ZB/E'), '--depth', 'empty')
+
 ########################################################################
 # Run the tests
 
@@ -2167,6 +2256,8 @@ test_list = [ None,
               status_case_changed,
               move_update_timestamps,
               status_path_handling,
+              status_move_missing_direct,
+              status_move_missing_direct_base,
              ]
 
 if __name__ == '__main__':

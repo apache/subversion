@@ -1041,7 +1041,7 @@ def switch_change_repos_root(sbox):
 
   # Test 1: A switch that changes to a non-existing repo shouldn't work.
   expected_err = ".*Unable to open repository.*|.*Could not open.*|"\
-                 ".*No repository found.*"
+                 ".*Could not find.*|.*No repository found.*"
   svntest.actions.run_and_verify_svn(None, None,
                                      expected_err,
                                      'switch', '--ignore-ancestry',
