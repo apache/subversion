@@ -526,33 +526,8 @@ static svn_error_t *
 serve_socket(connection_t *connection,
              apr_pool_t *pool)
 {
-  apr_status_t status;
-  svn_error_t *err;
-  
-  /* Enable TCP keep-alives on the socket so we time out when
-   * the connection breaks due to network-layer problems.
-   * If the peer has dropped the connection due to a network partition
-   * or a crash, or if the peer no longer considers the connection
-   * valid because we are behind a NAT and our public IP has changed,
-   * it will respond to the keep-alive probe with a RST instead of an
-   * acknowledgment segment, which will cause svn to abort the session
-   * even while it is currently blocked waiting for data from the peer. */
-  status = apr_socket_opt_set(connection->usock, APR_SO_KEEPALIVE, 1);
-  if (status)
-    {
-      /* It's not a fatal error if we cannot enable keep-alives. */
-    }
-
-  /* create the connection, configure ports etc. */
-  connection->conn
-    = svn_ra_svn_create_conn3(connection->usock, NULL, NULL,
-                              connection->params->compression_level,
-                              connection->params->zero_copy_limit,
-                              connection->params->error_check_interval,
-                              pool);
-
   /* process the actual request and log errors */
-  err = serve(connection->conn, connection->params, pool);
+  svn_error_t *err = serve_interruptable(NULL, connection, NULL, pool);
   if (err)
     logger__log_error(connection->params->logger, err, NULL,
                       get_client_info(connection->conn, connection->params,
@@ -567,6 +542,55 @@ serve_socket(connection_t *connection,
    There should be at most THREADPOOL_MAX_SIZE such pools. */
 svn_root_pools__t *connection_pools;
 
+#if HAVE_THREADPOOLS
+
+/* The global thread pool serving all connections. */
+apr_thread_pool_t *threads;
+
+/* Very simple load determination callback for serve_interruptable:
+   With less than have the threads in THREADS in use, we can afford to
+   wait in the socket read() function.  Otherwise, poll them round-robin. */
+static svn_boolean_t
+is_busy(connection_t *connection)
+{
+  return apr_thread_pool_threads_count(threads) * 2
+       > apr_thread_pool_thread_max_get(threads);
+}
+
+/* Serve the connection given by DATA.  Under high load, serve only
+   the current command (if any) and then put the connection back into
+   THREAD's task pool. */
+static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
+{
+  svn_boolean_t done;
+  connection_t *connection = data;
+  svn_error_t *err;
+
+  apr_pool_t *pool = svn_root_pools__acquire_pool(connection_pools);
+
+  /* process the actual request and log errors */
+  err = serve_interruptable(&done, connection, is_busy, pool);
+  if (err)
+    {
+      logger__log_error(connection->params->logger, err, NULL,
+                        get_client_info(connection->conn, connection->params,
+                                        pool));
+      svn_error_clear(err);
+    }
+  svn_root_pools__release_pool(pool, connection_pools);
+
+  /* Close or re-schedule connection. */
+  if (done)
+    close_connection(connection);
+  else
+    apr_thread_pool_push(threads, serve_thread, connection, 0, NULL);
+    
+  return NULL;
+}
+
+#else
+
+/* Fully serve the connection given by DATA. */
 static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 {
   struct connection_t *connection = data;
@@ -582,6 +606,8 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
 
   return NULL;
 }
+#endif
+
 #endif
 
 /* Write the PID of the current process as a decimal number, followed by a
@@ -643,13 +669,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *arg;
   apr_status_t status;
   apr_proc_t proc;
-#if APR_HAS_THREADS
-#if HAVE_THREADPOOLS
-  apr_thread_pool_t *threads;
-#else
+#if APR_HAS_THREADS && !HAVE_THREADPOOLS
   apr_threadattr_t *tattr;
   apr_thread_t *tid;
-#endif
 #endif
   svn_boolean_t is_multi_threaded;
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;

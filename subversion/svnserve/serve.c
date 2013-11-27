@@ -3800,6 +3800,142 @@ construct_server_baton(server_baton_t **baton,
   return SVN_NO_ERROR;
 }
 
+/* Open a svn_repos object in CONNECTION for the same repository and with
+   the same settings as last time.  The repository object remains valid
+   until POOL gets cleaned up at which point the respective pointer in
+   CONNECTION reset.  The repository in CONNECTION must have been opened
+   at some point in the past using construct_server_baton.
+ */
+static svn_error_t *
+reopen_repos(connection_t *connection,
+             apr_pool_t *pool)
+{
+  fs_warning_baton_t *warn_baton = apr_pcalloc(pool, sizeof(*warn_baton));
+  repository_t *repository = connection->baton->repository;
+
+  /* Open the repository and fill in b with the resulting information. */
+  SVN_ERR(svn_repos__repos_pool_get(&repository->repos,
+                                    connection->params->repos_pool,
+                                    repository->repos_root, repository->uuid,
+                                    pool));
+  repository->fs = svn_repos_fs(repository->repos);
+
+  /* Reset the REPOS pointer as soon as the REPOS will be returned to the
+     REPOS_POOL. */
+  apr_pool_cleanup_register(pool, repository, reset_repos,
+                            apr_pool_cleanup_null);
+
+  /* Configure svn_repos object */
+  SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
+                                                 repository->capabilities));
+  SVN_ERR(svn_repos_hooks_setenv(repository->repos, repository->hooks_env,
+                                 pool));
+  
+  warn_baton->server = connection->baton;
+  warn_baton->conn = connection->conn;
+  warn_baton->pool = svn_pool_create(pool);
+  svn_fs_set_warning_func(connection->baton->repository->fs,
+                          fs_warning_func, &warn_baton);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+serve_interruptable(svn_boolean_t *terminate_p,
+                    connection_t *connection,
+                    svn_boolean_t (* is_busy)(connection_t *),
+                    apr_pool_t *pool)
+{
+  svn_boolean_t terminate = FALSE;
+  const svn_ra_svn_cmd_entry_t *command;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Prepare command parser. */
+  apr_hash_t *cmd_hash = apr_hash_make(pool);
+  for (command = main_commands; command->cmdname; command++)
+    svn_hash_sets(cmd_hash, command->cmdname, command);
+
+  /* Auto-initialize connection & open repository */
+  if (connection->conn)
+    {
+      /* This is not the first call for CONNECTION. */
+      if (connection->baton->repository->repos == NULL)
+        SVN_ERR(reopen_repos(connection, pool));
+    }
+  else
+    {
+      apr_status_t status;
+
+      /* Enable TCP keep-alives on the socket so we time out when
+       * the connection breaks due to network-layer problems.
+       * If the peer has dropped the connection due to a network partition
+       * or a crash, or if the peer no longer considers the connection
+       * valid because we are behind a NAT and our public IP has changed,
+       * it will respond to the keep-alive probe with a RST instead of an
+       * acknowledgment segment, which will cause svn to abort the session
+       * even while it is currently blocked waiting for data from the peer. */
+      status = apr_socket_opt_set(connection->usock, APR_SO_KEEPALIVE, 1);
+      if (status)
+        {
+          /* It's not a fatal error if we cannot enable keep-alives. */
+        }
+
+      /* create the connection, configure ports etc. */
+      connection->conn
+        = svn_ra_svn_create_conn3(connection->usock, NULL, NULL,
+                                  connection->params->compression_level,
+                                  connection->params->zero_copy_limit,
+                                  connection->params->error_check_interval,
+                                  pool);
+
+      /* Construct server baton and open the repository for the first time. */
+      SVN_ERR(construct_server_baton(&connection->baton, connection->conn,
+                                     connection->params, pool));
+    }
+
+  /* Process incomming commands. */
+  while (!terminate)
+    {
+      svn_pool_clear(iterpool);
+      if (is_busy && is_busy(connection))
+        {
+          svn_boolean_t has_command;
+
+          /* If the server is busy, execute just one command and only if
+           * there is one currently waiting in our receive buffers.
+           */
+          SVN_ERR(svn_ra_svn__has_command(&has_command, &terminate,
+                                          connection->conn, iterpool));
+          if (has_command)
+            SVN_ERR(svn_ra_svn__handle_command(&terminate, cmd_hash,
+                                              connection->baton,
+                                              connection->conn,
+                                              FALSE, iterpool));
+
+          break;
+        }
+      else
+        {
+          /* The server is not busy, thus let's serve whichever command
+           * comes in next and whenever it comes in.  This requires the
+           * busy() callback test to return TRUE while there are still some
+           * resources left.
+           */
+          SVN_ERR(svn_ra_svn__handle_command(&terminate, cmd_hash,
+                                             connection->baton,
+                                             connection->conn,
+                                             FALSE, iterpool));
+        }
+    }
+
+  /* error or normal end of session. Close the connection */
+  svn_pool_destroy(iterpool);
+  if (terminate_p)
+    *terminate_p = terminate;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *serve(svn_ra_svn_conn_t *conn,
                    serve_params_t *params,
                    apr_pool_t *pool)

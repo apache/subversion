@@ -1233,6 +1233,34 @@ svn_ra_svn__read_item(svn_ra_svn_conn_t *conn,
   return read_item(conn, pool, *item, c, 0);
 }
 
+/* Drain existing whitespace from the receive buffer of CONN until either
+   there is no data in the underlying receive socket anymore or we found
+   a non-whitespace char.  Set *HAS_ITEM to TRUE in the latter case.
+ */
+static svn_error_t *
+svn_ra_svn__has_item(svn_boolean_t *has_item,
+                     svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool)
+{
+  do
+    {
+      if (conn->read_ptr == conn->read_end)
+        {
+          if (conn->write_pos)
+            SVN_ERR(writebuf_flush(conn, pool));
+
+          if (!svn_ra_svn__input_waiting(conn, pool))
+            break;
+
+          SVN_ERR(readbuf_fill(conn, pool));
+        }
+    }
+  while (svn_iswhitespace(*conn->read_ptr) && ++conn->read_ptr);
+
+  *has_item = conn->read_ptr != conn->read_end;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                  apr_pool_t *pool)
@@ -1521,7 +1549,25 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
                            status);
 }
 
-static svn_error_t *
+svn_error_t *
+svn_ra_svn__has_command(svn_boolean_t *has_command,
+                        svn_boolean_t *terminated,
+                        svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool)
+{
+  svn_error_t *err = svn_ra_svn__has_item(has_command, conn, pool);
+  if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+    {
+      *terminated = TRUE;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  *terminated = FALSE;
+  return svn_error_trace(err);
+}
+
+svn_error_t *
 svn_ra_svn__handle_command(svn_boolean_t *terminate,
                            apr_hash_t *cmd_hash,
                            void *baton,
