@@ -2065,7 +2065,6 @@ notify_verification_error_summary(svn_revnum_t rev,
                                   apr_pool_t *pool)
 {
   svn_repos_notify_t *notify_failure;
-  char errbuf[512]; /* ### svn_strerror() magic number  */
 
   if (notify_func == NULL)
     return;
@@ -2073,11 +2072,6 @@ notify_verification_error_summary(svn_revnum_t rev,
   notify_failure = svn_repos_notify_create(svn_repos_notify_failure_summary,
                                            pool);
   notify_failure->err = err;
-  notify_failure->warning_str = apr_psprintf(pool,
-                                             _("E%06d: %s"),
-                                             err->apr_err,
-                                             svn_err_best_message(err, errbuf,
-                                                                  sizeof(errbuf)));
   notify_failure->revision = rev;
   notify_func(notify_baton, notify_failure, pool);
 }
