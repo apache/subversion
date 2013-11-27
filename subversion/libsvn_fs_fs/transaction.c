@@ -3158,7 +3158,11 @@ commit_body(void *baton, apr_pool_t *pool)
      race with another caller writing to the prototype revision file
      before we commit it. */
 
-  /* Remove any temporary txn props representing 'flags'. */
+  /* Remove any temporary txn props representing 'flags'. 
+
+     ### This is a permanent change to the transaction.  If this
+     ### commit does not complete for any reason the transaction will
+     ### still exist but will have lost these properties. */
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
   txnprop_list = apr_array_make(pool, 3, sizeof(svn_prop_t));
   prop.value = NULL;
@@ -3215,7 +3219,11 @@ commit_body(void *baton, apr_pool_t *pool)
         }
     }
 
-  /* Move the finished rev file into place. */
+  /* Move the finished rev file into place.
+
+     ### This "breaks" the transaction by removing the protorev file
+     ### but the revision is not yet complete.  If this commit does
+     ### not complete for any reason the transaction will be lost. */
   old_rev_filename = svn_fs_fs__path_rev_absolute(cb->fs, old_rev, pool);
   rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
   proto_filename = svn_fs_fs__path_txn_proto_rev(cb->fs, txn_id, pool);
