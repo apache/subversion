@@ -805,6 +805,34 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Structure for errors encountered during 'svnadmin verify --keep-going'. */
+struct verification_error
+{
+  svn_revnum_t rev;
+  svn_error_t *err;
+};
+
+/* Pool cleanup function to clear an svn_error_t *. */
+static apr_status_t
+err_cleanup(void *data)
+{
+  svn_error_t *err = data;
+
+  svn_error_clear(err);
+
+  return APR_SUCCESS;
+}
+
+struct repos_notify_handler_baton {
+  /* Stream to write progress and other non-error output to. */
+  svn_stream_t *feedback_stream;
+
+  /* List of errors encountered during 'svnadmin verify --keep-going'. */
+  apr_array_header_t *error_summary;
+
+  /* Pool for data collected during notifications. */
+  apr_pool_t *result_pool;
+};
 
 /* Implementation of svn_repos_notify_func_t to wrap the output to a
    response stream for svn_repos_dump_fs2() and svn_repos_verify_fs() */
@@ -813,7 +841,8 @@ repos_notify_handler(void *baton,
                      const svn_repos_notify_t *notify,
                      apr_pool_t *scratch_pool)
 {
-  svn_stream_t *feedback_stream = baton;
+  struct repos_notify_handler_baton *b = baton;
+  svn_stream_t *feedback_stream = b->feedback_stream;
 
   switch (notify->action)
   {
@@ -829,8 +858,22 @@ repos_notify_handler(void *baton,
                                     _("* Error verifying revision %ld.\n"),
                                     notify->revision));
       if (notify->err)
-        svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
-                          "svnadmin: ");
+        {
+          svn_handle_error2(notify->err, stderr, FALSE /* non-fatal */,
+                            "svnadmin: ");
+          if (b->error_summary && notify->revision != SVN_INVALID_REVNUM)
+            {
+              struct verification_error *verr;
+              
+              verr = apr_palloc(b->result_pool, sizeof(*verr));
+              verr->rev = notify->revision;
+              verr->err = svn_error_dup(notify->err);
+              apr_pool_cleanup_register(b->result_pool, verr->err, err_cleanup,
+                                        apr_pool_cleanup_null);
+              APR_ARRAY_PUSH(b->error_summary,
+                             struct verification_error *) = verr;
+            }
+        }
       return;
 
     case svn_repos_notify_dump_rev_end:
@@ -1065,7 +1108,7 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_stream_t *stdout_stream;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
   svn_revnum_t youngest;
-  svn_stream_t *progress_stream = NULL;
+  struct repos_notify_handler_baton notify_baton = { 0 };
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1099,12 +1142,12 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stderr, pool);
+    notify_baton.feedback_stream = recode_stream_create(stderr, pool);
 
   SVN_ERR(svn_repos_dump_fs3(repos, stdout_stream, lower, upper,
                              opt_state->incremental, opt_state->use_deltas,
                              !opt_state->quiet ? repos_notify_handler : NULL,
-                             progress_stream, check_cancel, NULL, pool));
+                             &notify_baton, check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1251,7 +1294,8 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_revnum_t lower = SVN_INVALID_REVNUM, upper = SVN_INVALID_REVNUM;
-  svn_stream_t *stdin_stream, *stdout_stream = NULL;
+  svn_stream_t *stdin_stream;
+  struct repos_notify_handler_baton notify_baton = { 0 };
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1285,7 +1329,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    stdout_stream = recode_stream_create(stdout, pool);
+    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
 
   err = svn_repos_load_fs4(repos, stdin_stream, lower, upper,
                            opt_state->uuid_action, opt_state->parent_dir,
@@ -1293,7 +1337,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                            opt_state->use_post_commit_hook,
                            !opt_state->bypass_prop_validation,
                            opt_state->quiet ? NULL : repos_notify_handler,
-                           stdout_stream, check_cancel, NULL, pool);
+                           &notify_baton, check_cancel, NULL, pool);
   if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
     return svn_error_quick_wrap(err,
                                 _("Invalid property value found in "
@@ -1340,12 +1384,12 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
-  svn_stream_t *stdout_stream;
+  struct repos_notify_handler_baton notify_baton = { 0 };
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+  SVN_ERR(svn_stream_for_stdout(&notify_baton.feedback_stream, pool));
 
   /* Restore default signal handlers until after we have acquired the
    * exclusive lock so that the user interrupt before we actually
@@ -1353,7 +1397,7 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   setup_cancellation_signals(SIG_DFL);
 
   err = svn_repos_recover4(opt_state->repository_path, TRUE,
-                           repos_notify_handler, stdout_stream,
+                           repos_notify_handler, &notify_baton,
                            check_cancel, NULL, pool);
   if (err)
     {
@@ -1371,7 +1415,7 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                    " another process has it open?\n")));
       SVN_ERR(svn_cmdline_fflush(stdout));
       SVN_ERR(svn_repos_recover4(opt_state->repository_path, FALSE,
-                                 repos_notify_handler, stdout_stream,
+                                 repos_notify_handler, &notify_baton,
                                  check_cancel, NULL, pool));
     }
 
@@ -1626,7 +1670,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_stream_t *progress_stream = NULL;
+  struct repos_notify_handler_baton notify_baton = { 0 };
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1635,11 +1679,11 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stdout, pool);
+    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
 
   return svn_error_trace(
     svn_repos_fs_pack2(repos, !opt_state->quiet ? repos_notify_handler : NULL,
-                       progress_stream, check_cancel, NULL, pool));
+                       &notify_baton, check_cancel, NULL, pool));
 }
 
 
@@ -1651,7 +1695,8 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t youngest, lower, upper;
-  svn_stream_t *progress_stream = NULL;
+  struct repos_notify_handler_baton notify_baton = { 0 };
+  svn_error_t *verify_err;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1696,15 +1741,63 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
 
   if (! opt_state->quiet)
-    progress_stream = recode_stream_create(stdout, pool);
+    notify_baton.feedback_stream = recode_stream_create(stdout, pool);
 
-  return svn_error_trace(svn_repos_verify_fs3(repos, lower, upper,
-                                              opt_state->keep_going,
-                                              opt_state->check_ucs_norm,
-                                              !opt_state->quiet
-                                              ? repos_notify_handler : NULL,
-                                              progress_stream, check_cancel,
-                                              NULL, pool));
+  if (opt_state->keep_going)
+    notify_baton.error_summary =
+      apr_array_make(pool, 0, sizeof(struct verification_error *));
+
+  notify_baton.result_pool = pool;
+
+  verify_err = svn_repos_verify_fs3(repos, lower, upper,
+                                    opt_state->keep_going,
+                                    opt_state->check_ucs_norm,
+                                    !opt_state->quiet
+                                    ? repos_notify_handler : NULL,
+                                    &notify_baton, check_cancel,
+                                    NULL, pool);
+
+  /* Show the --keep-going error summary. */
+  if (opt_state->keep_going && notify_baton.error_summary->nelts > 0)
+    {
+      apr_pool_t *iterpool;
+      int i;
+
+      svn_error_clear(
+        svn_stream_printf(notify_baton.feedback_stream, pool,
+                          _("\n-----Summary of corrupt revisions-----\n")));
+
+      iterpool = svn_pool_create(pool);
+      for (i = 0; i < notify_baton.error_summary->nelts; i++)
+        {
+          struct verification_error *verr;
+          svn_error_t *err;
+          const char *rev_str;
+          
+          svn_pool_clear(iterpool);
+
+          verr = APR_ARRAY_IDX(notify_baton.error_summary, i,
+                               struct verification_error *);
+          rev_str = apr_psprintf(iterpool, "r%ld", verr->rev);
+          for (err = svn_error_purge_tracing(verr->err);
+               err != SVN_NO_ERROR; err = err->child)
+            {
+              char buf[512];
+              const char *message;
+              
+              message = svn_err_best_message(err, buf, sizeof(buf));
+              svn_error_clear(svn_stream_printf(notify_baton.feedback_stream,
+                                                iterpool,
+                                                "%6s: E%06d: %s\n",
+                                                rev_str, err->apr_err,
+                                                message));
+            }
+        }
+
+       svn_pool_destroy(iterpool);
+    }
+
+  return svn_error_trace(verify_err);
 }
 
 /* This implements `svn_opt_subcommand_t'. */
@@ -2091,18 +2184,18 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
-  svn_stream_t *stdout_stream;
+  struct repos_notify_handler_baton notify_baton = { 0 };
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+  SVN_ERR(svn_stream_for_stdout(&notify_baton.feedback_stream, pool));
 
   /* Restore default signal handlers. */
   setup_cancellation_signals(SIG_DFL);
 
   err = svn_repos_upgrade2(opt_state->repository_path, TRUE,
-                           repos_notify_handler, stdout_stream, pool);
+                           repos_notify_handler, &notify_baton, pool);
   if (err)
     {
       if (APR_STATUS_IS_EAGAIN(err->apr_err))
@@ -2120,7 +2213,7 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                        " another process has it open?\n")));
           SVN_ERR(svn_cmdline_fflush(stdout));
           SVN_ERR(svn_repos_upgrade2(opt_state->repository_path, FALSE,
-                                     repos_notify_handler, stdout_stream,
+                                     repos_notify_handler, &notify_baton,
                                      pool));
         }
       else if (err->apr_err == SVN_ERR_FS_UNSUPPORTED_UPGRADE)
