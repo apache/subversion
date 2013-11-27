@@ -59,7 +59,7 @@ make_keyword_hash(::Java::Env env, jobject jkeywords,
 
 
 /**
- * Converts property/value pairs the Java map @a jkeywords to an APR
+ * Converts property/value pairs the Java map @a jproperties to an APR
  * hash table allocated in @a pool. The keys in the resulting table
  * are @c const @c char*, the values are @c svn_string_t*. Null values
  * in the Java map will not appear in the converted map.
@@ -70,7 +70,7 @@ apr_hash_t*
 make_property_hash(::Java::Env env, jobject jproperties, apr_pool_t* pool);
 
 /**
- * Converts property/value pairs the Java map @a jkeywords to an APR
+ * Converts property/value pairs the Java map @a jproperties to an APR
  * hash table allocated in @a pool. The keys in the resulting table
  * are @c const @c char*, the values are @c svn_string_t*. Null values
  * in the Java map will not appear in the converted map.
