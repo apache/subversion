@@ -2031,9 +2031,6 @@ notify_verification_error(svn_revnum_t rev,
 {
   svn_repos_notify_t *notify_failure;
 
-  if (notify_func == NULL)
-    return;
-
   notify_failure = svn_repos_notify_create(svn_repos_notify_failure, pool);
   notify_failure->err = err;
   notify_failure->revision = rev;
@@ -2047,9 +2044,6 @@ notify_verification_summary(svn_error_t *err,
                             apr_pool_t *pool)
 {
   svn_repos_notify_t *notify_failure;
-
-  if (notify_func == NULL)
-    return;
 
   notify_failure = svn_repos_notify_create(svn_repos_notify_summary, pool);
   notify_failure->err = err;
