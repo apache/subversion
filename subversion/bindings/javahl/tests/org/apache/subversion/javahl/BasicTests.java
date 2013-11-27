@@ -219,6 +219,33 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test RuntimeVersion
+     */
+    public void testRuntimeVersion() throws Throwable
+    {
+        try
+        {
+            RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+            String versionString = runtimeVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("RuntimeVersion should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+
+        RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+        Version version = client.getVersion();
+        assertTrue(runtimeVersion.getMajor() > version.getMajor()
+                   || (runtimeVersion.getMajor() == version.getMajor()
+                       && runtimeVersion.getMinor() >= version.getMinor()));
+    }
+
+    /**
      * Test the JNIError class functionality
      * @throws Throwable
      */
