@@ -3864,7 +3864,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
     }
   else
     {
-      apr_status_t status;
+      apr_status_t ar;
 
       /* Enable TCP keep-alives on the socket so we time out when
        * the connection breaks due to network-layer problems.
@@ -3874,8 +3874,8 @@ serve_interruptable(svn_boolean_t *terminate_p,
        * it will respond to the keep-alive probe with a RST instead of an
        * acknowledgment segment, which will cause svn to abort the session
        * even while it is currently blocked waiting for data from the peer. */
-      status = apr_socket_opt_set(connection->usock, APR_SO_KEEPALIVE, 1);
-      if (status)
+      ar = apr_socket_opt_set(connection->usock, APR_SO_KEEPALIVE, 1);
+      if (ar)
         {
           /* It's not a fatal error if we cannot enable keep-alives. */
         }
@@ -3893,7 +3893,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
                                      connection->params, pool));
     }
 
-  /* Process incomming commands. */
+  /* Process incoming commands. */
   while (!terminate)
     {
       svn_pool_clear(iterpool);
