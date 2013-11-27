@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -68,14 +69,12 @@ public class SVNRemoteTests extends SVNTests
         thisTest = new OneTest();
     }
 
-    public static ISVNRemote getSession(String url, String configDirectory,
-                                        ConfigEvent configHandler)
+    public static ISVNRemote getSession(String url, String configDirectory)
     {
         try
         {
             RemoteFactory factory = new RemoteFactory();
             factory.setConfigDirectory(configDirectory);
-            factory.setConfigEventHandler(configHandler);
             factory.setUsername(USERNAME);
             factory.setPassword(PASSWORD);
             factory.setPrompt(new DefaultPromptUserPassword());
@@ -92,7 +91,7 @@ public class SVNRemoteTests extends SVNTests
 
     private ISVNRemote getSession()
     {
-        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath(), null);
+        return getSession(getTestRepoUrl(), super.conf.getAbsolutePath());
     }
 
     /**
@@ -111,9 +110,10 @@ public class SVNRemoteTests extends SVNTests
         try
         {
             session = new RemoteFactory(
-                super.conf.getAbsolutePath(), null,
+                super.conf.getAbsolutePath(),
                 USERNAME, PASSWORD,
-                new DefaultPromptUserPassword(), null)
+                new DefaultPromptUserPassword(),
+                null, null, null)
                 .openRemoteSession(getTestRepoUrl());
         }
         catch (ClientException ex)
@@ -128,6 +128,48 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
         session.dispose();
+    }
+
+    public void testSessionGC() throws Exception
+    {
+        int svnErrorCode = 0;
+        try {
+            try {
+                String prefix = getTestRepoUrl().substring(
+                    0, 1 + getTestRepoUrl().lastIndexOf("/"));
+                new RemoteFactory(
+                    super.conf.getAbsolutePath(),
+                    USERNAME, PASSWORD,
+                    new DefaultPromptUserPassword(),
+                    null, null, null)
+                    .openRemoteSession(prefix + "repositorydoesnotexisthere");
+            }
+            finally
+            {
+                for(int i = 0; i < 100; i++)
+                {
+                    Runtime.getRuntime().gc(); // GC should run finalize
+
+                    // Do something
+                    byte[] memEater = new byte[1024 * 1024];
+                    Arrays.fill(memEater, (byte) i);
+
+                    // Do some more javahl activity (this url is OK)
+                    final ISVNRemote session = getSession();
+                    session.getLatestRevision();
+                    session.dispose();
+                }
+            }
+        }
+        catch (ClientException ex)
+        {
+            List<ClientException.ErrorMessage> msgs = ex.getAllMessages();
+            svnErrorCode = msgs.get(msgs.size() - 1).getCode();
+        }
+
+        assertTrue(svnErrorCode == 180001    // file:
+                   || svnErrorCode == 210005 // svn:
+                   || svnErrorCode == 2);    // http:
     }
 
     public void testDatedRev() throws Exception
@@ -168,6 +210,20 @@ public class SVNRemoteTests extends SVNTests
 
         kind = session.checkPath("A", 1);
         assertEquals(NodeKind.dir, kind);
+    }
+
+    public void testStat() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        DirEntry dirent = session.stat("iota", 1);
+        assertEquals(NodeKind.file, dirent.getNodeKind());
+
+        dirent = session.stat("iota", 0);
+        assertNull(dirent);
+
+        dirent = session.stat("A", 1);
+        assertEquals(NodeKind.dir, dirent.getNodeKind());
     }
 
     private String getTestRepoUrl()
@@ -396,10 +452,13 @@ public class SVNRemoteTests extends SVNTests
         }
     }
 
-    private final class CommitContext implements CommitCallback
+    private static final class CommitContext implements CommitCallback
     {
         public final ISVNEditor editor;
-        public CommitContext(ISVNRemote session, String logstr)
+        public CommitContext(ISVNRemote session, String logstr,
+                             ISVNEditor.ProvideBaseCallback getBase,
+                             ISVNEditor.ProvidePropsCallback getProps,
+                             ISVNEditor.GetNodeKindCallback getKind)
             throws ClientException
         {
             Charset UTF8 = Charset.forName("UTF-8");
@@ -408,7 +467,19 @@ public class SVNRemoteTests extends SVNTests
                           : logstr.getBytes(UTF8));
             HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
             revprops.put("svn:log", log);
-            editor = session.getCommitEditor(revprops, this, null, false);
+
+            // Run the getCommitEditor overloads through their paces, too.
+            if (getBase == null && getProps == null && getKind == null)
+                editor = session.getCommitEditor(revprops, this, null, false);
+            else
+                editor = session.getCommitEditor(revprops, this, null, false,
+                                                 getBase, getProps, getKind);
+        }
+
+        public CommitContext(ISVNRemote session, String logstr)
+            throws ClientException
+        {
+            this(session, logstr, null, null, null);
         }
 
         public void commitInfo(CommitInfo info) { this.info = info; }
@@ -417,11 +488,67 @@ public class SVNRemoteTests extends SVNTests
         private CommitInfo info;
     }
 
-    public void testEditorCopy() throws Exception
+    private static final class EditorCallbacks
+    {
+        private final String wcpath;
+        private final long revision;
+        private final Map<String, byte[]> props;
+        private final NodeKind kind;
+
+        public EditorCallbacks(String wcpath, long revision,
+                               Map<String, byte[]> props,
+                               NodeKind kind)
+        {
+            this.wcpath = wcpath;
+            this.revision = revision;
+            this.props = props;
+            this.kind = kind;
+        }
+
+        public final ISVNEditor.ProvideBaseCallback getBase =
+            new ISVNEditor.ProvideBaseCallback()
+            {
+                public ISVNEditor.ProvideBaseCallback.ReturnValue
+                getContents(String relpath)
+                {
+                    try {
+                        return new ISVNEditor.ProvideBaseCallback.ReturnValue(
+                            new FileInputStream(wcpath + relpath), revision);
+                    } catch (java.io.FileNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            };
+
+        public final ISVNEditor.ProvidePropsCallback getProps =
+            new ISVNEditor.ProvidePropsCallback()
+            {
+                public ISVNEditor.ProvidePropsCallback.ReturnValue
+                getProperties(String relpath)
+                {
+                    return new ISVNEditor.ProvidePropsCallback.ReturnValue(
+                        props, revision);
+                }
+            };
+
+        public final ISVNEditor.GetNodeKindCallback getKind =
+            new ISVNEditor.GetNodeKindCallback()
+            {
+                public NodeKind getKind(String relpath, long revision)
+                {
+                    return kind;
+                }
+            };
+    };
+
+    private void testEditorCopy(EditorCallbacks cb) throws Exception
     {
         ISVNRemote session = getSession();
         CommitContext cc =
-            new CommitContext(session, "Copy A/B/lambda -> A/B/omega");
+            (cb != null
+             ? new CommitContext(session, "Copy A/B/lambda -> A/B/omega",
+                                 cb.getBase, cb.getProps, cb.getKind)
+             : new CommitContext(session, "Copy A/B/lambda -> A/B/omega"));
 
         try {
             // FIXME: alter dir A/B first
@@ -440,6 +567,18 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(NodeKind.file,
                      session.checkPath("A/B/omega",
                                        Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorCopy() throws Exception
+    {
+        testEditorCopy(null);
+    }
+
+    public void testEditorCopy_WithCallbacks() throws Exception
+    {
+        testEditorCopy(new EditorCallbacks(thisTest.getWCPath(), 1L,
+                                           new HashMap<String, byte[]>(),
+                                           NodeKind.file));
     }
 
     public void testEditorMove() throws Exception
@@ -525,7 +664,7 @@ public class SVNRemoteTests extends SVNTests
                                        Revision.SVN_INVALID_REVNUM));
     }
 
-    public void testEditorSetDirProps() throws Exception
+    private void testEditorSetDirProps(EditorCallbacks cb) throws Exception
     {
         Charset UTF8 = Charset.forName("UTF-8");
         ISVNRemote session = getSession();
@@ -534,7 +673,11 @@ public class SVNRemoteTests extends SVNTests
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
         props.put("svn:ignore", ignoreval);
 
-        CommitContext cc = new CommitContext(session, "Add svn:ignore");
+        CommitContext cc =
+            (cb != null
+             ? new CommitContext(session, "Add svn:ignore",
+                                 cb.getBase, cb.getProps, cb.getKind)
+             : new CommitContext(session, "Add svn:ignore"));
         try {
             cc.editor.alterDirectory("", 1, null, props);
             cc.editor.complete();
@@ -549,6 +692,18 @@ public class SVNRemoteTests extends SVNTests
                                                     "svn:ignore",
                                                     Revision.HEAD,
                                                     Revision.HEAD)));
+    }
+
+    public void testEditorSetDirProps() throws Exception
+    {
+        testEditorSetDirProps(null);
+    }
+
+    public void testEditorSetDirProps_WithCallbacks() throws Exception
+    {
+        testEditorSetDirProps(new EditorCallbacks(thisTest.getWCPath(), 1L,
+                                                  new HashMap<String, byte[]>(),
+                                                  NodeKind.dir));
     }
 
     private static byte[] SHA1(byte[] text) throws NoSuchAlgorithmException
@@ -593,7 +748,54 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(eolstyle, propval));
     }
 
-    public void testEditorSetFileContents() throws Exception
+    public void testEditorDeleteFileProps() throws Exception
+    {
+        Charset UTF8 = Charset.forName("UTF-8");
+        client.propertySetRemote(
+             thisTest.getUrl() + "/iota", 1L,
+             "name", "value".getBytes(UTF8),
+             new CommitMessageCallback() {
+                 public String getLogMessage(Set<CommitItem> elements) {
+                     return "Set property 'name' to 'value'";
+                 }
+             }, false, null, null);
+
+        ISVNRemote session = getSession();
+        HashMap<String, byte[]> props = new HashMap<String, byte[]>();
+        assertEquals(2L, session.getFile(Revision.SVN_INVALID_REVNUM, "iota",
+                                         null, props));
+
+        int propcount = 0;
+        for (Map.Entry<String, byte[]> e : props.entrySet()) {
+            final String key = e.getKey();
+            if (key.startsWith("svn:entry:") || key.startsWith("svn:wc:"))
+                continue;
+            ++propcount;
+        }
+        assertEquals(1, propcount);
+
+        CommitContext cc = new CommitContext(session, "Remove all props");
+        try {
+            props.clear();
+            cc.editor.alterFile("iota", 2L, null, null, props);
+            cc.editor.complete();
+        } finally {
+            cc.editor.dispose();
+        }
+
+        assertEquals(3L, session.getFile(Revision.SVN_INVALID_REVNUM, "iota",
+                                         null, props));
+        propcount = 0;
+        for (Map.Entry<String, byte[]> e : props.entrySet()) {
+            final String key = e.getKey();
+            if (key.startsWith("svn:entry:") || key.startsWith("svn:wc:"))
+                continue;
+            ++propcount;
+        }
+        assertEquals(0, propcount);
+    }
+
+    private void testEditorSetFileContents(EditorCallbacks cb) throws Exception
     {
         Charset UTF8 = Charset.forName("UTF-8");
         ISVNRemote session = getSession();
@@ -603,7 +805,10 @@ public class SVNRemoteTests extends SVNTests
         ByteArrayInputStream stream = new ByteArrayInputStream(contents);
 
         CommitContext cc =
-            new CommitContext(session, "Change contents of A/B/E/alpha");
+            (cb != null
+             ? new CommitContext(session, "Change contents of A/B/E/alpha",
+                                 cb.getBase, cb.getProps, cb.getKind)
+             : new CommitContext(session, "Change contents of A/B/E/alpha"));
         try {
             cc.editor.alterFile("A/B/E/alpha", 1, hash, stream, null);
             cc.editor.complete();
@@ -619,47 +824,17 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(contents, checkcontents.toByteArray()));
     }
 
-    // public void testEditorRotate() throws Exception
-    // {
-    //     ISVNRemote session = getSession();
-    //
-    //     ArrayList<ISVNEditor.RotatePair> rotation =
-    //         new ArrayList<ISVNEditor.RotatePair>(3);
-    //     rotation.add(new ISVNEditor.RotatePair("A/B", 1));
-    //     rotation.add(new ISVNEditor.RotatePair("A/C", 1));
-    //     rotation.add(new ISVNEditor.RotatePair("A/D", 1));
-    //
-    //     CommitContext cc =
-    //         new CommitContext(session, "Rotate A/B -> A/C -> A/D");
-    //     try {
-    //         // No alter-dir of A is needed, children remain the same.
-    //         cc.editor.rotate(rotation);
-    //         cc.editor.complete();
-    //     } finally {
-    //         cc.editor.dispose();
-    //     }
-    //
-    //     assertEquals(2, cc.getRevision());
-    //     assertEquals(2, session.getLatestRevision());
-    //
-    //     HashMap<String, DirEntry> dirents = new HashMap<String, DirEntry>();
-    //     HashMap<String, byte[]> properties = new HashMap<String, byte[]>();
-    //
-    //     // A/B is now what used to be A/D, so A/B/H must exist
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/B",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertEquals(dirents.get("H").getPath(), "H");
-    //
-    //     // A/C is now what used to be A/B, so A/C/F must exist
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/C",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertEquals(dirents.get("F").getPath(), "F");
-    //
-    //     // A/D is now what used to be A/C and must be empty
-    //     session.getDirectory(Revision.SVN_INVALID_REVNUM, "A/D",
-    //                          DirEntry.Fields.all, dirents, properties);
-    //     assertTrue(dirents.isEmpty());
-    // }
+    public void testEditorSetFileContents() throws Exception
+    {
+        testEditorSetFileContents(null);
+    }
+
+    public void testEditorSetFileContents_WithCallbacks() throws Exception
+    {
+        testEditorSetFileContents(new EditorCallbacks(thisTest.getWCPath(), 1L,
+                                                      new HashMap<String, byte[]>(),
+                                                      NodeKind.file));
+    }
 
     // Sanity check so that we don't forget about unimplemented methods.
     public void testEditorNotImplemented() throws Exception
@@ -690,13 +865,6 @@ public class SVNRemoteTests extends SVNTests
             }
             assertEquals("Not implemented: CommitEditor.alterSymlink", exmsg);
 
-            // try {
-            //     exmsg = "";
-            //     cc.editor.rotate(rotation);
-            // } catch (RuntimeException ex) {
-            //     exmsg = ex.getMessage();
-            // }
-            // assertEquals("Not implemented: CommitEditor.rotate", exmsg);
         } finally {
             cc.editor.dispose();
         }
@@ -794,12 +962,24 @@ public class SVNRemoteTests extends SVNTests
                         cat.enumerate(sec, en);
                     }
                 }
+
             };
 
-        ISVNRemote session = getSession(getTestRepoUrl(),
-                                        super.conf.getAbsolutePath(),
-                                        handler);
-        session.getLatestRevision(); // Make sure the configuration gets loaded
+        ISVNRemote session;
+        try
+        {
+            session = new RemoteFactory(
+                super.conf.getAbsolutePath(),
+                USERNAME, PASSWORD,
+                new DefaultPromptUserPassword(),
+                null, handler, null)
+                .openRemoteSession(getTestRepoUrl());
+        }
+        catch (ClientException ex)
+        {
+            throw new RuntimeException(ex);
+        }
+        session.getLatestRevision();
     }
 
     private static class RemoteStatusReceiver implements RemoteStatus
@@ -1082,5 +1262,48 @@ public class SVNRemoteTests extends SVNTests
             catalog.get("Abranch/mu").getRevisions("/A/mu");
         assertEquals(1, ranges.size());
         assertEquals("1-3", ranges.get(0).toString());
+    }
+
+    public void testGetLocations() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        Long expected = new Long(1L);
+        ArrayList<Long> revs = new ArrayList<Long>(3);
+        revs.add(new Long(0L));
+        revs.add(expected);
+
+        Map<Long, String> locs = session.getLocations("A", 1, revs);
+
+        assertEquals(1, locs.size());
+        assertTrue(locs.containsKey(expected));
+        assertEquals("/A", locs.get(expected));
+    }
+
+    public void testGetLocationSegments() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        List<ISVNRemote.LocationSegment> result =
+            session.getLocationSegments("A", 1,
+                                        Revision.SVN_INVALID_REVNUM,
+                                        Revision.SVN_INVALID_REVNUM);
+        assertEquals(1, result.size());
+        ISVNRemote.LocationSegment seg = result.get(0);
+        assertEquals("A", seg.getPath());
+        assertEquals(1, seg.getStartRevision());
+        assertEquals(1, seg.getEndRevision());
+    }
+
+    public void testGetFileRevisions() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        List<ISVNRemote.FileRevision> result =
+            session.getFileRevisions("iota", 0, 1, true);
+        assertEquals(1, result.size());
+        ISVNRemote.FileRevision rev = result.get(0);
+        assertEquals("/iota", rev.getPath());
+        assertFalse(rev.isResultOfMerge());
     }
 }

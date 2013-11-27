@@ -158,6 +158,7 @@ Commit access for specific areas:
       artagnon   Ramkumar Ramachandra <artagnon@gmail.com>   (svnrdump, svntest)
          arwin   Arwin Arni <arwin@collab.net>               (svn-bisect)
           joes   Joe Schaefer <joe_schaefer@yahoo.com>       (svnpubsub)
+     humbedooh   Daniel Gruno <humbedooh@apache.org>         (svnpubsub)
       prabhugs   Prabhu Gnana Sundar <prabhugs@collab.net>   (verify-keep-going)
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
 

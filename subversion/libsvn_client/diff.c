@@ -30,6 +30,8 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -52,8 +54,6 @@
 #include "private/svn_diff_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_io_private.h"
-
-#include "svn_private_config.h"
 
 
 /* Utilities */

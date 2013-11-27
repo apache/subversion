@@ -34,6 +34,7 @@
 #else
 #include <crtdbg.h>
 #include <io.h>
+#include <conio.h>
 #endif
 
 #include <apr.h>                /* for STDIN_FILENO */
@@ -42,6 +43,7 @@
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_ctype.h"
 #include "svn_dso.h"
@@ -64,15 +66,27 @@
 #include "private/svn_utf_private.h"
 #include "private/svn_string_private.h"
 
-#include "svn_private_config.h"
-
 #include "win32_crashrpt.h"
+
+#if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
+/* Before Visual Studio 2005, the C runtime didn't handle encodings for the
+   for the stdio output handling. */
+#define CMDLINE_USE_CUSTOM_ENCODING
 
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
 
 /* The stdout encoding. If null, it's the same as the native encoding. */
 static const char *output_encoding = NULL;
+#elif defined(WIN32) && defined(_MSC_VER)
+/* For now limit this code to Visual C++, as the result is highly dependent
+   on the CRT implementation */
+#define USE_WIN32_CONSOLE_SHORTCUT
+
+/* When TRUE, stdout/stderr is directly connected to a console */
+static svn_boolean_t shortcut_stdout_to_console = FALSE;
+static svn_boolean_t shortcut_stderr_to_console = FALSE;
+#endif
 
 
 int
@@ -114,7 +128,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif
 
 #ifdef WIN32
-#if _MSC_VER < 1400
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
   /* Initialize the input and output encodings. */
   {
     static char input_encoding_buffer[16];
@@ -128,33 +142,35 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
                  "CP%u", (unsigned) GetConsoleOutputCP());
     output_encoding = output_encoding_buffer;
   }
-#endif /* _MSC_VER < 1400 */
+#endif /* CMDLINE_USE_CUSTOM_ENCODING */
 
 #ifdef SVN_USE_WIN32_CRASHHANDLER
-  /* Attach (but don't load) the crash handler */
-  SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
+  if (!getenv("SVN_CMDLINE_DISABLE_CRASH_HANDLER"))
+    {
+      /* Attach (but don't load) the crash handler */
+      SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
 
 #if _MSC_VER >= 1400
-  /* ### This should work for VC++ 2002 (=1300) and later */
-  /* Show the abort message on STDERR instead of a dialog to allow
-     scripts (e.g. our testsuite) to continue after an abort without
-     user intervention. Allow overriding for easier debugging. */
-  if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
-    {
-      /* In release mode: Redirect abort() errors to stderr */
-      _set_error_mode(_OUT_TO_STDERR);
+      /* ### This should work for VC++ 2002 (=1300) and later */
+      /* Show the abort message on STDERR instead of a dialog to allow
+         scripts (e.g. our testsuite) to continue after an abort without
+         user intervention. Allow overriding for easier debugging. */
+      if (!getenv("SVN_CMDLINE_USE_DIALOG_FOR_ABORT"))
+        {
+          /* In release mode: Redirect abort() errors to stderr */
+          _set_error_mode(_OUT_TO_STDERR);
 
-      /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in release builds) */
-      _CrtSetReportFile( _CRT_WARN, _CRTDBG_FILE_STDERR);
-      _CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR);
-      _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
-      _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-      _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-      _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-    }
+          /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
+             (Ignored in release builds) */
+          _CrtSetReportFile( _CRT_WARN, _CRTDBG_FILE_STDERR);
+          _CrtSetReportFile( _CRT_ERROR, _CRTDBG_FILE_STDERR);
+          _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
+          _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+          _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+          _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+        }
 #endif /* _MSC_VER >= 1400 */
-
+    }
 #endif /* SVN_USE_WIN32_CRASHHANDLER */
 
 #endif /* WIN32 */
@@ -247,6 +263,31 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
       return EXIT_FAILURE;
     }
 
+#ifdef USE_WIN32_CONSOLE_SHORTCUT
+  if (_isatty(STDOUT_FILENO))
+    {
+      DWORD ignored;
+      HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+       /* stdout is a char device handle, but is it the console? */
+       if (GetConsoleMode(stdout_handle, &ignored))
+        shortcut_stdout_to_console = TRUE;
+
+       /* Don't close stdout_handle */
+    }
+  if (_isatty(STDERR_FILENO))
+    {
+      DWORD ignored;
+      HANDLE stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+
+       /* stderr is a char device handle, but is it the console? */
+      if (GetConsoleMode(stderr_handle, &ignored))
+          shortcut_stderr_to_console = TRUE;
+
+      /* Don't close stderr_handle */
+    }
+#endif
+
   return EXIT_SUCCESS;
 }
 
@@ -256,10 +297,12 @@ svn_cmdline_cstring_from_utf8(const char **dest,
                               const char *src,
                               apr_pool_t *pool)
 {
-  if (output_encoding == NULL)
-    return svn_utf_cstring_from_utf8(dest, src, pool);
-  else
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
+  if (output_encoding != NULL)
     return svn_utf_cstring_from_utf8_ex2(dest, src, output_encoding, pool);
+#endif
+
+  return svn_utf_cstring_from_utf8(dest, src, pool);
 }
 
 
@@ -277,10 +320,12 @@ svn_cmdline_cstring_to_utf8(const char **dest,
                             const char *src,
                             apr_pool_t *pool)
 {
-  if (input_encoding == NULL)
-    return svn_utf_cstring_to_utf8(dest, src, pool);
-  else
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
+  if (input_encoding != NULL)
     return svn_utf_cstring_to_utf8_ex2(dest, src, input_encoding, pool);
+#endif
+
+  return svn_utf_cstring_to_utf8(dest, src, pool);
 }
 
 
@@ -336,6 +381,45 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
   svn_error_t *err;
   const char *out;
 
+#ifdef USE_WIN32_CONSOLE_SHORTCUT
+  /* For legacy reasons the Visual C++ runtime converts output to the console
+     from the native 'ansi' encoding, to unicode, then back to 'ansi' and then
+     onwards to the console which is implemented as unicode.
+
+     For operations like 'svn status -v' this may cause about 70% of the total
+     processing time, with absolutely no gain.
+
+     For this specific scenario this shortcut exists. It has the nice side
+     effect of allowing full unicode output to the console.
+
+     Note that this shortcut is not used when the output is redirected, as in
+     that case the data is put on the pipe/file after the first conversion to
+     ansi. In this case the most expensive conversion is already avoided.
+   */
+  if ((stream == stdout && shortcut_stdout_to_console)
+      || (stream == stderr && shortcut_stderr_to_console))
+    {
+      WCHAR *result;
+
+      if (string[0] == '\0')
+        return SVN_NO_ERROR;
+
+      SVN_ERR(svn_cmdline_fflush(stream)); /* Flush existing output */
+
+      SVN_ERR(svn_utf__win32_utf8_to_utf16(&result, string, NULL, pool));
+
+      if (_cputws(result))
+        {
+          if (apr_get_os_error())
+          {
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
+          }
+        }
+
+      return SVN_NO_ERROR;
+    }
+#endif
+
   err = svn_cmdline_cstring_from_utf8(&out, string, pool);
 
   if (err)
@@ -356,7 +440,7 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
         {
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+          if (SVN__APR_STATUS_IS_EPIPE(apr_get_os_error()))
             return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
@@ -379,7 +463,7 @@ svn_cmdline_fflush(FILE *stream)
         {
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+          if (SVN__APR_STATUS_IS_EPIPE(apr_get_os_error()))
             return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
@@ -393,10 +477,12 @@ svn_cmdline_fflush(FILE *stream)
 
 const char *svn_cmdline_output_encoding(apr_pool_t *pool)
 {
+#ifdef CMDLINE_USE_CUSTOM_ENCODING
   if (output_encoding)
     return apr_pstrdup(pool, output_encoding);
-  else
-    return SVN_APR_LOCALE_CHARSET;
+#endif
+
+  return SVN_APR_LOCALE_CHARSET;
 }
 
 int
@@ -504,15 +590,6 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-
-  /* The server-cert, client-cert, and client-cert-password providers. */
-  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
-                                                  "windows",
-                                                  "ssl_server_trust",
-                                                  pool));
-
-  if (provider)
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -680,12 +757,12 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
       outstr, pool, svn_xml_protect_pcdata,
       inherited_prop ? "inherited_property" : "property",
       "name", propname,
-      "encoding", encoding, NULL);
+      "encoding", encoding, SVN_VA_NULL);
   else
     svn_xml_make_open_tag(
       outstr, pool, svn_xml_protect_pcdata,
       inherited_prop ? "inherited_property" : "property",
-      "name", propname, NULL);
+      "name", propname, SVN_VA_NULL);
 
   svn_stringbuf_appendcstr(*outstr, xml_safe);
 
@@ -911,7 +988,7 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
           svn_xml_make_open_tag(
             outstr, pool, svn_xml_self_closing,
             inherited_props ? "inherited_property" : "property",
-            "name", pname, NULL);
+            "name", pname, SVN_VA_NULL);
         }
       else
         {

@@ -209,7 +209,7 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
                                             ATOMIC_NAME,
                                             apr_itoa(pool,
                                                      id),
-                                            NULL),
+                                            SVN_VA_NULL),
                                 FALSE));
   SVN_ERR(svn_named_atomic__get(&atomic_out,
                                 ns,
@@ -217,7 +217,7 @@ test_pipeline(int id, int count, int iterations, apr_pool_t *pool)
                                             ATOMIC_NAME,
                                             apr_itoa(pool,
                                                      (id + 1) % count),
-                                            NULL),
+                                            SVN_VA_NULL),
                                 FALSE));
 
   /* our iteration counter */

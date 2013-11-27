@@ -34,6 +34,7 @@
 #include <apr_lib.h>
 #include <apr_file_info.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_version.h"
@@ -50,7 +51,6 @@
 #include "private/svn_opt_private.h"
 
 #include "opt.h"
-#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -186,7 +186,7 @@ format_option(const char **string,
     opts = apr_psprintf(pool, "--%s", opt->name);
 
   if (opt->has_arg)
-    opts = apr_pstrcat(pool, opts, _(" ARG"), (char *)NULL);
+    opts = apr_pstrcat(pool, opts, _(" ARG"), SVN_VA_NULL);
 
   if (doc)
     opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
@@ -933,7 +933,7 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
             }
         }
 
-      target = apr_pstrcat(pool, true_target, peg_rev, (char *)NULL);
+      target = apr_pstrcat(pool, true_target, peg_rev, SVN_VA_NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }

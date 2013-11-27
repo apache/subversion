@@ -35,10 +35,10 @@
 
 #include <expat.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_props.h"
@@ -48,6 +48,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_auth_private.h"
 
 #include "ra_serf.h"
 
@@ -192,13 +193,65 @@ construct_realm(svn_ra_serf__session_t *session,
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "%s, %s, %s, %s, %s (%s)",
-                      (char*)svn_hash_gets(org, "OU"),
-                      (char*)svn_hash_gets(org, "O"),
-                      (char*)svn_hash_gets(org, "L"),
-                      (char*)svn_hash_gets(org, "ST"),
-                      (char*)svn_hash_gets(org, "C"),
-                      (char*)svn_hash_gets(org, "E"));
+  const char *org_unit = svn_hash_gets(org, "OU");
+  const char *org_name = svn_hash_gets(org, "O");
+  const char *locality = svn_hash_gets(org, "L");
+  const char *state = svn_hash_gets(org, "ST");
+  const char *country = svn_hash_gets(org, "C");
+  const char *email = svn_hash_gets(org, "E");
+  svn_stringbuf_t *buf = svn_stringbuf_create_empty(pool);
+
+  if (org_unit)
+    {
+      svn_stringbuf_appendcstr(buf, org_unit);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (org_name)
+    {
+      svn_stringbuf_appendcstr(buf, org_name);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (locality)
+    {
+      svn_stringbuf_appendcstr(buf, locality);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (state)
+    {
+      svn_stringbuf_appendcstr(buf, state);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  if (country)
+    {
+      svn_stringbuf_appendcstr(buf, country);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
+
+  /* Chop ', ' if any. */
+  svn_stringbuf_chop(buf, 2);
+
+  if (email)
+    {
+      svn_stringbuf_appendcstr(buf, "(");
+      svn_stringbuf_appendcstr(buf, email);
+      svn_stringbuf_appendcstr(buf, ")");
+    }
+
+  return buf->data;
+}
+
+static void append_reason(svn_stringbuf_t *errmsg, const char *reason, int *reasons)
+{
+  if (*reasons < 1)
+    svn_stringbuf_appendcstr(errmsg, _(": "));
+  else
+    svn_stringbuf_appendcstr(errmsg, _(", "));
+  svn_stringbuf_appendcstr(errmsg, reason);
+  (*reasons)++;
 }
 
 /* This function is called on receiving a ssl certificate of a server when
@@ -218,26 +271,70 @@ ssl_server_cert(void *baton, int failures,
   svn_auth_iterstate_t *state;
   const char *realmstring;
   apr_uint32_t svn_failures;
-  apr_hash_t *issuer, *subject, *serf_cert;
-  apr_array_header_t *san;
+  apr_hash_t *issuer;
+  apr_hash_t *subject = NULL;
+  apr_hash_t *serf_cert = NULL;
   void *creds;
   int found_matching_hostname = 0;
 
-  /* Implicitly approve any non-server certs. */
-  if (serf_ssl_cert_depth(cert) > 0)
+  svn_failures = (ssl_convert_serf_failures(failures)
+      | conn->server_cert_failures);
+
+  if (serf_ssl_cert_depth(cert) == 0)
     {
-      if (failures)
-        conn->server_cert_failures |= ssl_convert_serf_failures(failures);
-      return APR_SUCCESS;
+      /* If the depth is 0, the hostname must match the certificate.
+
+      ### This should really be handled by serf, which should pass an error
+          for this case, but that has backwards compatibility issues. */
+      apr_array_header_t *san;
+
+      serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
+
+      san = svn_hash_gets(serf_cert, "subjectAltName");
+      /* Try to find matching server name via subjectAltName first... */
+      if (san) {
+          int i;
+          for (i = 0; i < san->nelts; i++) {
+              const char *s = APR_ARRAY_IDX(san, i, const char*);
+              if (apr_fnmatch(s, conn->session->session_url.hostname,
+                  APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
+              {
+                  found_matching_hostname = 1;
+                  break;
+              }
+          }
+      }
+
+      /* Match server certificate CN with the hostname of the server */
+      if (!found_matching_hostname)
+        {
+          const char *hostname = NULL;
+
+          subject = serf_ssl_cert_subject(cert, scratch_pool);
+
+          if (subject)
+            hostname = svn_hash_gets(subject, "CN");
+
+          if (!hostname
+              || apr_fnmatch(hostname, conn->session->session_url.hostname,
+                             APR_FNM_PERIOD | APR_FNM_CASE_BLIND) != APR_SUCCESS)
+          {
+              svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
+          }
+      }
     }
 
+  if (!svn_failures)
+    return SVN_NO_ERROR;
+
   /* Extract the info from the certificate */
-  subject = serf_ssl_cert_subject(cert, scratch_pool);
+  if (! subject)
+    subject = serf_ssl_cert_subject(cert, scratch_pool);
   issuer = serf_ssl_cert_issuer(cert, scratch_pool);
-  serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
+  if (! serf_cert)
+    serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
   cert_info.hostname = svn_hash_gets(subject, "CN");
-  san = svn_hash_gets(serf_cert, "subjectAltName");
   cert_info.fingerprint = svn_hash_gets(serf_cert, "sha1");
   if (! cert_info.fingerprint)
     cert_info.fingerprint = apr_pstrdup(scratch_pool, "<unknown>");
@@ -250,31 +347,56 @@ ssl_server_cert(void *baton, int failures,
   cert_info.issuer_dname = convert_organisation_to_str(issuer, scratch_pool);
   cert_info.ascii_cert = serf_ssl_cert_export(cert, scratch_pool);
 
-  svn_failures = (ssl_convert_serf_failures(failures)
-                  | conn->server_cert_failures);
-
-  /* Try to find matching server name via subjectAltName first... */
-  if (san) {
-      int i;
-      for (i = 0; i < san->nelts; i++) {
-          char *s = APR_ARRAY_IDX(san, i, char*);
-          if (apr_fnmatch(s, conn->session->session_url.hostname,
-                          APR_FNM_PERIOD) == APR_SUCCESS) {
-              found_matching_hostname = 1;
-              cert_info.hostname = s;
-              break;
-          }
-      }
-  }
-
-  /* Match server certificate CN with the hostname of the server */
-  if (!found_matching_hostname && cert_info.hostname)
+  /* Handle any non-server certs. */
+  if (serf_ssl_cert_depth(cert) > 0)
     {
-      if (apr_fnmatch(cert_info.hostname, conn->session->session_url.hostname,
-                      APR_FNM_PERIOD) == APR_FNM_NOMATCH)
+      svn_error_t *err;
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                             &cert_info);
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                             &svn_failures);
+
+      realmstring = apr_psprintf(scratch_pool, "AUTHORITY:%s",
+                                 cert_info.fingerprint);
+
+      err = svn_auth_first_credentials(&creds, &state,
+                                       SVN_AUTH_CRED_SSL_SERVER_AUTHORITY,
+                                       realmstring,
+                                       conn->session->wc_callbacks->auth_baton,
+                                       scratch_pool);
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
+
+      svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
+                             SVN_AUTH_PARAM_SSL_SERVER_FAILURES, NULL);
+
+      if (err)
         {
-          svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
+          if (err->apr_err != SVN_ERR_AUTHN_NO_PROVIDER)
+            return svn_error_trace(err);
+
+          /* No provider registered that handles server authorities */
+          svn_error_clear(err);
+          creds = NULL;
         }
+
+      if (creds)
+        {
+          server_creds = creds;
+          SVN_ERR(svn_auth_save_credentials(state, scratch_pool));
+
+          svn_failures &= ~server_creds->accepted_failures;
+        }
+
+      if (svn_failures)
+        conn->server_cert_failures |= svn_failures;
+
+      return APR_SUCCESS;
     }
 
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
@@ -295,14 +417,56 @@ ssl_server_cert(void *baton, int failures,
   if (creds)
     {
       server_creds = creds;
+      svn_failures &= ~server_creds->accepted_failures;
       SVN_ERR(svn_auth_save_credentials(state, scratch_pool));
+    }
+
+  while (svn_failures && creds)
+    {
+      SVN_ERR(svn_auth_next_credentials(&creds, state, scratch_pool));
+
+      if (creds)
+        {
+          server_creds = creds;
+          svn_failures &= ~server_creds->accepted_failures;
+          SVN_ERR(svn_auth_save_credentials(state, scratch_pool));
+        }
     }
 
   svn_auth_set_parameter(conn->session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO, NULL);
 
-  if (!server_creds)
-    return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL, NULL);
+  /* Are there non accepted failures left? */
+  if (svn_failures)
+    {
+      svn_stringbuf_t *errmsg;
+      int reasons = 0;
+
+      errmsg = svn_stringbuf_create(
+                 _("Server SSL certificate verification failed"),
+                 scratch_pool);
+
+
+      if (svn_failures & SVN_AUTH_SSL_NOTYETVALID)
+        append_reason(errmsg, _("certificate is not yet valid"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_EXPIRED)
+        append_reason(errmsg, _("certificate has expired"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_CNMISMATCH)
+        append_reason(errmsg,
+                      _("certificate issued for a different hostname"),
+                      &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_UNKNOWNCA)
+        append_reason(errmsg, _("issuer is not trusted"), &reasons);
+
+      if (svn_failures & SVN_AUTH_SSL_OTHER)
+        append_reason(errmsg, _("and other reason(s)"), &reasons);
+
+      return svn_error_create(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED, NULL,
+                              errmsg->data);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -476,7 +640,7 @@ connection_closed(svn_ra_serf__connection_t *conn,
 {
   if (why)
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_wrap_apr(why, NULL);
     }
 
   if (conn->session->using_ssl)
@@ -624,6 +788,9 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
  *
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  *
+ * If DAV_HEADERS is non-zero, it will add standard DAV capabilites headers
+ * to request.
+ *
  * REQUEST_POOL should live for the duration of the request. Serf will
  * construct this and provide it to the request_setup callback, so we
  * should just use that one.
@@ -636,6 +803,7 @@ setup_serf_req(serf_request_t *request,
                const char *method, const char *url,
                serf_bucket_t *body_bkt, const char *content_type,
                const char *accept_encoding,
+               svn_boolean_t dav_headers,
                apr_pool_t *request_pool,
                apr_pool_t *scratch_pool)
 {
@@ -702,12 +870,15 @@ setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(*hdrs_bkt, "Accept-Encoding", accept_encoding);
     }
 
-  /* These headers need to be sent with every request; see issue #3255
-     ("mod_dav_svn does not pass client capabilities to start-commit
-     hooks") for why. */
-  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+  /* These headers need to be sent with every request except GET; see
+     issue #3255 ("mod_dav_svn does not pass client capabilities to
+     start-commit hooks") for why. */
+  if (dav_headers)
+    {
+      serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+      serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+      serf_bucket_headers_setn(*hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -747,8 +918,6 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
          the connection timed out.  */
       if (APR_STATUS_IS_TIMEUP(status))
         {
-          svn_error_clear(err);
-          err = SVN_NO_ERROR;
           status = 0;
 
           if (sess->timeout)
@@ -759,8 +928,11 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                 }
               else
                 {
-                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                          _("Connection timed out"));
+                  return
+                      svn_error_compose_create(
+                            err,
+                            svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                             _("Connection timed out")));
                 }
             }
         }
@@ -808,6 +980,23 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
   /* Wait until the response logic marks its DONE status.  */
   err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
                                       scratch_pool);
+
+  /* A callback invocation has been canceled. In this simple case of
+     context_run_one, we can keep the ra-session operational by resetting
+     the connection.
+
+     If we don't do this, the next context run will notice that the connection
+     is still in the error state and will just return SVN_ERR_CEASE_INVOCATION
+     (=the last error for the connection) again  */
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+    {
+      apr_status_t status = serf_connection_reset(handler->conn->conn);
+
+      if (status)
+        err = svn_error_compose_create(err,
+                                       svn_ra_serf__wrap_err(status, NULL));
+    }
+
   if (handler->server_error)
     {
       err = svn_error_compose_create(err, handler->server_error->error);
@@ -1391,19 +1580,22 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
   int xml_status;
 
   xml_status = XML_Parse(ctx->xmlp, data, (int) len, 0);
-  if (xml_status == XML_STATUS_ERROR && !ctx->ignore_errors)
+
+  if (! ctx->ignore_errors)
     {
-      if (sl == NULL)
-        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                 _("XML parsing failed"));
+      SVN_ERR(ctx->error);
 
-      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                               _("XML parsing failed: (%d %s)"),
-                               sl->code, sl->reason);
-    }
+      if (xml_status != XML_STATUS_OK)
+        {
+          if (sl == NULL)
+            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("XML parsing failed"));
 
-  if (ctx->error && !ctx->ignore_errors)
-    return svn_error_trace(ctx->error);
+          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                   _("XML parsing failed: (%d %s)"),
+                                   sl->code, sl->reason);
+        }
+     }
 
   return SVN_NO_ERROR;
 }
@@ -1484,14 +1676,26 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   if (pending_empty &&
       parser->pending->network_eof)
     {
+      int xml_status;
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
-      /* Tell the parser that no more content will be parsed. Ignore the
-         return status. We just don't care.  */
-      (void) XML_Parse(parser->xmlp, NULL, 0, 1);
+      /* Tell the parser that no more content will be parsed. */
+      xml_status = XML_Parse(parser->xmlp, NULL, 0, 1);
 
       apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
+
+      if (! parser->ignore_errors)
+        {
+          SVN_ERR(parser->error);
+
+          if (xml_status != XML_STATUS_OK)
+            {
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                       _("XML parsing failed"));
+            }
+        }
+
       add_done_item(parser);
     }
 
@@ -1591,22 +1795,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       return svn_error_trace(err);
     }
 
-  if (ctx->headers_baton == NULL)
-    ctx->headers_baton = serf_bucket_response_get_headers(response);
-  else if (ctx->headers_baton != serf_bucket_response_get_headers(response))
-    {
-      /* We got a new response to an existing parser...
-         This tells us the connection has restarted and we should continue
-         where we stopped last time.
-       */
-
-      /* Is this a second attempt?? */
-      if (!ctx->skip_size)
-        ctx->skip_size = ctx->read_size;
-
-      ctx->read_size = 0; /* New request, nothing read */
-    }
-
   if (!ctx->xmlp)
     {
       ctx->xmlp = XML_ParserCreate(NULL);
@@ -1626,39 +1814,9 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       apr_size_t len;
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
-
       if (SERF_BUCKET_READ_ERROR(status))
         {
           return svn_ra_serf__wrap_err(status, NULL);
-        }
-
-      ctx->read_size += len;
-
-      if (ctx->skip_size)
-        {
-          /* Handle restarted requests correctly: Skip what we already read */
-          apr_size_t skip;
-
-          if (ctx->skip_size >= ctx->read_size)
-            {
-            /* Eek.  What did the file shrink or something? */
-              if (APR_STATUS_IS_EOF(status))
-                {
-                  SVN_ERR_MALFUNCTION();
-                }
-
-              /* Skip on to the next iteration of this loop. */
-              if (APR_STATUS_IS_EAGAIN(status))
-                {
-                  return svn_ra_serf__wrap_err(status, NULL);
-                }
-              continue;
-            }
-
-          skip = (apr_size_t)(len - (ctx->read_size - ctx->skip_size));
-          data += skip;
-          len -= skip;
-          ctx->skip_size = 0;
         }
 
       /* Note: once the callbacks invoked by inject_to_parser() sets the
@@ -1706,12 +1864,25 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
+              int xml_status;
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
-              /* Ignore the return status. We just don't care.  */
-              (void) XML_Parse(ctx->xmlp, NULL, 0, 1);
+              xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
 
               apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
+
+              if (! ctx->ignore_errors)
+                {
+                  SVN_ERR(ctx->error);
+
+                  if (xml_status != XML_STATUS_OK)
+                    {
+                      return svn_error_create(
+                                    SVN_ERR_XML_MALFORMED, NULL,
+                                    _("The XML response contains invalid XML"));
+                    }
+                }
+
               add_done_item(ctx);
             }
 
@@ -1831,12 +2002,26 @@ handle_response(serf_request_t *request,
     {
       /* Uh-oh. Our connection died.  */
       if (handler->response_error)
-        SVN_ERR(handler->response_error(request, response, 0,
-                                        handler->response_error_baton));
+        {
+          /* Give a handler chance to prevent request requeue. */
+          SVN_ERR(handler->response_error(request, response, 0,
+                                          handler->response_error_baton));
 
-      /* Requeue another request for this handler.
-         ### how do we know if the handler can deal with this?!  */
-      svn_ra_serf__request_create(handler);
+          svn_ra_serf__request_create(handler);
+        }
+      /* Response error callback is not configured. Requeue another request
+         for this handler only if we didn't started to process body.
+         Return error otherwise. */
+      else if (!handler->reading_body)
+        {
+          svn_ra_serf__request_create(handler);
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                    _("%s request on '%s' failed"),
+                                   handler->method, handler->path);
+        }
 
       return SVN_NO_ERROR;
     }
@@ -2146,7 +2331,8 @@ setup_request(serf_request_t *request,
   SVN_ERR(setup_serf_req(request, req_bkt, &headers_bkt,
                          handler->session, handler->method, handler->path,
                          body_bkt, handler->body_type, accept_encoding,
-                         request_pool, scratch_pool));
+                         !handler->no_dav_headers, request_pool,
+                         scratch_pool));
 
   if (handler->header_delegate)
     {
@@ -2156,7 +2342,7 @@ setup_request(serf_request_t *request,
                                        request_pool));
     }
 
-  return APR_SUCCESS;
+  return SVN_NO_ERROR;
 }
 
 /* Implements the serf_request_setup_t interface (which sets up both a
@@ -2418,8 +2604,12 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                     _("DAV request failed: 411 Content length required. The "
                       "server or an intermediate proxy does not accept "
-                      "chunked encoding. Try setting 'busted-proxy=yes' "
-                      "in your client configuration."));
+                      "chunked encoding. Try setting 'http-chunked-requests' "
+                      "to 'auto' or 'no' in your client configuration."));
+      case 501:
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("The requested feature is not supported by "
+                                   "'%s'"), path);
     }
 
   if (sline.code >= 300)

@@ -566,7 +566,7 @@ log_entry_receiver_xml(void *baton,
   revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
-                        "revision", revstr, NULL);
+                        "revision", revstr, SVN_VA_NULL);
 
   /* <author>xxx</author> */
   svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
@@ -587,7 +587,7 @@ log_entry_receiver_xml(void *baton,
 
       /* <paths> */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
-                            NULL);
+                            SVN_VA_NULL);
 
       /* Get an array of sorted hash keys. */
       sorted_paths = svn_sort__hash(log_entry->changed_paths2,
@@ -619,7 +619,7 @@ log_entry_receiver_xml(void *baton,
                                                      log_item->text_modified),
                                     "prop-mods", svn_tristate__to_word(
                                                      log_item->props_modified),
-                                    NULL);
+                                    SVN_VA_NULL);
             }
           else
             {
@@ -632,7 +632,7 @@ log_entry_receiver_xml(void *baton,
                                                      log_item->text_modified),
                                     "prop-mods", svn_tristate__to_word(
                                                      log_item->props_modified),
-                                    NULL);
+                                    SVN_VA_NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -652,7 +652,7 @@ log_entry_receiver_xml(void *baton,
   svn_compat_log_revprops_clear(log_entry->revprops);
   if (log_entry->revprops && apr_hash_count(log_entry->revprops) > 0)
     {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", SVN_VA_NULL);
       SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, log_entry->revprops,
                                                FALSE, /* name_only */
                                                FALSE, pool));
@@ -681,6 +681,9 @@ svn_cl__log(apr_getopt_t *os,
   const char *target;
   int i;
   apr_array_header_t *revprops;
+  svn_move_behavior_t move_behavior = opt_state->auto_moves
+                                    ? svn_move_behavior_auto_moves
+                                    : svn_move_behavior_explicit_moves;
 
   if (!opt_state->xml)
     {
@@ -831,13 +834,14 @@ svn_cl__log(apr_getopt_t *os,
           if (!opt_state->quiet)
             APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
         }
-      SVN_ERR(svn_client_log5(targets,
+      SVN_ERR(svn_client_log6(targets,
                               &lb.target_peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              move_behavior,
                               revprops,
                               log_entry_receiver_xml,
                               &lb,
@@ -854,13 +858,14 @@ svn_cl__log(apr_getopt_t *os,
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
       if (!opt_state->quiet)
         APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
-      SVN_ERR(svn_client_log5(targets,
+      SVN_ERR(svn_client_log6(targets,
                               &lb.target_peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              move_behavior,
                               revprops,
                               log_entry_receiver,
                               &lb,

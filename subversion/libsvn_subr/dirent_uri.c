@@ -1293,6 +1293,29 @@ svn_relpath_split(const char **dirpath,
     *base_name = svn_relpath_basename(relpath, pool);
 }
 
+const char *
+svn_relpath_limit(const char *relpath,
+                  int max_components,
+                  apr_pool_t *result_pool)
+{
+  const char *end;
+  assert(relpath_is_canonical(relpath));
+
+  if (max_components <= 0)
+    return "";
+
+  for (end = relpath; *end; end++)
+    {
+      if (*end == '/')
+        {
+          if (!--max_components)
+            break;
+        }
+    }
+
+  return apr_pstrmemdup(result_pool, relpath, end-relpath);
+}
+
 char *
 svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
@@ -1862,6 +1885,9 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
 #endif /* SVN_USE_DOS_PATHS */
 
   /* Now validate the rest of the URI. */
+  seg = ptr;
+  while (*ptr && (*ptr != '/'))
+    ptr++;
   while(1)
     {
       apr_size_t seglen = ptr - seg;
@@ -1880,9 +1906,8 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
 
       if (*ptr == '/')
         ptr++;
+
       seg = ptr;
-
-
       while (*ptr && (*ptr != '/'))
         ptr++;
     }
@@ -2396,7 +2421,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                                      "no path"), url);
 
         /* We still know that the path starts with a slash. */
-        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, NULL);
+        *dirent = apr_pstrcat(pool, "//", hostname, dup_path, SVN_VA_NULL);
       }
     else
       *dirent = dup_path;
@@ -2429,18 +2454,18 @@ svn_uri_get_file_url_from_dirent(const char **url,
   if (dirent[0] == '/' && dirent[1] == '\0')
     dirent = NULL; /* "file://" is the canonical form of "file:///" */
 
-  *url = apr_pstrcat(pool, "file://", dirent, (char *)NULL);
+  *url = apr_pstrcat(pool, "file://", dirent, SVN_VA_NULL);
 #else
   if (dirent[0] == '/')
     {
       /* Handle UNC paths //server/share -> file://server/share */
       assert(dirent[1] == '/'); /* Expect UNC, not non-absolute */
 
-      *url = apr_pstrcat(pool, "file:", dirent, NULL);
+      *url = apr_pstrcat(pool, "file:", dirent, SVN_VA_NULL);
     }
   else
     {
-      char *uri = apr_pstrcat(pool, "file:///", dirent, NULL);
+      char *uri = apr_pstrcat(pool, "file:///", dirent, SVN_VA_NULL);
       apr_size_t len = 8 /* strlen("file:///") */ + strlen(dirent);
 
       /* "C:/" is a canonical dirent on Windows,
@@ -2474,7 +2499,7 @@ svn_fspath__canonicalize(const char *fspath,
     return "/";
 
   return apr_pstrcat(pool, "/", svn_relpath_canonicalize(fspath, pool),
-                     (char *)NULL);
+                     SVN_VA_NULL);
 }
 
 
@@ -2507,7 +2532,7 @@ svn_fspath__dirname(const char *fspath,
     return apr_pstrdup(pool, fspath);
   else
     return apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
-                       (char *)NULL);
+                       SVN_VA_NULL);
 }
 
 
@@ -2551,9 +2576,9 @@ svn_fspath__join(const char *fspath,
   if (relpath[0] == '\0')
     result = apr_pstrdup(result_pool, fspath);
   else if (fspath[1] == '\0')
-    result = apr_pstrcat(result_pool, "/", relpath, (char *)NULL);
+    result = apr_pstrcat(result_pool, "/", relpath, SVN_VA_NULL);
   else
-    result = apr_pstrcat(result_pool, fspath, "/", relpath, (char *)NULL);
+    result = apr_pstrcat(result_pool, fspath, "/", relpath, SVN_VA_NULL);
 
   assert(svn_fspath__is_canonical(result));
   return result;
@@ -2572,7 +2597,7 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
                        svn_relpath_get_longest_ancestor(fspath1 + 1,
                                                         fspath2 + 1,
                                                         result_pool),
-                       (char *)NULL);
+                       SVN_VA_NULL);
 
   assert(svn_fspath__is_canonical(result));
   return result;

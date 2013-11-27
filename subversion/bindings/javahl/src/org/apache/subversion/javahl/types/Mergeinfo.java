@@ -37,13 +37,9 @@ import org.apache.subversion.javahl.SubversionException;
  */
 public class Mergeinfo implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is a incompatible change made to
+    // this class.  See the java documentation for when a change is incompatible.
+    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
     private static final long serialVersionUID = 1L;
 
     /**
@@ -108,6 +104,11 @@ public class Mergeinfo implements java.io.Serializable
             addRevisionRange(mergeSrc, range);
     }
 
+    public void addRevisions(String mergeSrc, RevisionRangeList ranges)
+    {
+        addRevisions(mergeSrc, ranges.getRanges());
+    }
+
     /**
      * Add a revision range to the merged revisions for a path.  If
      * the merge source already has associated revision ranges, add
@@ -153,6 +154,14 @@ public class Mergeinfo implements java.io.Serializable
     public List<RevisionRange> getRevisionRange(String mergeSrc)
     {
         return this.getRevisions(mergeSrc);
+    }
+
+    /**
+     * Like {@link #getReivsionRange}, but returns a {@link RevisionRangeList}.
+     */
+    public RevisionRangeList getRevisionRangeList(String mergeSrc)
+    {
+        return new RevisionRangeList(getRevisionRange(mergeSrc));
     }
 
     /**

@@ -53,6 +53,7 @@
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
+
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
@@ -1153,7 +1154,7 @@ create_private_resource(const dav_resource *base,
 
   if (base->info->repos->root_path[1])
     comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                                path->data, (char *)NULL);
+                                path->data, SVN_VA_NULL);
   else
     comb->res.uri = path->data;
   comb->res.info = &comb->priv;
@@ -1347,7 +1348,7 @@ dav_svn_split_uri(request_rec *r,
         if (ch == '\0')
           {
             /* relative is just "!svn", which is malformed. */
-            return dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+            return dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                       SVN_ERR_APMOD_MALFORMED_URI,
                                       "Nothing follows the svn special_uri.");
           }
@@ -1374,7 +1375,7 @@ dav_svn_split_uri(request_rec *r,
                           *repos_path = NULL;
                         else
                           return dav_svn__new_error(
-                                     r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                     r->pool, HTTP_NOT_FOUND,
                                      SVN_ERR_APMOD_MALFORMED_URI,
                                      "Missing info after special_uri.");
                       }
@@ -1398,7 +1399,7 @@ dav_svn_split_uri(request_rec *r,
                             /* Did we break from the loop prematurely? */
                             if (j != (defn->numcomponents - 1))
                               return dav_svn__new_error(
-                                         r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                         r->pool, HTTP_NOT_FOUND,
                                          SVN_ERR_APMOD_MALFORMED_URI,
                                          "Not enough components after "
                                          "special_uri.");
@@ -1412,13 +1413,13 @@ dav_svn_split_uri(request_rec *r,
                         else
                           {
                             /* Found a slash after the special components. */
-                            *repos_path = apr_pstrdup(r->pool, start);
+                            *repos_path = apr_pstrdup(r->pool, start - 1);
                           }
                       }
                     else
                       {
                         return
-                          dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                          dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                         SVN_ERR_APMOD_MALFORMED_URI,
                                         "Unknown data after special_uri.");
                       }
@@ -1429,7 +1430,7 @@ dav_svn_split_uri(request_rec *r,
 
             if (defn->name == NULL)
               return
-                dav_svn__new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                dav_svn__new_error(r->pool, HTTP_NOT_FOUND,
                                    SVN_ERR_APMOD_MALFORMED_URI,
                                    "Couldn't match subdir after special_uri.");
           }
@@ -1438,7 +1439,7 @@ dav_svn_split_uri(request_rec *r,
       {
         /* There's no "!svn/" at all, so the relative path is already
            a valid path within the repository.  */
-        *repos_path = apr_pstrdup(r->pool, relative);
+        *repos_path = apr_pstrdup(r->pool, relative - 1);
       }
   }
 
@@ -1515,7 +1516,7 @@ get_parentpath_resource(request_rec *r,
   if (r->uri[len-1] != '/')
     {
       new_uri = apr_pstrcat(r->pool, ap_escape_uri(r->pool, r->uri),
-                            "/", (char *)NULL);
+                            "/", SVN_VA_NULL);
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool, new_uri, r));
       return dav_svn__new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
@@ -1969,26 +1970,12 @@ get_resource(request_rec *r,
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
-  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+  if (dav_svn__is_parentpath_list(r))
     {
-      char *uri = apr_pstrdup(r->pool, r->uri);
-      char *parentpath = apr_pstrdup(r->pool, root_path);
-      apr_size_t uri_len = strlen(uri);
-      apr_size_t parentpath_len = strlen(parentpath);
-
-      if (uri[uri_len-1] == '/')
-        uri[uri_len-1] = '\0';
-
-      if (parentpath[parentpath_len-1] == '/')
-        parentpath[parentpath_len-1] = '\0';
-
-      if (strcmp(parentpath, uri) == 0)
-        {
-          err = get_parentpath_resource(r, resource);
-          if (err)
-            return err;
-          return NULL;
-        }
+      err = get_parentpath_resource(r, resource);
+      if (err)
+        return err;
+      return NULL;
     }
 
   /* This does all the work of interpreting/splitting the request uri. */
@@ -2158,7 +2145,7 @@ get_resource(request_rec *r,
   }
 
   /* Retrieve/cache open repository */
-  repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, (char *)NULL);
+  repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, SVN_VA_NULL);
   apr_pool_userdata_get(&userdata, repos_key, r->connection->pool);
   repos->repos = userdata;
   if (repos->repos == NULL)
@@ -2172,7 +2159,7 @@ get_resource(request_rec *r,
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                     dav_svn__get_fulltext_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                    dav_svn__get_revprop_cache_flag(r) ? "1" :"0");
+                    dav_svn__get_revprop_cache_flag(r) ? "2" :"0");
 
       /* Disallow BDB/event until issue 4157 is fixed. */
       if (!strcmp(ap_show_mpm(), "event"))
@@ -2204,9 +2191,16 @@ get_resource(request_rec *r,
              leak that path back to the client, because that would be
              a security risk, but we do want to log the real error on
              the server side. */
-          return dav_svn__sanitize_error(serr, "Could not open the requested "
-                                         "SVN filesystem",
-                                         HTTP_INTERNAL_SERVER_ERROR, r);
+
+          apr_status_t cause = svn_error_root_cause(serr)->apr_err;
+          if (APR_STATUS_IS_ENOENT(cause) || APR_STATUS_IS_ENOTDIR(cause))
+            return dav_svn__sanitize_error(
+                serr, "Could not find the requested SVN filesystem",
+                HTTP_NOT_FOUND, r);
+          else
+            return dav_svn__sanitize_error(
+                serr, "Could not open the requested SVN filesystem",
+                HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
       /* Cache the open repos for the next request on this connection */
@@ -2364,7 +2358,7 @@ get_resource(request_rec *r,
                                          "/",
                                          r->args ? "?" : "",
                                          r->args ? r->args : "",
-                                         (char *)NULL);
+                                         SVN_VA_NULL);
       apr_table_setn(r->headers_out, "Location",
                      ap_construct_url(r->pool, new_path, r));
       return dav_svn__new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
@@ -2408,21 +2402,12 @@ get_parent_path(const char *path,
                 svn_boolean_t is_urlpath,
                 apr_pool_t *pool)
 {
-  apr_size_t len;
-  char *tmp = apr_pstrdup(pool, path);
-
-  len = strlen(tmp);
-
-  if (len > 0)
+  if (*path != '\0') /* not an empty string */
     {
-      /* Remove any trailing slash; else svn_path_dirname() asserts. */
-      if (tmp[len-1] == '/')
-        tmp[len-1] = '\0';
-
       if (is_urlpath)
-        return svn_urlpath__dirname(tmp, pool);
+        return svn_urlpath__dirname(path, pool);
       else
-        return svn_fspath__dirname(tmp, pool);
+        return svn_fspath__dirname(path, pool);
     }
 
   return path;
@@ -2458,13 +2443,18 @@ get_parent_resource(const dav_resource *resource,
       parent->versioned = 1;
       parent->hooks = resource->hooks;
       parent->pool = resource->pool;
-      parent->uri = get_parent_path(resource->uri, TRUE, resource->pool);
+      parent->uri = get_parent_path(svn_urlpath__canonicalize(resource->uri,
+                                                              resource->pool),
+                                    TRUE, resource->pool);
       parent->info = parentinfo;
 
       parentinfo->uri_path =
-        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
-                                             TRUE, resource->pool),
-                             resource->pool);
+        svn_stringbuf_create(
+               get_parent_path(
+                   svn_urlpath__canonicalize(resource->info->uri_path->data,
+                                            resource->pool),
+                   TRUE, resource->pool),
+               resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;
@@ -3372,7 +3362,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           /* ### The xml output doesn't like to see a trailing slash on
              ### the visible portion, so avoid that. */
           if (is_dir)
-            href = apr_pstrcat(entry_pool, href, "/", (char *)NULL);
+            href = apr_pstrcat(entry_pool, href, "/", SVN_VA_NULL);
 
           if (gen_html)
             name = href;
@@ -3624,11 +3614,11 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                     resource->info->repos->base_url,
                                     ap_escape_uri(resource->pool,
                                                   resource->info->r->uri),
-                                    NULL);
+                                    SVN_VA_NULL);
               str_root = apr_pstrcat(resource->pool,
                                      resource->info->repos->base_url,
                                      resource->info->repos->root_path,
-                                     NULL);
+                                     SVN_VA_NULL);
 
               serr = svn_subst_build_keywords3(&kw, keywords->data,
                                                str_cmt_rev, str_uri, str_root,
@@ -3805,23 +3795,29 @@ copy_resource(const dav_resource *src,
         return err;
     }
 
-  serr = svn_dirent_get_absolute(&src_repos_path,
-                                 svn_repos_path(src->info->repos->repos,
-                                                src->pool),
-                                 src->pool);
-  if (!serr)
-    serr = svn_dirent_get_absolute(&dst_repos_path,
-                                   svn_repos_path(dst->info->repos->repos,
-                                                  dst->pool),
-                                   dst->pool);
+  src_repos_path = svn_repos_path(src->info->repos->repos, src->pool);
+  dst_repos_path = svn_repos_path(dst->info->repos->repos, dst->pool);
+
+  if (strcmp(src_repos_path, dst_repos_path) != 0)
+    {
+      /* Perhaps the source and dst repos use different path formats? */
+      serr = svn_error_compose_create(
+                svn_dirent_get_absolute(&src_repos_path, src_repos_path,
+                                        src->pool),
+                svn_dirent_get_absolute(&dst_repos_path, dst_repos_path,
+                                        dst->pool));
+
+      if (!serr && (strcmp(src_repos_path, dst_repos_path) != 0))
+          return dav_svn__new_error_tag(
+                dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                "Copy source and destination are in different repositories.",
+                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+    }
+  else
+      serr = SVN_NO_ERROR;
 
   if (!serr)
     {
-      if (strcmp(src_repos_path, dst_repos_path) != 0)
-        return dav_svn__new_error_tag
-          (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-           "Copy source and destination are in different repositories.",
-           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
       serr = svn_fs_copy(src->info->root.root,  /* root object of src rev*/
                          src->info->repos_path, /* relative path of src */
                          dst->info->root.root,  /* root object of dst txn*/
@@ -4166,7 +4162,7 @@ do_walk(walker_ctx_t *ctx, int depth)
                         apr_pstrmemdup(iterpool,
                                        ctx->repos_path->data,
                                        ctx->repos_path->len),
-                        key, (char *)NULL);
+                        key, SVN_VA_NULL);
           if (! dav_svn__allow_read(ctx->info.r, ctx->info.repos,
                                     repos_relpath, ctx->info.root.rev,
                                     iterpool))
@@ -4327,7 +4323,7 @@ dav_svn__create_working_resource(dav_resource *base,
 
   if (base->info->repos->root_path[1])
     res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                           path, (char *)NULL);
+                           path, SVN_VA_NULL);
   else
     res->uri = path;
   res->hooks = &dav_svn__hooks_repository;

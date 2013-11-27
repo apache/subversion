@@ -29,6 +29,8 @@
 
 #include <apr_file_io.h>
 #include <apr_md5.h>
+
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -42,7 +44,6 @@
 #include "svn_props.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_delta_private.h"
 #include "private/svn_wc_private.h"

@@ -28,6 +28,8 @@
 /*** Includes. ***/
 
 #include <apr_file_io.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -41,8 +43,6 @@
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
-
-#include "svn_private_config.h"
 
 
 /*** Code. ***/

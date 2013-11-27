@@ -25,6 +25,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -39,7 +40,6 @@
 #include "client.h"
 #include "mergeinfo.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
 
@@ -70,6 +70,8 @@ typedef struct callback_baton_t
   /* A client context. */
   svn_client_ctx_t *ctx;
 
+  /* Last progress reported by progress callback. */
+  apr_off_t last_progress;
 } callback_baton_t;
 
 
@@ -287,6 +289,28 @@ get_client_string(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_progress_notify_func_t. Accumulates progress information
+ * for different RA sessions and reports total progress to caller. */
+static void
+progress_func(apr_off_t progress,
+              apr_off_t total,
+              void *baton,
+              apr_pool_t *pool)
+{
+  callback_baton_t *b = baton;
+  svn_client_ctx_t *ctx = b->ctx;
+
+  ctx->progress += (progress - b->last_progress);
+  b->last_progress = progress;
+
+  if (ctx->progress_func)
+    {
+      /* All RA implementations currently provide -1 for total. So it doesn't
+         make sense to develop some complex logic to combine total across all
+         RA sessions. */
+      ctx->progress_func(ctx->progress, -1, ctx->progress_baton, pool);
+    }
+}
 
 #define SVN_CLIENT__MAX_REDIRECT_ATTEMPTS 3 /* ### TODO:  Make configurable. */
 
@@ -320,12 +344,16 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->invalidate_wc_props = (write_dav_props && read_dav_props)
                                   ? invalidate_wc_props : NULL;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
-  cbtable->progress_func = ctx->progress_func;
-  cbtable->progress_baton = ctx->progress_baton;
+  cbtable->progress_func = progress_func;
+  cbtable->progress_baton = cb;
   cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
   cbtable->get_client_string = get_client_string;
   if (base_dir_abspath)
     cbtable->get_wc_contents = get_wc_contents;
+  cbtable->check_tunnel_func = ctx->check_tunnel_func;
+  cbtable->open_tunnel_func = ctx->open_tunnel_func;
+  cbtable->close_tunnel_func = ctx->close_tunnel_func;
+  cbtable->tunnel_baton = ctx->tunnel_baton;
 
   cb->commit_items = commit_items;
   cb->ctx = ctx;

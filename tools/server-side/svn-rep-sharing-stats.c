@@ -33,6 +33,7 @@
 #include "../../subversion/libsvn_fs_fs/fs_fs.h"
 /* for svn_fs_fs__id_* (used in assertions only) */
 #include "../../subversion/libsvn_fs_fs/id.h"
+#include "../../subversion/libsvn_fs_fs/cached_data.h"
 
 #include "private/svn_cmdline_private.h"
 
@@ -78,7 +79,6 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
       ++options;
     }
   svn_error_clear(svn_cmdline_fprintf(stdout, pool, "\n"));
-  exit(0);
 }
 
 
@@ -95,7 +95,8 @@ check_lib_versions(void)
     };
   SVN_VERSION_DEFINE(my_version);
 
-  return svn_error_trace(svn_ver_check_list(&my_version, checklist));
+  return svn_error_trace(svn_ver_check_list2(&my_version, checklist,
+                                             svn_ver_equal));
 }
 
 
@@ -182,7 +183,8 @@ struct key_t
 /* What we need to know about a rep. */
 struct value_t
 {
-  svn_checksum_t *sha1_checksum;
+  svn_checksum_t checksum;
+  unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   apr_uint64_t refcount;
 };
 
@@ -200,7 +202,7 @@ static svn_error_t *record(apr_hash_t *records,
    * exist or doesn't have the checksum we are after.  (The latter case
    * often corresponds to node_rev->kind == svn_node_dir.)
    */
-  if (records == NULL || rep == NULL || rep->sha1_checksum == NULL)
+  if (records == NULL || rep == NULL || !rep->has_sha1)
     return SVN_NO_ERROR;
 
   /* Construct the key.
@@ -215,17 +217,19 @@ static svn_error_t *record(apr_hash_t *records,
   if ((value = apr_hash_get(records, key, sizeof(*key))))
     {
       /* Paranoia. */
-      SVN_ERR_ASSERT(value->sha1_checksum != NULL);
-      SVN_ERR_ASSERT(svn_checksum_match(value->sha1_checksum,
-                                        rep->sha1_checksum));
+      SVN_ERR_ASSERT(memcmp(value->sha1_digest,
+                            rep->sha1_digest,
+                            sizeof(value->sha1_digest)));
       /* Real work. */
       value->refcount++;
     }
   else
     {
       value = apr_palloc(result_pool, sizeof(*value));
-      value->sha1_checksum = svn_checksum_dup(rep->sha1_checksum, result_pool);
+      value->checksum.digest = value->sha1_digest;
+      value->checksum.kind = svn_checksum_sha1;
       value->refcount = 1;
+      memcpy(value->sha1_digest, rep->sha1_digest, sizeof(value->sha1_digest));
     }
 
   /* Store them. */
@@ -340,7 +344,7 @@ pretty_print(const char *name,
       SVN_ERR(svn_cmdline_printf(scratch_pool, "%s %" APR_UINT64_T_FMT " %s\n",
                                  name, value->refcount,
                                  svn_checksum_to_cstring_display(
-                                   value->sha1_checksum,
+                                   &value->checksum,
                                    scratch_pool)));
     }
 
@@ -419,14 +423,17 @@ static svn_error_t *process(const char *repos_path,
   return SVN_NO_ERROR;
 }
 
-int
-main(int argc, const char *argv[])
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   const char *repos_path;
-  apr_pool_t *pool;
   svn_boolean_t prop = FALSE, data = FALSE;
   svn_boolean_t quiet = FALSE;
-  svn_error_t *err;
   apr_getopt_t *os;
   const apr_getopt_option_t options[] =
     {
@@ -440,25 +447,12 @@ main(int argc, const char *argv[])
       {0,             0,  0,  0}
     };
 
-  /* Initialize the app. */
-  if (svn_cmdline_init("svn-rep-sharing-stats", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
   /* Check library versions */
-  err = check_lib_versions();
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svn-rep-sharing-stats: ");
+  SVN_ERR(check_lib_versions());
 
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svn-rep-sharing-stats: ");
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
-  SVN_INT_ERR(check_experimental());
+  SVN_ERR(check_experimental());
 
   os->interleave = 1;
   while (1)
@@ -471,7 +465,8 @@ main(int argc, const char *argv[])
       if (status != APR_SUCCESS)
         {
           usage(pool);
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
       switch (opt)
         {
@@ -491,14 +486,14 @@ main(int argc, const char *argv[])
           break;
         case 'h':
           help(options, pool);
-          break;
+          return SVN_NO_ERROR;
         case OPT_VERSION:
-          SVN_INT_ERR(version(pool));
-          exit(0);
-          break;
+          SVN_ERR(version(pool));
+          return SVN_NO_ERROR;
         default:
           usage(pool);
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -508,23 +503,51 @@ main(int argc, const char *argv[])
   if (os->ind + 1 != argc || (!data && !prop))
     {
       usage(pool);
-      return EXIT_FAILURE;
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   /* Grab REPOS_PATH from argv. */
-  SVN_INT_ERR(svn_utf_cstring_to_utf8(&repos_path, os->argv[os->ind], pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&repos_path, os->argv[os->ind], pool));
   repos_path = svn_dirent_internal_style(repos_path, pool);
 
   set_up_cancellation();
 
   /* Do something. */
-  SVN_INT_ERR(process(repos_path, prop, data, quiet, pool));
+  SVN_ERR(process(repos_path, prop, data, quiet, pool));
 
   /* We're done. */
+  return SVN_NO_ERROR;
+}
+
+int
+main(int argc, const char *argv[])
+{
+  apr_pool_t *pool;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
+
+  /* Initialize the app. */
+  if (svn_cmdline_init("svn-rep-sharing-stats", stderr) != EXIT_SUCCESS)
+    return EXIT_FAILURE;
+
+  /* Create our top-level pool.  Use a separate mutexless allocator,
+   * given this application is single threaded.
+   */
+  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+  err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svn-rep-sharing-stats: ");
+    }
 
   svn_pool_destroy(pool);
-  /* Flush stdout to make sure that the user will see any printing errors. */
-  SVN_INT_ERR(svn_cmdline_fflush(stdout));
-
-  return EXIT_SUCCESS;
+  return exit_code;
 }

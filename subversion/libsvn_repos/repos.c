@@ -23,6 +23,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -38,7 +39,6 @@
 
 #include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
-#include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
 
@@ -1796,6 +1796,11 @@ svn_repos_fs(svn_repos_t *repos)
   return repos->fs;
 }
 
+const char *
+svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool)
+{
+  return apr_pstrdup(pool, repos->fs_type);
+}
 
 /* For historical reasons, for the Berkeley DB backend, this code uses
  * repository locking, which is motivated by the need to support the

@@ -24,6 +24,7 @@ import os
 import signal
 import sys
 import time
+import multiprocessing  # requires Python 2.6
 
 
 # possible return values from Daemon.daemonize()
@@ -50,11 +51,11 @@ class Daemon(object):
   def daemonize_exit(self):
     try:
       result = self.daemonize()
-    except (ChildFailed, DaemonFailed) as e:
+    except (ChildFailed, DaemonFailed), e:
       # duplicate the exit code
       sys.exit(e.code)
     except (ChildTerminatedAbnormally, ChildForkFailed,
-            DaemonTerminatedAbnormally, DaemonForkFailed) as e:
+            DaemonTerminatedAbnormally, DaemonForkFailed), e:
       sys.stderr.write('ERROR: %s\n' % e)
       sys.exit(1)
     except ChildResumedIncorrectly:
@@ -71,28 +72,40 @@ class Daemon(object):
     # in original process. daemon is up and running. we're done.
 
   def daemonize(self):
-    # fork off a child that can detach itself from this process.
-    try:
-      pid = os.fork()
-    except OSError as e:
-      raise ChildForkFailed(e.errno, e.strerror)
+    ### review error situations. map to backwards compat. ??
+    ### be mindful of daemonize_exit().
+    ### we should try and raise ChildFailed / ChildTerminatedAbnormally.
+    ### ref: older revisions. OR: remove exceptions.
 
-    if pid > 0:
-      # we're in the parent. let's wait for the child to finish setting
-      # things up -- on our exit, we want to ensure the child is accepting
-      # connections.
-      cpid, status = os.waitpid(pid, 0)
-      assert pid == cpid
-      if os.WIFEXITED(status):
-        code = os.WEXITSTATUS(status)
-        if code:
-          raise ChildFailed(code)
-        return DAEMON_RUNNING
+    child_is_ready = multiprocessing.Event()
+    child_completed = multiprocessing.Event()
 
-      # the child did not exit cleanly.
-      raise ChildTerminatedAbnormally(status)
+    p = multiprocessing.Process(target=self._first_child,
+                                args=(child_is_ready, child_completed))
+    p.start()
+    
+    # Wait for the child to finish setting things up (in case we need
+    # to communicate with it). It will only exit when ready.
+    ### use a timeout here! (parameterized, of course)
+    p.join()
 
+    ### need to propagate errors, to adjust the return codes
+    if child_completed.is_set():
+      ### what was the exit status?
+      return DAEMON_COMPLETE
+    if child_is_ready.is_set():
+      return DAEMON_RUNNING
+
+    ### how did we get here?! the immediate child should not exit without
+    ### signalling ready/complete. some kind of error.
+    return DAEMON_STARTED
+
+  def _first_child(self, child_is_ready, child_completed):
     # we're in the child.
+
+    ### NOTE: the original design was a bit bunk. Exceptions raised from
+    ### this point are within the child processes. We need to signal the
+    ### errors to the parent in other ways.
 
     # decouple from the parent process
     os.chdir('/')
@@ -102,56 +115,86 @@ class Daemon(object):
     # remember this pid so the second child can signal it.
     thispid = os.getpid()
 
-    # register a signal handler so the SIGUSR1 doesn't stop the process.
-    # this object will also record whether if got signalled.
-    daemon_accepting = SignalCatcher(signal.SIGUSR1)
-
-    # if the daemon process exits before sending SIGUSR1, then we need to see
-    # the problem. trap SIGCHLD with a SignalCatcher.
+    # if the daemon process exits before signalling readiness, then we
+    # need to see the problem. trap SIGCHLD with a SignalCatcher.
     daemon_exit = SignalCatcher(signal.SIGCHLD)
 
     # perform the second fork
     try:
       pid = os.fork()
-    except OSError as e:
+    except OSError, e:
+      ### this won't make it to the parent process
       raise DaemonForkFailed(e.errno, e.strerror)
 
     if pid > 0:
       # in the parent.
 
-      # we want to wait for the daemon to signal that it has created and
-      # bound the socket, and is (thus) ready for connections. if the
-      # daemon improperly exits before serving, we'll see SIGCHLD and the
-      # .pause will return.
-      ### we should add a timeout to this. allow an optional parameter to
-      ### specify the timeout, in case it takes a long time to start up.
-      signal.pause()
+
+      # Wait for the child to be ready for operation.
+      while True:
+        # The readiness event will invariably be signalled early/first.
+        # If it *doesn't* get signalled because the child has prematurely
+        # exited, then we will pause 10ms before noticing the exit. The
+        # pause is acceptable since that is aberrant/unexpected behavior.
+        ### is there a way to break this wait() on a signal such as SIGCHLD?
+        ### parameterize this wait, in case the app knows children may
+        ### fail quickly?
+        if child_is_ready.wait(timeout=0.010):
+          # The child signalled readiness. Yay!
+          break
+        if daemon_exit.signalled:
+          # Whoops. The child exited without signalling :-(
+          break
+        # Python 2.6 compat: .wait() may exit when set, but return None
+        if child_is_ready.is_set():
+          break
+        # A simple timeout. The child is taking a while to prepare. Go
+        # back and wait for readiness.
 
       if daemon_exit.signalled:
+        # Tell the parent that the child has exited.
+        ### we need to communicate the exit status, if possible.
+        child_completed.set()
+
         # reap the daemon process, getting its exit code. bubble it up.
         cpid, status = os.waitpid(pid, 0)
         assert pid == cpid
         if os.WIFEXITED(status):
           code = os.WEXITSTATUS(status)
           if code:
+            ### this won't make it to the parent process
             raise DaemonFailed(code)
+          ### this return value is ignored
           return DAEMON_NOT_RUNNING
 
         # the daemon did not exit cleanly.
+        ### this won't make it to the parent process
         raise DaemonTerminatedAbnormally(status)
 
-      if daemon_accepting.signalled:
-        # the daemon is up and running, so save the pid and return success.
-        if self.pidfile:
-          open(self.pidfile, 'w').write('%d\n' % pid)
-        return DAEMON_STARTED
+      # child_is_ready got asserted. the daemon is up and running, so
+      # save the pid and return success.
+      if self.pidfile:
+        # Be wary of symlink attacks
+        try:
+          os.remove(self.pidfile)
+        except OSError:
+          pass
+        fd = os.open(self.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0444)
+        os.write(fd, '%d\n' % pid)
+        os.close(fd)
 
+      ### this return value is ignored
+      return DAEMON_STARTED
+
+      ### old code. what to do with this? throw ChildResumedIncorrectly
+      ### or just toss this and the exception.
       # some other signal popped us out of the pause. the daemon might not
       # be running.
+      ### this won't make it to the parent process
       raise ChildResumedIncorrectly()
 
-    # we're a deamon now. get rid of the final remnants of the parent.
-    # start by restoring default signal handlers
+    # we're a daemon now. get rid of the final remnants of the parent:
+    # restore the signal handlers and switch std* to the proper files.
     signal.signal(signal.SIGUSR1, signal.SIG_DFL)
     signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     sys.stdout.flush()
@@ -169,30 +212,31 @@ class Daemon(object):
     so.close()
     se.close()
 
-    # TEST: don't release the parent immediately. the whole parent stack
-    #       should pause along with this sleep.
+    ### TEST: don't release the parent immediately. the whole parent stack
+    ###       should pause along with this sleep.
     #time.sleep(10)
 
     # everything is set up. call the initialization function.
     self.setup()
 
-    # sleep for one second before signalling. we want to make sure the
-    # parent has called signal.pause()
-    ### we should think of a better wait around the race condition.
-    time.sleep(1)
+    ### TEST: exit before signalling.
+    #sys.exit(0)
+    #sys.exit(1)
 
-    # okay. the daemon is ready. signal the parent to tell it we're set.
-    os.kill(thispid, signal.SIGUSR1)
+    # the child is now ready for parent/anyone to communicate with it.
+    child_is_ready.set()
 
     # start the daemon now.
     self.run()
 
     # The daemon is shutting down, so toss the pidfile.
-    try:
-      os.remove(self.pidfile)
-    except OSError:
-      pass
+    if self.pidfile:
+      try:
+        os.remove(self.pidfile)
+      except OSError:
+        pass
 
+    ### this return value is ignored
     return DAEMON_COMPLETE
 
   def setup(self):
@@ -200,6 +244,34 @@ class Daemon(object):
 
   def run(self):
     raise NotImplementedError
+
+
+class _Detacher(Daemon):
+  def __init__(self, target, logfile='/dev/null', pidfile=None,
+               args=(), kwargs={}):
+    Daemon.__init__(self, logfile, pidfile)
+    self.target = target
+    self.args = args
+    self.kwargs = kwargs
+
+  def setup(self):
+    pass
+
+  def run(self):
+    self.target(*self.args, **self.kwargs)
+
+    
+def run_detached(target, *args, **kwargs):
+  """Simple function to run TARGET as a detached daemon.
+  
+  The additional arguments/keywords will be passed along. This function
+  does not return -- sys.exit() will be called as appropriate.
+  
+  (capture SystemExit if logging/reporting is necessary)
+  ### if needed, a variant of this func could be written to not exit
+  """
+  d = _Detacher(target, args=args, kwargs=kwargs)
+  d.daemonize_exit()
 
 
 class SignalCatcher(object):

@@ -1014,6 +1014,46 @@ typedef struct svn_client_ctx_t
    * @since New in 1.7.  */
   svn_wc_context_t *wc_ctx;
 
+  /** Total number of bytes transferred over network.
+   *
+   * @Since New in 1.9. */
+  apr_off_t progress;
+
+  /** Check-tunnel callback
+   *
+   * If not @c NULL, and open_tunnel_func is also not @c NULL, this
+   * callback will be invoked to check if open_tunnel_func should be
+   * used to create a specific tunnel, or if the default tunnel
+   * implementation (either built-in or configured in the client
+   * configuration file) should be used instead.
+   * @since New in 1.9.
+   */
+  svn_ra_check_tunnel_func_t check_tunnel_func;
+
+  /** Open-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked to create a tunnel
+   * for a ra_svn connection that needs one, overriding any tunnel
+   * definitions in the client config file. This callback is used only
+   * for ra_svn and ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_open_tunnel_func_t open_tunnel_func;
+
+  /** Close-tunnel callback
+   *
+   * If not @c NULL, this callback will be invoked when the pool that
+   * owns the connection created by the open_tunnel callback is
+   * cleared or destroyed. This callback is used only for ra_svn and
+   * ignored by the other RA modules.
+   * @since New in 1.9.
+   */
+  svn_ra_close_tunnel_func_t close_tunnel_func;
+
+  /** A baton used with open_tunnel_func and close_tunnel_func.
+   * @since New in 1.9.
+   */
+  void *tunnel_baton;
 } svn_client_ctx_t;
 
 /** Initialize a client context.
@@ -2655,6 +2695,9 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
+ * 
+ * @a move_behavior will control which changes will be reported as moves
+ * instead of additions and vice versa.
  *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
@@ -2665,8 +2708,31 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_log6(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_move_behavior_t move_behavior,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log6(), but with @a move_behavior set to
+ * #svn_move_behavior_no_moves.
+ *
+ * @deprecated Provided for compatibility with the 1.8 API.
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -5650,10 +5716,12 @@ svn_client_ls(apr_hash_t **dirents,
 /**
  * Output the content of a file.
  *
- * @param[in] out           The stream to which the content will be written.
- * @param[in] path_or_url   The path or URL of the file.
- * @param[in] peg_revision  The peg revision.
- * @param[in] revision  The operative revision.
+ * @param[out] props           Optional output argument to obtain properties.
+ * @param[in] out              The stream to which the content will be written.
+ * @param[in] path_or_url      The path or URL of the file.
+ * @param[in] peg_revision     The peg revision.
+ * @param[in] revision         The operative revision.
+ * @param[in] expand_keywords  When true, keywords (when set) are expanded.
  * @param[in] ctx   The standard client context, used for possible
  *                  authentication.
  * @param[in] pool  Used for any temporary allocation.
@@ -5668,11 +5736,29 @@ svn_client_ls(apr_hash_t **dirents,
  *         determined. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.2.
- *
  * @see #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_client_cat3(apr_hash_t **props,
+                svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t expand_keywords,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_cat3() except without the option of directly
+ * reading the properties, and with @a expand_keywords always TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cat2(svn_stream_t *out,
                 const char *path_or_url,

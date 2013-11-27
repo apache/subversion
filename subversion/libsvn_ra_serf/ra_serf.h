@@ -57,13 +57,6 @@ extern "C" {
 /** Use this to silence compiler warnings about unused parameters. */
 #define UNUSED_CTX(x) ((void)(x))
 
-/** Our User-Agent string. */
-#define USER_AGENT "SVN/" SVN_VER_NUMBER " (" SVN_BUILD_TARGET ")" \
-                   " serf/" \
-                   APR_STRINGIFY(SERF_MAJOR_VERSION) "." \
-                   APR_STRINGIFY(SERF_MINOR_VERSION) "." \
-                   APR_STRINGIFY(SERF_PATCH_VERSION)
-
 /** Wait duration (in microseconds) used in calls to serf_context_run() */
 #define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
 
@@ -147,6 +140,10 @@ struct svn_ra_serf__session_t {
   /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
   svn_boolean_t using_chunked_requests;
 
+  /* Do we need to detect whether the connection supports chunked requests?
+     i.e. is there a (reverse) proxy that does not support them?  */
+  svn_boolean_t detect_chunking;
+
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 
@@ -190,10 +187,6 @@ struct svn_ra_serf__session_t {
 
   /* Are we using a proxy? */
   svn_boolean_t using_proxy;
-
-  /* Should we be careful with this proxy? (some have insufficient support that
-     we need to work around).  */
-  svn_boolean_t busted_proxy;
 
   const char *proxy_username;
   const char *proxy_password;
@@ -436,6 +429,10 @@ typedef struct svn_ra_serf__handler_t {
      enabled. */
   svn_boolean_t custom_accept_encoding;
 
+  /* If TRUE then default DAV: capabilities request headers is not configured
+     for request. */
+  svn_boolean_t no_dav_headers;
+
   /* Has the request/response been completed?  */
   svn_boolean_t done;
 
@@ -658,11 +655,6 @@ struct svn_ra_serf__xml_parser_t {
 
      See libsvn_ra_serf/util.c  */
   struct svn_ra_serf__pending_t *pending;
-
-  /* Response restart support */
-  const void *headers_baton; /* Last pointer to headers */
-  apr_off_t skip_size; /* Number of bytes to skip */
-  apr_off_t read_size; /* Number of bytes read from response */
 };
 
 
@@ -1063,7 +1055,7 @@ void
 svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
                                   serf_bucket_alloc_t *bkt_alloc,
                                   const char *tag,
-                                  ...);
+                                  ...) SVN_NEEDS_SENTINEL_NULL;
 
 /*
  * Add the appropriate serf buckets to AGG_BUCKET representing xml tag close
@@ -1506,6 +1498,7 @@ svn_ra_serf__get_log(svn_ra_session_t *session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
+                     svn_move_behavior_t move_behavior,
                      const apr_array_header_t *revprops,
                      svn_log_entry_receiver_t receiver,
                      void *receiver_baton,

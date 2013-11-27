@@ -30,6 +30,7 @@
 #include <apr_file_io.h>
 #include <apr_hash.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -46,8 +47,6 @@
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
-
-#include "svn_private_config.h"
 
 
 /* Helper for report_revisions_and_depths().

@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -37,7 +38,6 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
-#include "svn_private_config.h"
 
 #include "../libsvn_ra/ra_loader.h"
 
@@ -215,7 +215,7 @@ create_getlocks_body(serf_bucket_t **body_bkt,
 
   svn_ra_serf__add_open_tag_buckets(
     buckets, alloc, "S:get-locks-report", "xmlns:S", SVN_XML_NAMESPACE,
-    "depth", svn_depth_to_word(lock_ctx->requested_depth), NULL);
+    "depth", svn_depth_to_word(lock_ctx->requested_depth), SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:get-locks-report");
 
   *body_bkt = buckets;
@@ -241,7 +241,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
   lock_ctx->pool = pool;
-  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
+  lock_ctx->path = apr_pstrcat(pool, "/", rel_path, SVN_VA_NULL);
   lock_ctx->requested_depth = depth;
   lock_ctx->hash = apr_hash_make(pool);
 

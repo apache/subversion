@@ -42,7 +42,8 @@ struct svn_wc__db_t {
      opened, and found to be not-current?  */
   svn_boolean_t verify_format;
 
-  /* Should we ensure the WORK_QUEUE is empty when a WCROOT is opened?  */
+  /* Should we ensure the WORK_QUEUE is empty when a DB is locked
+   * for writing?  */
   svn_boolean_t enforce_empty_wq;
 
   /* Should we open Sqlite databases EXCLUSIVE */
@@ -122,7 +123,6 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t enforce_empty_wq,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -145,6 +145,9 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+/* Return an error if the work queue in SDB is non-empty. */
+svn_error_t *
+svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb);
 
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
@@ -358,6 +361,18 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
   SVN_SQLITE__WITH_LOCK(expr, (wcroot)->sdb)
 
 
+/* Evaluate the expressions EXPR1..EXPR4 within a transaction, returning the
+ * first error if an error occurs.
+ *
+ * Begin a transaction in WCROOT's DB; evaluate the expressions, which would
+ * typically be  function calls that do some work in DB; finally commit
+ * the transaction if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * the transaction.
+ */
+#define SVN_WC__DB_WITH_TXN4(expr1, expr2, expr3, expr4, wcroot) \
+  SVN_SQLITE__WITH_LOCK4(expr1, expr2, expr3, expr4, (wcroot)->sdb)
+
+
 /* Return CHILDREN mapping const char * names to svn_node_kind_t * for the
    children of LOCAL_RELPATH at OP_DEPTH. */
 svn_error_t *
@@ -420,6 +435,38 @@ svn_wc__db_retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
                                  int op_depth,
                                  apr_pool_t *scratch_pool);
 
+/* Extract the moved-to information for LOCAL_RELPATH at OP-DEPTH by
+   examining the lowest working node above OP_DEPTH.  The output paths
+   are NULL if there is no move, otherwise:
+
+   *MOVE_DST_RELPATH: the moved-to destination of LOCAL_RELPATH.
+
+   *MOVE_DST_OP_ROOT_RELPATH: the moved-to destination of the root of
+   the move of LOCAL_RELPATH. This may be equal to *MOVE_DST_RELPATH
+   if LOCAL_RELPATH is the root of the move.
+
+   *MOVE_SRC_ROOT_RELPATH: the root of the move source.  For moves
+   inside a delete this will be different from *MOVE_SRC_OP_ROOT_RELPATH.
+
+   *MOVE_SRC_OP_ROOT_RELPATH: the root of the source layer that
+   contains the move.  For moves inside deletes this is the root of
+   the delete, for other moves this is the root of the move.
+
+   Given a path A/B/C with A/B moved to X then for A/B/C
+
+     MOVE_DST_RELPATH is X/C
+     MOVE_DST_OP_ROOT_RELPATH is X
+     MOVE_SRC_ROOT_RELPATH is A/B
+     MOVE_SRC_OP_ROOT_RELPATH is A/B
+
+   If A is then deleted the MOVE_DST_RELPATH, MOVE_DST_OP_ROOT_RELPATH
+   and MOVE_SRC_ROOT_RELPATH remain the same but MOVE_SRC_OP_ROOT_RELPATH
+   changes to A.
+
+   ### Think about combining with scan_deletion?  Also with
+   ### scan_addition to get moved-to for replaces?  Do we need to
+   ### return the op-root of the move source, i.e. A/B in the example
+   ### above?  */
 svn_error_t *
 svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
                              const char **move_dst_op_root_relpath,
@@ -430,6 +477,23 @@ svn_wc__db_op_depth_moved_to(const char **move_dst_relpath,
                              const char *local_relpath,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_op_set_props, but updates ACTUAL_NODE directly without
+   comparing with the pristine properties, etc.
+*/
+svn_error_t *
+svn_wc__db_op_set_props_internal(svn_wc__db_wcroot_t *wcroot,
+                                 const char *local_relpath,
+                                 apr_hash_t *props,
+                                 svn_boolean_t clear_recorded_info,
+                                 apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_read_props_internal(apr_hash_t **props,
+                               svn_wc__db_wcroot_t *wcroot,
+                               const char *local_relpath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /* Do a post-drive revision bump for the moved-away destination for
    any move sources under LOCAL_RELPATH.  This is called from within
@@ -442,9 +506,12 @@ svn_wc__db_bump_moved_away(svn_wc__db_wcroot_t *wcroot,
                            svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
+/* Unbreak the move from LOCAL_RELPATH on op-depth in WCROOT, by making
+   the destination a normal copy */
 svn_error_t *
 svn_wc__db_resolve_break_moved_away_internal(svn_wc__db_wcroot_t *wcroot,
                                              const char *local_relpath,
+                                             int op_depth,
                                              apr_pool_t *scratch_pool);
 
 svn_error_t *

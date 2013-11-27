@@ -476,7 +476,15 @@ def handle_options(options):
     # Otherwise, we should write this (foreground) PID into the file.
     if options.pidfile and not options.daemon:
         pid = os.getpid()
-        open(options.pidfile, 'w').write('%s\n' % pid)
+        # Be wary of symlink attacks
+        try:
+            os.remove(options.pidfile)
+        except OSError:
+            pass
+        fd = os.open(options.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                     0444)
+        os.write(fd, '%d\n' % pid)
+        os.close(fd)
         logging.info('pid %d written to %s', pid, options.pidfile)
 
     if options.gid:
@@ -536,7 +544,8 @@ def main(args):
 
     # We manage the logfile ourselves (along with possible rotation). The
     # daemon process can just drop stdout/stderr into /dev/null.
-    d = Daemon('/dev/null', options.pidfile, options.umask, bdec)
+    d = Daemon('/dev/null', os.path.abspath(options.pidfile),
+               options.umask, bdec)
     if options.daemon:
         # Daemonize the process and call sys.exit() with appropriate code
         d.daemonize_exit()

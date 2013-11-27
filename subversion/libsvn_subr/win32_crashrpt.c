@@ -244,7 +244,7 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 "Rsp=%016I64x Rbp=%016I64x Rsi=%016I64x Rdi=%016I64x\n",
                 context->Rsp, context->Rbp, context->Rsi, context->Rdi);
   fprintf(log_file,
-                "R8= %016I64x R9= %016I64x R10= %016I64x R11=%016I64x\n",
+                "R8= %016I64x R9= %016I64x R10=%016I64x R11=%016I64x\n",
                 context->R8, context->R9, context->R10, context->R11);
   fprintf(log_file,
                 "R12=%016I64x R13=%016I64x R14=%016I64x R15=%016I64x\n",
@@ -427,13 +427,15 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
 
       format_value(value_str, sym_info->ModBase, sym_info->TypeIndex,
                    (void *)var_data);
-      fprintf(log_file, "%s=%s", sym_info->Name, value_str);
+      fprintf(log_file, "%.*s=%s", (int)sym_info->NameLen, sym_info->Name,
+              value_str);
     }
   if (!log_params && sym_info->Flags & SYMFLAG_LOCAL)
     {
       format_value(value_str, sym_info->ModBase, sym_info->TypeIndex,
                    (void *)var_data);
-      fprintf(log_file, "        %s = %s\n", sym_info->Name, value_str);
+      fprintf(log_file, "        %.*s = %s\n", (int)sym_info->NameLen,
+              sym_info->Name, value_str);
     }
 
   return TRUE;
@@ -466,8 +468,10 @@ write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
   if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS))
     {
       fprintf(log_file,
-                    "#%d  0x%08I64x in %.200s(",
-                    nr_of_frame, stack_frame.AddrPC.Offset, pIHS->Name);
+                    "#%d  0x%08I64x in %.*s(",
+                    nr_of_frame, stack_frame.AddrPC.Offset,
+                    pIHS->NameLen > 200 ? 200 : (int)pIHS->NameLen,
+                    pIHS->Name);
 
       /* restrict symbol enumeration to this frame only */
       ih_stack_frame.InstructionOffset = stack_frame.AddrPC.Offset;

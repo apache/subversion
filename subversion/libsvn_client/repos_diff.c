@@ -36,6 +36,7 @@
 #include <apr_md5.h>
 #include <assert.h>
 
+#include "svn_private_config.h"
 #include "svn_checksum.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -44,7 +45,6 @@
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_props.h"
-#include "svn_private_config.h"
 
 #include "client.h"
 

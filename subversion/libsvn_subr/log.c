@@ -45,7 +45,7 @@ log_depth(svn_depth_t depth, apr_pool_t *pool)
 {
   if (depth == svn_depth_unknown)
     return "";
-  return apr_pstrcat(pool, " depth=", svn_depth_to_word(depth), (char *)NULL);
+  return apr_pstrcat(pool, " depth=", svn_depth_to_word(depth), SVN_VA_NULL);
 }
 
 static const char *

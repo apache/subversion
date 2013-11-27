@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
@@ -35,7 +36,6 @@
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
 
 /* Prototypes for referencing before declaration */
 static svn_error_t *
@@ -127,6 +127,10 @@ get_dir_contents(apr_uint32_t dirent_fields,
       return SVN_NO_ERROR;
     }
   SVN_ERR(err);
+
+ /* Locks will often be empty.  Prevent pointless lookups in that case. */
+ if (locks && apr_hash_count(locks) == 0)
+   locks = NULL;
 
  /* Filter out svn:externals from all properties hash. */
   if (prop_hash)

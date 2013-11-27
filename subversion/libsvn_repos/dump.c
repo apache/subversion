@@ -38,11 +38,276 @@
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_utf_private.h"
+#include "private/svn_cache.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
 /*----------------------------------------------------------------------*/
 
+
+/* To be able to check whether a path exists in the current revision
+   (as changes come in), we need to track the relevant tree changes.
+
+   In particular, we remember deletions, additions and copies including
+   their copy-from info.  Since the dump performs a pre-order tree walk,
+   we only need to store the data for the stack of parent folders.
+
+   The problem that we are trying to solve is that the dump receives
+   transforming operations whose validity depends on previous operations
+   in the same revision but cannot be checked against the final state
+   as stored in the repository as that is the state *after* we applied
+   the respective tree changes.
+
+   Note that the tracker functions don't perform any sanity or validity
+   checks.  Those higher-level tests have to be done in the calling code.
+   However, there is no way to corrupt the data structure using the
+   provided functions.
+ */
+
+/* Single entry in the path tracker.  Not all levels along the path
+   hierarchy do need to have an instance of this struct but only those
+   that got changed by a tree modification.
+
+   Please note that the path info in this struct is stored in re-usable
+   stringbuf objects such that we don't need to allocate more memory than
+   the longest path we encounter.
+ */
+typedef struct path_tracker_entry_t
+{
+  /* path in the current tree */
+  svn_stringbuf_t *path;
+
+  /* copy-from path (must be empty if COPYFROM_REV is SVN_INVALID_REVNUM) */
+  svn_stringbuf_t *copyfrom_path;
+
+  /* copy-from revision (SVN_INVALID_REVNUM for additions / replacements
+     that don't copy history, i.e. with no sub-tree) */
+  svn_revnum_t copyfrom_rev;
+
+  /* if FALSE, PATH has been deleted */
+  svn_boolean_t exists;
+} path_tracker_entry_t;
+
+/* Tracks all tree modifications above the current path.
+ */
+typedef struct path_tracker_t
+{
+  /* Container for all relevant tree changes in depth order.
+     May contain more entries than DEPTH to allow for reusing memory.
+     Only entries 0 .. DEPTH-1 are valid.
+   */
+  apr_array_header_t *stack;
+
+  /* Number of relevant entries in STACK.  May be 0 */
+  int depth;
+
+  /* Revision that we current track.  If DEPTH is 0, paths are exist in
+     REVISION exactly when they exist in REVISION-1.  This applies only
+     to the current state of our tree walk.
+   */
+  svn_revnum_t revision;
+
+  /* Allocate container entries here. */
+  apr_pool_t *pool;
+} path_tracker_t;
+
+/* Return a new path tracker object for REVISION, allocated in POOL.
+ */
+static path_tracker_t *
+tracker_create(svn_revnum_t revision,
+               apr_pool_t *pool)
+{
+  path_tracker_t *result = apr_pcalloc(pool, sizeof(*result));
+  result->stack = apr_array_make(pool, 16, sizeof(path_tracker_entry_t));
+  result->revision = revision;
+  result->pool = pool;
+
+  return result;
+}
+
+/* Remove all entries from TRACKER that are not relevant to PATH anymore.
+ * If ALLOW_EXACT_MATCH is FALSE, keep only entries that pertain to
+ * parent folders but not to PATH itself.
+ *
+ * This internal function implicitly updates the tracker state during the
+ * tree by removing "past" entries.  Other functions will add entries when
+ * we encounter a new tree change.
+ */
+static void
+tracker_trim(path_tracker_t *tracker,
+             const char *path,
+             svn_boolean_t allow_exact_match)
+{
+  /* remove everything that is unrelated to PATH.
+     Note that TRACKER->STACK is depth-ordered,
+     i.e. stack[N] is a (maybe indirect) parent of stack[N+1]
+     for N+1 < DEPTH.
+   */
+  for (; tracker->depth; --tracker->depth)
+    {
+      path_tracker_entry_t *parent = &APR_ARRAY_IDX(tracker->stack,
+                                                    tracker->depth - 1,
+                                                    path_tracker_entry_t);
+      const char *rel_path
+        = svn_dirent_skip_ancestor(parent->path->data, path);
+
+      /* always keep parents.  Keep exact matches when allowed. */
+      if (rel_path && (allow_exact_match || *rel_path != '\0'))
+        break;
+    }
+}
+
+/* Using TRACKER, check what path at what revision in the repository must
+   be checked to decide that whether PATH exists.  Return the info in
+   *ORIG_PATH and *ORIG_REV, respectively.
+
+   If the path is known to not exist, *ORIG_PATH will be NULL and *ORIG_REV
+   will be SVN_INVALID_REVNUM.  If *ORIG_REV is SVN_INVALID_REVNUM, PATH
+   has just been added in the revision currently being tracked.
+
+   Use POOL for allocations.  Note that *ORIG_PATH may be allocated in POOL,
+   a reference to internal data with the same lifetime as TRACKER or just
+   PATH.
+ */
+static void
+tracker_lookup(const char **orig_path,
+               svn_revnum_t *orig_rev,
+               path_tracker_t *tracker,
+               const char *path,
+               apr_pool_t *pool)
+{
+  tracker_trim(tracker, path, TRUE);
+  if (tracker->depth == 0)
+    {
+      /* no tree changes -> paths are the same as in the previous rev. */
+      *orig_path = path;
+      *orig_rev = tracker->revision - 1;
+    }
+  else
+    {
+      path_tracker_entry_t *parent = &APR_ARRAY_IDX(tracker->stack,
+                                                    tracker->depth - 1,
+                                                    path_tracker_entry_t);
+      if (parent->exists)
+        {
+          const char *rel_path
+            = svn_dirent_skip_ancestor(parent->path->data, path);
+
+          if (parent->copyfrom_rev != SVN_INVALID_REVNUM)
+            {
+              /* parent is a copy with history. Translate path. */
+              *orig_path = svn_dirent_join(parent->copyfrom_path->data,
+                                           rel_path, pool);
+              *orig_rev = parent->copyfrom_rev;
+            }
+          else if (*rel_path == '\0')
+            {
+              /* added in this revision with no history */
+              *orig_path = path;
+              *orig_rev = tracker->revision;
+            }
+          else
+            {
+              /* parent got added but not this path */
+              *orig_path = NULL;
+              *orig_rev = SVN_INVALID_REVNUM;
+            }
+        }
+      else
+        {
+          /* (maybe parent) path has been deleted */
+          *orig_path = NULL;
+          *orig_rev = SVN_INVALID_REVNUM;
+        }
+    }
+}
+
+/* Return a reference to the stack entry in TRACKER for PATH.  If no
+   suitable entry exists, add one.  Implicitly updates the tracked tree
+   location.
+
+   Only the PATH member of the result is being updated.  All other members
+   will have undefined values.
+ */
+static path_tracker_entry_t *
+tracker_add_entry(path_tracker_t *tracker,
+                  const char *path)
+{
+  path_tracker_entry_t *entry;
+  tracker_trim(tracker, path, FALSE);
+
+  if (tracker->depth == tracker->stack->nelts)
+    {
+      entry = apr_array_push(tracker->stack);
+      entry->path = svn_stringbuf_create_empty(tracker->pool);
+      entry->copyfrom_path = svn_stringbuf_create_empty(tracker->pool);
+    }
+  else
+    {
+      entry = &APR_ARRAY_IDX(tracker->stack, tracker->depth,
+                             path_tracker_entry_t);
+    }
+
+  svn_stringbuf_set(entry->path, path);
+  ++tracker->depth;
+
+  return entry;
+}
+
+/* Update the TRACKER with a copy from COPYFROM_PATH@COPYFROM_REV to
+   PATH in the tracked revision.
+ */
+static void
+tracker_path_copy(path_tracker_t *tracker,
+                  const char *path,
+                  const char *copyfrom_path,
+                  svn_revnum_t copyfrom_rev)
+{
+  path_tracker_entry_t *entry = tracker_add_entry(tracker, path);
+
+  svn_stringbuf_set(entry->copyfrom_path, copyfrom_path);
+  entry->copyfrom_rev = copyfrom_rev;
+  entry->exists = TRUE;
+}
+
+/* Update the TRACKER with a plain addition of PATH (without history).
+ */
+static void
+tracker_path_add(path_tracker_t *tracker,
+                 const char *path)
+{
+  path_tracker_entry_t *entry = tracker_add_entry(tracker, path);
+
+  svn_stringbuf_setempty(entry->copyfrom_path);
+  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  entry->exists = TRUE;
+}
+
+/* Update the TRACKER with a replacement of PATH with a plain addition
+   (without history).
+ */
+static void
+tracker_path_replace(path_tracker_t *tracker,
+                     const char *path)
+{
+  /* this will implicitly purge all previous sub-tree info from STACK.
+     Thus, no need to tack the deletion explicitly. */
+  tracker_path_add(tracker, path);
+}
+
+/* Update the TRACKER with a deletion of PATH.
+ */
+static void
+tracker_path_delete(path_tracker_t *tracker,
+                    const char *path)
+{
+  path_tracker_entry_t *entry = tracker_add_entry(tracker, path);
+
+  svn_stringbuf_setempty(entry->copyfrom_path);
+  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  entry->exists = FALSE;
+}
 
 
 /* Compute the delta between OLDROOT/OLDPATH and NEWROOT/NEWPATH and
@@ -116,6 +381,9 @@ struct edit_baton
   /* True if this "dump" is in fact a verify. */
   svn_boolean_t verify;
 
+  /* True if checking UCS normalization during a verify. */
+  svn_boolean_t check_ucs_norm;
+
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
 
@@ -130,6 +398,17 @@ struct edit_baton
   /* reusable buffer for writing file contents */
   char buffer[SVN__STREAM_CHUNK_SIZE];
   apr_size_t bufsize;
+
+  /* map nodeID -> node kind.  May be NULL.
+     The key is the string representation of the node ID given in
+     directory entries.  If we find an entry in this cache, the
+     respective node has already been verified as readable and being
+     of the type stored as value in the cache. */
+  svn_cache__t *verified_dirents_cache;
+
+  /* Structure allows us to verify the paths currently being dumped.
+     If NULL, validity checks are being skipped. */
+  path_tracker_t *path_tracker;
 };
 
 struct dir_baton
@@ -158,6 +437,12 @@ struct dir_baton
      full paths, because that's what the editor driver gives us.  but
      really, they're all within this directory.) */
   apr_hash_t *deleted_entries;
+
+  /* A flag indicating that new entries have been added to this
+     directory in this revision. Used to optimize detection of UCS
+     representation collisions; we will only check for that in
+     revisions where new names appear in the directory. */
+  svn_boolean_t check_name_collision;
 
   /* pool to be used for deleting the hash items */
   apr_pool_t *pool;
@@ -211,9 +496,197 @@ make_dir_baton(const char *path,
   new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make(pool);
+  new_db->check_name_collision = FALSE;
   new_db->pool = pool;
 
   return new_db;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_node_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool);
+
+/* Return an error when PATH in REVISION does not exist or is of a
+   different kind than EXPECTED_KIND.  If the latter is svn_node_unknown,
+   skip that check.  Use EB for context information.  If REVISION is the
+   current revision, use EB's path tracker to follow renames, deletions,
+   etc.
+
+   Use SCRATCH_POOL for temporary allocations.
+   No-op if EB's path tracker has not been initialized.
+ */
+static svn_error_t *
+node_must_exist(struct edit_baton *eb,
+                const char *path,
+                svn_revnum_t revision,
+                svn_node_kind_t expected_kind,
+                apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind = svn_node_none;
+
+  /* in case the caller is trying something stupid ... */
+  if (eb->path_tracker == NULL)
+    return SVN_NO_ERROR;
+
+  /* paths pertaining to the revision currently being processed must
+     be translated / checked using our path tracker. */
+  if (revision == eb->path_tracker->revision)
+    tracker_lookup(&path, &revision, eb->path_tracker, path, scratch_pool);
+
+  /* determine the node type (default: no such node) */
+  if (path)
+    SVN_ERR(fetch_kind_func(&kind, eb, path, revision, scratch_pool));
+
+  /* check results */
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                             _("Path '%s' not found in r%ld."),
+                             path, revision);
+
+  if (expected_kind != kind && expected_kind != svn_node_unknown)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Unexpected node kind %d for '%s' at r%ld. "
+                               "Expected kind was %d."),
+                             kind, path, revision, expected_kind);
+
+  return SVN_NO_ERROR;
+}
+
+/* Return an error when PATH exists in REVISION.  Use EB for context
+   information.  If REVISION is the current revision, use EB's path
+   tracker to follow renames, deletions, etc.
+
+   Use SCRATCH_POOL for temporary allocations.
+   No-op if EB's path tracker has not been initialized.
+ */
+static svn_error_t *
+node_must_not_exist(struct edit_baton *eb,
+                    const char *path,
+                    svn_revnum_t revision,
+                    apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind = svn_node_none;
+
+  /* in case the caller is trying something stupid ... */
+  if (eb->path_tracker == NULL)
+    return SVN_NO_ERROR;
+
+  /* paths pertaining to the revision currently being processed must
+     be translated / checked using our path tracker. */
+  if (revision == eb->path_tracker->revision)
+    tracker_lookup(&path, &revision, eb->path_tracker, path, scratch_pool);
+
+  /* determine the node type (default: no such node) */
+  if (path)
+    SVN_ERR(fetch_kind_func(&kind, eb, path, revision, scratch_pool));
+
+  /* check results */
+  if (kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                             _("Path '%s' exists in r%ld."),
+                             path, revision);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+check_ucs_normalization(const char *path,
+                        svn_node_kind_t kind,
+                        svn_repos_notify_func_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool)
+{
+  const char *const name = svn_relpath_basename(path, scratch_pool);
+  if (!svn_utf__is_normalized(name, scratch_pool))
+    {
+      svn_repos_notify_t *const notify =
+        svn_repos_notify_create(svn_repos_notify_warning, scratch_pool);
+      notify->warning = svn_repos_notify_warning_denormalized_name;
+      switch (kind)
+        {
+        case svn_node_dir:
+          notify->warning_str = apr_psprintf(
+              scratch_pool, _("Denormalized directory name '%s'"), path);
+          break;
+        case svn_node_file:
+          notify->warning_str = apr_psprintf(
+              scratch_pool, _("Denormalized file name '%s'"), path);
+          break;
+        default:
+          notify->warning_str = apr_psprintf(
+              scratch_pool, _("Denormalized entry name '%s'"), path);
+        }
+      notify_func(notify_baton, notify, scratch_pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+/* Baton used by the check_mergeinfo_normalization hash iterator. */
+struct check_mergeinfo_normalization_baton
+{
+  const char* path;
+  apr_hash_t *normalized;
+  svn_membuf_t buffer;
+  svn_repos_notify_func_t notify_func;
+  void *notify_baton;
+};
+
+/* Hash iterator that verifies normalization and collision of paths in
+   an svn:mergeinfo property. */
+static svn_error_t *
+check_mergeinfo_normalization(void *baton, const void *key, apr_ssize_t klen,
+                              void *val, apr_pool_t *pool)
+{
+  static const char unique[] = "unique";
+  static const char collision[] = "collision";
+
+  struct check_mergeinfo_normalization_baton *const check_baton = baton;
+
+  const char *const path = key;
+  const char *normpath;
+  const char *found;
+
+  SVN_ERR(svn_utf__normalize(&normpath, path, klen, &check_baton->buffer));
+
+  found = svn_hash_gets(check_baton->normalized, normpath);
+  if (!found)
+    {
+      if (0 != strcmp(path, normpath))
+        {
+          /* Report denormlized mergeinfo path */
+          svn_repos_notify_t *const notify =
+            svn_repos_notify_create(svn_repos_notify_warning, pool);
+          notify->warning = svn_repos_notify_warning_denormalized_mergeinfo;
+          notify->warning_str = apr_psprintf(
+              pool, _("Denormalized path '%s' in %s property of '%s'"),
+              path, SVN_PROP_MERGEINFO, check_baton->path);
+          check_baton->notify_func(check_baton->notify_baton, notify, pool);
+        }
+      svn_hash_sets(check_baton->normalized,
+                    apr_pstrdup(pool, normpath), unique);
+    }
+  else if (found == collision)
+    /* Skip already reported collision */;
+  else
+    {
+      /* Report path collision in mergeinfo */
+      svn_repos_notify_t *const notify =
+        svn_repos_notify_create(svn_repos_notify_warning, pool);
+      notify->warning = svn_repos_notify_warning_mergeinfo_collision;
+      notify->warning_str = apr_psprintf(
+          pool, _("Duplicate representation of path '%s'"
+                  " in %s property of '%s'"),
+          normpath, SVN_PROP_MERGEINFO, check_baton->path);
+      check_baton->notify_func(check_baton->notify_baton, notify, pool);
+      svn_hash_sets(check_baton->normalized,
+                    apr_pstrdup(pool, normpath), collision);
+    }
+  return SVN_NO_ERROR;
 }
 
 
@@ -303,6 +776,11 @@ dump_node(struct edit_baton *eb,
 
   if (action == svn_node_action_change)
     {
+      if (eb->path_tracker)
+        SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
+                  apr_psprintf(pool, _("Change invalid path '%s' in r%ld"),
+                               path, eb->current_rev));
+
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": change\n"));
 
@@ -321,8 +799,18 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_replace)
     {
+      if (eb->path_tracker)
+        SVN_ERR_W(node_must_exist(eb, path, eb->current_rev,
+                                  svn_node_unknown, pool),
+                  apr_psprintf(pool,
+                               _("Replacing non-existent path '%s' in r%ld"),
+                               path, eb->current_rev));
+
       if (! is_copy)
         {
+          if (eb->path_tracker)
+            tracker_path_replace(eb->path_tracker, path);
+
           /* a simple delete+add, implied by a single 'replace' action. */
           SVN_ERR(svn_stream_puts(eb->stream,
                                   SVN_REPOS_DUMPFILE_NODE_ACTION
@@ -335,6 +823,20 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
+          if (eb->path_tracker)
+            {
+              SVN_ERR_W(node_must_exist(eb, compare_path, compare_rev,
+                                        kind, pool),
+                        apr_psprintf(pool,
+                                     _("Replacing path '%s' in r%ld "
+                                       "with invalid path"),
+                                     path, eb->current_rev));
+
+              /* we will call dump_node again with an addition further
+                 down the road */
+              tracker_path_delete(eb->path_tracker, path);
+            }
+
           /* more complex:  delete original, then add-with-history.  */
 
           /* the path & kind headers have already been printed;  just
@@ -355,6 +857,14 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_delete)
     {
+      if (eb->path_tracker)
+        {
+          SVN_ERR_W(node_must_exist(eb, path, eb->current_rev, kind, pool),
+                    apr_psprintf(pool, _("Deleting invalid path '%s' in r%ld"),
+                                 path, eb->current_rev));
+          tracker_path_delete(eb->path_tracker, path);
+        }
+
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": delete\n"));
 
@@ -365,11 +875,20 @@ dump_node(struct edit_baton *eb,
     }
   else if (action == svn_node_action_add)
     {
+      if (eb->path_tracker)
+        SVN_ERR_W(node_must_not_exist(eb, path, eb->current_rev, pool),
+                  apr_psprintf(pool,
+                               _("Adding already existing path '%s' in r%ld"),
+                               path, eb->current_rev));
+
       SVN_ERR(svn_stream_puts(eb->stream,
                               SVN_REPOS_DUMPFILE_NODE_ACTION ": add\n"));
 
       if (! is_copy)
         {
+          if (eb->path_tracker)
+            tracker_path_add(eb->path_tracker, path);
+
           /* Dump all contents for a simple 'add'. */
           if (kind == svn_node_file)
             must_dump_text = TRUE;
@@ -377,6 +896,18 @@ dump_node(struct edit_baton *eb,
         }
       else
         {
+          if (eb->path_tracker)
+            {
+              SVN_ERR_W(node_must_exist(eb, compare_path, compare_rev,
+                                        kind, pool),
+                        apr_psprintf(pool,
+                                     _("Copying from invalid path to "
+                                       "'%s' in r%ld"),
+                                     path, eb->current_rev));
+              tracker_path_copy(eb->path_tracker, path, compare_path,
+                                compare_rev);
+            }
+
           if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
               && eb->notify_func)
             {
@@ -501,6 +1032,33 @@ dump_node(struct edit_baton *eb,
                     *eb->found_old_mergeinfo = TRUE;
                   eb->notify_func(eb->notify_baton, notify, pool);
                 }
+            }
+        }
+
+      /* If we're checking UCS normalization, also parse any changed
+         mergeinfo and warn about denormalized paths and name
+         collisions there. */
+      if (eb->verify && eb->check_ucs_norm && eb->notify_func)
+        {
+          /* N.B.: This hash lookup happens only once; the conditions
+             for verifying historic mergeinfo references and checking
+             UCS normalization are mutually exclusive. */
+          svn_string_t *mergeinfo_str = svn_hash_gets(prophash,
+                                                      SVN_PROP_MERGEINFO);
+          if (mergeinfo_str)
+            {
+              svn_mergeinfo_t mergeinfo;
+              struct check_mergeinfo_normalization_baton check_baton;
+              check_baton.path = path;
+              check_baton.normalized = apr_hash_make(pool);
+              svn_membuf__create(&check_baton.buffer, 0, pool);
+              check_baton.notify_func = eb->notify_func;
+              check_baton.notify_baton = eb->notify_baton;
+              SVN_ERR(svn_mergeinfo_parse(&mergeinfo,
+                                          mergeinfo_str->data, pool));
+              SVN_ERR(svn_iter_apr_hash(NULL, mergeinfo,
+                                        check_mergeinfo_normalization,
+                                        &check_baton, pool));
             }
         }
 
@@ -694,6 +1252,16 @@ add_directory(const char *path,
     /* Delete the path, it's now been dumped. */
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
+  /* Check for UCS normalization and name clashes, but only if this is
+     actually a new name in the parent, not a replacement. */
+  if (!val && eb->verify && eb->check_ucs_norm && eb->notify_func)
+    {
+      pb->check_name_collision = TRUE;
+      SVN_ERR(check_ucs_normalization(
+                  path, svn_node_dir,
+                  eb->notify_func, eb->notify_baton, pool));
+    }
+
   new_db->written_out = TRUE;
 
   *child_baton = new_db;
@@ -792,6 +1360,16 @@ add_file(const char *path,
                     is_copy ? copyfrom_path : NULL,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
+
+  /* Check for UCS normalization and name clashes, but only if this is
+     actually a new name in the parent, not a replacement. */
+  if (!val && eb->verify && eb->check_ucs_norm && eb->notify_func)
+    {
+      pb->check_name_collision = TRUE;
+      SVN_ERR(check_ucs_normalization(
+                  path, svn_node_file,
+                  eb->notify_func, eb->notify_baton, pool));
+    }
 
   if (val)
     /* delete the path, it's now been dumped. */
@@ -960,6 +1538,8 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
+                svn_boolean_t check_ucs_norm,
+                svn_cache__t *verified_dirents_cache,
                 apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -982,8 +1562,18 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
   eb->verify = verify;
+  eb->check_ucs_norm = check_ucs_norm;
   eb->found_old_reference = found_old_reference;
   eb->found_old_mergeinfo = found_old_mergeinfo;
+  eb->verified_dirents_cache = verified_dirents_cache;
+
+  /* In non-verification mode, we will allow anything to be dumped because
+     it might be an incremental dump with possible manual intervention.
+     Also, this might be the last resort when it comes to data recovery.
+
+     Else, make sure that all paths exists at their respective revisions.
+  */
+  eb->path_tracker = verify ? tracker_create(to_rev, pool) : NULL;
 
   /* Set up the editor. */
   dump_editor->open_root = open_root;
@@ -1180,7 +1770,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                               "", stream, &found_old_reference,
                               &found_old_mergeinfo, NULL,
                               notify_func, notify_baton,
-                              start_rev, use_deltas_for_rev, FALSE, subpool));
+                              start_rev, use_deltas_for_rev, FALSE, FALSE,
+                              NULL, subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, subpool));
@@ -1292,9 +1883,42 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
 {
   struct dir_baton *db = baton;
   svn_fs_dirent_t *dirent = (svn_fs_dirent_t *)val;
-  char *path = svn_relpath_join(db->path, (const char *)key, pool);
+  char *path;
   apr_hash_t *dirents;
   svn_filesize_t len;
+  svn_string_t *unparsed_id;
+
+  /* most directory entries will be unchanged from previous revs.
+     We should find those in the cache and they must match the
+     type defined in the DIRENT. */
+  if (db->edit_baton->verified_dirents_cache)
+    {
+      svn_node_kind_t *kind;
+      svn_boolean_t found;
+      unparsed_id = svn_fs_unparse_id(dirent->id, pool);
+
+      SVN_ERR(svn_cache__get((void **)&kind, &found,
+                             db->edit_baton->verified_dirents_cache,
+                             unparsed_id->data, pool));
+
+      if (found)
+        {
+          if (*kind == dirent->kind)
+            return SVN_NO_ERROR;
+          else
+            {
+              path = svn_relpath_join(db->path, (const char *)key, pool);
+
+              return
+                  svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                                    _("Unexpected node kind %d for '%s'. "
+                                      "Expected kind was %d."),
+                                    dirent->kind, path, *kind);
+            }
+        }
+    }
+
+  path = svn_relpath_join(db->path, (const char *)key, pool);
 
   /* since we can't access the directory entries directly by their ID,
      we need to navigate from the FS_ROOT to them (relatively expensive
@@ -1316,12 +1940,67 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
                              dirent->kind, path);
   }
 
+  /* remember ID, kind pair */
+  if (db->edit_baton->verified_dirents_cache)
+    SVN_ERR(svn_cache__set(db->edit_baton->verified_dirents_cache,
+                           unparsed_id->data, &dirent->kind, pool));
+
   return SVN_NO_ERROR;
 }
 
+/* Baton used by the check_name_collision hash iterator. */
+struct check_name_collision_baton
+{
+  struct dir_baton *dir_baton;
+  apr_hash_t *normalized;
+  svn_membuf_t buffer;
+};
+
+/* Scan the directory and report all entry names that differ only in
+   Unicode character representaiton. */
 static svn_error_t *
-verify_close_directory(void *dir_baton,
-                apr_pool_t *pool)
+check_name_collision(void *baton, const void *key, apr_ssize_t klen,
+                     void *val, apr_pool_t *pool)
+{
+  static const char unique[] = "unique";
+  static const char collision[] = "collision";
+
+  struct check_name_collision_baton *const check_baton = baton;
+  const char *name;
+  const char *found;
+
+  SVN_ERR(svn_utf__normalize(&name, key, klen, &check_baton->buffer));
+
+  found = svn_hash_gets(check_baton->normalized, name);
+  if (!found)
+    svn_hash_sets(check_baton->normalized,
+                  apr_pstrdup(pool, name), unique);
+  else if (found == collision)
+    /* Skip already reported collision */;
+  else
+    {
+      struct dir_baton *const db = check_baton->dir_baton;
+      struct edit_baton *const eb = db->edit_baton;
+      svn_repos_notify_t *notify;
+      const char* normpath;
+
+      svn_hash_sets(check_baton->normalized,
+                    apr_pstrdup(pool, name), collision);
+      SVN_ERR(svn_utf__normalize(
+                  &normpath, svn_relpath_join(db->path, name, pool),
+                  SVN_UTF__UNKNOWN_LENGTH, &check_baton->buffer));
+      notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
+      notify->warning = svn_repos_notify_warning_name_collision;
+      notify->warning_str = apr_psprintf(
+          pool, _("Duplicate representation of path '%s'"), normpath);
+      eb->notify_func(eb->notify_baton, notify, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+verify_close_directory(void *dir_baton, apr_pool_t *pool)
 {
   struct dir_baton *db = dir_baton;
   apr_hash_t *dirents;
@@ -1329,6 +2008,17 @@ verify_close_directory(void *dir_baton,
                              db->path, pool));
   SVN_ERR(svn_iter_apr_hash(NULL, dirents, verify_directory_entry,
                             dir_baton, pool));
+
+  if (db->check_name_collision)
+    {
+      struct check_name_collision_baton check_baton;
+      check_baton.dir_baton = db;
+      check_baton.normalized = apr_hash_make(pool);
+      svn_membuf__create(&check_baton.buffer, 0, pool);
+      SVN_ERR(svn_iter_apr_hash(NULL, dirents, check_name_collision,
+                                &check_baton, pool));
+    }
+
   return close_directory(dir_baton, pool);
 }
 
@@ -1399,8 +2089,10 @@ verify_one_revision(svn_fs_t *fs,
                     svn_repos_notify_func_t notify_func,
                     void *notify_baton,
                     svn_revnum_t start_rev,
+                    svn_boolean_t check_ucs_norm,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
+                    svn_cache__t *verified_dirents_cache,
                     apr_pool_t *scratch_pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -1419,6 +2111,8 @@ verify_one_revision(svn_fs_t *fs,
                           notify_func, notify_baton,
                           start_rev,
                           FALSE, TRUE, /* use_deltas, verify */
+                          check_ucs_norm,
+                          verified_dirents_cache,
                           scratch_pool));
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                             dump_editor, dump_edit_baton,
@@ -1426,6 +2120,7 @@ verify_one_revision(svn_fs_t *fs,
                                             &cancel_edit_baton,
                                             scratch_pool));
   SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_verify_root(to_root, scratch_pool));
   SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                             cancel_editor, cancel_edit_baton,
                             NULL, NULL, scratch_pool));
@@ -1497,11 +2192,36 @@ populate_summary(apr_array_header_t **error_summary,
   APR_ARRAY_PUSH(*error_summary, struct error_list *) = el;
 }
 
+/* cache entry (de-)serialization support for svn_node_kind_t. */
+static svn_error_t *
+serialize_node_kind(void **data,
+                    apr_size_t *data_len,
+                    void *in,
+                    apr_pool_t *pool)
+{
+  *data_len = sizeof(svn_node_kind_t);
+  *data = in;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+deserialize_node_kind(void **out,
+                      void *data,
+                      apr_size_t data_len,
+                      apr_pool_t *pool)
+{
+  *out = data;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
+                     svn_boolean_t check_ucs_norm,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -1519,6 +2239,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   apr_array_header_t *error_summary;
   int i;
   svn_boolean_t found_corruption = FALSE;
+  svn_cache__t *verified_dirents_cache = NULL;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -1580,6 +2301,18 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       svn_error_clear(err);
     }
 
+  if (svn_cache__get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache
+                                 (&verified_dirents_cache,
+                                  svn_cache__get_global_membuffer_cache(),
+                                  serialize_node_kind,
+                                  deserialize_node_kind,
+                                  APR_HASH_KEY_STRING,
+                                  svn_uuid_generate(pool),
+                                  SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                  FALSE,
+                                  pool));
+
   error_summary = apr_array_make(pool, 0, sizeof(struct error_list *));
           
   for (rev = start_rev; rev <= end_rev; rev++)
@@ -1587,8 +2320,10 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       svn_pool_clear(iterpool);
 
       /* Wrapper function to catch the possible errors. */
-      err = verify_one_revision(fs, rev, notify_func, notify_baton, start_rev,
-                                cancel_func, cancel_baton, iterpool);
+      err = verify_one_revision(fs, rev, notify_func, notify_baton,
+                                start_rev, check_ucs_norm,
+                                cancel_func, cancel_baton,
+                                verified_dirents_cache, iterpool);
 
       if (err)
         {

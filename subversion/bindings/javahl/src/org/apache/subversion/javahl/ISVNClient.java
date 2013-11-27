@@ -51,6 +51,11 @@ public interface ISVNClient
     public Version getVersion();
 
     /**
+     * @return Runtime version information about the loaded libsvn_client.
+     */
+    public RuntimeVersion getRuntimeVersion();
+
+    /**
      * @return Extended version information about the underlying
      * native libraries and operating system.
      */
@@ -132,6 +137,12 @@ public interface ISVNClient
      * @param prompt the callback interface
      */
     void setPrompt(UserPasswordCallback prompt);
+
+    /**
+     * Set callbacks for ra_svn tunnel handling.
+     * @since 1.9
+     */
+    void setTunnelAgent(TunnelAgent tunnelAgent);
 
     /**
      * Retrieve the log messages for an item.
@@ -308,6 +319,7 @@ public interface ISVNClient
      * @param handler   the commit message callback, may be <code>null</code>
      *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
+     * @throws NullPointerException if the <code>sources</code> list is empty.
      */
     void copy(List<CopySource> sources, String destPath,
               boolean copyAsChild, boolean makeParents,
@@ -347,6 +359,7 @@ public interface ISVNClient
      * @deprecated Provided for backward compatibility with 1.7. Passes
      *             metadataOnly false and allowMixRev true.
      */
+    @Deprecated
     void move(Set<String> srcPaths, String destPath, boolean force,
               boolean moveAsChild, boolean makeParents,
               Map<String, String> revpropTable,
@@ -590,7 +603,7 @@ public interface ISVNClient
      * Merge set of revisions into a new local path.
      * <p>
      * <b>Note:</b> Behaves like the 1.8 version where ignoreAncestry
-     * maps to both ignoreMergeinfo and diffIgnoreAncestry
+     * maps to both ignoreMergeinfo and diffIgnoreAncestry.
      *
      * @param path          path or url
      * @param pegRevision   revision to interpret path
@@ -627,6 +640,7 @@ public interface ISVNClient
      * @throws ClientException
      * @deprecated Will be removed in a future release
      */
+    @Deprecated
     void mergeReintegrate(String path, Revision pegRevision,
                           String localPath, boolean dryRun)
              throws ClientException;
@@ -649,7 +663,7 @@ public interface ISVNClient
      * @param pegRevision            peg rev for pathOrUrl
      * @param mergeSourceUrl         the source of the merge
      * @param srcPegRevision         peg rev for mergeSourceUrl
-     * @param srcStartRevieion       lower bound of the source revision range
+     * @param srcStartRevision       lower bound of the source revision range
      * @param srcEndRevision         upper bound of the source revision range
      * @param discoverChangedPaths   return paths of changed items
      * @param depth                  the depth to recurse to
@@ -696,7 +710,7 @@ public interface ISVNClient
      * @param target2       second path or url
      * @param revision2     second revision
      * @param relativeToDir index path is relative to this path
-     * @param outFileName   file name where difference are written
+     * @param outStream     the stream to which difference are written
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
@@ -711,14 +725,6 @@ public interface ISVNClient
      */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, OutputStream outStream,
-              Depth depth, Collection<String> changelists,
-              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
-              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
-              DiffOptions options)
-            throws ClientException;
-
-    void diff(String target1, Revision revision1, String target2,
-              Revision revision2, String relativeToDir, String outFileName,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
               boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
@@ -741,6 +747,34 @@ public interface ISVNClient
      *                      entirety, not as diffs from their sources
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir, String outFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
+     * @param outStream     the stream to which difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
      * @throws ClientException
      */
     void diff(String target1, Revision revision1, String target2,
@@ -750,11 +784,58 @@ public interface ISVNClient
               boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly)
             throws ClientException;
 
+    /**
+     * Display the differences between two paths
+     * @param target1       first path or url
+     * @param revision1     first revision
+     * @param target2       second path or url
+     * @param revision2     second revision
+     * @param relativeToDir index path is relative to this path
+     * @param outFileName   file name where difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
+     * @throws ClientException
+     */
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String relativeToDir, String outFileName,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
               boolean copiesAsAdds)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths.
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
+     * @param outStream     the stream to which difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
+     * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.8
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir, OutputStream outStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
             throws ClientException;
 
     /**
@@ -779,19 +860,38 @@ public interface ISVNClient
      * @since 1.8
      */
     void diff(String target, Revision pegRevision, Revision startRevision,
-              Revision endRevision, String relativeToDir, OutputStream outStream,
+              Revision endRevision, String relativeToDir, String outFileName,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
               boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
               DiffOptions options)
             throws ClientException;
 
+    /**
+     * Display the differences between two paths.
+     * @param target        path or url
+     * @param pegRevision   revision tointerpret target
+     * @param startRevision first Revision to compare
+     * @param endRevision   second Revision to compare
+     * @param relativeToDir index path is relative to this path
+     * @param outStream     the stream to which difference are written
+     * @param depth         how deep to traverse into subdirectories
+     * @param changelists  if non-null, filter paths using changelists
+     * @param ignoreAncestry ignore if files are not related
+     * @param noDiffDeleted no output on deleted files
+     * @param force         diff even on binary files
+     * @param copiesAsAdds  if set, copied files will be shown in their
+     *                      entirety, not as diffs from their sources
+     * @param ignoreProps   don't show property diffs
+     * @param propsOnly     show property changes only
+     * @throws ClientException
+     */
     void diff(String target, Revision pegRevision, Revision startRevision,
-              Revision endRevision, String relativeToDir, String outFileName,
+              Revision endRevision, String relativeToDir,
+              OutputStream outStream,
               Depth depth, Collection<String> changelists,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
-              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
-              DiffOptions options)
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly)
             throws ClientException;
 
     /**
@@ -813,14 +913,6 @@ public interface ISVNClient
      * @param propsOnly     show property changes only
      * @throws ClientException
      */
-    void diff(String target, Revision pegRevision, Revision startRevision,
-              Revision endRevision, String relativeToDir,
-              OutputStream outStream,
-              Depth depth, Collection<String> changelists,
-              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
-              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly)
-            throws ClientException;
-
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String relativeToDir, String outFileName,
               Depth depth, Collection<String> changelists,
@@ -860,7 +952,7 @@ public interface ISVNClient
      *
      * @param target Path or URL.
      * @param pegRevision Revision at which to interpret
-     * <code>target</code>.  If {@link Revision.Kind#unspecified} or
+     * <code>target</code>.  If {@link Revision#UNSPECIFIED} or
      * <code>null</code>, behave identically to {@link
      * #diffSummarize(String, Revision, String, Revision, Depth,
      * Collection, boolean, DiffSummaryCallback)}, using
@@ -925,6 +1017,23 @@ public interface ISVNClient
      *
      * @param paths   paths of the items
      * @param name    name of the property
+     * @param value   new value of the property. Set value to
+     * <code>null</code> to delete a property
+     * @param depth   the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
+     * @param force   do not check if the value is valid
+     * @throws ClientException
+     */
+    void propertySetLocal(Set<String> paths, String name, byte[] value,
+                          Depth depth, Collection<String> changelists,
+                          boolean force)
+            throws ClientException;
+
+    /**
+     * Sets one property of an item with a String value
+     *
+     * @param paths   paths of the items
+     * @param name    name of the property
      * @param value   new value of the property. Set value to <code>
      * null</code> to delete a property
      * @param depth   the depth to recurse into subdirectories
@@ -935,11 +1044,6 @@ public interface ISVNClient
      *                     results in a commit.
      * @throws ClientException
      */
-    void propertySetLocal(Set<String> paths, String name, byte[] value,
-                          Depth depth, Collection<String> changelists,
-                          boolean force)
-            throws ClientException;
-
     void propertySetRemote(String path, long baseRev, String name,
                            byte[] value, CommitMessageCallback handler,
                            boolean force, Map<String, String> revpropTable,
@@ -1069,17 +1173,24 @@ public interface ISVNClient
     void setConfigDirectory(String configDir) throws ClientException;
 
     /**
-     * Set an event handler that will be called every time the
-     * configuration is loaded.
-     */
-    void setConfigEventHandler(ConfigEvent configHandler);
-
-    /**
      * Get the configuration directory
      * @return  the directory
      * @throws ClientException
      */
     String getConfigDirectory() throws ClientException;
+
+    /**
+     * Set an event handler that will be called every time the
+     * configuration is loaded by this client object.
+     */
+    void setConfigEventHandler(ConfigEvent configHandler)
+            throws ClientException;
+
+    /**
+     * Return a reference to the installed configuration event
+     * handler. The returned value may be <code>null</code>.
+     */
+    ConfigEvent getConfigEventHandler() throws ClientException;
 
     /**
      * cancel the active operation
@@ -1139,7 +1250,56 @@ public interface ISVNClient
             throws ClientException;
 
     /**
+     * Invoke <code>callback</code> to return information
+     * <code>pathOrUrl</code> in <code>revision</code>.  The
+     * information returned is system-generated metadata, not the sort
+     * of "property" metadata created by users.
+     * <p>
+     * If both revision arguments are either <code>null</code> or
+     * {@link Revision#START}, then information will be pulled solely
+     * from the working copy; no network connections will be made.
+     * <p>
+     * Otherwise, information will be pulled from a repository.  The
+     * actual node revision selected is determined by the
+     * <code>pathOrUrl</code> as it exists in
+     * <code>pegRevision</code>.  If <code>pegRevision</code> is
+     * {@link Revision#START}, then it defaults to {@link
+     * Revision#HEAD} for URLs or {@link Revision#WORKING} for WC
+     * targets.
+     * <p>
+     * If <code>pathOrUrl</code> is not a local path, then if
+     * <code>revision</code> is {@link Revision#PREVIOUS} (or some
+     * other kind that requires a local path), an error will be
+     * returned, because the desired revision cannot be determined.
+     * <p>
+     * If <code>pathOrUrl</code> is a file, just invoke the callback on it.  If it
+     * is a directory, then descend according to <code>depth</code>.
+     * <p>
+     * @param pathOrUrl     the path or the url of the item
+     * @param revision      the revision of the item to return
+     * @param pegRevision   the revision to interpret pathOrUrl
+     * @param depth         the depth to recurse
+     * @param fetchExcluded when <code>true</code>, retreive
+     * information about nodes that are excluded from the working copy
+     * @param fetchActualOnly when <code>true</code>, retreive
+     * information about node that are not versioned, but are still
+     * tree conflicted.
+     * @param changelists   if non-null, filter paths using changelists
+     * @param callback      a callback to receive the infos retrieved
+     * @since 1.9
+     */
+    void info2(String pathOrUrl,
+               Revision revision, Revision pegRevision, Depth depth,
+               boolean fetchExcluded, boolean fetchActualOnly,
+               Collection<String> changelists, InfoCallback callback)
+        throws ClientException;
+
+    /**
      * Retrieve information about repository or working copy items.
+     * <p>
+     * Behaves like the 1.9 version, with <code>fetchExcluded</code>
+     * set to <code>false</code> and <code>fetchActualOnly</code> set
+     * to <code>true</code>.
      * @param pathOrUrl     the path or the url of the item
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl

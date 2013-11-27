@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -36,7 +37,6 @@
 #include "svn_path.h"
 
 #include "client.h"
-#include "svn_private_config.h"
 
 #include "private/svn_wc_private.h"
 
@@ -243,6 +243,8 @@ svn_client__get_inheritable_props(apr_hash_t **wcroot_iprops,
 {
   const char *old_session_url;
   svn_error_t *err;
+
+  *wcroot_iprops = NULL;
 
   if (!SVN_IS_VALID_REVNUM(revision))
     return SVN_NO_ERROR;

@@ -28,6 +28,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_private_config.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -808,6 +809,8 @@ test_prop_conflicts(const svn_test_opts_t *opts,
 }
 
 /* The test table.  */
+
+int svn_test_max_threads = 1;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

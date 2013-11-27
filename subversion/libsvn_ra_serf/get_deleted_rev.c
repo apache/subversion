@@ -101,7 +101,7 @@ create_getdrev_body(serf_bucket_t **body_bkt,
                                     "S:get-deleted-rev-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     "xmlns:D", "DAV:",
-                                    NULL, NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", drev_ctx->path,

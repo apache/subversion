@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
 #include "svn_auth.h"
+#include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
@@ -37,6 +38,7 @@
 #include "svn_ctype.h"
 
 #include "svn_private_config.h"
+#include "private/svn_subr_private.h"
 
 #ifdef __HAIKU__
 #  include <FindDirectory.h>
@@ -183,7 +185,25 @@ skip_to_eoln(parse_context_t *ctx, int *c)
 
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != '\n' && ch != EOF)
-    SVN_ERR(parser_getc_plain(ctx, &ch));
+    {
+      /* This is much faster than checking individual bytes.
+       * We use this function a lot when skipping comment lines.
+       *
+       * This assumes that the ungetc buffer is empty, but that is a
+       * safe assumption right after reading a character (which would
+       * clear the buffer. */
+      const char *newline = memchr(ctx->parser_buffer + ctx->buffer_pos, '\n',
+                                   ctx->buffer_size - ctx->buffer_pos);
+      if (newline)
+        {
+          ch = '\n';
+          ctx->buffer_pos = newline - ctx->parser_buffer + 1;
+          break;
+        }
+
+      /* refill buffer, check for EOF */
+      SVN_ERR(parser_getc_plain(ctx, &ch));
+    }
 
   *c = ch;
   return SVN_NO_ERROR;
@@ -394,7 +414,8 @@ svn_config__sys_config_path(const char **path_p,
     const char *folder;
     SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
     *path_p = svn_dirent_join_many(pool, folder,
-                                   SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+                                   SVN_CONFIG__SUBDIRECTORY, fname,
+                                   SVN_VA_NULL);
   }
 
 #elif defined(__HAIKU__)
@@ -407,19 +428,98 @@ svn_config__sys_config_path(const char **path_p,
       return SVN_NO_ERROR;
 
     *path_p = svn_dirent_join_many(pool, folder,
-                                   SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+                                   SVN_CONFIG__SYS_DIRECTORY, fname,
+                                   SVN_VA_NULL);
   }
 #else  /* ! WIN32 && !__HAIKU__ */
 
-  *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname, NULL);
+  *path_p = svn_dirent_join_many(pool, SVN_CONFIG__SYS_DIRECTORY, fname,
+                                 SVN_VA_NULL);
 
 #endif /* WIN32 */
 
   return SVN_NO_ERROR;
 }
 
+/* Callback for svn_config_enumerate2: Continue to next value. */
+static svn_boolean_t
+expand_value(const char *name,
+             const char *value,
+             void *baton,
+             apr_pool_t *pool)
+{
+  return TRUE;
+}
+
+/* Callback for svn_config_enumerate_sections2:
+ * Enumerate and implicitly expand all values in this section.
+ */
+static svn_boolean_t
+expand_values_in_section(const char *name,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  svn_config_t *cfg = baton;
+  svn_config_enumerate2(cfg, name, expand_value, NULL, pool);
+
+  return TRUE;
+}
+
 
 /*** Exported interfaces. ***/
+
+void
+svn_config__set_read_only(svn_config_t *cfg,
+                          apr_pool_t *scratch_pool)
+{
+  /* expand all items such that later calls to getters won't need to
+   * change internal state */
+  svn_config_enumerate_sections2(cfg, expand_values_in_section,
+                                 cfg, scratch_pool);
+
+  /* now, any modification attempt will be ignored / trigger an assertion
+   * in debug mode */
+  cfg->read_only = TRUE;
+}
+
+svn_boolean_t
+svn_config__is_read_only(svn_config_t *cfg)
+{
+  return cfg->read_only;
+}
+
+svn_config_t *
+svn_config__shallow_copy(svn_config_t *src,
+                         apr_pool_t *pool)
+{
+  svn_config_t *cfg = apr_palloc(pool, sizeof(*cfg));
+
+  cfg->sections = src->sections;
+  cfg->pool = pool;
+
+  /* r/o configs are fully expanded and don't need the x_pool anymore */
+  cfg->x_pool = src->read_only ? NULL : svn_pool_create(pool);
+  cfg->x_values = src->x_values;
+  cfg->tmp_key = svn_stringbuf_create_empty(pool);
+  cfg->tmp_value = svn_stringbuf_create_empty(pool);
+  cfg->section_names_case_sensitive = src->section_names_case_sensitive;
+  cfg->option_names_case_sensitive = src->option_names_case_sensitive;
+  cfg->read_only = src->read_only;
+
+  return cfg;
+}
+
+void
+svn_config__shallow_replace_section(svn_config_t *target,
+                                    svn_config_t *source,
+                                    const char *section)
+{
+  if (target->read_only)
+    target->sections = apr_hash_copy(target->pool, target->sections);
+
+  svn_hash_sets(target->sections, section,
+                svn_hash_gets(source->sections, section));
+}
 
 
 svn_error_t *
@@ -838,9 +938,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-max-connections       Maximum number of parallel server" NL
         "###                              connections to use for any given"  NL
         "###                              HTTP operation."                   NL
-        "###   busted-proxy               The proxy may have some protocol"  NL
-        "###                              issues that Subversion needs to"   NL
-        "###                              detect and work around."           NL
+        "###   http-chunked-requests      Whether to use chunked transfer"   NL
+        "###                              encoding for HTTP requests body."  NL
         "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
@@ -1264,7 +1363,7 @@ svn_config_get_user_config_path(const char **path,
 
   if (config_dir)
     {
-      *path = svn_dirent_join_many(pool, config_dir, fname, NULL);
+      *path = svn_dirent_join_many(pool, config_dir, fname, SVN_VA_NULL);
       return SVN_NO_ERROR;
     }
 
@@ -1273,7 +1372,7 @@ svn_config_get_user_config_path(const char **path,
     const char *folder;
     SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
     *path = svn_dirent_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+                                 SVN_CONFIG__SUBDIRECTORY, fname, SVN_VA_NULL);
   }
 
 #elif defined(__HAIKU__)
@@ -1286,7 +1385,8 @@ svn_config_get_user_config_path(const char **path,
       return SVN_NO_ERROR;
 
     *path = svn_dirent_join_many(pool, folder,
-                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+                                 SVN_CONFIG__USR_DIRECTORY, fname,
+                                 SVN_VA_NULL);
   }
 #else  /* ! WIN32 && !__HAIKU__ */
 
@@ -1296,7 +1396,7 @@ svn_config_get_user_config_path(const char **path,
       return SVN_NO_ERROR;
     *path = svn_dirent_join_many(pool,
                                svn_dirent_canonicalize(homedir, pool),
-                               SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+                               SVN_CONFIG__USR_DIRECTORY, fname, SVN_VA_NULL);
   }
 #endif /* WIN32 */
 

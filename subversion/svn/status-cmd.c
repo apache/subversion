@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_wc.h"
@@ -40,7 +41,6 @@
 #include "svn_cmdline.h"
 #include "cl.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 
@@ -51,7 +51,8 @@ struct status_baton
 {
   /* These fields all correspond to the ones in the
      svn_cl__print_status() interface. */
-  const char *cwd_abspath;
+  const char *target_abspath;
+  const char *target_path;
   svn_boolean_t suppress_externals_placeholders;
   svn_boolean_t detailed;
   svn_boolean_t show_last_committed;
@@ -77,6 +78,8 @@ struct status_baton
 struct status_cache
 {
   const char *path;
+  const char *target_abspath;
+  const char *target_path;
   svn_client_status_t *status;
 };
 
@@ -112,7 +115,7 @@ print_start_target_xml(const char *target, apr_pool_t *pool)
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
-                        "path", target, NULL);
+                        "path", target, SVN_VA_NULL);
 
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }
@@ -132,7 +135,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
       const char *repos_rev_str;
       repos_rev_str = apr_psprintf(pool, "%ld", repos_rev);
       svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "against",
-                            "revision", repos_rev_str, NULL);
+                            "revision", repos_rev_str, SVN_VA_NULL);
     }
 
   svn_xml_make_close_tag(&sb, pool, "target");
@@ -152,10 +155,11 @@ print_status_normal_or_xml(void *baton,
   struct status_baton *sb = baton;
 
   if (sb->xml_mode)
-    return svn_cl__print_status_xml(sb->cwd_abspath, path, status,
-                                    sb->ctx, pool);
+    return svn_cl__print_status_xml(sb->target_abspath, sb->target_path,
+                                    path, status, sb->ctx, pool);
   else
-    return svn_cl__print_status(sb->cwd_abspath, path, status,
+    return svn_cl__print_status(sb->target_abspath, sb->target_path,
+                                path, status,
                                 sb->suppress_externals_placeholders,
                                 sb->detailed,
                                 sb->show_last_committed,
@@ -239,6 +243,8 @@ print_status(void *baton,
       const char *cl_key = apr_pstrdup(sb->cl_pool, status->changelist);
       struct status_cache *scache = apr_pcalloc(sb->cl_pool, sizeof(*scache));
       scache->path = apr_pstrdup(sb->cl_pool, path);
+      scache->target_abspath = apr_pstrdup(sb->cl_pool, sb->target_abspath);
+      scache->target_path = apr_pstrdup(sb->cl_pool, sb->target_path);
       scache->status = svn_client_status_dup(status, sb->cl_pool);
 
       path_array =
@@ -303,7 +309,6 @@ svn_cl__status(apr_getopt_t *os,
                                   "mode"));
     }
 
-  SVN_ERR(svn_dirent_get_absolute(&(sb.cwd_abspath), "", scratch_pool));
   sb.suppress_externals_placeholders = (opt_state->quiet
                                         && (! opt_state->verbose));
   sb.detailed = (opt_state->verbose || opt_state->update);
@@ -328,6 +333,10 @@ svn_cl__status(apr_getopt_t *os,
 
       svn_pool_clear(iterpool);
 
+      SVN_ERR(svn_dirent_get_absolute(&(sb.target_abspath), target,
+                                      scratch_pool));
+      sb.target_path = target;
+
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       if (opt_state->xml)
@@ -349,7 +358,8 @@ svn_cl__status(apr_getopt_t *os,
                           NULL, opt_state->quiet,
                           /* not versioned: */
                           SVN_ERR_WC_NOT_WORKING_COPY,
-                          SVN_ERR_WC_PATH_NOT_FOUND));
+                          SVN_ERR_WC_PATH_NOT_FOUND,
+                          0));
 
       if (opt_state->xml)
         SVN_ERR(print_finish_target_xml(repos_rev, iterpool));
@@ -380,7 +390,7 @@ svn_cl__status(apr_getopt_t *os,
               svn_stringbuf_setempty(buf);
               svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                                     "changelist", "name", changelist_name,
-                                    NULL);
+                                    SVN_VA_NULL);
               SVN_ERR(svn_cl__error_checked_fputs(buf->data, stdout));
             }
           else
@@ -392,6 +402,8 @@ svn_cl__status(apr_getopt_t *os,
             {
               struct status_cache *scache =
                 APR_ARRAY_IDX(path_array, j, struct status_cache *);
+              sb.target_abspath = scache->target_abspath;
+              sb.target_path = scache->target_path;
               SVN_ERR(print_status_normal_or_xml(&sb, scache->path,
                                                  scache->status, scratch_pool));
             }

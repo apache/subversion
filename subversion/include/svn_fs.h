@@ -121,6 +121,16 @@ typedef struct svn_fs_t svn_fs_t;
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
+/**
+ * EXPERIMENTAL filesystem backend.
+ *
+ * It is not ready for general production use.  Please consult the
+ * respective release notes on suggested usage scenarios.
+ * 
+ * @since New in 1.9.
+ */
+#define SVN_FS_TYPE_FSX                         "fsx"
+
 /** Create repository format compatible with Subversion versions
  * earlier than 1.4.
  *
@@ -148,6 +158,18 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.8.
  */
 #define SVN_FS_CONFIG_PRE_1_8_COMPATIBLE        "pre-1.8-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.9.  The value must be a version in the same format
+ * as #SVN_VER_NUMBER.
+ *
+ * @note The @c patch component would often be ignored, due to our forward
+ * compatibility promises within minor release lines.  It should therefore
+ * usually be set to @c 0.
+ *
+ * @since New in 1.9.
+ */
+#define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
 /** @} */
 
 
@@ -222,6 +244,7 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  *
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
+ *   SVN_FS_TYPE_FSX   Experimental filesystem implementation
  *
  * If @a fs_config is @c NULL or does not contain a value for
  * #SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
@@ -1020,6 +1043,19 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * ###     conflict string
  * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
  * ###     to a valid, committed revision number
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_commit_txn2(const char **conflict_p,
+                   svn_revnum_t *new_rev,
+                   svn_fs_txn_t *txn,
+                   svn_boolean_t set_timestamp,
+                   apr_pool_t *pool);
+
+/*
+ * Same as svn_fs_commit_txn2(), but with @a set_timestamp
+ * always set to @c TRUE.
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
@@ -1275,7 +1311,13 @@ typedef enum svn_fs_path_change_kind_t
   svn_fs_path_change_replace,
 
   /** ignore all previous change items for path (internal-use only) */
-  svn_fs_path_change_reset
+  svn_fs_path_change_reset,
+
+  /** moved to this path in txn */
+  svn_fs_path_change_move,
+
+  /** path removed and replaced by moved path in txn */
+  svn_fs_path_change_movereplace
 
 } svn_fs_path_change_kind_t;
 
@@ -1796,6 +1838,19 @@ svn_fs_dir_entries(apr_hash_t **entries_p,
                    const char *path,
                    apr_pool_t *pool);
 
+/** Take the #svn_fs_dirent_t structures in @a entries as returned by
+ * #svn_fs_dir_entries for @a root and determine an optimized ordering
+ * in which data access would most likely be efficient.  Set @a *ordered_p
+ * to a newly allocated APR array of pointers to these #svn_fs_dirent_t
+ * structures.  Allocate the array (but not its contents) in @a pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_dir_optimal_order(apr_array_header_t **ordered_p,
+                         svn_fs_root_t *root,
+                         apr_hash_t *entries,
+                         apr_pool_t *pool);
 
 /** Create a new directory named @a path in @a root.  The new directory has
  * no entries, and no properties.  @a root must be the root of a transaction,
@@ -1869,6 +1924,38 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
                      svn_fs_root_t *to_root,
                      const char *path,
                      apr_pool_t *pool);
+
+/** Create a copy of @a from_path in @a from_root named @a to_path in
+ * @a to_root and record it as a Move.  If @a from_path in @a from_root is
+ * a directory, copy the tree it refers to recursively.  @a from_root must
+ * be @a to_root's base revision.
+ *
+ * The move will remember its source; use svn_fs_copied_from() to
+ * access this information.
+ *
+ * @a to_root must be the root of a transaction based on that revision.
+ * Further, @a to_root and @a from_root must represent the same filesystem.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @note This will not implicitly delete the @a from_path in @a to_root
+ *       but the deletion must be reported just as if this was a
+ *       #svn_fs_copy call.
+ *
+ * @warning This function is marked as @b experimental.  That means this
+ *          function will probably be supported in future releases but
+ *          might change in signature or various aspects of its semantics.
+ *
+ * @since New in 1.9.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_fs_move(svn_fs_root_t *from_root,
+            const char *from_path,
+            svn_fs_root_t *to_root,
+            const char *to_path,
+            apr_pool_t *pool);
+
 
 /* Files.  */
 
@@ -2648,6 +2735,32 @@ typedef struct svn_fs_fsfs_info_t {
   /* If you add fields here, check whether you need to extend svn_fs_info()
      or svn_fs_info_dup(). */
 } svn_fs_fsfs_info_t;
+
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_FSX filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_fs_fsx_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSX. */
+  const char *fs_type;
+
+  /** Shard size, always > 0. */
+  int shard_size;
+
+  /** The smallest revision which is not in a pack file. */
+  svn_revnum_t min_unpacked_rev;
+
+  /* If you add fields here, check whether you need to extend svn_fs_info()
+     or svn_fs_info_dup(). */
+
+} svn_fs_fsx_info_t;
 
 /** @see svn_fs_info()
  * @since New in 1.9. */

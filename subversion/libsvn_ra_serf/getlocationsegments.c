@@ -27,12 +27,12 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
 #include "ra_serf.h"
@@ -119,7 +119,7 @@ create_gls_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_open_tag_buckets(buckets, alloc,
                                     "S:get-location-segments",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", gls_ctx->path,

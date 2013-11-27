@@ -30,6 +30,8 @@
 #include <string.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
@@ -45,8 +47,6 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
-
-#include "svn_private_config.h"
 
 struct capture_baton_t {
   svn_commit_callback2_t original_callback;
@@ -854,6 +854,19 @@ svn_client_commit6(const apr_array_header_t *targets,
                               svn_dirent_local_style(item->path, iterpool),
                               svn_dirent_local_style(delete_op_root_abspath,
                                                      iterpool));
+
+                  if (ctx->notify_func2)
+                    {
+                      svn_wc_notify_t *notify;
+                      notify = svn_wc_create_notify(
+                                    delete_op_root_abspath,
+                                    svn_wc_notify_failed_requires_target,
+                                    iterpool);
+                      notify->err = cmt_err;
+
+                      ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                    }
+
                   goto cleanup;
                 }
             }
@@ -885,6 +898,19 @@ svn_client_commit6(const apr_array_header_t *targets,
                          svn_dirent_local_style(item->path, iterpool),
                          svn_dirent_local_style(copy_op_root_abspath,
                                                 iterpool));
+
+              if (ctx->notify_func2)
+                {
+                    svn_wc_notify_t *notify;
+                    notify = svn_wc_create_notify(
+                                copy_op_root_abspath,
+                                svn_wc_notify_failed_requires_target,
+                                iterpool);
+                    notify->err = cmt_err;
+
+                    ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                }
+
               goto cleanup;
             }
         }
@@ -999,9 +1025,22 @@ svn_client_commit6(const apr_array_header_t *targets,
     }
 
  cleanup:
-  /* Sleep to ensure timestamp integrity. */
+  /* Sleep to ensure timestamp integrity.  BASE_ABSPATH may have been
+     removed by the commit or it may the common ancestor of multiple
+     working copies. */
   if (timestamp_sleep)
-    svn_io_sleep_for_timestamps(base_abspath, pool);
+    {
+      const char *sleep_abspath;
+      svn_error_t *err = svn_wc__get_wcroot(&sleep_abspath, ctx->wc_ctx,
+                                            base_abspath, pool, pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          sleep_abspath = base_abspath;
+        }
+
+      svn_io_sleep_for_timestamps(sleep_abspath, pool);
+    }
 
   /* Abort the commit if it is still in progress. */
   svn_pool_clear(iterpool); /* Close open handles before aborting */

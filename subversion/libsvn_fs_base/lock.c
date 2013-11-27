@@ -21,11 +21,11 @@
  */
 
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
-#include "svn_private_config.h"
 
 #include <apr_uuid.h>
 
@@ -253,7 +253,7 @@ svn_fs_base__generate_lock_token(const char **token,
      generate a URI that matches the DAV RFC.  We could change this to
      some other URI scheme someday, if we wish. */
   *token = apr_pstrcat(pool, "opaquelocktoken:",
-                       svn_uuid_generate(pool), (char *)NULL);
+                       svn_uuid_generate(pool), SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 
@@ -465,8 +465,9 @@ svn_fs_base__get_locks(svn_fs_t *fs,
   args.path = svn_fs__canonicalize_abspath(path, pool);
   args.depth = depth;
   /* Enough for 100+ locks if the comments are small. */
-  args.stream = svn_stream__from_spillbuf(4 * 1024  /* blocksize */,
-                                          64 * 1024 /* maxsize */,
+  args.stream = svn_stream__from_spillbuf(svn_spillbuf__create(4 * 1024  /* blocksize */,
+                                                               64 * 1024 /* maxsize */,
+                                                               pool),
                                           pool);
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool));
 

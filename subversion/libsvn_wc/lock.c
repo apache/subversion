@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_time.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -39,7 +40,6 @@
 #include "props.h"
 #include "wc_db.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 

@@ -32,6 +32,7 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_path.h"
@@ -43,13 +44,12 @@
 #include "svn_mergeinfo.h"
 #include "svn_utf.h"
 #include "svn_xml.h"
+#include "svn_auth.h"
 
 #include "opt.h"
+#include "auth.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
-
-#include "svn_private_config.h"
-
 
 
 
@@ -1252,12 +1252,26 @@ svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
   svn_xml_make_header2(str, NULL, pool);
 }
 
+
+/*** From utf.c ***/
 void
 svn_utf_initialize(apr_pool_t *pool)
 {
   svn_utf_initialize2(FALSE, pool);
 }
 
+svn_error_t *
+svn_utf_cstring_from_utf8_ex(const char **dest,
+                             const char *src,
+                             const char *topage,
+                             const char *convset_key,
+                             apr_pool_t *pool)
+{
+  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
+}
+
+
+/*** From subst.c ***/
 svn_error_t *
 svn_subst_build_keywords(svn_subst_keywords_t *kw,
                          const char *keywords_val,
@@ -1301,4 +1315,62 @@ svn_subst_build_keywords(svn_subst_keywords_t *kw,
   return SVN_NO_ERROR;
 }
 
+/*** From version.c ***/
+svn_error_t *
+svn_ver_check_list(const svn_version_t *my_version,
+                   const svn_version_checklist_t *checklist)
+{
+  return svn_ver_check_list2(my_version, checklist, svn_ver_compatible);
+}
 
+/*** From win32_crypto.c ***/
+#if defined(WIN32) && !defined(__MINGW32__)
+void
+svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
+                                     apr_pool_t *pool)
+{
+  svn_auth__get_windows_simple_provider(provider, pool);
+}
+
+void
+svn_auth_get_windows_ssl_client_cert_pw_provider
+   (svn_auth_provider_object_t **provider,
+    apr_pool_t *pool)
+{
+  svn_auth__get_windows_ssl_client_cert_pw_provider(provider, pool);
+}
+
+void
+svn_auth_get_windows_ssl_server_trust_provider
+  (svn_auth_provider_object_t **provider, apr_pool_t *pool)
+{
+  svn_auth__get_windows_ssl_server_trust_provider(provider, pool);
+}
+#endif /* WIN32 && !__MINGW32__ */
+
+/*** From macos_keychain.c ***/
+#if defined(DARWIN)
+void
+svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
+                                      apr_pool_t *pool)
+{
+  svn_auth__get_keychain_simple_provider(provider, pool);
+}
+
+void
+svn_auth_get_keychain_ssl_client_cert_pw_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool)
+{
+  svn_auth__get_keychain_ssl_client_cert_pw_provider(provider, pool);
+}
+#endif /* DARWIN */
+
+#if !defined(WIN32)
+void
+svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
+                                       apr_pool_t *pool)
+{
+  svn_auth__get_gpg_agent_simple_provider(provider, pool);
+}
+#endif /* !WIN32 */

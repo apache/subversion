@@ -26,11 +26,11 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"

@@ -2752,6 +2752,20 @@ def basic_diff_summarize(sbox):
   svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
                                                 wc_dir, '-c-3')
 
+  # Get the differences between a deep newly added dir Issue(4421)
+  expected_diff = svntest.wc.State(wc_dir, {
+    'Q/R'         : Item(status='A '),
+    'Q/R/newfile' : Item(status='A '),
+    })
+  expected_reverse_diff = svntest.wc.State(wc_dir, {
+    'Q/R'         : Item(status='D '),
+    'Q/R/newfile' : Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                p('Q/R'), '-c3')
+  svntest.actions.run_and_verify_diff_summarize(expected_reverse_diff,
+                                                p('Q/R'), '-c-3')
+
 #----------------------------------------------------------------------
 def diff_weird_author(sbox):
   "diff with svn:author that has < in it"
@@ -4580,6 +4594,80 @@ def diff_missing_tree_conflict_victim(sbox):
   expected_output = [ ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
 
+@Issue(4396)
+def diff_local_missing_obstruction(sbox):
+  "diff local missing and obstructed files"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  os.unlink(sbox.ospath('iota'))
+  os.unlink(sbox.ospath('A/mu'))
+  os.mkdir(sbox.ospath('A/mu'))
+
+  # Expect no output for missing and obstructed files
+  expected_output = [
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
+
+  sbox.simple_propset('K', 'V', 'iota', 'A/mu')
+  sbox.simple_append('IotA', 'Content')
+
+  # But do expect a proper property diff
+  expected_output = [
+    'Index: %s\n' % (sbox.path('A/mu'),),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % (sbox.path('A/mu'),),
+    '+++ %s\t(working copy)\n' % (sbox.path('A/mu'),),
+    '\n',
+    'Property changes on: %s\n' % (sbox.path('A/mu'),),
+    '___________________________________________________________________\n',
+    'Added: K\n',
+    '## -0,0 +1 ##\n',
+    '+V\n',
+    '\ No newline at end of property\n',
+    'Index: %s\n' % (sbox.path('iota'),),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % (sbox.path('iota'),),
+    '+++ %s\t(working copy)\n' % (sbox.path('iota'),),
+    '\n',
+    'Property changes on: %s\n' % (sbox.path('iota'),),
+    '___________________________________________________________________\n',
+    'Added: K\n',
+    '## -0,0 +1 ##\n',
+    '+V\n',
+    '\ No newline at end of property\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', wc_dir)
+
+  # Create an external. This produces an error in 1.8.0.
+  sbox.simple_propset('svn:externals', 'AA/BB ' + sbox.repo_url + '/A', '.')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'diff', wc_dir)
+
+
+@Issue(4444)
+def diff_move_inside_copy(sbox):
+  "diff copied-along child that contains a moved file"
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  d_path = 'A/D'
+  d_copy = 'A/D-copy'
+  h_path = 'A/D-copy/H'
+  chi_path = '%s/chi' % h_path
+  chi_moved = '%s/chi-moved' % h_path
+
+  sbox.simple_copy(d_path, d_copy)
+  sbox.simple_move(chi_path, chi_moved)
+  sbox.simple_append(chi_moved, 'a new line')
+
+  # Bug: Diffing the copied-along parent directory asserts
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'diff', sbox.ospath(h_path))
+
 ########################################################################
 #Run the tests
 
@@ -4660,6 +4748,8 @@ test_list = [ None,
               diff_dir_replaced_by_dir,
               diff_repos_empty_file_addition,
               diff_missing_tree_conflict_victim,
+              diff_local_missing_obstruction,
+              diff_move_inside_copy,
               ]
 
 if __name__ == '__main__':

@@ -1304,7 +1304,7 @@ svn_path_resolve_repos_relative_url(const char **absolute_url,
    * this function, which will remove any duplicate path separator.
    */
   *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1,
-                              (char *)NULL);
+                              SVN_VA_NULL);
 
   return SVN_NO_ERROR;
 }

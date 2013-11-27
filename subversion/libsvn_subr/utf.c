@@ -32,13 +32,13 @@
 #include <apr_xlate.h>
 #include <apr_atomic.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
-#include "svn_private_config.h"
 #include "win32_xlate.h"
 
 #include "private/svn_utf_private.h"
@@ -172,7 +172,7 @@ get_xlate_key(const char *topage,
     topage = "APR_DEFAULT_CHARSET";
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
-                     "-xlate-handle", (char *)NULL);
+                     "-xlate-handle", SVN_VA_NULL);
 }
 
 /* Atomically replace the content in *MEM with NEW_VALUE and return
@@ -212,6 +212,7 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 {
   apr_status_t apr_err;
   apr_xlate_t *handle;
+  const char *name;
 
   /* The error handling doesn't support the following cases, since we don't
      use them currently.  Catch this here. */
@@ -224,8 +225,10 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
 #if defined(WIN32)
   apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
                                        frompage, pool);
+  name = "win32-xlate: ";
 #else
   apr_err = apr_xlate_open(&handle, topage, frompage, pool);
+  name = "APR: ";
 #endif
 
   if (APR_STATUS_IS_EINVAL(apr_err) || APR_STATUS_IS_ENOTIMPL(apr_err))
@@ -233,6 +236,8 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
   else if (apr_err != APR_SUCCESS)
     {
       const char *errstr;
+      char apr_strerr[512];
+
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
       if (frompage == SVN_APR_LOCALE_CHARSET)
@@ -248,7 +253,13 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                               _("Can't create a character converter from "
                                 "'%s' to '%s'"), frompage, topage);
 
-      return svn_error_create(apr_err, NULL, errstr);
+      /* Just put the error on the stack, since svn_error_create duplicates it
+         later.  APR_STRERR will be in the local encoding, not in UTF-8, though.
+       */
+      svn_strerror(apr_err, apr_strerr, sizeof(apr_strerr));
+      return svn_error_createf(SVN_ERR_PLUGIN_LOAD_FAILURE, 
+                               svn_error_create(apr_err, NULL, apr_strerr),
+                               "%s%s", name, errstr);
     }
 
   /* Allocate and initialize the node. */
@@ -469,58 +480,6 @@ get_uton_xlate_handle_node(xlate_handle_node_t **ret, apr_pool_t *pool)
 }
 
 
-/* Copy LEN bytes of SRC, converting non-ASCII and zero bytes to ?\nnn
-   sequences, allocating the result in POOL. */
-static const char *
-fuzzy_escape(const char *src, apr_size_t len, apr_pool_t *pool)
-{
-  const char *src_orig = src, *src_end = src + len;
-  apr_size_t new_len = 0;
-  char *new;
-  const char *new_orig;
-
-  /* First count how big a dest string we'll need. */
-  while (src < src_end)
-    {
-      if (! svn_ctype_isascii(*src) || *src == '\0')
-        new_len += 5;  /* 5 slots, for "?\XXX" */
-      else
-        new_len += 1;  /* one slot for the 7-bit char */
-
-      src++;
-    }
-
-  /* Allocate that amount, plus one slot for '\0' character. */
-  new = apr_palloc(pool, new_len + 1);
-
-  new_orig = new;
-
-  /* And fill it up. */
-  while (src_orig < src_end)
-    {
-      if (! svn_ctype_isascii(*src_orig) || src_orig == '\0')
-        {
-          /* This is the same format as svn_xml_fuzzy_escape uses, but that
-             function escapes different characters.  Please keep in sync!
-             ### If we add another fuzzy escape somewhere, we should abstract
-             ### this out to a common function. */
-          apr_snprintf(new, 6, "?\\%03u", (unsigned char) *src_orig);
-          new += 5;
-        }
-      else
-        {
-          *new = *src_orig;
-          new += 1;
-        }
-
-      src_orig++;
-    }
-
-  *new = '\0';
-
-  return new_orig;
-}
-
 /* Convert SRC_LENGTH bytes of SRC_DATA in NODE->handle, store the result
    in *DEST, which is allocated in POOL. */
 static svn_error_t *
@@ -598,8 +557,8 @@ convert_to_stringbuf(xlate_handle_node_t *node,
           (pool, _("Can't convert string from '%s' to '%s':"),
            node->frompage, node->topage);
 
-      err = svn_error_create(apr_err, NULL, fuzzy_escape(src_data,
-                                                         src_length, pool));
+      err = svn_error_create(
+          apr_err, NULL, svn_utf__fuzzy_escape(src_data, src_length, pool));
       return svn_error_create(apr_err, err, errstr);
     }
   /* Else, exited due to success.  Trim the result buffer down to the
@@ -680,7 +639,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     valid_txt = apr_pstrcat(pool, valid_txt,
                             apr_psprintf(pool, " %02x",
                                          (unsigned char)last[i-valid]),
-                                         (char *)NULL);
+                                         SVN_VA_NULL);
 
   /* 4 invalid octets will guarantee that the faulty octet is displayed */
   invalid = data + len - last;
@@ -690,7 +649,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
     invalid_txt = apr_pstrcat(pool, invalid_txt,
                               apr_psprintf(pool, " %02x",
                                            (unsigned char)last[i]),
-                                           (char *)NULL);
+                                           SVN_VA_NULL);
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Valid UTF-8 data\n(hex:%s)\n"
@@ -975,18 +934,6 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
   return err;
 }
 
-
-svn_error_t *
-svn_utf_cstring_from_utf8_ex(const char **dest,
-                             const char *src,
-                             const char *topage,
-                             const char *convset_key,
-                             apr_pool_t *pool)
-{
-  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
-}
-
-
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                  apr_pool_t *pool,
@@ -996,7 +943,7 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
   const char *escaped, *converted;
   svn_error_t *err;
 
-  escaped = fuzzy_escape(src, strlen(src), pool);
+  escaped = svn_utf__fuzzy_escape(src, strlen(src), pool);
 
   /* Okay, now we have a *new* UTF-8 string, one that's guaranteed to
      contain only 7-bit bytes :-).  Recode to native... */
@@ -1073,3 +1020,85 @@ svn_utf_cstring_from_utf8_string(const char **dest,
 
   return err;
 }
+
+
+#ifdef WIN32
+
+
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             const WCHAR *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int utf8_count = strlen(src);
+  const int prefix_len = (prefix ? lstrlenW(prefix) : 0);
+  WCHAR *wide_str;
+  int wide_count;
+
+  if (0 == prefix_len + utf8_count)
+    {
+      *result = L"";
+      return SVN_NO_ERROR;
+    }
+
+  wide_count = MultiByteToWideChar(CP_UTF8, 0, src, utf8_count, NULL, 0);
+  if (wide_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str = apr_palloc(result_pool,
+                        (prefix_len + wide_count + 1) * sizeof(*wide_str));
+  if (prefix_len)
+    memcpy(wide_str, prefix, prefix_len * sizeof(*wide_str));
+  if (0 == MultiByteToWideChar(CP_UTF8, 0, src, utf8_count,
+                               wide_str + prefix_len, wide_count))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion to UTF-16 failed"));
+
+  wide_str[prefix_len + wide_count] = 0;
+  *result = wide_str;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             const char *prefix,
+                             apr_pool_t *result_pool)
+{
+  const int wide_count = lstrlenW(src);
+  const int prefix_len = (prefix ? strlen(prefix) : 0);
+  char *utf8_str;
+  int utf8_count;
+
+  if (0 == prefix_len + wide_count)
+    {
+      *result = "";
+      return SVN_NO_ERROR;
+    }
+
+  utf8_count = WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                                   NULL, 0, NULL, FALSE);
+  if (utf8_count == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str = apr_palloc(result_pool,
+                        (prefix_len + utf8_count + 1) * sizeof(*utf8_str));
+  if (prefix_len)
+    memcpy(utf8_str, prefix, prefix_len * sizeof(*utf8_str));
+  if (0 == WideCharToMultiByte(CP_UTF8, 0, src, wide_count,
+                               utf8_str + prefix_len, utf8_count,
+                               NULL, FALSE))
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              _("Conversion from UTF-16 failed"));
+
+  utf8_str[prefix_len + utf8_count] = 0;
+  *result = utf8_str;
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* WIN32 */

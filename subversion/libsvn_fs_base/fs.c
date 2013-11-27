@@ -28,6 +28,8 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#define SVN_WANT_BDB
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -43,8 +45,6 @@
 #include "tree.h"
 #include "id.h"
 #include "lock.h"
-#define SVN_WANT_BDB
-#include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
 #include "bdb/bdb_compat.h"
@@ -729,7 +729,10 @@ populate_opened_fs(svn_fs_t *fs, apr_pool_t *scratch_pool)
 }
 
 static svn_error_t *
-base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_create(svn_fs_t *fs,
+            const char *path,
+            svn_mutex__t *common_pool_lock,
+            apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
@@ -805,7 +808,10 @@ check_format(int format)
 }
 
 static svn_error_t *
-base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_open(svn_fs_t *fs,
+          const char *path,
+          svn_mutex__t *common_pool_lock,
+          apr_pool_t *pool,
           apr_pool_t *common_pool)
 {
   int format;
@@ -888,7 +894,10 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 }
 
 static svn_error_t *
-base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
+base_open_for_recovery(svn_fs_t *fs,
+                       const char *path,
+                       svn_mutex__t *common_pool_lock,
+                       apr_pool_t *pool,
                        apr_pool_t *common_pool)
 {
   /* Just stash the path in the fs pointer - it's all we really need. */
@@ -904,6 +913,7 @@ base_upgrade(svn_fs_t *fs,
              void *notify_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
+             svn_mutex__t *common_pool_lock,
              apr_pool_t *pool,
              apr_pool_t *common_pool)
 {
@@ -946,7 +956,7 @@ base_upgrade(svn_fs_t *fs,
          But it's better to use the existing encapsulation of "opening
          the filesystem" rather than duplicating (or worse, partially
          duplicating) that logic here.  */
-      SVN_ERR(base_open(fs, path, subpool, common_pool));
+      SVN_ERR(base_open(fs, path, common_pool_lock, subpool, common_pool));
 
       /* Fetch the youngest rev, and record it */
       SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
@@ -968,6 +978,7 @@ base_verify(svn_fs_t *fs, const char *path,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
+            svn_mutex__t *common_pool_lock,
             apr_pool_t *pool,
             apr_pool_t *common_pool)
 {
@@ -992,6 +1003,7 @@ base_bdb_pack(svn_fs_t *fs,
               void *notify_baton,
               svn_cancel_func_t cancel,
               void *cancel_baton,
+              svn_mutex__t *common_pool_lock,
               apr_pool_t *pool,
               apr_pool_t *common_pool)
 {
@@ -1493,7 +1505,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
     return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
                              _("Unsupported FS loader version (%d) for bdb"),
                              loader_version->major);
-  SVN_ERR(svn_ver_check_list(base_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(base_version(), checklist, svn_ver_equal));
   SVN_ERR(check_bdb_version());
   SVN_ERR(svn_fs_bdb__init(common_pool));
 

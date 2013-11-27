@@ -30,12 +30,15 @@
 #include <util_filter.h>
 #include <ap_config.h>
 #include <apr_strings.h>
+#include <apr_uri.h>
 
 #include <expat.h>
 
 #include "mod_dav_svn.h"
 #include "svn_string.h"
 #include "svn_config.h"
+#include "svn_path.h"
+#include "private/svn_fspath.h"
 
 module AP_MODULE_DECLARE_DATA dontdothat_module;
 
@@ -161,26 +164,71 @@ matches(const char *wc, const char *p)
     }
 }
 
+/* duplicate of dav_svn__log_err() from mod_dav_svn/util.c */
+static void
+log_dav_err(request_rec *r,
+            dav_error *err,
+            int level)
+{
+    dav_error *errscan;
+
+    /* Log the errors */
+    /* ### should have a directive to log the first or all */
+    for (errscan = err; errscan != NULL; errscan = errscan->prev) {
+        apr_status_t status;
+
+        if (errscan->desc == NULL)
+            continue;
+
+#if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
+        status = errscan->aprerr;
+#else
+        status = errscan->save_errno;
+#endif
+
+        ap_log_rerror(APLOG_MARK, level, status, r,
+                      "%s  [%d, #%d]",
+                      errscan->desc, errscan->status, errscan->error_id);
+    }
+}
+
 static svn_boolean_t
 is_this_legal(dontdothat_filter_ctx *ctx, const char *uri)
 {
   const char *relative_path;
   const char *cleaned_uri;
   const char *repos_name;
+  const char *uri_path;
   int trailing_slash;
   dav_error *derr;
 
-  /* Ok, so we need to skip past the scheme, host, etc. */
-  uri = ap_strstr_c(uri, "://");
-  if (uri)
-    uri = ap_strchr_c(uri + 3, '/');
+  /* uri can be an absolute uri or just a path, we only want the path to match
+   * against */
+  if (uri && svn_path_is_url(uri))
+    {
+      apr_uri_t parsed_uri;
+      apr_status_t rv = apr_uri_parse(ctx->r->pool, uri, &parsed_uri);
+      if (APR_SUCCESS != rv)
+        {
+          /* Error parsing the URI, log and reject request. */
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, ctx->r,
+                        "mod_dontdothat: blocked request after failing "
+                        "to parse uri: '%s'", uri);
+          return FALSE;
+        }
+      uri_path = parsed_uri.path;
+    }
+  else
+    {
+      uri_path = uri;
+    }
 
-  if (uri)
+  if (uri_path)
     {
       const char *repos_path;
 
       derr = dav_svn_split_uri(ctx->r,
-                               uri,
+                               uri_path,
                                ctx->cfg->base_path,
                                &cleaned_uri,
                                &trailing_slash,
@@ -194,7 +242,7 @@ is_this_legal(dontdothat_filter_ctx *ctx, const char *uri)
           if (! repos_path)
             repos_path = "";
 
-          repos_path = apr_psprintf(ctx->r->pool, "/%s", repos_path);
+          repos_path = svn_fspath__canonicalize(repos_path, ctx->r->pool);
 
           /* First check the special cases that are always legal... */
           for (idx = 0; idx < ctx->allow_recursive_ops->nelts; ++idx)
@@ -228,6 +276,19 @@ is_this_legal(dontdothat_filter_ctx *ctx, const char *uri)
                 }
             }
         }
+      else
+        {
+          log_dav_err(ctx->r, derr, APLOG_ERR);
+          return FALSE;
+        }
+
+    }
+  else
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, ctx->r,
+                    "mod_dontdothat: empty uri passed to is_this_legal(), "
+                    "module bug?");
+      return FALSE;
     }
 
   return TRUE;

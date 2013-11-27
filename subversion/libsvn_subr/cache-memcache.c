@@ -99,7 +99,7 @@ build_key(const char **mc_key,
     }
 
   long_key = apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix,
-                         (char *)NULL);
+                         SVN_VA_NULL);
   long_key_len = strlen(long_key);
 
   /* We don't want to have a key that's too big.  If it was going to
@@ -120,7 +120,7 @@ build_key(const char **mc_key,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
                              svn_checksum_to_cstring_display(checksum, pool),
-                             (char *)NULL);
+                             SVN_VA_NULL);
     }
 
   *mc_key = long_key;
@@ -209,6 +209,26 @@ memcache_get(void **value_p,
           *value_p = value;
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implement vtable.has_key in terms of the getter.
+ */
+static svn_error_t *
+memcache_has_key(svn_boolean_t *found,
+                 void *cache_void,
+                 const void *key,
+                 apr_pool_t *scratch_pool)
+{
+  char *data;
+  apr_size_t data_len;
+  SVN_ERR(memcache_internal_get(&data,
+                                &data_len,
+                                found,
+                                cache_void,
+                                key,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -371,6 +391,7 @@ memcache_get_info(void *cache_void,
 
 static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
+  memcache_has_key,
   memcache_set,
   memcache_iter,
   memcache_is_cachable,

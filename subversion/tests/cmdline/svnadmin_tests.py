@@ -61,8 +61,7 @@ def check_hotcopy_bdb(src, dst):
   if origerr or backerr or origout != backout:
     raise svntest.Failure
 
-def check_hotcopy_fsfs(src, dst):
-    "Verify that the SRC FSFS repository has been correctly copied to DST."
+def check_hotcopy_fsfs_fsx(src, dst):
     # Walk the source and compare all files to the destination
     for src_dirpath, src_dirs, src_files in os.walk(src):
       # Verify that the current directory exists in the destination
@@ -146,6 +145,14 @@ def check_hotcopy_fsfs(src, dst):
         f1.close()
         f2.close()
 
+def check_hotcopy_fsfs(src, dst):
+    "Verify that the SRC FSFS repository has been correctly copied to DST."
+    check_hotcopy_fsfs_fsx(src, dst)
+
+def check_hotcopy_fsx(src, dst):
+    "Verify that the SRC FSX repository has been correctly copied to DST."
+    check_hotcopy_fsfs_fsx(src, dst)
+        
 #----------------------------------------------------------------------
 
 # How we currently test 'svnadmin' --
@@ -237,6 +244,27 @@ def load_dumpstream(sbox, dump, *varargs):
   "Load dump text without verification."
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
+
+def set_changed_path_list(filename, changes):
+  """ Replace the changed paths list in the file given by FILENAME
+      with the text CHANGES."""
+
+  # read full file
+  fp = open(filename, 'r+b')
+  contents = fp.read()
+
+  # replace the changed paths list
+  length = len(contents)
+  header = contents[contents.rfind('\n', length - 64, length - 1):]
+  body_len = long(header.split(' ')[1])
+
+  contents = contents[:body_len] + changes + header
+
+  # set new contents
+  fp.seek(0)
+  fp.write(contents)
+  fp.truncate()
+  fp.close()
 
 ######################################################################
 # Tests
@@ -457,8 +485,10 @@ def hotcopy_dot(sbox):
 
   if svntest.main.is_fs_type_fsfs():
     check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
-  else:
+  if svntest.main.is_fs_type_bdb():
     check_hotcopy_bdb(sbox.repo_dir, backup_dir)
+  if svntest.main.is_fs_type_fsx():
+    check_hotcopy_fsx(sbox.repo_dir, backup_dir)
 
 #----------------------------------------------------------------------
 
@@ -549,9 +579,17 @@ def verify_windows_paths_in_repos(sbox):
   if errput:
     raise SVNUnexpectedStderr(errput)
 
-  # unfortunately, FSFS needs to do more checks than BDB resulting in
-  # different progress output
-  if svntest.main.is_fs_type_fsfs():
+  # unfortunately, some backends needs to do more checks than other
+  # resulting in different progress output
+  if svntest.main.is_fs_type_fsx():
+    svntest.verify.compare_and_display_lines(
+      "Error while running 'svnadmin verify'.",
+      'STDERR', ["* Verifying metadata at revision 0 ...\n",
+                 "* Verifying repository metadata ...\n",
+                 "* Verified revision 0.\n",
+                 "* Verified revision 1.\n",
+                 "* Verified revision 2.\n"], output)
+  elif svntest.main.is_fs_type_fsfs():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verifying repository metadata ...\n",
@@ -1468,8 +1506,8 @@ def verify_non_utf8_paths(sbox):
   expected_stderr = [
     "* Dumped revision 0.\n",
     "WARNING 0x0002: E160005: "
-      "While validating fspath '?\\230': "
-      "Path '?\\230' is not in UTF-8"
+      "While validating fspath '?\\E6': "
+      "Path '?\\E6' is not in UTF-8"
       "\n",
     "* Dumped revision 1.\n",
     ]
@@ -1618,7 +1656,7 @@ def hotcopy_incremental_packed(sbox):
   cwd = os.getcwd()
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write("4\nlayout sharded 2\n")
+  format_file.write("6\nlayout sharded 2\n")
   format_file.close()
 
   # Pack revisions 0 and 1.
@@ -1856,7 +1894,7 @@ def verify_keep_going(sbox):
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
                                            ".*Error verifying revision 2.",
-                                           ".*Verified revision 3.*",
+                                           ".*Error verifying revision 3.",
                                            ".*",
                                            ".*Summary.*",
                                            ".*E160004:.*"])
@@ -1889,6 +1927,170 @@ def verify_keep_going(sbox):
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
                                    None, errput, None, "svnadmin: E165011:.*"):
     raise svntest.Failure
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_invalid_path_changes(sbox):
+  "detect invalid changed path list entries"
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+
+  # Create a number of revisions each adding a single path
+  for r in range(2,20):
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'mkdir', '-m', 'log_msg',
+                                       sbox.repo_url + '/B' + str(r))
+
+  # modify every other revision to make sure that errors are not simply
+  # "carried over" but that all corrupts we get detected independently
+
+  # add existing node
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '2'),
+                        "_0.0.t1-1 add-dir false false /A\n\n")
+
+  # add into non-existent parent
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '4'),
+                        "_0.0.t3-2 add-dir false false /C/X\n\n")
+
+  # del non-existent node
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '6'),
+                        "_0.0.t5-2 delete-dir false false /C\n\n")
+
+  # del existent node of the wrong kind
+  # THIS WILL NOT BE DETECTED
+  # since dump mechanism and file don't care about the types of deleted nodes
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '8'),
+                        "_0.0.t7-2 delete-file false false /B3\n\n")
+
+  # copy from non-existent node
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '10'),
+                        "_0.0.t9-2 add-dir false false /B10\n"
+                        "6 /B8\n")
+
+  # copy from existing node of the wrong kind
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '12'),
+                        "_0.0.t11-2 add-file false false /B12\n"
+                        "9 /B8\n")
+
+  # modify non-existent node
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '14'),
+                        "_0.0.t13-2 modify-file false false /A/D/H/foo\n\n")
+
+  # modify existent node of the wrong kind
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '16'),
+                        "_0.0.t15-2 modify-file false false /B12\n\n")
+
+  # replace non-existent node
+  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '18'),
+                        "_0.0.t17-2 replace-file false false /A/D/H/foo\n\n")
+
+  # find corruptions
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--keep-going",
+                                                        sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2.",
+                                           ".*Verified revision 3.",
+                                           ".*Error verifying revision 4.",
+                                           ".*Verified revision 5.",
+                                           ".*Error verifying revision 6.",
+                                           ".*Verified revision 7.",
+                                           ".*Verified revision 8.",
+                                           ".*Verified revision 9.",
+                                           ".*Error verifying revision 10.",
+                                           ".*Verified revision 11.",
+                                           ".*Error verifying revision 12.",
+                                           ".*Verified revision 13.",
+                                           ".*Error verifying revision 14.",
+                                           ".*Verified revision 15.",
+                                           ".*Error verifying revision 16.",
+                                           ".*Verified revision 17.",
+                                           ".*Error verifying revision 18.",
+                                           ".*Verified revision 19."])
+
+  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
+                                            "svnadmin: E165011:.*"], False)
+
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        sbox.repo_dir)
+
+  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                           ".*Verified revision 0.",
+                                           ".*Verified revision 1.",
+                                           ".*Error verifying revision 2."])
+
+  if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
+                                   output, errput, exp_out, exp_err):
+    raise svntest.Failure
+
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--quiet",
+                                                        sbox.repo_dir)
+
+  if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
+                                   None, errput, None, "svnadmin: E165011:.*"):
+    raise svntest.Failure
+
+
+def verify_denormalized_names(sbox):
+  "detect denormalized names and name collisions"
+
+  sbox.build(create_wc = False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'normalization_check.dump')
+  load_dumpstream(sbox, open(dumpfile_location).read())
+
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    "verify", "--check-ucs-normalization", sbox.repo_dir)
+
+  expected_output_regex_list = [
+    ".*Verified revision 0.",
+                                                # A/{Eacute}
+    "WARNING 0x0003: Denormalized directory name 'A/.*'",
+                                           # A/{icircumflex}{odiaeresis}ta
+    "WARNING 0x0003: Denormalized file name 'A/.*ta'",
+    ".*Verified revision 1.",
+    ".*Verified revision 2.",
+    ".*Verified revision 3.",
+                                           # A/{Eacute}/{aring}lpha
+    "WARNING 0x0003: Denormalized file name 'A/.*/.*lpha'",
+    "WARNING 0x0004: Duplicate representation of path 'A/.*/.*lpha'",
+    ".*Verified revision 4.",
+    ".*Verified revision 5.",
+                                       # Q/{aring}lpha
+    "WARNING 0x0005: Denormalized path '/Q/.*lpha'"
+                                  # A/{Eacute}
+    " in svn:mergeinfo property of 'A/.*'",
+                                                      # Q/{aring}lpha
+    "WARNING 0x0006: Duplicate representation of path '/Q/.*lpha'"
+                                  # A/{Eacute}
+    " in svn:mergeinfo property of 'A/.*'",
+    ".*Verified revision 6."]
+
+  # The BDB backend doesn't do global metadata verification.
+  if not svntest.main.is_fs_type_bdb():
+    expected_output_regex_list.insert(0, ".*Verifying repository metadata")
+
+  exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
+
+  if svntest.verify.verify_outputs(
+      "Unexpected error while running 'svnadmin verify'.",
+      output, errput, exp_out, None):
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -1927,6 +2129,8 @@ test_list = [ None,
               mergeinfo_race,
               recover_old,
               verify_keep_going,
+              verify_invalid_path_changes,
+              verify_denormalized_names,
              ]
 
 if __name__ == '__main__':

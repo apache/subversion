@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -37,7 +38,6 @@
 #include "conflicts.h"
 #include "translate.h"
 
-#include "svn_private_config.h"
 #include "private/svn_skel.h"
 
 

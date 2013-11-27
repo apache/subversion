@@ -87,6 +87,48 @@ maybe_send_header(struct log_receiver_baton *lrb)
   return SVN_NO_ERROR;
 }
 
+/* Utility for log_receiver opening a new XML element in LRB's brigade
+   for LOG_ITEM and return the element's name in *ELEMENT.  Use POOL for
+   temporary allocations.
+
+   Call this function for items that may have a copy-from */
+static svn_error_t *
+start_path_with_copy_from(const char **element,
+                          struct log_receiver_baton *lrb,
+                          svn_log_changed_path2_t *log_item,
+                          apr_pool_t *pool)
+{
+  switch (log_item->action)
+    {
+      case 'A': *element = "S:added-path";
+                break;
+      case 'R': *element = "S:replaced-path";
+                break;
+      case 'V': *element = "S:moved-path";
+                break;
+      case 'E': *element = "S:replaced-by-moved-path";
+                break;
+
+      default:  /* Caller, you did wrong! */
+                SVN_ERR_MALFUNCTION();
+    }
+
+  if (log_item->copyfrom_path
+      && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
+    SVN_ERR(dav_svn__brigade_printf
+            (lrb->bb, lrb->output,
+             "<%s copyfrom-path=\"%s\" copyfrom-rev=\"%ld\"",
+             *element,
+             apr_xml_quote_string(pool,
+                                  log_item->copyfrom_path,
+                                  1), /* escape quotes */
+             log_item->copyfrom_rev));
+  else
+    SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output, "<%s", *element));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* This implements `svn_log_entry_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
@@ -203,39 +245,11 @@ log_receiver(void *baton,
           switch (log_item->action)
             {
             case 'A':
-              if (log_item->copyfrom_path
-                  && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                SVN_ERR(dav_svn__brigade_printf
-                        (lrb->bb, lrb->output,
-                         "<S:added-path copyfrom-path=\"%s\""
-                         " copyfrom-rev=\"%ld\"",
-                         apr_xml_quote_string(iterpool,
-                                              log_item->copyfrom_path,
-                                              1), /* escape quotes */
-                         log_item->copyfrom_rev));
-              else
-                SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
-                                              "<S:added-path"));
-
-              close_element = "S:added-path";
-              break;
-
             case 'R':
-              if (log_item->copyfrom_path
-                  && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
-                SVN_ERR(dav_svn__brigade_printf
-                        (lrb->bb, lrb->output,
-                         "<S:replaced-path copyfrom-path=\"%s\""
-                         " copyfrom-rev=\"%ld\"",
-                         apr_xml_quote_string(iterpool,
-                                              log_item->copyfrom_path,
-                                              1), /* escape quotes */
-                         log_item->copyfrom_rev));
-              else
-                SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
-                                              "<S:replaced-path"));
-
-              close_element = "S:replaced-path";
+            case 'V':
+            case 'E':
+              SVN_ERR(start_path_with_copy_from(&close_element, lrb,
+                                                log_item, iterpool));
               break;
 
             case 'D':
@@ -301,6 +315,9 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t discover_changed_paths = FALSE;      /* off by default */
   svn_boolean_t strict_node_history = FALSE;         /* off by default */
   svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
+  svn_move_behavior_t move_behavior = svn_move_behavior_no_moves;
+                                             /* no moves by default */
+  
   apr_array_header_t *revprops = apr_array_make(resource->pool, 3,
                                                 sizeof(const char *));
   apr_array_header_t *paths
@@ -395,6 +412,24 @@ dav_svn__log_report(const dav_resource *resource,
                                     resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
+      else if (strcmp(child->name, "move-behavior") == 0)
+        {
+          int move_behavior_param;
+          serr = svn_cstring_atoi(&move_behavior_param,
+                                  dav_xml_get_cdata(child, resource->pool, 1));
+          if (serr)
+            return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                        "Malformed CDATA in element "
+                                        "\"move-behavior\"", resource->pool);
+
+          if (   move_behavior_param < 0
+              || move_behavior_param > svn_move_behavior_auto_moves)
+            return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
+                                        "Invalid CDATA in element "
+                                        "\"move-behavior\"", resource->pool);
+
+          move_behavior = (svn_move_behavior_t) move_behavior_param;
+        }
       /* else unknown element; skip it */
     }
 
@@ -424,7 +459,7 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs4(repos->repos,
+  serr = svn_repos_get_logs5(repos->repos,
                              paths,
                              start,
                              end,
@@ -432,6 +467,7 @@ dav_svn__log_report(const dav_resource *resource,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
+                             move_behavior,
                              revprops,
                              dav_svn__authz_read_func(&arb),
                              &arb,

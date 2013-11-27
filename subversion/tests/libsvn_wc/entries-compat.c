@@ -377,7 +377,7 @@ test_entries_alloc(apr_pool_t *pool)
                                        "fake-wc",
                                        WC_NAME,
                                        "D",
-                                       NULL);
+                                       SVN_VA_NULL);
   SVN_ERR(svn_wc_entry(&entry, local_relpath, adm_access, TRUE, pool));
   SVN_TEST_ASSERT(entry == apr_hash_get(entries, "D", APR_HASH_KEY_STRING));
 
@@ -413,7 +413,7 @@ test_stubs(apr_pool_t *pool)
                                        "fake-wc",
                                        WC_NAME,
                                        "M",
-                                       NULL);
+                                       SVN_VA_NULL);
 
   SVN_ERR(svn_wc_adm_open3(&adm_access,
                            NULL /* associated */,
@@ -637,6 +637,8 @@ test_access_baton_like_locking(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+int svn_test_max_threads = -1;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

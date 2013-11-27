@@ -28,6 +28,8 @@
 /*** Includes. ***/
 
 #include <string.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -43,7 +45,6 @@
 #include "client.h"
 #include "mergeinfo.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_mergeinfo_private.h"
@@ -1943,6 +1944,9 @@ try_copy(svn_boolean_t *timestamp_sleep,
                                        sizeof(svn_client__copy_pair_t *));
   svn_boolean_t srcs_are_urls, dst_is_url;
   int i;
+
+  /* Assert instead of crashing if the sources list is empty. */
+  SVN_ERR_ASSERT(sources->nelts > 0);
 
   /* Are either of our paths URLs?  Just check the first src_path.  If
      there are more than one, we'll check for homogeneity among them

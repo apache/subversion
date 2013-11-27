@@ -26,6 +26,7 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_path.h"
@@ -35,9 +36,6 @@
 
 #include "ra_loader.h"
 #include "deprecated.h"
-
-#include "svn_private_config.h"
-
 
 
 
@@ -292,6 +290,25 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
   return svn_ra_do_diff2(session, reporter, report_baton, revision,
                          diff_target, recurse, ignore_ancestry, TRUE,
                          versus_url, diff_editor, diff_baton, pool);
+}
+
+svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t start,
+                             svn_revnum_t end,
+                             int limit,
+                             svn_boolean_t discover_changed_paths,
+                             svn_boolean_t strict_node_history,
+                             svn_boolean_t include_merged_revisions,
+                             const apr_array_header_t *revprops,
+                             svn_log_entry_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool)
+{
+  return svn_ra_get_log3(session, paths, start, end, limit,
+                         discover_changed_paths, strict_node_history,
+                         include_merged_revisions, svn_move_behavior_no_moves,
+                         revprops, receiver, receiver_baton, pool);
 }
 
 svn_error_t *svn_ra_get_log(svn_ra_session_t *session,

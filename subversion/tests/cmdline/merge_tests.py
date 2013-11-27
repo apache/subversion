@@ -656,7 +656,7 @@ def simple_property_merges(sbox):
     'E/alpha.prej'
     : Item(error_message('foo', 'foo_val', 'mod_foo')),
     'E/beta.prej'
-    : Item(error_message('foo', 'foo?\\129val', 'mod?\\129foo')),
+    : Item(error_message('foo', 'foo?\\81val', 'mod?\\81foo')),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
@@ -1977,7 +1977,7 @@ def merge_binary_with_common_ancestry(sbox):
   # Commit the second branch
   expected_output = wc.State(wc_dir, {
     'L'       : Item(verb='Adding'),
-    'L/theta' : Item(verb='Adding  (bin)'),
+    'L/theta' : Item(verb='Replacing'),
     })
 
   expected_status.add({

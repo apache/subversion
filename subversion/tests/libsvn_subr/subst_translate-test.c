@@ -27,6 +27,7 @@
 
 #include "../svn_test.h"
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_subst.h"
@@ -499,6 +500,8 @@ test_svn_subst_long_keywords(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+int svn_test_max_threads = 1;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

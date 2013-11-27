@@ -26,6 +26,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -39,7 +40,6 @@
 #include "private/svn_dav_protocol.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
-#include "svn_private_config.h"
 
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -60,6 +60,8 @@ enum log_state_e {
   HAS_CHILDREN,
   ADDED_PATH,
   REPLACED_PATH,
+  MOVED_PATH,
+  MOVE_REPLACED_PATH,
   DELETED_PATH,
   MODIFIED_PATH,
   SUBTRACTIVE_MERGE
@@ -76,6 +78,7 @@ typedef struct log_context_t {
   svn_boolean_t changed_paths;
   svn_boolean_t strict_node_history;
   svn_boolean_t include_merged_revisions;
+  svn_move_behavior_t move_behavior;
   const apr_array_header_t *revprops;
   int nest_level; /* used to track mergeinfo nesting levels */
   int count; /* only incremented when nest_level == 0 */
@@ -133,6 +136,14 @@ static const svn_ra_serf__xml_transition_t log_ttable[] = {
             "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
   { ITEM, S_, "replaced-path", REPLACED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ITEM, S_, "moved-path", MOVED_PATH,
+    TRUE, { "?node-kind", "?text-mods", "?prop-mods",
+            "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
+
+  { ITEM, S_, "replaced-by-moved-path", MOVE_REPLACED_PATH,
     TRUE, { "?node-kind", "?text-mods", "?prop-mods",
             "?copyfrom-path", "?copyfrom-rev", NULL }, TRUE },
 
@@ -383,6 +394,10 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
         action = 'A';
       else if (leaving_state == REPLACED_PATH)
         action = 'R';
+      else if (leaving_state == MOVED_PATH)
+        action = 'V';
+      else if (leaving_state == MOVE_REPLACED_PATH)
+        action = 'E';
       else if (leaving_state == DELETED_PATH)
         action = 'D';
       else
@@ -412,7 +427,7 @@ create_log_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_open_tag_buckets(buckets, alloc,
                                     "S:log-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:start-revision",
@@ -448,6 +463,14 @@ create_log_body(serf_bucket_t **body_bkt,
     {
       svn_ra_serf__add_tag_buckets(buckets,
                                    "S:include-merged-revisions", NULL,
+                                   alloc);
+    }
+
+  if (log_ctx->move_behavior != svn_move_behavior_no_moves)
+    {
+      svn_ra_serf__add_tag_buckets(buckets,
+                                   "S:move-behavior",
+                                   apr_ltoa(pool, log_ctx->move_behavior),
                                    alloc);
     }
 
@@ -507,6 +530,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
+                     svn_move_behavior_t move_behavior,
                      const apr_array_header_t *revprops,
                      svn_log_entry_receiver_t receiver,
                      void *receiver_baton,
@@ -532,6 +556,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->changed_paths = discover_changed_paths;
   log_ctx->strict_node_history = strict_node_history;
   log_ctx->include_merged_revisions = include_merged_revisions;
+  log_ctx->move_behavior = move_behavior;
   log_ctx->revprops = revprops;
   log_ctx->nest_level = 0;
 

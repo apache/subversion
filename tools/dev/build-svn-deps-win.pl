@@ -51,7 +51,6 @@
 # Usage/help output from the usual flags/on error input.
 # Make SQLITE_VER friendly since we're using no dots right now.
 # Work out the fixes to the projects' sources and contribute them back.
-# Allow selection of Release/Debug builds.
 # Allow selection of Arch (x86 and x64)
 # ZLib support for OpenSSL (have to patch openssl)
 # Use CMake zlib build instead.
@@ -135,7 +134,8 @@ our $SRCDIR; # directory where we store package files
 # Some other options
 our $VS_VER;
 our $NEON;
-our $SVN_VER = '1.8.x';
+our $SVN_VER = '1.9.x';
+our $DEBUG = 0;
 
 # Utility function to remove dots from a string
 sub remove_dots {
@@ -351,6 +351,7 @@ sub clean_structure {
   rmtree($INCDIR);
   rmtree($LIBDIR);
   rmtree("$INSTDIR\\serf");
+  rmtree("$INSTDIR\\neon");
   rmtree("$INSTDIR\\sqlite-amalgamation");
 
   # Dirs created indirectly by the install targets
@@ -422,7 +423,7 @@ sub download_dependencies {
   download_file($PCRE_URL, "$SRCDIR\\pcre.zip", \$PCRE_FILE);
   download_file($SQLITE_URL, "$SRCDIR\\sqlite-amalgamation.zip", \$SQLITE_FILE);
   download_file($SERF_URL, "$SRCDIR\\serf.zip", \$SERF_FILE);
-  download_file($NEON_URL, "$SRCDIR\\neon.tar.gz", \$NEON_FILE) if defined($NEON);
+  download_file($NEON_URL, "$SRCDIR\\neon.tar.gz", \$NEON_FILE) if $NEON;
 }
 
 ##############
@@ -488,7 +489,7 @@ sub extract_dependencies {
   extract_file($SERF_FILE, $INSTDIR,
                "$INSTDIR\\serf-$SERF_VER", "$INSTDIR\\serf");
   extract_file($NEON_FILE, $INSTDIR,
-               "$INSTDIR\\neon-$NEON_VER", "$INSTDIR\\neon") if defined($NEON);
+               "$INSTDIR\\neon-$NEON_VER", "$INSTDIR\\neon") if $NEON;
 }
 
 #########
@@ -499,7 +500,7 @@ sub build_pcre {
   chdir_or_die("$SRCLIB\\pcre");
   my $pcre_generator = 'NMake Makefiles';
   # Have to use RelWithDebInfo since httpd looks for the pdb files
-  my $pcre_build_type = '-DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo';
+  my $pcre_build_type = '-DCMAKE_BUILD_TYPE:STRING=' . ($DEBUG ? 'Debug' : 'RelWithDebInfo');
   my $pcre_shared_libs = '-DBUILD_SHARED_LIBS:BOOL=ON';
   my $pcre_install_prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$INSTDIR";
   my $cmake_cmd = qq("$CMAKE" -G "$pcre_generator" "$pcre_build_type" "$pcre_shared_libs" "$pcre_install_prefix" .); 
@@ -514,7 +515,7 @@ sub build_pcre {
 # build generates, it it doesn't match that then Subversion will fail to build.
 sub build_zlib {
   chdir_or_die("$SRCLIB\\zlib");
-  $ENV{CC_OPTS} = '/MD /02 /Zi';
+  $ENV{CC_OPTS} = $DEBUG ? '/MDd /Gm /ZI /Od /GZ /D_DEBUG' : '/MD /02 /Zi';
   $ENV{COMMON_CC_OPTS} = '/nologo /W3 /DWIN32 /D_WINDOWS';
   
   system_or_die("Failure building zilb", qq("$NMAKE" /nologo -f win32\\Makefile.msc STATICLIB=zlibstat.lib all));
@@ -543,8 +544,9 @@ sub build_openssl {
   # The apache build docs suggest no-rc5 no-idea enable-mdc2 on top of what
   # is used below, the primary driver behind that is patents, but I believe
   # the rc5 and idea patents have expired.
+  my $platform = $DEBUG ? 'debug-VC-WIN32' : 'VC-WIN32';
   system_or_die("Failure configuring openssl",
-                qq("$PERL" Configure no-asm "--prefix=$INSTDIR" VC-WIN32));
+                qq("$PERL" Configure no-asm "--prefix=$INSTDIR" $platform));
   system_or_die("Failure building openssl (bat)", 'ms\do_ms.bat');
   system_or_die("Failure building openssl (nmake)", qq("$NMAKE" /f ms\\ntdll.mak));
   system_or_die("Failure testing openssl", qq("$NMAKE" /f ms\\ntdll.mak test));
@@ -601,6 +603,9 @@ sub httpd_fix_makefile {
 
   modify_file_in_place($file, sub {
       s/\.vcproj/.vcxproj/i;
+      # below fixes that installd breaks when trying to install pcre because 
+      # dll is named pcred.dll when a Debug build. 
+      s/^(\s*copy srclib\\pcre\\pcre\.\$\(src_dll\)\s+"\$\(inst_dll\)"\s+<\s*\.y\s*)$/!IF EXISTS("srclib\\pcre\\pcre\.\$(src_dll)")\n$1!ENDIF\n!IF EXISTS("srclib\\pcre\\pcred\.\$(src_dll)")\n\tcopy srclib\\pcre\\pcred.\$(src_dll)\t\t\t"\$(inst_dll)" <.y\n!ENDIF\n/;
     });
 }
 
@@ -650,8 +655,9 @@ sub get_output_file {
 # Find the name of the bdb library we've installed in our LIBDIR.
 sub find_bdb_lib {
   my $result;
+  my $debug = $DEBUG ? 'd' : '';
   find(sub {
-         if (not defined($result) and /^libdb\d+\.lib$/) {
+         if (not defined($result) and /^libdb\d+$debug\.lib$/) {
            $result = $_;
          }
        }, $LIBDIR);
@@ -688,11 +694,24 @@ sub httpd_enable_bdb {
   insert_dependency_in_proj('support\htdbm.vcxproj', $bdb_lib, '.bdb');
 }
 
+# Apply the same fix as found in r1486937 on httpd 2.4.x branch.
+sub httpd_fix_debug {
+  my ($httpd_major, $httpd_minor, $httpd_patch) = $HTTPD_VER =~ /^(\d+)\.(\d+)\.(.+)$/;
+  return unless ($httpd_major <= 2 && $httpd_minor <= 4 && $httpd_patch < 5);
+
+  modify_file_in_place('libhttpd.dsp', sub {
+      s/^(!MESSAGE "libhttpd - Win32 Debug" \(based on "Win32 \(x86\) Dynamic-Link Library"\))$/$1\n!MESSAGE "libhttpd - Win32 Lexical" (based on "Win32 (x86) Dynamic-Link Library")/;
+      s/^(# Begin Group "headers")$/# Name "libhttpd - Win32 Lexical"\n$1/;
+    }, '.lexical');
+}
+
 sub build_httpd {
   chdir_or_die($HTTPD);
 
   my $vs_2012 = $VS_VER eq '2012';
   my $vs_2010 = $VS_VER eq '2010';
+
+  httpd_fix_debug();
 
   # I don't think cvtdsp.pl is necessary with Visual Studio 2012
   # but it shouldn't hurt anything either.  Including it allows
@@ -763,8 +782,9 @@ sub build_httpd {
   # configurations inside the project since we get them from the environment.
   # Once all that is done the BuildBin project should be buildable for you to
   # diagnose the problem.
+  my $target = $DEBUG ? "installd" : "installr";
   system_or_die("Failed building/installing httpd/apr/apu/api",
-    qq("$NMAKE" /f Makefile.win installr "DBM_LIST=db" "INSTDIR=$INSTDIR"));
+    qq("$NMAKE" /f Makefile.win $target "DBM_LIST=db" "INSTDIR=$INSTDIR"));
 
   chdir_or_die($TOPDIR);
 }
@@ -776,13 +796,15 @@ sub build_bdb {
   my $sln = 'build_windows\Berkeley_DB_vs2010.sln'; 
   upgrade_solution($sln);
 
+  my $platform = $DEBUG ? 'Debug|Win32' : 'Release|Win32';
+
   # Build the db Project first since the full solution fails due to a broken
   # dependency with the current version of BDB if we don't.
   system_or_die("Failed building DBD (Project db)",
-                qq("$DEVENV" "$sln" /Build "Release|Win32" /Project db));
+                qq("$DEVENV" "$sln" /Build "$platform" /Project db));
 
   system_or_die("Failed building DBD",
-                qq("$DEVENV" "$sln" /Build "Release|Win32"));
+                qq("$DEVENV" "$sln" /Build "$platform"));
 
   # BDB doesn't seem to have it's own install routines so we'll do it ourselves
   copy_or_die('build_windows\db.h', $INCDIR);
@@ -792,8 +814,22 @@ sub build_bdb {
      } elsif (/\.lib$/) {
        copy_or_die($_, $LIBDIR);
      }
-   }, 'build_windows\Win32\Release');
+   }, 'build_windows\\Win32\\' . ($DEBUG ? 'Debug' : 'Release'));
 
+  chdir_or_die($TOPDIR);
+}
+
+# Right now this doesn't actually build serf but just patches it so that it
+# can build against a debug build of OpenSSL.
+sub build_serf {
+  chdir_or_die("$TOPDIR\\serf");
+
+  modify_file_in_place('serf.mak', sub {
+      s/^(INTDIR = Release)$/$1\nOPENSSL_OUT_SUFFIX =/;
+      s/^(INTDIR = Debug)$/$1\nOPENSSL_OUT_SUFFIX = .dbg/;
+      s/(\$\(OPENSSL_SRC\)\\out32(?:dll)?)/$1\$(OPENSSL_OUT_SUFFIX)/g;
+    }, '.debug');
+  
   chdir_or_die($TOPDIR);
 }
 
@@ -802,6 +838,7 @@ sub build_dependencies {
   build_zlib();
   build_pcre();
   build_openssl();
+  build_serf();
   build_httpd();
 }
 

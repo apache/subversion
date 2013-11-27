@@ -32,9 +32,12 @@ import org.apache.subversion.javahl.ISVNReporter;
 import org.apache.subversion.javahl.JNIObject;
 import org.apache.subversion.javahl.OperationContext;
 import org.apache.subversion.javahl.ClientException;
+import org.apache.subversion.javahl.NativeResources;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.io.OutputStream;
@@ -44,6 +47,14 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 public class RemoteSession extends JNIObject implements ISVNRemote
 {
+    /**
+     * Load the required native library.
+     */
+    static
+    {
+        NativeResources.loadNativeLibrary();
+    }
+
     public void dispose()
     {
         if (editorReference != null)
@@ -121,18 +132,30 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
                                       CommitCallback commitCallback,
-                                      Set<Lock> lockTokens,
-                                      boolean keepLocks)
+                                      Set<Lock> lockTokens, boolean keepLocks,
+                                      ISVNEditor.ProvideBaseCallback getBase,
+                                      ISVNEditor.ProvidePropsCallback getProps,
+                                      ISVNEditor.GetNodeKindCallback getCopyfromKind)
             throws ClientException
     {
         check_inactive(editorReference, reporterReference);
         ISVNEditor ed =
             CommitEditor.createInstance(this, revisionProperties,
-                                        commitCallback, lockTokens, keepLocks);
+                                        commitCallback, lockTokens, keepLocks,
+                                        getBase, getProps, getCopyfromKind);
         if (editorReference != null)
             editorReference.clear();
         editorReference = new WeakReference<ISVNEditor>(ed);
         return ed;
+    }
+
+    public ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                                      CommitCallback commitCallback,
+                                      Set<Lock> lockTokens, boolean keepLocks)
+            throws ClientException
+    {
+        return getCommitEditor(revisionProperties, commitCallback,
+                               lockTokens, keepLocks, null, null, null);
     }
 
     public long getFile(long revision, String path,
@@ -197,10 +220,77 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     public native NodeKind checkPath(String path, long revision)
             throws ClientException;
 
-    // TODO: stat
-    // TODO: getLocations
-    // TODO: getLocationSegments
-    // TODO: getFileRevisions
+    public native DirEntry stat(String path, long revision)
+            throws ClientException;
+
+    public native Map<Long, String>
+        getLocations(String path, long pegRevision,
+                     Iterable<Long> locationRevisions)
+            throws ClientException;
+
+    public native
+        void getLocationSegments(String path,
+                                 long pegRevision,
+                                 long startRevision,
+                                 long endRevision,
+                                 RemoteLocationSegmentsCallback handler)
+            throws ClientException;
+
+    private static class GetLocationSegmentsHandler
+        implements RemoteLocationSegmentsCallback
+    {
+        public List<LocationSegment> locationSegments = null;
+        public void doSegment(LocationSegment locationSegment)
+        {
+            if (locationSegments == null)
+                locationSegments = new ArrayList<LocationSegment>();
+            locationSegments.add(locationSegment);
+        }
+    }
+
+    public List<LocationSegment> getLocationSegments(String path,
+                                                     long pegRevision,
+                                                     long startRevision,
+                                                     long endRevision)
+            throws ClientException
+    {
+        final GetLocationSegmentsHandler handler = new GetLocationSegmentsHandler();
+        getLocationSegments(path, pegRevision, startRevision, endRevision, handler);
+        return handler.locationSegments;
+    }
+
+    public native
+        void getFileRevisions(String path,
+                              long startRevision,
+                              long endRevision,
+                              boolean includeMergedRevisions,
+                              RemoteFileRevisionsCallback handler)
+            throws ClientException;
+
+    private static class GetFileRevisionsHandler
+        implements RemoteFileRevisionsCallback
+    {
+        public List<FileRevision> fileRevisions = null;
+        public void doRevision(FileRevision fileRevision)
+        {
+            if (fileRevisions == null)
+                fileRevisions = new ArrayList<FileRevision>();
+            fileRevisions.add(fileRevision);
+        }
+    }
+
+    public List<FileRevision> getFileRevisions(String path,
+                                               long startRevision,
+                                               long endRevision,
+                                               boolean includeMergedRevisions)
+            throws ClientException
+    {
+        final GetFileRevisionsHandler handler = new GetFileRevisionsHandler();
+        getFileRevisions(path, startRevision, endRevision,
+                         includeMergedRevisions, handler);
+        return handler.fileRevisions;
+    }
+
     // TODO: lock
     // TODO: unlock
     // TODO: getLock

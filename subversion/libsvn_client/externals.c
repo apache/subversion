@@ -28,6 +28,8 @@
 /*** Includes. ***/
 
 #include <apr_uri.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -40,7 +42,6 @@
 #include "svn_config.h"
 #include "client.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 
@@ -737,7 +738,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
   switch (ext_kind)
     {
       case svn_node_dir:
-        SVN_ERR(switch_dir_external(local_abspath, new_url,
+        SVN_ERR(switch_dir_external(local_abspath, new_loc->url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,

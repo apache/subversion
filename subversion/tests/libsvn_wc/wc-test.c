@@ -24,6 +24,7 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_io.h"
 #include "svn_dirent_uri.h"
@@ -307,6 +308,8 @@ test_externals_parse_erratic(apr_pool_t *pool)
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
+
+int svn_test_max_threads = 2;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

@@ -25,6 +25,7 @@
 
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_base64.h"
@@ -35,7 +36,6 @@
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
 #include "private/svn_string_private.h"
-#include "svn_private_config.h"
 
 #include "ra_serf.h"
 
@@ -143,7 +143,7 @@ static const int propfind_expected_status[] = {
 
 /* Return the HTTP status code contained in STATUS_LINE, or 0 if
    there's a problem parsing it. */
-static int parse_status_code(const char *status_line)
+static apr_int64_t parse_status_code(const char *status_line)
 {
   /* STATUS_LINE should be of form: "HTTP/1.1 200 OK" */
   if (status_line[0] == 'H' &&
@@ -261,7 +261,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
          that we wish to ignore.  (Typically, if it's not a 200, the
          status will be 404 to indicate that a property we
          specifically requested from the server doesn't exist.)  */
-      int status = parse_status_code(cdata->data);
+      apr_int64_t status = parse_status_code(cdata->data);
       if (status != 200)
         svn_ra_serf__xml_note(xes, PROPSTAT, "ignore-prop", "*");
     }
@@ -838,10 +838,10 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
     return apr_pstrdup(result_pool, name);
 
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
 
   if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    return apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
 
   if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
     return SVN_PROP_ENTRY_COMMITTED_REV;
@@ -869,7 +869,7 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
     }
 
   /* An unknown namespace, must be a custom property. */
-  return apr_pstrcat(result_pool, ns, name, (char *)NULL);
+  return apr_pstrcat(result_pool, ns, name, SVN_VA_NULL);
 }
 
 
@@ -928,9 +928,9 @@ select_revprops(void *baton,
   if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = name;
   else if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
   else if (strcmp(ns, SVN_PROP_PREFIX) == 0)
-    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, (char *)NULL);
+    prop_name = apr_pstrcat(result_pool, SVN_PROP_PREFIX, name, SVN_VA_NULL);
   else if (strcmp(ns, "") == 0)
     prop_name = name;
   else

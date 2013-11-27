@@ -33,9 +33,8 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
-#include "svn_private_config.h"
-
 #include "private/svn_delta_private.h"
+#include "svn_private_config.h"
 
 
 struct file_rev_handler_wrapper_baton {
@@ -1331,17 +1330,6 @@ move_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* This implements svn_editor_cb_rotate_t */
-static svn_error_t *
-rotate_cb(void *baton,
-          const apr_array_header_t *relpaths,
-          const apr_array_header_t *revisions,
-          apr_pool_t *scratch_pool)
-{
-  SVN__NOT_IMPLEMENTED();
-}
-
-
 static int
 count_components(const char *relpath)
 {
@@ -1640,7 +1628,7 @@ apply_change(void **dir_baton,
               /* Make this an FS path by prepending "/" */
               if (copyfrom_url[0] != '/')
                 copyfrom_url = apr_pstrcat(scratch_pool, "/",
-                                           copyfrom_url, NULL);
+                                           copyfrom_url, SVN_VA_NULL);
             }
 
           copyfrom_rev = change->copyfrom_rev;
@@ -1889,7 +1877,6 @@ svn_delta__editor_from_delta(svn_editor_t **editor_p,
       delete_cb,
       copy_cb,
       move_cb,
-      rotate_cb,
       complete_cb,
       abort_cb
     };

@@ -20,7 +20,7 @@
  * ====================================================================
  */
 
-
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -37,11 +37,11 @@
 #include "lock.h"
 #include "tree.h"
 #include "fs_fs.h"
+#include "util.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
-#include "svn_private_config.h"
 
 /* Names of hash keys used to store a lock for writing to disk. */
 #define PATH_KEY "path"
@@ -133,7 +133,7 @@ digest_path_from_digest(const char *fs_path,
 {
   return svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                               apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
-                              digest, NULL);
+                              digest, SVN_VA_NULL);
 }
 
 
@@ -151,7 +151,7 @@ digest_path_from_path(const char **digest_path,
   *digest_path = svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                                       apr_pstrmemdup(pool, digest,
                                                      DIGEST_SUBDIR_LEN),
-                                      digest, NULL);
+                                      digest, SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 
@@ -252,24 +252,23 @@ read_digest_file(apr_hash_t **children_p,
   apr_hash_t *hash;
   svn_stream_t *stream;
   const char *val;
+  svn_node_kind_t kind;
 
   if (lock_p)
     *lock_p = NULL;
   if (children_p)
     *children_p = apr_hash_make(pool);
 
-  err = svn_stream_open_readonly(&stream, digest_path, pool, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
+  SVN_ERR(svn_io_check_path(digest_path, &kind, pool));
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
 
   /* If our caller doesn't care about anything but the presence of the
      file... whatever. */
-  if (! (lock_p || children_p))
-    return svn_stream_close(stream);
+  if (kind == svn_node_file && !lock_p && !children_p)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_stream_open_readonly(&stream, digest_path, pool, pool));
 
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool)))
@@ -456,8 +455,7 @@ delete_lock(svn_fs_t *fs,
         }
       else
         {
-          const char *rev_0_path;
-          SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, fs, 0, pool));
+          const char *rev_0_path = svn_fs_fs__path_rev_absolute(fs, 0, pool);
           SVN_ERR(write_digest_file(this_children, this_lock, fs->path,
                                     digest_path, rev_0_path, subpool));
         }
@@ -864,7 +862,8 @@ lock_body(void *baton, apr_pool_t *pool)
   lock->is_dav_comment = lb->is_dav_comment;
   lock->creation_date = apr_time_now();
   lock->expiration_date = lb->expiration_date;
-  SVN_ERR(svn_fs_fs__path_rev_absolute(&rev_0_path, lb->fs, 0, pool));
+
+  rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
   SVN_ERR(set_lock(lb->fs->path, lock, rev_0_path, pool));
   *lb->lock_p = lock;
 
@@ -959,7 +958,7 @@ svn_fs_fs__generate_lock_token(const char **token,
      generate a URI that matches the DAV RFC.  We could change this to
      some other URI scheme someday, if we wish. */
   *token = apr_pstrcat(pool, "opaquelocktoken:",
-                       svn_uuid_generate(pool), (char *)NULL);
+                       svn_uuid_generate(pool), SVN_VA_NULL);
   return SVN_NO_ERROR;
 }
 

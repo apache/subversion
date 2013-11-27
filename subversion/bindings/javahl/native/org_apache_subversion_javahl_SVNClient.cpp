@@ -275,6 +275,21 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt
 }
 
 JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setTunnelAgent
+(JNIEnv *env, jobject jthis, jobject jtunnelcb)
+{
+  JNIEntry(SVNClient, setPrompt);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setTunnelCallback(jtunnelcb);
+}
+
+JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,
@@ -384,7 +399,7 @@ Java_org_apache_subversion_javahl_SVNClient_remove
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -498,7 +513,7 @@ Java_org_apache_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -539,7 +554,7 @@ Java_org_apache_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -577,7 +592,7 @@ Java_org_apache_subversion_javahl_SVNClient_move
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -610,7 +625,7 @@ Java_org_apache_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -761,7 +776,7 @@ Java_org_apache_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1012,7 +1027,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
   if (JNIUtil::isExceptionThrown())
     return;
 
-  PropertyTable revprops(jrevpropTable);
+  PropertyTable revprops(jrevpropTable, false, false);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1634,21 +1649,6 @@ Java_org_apache_subversion_javahl_SVNClient_setConfigDirectory
   cl->getClientContext().setConfigDirectory(configDir);
 }
 
-JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler
-(JNIEnv *env, jobject jthis, jobject jconfigHandler)
-{
-  JNIEntry(SVNClient, setConfigDirectory);
-  SVNClient *cl = SVNClient::getCppObject(jthis);
-  if (cl == NULL)
-    {
-      JNIUtil::throwError(_("bad C++ this"));
-      return;
-    }
-
-  cl->getClientContext().setConfigCallback(jconfigHandler);
-}
-
 JNIEXPORT jstring JNICALL
 Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 (JNIEnv *env, jobject jthis)
@@ -1663,6 +1663,36 @@ Java_org_apache_subversion_javahl_SVNClient_getConfigDirectory
 
   const char *configDir = cl->getClientContext().getConfigDirectory();
   return JNIUtil::makeJString(configDir);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_setConfigEventHandler(
+    JNIEnv* env, jobject jthis, jobject jcallback)
+{
+  JNIEntry(SVNClient, setConfigEventHandler);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  cl->getClientContext().setConfigEventHandler(jcallback);
+}
+
+JNIEXPORT jobject JNICALL
+Java_org_apache_subversion_javahl_SVNClient_getConfigEventHandler(
+    JNIEnv* env, jobject jthis)
+{
+  JNIEntry(SVNClient, getConfigEventHandler);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return NULL;
+    }
+
+  return cl->getClientContext().getConfigEventHandler();
 }
 
 JNIEXPORT void JNICALL
@@ -1810,8 +1840,9 @@ Java_org_apache_subversion_javahl_SVNClient_unlock
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_info2
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jobject jchangelists,
- jobject jinfoCallback)
+ jobject jpegRevision, jobject jdepth,
+ jboolean jfetchExcluded, jboolean jfetchActualOnly,
+ jobject jchangelists, jobject jinfoCallback)
 {
   JNIEntry(SVNClient, info2);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1838,6 +1869,7 @@ Java_org_apache_subversion_javahl_SVNClient_info2
 
   InfoCallback callback(jinfoCallback);
   cl->info2(path, revision, pegRevision, EnumMapper::toDepth(jdepth),
+            svn_boolean_t(jfetchExcluded), svn_boolean_t(jfetchActualOnly),
             changelists, &callback);
 }
 

@@ -25,6 +25,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_fs.h"
 #include "svn_pools.h"
@@ -41,7 +42,6 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
-#include "svn_private_config.h"
 
 
 /*** Creating and opening the changes table. ***/

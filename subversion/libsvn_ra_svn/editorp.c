@@ -28,6 +28,7 @@
 #include <apr_general.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
@@ -37,7 +38,6 @@
 #include "svn_ra_svn.h"
 #include "svn_path.h"
 #include "svn_pools.h"
-#include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
 #include "private/svn_editor.h"

@@ -140,6 +140,9 @@ svn_cl__null_log(apr_getopt_t *os,
   apr_array_header_t *revprops;
   svn_opt_revision_t target_peg_revision;
   const char *target_path_or_url;
+  svn_move_behavior_t move_behavior = opt_state->auto_moves
+                                    ? svn_move_behavior_auto_moves
+                                    : svn_move_behavior_explicit_moves;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -202,13 +205,14 @@ svn_cl__null_log(apr_getopt_t *os,
   APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
   if (!opt_state->quiet)
     APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
-  SVN_ERR(svn_client_log5(targets,
+  SVN_ERR(svn_client_log6(targets,
                           &target_peg_revision,
                           opt_state->revision_ranges,
                           opt_state->limit,
                           opt_state->verbose,
                           opt_state->stop_on_copy,
                           opt_state->use_merge_history,
+                          move_behavior,
                           revprops,
                           log_entry_receiver,
                           &lb,

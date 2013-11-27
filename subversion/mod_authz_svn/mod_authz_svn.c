@@ -91,7 +91,8 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
 /* canonicalize ACCESS_FILE based on the type of argument.
  * If SERVER_RELATIVE is true, ACCESS_FILE is a relative
  * path then ACCESS_FILE is converted to an absolute
- * path rooted at the server root. */
+ * path rooted at the server root.
+ * Returns NULL if path is not valid.*/
 static const char *
 canonicalize_access_file(const char *access_file,
                          svn_boolean_t server_relative,
@@ -104,7 +105,11 @@ canonicalize_access_file(const char *access_file,
   else if (!svn_path_is_repos_relative_url(access_file))
     {
       if (server_relative)
-        access_file = ap_server_root_relative(pool, access_file);
+        {
+          access_file = ap_server_root_relative(pool, access_file);
+          if (access_file == NULL)
+            return NULL;
+        }
 
       access_file = svn_dirent_internal_style(access_file, pool);
     }
@@ -126,6 +131,8 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
            "directives are mutually exclusive.";
 
   conf->access_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+  if (!conf->access_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }
@@ -145,6 +152,9 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
   conf->repo_relative_access_file = canonicalize_access_file(arg1, FALSE,
                                                              cmd->pool);
 
+  if (!conf->repo_relative_access_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
+
   return NULL;
 }
 
@@ -154,6 +164,9 @@ AuthzSVNGroupsFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
   authz_svn_config_rec *conf = config;
 
   conf->groups_file = canonicalize_access_file(arg1, TRUE, cmd->pool);
+
+  if (!conf->groups_file)
+    return apr_pstrcat(cmd->pool, "Invalid file path ", arg1, SVN_VA_NULL);
 
   return NULL;
 }
@@ -363,7 +376,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
         {
           access_file = svn_dirent_join_many(scratch_pool, repos_path, "conf",
                                              conf->repo_relative_access_file,
-                                             NULL);
+                                             SVN_VA_NULL);
         }
     }
   else
@@ -404,7 +417,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
     }
 
   cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
-                          access_file, groups_file, (char *)NULL);
+                          access_file, groups_file, SVN_VA_NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
   if (access_conf == NULL)
@@ -572,7 +585,7 @@ req_check_access(request_rec *r,
     repos_path = svn_fspath__canonicalize(repos_path, r->pool);
 
   *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path,
-                                (char *)NULL);
+                                SVN_VA_NULL);
 
   if (r->method_number == M_MOVE || r->method_number == M_COPY)
     {
@@ -620,7 +633,7 @@ req_check_access(request_rec *r,
         dest_repos_path = svn_fspath__canonicalize(dest_repos_path, r->pool);
 
       *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
-                                         dest_repos_path, (char *)NULL);
+                                         dest_repos_path, SVN_VA_NULL);
     }
 
   /* Retrieve/cache authorization file */
@@ -806,14 +819,15 @@ access_checker(request_rec *r)
                                                     &authz_svn_module);
   const char *repos_path = NULL;
   const char *dest_repos_path = NULL;
-  int status;
+  int status, authn_required;
 
   /* We are not configured to run */
   if (!conf->anonymous
       || (! (conf->access_file || conf->repo_relative_access_file)))
     return DECLINED;
 
-  if (ap_some_auth_required(r))
+  authn_required = ap_some_auth_required(r);
+  if (authn_required)
     {
       /* It makes no sense to check if a location is both accessible
        * anonymous and by an authenticated user (in the same request!).
@@ -843,7 +857,7 @@ access_checker(request_rec *r)
       if (!conf->authoritative)
         return DECLINED;
 
-      if (!ap_some_auth_required(r))
+      if (!authn_required)
         log_access_verdict(APLOG_MARK, r, 0, repos_path, dest_repos_path);
 
       return HTTP_FORBIDDEN;

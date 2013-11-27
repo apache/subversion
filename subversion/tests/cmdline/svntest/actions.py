@@ -1916,11 +1916,11 @@ def get_virginal_state(wc_dir, rev):
   return state
 
 # Cheap administrative directory locking
-def lock_admin_dir(wc_dir, recursive=False):
+def lock_admin_dir(wc_dir, recursive=False, work_queue=False):
   "Lock a SVN administrative directory"
   db, root_path, relpath = wc.open_wc_db(wc_dir)
 
-  svntest.main.run_wc_lock_tester(recursive, wc_dir)
+  svntest.main.run_wc_lock_tester(recursive, wc_dir, work_queue)
 
 def set_incomplete(wc_dir, revision):
   "Make wc_dir incomplete at revision"

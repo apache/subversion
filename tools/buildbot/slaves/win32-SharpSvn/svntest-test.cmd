@@ -65,10 +65,12 @@ IF NOT "%1" == "" GOTO next
 
 taskkill /im svnserve.exe httpd.exe /f 2> nul:
 
-IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
-xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
+IF "%SVN_BRANCH%" LSS "1.9." (
+  IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
+  xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
 
-PATH %TESTDIR%\bin;%PATH%
+  PATH %TESTDIR%\bin;!PATH!
+)
 
 IF "%LOCAL%+%FSFS%" == "1+1" (
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs %ARGS% "%TESTDIR%\tests"
