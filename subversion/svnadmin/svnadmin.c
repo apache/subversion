@@ -851,8 +851,9 @@ repos_notify_handler(void *baton,
                   message = svn_err_best_message(err, buf, sizeof(buf));
                   svn_error_clear(svn_stream_printf(feedback_stream,
                                                     scratch_pool,
-                                                    "%6s: %s\n",
-                                                    rev_str, message));
+                                                    "%6s: E%06d: %s\n",
+                                                    rev_str, err->apr_err,
+                                                    message));
                 }
             }
       }
