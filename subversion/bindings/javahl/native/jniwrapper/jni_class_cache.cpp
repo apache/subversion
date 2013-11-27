@@ -37,6 +37,7 @@
 
 #include "../SubversionException.hpp"
 #include "../ExternalItem.hpp"
+#include "../EditorCallbacks.hpp"
 
 namespace Java {
 
@@ -120,7 +121,19 @@ ClassCache::ClassCache(Env env)
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
                                            ::JavaHL::SubversionException),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
-                                           ::JavaHL::ExternalItem)
+                                           ::JavaHL::ExternalItem),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_base_cb,
+                                           ::JavaHL::ProvideBaseCallback),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        editor_provide_base_cb_return_value,
+        ::JavaHL::ProvideBaseCallback::ReturnValue),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_props_cb,
+                                           ::JavaHL::ProvidePropsCallback),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        editor_provide_props_cb_return_value,
+        ::JavaHL::ProvidePropsCallback::ReturnValue),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_get_kind_cb,
+                                           ::JavaHL::GetNodeKindCallback)
 {
   m_instance = this;
   // no-op: Object::static_init(env);
@@ -144,6 +157,11 @@ ClassCache::ClassCache(Env env)
 
   // no-op: ::JavaHL::SubversionException::static_init(env);
   ::JavaHL::ExternalItem::static_init(env);
+  ::JavaHL::ProvideBaseCallback::static_init(env);
+  ::JavaHL::ProvideBaseCallback::ReturnValue::static_init(env);
+  ::JavaHL::ProvidePropsCallback::static_init(env);
+  ::JavaHL::ProvidePropsCallback::ReturnValue::static_init(env);
+  ::JavaHL::GetNodeKindCallback::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT
 

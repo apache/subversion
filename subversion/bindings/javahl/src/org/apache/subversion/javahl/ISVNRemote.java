@@ -195,14 +195,35 @@ public interface ISVNRemote
      * locks on committed objects.  Else, automatically release such
      * locks.
      * <p>
+     * The callbacks <code>getBase</code>, <code>getProps</code> and
+     * <code>getCopyfromKind</code> are invoked by the editor to fetch
+     * the contents, preoprties and copyfrom kind of an entry during
+     * the commit drive. They may be <code>null</code>; in that case,
+     * the commit may be less efficient because the client will not be
+     * able to delta-compress the data sent to the server, and more
+     * server connections may have to be opened.
+     * <p>
      * The caller may not perform any remote operations using this session
      * before finishing the edit.
      * @throws ClientException
      */
     ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
                                CommitCallback commitCallback,
-                               Set<Lock> lockTokens,
-                               boolean keepLocks)
+                               Set<Lock> lockTokens, boolean keepLocks,
+                               ISVNEditor.ProvideBaseCallback getBase,
+                               ISVNEditor.ProvidePropsCallback getProps,
+                               ISVNEditor.GetNodeKindCallback getCopyfromKind)
+            throws ClientException;
+
+    /**
+     * Like {@link #getCommitEditor(Map,CommitCallback<Set,boolean,
+     * ISVNEditor.ProvideBaseCallback,ISVNEditor.ProvidePropsCallback,
+     * ISVNEditor.GetNodeKindCallback)}, but with all callbacks set to
+     * <code>null</code>.
+     */
+    ISVNEditor getCommitEditor(Map<String, byte[]> revisionProperties,
+                               CommitCallback commitCallback,
+                               Set<Lock> lockTokens, boolean keepLocks)
             throws ClientException;
 
     /**

@@ -288,4 +288,86 @@ public interface ISVNEditor
      * @throws ClientException
      */
     void abort() throws ClientException;
+
+
+    /**
+     * Callback interface for providing the base contents of a file
+     * that is being modified.
+     * @see ISVNRemote.getCommitEditor(Map,CommitCallback,Set,boolean,ISVNEditor.ProvideBaseCallback,ISVNEditor.ProvidePropsCallback,ISVNEditor.GetNodeKindCallback)
+     */
+    public interface ProvideBaseCallback
+    {
+        public static class ReturnValue
+        {
+            /**
+             * @param contents The base ({@link Revision#BASE}) contents
+             *         of the file.
+             * @param revision The base revision number.
+             */
+            public ReturnValue(InputStream contents, long revision)
+            {
+                this.contents = contents;
+                this.revision = revision;
+            }
+
+            final InputStream contents;
+            final long revision;
+        }
+
+        /**
+         * Returns the base contents and revision number of the file.
+         * @param reposRelpath The repository path of the file,
+         *        relative to the session base URL.
+         */
+        ReturnValue getContents(String reposRelpath);
+    }
+
+    /**
+     * Callback interface for providing the base properties of a file
+     * or directory that is being modified.
+     * @see ISVNRemote.getCommitEditor(Map,CommitCallback,Set,boolean,ISVNEditor.ProvideBaseCallback,ISVNEditor.ProvidePropsCallback,ISVNEditor.GetNodeKindCallback)
+     */
+    public interface ProvidePropsCallback
+    {
+        public static class ReturnValue
+        {
+            /**
+             * @param properties The base ({@link Revision#BASE}) properties
+             *         of the file or directory.
+             * @param revision The base revision number.
+             */
+            public ReturnValue(Map<String, byte[]> properties, long revision)
+            {
+                this.properties = properties;
+                this.revision = revision;
+            }
+
+            final Map<String, byte[]> properties;
+            final long revision;
+        }
+
+        /**
+         * Returns the base properties and revision number of the file
+         * or directory.
+         * @param reposRelpath The repository path of the file or directory,
+         *        relative to the session base URL.
+         */
+        ReturnValue getProperties(String reposRelpath);
+    }
+
+    /**
+     * Callback interface for providing the kind of the node that was
+     * the source of a copy.
+     * @see ISVNRemote.getCommitEditor(Map,CommitCallback,Set,boolean,ISVNEditor.ProvideBaseCallback,ISVNEditor.ProvidePropsCallback,ISVNEditor.GetNodeKindCallback)
+     */
+    public interface GetNodeKindCallback
+    {
+        /**
+         * Returns the kind of the node that was the source of a copy.
+         * @param reposRelpath The repository path of the node,
+         *        relative to the session base URL.
+         * @param revision The copy-from revision.
+         */
+        NodeKind getKind(String reposRelpath, long revision);
+    }
 }
