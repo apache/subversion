@@ -40,7 +40,7 @@ class GlobalObject
 {
 public:
   explicit GlobalObject(Env env, jobject obj)
-    : m_obj(env.NewGlobalRef(obj))
+    : m_obj(obj ? env.NewGlobalRef(obj) : NULL)
     {}
 
   ~GlobalObject();
