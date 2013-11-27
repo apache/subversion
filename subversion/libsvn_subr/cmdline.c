@@ -757,12 +757,12 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
       outstr, pool, svn_xml_protect_pcdata,
       inherited_prop ? "inherited_property" : "property",
       "name", propname,
-      "encoding", encoding, NULL);
+      "encoding", encoding, SVN_VA_NULL);
   else
     svn_xml_make_open_tag(
       outstr, pool, svn_xml_protect_pcdata,
       inherited_prop ? "inherited_property" : "property",
-      "name", propname, NULL);
+      "name", propname, SVN_VA_NULL);
 
   svn_stringbuf_appendcstr(*outstr, xml_safe);
 
@@ -988,7 +988,7 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
           svn_xml_make_open_tag(
             outstr, pool, svn_xml_self_closing,
             inherited_props ? "inherited_property" : "property",
-            "name", pname, NULL);
+            "name", pname, SVN_VA_NULL);
         }
       else
         {

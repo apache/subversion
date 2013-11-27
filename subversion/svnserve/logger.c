@@ -42,8 +42,8 @@
 
 struct logger_t
 {
-  /* actual log file object */
-  apr_file_t *file;
+  /* actual log file / stream object */
+  svn_stream_t *stream;
 
   /* mutex used to serialize access to this structure */
   svn_mutex__t *mutex;
@@ -62,18 +62,39 @@ static apr_status_t cleanup_logger(void *data)
 }
 
 svn_error_t *
+logger__create_for_stderr(logger_t **logger,
+                          apr_pool_t *pool)
+{
+  logger_t *result = apr_pcalloc(pool, sizeof(*result));
+  result->pool = svn_pool_create(NULL);
+  
+  SVN_ERR(svn_stream_for_stderr(&result->stream, pool));
+  SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
+
+  apr_pool_cleanup_register(pool, result, cleanup_logger,
+                            apr_pool_cleanup_null);
+  
+  *logger = result;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 logger__create(logger_t **logger,
                const char *filename,
                apr_pool_t *pool)
 {
   logger_t *result = apr_pcalloc(pool, sizeof(*result));
-
-  SVN_ERR(svn_io_file_open(&result->file, filename,
+  apr_file_t *file;
+  
+  SVN_ERR(svn_io_file_open(&file, filename,
                            APR_WRITE | APR_CREATE | APR_APPEND,
                            APR_OS_DEFAULT, pool));
   SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
-  result->pool = svn_pool_create(NULL);
 
+  result->stream = svn_stream_from_aprfile2(file, FALSE,  pool);
+  result->pool = svn_pool_create(NULL);
+  
   apr_pool_cleanup_register(pool, result, cleanup_logger,
                             apr_pool_cleanup_null);
   
@@ -130,12 +151,12 @@ logger__log_error(logger_t *logger,
           }
           strcpy(errstr + len, APR_EOL_STR);
           len += strlen(APR_EOL_STR);
-          svn_error_clear(svn_io_file_write(logger->file, errstr, &len,
-                                            logger->pool));
+          svn_error_clear(svn_stream_write(logger->stream, errstr, &len));
 
           continuation = "-";
           err = err->child;
         }
+
       svn_pool_clear(logger->pool);
       
       svn_error_clear(svn_mutex__unlock(logger->mutex, SVN_NO_ERROR));
@@ -148,7 +169,6 @@ logger__write(logger_t *logger,
               apr_size_t len)
 {
   SVN_MUTEX__WITH_LOCK(logger->mutex,
-                       svn_io_file_write(logger->file, errstr, &len,
-                                         logger->pool));
+                       svn_stream_write(logger->stream, errstr, &len));
   return SVN_NO_ERROR;
 }

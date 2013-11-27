@@ -103,6 +103,11 @@ public class SVNClient implements ISVNClient
         return NativeResources.getVersion();
     }
 
+    public RuntimeVersion getRuntimeVersion()
+    {
+        return NativeResources.getRuntimeVersion();
+    }
+
     public native VersionExtended getVersionExtended(boolean verbose);
 
     public native String getAdminDirectoryName();
@@ -112,6 +117,7 @@ public class SVNClient implements ISVNClient
     /**
       * @deprecated
       */
+    @Deprecated
     public native String getLastPath();
 
     public native void status(String path, Depth depth, boolean onServer,
@@ -215,6 +221,7 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /** @deprecated */
+    @Deprecated
     public void move(Set<String> srcPaths, String destPath,
                      boolean force, boolean moveAsChild,
                      boolean makeParents,
@@ -323,6 +330,7 @@ public class SVNClient implements ISVNClient
 
 
     /** @deprecated */
+    @Deprecated
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
             throws ClientException;
@@ -576,6 +584,12 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     public native String getConfigDirectory()
+            throws ClientException;
+
+    public native void setConfigEventHandler(ConfigEvent configHandler)
+            throws ClientException;
+
+    public native ConfigEvent getConfigEventHandler()
             throws ClientException;
 
     public native void cancelOperation()

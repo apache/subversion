@@ -184,7 +184,7 @@ svn_prefix_string__create(svn_prefix_tree__t *tree,
           : 0;
 
       /* any (partially) matching sub-nodes? */
-      if (idx == node->sub_node_count
+      if (idx == (int)node->sub_node_count
           || node->sub_nodes[idx]->key.data[0] != s[node->length])
         break;
 

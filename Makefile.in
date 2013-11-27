@@ -206,6 +206,7 @@ COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPF
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS) $(JAVAHL_INCLUDES) -o $@ -c
 COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
+COMPILE_JAVAHL_COMPAT_JAVAC = $(JAVAC) $(JAVAC_COMPAT_FLAGS)
 
 # export an env variable so that the tests can run without being installed
 TEST_SHLIB_VAR_JAVAHL=\
@@ -375,6 +376,7 @@ JAVA = @JAVA@
 JAVAC = @JAVAC@
 JAVADOC = @JAVADOC@
 JAVAC_FLAGS = @JAVAC_FLAGS@
+JAVAC_COMPAT_FLAGS = @JAVAC_COMPAT_FLAGS@
 JAVAH = @JAVAH@
 JAR = @JAR@
 
@@ -480,8 +482,11 @@ install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-l
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
 clean-javahl:
+	if [ -d $(javahl_test_rootdir) ]; then \
+	  find $(javahl_test_rootdir) -mindepth 1 -maxdepth 1 \
+               -print0 | xargs -0 rm -rf --;   \
+	fi
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
-	rm -fr $(javahl_test_rootdir)
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
@@ -678,8 +683,8 @@ doc-javahl:
 	  org.apache.subversion.javahl.util
 
 doc-clean:
-	rm -rf $(top_srcdir)/doc/doxygen
-	rm -rf $(top_srcdir)/doc/javadoc
+	rm -rf $(abs_builddir)/doc/doxygen
+	rm -rf $(abs_builddir)/doc/javadoc
 
 # Converting from the .rnc XML shcemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \

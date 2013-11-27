@@ -121,7 +121,7 @@ create_get_locations_body(serf_bucket_t **body_bkt,
                                     "S:get-locations",
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     "xmlns:D", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", loc_ctx->path,

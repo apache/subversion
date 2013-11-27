@@ -131,12 +131,15 @@ public class CommitEditor extends JNIObject implements ISVNEditor
         CommitEditor createInstance(RemoteSession session,
                                     Map<String, byte[]> revisionProperties,
                                     CommitCallback commitCallback,
-                                    Set<Lock> lockTokens,
-                                    boolean keepLocks)
+                                    Set<Lock> lockTokens, boolean keepLocks,
+                                    ISVNEditor.ProvideBaseCallback baseCB,
+                                    ISVNEditor.ProvidePropsCallback propsCB,
+                                    ISVNEditor.GetNodeKindCallback kindCB)
             throws ClientException
     {
-        long cppAddr = nativeCreateInstance(session, revisionProperties,
-                                            commitCallback, lockTokens, keepLocks);
+        long cppAddr = nativeCreateInstance(
+            session, revisionProperties, commitCallback,
+            lockTokens, keepLocks, baseCB, propsCB, kindCB);
         return new CommitEditor(cppAddr, session);
     }
 
@@ -163,7 +166,9 @@ public class CommitEditor extends JNIObject implements ISVNEditor
         long nativeCreateInstance(RemoteSession session,
                                   Map<String, byte[]> revisionProperties,
                                   CommitCallback commitCallback,
-                                  Set<Lock> lockTokens,
-                                  boolean keepLocks)
+                                  Set<Lock> lockTokens, boolean keepLocks,
+                                  ISVNEditor.ProvideBaseCallback baseCB,
+                                  ISVNEditor.ProvidePropsCallback propsCB,
+                                  ISVNEditor.GetNodeKindCallback kindCB)
             throws ClientException;
 }

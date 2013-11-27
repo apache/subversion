@@ -612,7 +612,7 @@ write_null_string(const svn_test_opts_t *opts,
 
   /* Create a new fs and repos */
   SVN_ERR(svn_test__create_bdb_fs
-          (&fs, "test-repo-test-strings", opts,
+          (&fs, "test-repo-write-null-string", opts,
            pool));
 
   args.fs = fs;
@@ -731,6 +731,8 @@ copy_string(const svn_test_opts_t *opts,
 
 
 /* The test table.  */
+
+int svn_test_max_threads = 3;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

@@ -131,7 +131,9 @@ svn_path_join(const char *base, const char *component, apr_pool_t *pool);
  */
 SVN_DEPRECATED
 char *
-svn_path_join_many(apr_pool_t *pool, const char *base, ...);
+svn_path_join_many(apr_pool_t *pool,
+                   const char *base,
+                   ...) SVN_NEEDS_SENTINEL_NULL;
 
 
 /** Get the basename of the specified canonicalized @a path.  The

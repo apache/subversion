@@ -333,8 +333,9 @@ heap_is_less(svn_priority_queue__t *queue,
   char *lhs_value = queue->elements->elts + lhs * queue->elements->elt_size;
   char *rhs_value = queue->elements->elts + rhs * queue->elements->elt_size;
 
-  assert(lhs < queue->elements->nelts);
-  assert(rhs < queue->elements->nelts);
+  /* nelts is never negative */
+  assert(lhs < (apr_size_t)queue->elements->nelts);
+  assert(rhs < (apr_size_t)queue->elements->nelts);
   return queue->compare_func((void *)lhs_value, (void *)rhs_value) < 0;
 }
 

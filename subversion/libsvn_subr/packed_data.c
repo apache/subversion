@@ -849,7 +849,7 @@ svn_packed__get_bytes(svn_packed__byte_stream_t *stream,
                       apr_size_t *len)
 {
   const char *result = stream->packed->data;
-  apr_size_t count = svn_packed__get_uint(stream->lengths_stream);
+  apr_size_t count = (apr_size_t)svn_packed__get_uint(stream->lengths_stream);
 
   if (count > stream->packed->len)
     count = stream->packed->len;
@@ -1011,8 +1011,8 @@ svn_packed__data_read(svn_packed__data_root_t **root_p,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  apr_size_t i;
-  apr_size_t count;
+  apr_uint64_t i;
+  apr_uint64_t count;
   
   svn_packed__int_stream_t *int_stream;
   svn_packed__byte_stream_t *byte_stream;

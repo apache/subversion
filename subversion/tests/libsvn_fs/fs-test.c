@@ -1021,7 +1021,7 @@ static svn_error_t *
 check_entry_present(svn_fs_root_t *root, const char *path,
                     const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = FALSE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (! present)
@@ -1038,7 +1038,7 @@ static svn_error_t *
 check_entry_absent(svn_fs_root_t *root, const char *path,
                    const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = TRUE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (present)
@@ -5133,6 +5133,8 @@ test_compat_version(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
+int svn_test_max_threads = 8;
+
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
@@ -5148,6 +5150,12 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check that transaction names are not reused"),
     SVN_TEST_OPTS_PASS(write_and_read_file,
                        "write and read a file's contents"),
+    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
+                       "create and modify almostmedium file"),
+    SVN_TEST_OPTS_PASS(medium_file_integrity,
+                       "create and modify medium file"),
+    SVN_TEST_OPTS_PASS(large_file_integrity,
+                       "create and modify large file"),
     SVN_TEST_OPTS_PASS(create_mini_tree_transaction,
                        "test basic file and subdirectory creation"),
     SVN_TEST_OPTS_PASS(create_greek_tree_transaction,
@@ -5179,12 +5187,6 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check old revisions"),
     SVN_TEST_OPTS_PASS(check_all_revisions,
                        "after each commit, check all revisions"),
-    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
-                       "create and modify almostmedium file"),
-    SVN_TEST_OPTS_PASS(medium_file_integrity,
-                       "create and modify medium file"),
-    SVN_TEST_OPTS_PASS(large_file_integrity,
-                       "create and modify large file"),
     SVN_TEST_OPTS_PASS(check_root_revision,
                        "ensure accurate storage of root node"),
     SVN_TEST_OPTS_PASS(test_node_created_rev,

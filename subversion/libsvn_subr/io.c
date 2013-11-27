@@ -1591,14 +1591,9 @@ io_set_file_perms(const char *path,
     {
       if (enable_write) /* Make read-write. */
         {
-          apr_file_t *fd;
-
-          /* Get the perms for the original file so we'll have any other bits
-           * that were already set (like the execute bits, for example). */
-          SVN_ERR(svn_io_file_open(&fd, path, APR_READ,
-                                   APR_OS_DEFAULT, pool));
-          SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
-          SVN_ERR(svn_io_file_close(fd, pool));
+          /* Tweak the owner bits only. The group/other bits aren't safe to
+           * touch because we may end up setting them in undesired ways. */
+          perms_to_set |= (APR_UREAD|APR_UWRITE);
         }
       else
         {
@@ -2312,12 +2307,11 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
      efficient memory handling, we'll try to do so. */
   if (check_size)
     {
-      apr_finfo_t finfo;
+      apr_finfo_t finfo = { 0 };
 
       /* In some cases we get size 0 and no error for non files,
           so we also check for the name. (= cached in apr_file_t) */
-      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_NAME, file)
-          && finfo.name != NULL)
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file) && finfo.fname)
         {
           /* we've got the file length. Now, read it in one go. */
           svn_boolean_t eof;
@@ -3787,14 +3781,20 @@ svn_io_write_atomic(const char *final_path,
   if (!err && copy_perms_path)
     err = svn_io_copy_perms(copy_perms_path, tmp_path, scratch_pool);
 
+  if (!err)
+    err = svn_io_file_rename(tmp_path, final_path, scratch_pool);
+
   if (err)
     {
-      return svn_error_compose_create(err,
-                                      svn_io_remove_file2(tmp_path, FALSE,
-                                                          scratch_pool));
-    }
+      err = svn_error_compose_create(err,
+                                     svn_io_remove_file2(tmp_path, TRUE,
+                                                         scratch_pool));
 
-  SVN_ERR(svn_io_file_rename(tmp_path, final_path, scratch_pool));
+      return svn_error_createf(err->apr_err, err,
+                               _("Can't write '%s' atomicly"),
+                               svn_dirent_local_style(final_path,
+                                                      scratch_pool));
+    }
 
 #ifdef __linux__
   {
