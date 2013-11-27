@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -451,10 +452,13 @@ public class SVNRemoteTests extends SVNTests
         }
     }
 
-    private final class CommitContext implements CommitCallback
+    private static final class CommitContext implements CommitCallback
     {
         public final ISVNEditor editor;
-        public CommitContext(ISVNRemote session, String logstr)
+        public CommitContext(ISVNRemote session, String logstr,
+                             ISVNEditor.ProvideBaseCallback getBase,
+                             ISVNEditor.ProvidePropsCallback getProps,
+                             ISVNEditor.GetNodeKindCallback getKind)
             throws ClientException
         {
             Charset UTF8 = Charset.forName("UTF-8");
@@ -463,7 +467,19 @@ public class SVNRemoteTests extends SVNTests
                           : logstr.getBytes(UTF8));
             HashMap<String, byte[]> revprops = new HashMap<String, byte[]>();
             revprops.put("svn:log", log);
-            editor = session.getCommitEditor(revprops, this, null, false);
+
+            // Run the getCommitEditor overloads through their paces, too.
+            if (getBase == null && getProps == null && getKind == null)
+                editor = session.getCommitEditor(revprops, this, null, false);
+            else
+                editor = session.getCommitEditor(revprops, this, null, false,
+                                                 getBase, getProps, getKind);
+        }
+
+        public CommitContext(ISVNRemote session, String logstr)
+            throws ClientException
+        {
+            this(session, logstr, null, null, null);
         }
 
         public void commitInfo(CommitInfo info) { this.info = info; }
@@ -472,11 +488,67 @@ public class SVNRemoteTests extends SVNTests
         private CommitInfo info;
     }
 
-    public void testEditorCopy() throws Exception
+    private static final class EditorCallbacks
+    {
+        private final String wcpath;
+        private final long revision;
+        private final Map<String, byte[]> props;
+        private final NodeKind kind;
+
+        public EditorCallbacks(String wcpath, long revision,
+                               Map<String, byte[]> props,
+                               NodeKind kind)
+        {
+            this.wcpath = wcpath;
+            this.revision = revision;
+            this.props = props;
+            this.kind = kind;
+        }
+
+        public final ISVNEditor.ProvideBaseCallback getBase =
+            new ISVNEditor.ProvideBaseCallback()
+            {
+                public ISVNEditor.ProvideBaseCallback.ReturnValue
+                getContents(String relpath)
+                {
+                    try {
+                        return new ISVNEditor.ProvideBaseCallback.ReturnValue(
+                            new FileInputStream(wcpath + relpath), revision);
+                    } catch (java.io.FileNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            };
+
+        public final ISVNEditor.ProvidePropsCallback getProps =
+            new ISVNEditor.ProvidePropsCallback()
+            {
+                public ISVNEditor.ProvidePropsCallback.ReturnValue
+                getProperties(String relpath)
+                {
+                    return new ISVNEditor.ProvidePropsCallback.ReturnValue(
+                        props, revision);
+                }
+            };
+
+        public final ISVNEditor.GetNodeKindCallback getKind =
+            new ISVNEditor.GetNodeKindCallback()
+            {
+                public NodeKind getKind(String relpath, long revision)
+                {
+                    return kind;
+                }
+            };
+    };
+
+    private void testEditorCopy(EditorCallbacks cb) throws Exception
     {
         ISVNRemote session = getSession();
         CommitContext cc =
-            new CommitContext(session, "Copy A/B/lambda -> A/B/omega");
+            (cb != null
+             ? new CommitContext(session, "Copy A/B/lambda -> A/B/omega",
+                                 cb.getBase, cb.getProps, cb.getKind)
+             : new CommitContext(session, "Copy A/B/lambda -> A/B/omega"));
 
         try {
             // FIXME: alter dir A/B first
@@ -495,6 +567,18 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(NodeKind.file,
                      session.checkPath("A/B/omega",
                                        Revision.SVN_INVALID_REVNUM));
+    }
+
+    public void testEditorCopy() throws Exception
+    {
+        testEditorCopy(null);
+    }
+
+    public void testEditorCopy_WithCallbacks() throws Exception
+    {
+        testEditorCopy(new EditorCallbacks(thisTest.getWCPath(), 1L,
+                                           new HashMap<String, byte[]>(),
+                                           NodeKind.file));
     }
 
     public void testEditorMove() throws Exception
@@ -580,7 +664,7 @@ public class SVNRemoteTests extends SVNTests
                                        Revision.SVN_INVALID_REVNUM));
     }
 
-    public void testEditorSetDirProps() throws Exception
+    private void testEditorSetDirProps(EditorCallbacks cb) throws Exception
     {
         Charset UTF8 = Charset.forName("UTF-8");
         ISVNRemote session = getSession();
@@ -589,7 +673,11 @@ public class SVNRemoteTests extends SVNTests
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
         props.put("svn:ignore", ignoreval);
 
-        CommitContext cc = new CommitContext(session, "Add svn:ignore");
+        CommitContext cc =
+            (cb != null
+             ? new CommitContext(session, "Add svn:ignore",
+                                 cb.getBase, cb.getProps, cb.getKind)
+             : new CommitContext(session, "Add svn:ignore"));
         try {
             cc.editor.alterDirectory("", 1, null, props);
             cc.editor.complete();
@@ -604,6 +692,18 @@ public class SVNRemoteTests extends SVNTests
                                                     "svn:ignore",
                                                     Revision.HEAD,
                                                     Revision.HEAD)));
+    }
+
+    public void testEditorSetDirProps() throws Exception
+    {
+        testEditorSetDirProps(null);
+    }
+
+    public void testEditorSetDirProps_WithCallbacks() throws Exception
+    {
+        testEditorSetDirProps(new EditorCallbacks(thisTest.getWCPath(), 1L,
+                                                  new HashMap<String, byte[]>(),
+                                                  NodeKind.dir));
     }
 
     private static byte[] SHA1(byte[] text) throws NoSuchAlgorithmException
@@ -695,7 +795,7 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(0, propcount);
     }
 
-    public void testEditorSetFileContents() throws Exception
+    private void testEditorSetFileContents(EditorCallbacks cb) throws Exception
     {
         Charset UTF8 = Charset.forName("UTF-8");
         ISVNRemote session = getSession();
@@ -705,7 +805,10 @@ public class SVNRemoteTests extends SVNTests
         ByteArrayInputStream stream = new ByteArrayInputStream(contents);
 
         CommitContext cc =
-            new CommitContext(session, "Change contents of A/B/E/alpha");
+            (cb != null
+             ? new CommitContext(session, "Change contents of A/B/E/alpha",
+                                 cb.getBase, cb.getProps, cb.getKind)
+             : new CommitContext(session, "Change contents of A/B/E/alpha"));
         try {
             cc.editor.alterFile("A/B/E/alpha", 1, hash, stream, null);
             cc.editor.complete();
@@ -719,6 +822,18 @@ public class SVNRemoteTests extends SVNTests
         client.streamFileContent(session.getSessionUrl() + "/A/B/E/alpha",
                                  Revision.HEAD, Revision.HEAD, checkcontents);
         assertTrue(Arrays.equals(contents, checkcontents.toByteArray()));
+    }
+
+    public void testEditorSetFileContents() throws Exception
+    {
+        testEditorSetFileContents(null);
+    }
+
+    public void testEditorSetFileContents_WithCallbacks() throws Exception
+    {
+        testEditorSetFileContents(new EditorCallbacks(thisTest.getWCPath(), 1L,
+                                                      new HashMap<String, byte[]>(),
+                                                      NodeKind.file));
     }
 
     // Sanity check so that we don't forget about unimplemented methods.
