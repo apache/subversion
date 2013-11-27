@@ -1838,7 +1838,7 @@ select_level(svn_membuffer_t *cache,
            && priority >= SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
     {
       /* Large and somewhat important items go into L2. */
-      entry_t dummy_entry = { 0 };
+      entry_t dummy_entry = { { 0 } };
       dummy_entry.priority = priority;
       dummy_entry.size = size;
 
