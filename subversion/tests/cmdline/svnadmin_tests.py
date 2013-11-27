@@ -2175,6 +2175,9 @@ def verify_denormalized_names(sbox):
   if not svntest.main.is_fs_type_bdb():
     expected_output_regex_list.insert(0, ".*Verifying repository metadata")
 
+    if svntest.main.is_fs_log_addressing():
+      expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0 ...")
+
   exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
 
   if svntest.verify.verify_outputs(
