@@ -168,12 +168,20 @@ public:
      * Copies the array contents to a NUL-terminated string allocated
      * from @a result_pool.
      */
-    svn_string_t* get_string(const ::SVN::Pool& result_pool) const
+    svn_string_t* get_string(apr_pool_t* result_pool) const
       {
         if (m_data)
-          return svn_string_ncreate(data(), m_array.m_length,
-                                    result_pool.getPool());
+          return svn_string_ncreate(data(), m_array.m_length, result_pool);
         return NULL;
+      }
+
+    /**
+     * Copies the array contents to a NUL-terminated string allocated
+     * from @a result_pool.
+     */
+    svn_string_t* get_string(const ::SVN::Pool& result_pool) const
+      {
+        return get_string(result_pool.getPool());
       }
 
   protected:
@@ -232,9 +240,18 @@ public:
      * Copies the array contents to a NUL-terminated string allocated
      * from @a result_pool.
      */
-    svn_string_t* get_string(const ::SVN::Pool& result_pool) const
+    svn_string_t* get_string(apr_pool_t* result_pool) const
       {
         return Contents::get_string(result_pool);
+      }
+
+    /**
+     * Copies the array contents to a NUL-terminated string allocated
+     * from @a result_pool.
+     */
+    svn_string_t* get_string(const ::SVN::Pool& result_pool) const
+      {
+        return Contents::get_string(result_pool.getPool());
       }
   };
 
