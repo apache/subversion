@@ -1817,6 +1817,39 @@ entry_exists(svn_membuffer_t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Given the SIZE and PRIORITY of a new item, return the cache level
+   (L1 or L2) in fragment CACHE that this item shall be inserted into.
+   If we can't find nor make enough room for the item, return NULL.
+ */
+static cache_level_t *
+select_level(svn_membuffer_t *cache,
+             apr_size_t size,
+             apr_uint32_t priority)
+{
+  if (cache->max_entry_size >= size)
+    {
+      /* Small items go into L1. */
+      return ensure_data_insertable_l1(cache, size)
+           ? &cache->l1
+           : NULL;
+    }
+  else if (   cache->l2.size >= size
+           && MAX_ITEM_SIZE >= size
+           && priority >= SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
+    {
+      /* Large and somewhat important items go into L2. */
+      entry_t dummy_entry = { 0 };
+      dummy_entry.priority = priority;
+      dummy_entry.size = size;
+
+      return ensure_data_insertable_l2(cache, &dummy_entry)
+           ? &cache->l2
+           : NULL;
+    }
+
+  /* Don't cache large, unimportant items. */
+  return NULL;
+}
 
 /* Try to insert the serialized item given in BUFFER with SIZE into
  * the group GROUP_INDEX of CACHE and uniquely identify it by hash
@@ -1840,6 +1873,8 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
                              DEBUG_CACHE_MEMBUFFER_TAG_ARG
                              apr_pool_t *scratch_pool)
 {
+  cache_level_t *level;
+
   /* first, look for a previous entry for the given key */
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
 
@@ -1869,9 +1904,8 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
   /* if necessary, enlarge the insertion window.
    */
-  if (   buffer != NULL
-      && cache->max_entry_size >= size
-      && ensure_data_insertable_l1(cache, size))
+  level = buffer ? select_level(cache, size, priority) : NULL;
+  if (level)
     {
       /* Remove old data for this key, if that exists.
        * Get an unused entry for the key and and initialize it with
@@ -1879,7 +1913,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        */
       entry = find_entry(cache, group_index, to_find, TRUE);
       entry->size = size;
-      entry->offset = cache->l1.current_data;
+      entry->offset = level->current_data;
       entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -2774,7 +2808,9 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return size <= cache->membuffer->max_entry_size;
+  return cache->priority >= SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
+       ? cache->membuffer->l2.size >= size && MAX_ITEM_SIZE >= size
+       : size <= cache->membuffer->max_entry_size;
 }
 
 /* Add statistics of SEGMENT to INFO.  If INCLUDE_HISTOGRAM is TRUE,
