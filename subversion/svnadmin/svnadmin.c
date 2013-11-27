@@ -1760,12 +1760,27 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Show the --keep-going error summary. */
   if (opt_state->keep_going && notify_baton.error_summary->nelts > 0)
     {
+      int rev_maxlength;
+      svn_revnum_t end_revnum;
       apr_pool_t *iterpool;
       int i;
 
       svn_error_clear(
         svn_stream_printf(notify_baton.feedback_stream, pool,
                           _("\n-----Summary of corrupt revisions-----\n")));
+
+      /* The standard column width for the revision number is 6 characters.
+         If the revision number can potentially be larger (i.e. if end_revnum
+         is larger than 1000000), we increase the column width as needed. */
+      rev_maxlength = 6;
+      end_revnum = APR_ARRAY_IDX(notify_baton.error_summary,
+                                 notify_baton.error_summary->nelts - 1,
+                                 struct verification_error *)->rev;
+      while (end_revnum >= 1000000)
+        {
+          rev_maxlength++;
+          end_revnum = end_revnum / 10;
+        }
 
       iterpool = svn_pool_create(pool);
       for (i = 0; i < notify_baton.error_summary->nelts; i++)
@@ -1779,6 +1794,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           verr = APR_ARRAY_IDX(notify_baton.error_summary, i,
                                struct verification_error *);
           rev_str = apr_psprintf(iterpool, "r%ld", verr->rev);
+          rev_str = apr_psprintf(iterpool, "%*s", rev_maxlength, rev_str);
           for (err = svn_error_purge_tracing(verr->err);
                err != SVN_NO_ERROR; err = err->child)
             {
@@ -1788,7 +1804,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
               message = svn_err_best_message(err, buf, sizeof(buf));
               svn_error_clear(svn_stream_printf(notify_baton.feedback_stream,
                                                 iterpool,
-                                                "%6s: E%06d: %s\n",
+                                                "%s: E%06d: %s\n",
                                                 rev_str, err->apr_err,
                                                 message));
             }
