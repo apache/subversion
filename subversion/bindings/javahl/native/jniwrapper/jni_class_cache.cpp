@@ -37,6 +37,7 @@
 
 #include "../SubversionException.hpp"
 #include "../ExternalItem.hpp"
+#include "../EditorCallbacks.hpp"
 
 namespace Java {
 
@@ -50,6 +51,8 @@ void ClassCache::create()
     {
       new ClassCache(Env());
     }
+  catch (const SignalExceptionThrown&)
+    {}
   catch (const std::exception& ex)
     {
       exception_message = ex.what();
@@ -59,23 +62,27 @@ void ClassCache::create()
       exception_message = "Caught unknown C++ exception";
     }
 
-  const ::Java::Env env;
-  if (exception_message || env.ExceptionCheck())
+  // Do not throw any more exceptions from here, so use the raw environment.
+  ::JNIEnv* const jenv = Env().get();
+  if (exception_message || jenv->ExceptionCheck())
     {
-      const jclass rtx = env.FindClass("java/lang/RuntimeException");
-      const jmethodID ctor = env.GetMethodID(rtx, "<init>",
-                                             "(Ljava/lang/String;"
-                                             "Ljava/lang/Throwable;)V");
-      jobject cause = env.ExceptionOccurred();
+      jobject cause = jenv->ExceptionOccurred();
+      if (cause)
+        jenv->ExceptionClear();
+
+      const jclass rtx = jenv->FindClass("java/lang/RuntimeException");
+      const jmethodID ctor = jenv->GetMethodID(rtx, "<init>",
+                                               "(Ljava/lang/String;"
+                                               "Ljava/lang/Throwable;)V");
       if (!cause && exception_message)
         {
-          const jstring msg = env.NewStringUTF(exception_message);
-          cause = env.NewObject(rtx, ctor, msg, jthrowable(0));
+          const jstring msg = jenv->NewStringUTF(exception_message);
+          cause = jenv->NewObject(rtx, ctor, msg, jthrowable(0));
         }
       const jstring reason =
-        env.NewStringUTF("JavaHL native library initialization failed");
-      const jobject exception = env.NewObject(rtx, ctor, reason, cause);
-      env.Throw(jthrowable(exception));
+        jenv->NewStringUTF("JavaHL native library initialization failed");
+      const jobject exception = jenv->NewObject(rtx, ctor, reason, cause);
+      jenv->Throw(jthrowable(exception));
     }
 }
 
@@ -114,7 +121,19 @@ ClassCache::ClassCache(Env env)
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(subversion_exception,
                                            ::JavaHL::SubversionException),
     SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(external_item,
-                                           ::JavaHL::ExternalItem)
+                                           ::JavaHL::ExternalItem),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_base_cb,
+                                           ::JavaHL::ProvideBaseCallback),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        editor_provide_base_cb_return_value,
+        ::JavaHL::ProvideBaseCallback::ReturnValue),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_provide_props_cb,
+                                           ::JavaHL::ProvidePropsCallback),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(
+        editor_provide_props_cb_return_value,
+        ::JavaHL::ProvidePropsCallback::ReturnValue),
+    SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT(editor_get_kind_cb,
+                                           ::JavaHL::GetNodeKindCallback)
 {
   m_instance = this;
   // no-op: Object::static_init(env);
@@ -138,6 +157,11 @@ ClassCache::ClassCache(Env env)
 
   // no-op: ::JavaHL::SubversionException::static_init(env);
   ::JavaHL::ExternalItem::static_init(env);
+  ::JavaHL::ProvideBaseCallback::static_init(env);
+  ::JavaHL::ProvideBaseCallback::ReturnValue::static_init(env);
+  ::JavaHL::ProvidePropsCallback::static_init(env);
+  ::JavaHL::ProvidePropsCallback::ReturnValue::static_init(env);
+  ::JavaHL::GetNodeKindCallback::static_init(env);
 }
 #undef SVN_JAVAHL_JNIWRAPPER_CLASS_CACHE_INIT
 

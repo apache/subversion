@@ -51,6 +51,11 @@ public interface ISVNClient
     public Version getVersion();
 
     /**
+     * @return Runtime version information about the loaded libsvn_client.
+     */
+    public RuntimeVersion getRuntimeVersion();
+
+    /**
      * @return Extended version information about the underlying
      * native libraries and operating system.
      */

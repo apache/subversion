@@ -162,6 +162,12 @@ class ClassCache
 
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(subversion_exception);
   SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(external_item);
+
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_base_cb);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_base_cb_return_value);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_props_cb);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_provide_props_cb_return_value);
+  SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS(editor_get_kind_cb);
 #undef SVN_JAVAHL_JNIWRAPPER_CACHED_CLASS
 
 public:
