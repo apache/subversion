@@ -835,9 +835,27 @@ repos_notify_handler(void *baton,
 
     case svn_repos_notify_failure_summary:
       if (notify->revision != SVN_INVALID_REVNUM)
-        svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
-                              _("r%ld: %s \n"),
-                              notify->revision, notify->warning_str));
+        {
+          svn_error_t *err;
+          const char *rev_str;
+          
+          rev_str = apr_psprintf(scratch_pool, "r%ld", notify->revision);
+          for (err = svn_error_purge_tracing(notify->err);
+               err != SVN_NO_ERROR; err = err->child)
+            {
+              char buf[512];
+              const char *message;
+              
+              if (err != SVN_NO_ERROR)
+                {
+                  message = svn_err_best_message(err, buf, sizeof(buf));
+                  svn_error_clear(svn_stream_printf(feedback_stream,
+                                                    scratch_pool,
+                                                    "%6s: %s\n",
+                                                    rev_str, message));
+                }
+            }
+      }
       return;
 
     case svn_repos_notify_summary:
