@@ -1253,6 +1253,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       /* don't queue requests unless we reached the worker thread limit */
       apr_thread_pool_threshold_set(threads, 0);
     }
+  else
+    {
+      threads = NULL;
+    }
 #endif
 
   while (1)
@@ -1359,6 +1363,14 @@ main(int argc, const char *argv[])
       exit_code = EXIT_FAILURE;
       svn_cmdline_handle_exit_error(err, NULL, "svnserve: ");
     }
+
+#if HAVE_THREADPOOLS
+  /* Explicitly wait for all threads to exit.  As we found out with similar
+     code in our C test framework, the memory pool cleanup below cannot be
+     trusted to do the right thing. */
+  if (threads)
+    apr_thread_pool_destroy(threads);
+#endif
 
   /* this will also close the server's socket */
   svn_pool_destroy(pool);
