@@ -1766,7 +1766,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       int i;
 
       svn_error_clear(
-        svn_stream_printf(notify_baton.feedback_stream, pool,
+        svn_stream_puts(notify_baton.feedback_stream,
                           _("\n-----Summary of corrupt revisions-----\n")));
 
       /* The standard column width for the revision number is 6 characters.
