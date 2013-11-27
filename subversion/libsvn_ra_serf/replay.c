@@ -26,6 +26,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -36,7 +37,6 @@
 #include "svn_delta.h"
 #include "svn_base64.h"
 #include "svn_path.h"
-#include "svn_private_config.h"
 
 #include "private/svn_string_private.h"
 
@@ -508,7 +508,7 @@ create_replay_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                     "S:replay-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   /* If we have a non-NULL include path, we add it to the body and
      omit the revision; otherwise, the reverse. */

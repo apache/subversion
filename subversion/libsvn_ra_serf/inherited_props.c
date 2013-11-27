@@ -25,6 +25,7 @@
 #include <apr_tables.h>
 #include <apr_xml.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_ra.h"
@@ -35,7 +36,6 @@
 
 #include "private/svn_dav_protocol.h"
 #include "../libsvn_ra/ra_loader.h"
-#include "svn_private_config.h"
 #include "ra_serf.h"
 
 
@@ -207,7 +207,7 @@ create_iprops_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                     "S:" SVN_DAV__INHERITED_PROPS_REPORT,
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:" SVN_DAV__REVISION,
                                apr_ltoa(pool, iprops_ctx->revision),

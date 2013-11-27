@@ -26,15 +26,16 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_auth.h"
 #include "svn_config.h"
-#include "svn_private_config.h"
 #include "svn_dso.h"
 #include "svn_version.h"
+#include "private/svn_auth_private.h"
 #include "private/svn_dep_compat.h"
 
 #include "auth.h"
@@ -176,14 +177,18 @@ svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
                        const char *name,
                        const void *value)
 {
-  svn_hash_sets(auth_baton->parameters, name, value);
+  if (auth_baton)
+    svn_hash_sets(auth_baton->parameters, name, value);
 }
 
 const void *
 svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
                        const char *name)
 {
-  return svn_hash_gets(auth_baton->parameters, name);
+  if (auth_baton)
+    return svn_hash_gets(auth_baton->parameters, name);
+  else
+    return NULL;
 }
 
 
@@ -194,7 +199,7 @@ make_cache_key(const char *cred_kind,
                const char *realmstring,
                apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
+  return apr_pstrcat(pool, cred_kind, ":", realmstring, SVN_VA_NULL);
 }
 
 svn_error_t *
@@ -213,6 +218,10 @@ svn_auth_first_credentials(void **credentials,
   svn_boolean_t got_first = FALSE;
   svn_auth_iterstate_t *iterstate;
   const char *cache_key;
+
+  if (! auth_baton)
+    return svn_error_create(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
+                            _("No authentication providers registered"));
 
   /* Get the appropriate table of providers for CRED_KIND. */
   table = svn_hash_gets(auth_baton->tables, cred_kind);
@@ -481,7 +490,8 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
               check_list[0].version_query = version_function;
               check_list[1].label = NULL;
               check_list[1].version_query = NULL;
-              SVN_ERR(svn_ver_check_list(svn_subr_version(), check_list));
+              SVN_ERR(svn_ver_check_list2(svn_subr_version(), check_list,
+                                          svn_ver_equal));
             }
           if (apr_dso_sym(&provider_function_symbol,
                           dso,
@@ -509,19 +519,19 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
       if (strcmp(provider_name, "gpg_agent") == 0 &&
           strcmp(provider_type, "simple") == 0)
         {
-          svn_auth_get_gpg_agent_simple_provider(provider, pool);
+          svn_auth__get_gpg_agent_simple_provider(provider, pool);
         }
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
       if (strcmp(provider_name, "keychain") == 0 &&
           strcmp(provider_type, "simple") == 0)
         {
-          svn_auth_get_keychain_simple_provider(provider, pool);
+          svn_auth__get_keychain_simple_provider(provider, pool);
         }
       else if (strcmp(provider_name, "keychain") == 0 &&
                strcmp(provider_type, "ssl_client_cert_pw") == 0)
         {
-          svn_auth_get_keychain_ssl_client_cert_pw_provider(provider, pool);
+          svn_auth__get_keychain_ssl_client_cert_pw_provider(provider, pool);
         }
 #endif
 
@@ -529,17 +539,22 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
       if (strcmp(provider_name, "windows") == 0 &&
           strcmp(provider_type, "simple") == 0)
         {
-          svn_auth_get_windows_simple_provider(provider, pool);
+          svn_auth__get_windows_simple_provider(provider, pool);
         }
       else if (strcmp(provider_name, "windows") == 0 &&
                strcmp(provider_type, "ssl_client_cert_pw") == 0)
         {
-          svn_auth_get_windows_ssl_client_cert_pw_provider(provider, pool);
+          svn_auth__get_windows_ssl_client_cert_pw_provider(provider, pool);
         }
       else if (strcmp(provider_name, "windows") == 0 &&
                strcmp(provider_type, "ssl_server_trust") == 0)
         {
-          svn_auth_get_windows_ssl_server_trust_provider(provider, pool);
+          svn_auth__get_windows_ssl_server_trust_provider(provider, pool);
+        }
+      else if (strcmp(provider_name, "windows") == 0 &&
+               strcmp(provider_type, "ssl_server_authority") == 0)
+        {
+          svn_auth__get_windows_ssl_server_authority_provider(provider, pool);
         }
 #endif
     }
@@ -650,6 +665,23 @@ svn_auth_get_platform_specific_client_providers(apr_array_header_t **providers,
           SVN__MAYBE_ADD_PROVIDER(*providers, provider);
         }
     }
+
+  /* Windows has two providers without a store to allow easy access to
+     SSL servers. We enable these unconditionally.
+     (This behavior was moved here from svn_cmdline_create_auth_baton()) */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "windows",
+                                                  "ssl_server_trust",
+                                                  pool));
+  SVN__MAYBE_ADD_PROVIDER(*providers, provider);
+
+  /* The windows ssl authority certificate CRYPTOAPI provider. */
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider,
+                                                  "windows",
+                                                  "ssl_server_authority",
+                                                  pool));
+
+  SVN__MAYBE_ADD_PROVIDER(*providers, provider);
 
   return SVN_NO_ERROR;
 }

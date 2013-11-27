@@ -39,6 +39,10 @@
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
+#include "EditorCallbacks.hpp"
+#include "jniwrapper/jni_string.hpp"
+#include "jniwrapper/jni_stack.hpp"
+
 CommitEditor*
 CommitEditor::getCppObject(jobject jthis)
 {
@@ -53,14 +57,19 @@ CommitEditor::createInstance(jobject jsession,
                              jobject jrevprops,
                              jobject jcommit_callback,
                              jobject jlock_tokens,
-                             jboolean jkeep_locks)
+                             jboolean jkeep_locks,
+                             jobject jget_base_cb,
+                             jobject jget_props_cb,
+                             jobject jget_kind_cb)
 {
   RemoteSession* session = RemoteSession::getCppObject(jsession);
   CPPADDR_NULL_PTR(session, 0);
 
   CommitEditor* editor = new CommitEditor(session,
                                           jrevprops, jcommit_callback,
-                                          jlock_tokens, jkeep_locks);
+                                          jlock_tokens, jkeep_locks,
+                                          jget_base_cb, jget_props_cb,
+                                          jget_kind_cb);
   if (JNIUtil::isJavaExceptionThrown())
     {
       delete editor;
@@ -71,11 +80,17 @@ CommitEditor::createInstance(jobject jsession,
 
 CommitEditor::CommitEditor(RemoteSession* session,
                            jobject jrevprops, jobject jcommit_callback,
-                           jobject jlock_tokens, jboolean jkeep_locks)
+                           jobject jlock_tokens, jboolean jkeep_locks,
+                           jobject jget_base_cb, jobject jget_props_cb,
+                           jobject jget_kind_cb)
+
   : m_valid(false),
     m_callback(jcommit_callback),
     m_session(session),
     m_editor(NULL),
+    m_get_base_cb(Java::Env(), jget_base_cb),
+    m_get_props_cb(Java::Env(), jget_props_cb),
+    m_get_kind_cb(Java::Env(), jget_kind_cb),
     m_callback_session(NULL),
     m_callback_session_url(NULL),
     m_callback_session_uuid(NULL)
@@ -89,7 +104,7 @@ CommitEditor::CommitEditor(RemoteSession* session,
                                &m_callback_session_uuid,
                                pool.getPool()),);
 
-  PropertyTable revprops(jrevprops, true);
+  PropertyTable revprops(jrevprops, true, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
   LockTokenTable lock_tokens(jlock_tokens);
@@ -100,7 +115,7 @@ CommitEditor::CommitEditor(RemoteSession* session,
   SVN_JNI_ERR(svn_ra__get_commit_ev2(
                   &m_editor,
                   session->m_session,
-                  revprops.hash(subPool, false),
+                  revprops.hash(subPool),
                   m_callback.callback, &m_callback,
                   lock_tokens.hash(subPool, true),
                   bool(jkeep_locks),
@@ -200,57 +215,6 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
 
   return checksum;
 }
-
-// void
-// build_rotation(const apr_array_header_t **p_relpaths,
-//                const apr_array_header_t **p_revisions,
-//                const Iterator& iter, SVN::Pool& pool)
-// {
-//   *p_relpaths = *p_revisions = NULL;
-//
-//   static jfieldID relpath_fid = 0;
-//   static jfieldID revision_fid = 0;
-//
-//   JNIEnv *env = JNIUtil::getEnv();
-//   if (0 == relpath_fid || 0 == revision_fid)
-//     {
-//       jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNEditor$RotatePair");
-//       if (JNIUtil::isJavaExceptionThrown())
-//         return;
-//
-//       relpath_fid = env->GetFieldID(cls, "relativePath", "Ljava/lang/String;");
-//       if (JNIUtil::isJavaExceptionThrown())
-//         return;
-//       revision_fid = env->GetFieldID(cls, "revision", "J");
-//       if (JNIUtil::isJavaExceptionThrown())
-//         return;
-//     }
-//
-//   apr_pool_t* result_pool = pool.getPool();
-//   apr_array_header_t* relpaths = apr_array_make(
-//       result_pool, 0, sizeof(const char*));
-//   apr_array_header_t* revisions = apr_array_make(
-//       result_pool, 0, sizeof(svn_revnum_t));
-//   while (iter.hasNext())
-//     {
-//       jobject jpair = iter.next();
-//       jobject jrelpath = env->GetObjectField(jpair, relpath_fid);
-//       if (JNIUtil::isJavaExceptionThrown())
-//         return;
-//       jlong jrevision = env->GetLongField(jpair, revision_fid);
-//       if (JNIUtil::isJavaExceptionThrown())
-//         return;
-//       JNIStringHolder relpath((jstring)jrelpath);
-//       if (JNIUtil::isJavaExceptionThrown())
-//         return;
-//
-//       APR_ARRAY_PUSH(relpaths, const char*) = relpath.pstrdup(result_pool);
-//       APR_ARRAY_PUSH(revisions, svn_revnum_t) = svn_revnum_t(jrevision);
-//     }
-//
-//   *p_relpaths = relpaths;
-//   *p_revisions = revisions;
-// }
 } // anonymous namespace
 
 
@@ -264,7 +228,7 @@ void CommitEditor::addDirectory(jstring jrelpath,
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -276,7 +240,7 @@ void CommitEditor::addDirectory(jstring jrelpath,
 
   SVN_JNI_ERR(svn_editor_add_directory(m_editor, relpath.c_str(),
                                        build_children(children, subPool),
-                                       properties.hash(subPool, false),
+                                       properties.hash(subPool),
                                        svn_revnum_t(jreplaces_revision)),);
 }
 
@@ -289,7 +253,7 @@ void CommitEditor::addFile(jstring jrelpath,
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, true);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -304,7 +268,7 @@ void CommitEditor::addFile(jstring jrelpath,
     return;
   SVN_JNI_ERR(svn_editor_add_file(m_editor, relpath.c_str(),
                                   &checksum, contents.getStream(subPool),
-                                  properties.hash(subPool, false),
+                                  properties.hash(subPool),
                                   svn_revnum_t(jreplaces_revision)),);
 }
 
@@ -341,7 +305,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   Iterator children(jchildren);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, false);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -354,7 +318,7 @@ void CommitEditor::alterDirectory(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(svn_editor_alter_directory(
                   m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jchildren ? build_children(children, subPool) : NULL),
-                  properties.hash(subPool, true)),);
+                  properties.hash(subPool)),);
 }
 
 void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
@@ -365,7 +329,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
 
   InputStream contents(jcontents);
-  PropertyTable properties(jproperties, true);
+  PropertyTable properties(jproperties, true, false);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -382,7 +346,7 @@ void CommitEditor::alterFile(jstring jrelpath, jlong jrevision,
                   m_editor, relpath.c_str(), svn_revnum_t(jrevision),
                   (jcontents ? &checksum : NULL),
                   (jcontents ? contents.getStream(subPool) : NULL),
-                  properties.hash(subPool, true)),);
+                  properties.hash(subPool)),);
 }
 
 void CommitEditor::alterSymlink(jstring jrelpath, jlong jrevision,
@@ -452,21 +416,6 @@ void CommitEditor::move(jstring jsrc_relpath, jlong jsrc_revision,
                               svn_revnum_t(jreplaces_revision)),);
 }
 
-// void CommitEditor::rotate(jobject jelements)
-// {
-//   if (!m_valid) { throw_editor_inactive(); return; }
-//   SVN_JNI_ERR(m_session->m_context->checkCancel(m_session->m_context),);
-//
-//   SVN::Pool subPool(pool);
-//   const apr_array_header_t* relpaths;
-//   const apr_array_header_t* revisions;
-//   build_rotation(&relpaths, &revisions, jelements, subPool);
-//   if (JNIUtil::isJavaExceptionThrown())
-//     return;
-//
-//   SVN_JNI_ERR(svn_editor_rotate(m_editor, relpaths, revisions),);
-// }
-
 void CommitEditor::complete()
 {
   if (!m_valid) { throw_editor_inactive(); return; }
@@ -516,6 +465,44 @@ svn_error_t* open_callback_session(svn_ra_session_t*& session,
     }
   return SVN_NO_ERROR;
 }
+
+void
+invoke_get_base_cb(svn_stream_t **contents, svn_revnum_t *revision,
+                   Java::Env env, jobject get_base_cb,
+                   const char *repos_relpath, apr_pool_t *result_pool)
+{
+  Java::String relpath(env, repos_relpath);
+  jobject jrv =
+    JavaHL::ProvideBaseCallback(env, get_base_cb)(relpath.get());
+  JavaHL::ProvideBaseCallback::ReturnValue rv(env, jrv);
+  *contents = rv.get_global_stream(result_pool);
+  *revision = svn_revnum_t(rv.get_revision());
+}
+
+void
+invoke_get_props_cb(apr_hash_t **props, svn_revnum_t *revision,
+                   Java::Env env, jobject get_props_cb,
+                   const char *repos_relpath, apr_pool_t *result_pool)
+{
+  Java::String relpath(env, repos_relpath);
+  jobject jrv =
+    JavaHL::ProvidePropsCallback(env, get_props_cb)(relpath.get());
+  JavaHL::ProvidePropsCallback::ReturnValue rv(env, jrv);
+  *props = rv.get_property_hash(result_pool);
+  *revision = svn_revnum_t(rv.get_revision());
+}
+
+void
+invoke_get_kind_cb(svn_node_kind_t *kind,
+                   Java::Env env, jobject get_kind_cb,
+                   const char *repos_relpath, svn_revnum_t revision)
+{
+  Java::String relpath(env, repos_relpath);
+  jobject jnode_kind =
+    JavaHL::GetNodeKindCallback(env, get_kind_cb)(relpath.get(),
+                                                  jlong(revision));
+  *kind = EnumMapper::toNodeKind(jnode_kind);
+}
 } // anonymous namespace
 
 
@@ -527,8 +514,21 @@ CommitEditor::provide_base_cb(svn_stream_t **contents,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  *contents = NULL;
-  *revision = NULL;
+  CommitEditor* editor = static_cast<CommitEditor*>(baton);
+  if (editor->m_get_base_cb.get())
+    {
+      const Java::Env env;
+      SVN_JAVAHL_CATCH(env, SVN_ERR_BASE,
+                       invoke_get_base_cb(contents, revision, env,
+                                          editor->m_get_base_cb.get(),
+                                          repos_relpath,
+                                          result_pool));
+    }
+  else
+    {
+      *contents = NULL;
+      *revision = SVN_INVALID_REVNUM;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -541,33 +541,49 @@ CommitEditor::provide_props_cb(apr_hash_t **props,
                                apr_pool_t *scratch_pool)
 {
   CommitEditor* editor = static_cast<CommitEditor*>(baton);
-  SVN_ERR(open_callback_session(editor->m_callback_session,
-                                editor->m_callback_session_url,
-                                editor->m_callback_session_uuid,
-                                editor->m_session->m_context,
-                                editor->pool));
-
-  svn_node_kind_t kind = svn_node_unknown;
-  SVN_ERR(svn_ra_check_path(editor->m_callback_session,
-                            repos_relpath, SVN_INVALID_REVNUM, &kind,
-                            scratch_pool));
-
-  // FIXME: Getting properties from the youngest revision is in fact
-  // not such a bright idea, as the path may have been moved or
-  // deleted in the path.
-  if (kind == svn_node_file)
-    return svn_ra_get_file(editor->m_callback_session,
-                           repos_relpath, SVN_INVALID_REVNUM,
-                           NULL, revision, props, scratch_pool);
-  else if (kind == svn_node_dir)
-    return svn_ra_get_dir2(editor->m_callback_session, NULL, revision, props,
-                           repos_relpath, SVN_INVALID_REVNUM, 0, scratch_pool);
+  if (editor->m_get_props_cb.get())
+    {
+      const Java::Env env;
+      SVN_JAVAHL_CATCH(env, SVN_ERR_BASE,
+                       invoke_get_props_cb(props, revision, env,
+                                           editor->m_get_props_cb.get(),
+                                           repos_relpath,
+                                           result_pool));
+    }
   else
-    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                             _("Expected node kind '%s' or '%s' but got '%s'"),
-                             svn_node_kind_to_word(svn_node_file),
-                             svn_node_kind_to_word(svn_node_dir),
-                             svn_node_kind_to_word(kind));
+    {
+      SVN_ERR(open_callback_session(editor->m_callback_session,
+                                    editor->m_callback_session_url,
+                                    editor->m_callback_session_uuid,
+                                    editor->m_session->m_context,
+                                    editor->pool));
+
+      svn_node_kind_t kind = svn_node_unknown;
+      SVN_ERR(svn_ra_check_path(editor->m_callback_session,
+                                repos_relpath, SVN_INVALID_REVNUM, &kind,
+                                scratch_pool));
+
+      // FIXME: Getting properties from the youngest revision is in
+      // fact not such a bright idea, as the path may have been moved
+      // or deleted in the repository. On the other hand, if that
+      // happens, the commit would fail due to a conflict anyway.
+      if (kind == svn_node_file)
+        return svn_ra_get_file(editor->m_callback_session,
+                               repos_relpath, SVN_INVALID_REVNUM,
+                               NULL, revision, props, scratch_pool);
+      else if (kind == svn_node_dir)
+        return svn_ra_get_dir2(editor->m_callback_session, NULL, revision,
+                               props, repos_relpath, SVN_INVALID_REVNUM, 0,
+                               scratch_pool);
+      else
+        return svn_error_createf(
+            SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+            _("Expected node kind '%s' or '%s' but got '%s'"),
+            svn_node_kind_to_word(svn_node_file),
+            svn_node_kind_to_word(svn_node_dir),
+            svn_node_kind_to_word(kind));
+    }
+  return SVN_NO_ERROR;
 }
 
 svn_error_t*
@@ -577,13 +593,26 @@ CommitEditor::get_copysrc_kind_cb(svn_node_kind_t* kind, void* baton,
                                   apr_pool_t *scratch_pool)
 {
   CommitEditor* editor = static_cast<CommitEditor*>(baton);
-  SVN_ERR(open_callback_session(editor->m_callback_session,
-                                editor->m_callback_session_url,
-                                editor->m_callback_session_uuid,
-                                editor->m_session->m_context,
-                                editor->pool));
+  if (editor->m_get_kind_cb.get())
+    {
+      const Java::Env env;
+      SVN_JAVAHL_CATCH(env, SVN_ERR_BASE,
+                       invoke_get_kind_cb(kind, env,
+                                          editor->m_get_kind_cb.get(),
+                                          repos_relpath,
+                                          src_revision));
+    }
+  else
+    {
+      SVN_ERR(open_callback_session(editor->m_callback_session,
+                                    editor->m_callback_session_url,
+                                    editor->m_callback_session_uuid,
+                                    editor->m_session->m_context,
+                                    editor->pool));
 
-  return svn_ra_check_path(editor->m_callback_session,
-                           repos_relpath, src_revision, kind,
-                           scratch_pool);
+      return svn_ra_check_path(editor->m_callback_session,
+                               repos_relpath, src_revision, kind,
+                               scratch_pool);
+    }
+  return SVN_NO_ERROR;
 }

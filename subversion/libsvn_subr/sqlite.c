@@ -707,9 +707,20 @@ svn_sqlite__finalize(svn_sqlite__stmt_t *stmt)
 svn_error_t *
 svn_sqlite__reset(svn_sqlite__stmt_t *stmt)
 {
-  SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
-  SQLITE_ERR(sqlite3_clear_bindings(stmt->s3stmt), stmt->db);
+  /* No need to reset again after a first attempt */
   stmt->needs_reset = FALSE;
+
+  /* Clear bindings first, as there are no documented reasons
+     why this would ever fail, but keeping variable bindings
+     when reset is not what we expect. */
+  SQLITE_ERR(sqlite3_clear_bindings(stmt->s3stmt), stmt->db);
+
+  /* Reset last, as this *will* fail if the statement failed since
+     the last time it was reset, while reporting just the same failure.
+     (In this case the statement is also properly reset).
+
+     See the sqlite3_reset() documentation for more details. */
+  SQLITE_ERR(sqlite3_reset(stmt->s3stmt), stmt->db);
   return SVN_NO_ERROR;
 }
 
@@ -1425,4 +1436,10 @@ void
 svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val)
 {
   sqlite3_result_int64(sctx->context, val);
+}
+
+void
+svn_sqlite__result_error(svn_sqlite__context_t *sctx, const char *msg, int num)
+{
+  sqlite3_result_error(sctx->context, msg, num);
 }

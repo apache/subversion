@@ -91,9 +91,9 @@ def blame(path, filename, rev=None):
 #    print ''.join(diffresult)
 #  print annotresult
   for x in range(len(annotresult.keys())):
-     sys.stdout.write("Line %d (rev %d):%s" % (x,
-                                               annotresult[x][0],
-                                               annotresult[x][1]))
+     sys.stdout.write("Line %d (r%d):%s" % (x,
+                                            annotresult[x][0],
+                                            annotresult[x][1]))
 
 def usage():
   print("USAGE: blame.py [-r REV] repos-path file")

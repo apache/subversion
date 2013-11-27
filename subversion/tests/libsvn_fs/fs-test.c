@@ -27,6 +27,7 @@
 
 #include "../svn_test.h"
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_time.h"
@@ -1019,7 +1020,7 @@ static svn_error_t *
 check_entry_present(svn_fs_root_t *root, const char *path,
                     const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = FALSE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (! present)
@@ -1036,7 +1037,7 @@ static svn_error_t *
 check_entry_absent(svn_fs_root_t *root, const char *path,
                    const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = TRUE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (present)
@@ -5048,15 +5049,27 @@ test_fs_info_format(const svn_test_opts_t *opts,
   int fs_format;
   svn_version_t *supports_version;
   svn_version_t v1_5_0 = {1, 5, 0, ""};
+  svn_version_t v1_9_0 = {1, 9, 0, ""};
   svn_test_opts_t opts2;
+  svn_boolean_t is_fsx = strcmp(opts->fs_type, "fsx") == 0;
 
   opts2 = *opts;
-  opts2.server_minor_version = 5;
+  opts2.server_minor_version = is_fsx ? 9 : 5;
 
   SVN_ERR(svn_test__create_fs(&fs, "test-fs-format-info", &opts2, pool));
   SVN_ERR(svn_fs_info_format(&fs_format, &supports_version, fs, pool, pool));
-  SVN_TEST_ASSERT(fs_format == 3); /* happens to be the same for FSFS and BDB */
-  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_5_0));
+
+  if (is_fsx)
+    {
+      SVN_TEST_ASSERT(fs_format == 1);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_9_0));
+    }
+  else
+    {
+       /* happens to be the same for FSFS and BDB */
+      SVN_TEST_ASSERT(fs_format == 3);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_5_0));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5064,6 +5077,8 @@ test_fs_info_format(const svn_test_opts_t *opts,
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
+
+int svn_test_max_threads = 8;
 
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -5080,6 +5095,12 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check that transaction names are not reused"),
     SVN_TEST_OPTS_PASS(write_and_read_file,
                        "write and read a file's contents"),
+    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
+                       "create and modify almostmedium file"),
+    SVN_TEST_OPTS_PASS(medium_file_integrity,
+                       "create and modify medium file"),
+    SVN_TEST_OPTS_PASS(large_file_integrity,
+                       "create and modify large file"),
     SVN_TEST_OPTS_PASS(create_mini_tree_transaction,
                        "test basic file and subdirectory creation"),
     SVN_TEST_OPTS_PASS(create_greek_tree_transaction,
@@ -5111,12 +5132,6 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check old revisions"),
     SVN_TEST_OPTS_PASS(check_all_revisions,
                        "after each commit, check all revisions"),
-    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
-                       "create and modify almostmedium file"),
-    SVN_TEST_OPTS_PASS(medium_file_integrity,
-                       "create and modify medium file"),
-    SVN_TEST_OPTS_PASS(large_file_integrity,
-                       "create and modify large file"),
     SVN_TEST_OPTS_PASS(check_root_revision,
                        "ensure accurate storage of root node"),
     SVN_TEST_OPTS_PASS(test_node_created_rev,

@@ -382,11 +382,13 @@ second place for auth-request point as noted below.
                 [ end-rev:number ] changed-paths:bool strict-node:bool
                 ? limit:number
                 ? include-merged-revisions:bool
-                all-revprops | revprops ( revprop:string ... ) )
+                all-revprops | revprops ( revprop:string ... )
+                ? move-behavior:number )
     Before sending response, server sends log entries, ending with "done".
     If a client does not want to specify a limit, it should send 0 as the
     limit parameter.  rev-props excludes author, date, and log; they are
     sent separately for backwards-compatibility.
+    Move-behavior is encoded like enum svn_move_behavior_t.
     log-entry: ( ( change:changed-path-entry ... ) rev:number
                  [ author:string ] [ date:string ] [ message:string ]
                  ? has-children:bool invalid-revnum:bool

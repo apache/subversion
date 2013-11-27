@@ -1909,6 +1909,16 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/* Structure used as linked list in svn_wc__db_info_t to describe all nodes
+   in this location that were moved to another location */
+struct svn_wc__db_moved_to_info_t
+{
+  const char *moved_to_abspath;
+  const char *shadow_op_root_abspath;
+
+  struct svn_wc__db_moved_to_info_t *next;
+};
+
 /* Structure returned by svn_wc__db_read_children_info.  Only has the
    fields needed by status. */
 struct svn_wc__db_info_t {
@@ -1945,7 +1955,10 @@ struct svn_wc__db_info_t {
   svn_wc__db_lock_t *lock;  /* Repository file lock */
   svn_boolean_t incomplete; /* TRUE if a working node is incomplete */
 
-  const char *moved_to_abspath; /* Only on op-roots. See svn_wc_status3_t. */
+  struct svn_wc__db_moved_to_info_t *moved_to; /* A linked list of locations
+                                                 where nodes at this path
+                                                 are moved to. Highest layers
+                                                 first */
   svn_boolean_t moved_here;     /* Only on op-roots. */
 
   svn_boolean_t file_external;
@@ -1967,6 +1980,14 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_read_children_info, but only gets an info node for the root
+   element. */
+svn_error_t *
+svn_wc__db_read_single_info(const struct svn_wc__db_info_t **info,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Structure returned by svn_wc__db_read_walker_info.  Only has the
    fields needed by svn_wc__internal_walk_children(). */
@@ -2124,7 +2145,7 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
  * paths relative to the repository root URL for cached inherited
  * properties and absolute working copy paths otherwise.
  *
- * If ACTUAL_PROPS is not NULL, then set *ACTUAL_PROPS to the actual
+ * If ACTUAL_PROPS is not NULL, then set *ACTUAL_PROPS to ALL the actual
  * properties stored on LOCAL_ABSPATH.
  *
  * Allocate @a *iprops in @a result_pool.  Use @a scratch_pool
@@ -2685,7 +2706,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                          apr_pool_t *scratch_pool);
 
 /* Scan the working copy for move information of the node LOCAL_ABSPATH.
- * If LOCAL_ABSPATH return a SVN_ERR_WC_PATH_UNEXPECTED_STATUS error.
+ * If LOCAL_ABSPATH is not moved here return an
+ * SVN_ERR_WC_PATH_UNEXPECTED_STATUS error.
  *
  * If not NULL *MOVED_FROM_ABSPATH will be set to the previous location
  * of LOCAL_ABSPATH, before it or an ancestror was moved.
@@ -2830,6 +2852,16 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
 /* @defgroup svn_wc__db_upgrade  Functions for upgrading a working copy.
    @{
 */
+
+/* Installs or updates Sqlite schema statistics for the current (aka latest)
+   working copy schema.
+
+   This function should be called once on initializing the database and after
+   an schema update completes */
+svn_error_t *
+svn_wc__db_install_schema_statistics(svn_sqlite__db_t *sdb,
+                                     apr_pool_t *scratch_pool);
+
 
 /* Create a new wc.db file for LOCAL_DIR_ABSPATH, which is going to be a
    working copy for the repository REPOS_ROOT_URL with uuid REPOS_UUID.
@@ -3382,7 +3414,14 @@ svn_wc__db_resolve_delete_raise_moved_away(svn_wc__db_t *db,
                                            apr_pool_t *scratch_pool);
 
 /* Like svn_wc__db_resolve_delete_raise_moved_away this should be
-   combined. */
+   combined.
+   
+   ### LOCAL_ABSPATH specifies the move origin, but the move origin
+   ### is not necessary unique enough. This function needs an op_root_abspath
+   ### argument to differentiate between different origins.
+
+   ### See move_tests.py: move_many_update_delete for an example case.
+   */
 svn_error_t *
 svn_wc__db_resolve_break_moved_away(svn_wc__db_t *db,
                                     const char *local_abspath,

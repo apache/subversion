@@ -42,9 +42,9 @@ PropertyTable::~PropertyTable()
     JNIUtil::getEnv()->DeleteLocalRef(m_revpropTable);
 }
 
-apr_hash_t *PropertyTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
+apr_hash_t *PropertyTable::hash(const SVN::Pool &pool)
 {
-  if (m_revprops.size() == 0 && nullIfEmpty)
+  if (!m_revpropTable && !m_empty_if_null)
     return NULL;
 
   apr_hash_t *revprop_table = apr_hash_make(pool.getPool());
@@ -73,7 +73,10 @@ apr_hash_t *PropertyTable::hash(const SVN::Pool &pool, bool nullIfEmpty)
   return revprop_table;
 }
 
-PropertyTable::PropertyTable(jobject jrevpropTable, bool bytearray_values)
+PropertyTable::PropertyTable(jobject jrevpropTable, bool bytearray_values,
+                             bool empty_if_null)
+  : m_revpropTable(jrevpropTable),
+    m_empty_if_null(empty_if_null)
 {
   m_revpropTable = jrevpropTable;
 

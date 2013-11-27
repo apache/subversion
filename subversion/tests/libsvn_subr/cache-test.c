@@ -193,6 +193,7 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE,
                                             pool));
 
@@ -257,6 +258,8 @@ test_memcache_long_key(const svn_test_opts_t *opts,
 
 
 /* The test table.  */
+
+int svn_test_max_threads = 1;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

@@ -24,6 +24,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -34,8 +35,6 @@
 #include "svn_path.h"
 #include "svn_base64.h"
 #include "svn_props.h"
-
-#include "svn_private_config.h"
 
 #include "private/svn_string_private.h"
 
@@ -287,7 +286,7 @@ create_file_revs_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_open_tag_buckets(buckets, alloc,
                                     "S:file-revs-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:start-revision", apr_ltoa(pool, blame_ctx->start),

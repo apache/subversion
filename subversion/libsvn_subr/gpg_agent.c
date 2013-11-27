@@ -73,6 +73,7 @@
 #include "svn_checksum.h"
 #include "svn_string.h"
 
+#include "auth.h"
 #include "private/svn_auth_private.h"
 
 #include "svn_private_config.h"
@@ -475,7 +476,7 @@ static const svn_auth_provider_t gpg_agent_simple_provider = {
 
 /* Public API */
 void
-svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
+svn_auth__get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));

@@ -1261,6 +1261,11 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.9. */
   svn_wc_notify_cleanup_external,
 
+  /** The operation failed because the operation (E.g. commit) is only valid
+   * if the operation includes this path.
+   * @since New in 1.9. */
+  svn_wc_notify_failed_requires_target
+
 } svn_wc_notify_action_t;
 
 

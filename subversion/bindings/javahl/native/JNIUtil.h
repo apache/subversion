@@ -73,17 +73,18 @@ class JNIUtil
   static apr_time_t getDate(jobject jdate);
   static void logMessage(const char *message);
   static int getLogLevel();
-  static char *getFormatBuffer();
   static void initLogFile(int level, jstring path);
   static jstring makeJString(const char *txt);
-  static bool isJavaExceptionThrown();
   static JNIEnv *getEnv();
-  static void setEnv(JNIEnv *);
 
   /**
    * @return Whether any Throwable has been raised.
    */
-  static bool isExceptionThrown();
+  static bool isExceptionThrown() { return isJavaExceptionThrown(); }
+  static bool isJavaExceptionThrown()
+    {
+      return getEnv()->ExceptionCheck();
+    }
 
   static void handleAPRError(int error, const char *op);
 
@@ -120,9 +121,11 @@ class JNIUtil
    * Throw a Java exception corresponding to err, and run
    * svn_error_clear() on err.
    */
-  static void handleSVNError(svn_error_t *err);
+  static void handleSVNError(svn_error_t *err, jthrowable jcause = NULL);
 
-  static jstring makeSVNErrorMessage(svn_error_t *err);
+  static std::string makeSVNErrorMessage(svn_error_t *err,
+                                         jstring *jerror_message,
+                                         jobject *jmessage_stack);
 
   /**
    * Create and throw a java.lang.Throwable instance.
@@ -147,36 +150,17 @@ class JNIUtil
   static bool JNIGlobalInit(JNIEnv *env);
   static bool JNIInit(JNIEnv *env);
   static bool initializeJNIRuntime();
-  enum { formatBufferSize = 2048 };
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 
-  struct message_stack_item
-  {
-    apr_status_t m_code;
-    std::string m_message;
-    bool m_generic;
-
-    message_stack_item(apr_status_t code, const char* message,
-                       bool generic = false)
-      : m_code(code),
-        m_message(message),
-        m_generic(generic)
-      {}
-  };
-  typedef std::vector<message_stack_item> error_message_stack_t;
+  /**
+   * Mutex that secures the global configuration object.
+   */
+  static JNIMutex *g_configMutex;
 
  private:
-  static void assembleErrorMessage(svn_error_t *err, int depth,
-                                   apr_status_t parent_apr_err,
-                                   std::string &buffer,
-                                   error_message_stack_t* message_stack = NULL);
+  static void wrappedHandleSVNError(svn_error_t *err, jthrowable jcause);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
-  /**
-   * Set the appropriate global or thread-local flag that an exception
-   * has been thrown to @a flag.
-   */
-  static void setExceptionThrown(bool flag = true);
 
   /**
    * The log level of this module.
@@ -219,11 +203,6 @@ class JNIUtil
    * The JNI environment used during initialization.
    */
   static JNIEnv *g_initEnv;
-
-  /**
-   * Fuffer the format error messages during initialization.
-   */
-  static char g_initFormatBuffer[formatBufferSize];
 
   /**
    * The stream to write log messages to.

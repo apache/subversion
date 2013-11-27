@@ -24,6 +24,7 @@
 #include <apr_uri.h>
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -36,7 +37,6 @@
 #include "svn_path.h"
 #include "svn_props.h"
 
-#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_skel.h"
@@ -244,9 +244,11 @@ create_checkout_body(serf_bucket_t **bkt,
   svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:checkout",
                                     "xmlns:D", "DAV:",
-                                    NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set", NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set",
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href",
+                                    SVN_VA_NULL);
 
   SVN_ERR_ASSERT(activity_url != NULL);
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
@@ -382,7 +384,7 @@ checkout_dir(dir_context_t *dir,
              apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  dir_context_t *p_dir = dir;
+  dir_context_t *c_dir = dir;
   const char *checkout_url;
   const char **working;
 
@@ -393,17 +395,25 @@ checkout_dir(dir_context_t *dir,
 
   /* Is this directory or one of our parent dirs newly added?
    * If so, we're already implicitly checked out. */
-  while (p_dir)
+  while (c_dir)
     {
-      if (p_dir->added)
+      if (c_dir->added)
         {
+          /* Calculate the working_url by skipping the shared ancestor between
+           * the c_dir_parent->relpath and dir->relpath. This is safe since an
+           * add is guaranteed to have a parent that is checked out. */
+          dir_context_t *c_dir_parent = c_dir->parent_dir;
+          const char *relpath = svn_relpath_skip_ancestor(c_dir_parent->relpath,
+                                                          dir->relpath);
+
           /* Implicitly checkout this dir now. */
+          SVN_ERR_ASSERT(c_dir_parent->working_url);
           dir->working_url = svn_path_url_add_component2(
-                                   dir->parent_dir->working_url,
-                                   dir->name, dir->pool);
+                                   c_dir_parent->working_url,
+                                   relpath, dir->pool);
           return SVN_NO_ERROR;
         }
-      p_dir = p_dir->parent_dir;
+      c_dir = c_dir->parent_dir;
     }
 
   /* We could be called twice for the root: once to checkout the baseline;
@@ -544,6 +554,7 @@ checkout_file(file_context_t *file,
       if (parent_dir->added)
         {
           /* Implicitly checkout this file now. */
+          SVN_ERR_ASSERT(parent_dir->working_url);
           file->working_url = svn_path_url_add_component2(
                                     parent_dir->working_url,
                                     svn_relpath_skip_ancestor(
@@ -717,18 +728,18 @@ proppatch_walker(void *baton,
   /* Use the namespace prefix instead of adding the xmlns attribute to support
      property names containing ':' */
   if (strcmp(ns, SVN_DAV_PROP_NS_SVN) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "S:", name, (char *)NULL);
+    prop_name = apr_pstrcat(wb->body_pool, "S:", name, SVN_VA_NULL);
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
-    prop_name = apr_pstrcat(wb->body_pool, "C:", name, (char *)NULL);
+    prop_name = apr_pstrcat(wb->body_pool, "C:", name, SVN_VA_NULL);
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
                                       "V:encoding", encoding,
-                                      NULL);
+                                      SVN_VA_NULL);
   else
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
                                       "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
-                                      NULL);
+                                      SVN_VA_NULL);
 
   if (have_old_val)
     {
@@ -755,12 +766,12 @@ proppatch_walker(void *baton,
         svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                           "V:" SVN_DAV__OLD_VALUE,
                                           "V:encoding", encoding2,
-                                          NULL);
+                                          SVN_VA_NULL);
       else
         svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                           "V:" SVN_DAV__OLD_VALUE,
                                           "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
-                                          NULL);
+                                          SVN_VA_NULL);
 
       if (cdata_bkt2)
         serf_bucket_aggregate_append(body_bkt, cdata_bkt2);
@@ -815,7 +826,7 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
           token_uri = apr_uri_unparse(pool, &uri, 0);
 
           token_header = apr_pstrcat(pool, "<", token_uri, "> (<", token, ">)",
-                                     (char *)NULL);
+                                     SVN_VA_NULL);
           serf_bucket_headers_set(headers, "If", token_header);
         }
     }
@@ -871,7 +882,7 @@ create_proppatch_body(serf_bucket_t **bkt,
                                     "xmlns:V", SVN_DAV_PROP_NS_DAV,
                                     "xmlns:C", SVN_DAV_PROP_NS_CUSTOM,
                                     "xmlns:S", SVN_DAV_PROP_NS_SVN,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   wb.body_bkt = body_bkt;
   wb.body_pool = pbb->body_pool;
@@ -881,8 +892,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 
   if (apr_hash_count(ctx->changed_props) > 0)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
       wb.filter = filter_all_props;
       wb.deleting = FALSE;
@@ -897,8 +908,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 
   if (apr_hash_count(ctx->removed_props) > 0)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", SVN_VA_NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
       wb.filter = filter_props_with_old_value;
       wb.deleting = TRUE;
@@ -913,8 +924,8 @@ create_proppatch_body(serf_bucket_t **bkt,
 
   if (apr_hash_count(ctx->removed_props) > 0)
     {
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", NULL);
-      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", SVN_VA_NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
 
       wb.filter = filter_props_without_old_value;
       wb.deleting = TRUE;
@@ -1123,7 +1134,7 @@ setup_delete_headers(serf_bucket_t *headers,
           const char *token_header;
 
           token_header = apr_pstrcat(pool, "<", ctx->path, "> (<",
-                                     ctx->lock_token, ">)", (char *)NULL);
+                                     ctx->lock_token, ">)", SVN_VA_NULL);
 
           serf_bucket_headers_set(headers, "If", token_header);
 
@@ -1924,7 +1935,11 @@ add_file(const char *path,
 
       if (handler->sline.code != 404)
         {
-          return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
+          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                               handler->path,
+                                               handler->location));
+
+         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"), path);
         }
     }
@@ -2159,8 +2174,8 @@ close_file(void *file_baton,
     {
       proppatch_context_t *proppatch;
 
-      proppatch = apr_pcalloc(ctx->pool, sizeof(*proppatch));
-      proppatch->pool = ctx->pool;
+      proppatch = apr_pcalloc(scratch_pool, sizeof(*proppatch));
+      proppatch->pool = scratch_pool;
       proppatch->relpath = ctx->relpath;
       proppatch->path = ctx->url;
       proppatch->commit = ctx->commit;
@@ -2168,7 +2183,7 @@ close_file(void *file_baton,
       proppatch->removed_props = ctx->removed_props;
       proppatch->base_revision = ctx->base_revision;
 
-      SVN_ERR(proppatch_resource(proppatch, ctx->commit, ctx->pool));
+      SVN_ERR(proppatch_resource(proppatch, ctx->commit, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2269,7 +2284,9 @@ abort_edit(void *edit_baton,
       && handler->sline.code != 404
       )
     {
-      SVN_ERR_MALFUNCTION();
+      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                               _("DELETE returned unexpected status: %d"),
+                               handler->sline.code);
     }
 
   return SVN_NO_ERROR;

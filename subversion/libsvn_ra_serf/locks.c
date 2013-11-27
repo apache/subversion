@@ -302,8 +302,8 @@ create_getlock_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_xml_header_buckets(buckets, alloc);
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "propfind",
                                     "xmlns", "DAV:",
-                                    NULL);
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", NULL);
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(buckets, "lockdiscovery", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "prop");
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "propfind");
@@ -337,13 +337,13 @@ create_lock_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_xml_header_buckets(buckets, alloc);
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockinfo",
                                     "xmlns", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
 
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(buckets, "exclusive", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockscope");
 
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(buckets, "write", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "locktype");
 
@@ -602,7 +602,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
         }
 
       unlock_ctx.force = force;
-      unlock_ctx.token = apr_pstrcat(iterpool, "<", token, ">", (char *)NULL);
+      unlock_ctx.token = apr_pstrcat(iterpool, "<", token, ">", SVN_VA_NULL);
 
       req_url = svn_path_url_add_component2(session->session_url.path, path,
                                             iterpool);

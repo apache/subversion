@@ -47,15 +47,15 @@ class RemoteSession : public SVNBase
     static jobject open(jint jretryAttempts,
                         jstring jurl, jstring juuid,
                         jstring jconfigDirectory,
-                        jobject jconfigHandler,
                         jstring jusername, jstring jpassword,
-                        jobject jprompter, jobject jprogress);
+                        jobject jprompter, jobject jprogress,
+                        jobject jcfgcb, jobject jtunnelcb);
     static jobject open(jint jretryAttempts,
                         const char* url, const char* uuid,
                         const char* configDirectory,
-                        jobject jconfigHandler,
                         const char* username, const char* password,
-                        Prompter* prompter, jobject jprogress);
+                        Prompter*& prompter, jobject jprogress,
+                        jobject jcfgcb, jobject jtunnelcb);
     ~RemoteSession();
 
     void cancelOperation() const { m_context->cancelOperation(); }
@@ -92,9 +92,16 @@ class RemoteSession : public SVNBase
                 jboolean jinclude_merged_revisions,
                 jobject jrevprops, jobject jlog_callback);
     jobject checkPath(jstring jpath, jlong jrevision);
-    // TODO: stat
-    // TODO: getLocations
-    // TODO: getLocationSegments
+    jobject stat(jstring jpath, jlong jrevision);
+    jobject getLocations(jstring jpath, jlong jpeg_revision,
+                         jobject jlocation_revisions);
+    void getLocationSegments(jstring jpath, jlong jpeg_revision,
+                             jlong jstart_revision, jlong jend_revision,
+                             jobject jcallback);
+    void getFileRevisions(jstring jpath,
+                          jlong jstart_revision, jlong jend_revision,
+                          jboolean jinclude_merged_revisions,
+                          jobject jcallback);
     // TODO: getFileRevisions
     // TODO: lock
     // TODO: unlock
@@ -108,12 +115,11 @@ class RemoteSession : public SVNBase
 
   private:
     friend class CommitEditor;
-    RemoteSession(jobject*, int retryAttempts,
+    RemoteSession(int retryAttempts,
                   const char* url, const char* uuid,
                   const char* configDirectory,
-                  jobject jconfigHandler,
                   const char* username, const char* password,
-                  Prompter* prompter, jobject jprogress);
+                  Prompter*& prompter, jobject jcfgcb, jobject jtunnelcb);
 
     svn_ra_session_t* m_session;
     RemoteSessionContext* m_context;

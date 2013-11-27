@@ -30,6 +30,8 @@
 #include <stdlib.h>
 
 #include <apr_hash.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_string.h"
@@ -46,7 +48,6 @@
 #include "private/svn_string_private.h"
 #include "private/svn_cmdline_private.h"
 
-#include "svn_private_config.h"
 
 
 svn_error_t *

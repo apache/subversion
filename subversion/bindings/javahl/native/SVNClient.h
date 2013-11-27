@@ -66,9 +66,10 @@ class SVNClient :public SVNBase
   void patch(const char *patchPath, const char *targetPath, bool dryRun,
              int stripCount, bool reverse, bool ignoreWhitespace,
              bool removeTempfiles, PatchCallback *callback);
-  void info2(const char *path, Revision &revision, Revision &pegRevision,
-             svn_depth_t depth, StringArray &changelists,
-             InfoCallback *callback);
+  void info2(const char *path,
+             Revision &revision, Revision &pegRevision, svn_depth_t depth,
+             svn_boolean_t fetchExcluded, svn_boolean_t fetchActualOnly,
+             StringArray &changelists, InfoCallback *callback);
   void unlock(Targets &targets, bool force);
   void lock(Targets &targets, const char *comment, bool force);
   jobject revProperties(const char *path, Revision &revision);

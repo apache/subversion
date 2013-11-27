@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "svn_private_config.h"
 #include "svn_config.h"
 #include "svn_hash.h"
 #include "svn_error.h"
@@ -36,7 +37,7 @@
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "repos.h"
-#include "svn_private_config.h"
+
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_string_private.h"
@@ -334,7 +335,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
   for (extn = check_extns; *extn; ++extn)
     {
       const char *const hook_path =
-        (**extn ? apr_pstrcat(pool, hook, *extn, (char *)NULL) : hook);
+        (**extn ? apr_pstrcat(pool, hook, *extn, SVN_VA_NULL) : hook);
 
       svn_node_kind_t kind;
       if (!(err = svn_io_check_resolved_path(hook_path, &kind, pool))
@@ -416,17 +417,25 @@ svn_repos__parse_hooks_env(apr_hash_t **hooks_env_p,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_config_t *cfg;
   struct parse_hooks_env_section_baton b;
-
   if (local_abspath)
     {
-      SVN_ERR(svn_config_read3(&cfg, local_abspath, FALSE,
-                               TRUE, TRUE, scratch_pool));
-      b.cfg = cfg;
+      svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
       b.hooks_env = apr_hash_make(result_pool);
-      (void)svn_config_enumerate_sections2(cfg, parse_hooks_env_section, &b,
-                                           scratch_pool);
+
+      if (kind != svn_node_none)
+        {
+          svn_config_t *cfg;
+          SVN_ERR(svn_config_read3(&cfg, local_abspath, FALSE,
+                                  TRUE, TRUE, scratch_pool));
+          b.cfg = cfg;
+
+          (void)svn_config_enumerate_sections2(cfg, parse_hooks_env_section,
+                                               &b, scratch_pool);
+        }
+
       *hooks_env_p = b.hooks_env;
     }
   else

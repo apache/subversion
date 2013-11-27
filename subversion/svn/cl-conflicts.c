@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "cl-conflicts.h"
 #include "svn_hash.h"
 #include "svn_xml.h"
@@ -29,9 +30,6 @@
 #include "private/svn_token.h"
 
 #include "cl.h"
-
-#include "svn_private_config.h"
-
 
 /* A map for svn_wc_conflict_action_t values to XML strings */
 static const svn_token_map_t map_conflict_action_xml[] =

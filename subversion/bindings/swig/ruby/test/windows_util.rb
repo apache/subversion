@@ -34,149 +34,31 @@ module SvnTestUtil
         end
       end
 
-      def service_control(command, args={})
-        args = args.collect do |key, value|
-          "#{key}= #{Svnserve.escape_value(value)}"
-        end.join(" ")
-        result = `sc #{command} #{service_name} #{args}`
-        if result.match(/FAILED/)
-          raise "Failed to #{command} #{service_name}: #{args}"
-        end
-        /^\s*STATE\s*:\s\d+\s*(.*?)\s*$/ =~ result
-        $1
-      end
-
-      def grant_everyone_full_access(dir)
-        dir = dir.tr(File::SEPARATOR, File::ALT_SEPARATOR)
-        `cacls #{Svnserve.escape_value(dir)} /T /E /P Everyone:F`
-      end
-
-      def service_exists?
-        begin
-          service_control("query")
-          true
-        rescue
-          false
-        end
-      end
-
-      def service_stopped?
-        "STOPPED" == service_control("query") rescue true
-      end
-
       def setup_svnserve
         @svnserve_port = @svnserve_ports.last
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
-        grant_everyone_full_access(@full_repos_path)
 
         @@service_created ||= begin
           @@service_created = true
-          service_control('stop') unless service_stopped?
-          service_control('delete') if service_exists?
 
-          svnserve_dir = File.expand_path("svnserve")
-          FileUtils.mkdir_p(svnserve_dir)
-          at_exit do
-            service_control('stop') unless service_stopped?
-            service_control('delete') if service_exists?
-            FileUtils.rm_rf(svnserve_dir)
-          end
-          trap("INT") do
-            service_control('stop') unless service_stopped?
-            service_control('delete') if service_exists?
-            FileUtils.rm_rf(svnserve_dir)
-          end
-
-          config = SetupEnvironment.gen_make_opts
-          apr_version_include = Pathname.new(config["--with-apr"])  +
-              'include' + 'apr_version.h'
-          %r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)' =~ apr_version_include.read
-          apr_major_version = $1 == '0' ? '' : "-#{$1}"
-
-          cwd = Dir.getwd
-          targets = %W(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
-                       libsvn_fs-1.dll libsvn_delta-1.dll
-                       libaprutil#{apr_major_version}.dll
-                       libapr#{apr_major_version}.dll
-                       libapriconv#{apr_major_version}.dll
-                       libdb??.dll libdb??d.dll)
-          ENV["PATH"].split(";").each do |path|
-
-            # Change the cwd to path, but ignore non-existent paths.
-            begin
-              Dir.chdir(path)
-            rescue Errno::ENOENT
-              next
-            end
-
-            found_targets = []
-            targets.each do |target|
-              matching_paths = Dir.glob(target)
-              matching_paths.each do |target_path|
-                target_path = File.join(path.tr('\\', '/'), target_path)
-                if File.exists?(target_path)
-                  found_targets << target
-                  retried = 0
-                  begin
-                    FileUtils.cp(target_path, svnserve_dir)
-                  rescue Errno::EACCES
-                    # On Windows the tests frequently fail spuriously with a
-                    # 'Errno::EACCES: Permission denied - svnserve.exe' error.
-                    # Sleeping for a few seconds avoids this.
-                    if retried > 5
-                      # Give up!
-                      raise
-                    else
-                      # Wait a sec...
-                      sleep(1)
-                      retried += 1
-                      retry
-                    end
-                  end
-                end
-              end
-            end
-            targets -= found_targets
-            break if targets.empty?
-          end
-          Dir.chdir(cwd)
-          # Remove optional targets instead of raising below.  If they are really
-          # needed, svnserve won't start anyway.
-          targets -= %W[libapriconv#{apr_major_version}.dll]
-          # Ditto these four, since svnserve.exe might be a static build.
-          targets -= %W[libsvn_subr-1.dll]
-          targets -= %W[libsvn_repos-1.dll]
-          targets -= %W[libsvn_fs-1.dll]
-          targets -= %W[libsvn_delta-1.dll]
-
-          unless targets.empty?
-            raise "can't find libraries to work svnserve: #{targets.join(' ')}"
-          end
-
-          grant_everyone_full_access(svnserve_dir)
-
-          svnserve_path = File.join(svnserve_dir, "svnserve.exe")
-          svnserve_path = svnserve_path.tr(File::SEPARATOR,
-                                           File::ALT_SEPARATOR)
+          top_directory = File.join(File.dirname(__FILE__), "..", "..", "..", "..", "..")
+          build_type = ENV["BUILD_TYPE"] || "Release"
+          svnserve_path = File.join(top_directory, build_type, 'subversion', 'svnserve', 'svnserve.exe')
           svnserve_path = Svnserve.escape_value(svnserve_path)
 
           root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+          FileUtils.mkdir_p(root)
 
-          args = ["--service", "--root", Svnserve.escape_value(root),
-                  "--listen-host", @svnserve_host,
-                  "--listen-port", @svnserve_port]
+          IO.popen("#{svnserve_path} -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid_file}")
           user = ENV["USERNAME"] || Etc.getlogin
-          service_control('create',
-                          [["binPath", "#{svnserve_path} #{args.join(' ')}"],
-                           ["DisplayName", service_name],
-                           ["type", "own"]])
         end
-        service_control('start')
         true
       end
 
       def teardown_svnserve
-        service_control('stop') unless service_stopped?
+        # TODO:
+        #   Load @svnserve_pid_file
+        #   Kill process
       end
 
       def add_pre_revprop_change_hook

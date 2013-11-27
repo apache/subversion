@@ -26,6 +26,7 @@
 
 #include "../svn_test.h"
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
@@ -36,6 +37,10 @@
 #include "svn_config.h"
 #include "svn_props.h"
 #include "svn_version.h"
+#include "private/svn_repos_private.h"
+
+/* be able to look into svn_config_t */
+#include "../../libsvn_subr/config_impl.h"
 
 #include "../svn_test_fs.h"
 
@@ -484,19 +489,19 @@ print_chrevs(const apr_array_header_t *revs_got,
           outstr = apr_pstrcat(pool,
                                outstr,
                                apr_psprintf(pool, "%ld ", rev),
-                               (char *)NULL);
+                               SVN_VA_NULL);
         }
     }
-  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", (char *)NULL);
+  outstr = apr_pstrcat(pool, outstr, "}  Expected: { ", SVN_VA_NULL);
   for (i = 0; i < num_revs_expected; i++)
     {
       outstr = apr_pstrcat(pool,
                            outstr,
                            apr_psprintf(pool, "%ld ",
                                         revs_expected[i]),
-                           (char *)NULL);
+                           SVN_VA_NULL);
     }
-  return apr_pstrcat(pool, outstr, "}", (char *)NULL);
+  return apr_pstrcat(pool, outstr, "}", SVN_VA_NULL);
 }
 
 
@@ -1454,8 +1459,8 @@ in_repo_authz(const svn_test_opts_t *opts,
 
   repos_root = svn_repos_path(repos, pool);
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
-  authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
+  authz_url = svn_path_url_add_component2(repos_url, "authz", pool);
+  noent_authz_url = svn_path_url_add_component2(repos_url, "A/authz", pool);
 
   /* absolute file URL. */
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
@@ -1593,11 +1598,11 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
   /* Calculate URLs */
   repos_root = svn_repos_path(repos, pool);
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_root, pool));
-  authz_url = apr_pstrcat(pool, repos_url, "/authz", (char *)NULL);
-  empty_authz_url = apr_pstrcat(pool, repos_url, "/empty-authz", (char *)NULL);
-  noent_authz_url = apr_pstrcat(pool, repos_url, "/A/authz", (char *)NULL);
-  groups_url = apr_pstrcat(pool, repos_url, "/groups", (char *)NULL);
-  noent_groups_url = apr_pstrcat(pool, repos_url, "/A/groups", (char *)NULL);
+  authz_url = svn_path_url_add_component2(repos_url, "authz", pool);
+  empty_authz_url = svn_path_url_add_component2(repos_url, "empty-authz", pool);
+  noent_authz_url = svn_path_url_add_component2(repos_url, "A/authz", pool);
+  groups_url = svn_path_url_add_component2(repos_url, "groups", pool);
+  noent_groups_url = svn_path_url_add_component2(repos_url, "A/groups", pool);
 
 
   /* absolute file URLs. */
@@ -3270,21 +3275,26 @@ test_repos_info(const svn_test_opts_t *opts,
   svn_version_t v1_0_0 = {1, 0, 0, ""};
   svn_version_t v1_4_0 = {1, 4, 0, ""};
   int repos_format;
+  svn_boolean_t is_fsx = strcmp(opts->fs_type, "fsx") == 0;
 
   opts2 = *opts;
 
-  opts2.server_minor_version = 3;
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-3",
-                                 &opts2, pool));
-  SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
-  SVN_TEST_ASSERT(apr_hash_count(capabilities) == 0);
-  SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
-                                pool, pool));
-  SVN_TEST_ASSERT(repos_format == 3);
-  SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_0_0));
+  /* for repo types that have been around before 1.4 */
+  if (!is_fsx)
+    {
+      opts2.server_minor_version = 3;
+      SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-3",
+                                     &opts2, pool));
+      SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
+      SVN_TEST_ASSERT(apr_hash_count(capabilities) == 0);
+      SVN_ERR(svn_repos_info_format(&repos_format, &supports_version, repos,
+                                    pool, pool));
+      SVN_TEST_ASSERT(repos_format == 3);
+      SVN_TEST_ASSERT(svn_ver_equal(supports_version, &v1_0_0));
+    }
 
-  opts2.server_minor_version = 8;
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-8",
+  opts2.server_minor_version = 9;
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-info-9",
                                  &opts2, pool));
   SVN_ERR(svn_repos_capabilities(&capabilities, repos, pool, pool));
   SVN_TEST_ASSERT(apr_hash_count(capabilities) == 1);
@@ -3297,8 +3307,245 @@ test_repos_info(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-
+static svn_error_t *
+test_config_pool(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  const char *repo_name = "test-repo-config-pool";
+  svn_repos_t *repos;
+  svn_stringbuf_t *cfg_buffer1, *cfg_buffer2;
+  svn_config_t *cfg;
+  apr_hash_t *sections1, *sections2;
+  int i;
+  svn_boolean_t bvalue;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root, *rev_root;
+  svn_revnum_t rev;
+  const char *repo_root_url;
+  svn_error_t *err;
+
+  svn_repos__config_pool_t *config_pool;
+  apr_pool_t *config_pool_pool;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  const char *wrk_dir = svn_test_data_path("config_pool", pool);
+
+  SVN_ERR(svn_io_make_dir_recursively(wrk_dir, pool));
+
+  /* read all config info through a single config pool and we want to be
+     able to control its lifetime.  The latter requires a separate pool. */
+  config_pool_pool = svn_pool_create(pool);
+  SVN_ERR(svn_repos__config_pool_create(&config_pool, TRUE,
+                                        config_pool_pool));
+
+  /* have two different configurations  */
+  SVN_ERR(svn_stringbuf_from_file2(
+                        &cfg_buffer1,
+                        svn_dirent_join(opts->srcdir,
+                                        "../libsvn_subr/config-test.cfg",
+                                        pool),
+                        pool));
+  cfg_buffer2 = svn_stringbuf_dup(cfg_buffer1, pool);
+  svn_stringbuf_appendcstr(cfg_buffer2, "\n[more]\nU=\"X\"\n");
+
+  /* write them to 2x2 files */
+  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
+                                              "config-pool-test1.cfg",
+                                              pool),
+                              cfg_buffer1->data, cfg_buffer1->len, NULL,
+                              pool));
+  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
+                                              "config-pool-test2.cfg",
+                                              pool),
+                              cfg_buffer1->data, cfg_buffer1->len, NULL,
+                              pool));
+  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
+                                              "config-pool-test3.cfg",
+                                              pool),
+                              cfg_buffer2->data, cfg_buffer2->len, NULL,
+                              pool));
+  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
+                                              "config-pool-test4.cfg",
+                                              pool),
+                              cfg_buffer2->data, cfg_buffer2->len, NULL,
+                              pool));
+
+  /* requesting a config over and over again should return the same
+     (even though it is not being referenced) */
+  sections1 = NULL;
+  for (i = 0; i < 4; ++i)
+    {
+      SVN_ERR(svn_repos__config_pool_get(
+                                    &cfg, NULL, config_pool,
+                                    svn_dirent_join(wrk_dir,
+                                                    "config-pool-test1.cfg",
+                                                    pool),
+                                    TRUE, TRUE, NULL, subpool));
+
+      if (sections1 == NULL)
+        sections1 = cfg->sections;
+      else
+        SVN_TEST_ASSERT(cfg->sections == sections1);
+
+      svn_pool_clear(subpool);
+    }
+
+  /* requesting the same config from another file should return the same
+     (even though it is not being referenced) */
+  for (i = 0; i < 4; ++i)
+    {
+      SVN_ERR(svn_repos__config_pool_get(
+                                    &cfg, NULL, config_pool,
+                                    svn_dirent_join(wrk_dir,
+                                                    "config-pool-test2.cfg",
+                                                    pool),
+                                    TRUE, TRUE, NULL, subpool));
+
+      SVN_TEST_ASSERT(cfg->sections == sections1);
+
+      svn_pool_clear(subpool);
+    }
+
+  /* reading a different configuration should return a different pointer */
+  sections2 = NULL;
+  for (i = 0; i < 2; ++i)
+    {
+      SVN_ERR(svn_repos__config_pool_get(
+                                    &cfg, NULL, config_pool,
+                                    svn_dirent_join(wrk_dir,
+                                                    "config-pool-test3.cfg",
+                                                    pool),
+                                    TRUE, TRUE, NULL, subpool));
+
+      if (sections2 == NULL)
+        sections2 = cfg->sections;
+      else
+        SVN_TEST_ASSERT(cfg->sections == sections2);
+
+      SVN_TEST_ASSERT(sections1 != sections2);
+      svn_pool_clear(subpool);
+    }
+
+  /* create an in-repo config */
+  SVN_ERR(svn_dirent_get_absolute(&repo_root_url, repo_name, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repo_root_url, repo_root_url,
+                                           pool));
+
+  SVN_ERR(svn_test__create_repos(&repos, repo_name, opts, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "dir", pool));
+  SVN_ERR(svn_fs_make_file(root, "dir/config", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "dir/config",
+                                      cfg_buffer1->data, pool));
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+
+  /* reading the config from the repo should still give cfg1 */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "dir/config", pool),
+                                     TRUE, TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections1);
+  svn_pool_clear(subpool);
+
+  /* create another in-repo config */
+  SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, svn_repos_fs(repos), rev, pool));
+  SVN_ERR(svn_fs_copy(rev_root, "dir", root, "another-dir", pool));
+  SVN_ERR(svn_test__set_file_contents(root, "dir/config",
+                                      cfg_buffer2->data, pool));
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+
+  /* reading the config from the repo should give cfg2 now */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "dir/config", pool),
+                                     TRUE, TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections2);
+  svn_pool_clear(subpool);
+
+  /* reading the copied config should still give cfg1 */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "another-dir/config",
+                                                    pool),
+                                     TRUE, TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections1);
+  svn_pool_clear(subpool);
+
+  /* once again: repeated reads.  This triggers a different code path. */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "dir/config", pool),
+                                     TRUE, TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections2);
+  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                     svn_path_url_add_component2(
+                                                    repo_root_url,
+                                                    "another-dir/config",
+                                                    pool),
+                                     TRUE, TRUE, NULL, subpool));
+  SVN_TEST_ASSERT(cfg->sections == sections1);
+  svn_pool_clear(subpool);
+
+  /* access paths that don't exist */
+  SVN_TEST_ASSERT_ERROR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                          svn_path_url_add_component2(repo_root_url, "X",
+                                                      pool),
+                          TRUE, TRUE, NULL, subpool),
+                        SVN_ERR_ILLEGAL_TARGET);
+  err = svn_repos__config_pool_get(&cfg, NULL, config_pool, "X.cfg",
+                                   TRUE, TRUE, NULL, subpool);
+  SVN_TEST_ASSERT(err && APR_STATUS_IS_ENOENT(err->apr_err));
+  svn_error_clear(err);
+  svn_pool_clear(subpool);
+
+  /* as long as we keep a reference to a config, clearing the config pool
+     should not invalidate that reference */
+  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+                                     svn_dirent_join(wrk_dir,
+                                                     "config-pool-test1.cfg",
+                                                     pool),
+                                     TRUE, TRUE, NULL, pool));
+  svn_pool_clear(config_pool_pool);
+  for (i = 0; i < 64000; ++i)
+    apr_pcalloc(config_pool_pool, 80);
+
+  SVN_ERR(svn_config_get_bool(cfg, &bvalue, "booleans", "true3", FALSE));
+  SVN_TEST_ASSERT(bvalue);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_repos_fs_type(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-repos_fs_type",
+                                 opts, pool));
+
+  SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
+
+  /* Re-open repository and verify fs-type again. */
+  SVN_ERR(svn_repos_open2(&repos, svn_repos_path(repos, pool), NULL, pool));
+
+  SVN_TEST_STRING_ASSERT(svn_repos_fs_type(repos, pool), opts->fs_type);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
+
+int svn_test_max_threads = 4;
 
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -3345,5 +3592,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test filenames with control characters"),
     SVN_TEST_OPTS_PASS(test_repos_info,
                        "test svn_repos_info_*"),
+    SVN_TEST_OPTS_PASS(test_config_pool,
+                       "test svn_repos__config_pool_*"),
+    SVN_TEST_OPTS_PASS(test_repos_fs_type,
+                       "test test_repos_fs_type"),
     SVN_TEST_NULL
   };

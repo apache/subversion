@@ -31,14 +31,6 @@ package org.tigris.subversion.javahl;
 public class Path
 {
     /**
-     * Load the required native library.
-     */
-    static
-    {
-        org.apache.subversion.javahl.NativeResources.loadNativeLibrary();
-    }
-
-    /**
      * A valid path is a UTF-8 string without any control characters.
      *
      * @return Whether Subversion can store the path in a repository.

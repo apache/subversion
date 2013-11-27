@@ -31,6 +31,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -40,8 +41,6 @@
 #include "cl.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
-
-#include "svn_private_config.h"
 
 
 /* Baton for notify and friends. */
@@ -486,7 +485,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
                                                        " and fuzz %lu (%s)\n",
-                                                       (char *)NULL),
+                                                       SVN_VA_NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
                                            n->hunk_modified_start,
@@ -503,7 +502,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
                                                        " and fuzz %lu\n",
-                                                       (char *)NULL),
+                                                       SVN_VA_NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
                                            n->hunk_modified_start,
@@ -524,7 +523,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                             apr_pstrcat(pool, s,
                                                         "%"APR_UINT64_T_FMT" (%s)\n",
-                                                        (char *)NULL),
+                                                        SVN_VA_NULL),
                                             n->hunk_original_start,
                                             n->hunk_original_length,
                                             n->hunk_modified_start,
@@ -538,7 +537,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT"\n",
-                                                       (char *)NULL),
+                                                       SVN_VA_NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
                                            n->hunk_modified_start,

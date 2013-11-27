@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
 #include "ra_local.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
@@ -35,7 +36,6 @@
 #include "svn_version.h"
 #include "svn_cache_config.h"
 
-#include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
@@ -240,7 +240,7 @@ reporter_link_path(void *reporter_baton,
   if (relpath[0] == '\0')
     fs_path = "/";
   else
-    fs_path = apr_pstrcat(pool, "/", relpath, (char *)NULL);
+    fs_path = apr_pstrcat(pool, "/", relpath, SVN_VA_NULL);
 
   return svn_repos_link_path3(rbaton->report_baton, path, fs_path, revision,
                               depth, start_empty, lock_token, pool);
@@ -327,7 +327,7 @@ make_reporter(svn_ra_session_t *session,
              "'%s'"), other_url, sess->repos_url);
 
       other_fs_path = apr_pstrcat(scratch_pool, "/", other_relpath,
-                                  (char *)NULL);
+                                  SVN_VA_NULL);
     }
 
   /* Pass back our reporter */
@@ -502,7 +502,7 @@ apply_lock_tokens(svn_fs_t *fs,
         N_("Module for accessing a repository on local disk.")
 
 static const char *
-svn_ra_local__get_description(void)
+svn_ra_local__get_description(apr_pool_t *pool)
 {
   return _(RA_LOCAL_DESCRIPTION);
 }
@@ -604,7 +604,7 @@ svn_ra_local__open(svn_ra_session_t *session,
 
   if (client_string)
     sess->useragent = apr_pstrcat(pool, USER_AGENT " ",
-                                  client_string, (char *)NULL);
+                                  client_string, SVN_VA_NULL);
   else
     sess->useragent = USER_AGENT;
 
@@ -989,6 +989,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       svn_boolean_t discover_changed_paths,
                       svn_boolean_t strict_node_history,
                       svn_boolean_t include_merged_revisions,
+                      svn_move_behavior_t move_behavior,
                       const apr_array_header_t *revprops,
                       svn_log_entry_receiver_t receiver,
                       void *receiver_baton,
@@ -1017,7 +1018,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
   receiver = log_receiver_wrapper;
   receiver_baton = &lb;
 
-  return svn_repos_get_logs4(sess->repos,
+  return svn_repos_get_logs5(sess->repos,
                              abs_paths,
                              start,
                              end,
@@ -1025,6 +1026,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
+                             move_behavior,
                              revprops,
                              NULL, NULL,
                              receiver,
@@ -1764,7 +1766,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
                                "ra_local"),
                              loader_version->major);
 
-  SVN_ERR(svn_ver_check_list(ra_local_version(), checklist));
+  SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
 #ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
   /* This assumes that POOL was the pool used to load the dso. */

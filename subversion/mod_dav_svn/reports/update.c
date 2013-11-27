@@ -913,7 +913,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
   const char *errstr = apr_pstrcat(pool, "The request's '", tagname,
                                    "' element is malformed; there "
                                    "is a problem with the client.",
-                                   (char *)NULL);
+                                   SVN_VA_NULL);
   return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
@@ -934,7 +934,7 @@ validate_input_revision(svn_revnum_t revision,
                         const dav_resource *resource)
 {
   if (! SVN_IS_VALID_REVNUM(revision))
-    return SVN_NO_ERROR;
+    return NULL;
 
   if (revision > youngest)
     {
@@ -958,7 +958,7 @@ validate_input_revision(svn_revnum_t revision,
                                   "Invalid revision found in update report "
                                   "request.", resource->pool);
     }
-  return SVN_NO_ERROR;
+  return NULL;
 }
 
 

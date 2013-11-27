@@ -29,6 +29,7 @@
 
 #include <apr_general.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
@@ -39,8 +40,6 @@
 #include "svn_error.h"
 #include "svn_config.h"
 #include "cl.h"
-
-#include "svn_private_config.h"
 
 
 

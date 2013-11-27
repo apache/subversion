@@ -30,6 +30,7 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_dirent_uri.h"
@@ -45,9 +46,7 @@
 #include "translate.h"
 #include "props.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-
 
 
 /* */

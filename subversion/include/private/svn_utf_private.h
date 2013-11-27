@@ -73,6 +73,18 @@ svn_utf__last_valid(const char *src, apr_size_t len);
 const char *
 svn_utf__last_valid2(const char *src, apr_size_t len);
 
+/* Copy LENGTH bytes of SRC, converting characters as follows:
+    - Pass characters from the ASCII subset to the result
+    - Strip all combining marks from the string
+    - Represent other valid Unicode chars as {U+XXXX}
+    - Replace invalid Unicode chars with {U?XXXX}
+    - Represent chars that are not valid UTF-8 as ?\XX
+    - Replace codes outside the Unicode range with a sequence of ?\XX
+    - Represent the null byte as \0
+   Allocate the result in POOL. */
+const char *
+svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool);
+
 const char *
 svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                  apr_pool_t *pool,
@@ -80,6 +92,28 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                               (const char **,
                                                const char *,
                                                apr_pool_t *));
+
+
+#if defined(WIN32)
+/* On Windows: Convert the UTF-8 string SRC to UTF-16.
+   If PREFIX is not NULL, prepend it to the converted result.
+   The result, if not empty, will be allocated in RESULT_POOL. */
+svn_error_t *
+svn_utf__win32_utf8_to_utf16(const WCHAR **result,
+                             const char *src,
+                             const WCHAR *prefix,
+                             apr_pool_t *result_pool);
+
+/* On Windows: Convert the UTF-16 string SRC to UTF-8.
+   If PREFIX is not NULL, prepend it to the converted result.
+   The result, if not empty, will be allocated in RESULT_POOL. */
+svn_error_t *
+svn_utf__win32_utf16_to_utf8(const char **result,
+                             const WCHAR *src,
+                             const char *prefix,
+                             apr_pool_t *result_pool);
+#endif /* WIN32*/
+
 
 /* A constant used for many length parameters in the utf8proc wrappers
  * to indicate that the length of a string is unknonw. */
@@ -100,6 +134,30 @@ svn_utf__normcmp(int *result,
                  const char *str2, apr_size_t len2,
                  svn_membuf_t *buf1, svn_membuf_t *buf2);
 
+/* Normalize the UTF-8 string STR to form C, using BUF for temporary
+ * storage. If LEN is SVN_UTF__UNKNOWN_LENGTH, assume STR is
+ * null-terminated; otherwise, consider the string only up to the
+ * given length.
+ *
+ * Return the normalized string in *RESULT, which shares storage with
+ * BUF and is valid only until the next time BUF is modified.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints.
+ */
+svn_error_t*
+svn_utf__normalize(const char **result,
+                   const char *str, apr_size_t len,
+                   svn_membuf_t *buf);
+
+/* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
+ * a FALSE return value may indicate that STRING is not valid UTF-8 at
+ * all.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_boolean_t
+svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool);
 
 /* Pattern matching similar to the the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8

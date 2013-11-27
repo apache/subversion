@@ -3360,9 +3360,12 @@ public class BasicTests extends SVNTests
     private class MyChangelistCallback extends HashMap
         implements ChangelistCallback
     {
+        private static final long serialVersionUID = 1L;
+
         @SuppressWarnings("unchecked")
         public void doChangelist(String path, String changelist)
         {
+            path = fileToSVNPath(new File(path), true);
             if (super.containsKey(path))
             {
                 // Append the changelist to the existing list

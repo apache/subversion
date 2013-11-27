@@ -28,11 +28,11 @@
 #include "JNIUtil.h"
 #include "../include/org_apache_subversion_javahl_NativeResources.h"
 
-JNIEXPORT void JNICALL
+JNIEXPORT jboolean JNICALL
 Java_org_apache_subversion_javahl_NativeResources_initNativeLibrary
 (JNIEnv *env, jclass jclazz)
 {
   // No usual JNIEntry here, as the prerequisite native library
   // initialization is performed here.
-  JNIUtil::JNIGlobalInit(env);
+  return jboolean(JNIUtil::JNIGlobalInit(env));
 }

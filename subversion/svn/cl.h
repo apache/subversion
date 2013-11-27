@@ -223,6 +223,7 @@ typedef struct svn_cl__opt_state_t
                                     (not converted to UTF-8) */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
+  svn_boolean_t auto_moves;      /* interpret unique DEL/ADD pairs as moves */
   svn_cl__accept_t accept_which;   /* how to handle conflicts */
   svn_cl__show_revs_t show_revs;   /* mergeinfo flavor */
   svn_depth_t set_depth;           /* new sticky ambient depth value */
@@ -242,6 +243,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t mergeinfo_log;     /* show log message in mergeinfo command */
   svn_boolean_t remove_unversioned;/* remove unversioned items */
   svn_boolean_t remove_ignored;    /* remove ignored items */
+  svn_boolean_t no_newline;        /* do not output the trailing newline */
 } svn_cl__opt_state_t;
 
 
@@ -289,7 +291,8 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__upgrade;
+  svn_cl__upgrade,
+  svn_cl__youngest;
 
 
 /* See definition in svn.c for documentation. */
@@ -317,7 +320,7 @@ extern const apr_getopt_option_t svn_cl__options[];
  *
  * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
  * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
- * forget to terminate the argument list with SVN_NO_ERROR.
+ * forget to terminate the argument list with 0 (or APR_SUCCESS).
  */
 svn_error_t *
 svn_cl__try(svn_error_t *err,
@@ -439,12 +442,12 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    Increment *TEXT_CONFLICTS, *PROP_CONFLICTS, or *TREE_CONFLICTS if
    a conflict was encountered.
 
-   Use CWD_ABSPATH -- the absolute path of the current working
-   directory -- to shorten PATH into something relative to that
-   directory as necessary.
+   Use TARGET_ABSPATH and TARGET_PATH to shorten PATH into something
+   relative to the target as necessary.
 */
 svn_error_t *
-svn_cl__print_status(const char *cwd_abspath,
+svn_cl__print_status(const char *target_abspath,
+                     const char *target_path,
                      const char *path,
                      const svn_client_status_t *status,
                      svn_boolean_t suppress_externals_placeholders,
@@ -462,12 +465,12 @@ svn_cl__print_status(const char *cwd_abspath,
 /* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
    allocations.
 
-   Use CWD_ABSPATH -- the absolute path of the current working
-   directory -- to shorten PATH into something relative to that
-   directory as necessary.
+   Use TARGET_ABSPATH and TARGET_PATH to shorten PATH into something
+   relative to the target as necessary.
  */
 svn_error_t *
-svn_cl__print_status_xml(const char *cwd_abspath,
+svn_cl__print_status_xml(const char *target_abspath,
+                         const char *target_path,
                          const char *path,
                          const svn_client_status_t *status,
                          svn_client_ctx_t *ctx,

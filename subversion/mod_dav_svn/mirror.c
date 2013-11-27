@@ -56,7 +56,7 @@ static int proxy_request_fixup(request_rec *r,
     r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
                                                            master_uri,
                                                            uri_segment,
-                                                           (char *)NULL),
+                                                           SVN_VA_NULL),
                                                r->pool);
     r->handler = "proxy-server";
 
@@ -102,11 +102,11 @@ int dav_svn__proxy_request_fixup(request_rec *r)
             r->method_number == M_GET) {
             if ((seg = ap_strstr(r->uri, root_dir))) {
                 if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                 "/wrk/", (char *)NULL))
+                                                 "/wrk/", SVN_VA_NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                    "/txn/", (char *)NULL))
+                                                    "/txn/", SVN_VA_NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
-                                                    "/txr/", (char *)NULL))) {
+                                                    "/txr/", SVN_VA_NULL))) {
                     int rv;
                     seg += strlen(root_dir);
                     rv = proxy_request_fixup(r, master_uri, seg);
@@ -259,7 +259,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
         new_uri = ap_construct_url(r->pool,
                                    apr_pstrcat(r->pool,
                                                dav_svn__get_root_dir(r), "/",
-                                               start_foo, (char *)NULL),
+                                               start_foo, SVN_VA_NULL),
                                    r);
         apr_table_set(r->headers_out, "Location", new_uri);
     }

@@ -49,13 +49,11 @@ SVN_CONFIG_NICE(config.nice)
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
-CMAINTAINERFLAGS="$CUSERFLAGS"
 CUSERFLAGS="$CFLAGS"
 AC_PROG_CC
 SVN_CC_MODE_SETUP
 
 # Look for a C++ compiler (before anything can set CXXFLAGS)
-CXXMAINTAINERFLAGS="$CXXUSERFLAGS"
 CXXUSERFLAGS="$CXXFLAGS"
 AC_PROG_CXX
 SVN_CXX_MODE_SETUP
@@ -167,7 +165,6 @@ if test -n "$sqlite_compat_ver" && test "$sqlite_compat_ver" != no; then
 fi
 
 SVN_CHECK_FOR_ATOMIC_BUILTINS
-
 if test "$svn_cv_atomic_builtins" = "yes"; then
     AC_DEFINE(SVN_HAS_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
 fi
@@ -570,64 +567,97 @@ found_gnome_keyring=no
 AC_MSG_CHECKING([whether to look for GNOME Keyring])
 if test "$with_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
-  if test "$svn_enable_shared" = "yes"; then
-    if test "$APR_HAS_DSO" = "yes"; then
-      if test -n "$PKG_CONFIG"; then
-        AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
-        if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
-          AC_MSG_RESULT([yes])
-          old_CPPFLAGS="$CPPFLAGS"
-          SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
-          CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-          AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
-          AC_MSG_CHECKING([for GNOME Keyring])
-          if test "$found_gnome_keyring" = "yes"; then
+  case "$host" in
+  *-*-darwin*)
+    if test "$with_gnome_keyring" = "yes"; then
+      AC_MSG_ERROR([--with-gnome-keyring is not supported on Mac OS X.])
+    else
+      with_gnome_keyring=no
+    fi
+    ;;
+  *)
+    if test "$svn_enable_shared" = "yes"; then
+      if test "$APR_HAS_DSO" = "yes"; then
+        if test -n "$PKG_CONFIG"; then
+          AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+          if $PKG_CONFIG --exists glib-2.0 gnome-keyring-1; then
             AC_MSG_RESULT([yes])
-            AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
-                      [Is GNOME Keyring support enabled?])
-            CPPFLAGS="$old_CPPFLAGS"
-            SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+            old_CPPFLAGS="$CPPFLAGS"
+            SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
+            CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+            AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
+            AC_MSG_CHECKING([for GNOME Keyring])
+            if test "$found_gnome_keyring" = "yes"; then
+              AC_MSG_RESULT([yes])
+              AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
+                        [Is GNOME Keyring support enabled?])
+              CPPFLAGS="$old_CPPFLAGS"
+              SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+            else
+              AC_MSG_RESULT([no])
+              if test "$with_gnome_keyring" = "yes"; then
+                AC_MSG_ERROR([cannot find GNOME Keyring])
+              fi
+            fi
           else
             AC_MSG_RESULT([no])
             if test "$with_gnome_keyring" = "yes"; then
-              AC_MSG_ERROR([cannot find GNOME Keyring])
+              AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
+            else
+              with_gnome_keyring=no
             fi
           fi
         else
-          AC_MSG_RESULT([no])
           if test "$with_gnome_keyring" = "yes"; then
-            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
+            AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
           else
             with_gnome_keyring=no
           fi
         fi
       else
         if test "$with_gnome_keyring" = "yes"; then
-          AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
+          AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
         else
           with_gnome_keyring=no
         fi
       fi
     else
       if test "$with_gnome_keyring" = "yes"; then
-        AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
+        AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
       else
         with_gnome_keyring=no
       fi
     fi
-  else
-    if test "$with_gnome_keyring" = "yes"; then
-      AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
-    else
-      with_gnome_keyring=no
-    fi
-  fi
+    ;;
+  esac
 else
   AC_MSG_RESULT([no])
 fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
+dnl Googlemock -----------------
+AC_ARG_ENABLE([gmock],
+  AS_HELP_STRING([--disable-gmock],
+                 [Do not use the Googlemock testing framework]),
+  [],
+  [enable_gmock=yes])
+
+AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_MSG_CHECKING([whether use Googlemock])
+if test "$enable_gmock" != "no"; then
+  if test -d "$GMOCK_SRCDIR"; then
+    AC_MSG_RESULT([yes])
+    SVN_USE_GMOCK=true
+  else
+    AC_MSG_RESULT([no])
+    SVN_USE_GMOCK=false
+  fi
+else
+  AC_MSG_RESULT([no])
+  SVN_USE_GMOCK_SOURCES=false
+fi
+AC_SUBST([SVN_USE_GMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -710,6 +740,26 @@ AH_BOTTOM([
 #define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
 #define gettext(x) (x)
 #define dgettext(domain, x) (x)
+#endif
+
+/* compiler hints */
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
+# define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+# define SVN__PREDICT_FALSE(x) (x)
+# define SVN__PREDICT_TRUE(x) (x)
+#endif
+
+#if defined(SVN_DEBUG)
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
+#elif defined(__GNUC__)
+# define SVN__FORCE_INLINE __attribute__ ((always_inline))
+# define SVN__PREVENT_INLINE __attribute__ ((noinline))
+#else
+# define SVN__FORCE_INLINE
+# define SVN__PREVENT_INLINE
 #endif
 ])
 
@@ -989,7 +1039,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         dnl but throw too many warnings in svn code, of too little importance,
         dnl to keep these enabled. Remove the "dnl" to do a run with these
         dnl switches enabled.
-        dnl ./configure CUSERFLAGS="-Wswitch-enum -Wswitch-default"
+        dnl ./configure CFLAGS="-Wswitch-enum -Wswitch-default"
 
         dnl Add each of the following flags only if the C compiler accepts it.
         CFLAGS_KEEP="$CFLAGS"
@@ -1003,8 +1053,9 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wold-style-definition])
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
 
-        CMAINTAINERFLAGS="$CFLAGS $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
@@ -1022,7 +1073,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CXXFLAGS_ADD_IFELSE([-Wshorten-64-to-32])
         SVN_CXXFLAGS_ADD_IFELSE([-Wno-system-headers])
 
-        CXXMAINTAINERFLAGS="$CXXFLAGS $CXXMAINTAINERFLAGS"
+        CXXMAINTAINERFLAGS="$CXXFLAGS"
         CXXFLAGS="$CXXFLAGS_KEEP"
 
         dnl Add flags that all versions of G++ (should) support
@@ -1089,7 +1140,6 @@ if test "$enable_optimization" = "yes"; then
             SVN_CFLAGS_ADD_IFELSE([-O])])])])
       SVN_CFLAGS_ADD_IFELSE([-Wno-clobbered])
       SVN_CFLAGS_ADD_IFELSE([-flto])
-      SVN_CFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
   if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
@@ -1106,7 +1156,6 @@ if test "$enable_optimization" = "yes"; then
             SVN_CXXFLAGS_ADD_IFELSE([-O])])])])
       SVN_CXXFLAGS_ADD_IFELSE([-Wno-clobbered])
       SVN_CXXFLAGS_ADD_IFELSE([-flto])
-      SVN_CXXFLAGS_ADD_IFELSE([-fwhole-program])
     fi
   fi
 elif test "$enable_optimization" = "no"; then
@@ -1347,6 +1396,13 @@ if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   svn_fs_lib_install_deps="install-fsmod-lib"
   svn_fs_lib_link="\$(FS_FS_LINK)"
 
+  AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_X, 1,
+      [Defined if libsvn_fs should link against libsvn_fs_x])
+  svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_X_DEPS)"
+  svn_fs_lib_link="$svn_fs_lib_link \$(FS_X_LINK)"
+dnl  FSFS already installs fsmod
+dnl  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsmod-lib"
+
   if test "$svn_lib_berkeley_db" = "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
       [Defined if libsvn_fs should link against libsvn_fs_base])
@@ -1444,6 +1500,11 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
+
+# Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
+SWIG_CPPFLAGS="$CPPFLAGS"
+SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
+AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

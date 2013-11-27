@@ -1,0 +1,173 @@
+/* low_level.c --- low level r/w access to fs_x file structures
+ *
+ * ====================================================================
+ *    Licensed to the Apache Software Foundation (ASF) under one
+ *    or more contributor license agreements.  See the NOTICE file
+ *    distributed with this work for additional information
+ *    regarding copyright ownership.  The ASF licenses this file
+ *    to you under the Apache License, Version 2.0 (the
+ *    "License"); you may not use this file except in compliance
+ *    with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing,
+ *    software distributed under the License is distributed on an
+ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *    KIND, either express or implied.  See the License for the
+ *    specific language governing permissions and limitations
+ *    under the License.
+ * ====================================================================
+ */
+
+#ifndef SVN_LIBSVN_FS__LOW_LEVEL_H
+#define SVN_LIBSVN_FS__LOW_LEVEL_H
+
+#include "svn_fs.h"
+
+#include "fs_x.h"
+#include "id.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/* Kinds that a node-rev can be. */
+#define SVN_FS_X__KIND_FILE          "file"
+#define SVN_FS_X__KIND_DIR           "dir"
+
+/* Given the last "few" bytes (should be at least 40) of revision REV in
+ * TRAILER,  parse the last line and return the offset of the root noderev
+ * in *ROOT_OFFSET and the offset of the changed paths list in
+ * *CHANGES_OFFSET.  Offsets are relative to the revision's start offset.
+ * ROOT_OFFSET and / or CHANGES_OFFSET may be NULL.
+ * 
+ * Note that REV is only used to construct nicer error objects.
+ */
+svn_error_t *
+svn_fs_x__parse_revision_trailer(apr_off_t *root_offset,
+                                 apr_off_t *changes_offset,
+                                 svn_stringbuf_t *trailer,
+                                 svn_revnum_t rev);
+
+/* Given the offset of the root noderev in ROOT_OFFSET and the offset of
+ * the changed paths list in CHANGES_OFFSET,  return the corresponding
+ * revision's trailer.  Allocate it in POOL.
+ */
+svn_stringbuf_t *
+svn_fs_x__unparse_revision_trailer(apr_off_t root_offset,
+                                   apr_off_t changes_offset,
+                                   apr_pool_t *pool);
+
+/* Parse the description of a representation from TEXT and store it
+   into *REP_P.  Allocate *REP_P in POOL. */
+svn_error_t *
+svn_fs_x__parse_representation(representation_t **rep_p,
+                               svn_stringbuf_t *text,
+                               apr_pool_t *pool);
+
+/* Return a formatted string, compatible with filesystem format FORMAT,
+   that represents the location of representation REP.  If
+   MUTABLE_REP_TRUNCATED is given, the rep is for props or dir contents,
+   and only a "-1" revision number will be given for a mutable rep.
+   If MAY_BE_CORRUPT is true, guard for NULL when constructing the string.
+   Perform the allocation from POOL.  */
+svn_stringbuf_t *
+svn_fs_x__unparse_representation(representation_t *rep,
+                                 int format,
+                                 svn_boolean_t mutable_rep_truncated,
+                                 apr_pool_t *pool);
+
+/* Read a node-revision from STREAM. Set *NODEREV to the new structure,
+   allocated in POOL. */
+svn_error_t *
+svn_fs_x__read_noderev(node_revision_t **noderev,
+                       svn_stream_t *stream,
+                       apr_pool_t *pool);
+
+/* Write the node-revision NODEREV into the stream OUTFILE, compatible with
+   filesystem format FORMAT.  Temporary allocations are from POOL. */
+svn_error_t *
+svn_fs_x__write_noderev(svn_stream_t *outfile,
+                        node_revision_t *noderev,
+                        int format,
+                        apr_pool_t *pool);
+
+/* This type enumerates all forms of representations that we support. */
+typedef enum svn_fs_x__rep_type_t
+{
+  /* this is a DELTA representation with no base representation */
+  svn_fs_x__rep_self_delta,
+
+  /* this is a DELTA representation against some base representation */
+  svn_fs_x__rep_delta,
+
+  /* this is a representation in a star-delta container */
+  svn_fs_x__rep_container
+} svn_fs_x__rep_type_t;
+
+/* This structure is used to hold the information stored in a representation
+ * header. */
+typedef struct svn_fs_x__rep_header_t
+{
+  /* type of the representation, i.e. whether self-DELTA etc. */
+  svn_fs_x__rep_type_t type;
+
+  /* if this rep is a delta against some other rep, that base rep can
+   * be found in this revision.  Should be 0 if there is no base rep. */
+  svn_revnum_t base_revision;
+
+  /* if this rep is a delta against some other rep, that base rep can
+   * be found at this item index within the base rep's revision.  Should
+   * be 0 if there is no base rep. */
+  apr_off_t base_item_index;
+
+  /* if this rep is a delta against some other rep, this is the (deltified)
+   * size of that base rep.  Should be 0 if there is no base rep. */
+  svn_filesize_t base_length;
+
+  /* length of the textual representation of the header in the rep or pack
+   * file, including EOL.  Only valid after reading it from disk.
+   * Should be 0 otherwise. */
+  apr_size_t header_size;
+} svn_fs_x__rep_header_t;
+
+/* Read the next line from file FILE and parse it as a text
+   representation entry.  Return the parsed entry in *REP_ARGS_P.
+   Perform all allocations in POOL. */
+svn_error_t *
+svn_fs_x__read_rep_header(svn_fs_x__rep_header_t **header,
+                          svn_stream_t *stream,
+                          apr_pool_t *pool);
+
+/* Write the representation HEADER to STREAM.  Use POOL for allocations. */
+svn_error_t *
+svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
+                           svn_stream_t *stream,
+                           apr_pool_t *pool);
+
+/* Read all the changes from STREAM and store them in *CHANGES.  Do all
+   allocations in POOL. */
+svn_error_t *
+svn_fs_x__read_changes(apr_array_header_t **changes,
+                       svn_stream_t *stream,
+                       apr_pool_t *pool);
+
+/* Write the changed path info from CHANGES in filesystem FS to the
+   output stream STREAM.  You may call this function multiple time on
+   the same stream but the last call should set TERMINATE_LIST to write
+   an extra empty line that marks the end of the changed paths list.
+   Perform temporary allocations in POOL.
+ */
+svn_error_t *
+svn_fs_x__write_changes(svn_stream_t *stream,
+                        svn_fs_t *fs,
+                        apr_hash_t *changes,
+                        svn_boolean_t terminate_list,
+                        apr_pool_t *pool);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_FS__LOW_LEVEL_H */

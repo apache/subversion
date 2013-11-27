@@ -79,6 +79,7 @@ module SvnTestUtil
     @wc_path = File.join(@tmp_path, "wc")
     @import_path = File.join(@tmp_path, "import")
     @repos_path = File.join(@tmp_path, "repos")
+    @svnserve_pid_file = File.join(@tmp_path, "svnserve.pid")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
 

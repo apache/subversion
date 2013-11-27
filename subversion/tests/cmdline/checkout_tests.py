@@ -1057,7 +1057,7 @@ def checkout_wc_from_drive(sbox):
   svntest.main.safe_rmtree(sbox.wc_dir)
   os.mkdir(sbox.wc_dir)
 
-  # create a virtual drive to the working copy folder
+  # create a virtual drive to the repository folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
     raise svntest.Skip
@@ -1093,8 +1093,76 @@ def checkout_wc_from_drive(sbox):
     })
     svntest.actions.run_and_verify_checkout(repo_url, wc_dir,
                                             expected_output, expected_wc,
-                                            None, None, None, None,
-                                            '--force')
+                                            None, None, None, None)
+
+    wc2_dir = sbox.add_wc_path('2')
+    expected_output = wc.State(wc2_dir, {
+      'D'                 : Item(status='A '),
+      'D/H'               : Item(status='A '),
+      'D/H/psi'           : Item(status='A '),
+      'D/H/chi'           : Item(status='A '),
+      'D/H/omega'         : Item(status='A '),
+      'D/G'               : Item(status='A '),
+      'D/G/tau'           : Item(status='A '),
+      'D/G/pi'            : Item(status='A '),
+      'D/G/rho'           : Item(status='A '),
+      'D/gamma'           : Item(status='A '),
+      'C'                 : Item(status='A '),
+      'mu'                : Item(status='A '),
+      'B'                 : Item(status='A '),
+      'B/E'               : Item(status='A '),
+      'B/E/alpha'         : Item(status='A '),
+      'B/E/beta'          : Item(status='A '),
+      'B/F'               : Item(status='A '),
+      'B/lambda'          : Item(status='A '),
+    })
+
+    expected_wc = wc.State('', {
+      'C'         : Item(),
+      'B/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+      'B/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+      'B/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+      'B/F'       : Item(),
+      'D/H/omega' : Item(contents="This is the file 'omega'.\n"),
+      'D/H/psi'   : Item(contents="This is the file 'psi'.\n"),
+      'D/H/chi'   : Item(contents="This is the file 'chi'.\n"),
+      'D/G/rho'   : Item(contents="This is the file 'rho'.\n"),
+      'D/G/tau'   : Item(contents="This is the file 'tau'.\n"),
+      'D/G/pi'    : Item(contents="This is the file 'pi'.\n"),
+      'D/gamma'   : Item(contents="This is the file 'gamma'.\n"),
+      'mu'        : Item(contents="This is the file 'mu'.\n"),    
+    })
+    
+    svntest.actions.run_and_verify_checkout(repo_url + '/A', wc2_dir,
+                                            expected_output, expected_wc,
+                                            None, None, None, None)
+
+    wc3_dir = sbox.add_wc_path('3')
+    expected_output = wc.State(wc3_dir, {
+      'H'                 : Item(status='A '),
+      'H/psi'             : Item(status='A '),
+      'H/chi'             : Item(status='A '),
+      'H/omega'           : Item(status='A '),
+      'G'                 : Item(status='A '),
+      'G/tau'             : Item(status='A '),
+      'G/pi'              : Item(status='A '),
+      'G/rho'             : Item(status='A '),
+      'gamma'             : Item(status='A '),
+    })
+
+    expected_wc = wc.State('', {
+      'H/chi'   : Item(contents="This is the file 'chi'.\n"),
+      'H/psi'   : Item(contents="This is the file 'psi'.\n"),
+      'H/omega' : Item(contents="This is the file 'omega'.\n"),
+      'G/pi'    : Item(contents="This is the file 'pi'.\n"),
+      'G/tau'   : Item(contents="This is the file 'tau'.\n"),
+      'G/rho'   : Item(contents="This is the file 'rho'.\n"),
+      'gamma'   : Item(contents="This is the file 'gamma'.\n"),    
+    })
+
+    svntest.actions.run_and_verify_checkout(repo_url + '/A/D', wc3_dir,
+                                            expected_output, expected_wc,
+                                            None, None, None, None)
 
   finally:
     os.chdir(was_cwd)

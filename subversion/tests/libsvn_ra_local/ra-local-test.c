@@ -220,7 +220,7 @@ check_split_url(const char *repos_path,
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&root_url, repos_path, pool));
   if (in_repos_path)
-    url = apr_pstrcat(pool, root_url, in_repos_path, (char *)NULL);
+    url = apr_pstrcat(pool, root_url, in_repos_path, SVN_VA_NULL);
   else
     url = root_url;
 
@@ -278,6 +278,8 @@ split_url_test(const svn_test_opts_t *opts,
 #else
 #define HAS_UNC_HOST 0
 #endif
+
+int svn_test_max_threads = 1;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

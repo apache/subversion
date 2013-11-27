@@ -44,10 +44,11 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
+#include "private/svn_utf_private.h"
 
 svn_error_t *
 svn_config__win_config_path(const char **folder, int system_path,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool)
 {
   /* ### Adding CSIDL_FLAG_CREATE here, because those folders really
      must exist.  I'm not too sure about the SHGFP_TYPE_CURRENT
@@ -56,8 +57,6 @@ svn_config__win_config_path(const char **folder, int system_path,
                      | CSIDL_FLAG_CREATE);
 
   WCHAR folder_ucs2[MAX_PATH];
-  int inwords, outbytes, outlength;
-  char *folder_utf8;
 
   if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
                                folder_ucs2))
@@ -66,26 +65,8 @@ svn_config__win_config_path(const char **folder, int system_path,
                            ? "Can't determine the system config path"
                            : "Can't determine the user's config path"));
 
-  /* ### When mapping from UCS-2 to UTF-8, we need at most 3 bytes
-         per wide char, plus extra space for the nul terminator. */
-  inwords = lstrlenW(folder_ucs2);
-  outbytes = outlength = 3 * (inwords + 1);
-
-  folder_utf8 = apr_palloc(pool, outlength);
-
-  outbytes = WideCharToMultiByte(CP_UTF8, 0, folder_ucs2, inwords,
-                                 folder_utf8, outbytes, NULL, NULL);
-
-  if (outbytes == 0)
-    return svn_error_wrap_apr(apr_get_os_error(),
-                              "Can't convert config path to UTF-8");
-
-  /* Note that WideCharToMultiByte does _not_ terminate the
-     outgoing buffer. */
-  folder_utf8[outbytes] = '\0';
-  *folder = folder_utf8;
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_utf__win32_utf16_to_utf8(folder, folder_ucs2,
+                                                      NULL, result_pool));
 }
 
 
@@ -97,6 +78,8 @@ svn_config__win_config_path(const char **folder, int system_path,
 #define SVN_REG_DEFAULT_NAME_SIZE  2048
 #define SVN_REG_DEFAULT_VALUE_SIZE 8192
 
+/* ### This function should be converted to use the unicode functions
+   ### instead of the ansi functions */
 static svn_error_t *
 parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
               svn_stringbuf_t *option, svn_stringbuf_t *value)

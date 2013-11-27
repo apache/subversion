@@ -27,12 +27,12 @@
 
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
-#include "svn_private_config.h"
 
 #include "../libsvn_ra/ra_loader.h"
 
@@ -121,7 +121,7 @@ create_get_locations_body(serf_bucket_t **body_bkt,
                                     "S:get-locations",
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     "xmlns:D", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", loc_ctx->path,

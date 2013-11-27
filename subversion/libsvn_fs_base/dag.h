@@ -273,12 +273,16 @@ svn_error_t *svn_fs_base__dag_clone_root(dag_node_t **root_p,
    latest revision in TXN->FS.  If the caller doesn't take care of this,
    you may lose people's work!
 
+   Update commit time to ensure that svn:date revprops remain ordered if
+   SET_TIMESTAMP is non-zero.
+
    Do any necessary temporary allocation in a subpool of POOL.
    Consume temporary space at most proportional to the maximum depth
    of SVN_TXN's tree of mutable nodes.  */
 svn_error_t *svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                                          svn_fs_txn_t *txn,
                                          trail_t *trail,
+                                         svn_boolean_t set_timestamp,
                                          apr_pool_t *pool);
 
 

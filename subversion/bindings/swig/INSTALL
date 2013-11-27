@@ -232,35 +232,15 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
              compile in Release mode.  (This is due to pyconfig.h using the
             _DEBUG flag too and setting a #pragma comment(lib) value.)
 
-       For Perl support, you also need to add the paths into Visual Studio.
-
-       In Visual C++ 6, go to Tools -> Options -> Directories.
-
-       In Visual C++ .NET, go to Tools -> Options -> Projects
-       -> VC++ Directories.
-
-       Add the following paths:
-
-           Executable Directories:
-
-               For Perl, path to perl.exe
-               (for example, C:\Program Files\Perl\bin)
-
-           Library Directories:
-
-               For Perl, path to perl##.lib
-               (for example, C:\Program Files\Perl\lib\CORE)
-
-           Include Directories:
-
-               For Perl, path to perl.h
-               (for example, C:\Program Files\Perl\lib\CORE)
+       Our project generator detects Perl, Ruby and Python installs and will
+       generate the swig projects for these languages if both swig and the
+       language is found.
 
    3.  Create the Visual Studio project files via gen-make.py, adding in
        the --with-swig parameter to the installed location for SWIG.
        Example:
 
-        > gen-make.py -t vcproj --with-swig="C:\Program Files\SWIG-2.0.2"
+        > gen-make.py <other options> --with-swig="C:\Program Files\SWIG-2.0.2"
 
    4.  If you haven't already built Subversion, you should do so now.
        Instructions are in the main INSTALL file.
@@ -271,6 +251,7 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
            __SWIG_PYTHON__
            __SWIG_PERL__
+           __SWIG_RUBY__
 
    6. Install the bindings. The procedure varies depending on the language.
 

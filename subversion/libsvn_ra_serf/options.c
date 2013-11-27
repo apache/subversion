@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -35,7 +36,6 @@
 #include "svn_xml.h"
 
 #include "../libsvn_ra/ra_loader.h"
-#include "svn_private_config.h"
 #include "private/svn_fspath.h"
 
 #include "ra_serf.h"
@@ -123,7 +123,7 @@ create_options_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_xml_header_buckets(body, alloc);
   svn_ra_serf__add_open_tag_buckets(body, alloc, "D:options",
                                     "xmlns:D", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(body, "D:activity-collection-set", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body, alloc, "D:options");
 

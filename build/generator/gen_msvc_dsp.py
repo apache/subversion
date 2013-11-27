@@ -82,7 +82,6 @@ class Generator(gen_win.WinGeneratorBase):
       'rootpath' : self.rootpath,
       'platforms' : self.platforms,
       'configs' : configs,
-      'includes' : self.get_win_includes(target),
       'sources' : sources,
       'default_platform' : self.platforms[0],
       'default_config' : configs[0].name,

@@ -466,10 +466,10 @@ svn_client__wc_delete_many(const apr_array_header_t *targets,
                            apr_pool_t *pool);
 
 
-/* Make PATH and add it to the working copy, optionally making all the
-   intermediate parent directories if MAKE_PARENTS is TRUE. */
+/* Make LOCAL_ABSPATH and add it to the working copy, optionally making all
+   the intermediate parent directories if MAKE_PARENTS is TRUE. */
 svn_error_t *
-svn_client__make_local_parents(const char *path,
+svn_client__make_local_parents(const char *local_abspath,
                                svn_boolean_t make_parents,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);

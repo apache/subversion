@@ -103,6 +103,11 @@ public class SVNClient implements ISVNClient
         return NativeResources.getVersion();
     }
 
+    public RuntimeVersion getRuntimeVersion()
+    {
+        return NativeResources.getRuntimeVersion();
+    }
+
     public native VersionExtended getVersionExtended(boolean verbose);
 
     public native String getAdminDirectoryName();
@@ -112,6 +117,7 @@ public class SVNClient implements ISVNClient
     /**
       * @deprecated
       */
+    @Deprecated
     public native String getLastPath();
 
     public native void status(String path, Depth depth, boolean onServer,
@@ -131,6 +137,8 @@ public class SVNClient implements ISVNClient
     public native void password(String password);
 
     public native void setPrompt(UserPasswordCallback prompt);
+
+    public native void setTunnelAgent(TunnelAgent tunnelAgent);
 
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
@@ -213,6 +221,7 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /** @deprecated */
+    @Deprecated
     public void move(Set<String> srcPaths, String destPath,
                      boolean force, boolean moveAsChild,
                      boolean makeParents,
@@ -321,6 +330,7 @@ public class SVNClient implements ISVNClient
 
 
     /** @deprecated */
+    @Deprecated
     public native void mergeReintegrate(String path, Revision pegRevision,
                                         String localPath, boolean dryRun)
             throws ClientException;
@@ -573,9 +583,13 @@ public class SVNClient implements ISVNClient
     public native void setConfigDirectory(String configDir)
             throws ClientException;
 
-    public native void setConfigEventHandler(ConfigEvent configHandler);
-
     public native String getConfigDirectory()
+            throws ClientException;
+
+    public native void setConfigEventHandler(ConfigEvent configHandler)
+            throws ClientException;
+
+    public native ConfigEvent getConfigEventHandler()
             throws ClientException;
 
     public native void cancelOperation()
@@ -664,9 +678,20 @@ public class SVNClient implements ISVNClient
 
     public native void info2(String pathOrUrl, Revision revision,
                              Revision pegRevision, Depth depth,
+                             boolean fetchExcluded, boolean fetchActualOnly,
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
+
+    public void info2(String pathOrUrl, Revision revision,
+                      Revision pegRevision, Depth depth,
+                      Collection<String> changelists,
+                      InfoCallback callback)
+            throws ClientException
+    {
+        info2(pathOrUrl, revision, pegRevision, depth,
+              false, true, changelists, callback);
+    }
 
     public native void patch(String patchPath, String targetPath,
                              boolean dryRun, int stripCount, boolean reverse,

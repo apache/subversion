@@ -290,8 +290,43 @@ typedef enum svn_repos_notify_warning_t
    * @see svn_fs.h:"Directory entry names and directory paths" */
   /* ### TODO(doxygen): make that a proper doxygen link */
   /* See svn_fs__path_valid(). */
-  svn_repos_notify_warning_invalid_fspath
+  svn_repos_notify_warning_invalid_fspath,
 
+  /**
+   * Found a denormalized name. Reported when the name of a directoy
+   * entry is not normalized to Unicode Normalization Form C.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_denormalized_name,
+
+  /**
+   * Detected a name collision. Reported when the names of two or more
+   * entries in the same directory differ only in character
+   * representation (normalization), but are otherwise identical.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_name_collision,
+
+  /**
+   * Found a denormalized mergeinfo entry. Reported when the path in
+   * an entry in the svn:mergeinfo property is not normalized to
+   * Unicode Normalization Form C.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_denormalized_mergeinfo,
+
+  /**
+   * Detected a mergeinfo path collision. Reported when the paths in
+   * two or more entries in the same svn:mergeinfo property differ
+   * only in character representation (normalization), but are
+   * otherwise identical.
+   *
+   * @since New in 1.9.
+   */
+  svn_repos_notify_warning_mergeinfo_collision
 } svn_repos_notify_warning_t;
 
 /**
@@ -564,6 +599,13 @@ svn_repos_capabilities(apr_hash_t **capabilities,
 svn_fs_t *
 svn_repos_fs(svn_repos_t *repos);
 
+/** Return the type of filesystem associated with repository object
+ * @a repos allocated in @a pool.
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool);
 
 /** Make a hot copy of the Subversion repository found at @a src_path
  * to @a dst_path.
@@ -1800,6 +1842,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * filesystem, as limited by @a paths. In the latter case those revisions
  * are skipped and @a receiver is not invoked.
  *
+ * @a move_behavior defines which changes are being reported as moves.
+ * See #svn_move_behavior_t for the various options.
+ *
  * If @a revprops is NULL, retrieve all revision properties; else, retrieve
  * only the revision properties named by the (const char *) array elements
  * (i.e. retrieve none if the array is empty).
@@ -1824,8 +1869,33 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  *
  * Use @a pool for temporary allocations.
  *
- * @since New in 1.5.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_get_logs5(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    svn_move_behavior_t move_behavior,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_entry_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_repos_get_logs5(), but with @a move_behavior being set to
+ * #svn_fs_move_behavior_no_moves.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -2630,6 +2700,12 @@ svn_repos_info_format(int *repos_format,
  * not notified. Finally, return an error if there were any failures during
  * verification, or SVN_NO_ERROR if there were no failures.
  *
+ * If @a check_ucs_norm is @c TRUE, verify that all path names in the
+ * repository and in svn:mergeinfo entries are normaized to Unicode
+ * Normalization Form C, and report any name collisions within the
+ * same directory or svn:mergeinfo property where the names differ only
+ * in character representation, but are otherwise identical.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -2637,6 +2713,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
+                     svn_boolean_t check_ucs_norm,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel,
@@ -2644,7 +2721,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      apr_pool_t *scratch_pool);
 
 /**
- * Like svn_repos_verify_fs3(), but with @a keep_going set to @c FALSE.
+ * Like svn_repos_verify_fs3(), but with @a keep_going and
+ * @a check_ucs_norm set to @c FALSE.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.

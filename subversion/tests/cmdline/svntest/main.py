@@ -800,9 +800,11 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
                      url, revision, propname, skel,
                      want_error and 1 or 0, default_config_dir)
 
-def run_wc_lock_tester(recursive, path):
+def run_wc_lock_tester(recursive, path, work_queue=False):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
-  if recursive:
+  if work_queue:
+    option = "-w"
+  elif recursive:
     option = "-r"
   else:
     option = "-1"
@@ -1328,6 +1330,9 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_fsx():
+  return options.fs_type == 'fsx'
+
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
 
@@ -1375,6 +1380,9 @@ def server_has_atomic_revprop():
 
 def server_has_reverse_get_file_revs():
   return options.server_minor_version >= 8
+
+def server_has_auto_move():
+  return options.server_minor_version >= 9
 
 def is_plaintext_password_storage_disabled():
   try:
@@ -1751,7 +1759,7 @@ def _create_parser():
   parser.add_option('--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('--fs-type', action='store',
-                    help='Subversion file system type (fsfs or bdb)')
+                    help='Subversion file system type (fsfs, bdb or fsx)')
   parser.add_option('--cleanup', action='store_true',
                     help='Whether to clean up')
   parser.add_option('--enable-sasl', action='store_true',
@@ -2024,7 +2032,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
         # it to a number if possible
         for testnum in list(range(1, len(test_list))):
           test_case = TestRunner(test_list[testnum], testnum)
-          if test_case.get_function_name() == str(arg):
+          if test_case.get_function_name() == str(arg).rstrip(','):
             testnums.append(testnum)
             appended = True
             break
@@ -2137,7 +2145,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
   if not options.is_child_process and not options.keep_local_tmp:
-    safe_rmtree(temp_dir, 1)
+    try:
+      safe_rmtree(temp_dir, 1)
+    except:
+      logger.error("ERROR: cleanup of '%s' directory failed." % temp_dir)
+      exit_code = 1
 
   # Cleanup after ourselves.
   svntest.sandbox.cleanup_deferred_test_paths()

@@ -24,6 +24,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_auth.h"
 #include "svn_error.h"
@@ -78,13 +79,7 @@ ssl_server_trust_file_first_credentials(void **credentials,
       failstr = svn_hash_gets(creds_hash, AUTHN_FAILURES_KEY);
 
       if (failstr)
-        {
-          char *endptr;
-          unsigned long tmp_ulong = strtoul(failstr->data, &endptr, 10);
-
-          if (*endptr == '\0')
-            last_failures = (apr_uint32_t) tmp_ulong;
-        }
+        SVN_ERR(svn_cstring_atoui(&last_failures, failstr->data));
 
       /* If the cert is trusted and there are no new failures, we
        * accept it by clearing all failures. */

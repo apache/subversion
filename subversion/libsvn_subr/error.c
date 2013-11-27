@@ -110,7 +110,8 @@ make_error_internal(apr_status_t apr_err,
     pool = child->pool;
   else
     {
-      if (apr_pool_create(&pool, NULL))
+      pool = svn_pool_create(NULL);
+      if (!pool)
         abort();
     }
 
@@ -201,7 +202,8 @@ svn_error_wrap_apr(apr_status_t status,
       va_end(ap);
       if (msg_apr)
         {
-          err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr, NULL);
+          err->message = apr_pstrcat(err->pool, msg, ": ", msg_apr,
+                                     SVN_VA_NULL);
         }
       else
         {
@@ -339,7 +341,8 @@ svn_error_dup(svn_error_t *err)
   apr_pool_t *pool;
   svn_error_t *new_err = NULL, *tmp_err = NULL;
 
-  if (apr_pool_create(&pool, NULL))
+  pool = svn_pool_create(NULL);
+  if (!pool)
     abort();
 
   for (; err; err = err->child)
@@ -559,7 +562,7 @@ svn_handle_error2(svn_error_t *err,
      preferring apr_pool_*() instead.  I can't remember why -- it may
      be an artifact of r843793, or it may be for some deeper reason --
      but I'm playing it safe and using apr_pool_*() here too. */
-  apr_pool_create(&subpool, err->pool);
+  subpool = svn_pool_create(err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
   tmp_err = err;
@@ -696,7 +699,7 @@ svn_error_symbolic_name(apr_status_t statcode)
       return defn->errname;
 
   /* "No error" is not in error_table. */
-  if (statcode == SVN_NO_ERROR)
+  if (statcode == APR_SUCCESS)
     return "SVN_NO_ERROR";
 
 #ifdef SVN_DEBUG

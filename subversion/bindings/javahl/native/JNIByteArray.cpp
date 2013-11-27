@@ -32,30 +32,24 @@
  * @param flag that the underlying byte array reference should be deleted at
  *        destruction
  */
-JNIByteArray::JNIByteArray(jbyteArray jba, bool deleteByteArray)
-{
-  m_array = jba;
-  m_deleteByteArray = deleteByteArray;
-  if (jba != NULL)
-    {
-      // Get the bytes.
-      JNIEnv *env = JNIUtil::getEnv();
-      m_data = env->GetByteArrayElements(jba, NULL);
-    }
-  else
-    {
-      m_data = NULL;
-    }
-}
+JNIByteArray::JNIByteArray(jbyteArray jba,
+                           bool deleteByteArray,
+                           bool abortOnRelease)
+  : m_array(jba),
+    m_data(!jba ? NULL
+           : JNIUtil::getEnv()->GetByteArrayElements(jba, NULL)),
+    m_deleteByteArray(deleteByteArray),
+    m_abortOnRelease(abortOnRelease)
+{}
 
 JNIByteArray::~JNIByteArray()
 {
   if (m_array != NULL)
     {
       // Release the bytes
-      JNIUtil::getEnv()->ReleaseByteArrayElements(m_array,
-                                                  m_data,
-                                                  JNI_ABORT);
+      JNIUtil::getEnv()->ReleaseByteArrayElements(
+          m_array, m_data,
+          (m_abortOnRelease ? JNI_ABORT: JNI_COMMIT));
       if (m_deleteByteArray)
         // And if needed the byte array.
         JNIUtil::getEnv()->DeleteLocalRef(m_array);

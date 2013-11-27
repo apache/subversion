@@ -23,14 +23,6 @@
 
 
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#define PSAPI_VERSION 1
-#include <windows.h>
-#include <psapi.h>
-#include <Ws2tcpip.h>
-#endif
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
@@ -278,7 +270,7 @@ release_name_from_uname(apr_pool_t *pool)
 
 #if __linux__
 /* Split a stringbuf into a key/value pair.
-   Return the key, leaving the striped value in the stringbuf. */
+   Return the key, leaving the stripped value in the stringbuf. */
 static const char *
 stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
 {
@@ -290,11 +282,21 @@ stringbuf_split_key(svn_stringbuf_t *buffer, char delim)
     return NULL;
 
   svn_stringbuf_strip_whitespace(buffer);
+
+  /* Now we split the currently allocated buffer in two parts:
+      - a const char * HEAD
+      - the remaining stringbuf_t. */
+
+  /* Create HEAD as '\0' terminated const char * */
   key = buffer->data;
   end = strchr(key, delim);
   *end = '\0';
-  buffer->len = 1 + end - key;
+
+  /* And update the TAIL to be a smaller, but still valid stringbuf */
   buffer->data = end + 1;
+  buffer->len -= 1 + end - key;
+  buffer->blocksize -= 1 + end - key;
+
   svn_stringbuf_strip_whitespace(buffer);
 
   return key;
@@ -508,7 +510,7 @@ debian_release(apr_pool_t *pool)
       return NULL;
 
   stringbuf_first_line_only(buffer);
-  return apr_pstrcat(pool, "Debian ", buffer->data, NULL);
+  return apr_pstrcat(pool, "Debian ", buffer->data, SVN_VA_NULL);
 }
 
 /* Try to find the Linux distribution name, or return info from uname. */
@@ -546,7 +548,7 @@ linux_release_name(apr_pool_t *pool)
 
 #ifdef WIN32
 typedef DWORD (WINAPI *FNGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
-typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE, DWORD, LPDWORD);
+typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE*, DWORD, LPDWORD);
 
 /* Get system and version info, and try to tell the difference
    between the native system type and the runtime environment of the
@@ -763,16 +765,36 @@ win32_release_name(apr_pool_t *pool)
 static HMODULE *
 enum_loaded_modules(apr_pool_t *pool)
 {
+  HMODULE psapi_dll = 0;
   HANDLE current = GetCurrentProcess();
   HMODULE dummy[1];
   HMODULE *handles;
   DWORD size;
+  FNENUMPROCESSMODULES EnumProcessModules_;
 
-  if (!EnumProcessModules(current, dummy, sizeof(dummy), &size))
+  psapi_dll = GetModuleHandleA("psapi.dll");
+
+  if (!psapi_dll)
+    {
+      /* Load and never unload, just like static linking */
+      psapi_dll = LoadLibraryA("psapi.dll");
+    }
+
+  if (!psapi_dll)
+      return NULL;
+
+  EnumProcessModules_ = (FNENUMPROCESSMODULES)
+                              GetProcAddress(psapi_dll, "EnumProcessModules");
+
+  /* Before Windows XP psapi was an optional module */
+  if (! EnumProcessModules_)
+    return NULL;
+
+  if (!EnumProcessModules_(current, dummy, sizeof(dummy), &size))
     return NULL;
 
   handles = apr_palloc(pool, size + sizeof *handles);
-  if (!EnumProcessModules(current, handles, size, &size))
+  if (! EnumProcessModules_(current, handles, size, &size))
     return NULL;
   handles[size / sizeof *handles] = NULL;
   return handles;

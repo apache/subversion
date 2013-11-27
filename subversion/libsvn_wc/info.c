@@ -21,6 +21,7 @@
  * @endcopyright
  */
 
+#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
@@ -29,7 +30,6 @@
 
 #include "wc.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
 
@@ -555,7 +555,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                                                   &repos_uuid,
                                                   wc_ctx->db,
                                                   svn_dirent_dirname(
-                                                            local_abspath,
+                                                            this_abspath,
                                                             iterpool),
                                                   scratch_pool,
                                                   iterpool));

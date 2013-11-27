@@ -30,6 +30,8 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
+
+#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_wc.h"
@@ -46,8 +48,6 @@
 #include "client.h"
 
 #include "private/svn_wc_private.h"
-
-#include "svn_private_config.h"
 
 
 /* Try to get properties for LOCAL_ABSPATH and return them in the property

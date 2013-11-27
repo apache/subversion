@@ -23,6 +23,7 @@
 
 
 
+#include "svn_private_config.h"
 #include "svn_time.h"
 #include "svn_xml.h"
 #include "svn_dirent_uri.h"
@@ -37,7 +38,6 @@
 #include "lock.h"
 
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
 
 
 /* Within the (old) entries file, boolean values have a specific string
@@ -443,7 +443,7 @@ svn_wc__serialize_file_external(const char **str,
       SVN_ERR(opt_revision_to_string(&s1, path, peg_rev, pool));
       SVN_ERR(opt_revision_to_string(&s2, path, rev, pool));
 
-      s = apr_pstrcat(pool, s1, ":", s2, ":", path, (char *)NULL);
+      s = apr_pstrcat(pool, s1, ":", s2, ":", path, SVN_VA_NULL);
     }
   else
     s = NULL;
@@ -811,11 +811,15 @@ atts_to_entry(svn_wc_entry_t **new_entry,
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
   entry->url = extract_string(atts, ENTRIES_ATTR_URL, pool);
+  if (entry->url)
+    entry->url = svn_uri_canonicalize(entry->url, pool);
 
   /* Set up repository root.  Make sure it is a prefix of url.
 
      ### not used by loggy; no need to set MODIFY_FLAGS  */
   entry->repos = extract_string(atts, ENTRIES_ATTR_REPOS, pool);
+  if (entry->repos)
+    entry->repos = svn_uri_canonicalize(entry->repos, pool);
 
   if (entry->url && entry->repos
       && !svn_uri__is_ancestor(entry->repos, entry->url))

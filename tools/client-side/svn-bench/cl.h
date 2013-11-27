@@ -90,6 +90,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_revprops;     /* retrieve no revprops */
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t use_merge_history; /* use/display extra merge information */
+  svn_boolean_t auto_moves;      /* interpret unique DEL/ADD pairs as moves */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
 } svn_cl__opt_state_t;
@@ -107,7 +108,8 @@ svn_opt_subcommand_t
   svn_cl__help,
   svn_cl__null_export,
   svn_cl__null_list,
-  svn_cl__null_log;
+  svn_cl__null_log,
+  svn_cl__null_info;
 
 
 /* See definition in main.c for documentation. */
@@ -135,7 +137,7 @@ extern const apr_getopt_option_t svn_cl__options[];
  *
  * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
  * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
- * forget to terminate the argument list with SVN_NO_ERROR.
+ * forget to terminate the argument list with 0 (or APR_SUCCESS).
  */
 svn_error_t *
 svn_cl__try(svn_error_t *err,

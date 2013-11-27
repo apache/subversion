@@ -33,6 +33,8 @@
 #define SVN_DEPRECATED
 
 #include <string.h>
+
+#include "svn_private_config.h"
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_compat.h"
@@ -47,8 +49,6 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
-
 
 
 
@@ -1498,6 +1498,28 @@ svn_client_ls(apr_hash_t **dirents,
 }
 
 /*** From log.c ***/
+
+svn_error_t *
+svn_client_log5(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_log6(targets, peg_revision, revision_ranges, limit,
+                         discover_changed_paths, strict_node_history,
+                         include_merged_revisions,
+                         svn_move_behavior_no_moves, revprops, receiver,
+                         receiver_baton, ctx, pool);
+}
+
 svn_error_t *
 svn_client_log4(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -2438,6 +2460,21 @@ svn_client_switch(svn_revnum_t *result_rev,
 }
 
 /*** From cat.c ***/
+svn_error_t *
+svn_client_cat2(svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_cat3(NULL /* props */,
+                         out, path_or_url, peg_revision, revision,
+                         TRUE /* expand_keywords */,
+                         ctx, pool, pool);
+}
+
+
 svn_error_t *
 svn_client_cat(svn_stream_t *out,
                const char *path_or_url,

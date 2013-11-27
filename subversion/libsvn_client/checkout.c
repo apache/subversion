@@ -79,8 +79,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  apr_pool_t *session_pool = svn_pool_create(pool);
-  svn_ra_session_t *ra_session;
   svn_client__pathrev_t *pathrev;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
@@ -94,15 +92,21 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  /* Get the RA connection. */
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &pathrev,
-                                            url, NULL, peg_revision, revision,
-                                            ctx, session_pool));
+  {
+    apr_pool_t *session_pool = svn_pool_create(pool);
+    svn_ra_session_t *ra_session;
 
-  pathrev = svn_client__pathrev_dup(pathrev, pool);
-  SVN_ERR(svn_ra_check_path(ra_session, "", pathrev->rev, &kind, pool));
+    /* Get the RA connection. */
+    SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &pathrev,
+                                              url, NULL, peg_revision,
+                                              revision, ctx, session_pool));
 
-  svn_pool_destroy(session_pool);
+    pathrev = svn_client__pathrev_dup(pathrev, pool);
+    SVN_ERR(svn_ra_check_path(ra_session, "", pathrev->rev, &kind,
+                              session_pool));
+
+    svn_pool_destroy(session_pool);
+  }
 
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,

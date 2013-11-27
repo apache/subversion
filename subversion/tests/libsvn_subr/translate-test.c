@@ -325,8 +325,8 @@ substitute_and_verify(const char *test_name,
   apr_size_t idx = 0;
   apr_size_t i;
   const char *expect[(sizeof(lines) / sizeof(*lines))];
-  const char *src_fname = apr_pstrcat(pool, test_name, ".src", (char *)NULL);
-  const char *dst_fname = apr_pstrcat(pool, test_name, ".dst", (char *)NULL);
+  const char *src_fname = apr_pstrcat(pool, test_name, ".src", SVN_VA_NULL);
+  const char *dst_fname = apr_pstrcat(pool, test_name, ".dst", SVN_VA_NULL);
   svn_string_t *val;
   apr_pool_t *subpool = svn_pool_create(pool);
 
@@ -419,27 +419,27 @@ substitute_and_verify(const char *test_name,
                         "Valid $LastChangedRevision: ",
                         rev,
                         " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[5 - 1] =
             apr_pstrcat(pool, "Line 5: ",
                         "Valid $Rev: ", rev, " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[26 - 1] =
             apr_pstrcat(pool, "Line 26: ",
                         "Emptily expanded keyword $Rev: ", rev," $.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[29 - 1] =
             apr_pstrcat(pool, "Line 29: ",
                         "Valid $LastChangedRevision: ",
                         rev,
                         " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[30 - 1] =
             apr_pstrcat(pool, "Line 30: ",
                         "Valid $Rev: ",
                         rev,
                         " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       else  /* unexpand */
         {
@@ -462,31 +462,31 @@ substitute_and_verify(const char *test_name,
                         "Valid $LastChangedDate: ",
                         date,
                         " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[13 - 1] =
             apr_pstrcat(pool, "Line 13: ",
                         "Valid $Date: ", date, " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[33 - 1] =
             apr_pstrcat(pool, "Line 33: ",
                         "Valid $LastChangedDate: ",
                         date,
                         " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[34 - 1] =
             apr_pstrcat(pool, "Line 34: ",
                         "Valid $Date: ", date, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[51 - 1] =
             apr_pstrcat(pool, "Line 51: ",
                         "same, but with embedded keyword ",
                         "$$$$$$$$Date: ", date, " $$$$$$$$$$.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[52 - 1] =
             apr_pstrcat(pool, "Line 52: ",
                         "same, with expanded, empty keyword ",
                         "$$$$$$Date: ", date, " $$$$$$.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       else  /* unexpand */
         {
@@ -511,46 +511,46 @@ substitute_and_verify(const char *test_name,
                         "Valid $LastChangedBy: ",
                         author,
                         " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[9 - 1] =
             apr_pstrcat(pool, "Line 9: ",
                         "Valid $Author: ", author, " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[37 - 1] =
             apr_pstrcat(pool, "Line 37: ",
                         "Valid $LastChangedBy: ", author,
-                        " $, started expanded.", (char *)NULL);
+                        " $, started expanded.", SVN_VA_NULL);
           expect[38 - 1] =
             apr_pstrcat(pool, "Line 38: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[46 - 1] =
             apr_pstrcat(pool, "Line 46: ",
                         "Empty $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[71 - 1] =
-            apr_pstrcat(pool, ".$veR$Author: ", author, " $", (char *)NULL);
+            apr_pstrcat(pool, ".$veR$Author: ", author, " $", SVN_VA_NULL);
 
           expect[74 - 1] =
             apr_pstrcat(pool, "Line 74: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[79 - 1] =
             apr_pstrcat(pool, "Line 79: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[80 - 1] =
             apr_pstrcat(pool, "Line 80: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[81 - 1] =
             apr_pstrcat(pool, "Line 81: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[82 - 1] =
             apr_pstrcat(pool, "Line 82: ",
                         "Valid $Author: ", author, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       else  /* unexpand */
         {
@@ -581,23 +581,23 @@ substitute_and_verify(const char *test_name,
           expect[16 - 1] =
             apr_pstrcat(pool, "Line 16: ",
                         "Valid $HeadURL: ", url, " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[17 - 1] =
             apr_pstrcat(pool, "Line 17: ",
                         "Valid $URL: ", url, " $, started unexpanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[41 - 1] =
             apr_pstrcat(pool, "Line 41: ",
                         "Valid $HeadURL: ", url, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[42 - 1] =
             apr_pstrcat(pool, "Line 42: ",
                         "Valid $URL: ", url, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[75 - 1] =
             apr_pstrcat(pool, "Line 75: ",
                         "Valid $URL: ", url, " $, started expanded.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       else  /* unexpand */
         {
@@ -622,14 +622,14 @@ substitute_and_verify(const char *test_name,
                         "Two keywords back to back: "
                         "$Author: ", author, " $"
                         "$Rev: ", rev, " $.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
                         "$Author: ", author, " $Rev$.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", (char *)NULL);
+            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", SVN_VA_NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -641,14 +641,14 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
                         "$Author$$Rev: ", rev, " $.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
                         "$Author$Rev: ", rev, " $.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author$Rev: ", rev, " $.", (char *)NULL);
+            apr_pstrcat(pool, "$Author$Rev: ", rev, " $.", SVN_VA_NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -660,14 +660,14 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 48: ",
                         "Two keywords back to back: "
                         "$Author: ", author, " $$Rev$.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[49 - 1] =
             apr_pstrcat(pool, "Line 49: ",
                         "One keyword, one not, back to back: "
                         "$Author: ", author, " $Rev$.",
-                        (char *)NULL);
+                        SVN_VA_NULL);
           expect[70 - 1] =
-            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", (char *)NULL);
+            apr_pstrcat(pool, "$Author: ", author, " $Rev$.", SVN_VA_NULL);
         }
       /* Else Lines 48, 49, and 70 remain unchanged. */
     }
@@ -684,14 +684,14 @@ substitute_and_verify(const char *test_name,
                         "keyword in a keyword: $Author: ",
                         author,
                         " $Date$ $",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
                         "keyword in a keyword: $Author$Date$ $",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
     }
   else if (date && (! author))
@@ -703,7 +703,7 @@ substitute_and_verify(const char *test_name,
                         "keyword in a keyword: $Author: $Date: ",
                         date,
                         " $ $",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       /* Else Line 24 remains unchanged. */
     }
@@ -716,14 +716,14 @@ substitute_and_verify(const char *test_name,
                         "keyword in a keyword: $Author: ",
                         author,
                         " $Date$ $",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
       else  /* unexpand */
         {
           expect[24 - 1] =
             apr_pstrcat(pool, "Line 24: ",
                         "keyword in a keyword: $Author$Date$ $",
-                        (char *)NULL);
+                        SVN_VA_NULL);
         }
     }
   /* Else neither author nor date, so Line 24 remains unchanged. */
@@ -862,7 +862,7 @@ static svn_error_t *
 mixed_to_lf(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("cr_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, 1, pool);
+          ("mixed_to_lf", NULL, "\n", 1, NULL, NULL, NULL, NULL, 1, pool);
 }
 
 
@@ -1096,10 +1096,10 @@ static svn_error_t *
 unexpand_author(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
+          ("unexpand_author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author", "\r\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
+          ("unexpand_author", "\r\n", NULL, 0, NULL, NULL, "jrandom", NULL, 0, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1109,11 +1109,11 @@ static svn_error_t *
 unexpand_date(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("date", "\n", NULL, 0,
+          ("unexpand_date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("date", "\r\n", NULL, 0,
+          ("unexpand_date", "\r\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", NULL, NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1124,11 +1124,11 @@ static svn_error_t *
 unexpand_author_date(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author_date", "\n", NULL, 0,
+          ("unexpand_author_date", "\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author_date", "\r\n", NULL, 0,
+          ("unexpand_author_date", "\r\n", NULL, 0,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1139,11 +1139,11 @@ static svn_error_t *
 unexpand_author_rev(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author_rev", "\n", NULL, 0,
+          ("unexpand_author_rev", "\n", NULL, 0,
            "1729", NULL, "jrandom", NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author_rev", "\r\n", NULL, 0,
+          ("unexpand_author_rev", "\r\n", NULL, 0,
            "1729", NULL, "jrandom", NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1154,11 +1154,11 @@ static svn_error_t *
 unexpand_rev(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("rev", "\n", NULL, 0,
+          ("unexpand_rev", "\n", NULL, 0,
            "1729", NULL, NULL, NULL, 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("rev", "\r\n", NULL, 0,
+          ("unexpand_rev", "\r\n", NULL, 0,
            "1729", NULL, NULL, NULL, 0, pool));
 
   return SVN_NO_ERROR;
@@ -1169,11 +1169,11 @@ static svn_error_t *
 unexpand_rev_url(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("rev_url", "\n", NULL, 0,
+          ("unexpand_rev_url", "\n", NULL, 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
 
   SVN_ERR(substitute_and_verify
-          ("rev_url", "\r\n", NULL, 0,
+          ("unexpand_rev_url", "\r\n", NULL, 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool));
 
   return SVN_NO_ERROR;
@@ -1184,7 +1184,7 @@ static svn_error_t *
 unexpand_author_date_rev_url(apr_pool_t *pool)
 {
   SVN_ERR(substitute_and_verify
-          ("author_date_rev_url", "\n", NULL, 0,
+          ("unexpand_author_date_rev_url", "\n", NULL, 0,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
@@ -1192,7 +1192,7 @@ unexpand_author_date_rev_url(apr_pool_t *pool)
            1, pool));
 
   SVN_ERR(substitute_and_verify
-          ("author_date_rev_url", "\r\n", NULL, 0,
+          ("unexpand_author_date_rev_url", "\r\n", NULL, 0,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
@@ -1210,7 +1210,7 @@ static svn_error_t *
 lf_to_crlf_unexpand_author(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("lf_to_crlf_author", "\n", "\r\n", 0,
+          ("lf_to_crlf_unexpand_author", "\n", "\r\n", 0,
            NULL, NULL, "jrandom", NULL, 0, pool);
 }
 
@@ -1219,7 +1219,7 @@ static svn_error_t *
 mixed_to_lf_unexpand_author_date(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("mixed_to_lf_author_date", NULL, "\n", 1,
+          ("mixed_to_lf_unexpand_author_date", NULL, "\n", 1,
            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, 0, pool);
 }
 
@@ -1228,7 +1228,7 @@ static svn_error_t *
 crlf_to_cr_unexpand_author_rev(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("crlf_to_cr_author_rev", "\r\n", "\r", 0,
+          ("crlf_to_cr_unexpand_author_rev", "\r\n", "\r", 0,
            "1729", NULL, "jrandom", NULL, 0, pool);
 }
 
@@ -1237,7 +1237,7 @@ static svn_error_t *
 cr_to_crlf_unexpand_rev(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("cr_to_crlf_rev", "\r", "\r\n", 0,
+          ("cr_to_crlf_unexpand_rev", "\r", "\r\n", 0,
            "1729", NULL, NULL, NULL, 0, pool);
 }
 
@@ -1246,7 +1246,7 @@ static svn_error_t *
 cr_to_crlf_unexpand_rev_url(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("cr_to_crlf_rev_url", "\r", "\r\n", 0,
+          ("cr_to_crlf_unexpand_rev_url", "\r", "\r\n", 0,
            "1729", NULL, NULL, "http://subversion.tigris.org", 0, pool);
 }
 
@@ -1255,7 +1255,7 @@ static svn_error_t *
 mixed_to_crlf_unexpand_author_date_rev_url(apr_pool_t *pool)
 {
   return substitute_and_verify
-          ("mixed_to_crlf_author_date_rev_url", NULL, "\r\n", 1,
+          ("mixed_to_crlf_unexpand_author_date_rev_url", NULL, "\r\n", 1,
            "1729",
            "Wed Jan  9 07:49:05 2002",
            "jrandom",
@@ -1267,6 +1267,8 @@ mixed_to_crlf_unexpand_author_date_rev_url(apr_pool_t *pool)
 
 
 /* The test table.  */
+
+int svn_test_max_threads = 7;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

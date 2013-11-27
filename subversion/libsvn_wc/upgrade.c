@@ -23,6 +23,7 @@
 
 #include <apr_pools.h>
 
+#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -38,7 +39,6 @@
 #include "wc-queries.h"  /* for STMT_*  */
 #include "workqueue.h"
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_token.h"
@@ -400,7 +400,7 @@ build_lockfile_path(const char *local_dir_abspath,
                               local_dir_abspath,
                               svn_wc_get_adm_dir(result_pool),
                               ADM_LOCK,
-                              NULL);
+                              SVN_VA_NULL);
 }
 
 
@@ -755,13 +755,13 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
         {
           /* There is an existing ACTUAL row, so just update it. */
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_UPDATE_ACTUAL_CONFLICT_DATA));
+                                            STMT_UPDATE_ACTUAL_CONFLICT));
         }
       else
         {
           /* We need to insert an ACTUAL row with the tree conflict data. */
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_INSERT_ACTUAL_CONFLICT_DATA));
+                                            STMT_INSERT_ACTUAL_CONFLICT));
         }
 
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wc_id, conflict_relpath,
@@ -875,21 +875,21 @@ migrate_node_props(const char *dir_abspath,
                                      apr_pstrcat(scratch_pool,
                                                  name,
                                                  SVN_WC__BASE_EXT,
-                                                 (char *)NULL),
+                                                 SVN_VA_NULL),
                                      scratch_pool);
 
       revert_abspath = svn_dirent_join(basedir_abspath,
                                        apr_pstrcat(scratch_pool,
                                                    name,
                                                    SVN_WC__REVERT_EXT,
-                                                   (char *)NULL),
+                                                   SVN_VA_NULL),
                                        scratch_pool);
 
       working_abspath = svn_dirent_join(propsdir_abspath,
                                         apr_pstrcat(scratch_pool,
                                                     name,
                                                     SVN_WC__WORK_EXT,
-                                                    (char *)NULL),
+                                                    SVN_VA_NULL),
                                         scratch_pool);
     }
 
@@ -1248,7 +1248,7 @@ rename_pristine_file(void *baton,
           == PRISTINE_BASENAME_OLD_LEN))
     {
       const char *new_abspath
-        = apr_pstrcat(pool, abspath, PRISTINE_STORAGE_EXT, (char *)NULL);
+        = apr_pstrcat(pool, abspath, PRISTINE_STORAGE_EXT, SVN_VA_NULL);
 
       SVN_ERR(svn_io_file_rename(abspath, new_abspath, pool));
     }
@@ -1349,7 +1349,8 @@ bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* Rename all pristine files, adding a ".svn-base" suffix. */
   pristine_dir_abspath = svn_dirent_join_many(scratch_pool, wcroot_abspath,
                                               svn_wc_get_adm_dir(scratch_pool),
-                                              PRISTINE_STORAGE_RELPATH, NULL);
+                                              PRISTINE_STORAGE_RELPATH,
+                                              SVN_VA_NULL);
   SVN_ERR(svn_io_dir_walk2(pristine_dir_abspath, APR_FINFO_MIN,
                            rename_pristine_file, NULL, scratch_pool));
 
@@ -1958,6 +1959,10 @@ svn_wc__upgrade_sdb(int *result_format,
       case SVN_WC__VERSION:
         /* already upgraded */
         *result_format = SVN_WC__VERSION;
+
+        SVN_SQLITE__WITH_LOCK(
+            svn_wc__db_install_schema_statistics(sdb, scratch_pool),
+            sdb);
     }
 
 #ifdef SVN_DEBUG

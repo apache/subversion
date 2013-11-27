@@ -339,6 +339,24 @@ def cleanup_dir_external(sbox):
                                      [], "cleanup", '--include-externals',
                                      sbox.ospath(""))
 
+@Issue(4390)
+def checkout_within_locked_wc(sbox):
+  """checkout within a locked working copy"""
+
+  sbox.build(read_only = True)
+
+  # lock working copy and create outstanding work queue items
+  svntest.actions.lock_admin_dir(sbox.ospath(""), True, True)
+  expected_output = [
+  "A    %s\n" % sbox.ospath("nested-wc/alpha"),
+  "A    %s\n" % sbox.ospath("nested-wc/beta"),
+  "Checked out revision 1.\n"
+  ]
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], "checkout", sbox.repo_url + '/A/B/E',
+                                     sbox.ospath("nested-wc"))
+
+
 ########################################################################
 # Run the tests
 
@@ -361,6 +379,7 @@ test_list = [ None,
               cleanup_unversioned_items,
               cleanup_unversioned_items_in_locked_wc,
               cleanup_dir_external,
+              checkout_within_locked_wc,
              ]
 
 if __name__ == '__main__':

@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include "svn_private_config.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_ctype.h"
@@ -36,7 +37,6 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_dep_compat.h"
 
@@ -2566,7 +2566,7 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
         continue;
 
       /* Prepend a leading slash to our path. */
-      source_path = apr_pstrcat(pool, "/", segment->path, (char *)NULL);
+      source_path = apr_pstrcat(pool, "/", segment->path, SVN_VA_NULL);
 
       /* See if we already stored ranges for this path.  If not, make
          a new list.  */

@@ -275,7 +275,8 @@ mergeinfo_summary(
 
   target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
-                     || target_revision->kind == svn_opt_revision_working);
+                     || target_revision->kind == svn_opt_revision_working 
+                     || target_revision->kind == svn_opt_revision_base);
   SVN_ERR(svn_client_get_merging_summary(
             &is_reintegration,
             &yca_url, &yca_rev,
