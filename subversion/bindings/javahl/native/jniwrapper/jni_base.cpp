@@ -127,7 +127,8 @@ GlobalObject& GlobalObject::operator=(jobject that)
 
 GlobalObject::~GlobalObject()
 {
-  Env().DeleteGlobalRef(m_obj);
+  if (m_obj)
+    Env().DeleteGlobalRef(m_obj);
 }
 
 
