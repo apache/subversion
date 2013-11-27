@@ -323,7 +323,7 @@ svn_xml_make_open_tag(svn_stringbuf_t **str,
                       apr_pool_t *pool,
                       enum svn_xml_open_tag_style style,
                       const char *tagname,
-                      ...);
+                      ...) SVN_NEEDS_SENTINEL_NULL;
 
 
 /** Like svn_xml_make_open_tag(), but takes a @c va_list instead of being

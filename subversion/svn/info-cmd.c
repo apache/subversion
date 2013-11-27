@@ -100,7 +100,7 @@ print_info_xml(void *baton,
                                   path_prefix, target, pool),
                         "kind", svn_cl__node_kind_str_xml(info->kind),
                         "revision", rev_str,
-                        NULL);
+                        SVN_VA_NULL);
 
   /* "<url> xx </url>" */
   svn_cl__xml_tagged_cdata(&sb, pool, "url", info->URL);
@@ -121,7 +121,8 @@ print_info_xml(void *baton,
   if (info->repos_root_URL || info->repos_UUID)
     {
       /* "<repository>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repository", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "repository",
+                            SVN_VA_NULL);
 
       /* "<root> xx </root>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "root", info->repos_root_URL);
@@ -136,7 +137,8 @@ print_info_xml(void *baton,
   if (info->wc_info)
     {
       /* "<wc-info>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info",
+                            SVN_VA_NULL);
 
       /* "<wcroot-abspath> xx </wcroot-abspath>" */
       if (info->wc_info->wcroot_abspath)

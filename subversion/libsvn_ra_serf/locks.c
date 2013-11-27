@@ -302,8 +302,8 @@ create_getlock_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_xml_header_buckets(buckets, alloc);
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "propfind",
                                     "xmlns", "DAV:",
-                                    NULL);
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", NULL);
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(buckets, "lockdiscovery", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "prop");
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "propfind");
@@ -337,13 +337,13 @@ create_lock_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_xml_header_buckets(buckets, alloc);
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockinfo",
                                     "xmlns", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
 
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(buckets, "exclusive", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockscope");
 
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(buckets, "write", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "locktype");
 

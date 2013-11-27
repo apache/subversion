@@ -398,7 +398,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                       fs,
                       pool));
 
-  prefix = apr_pstrcat(pool, "ns:", cache_namespace, ":", prefix, NULL);
+  prefix = apr_pstrcat(pool, "ns:", cache_namespace, ":", prefix, SVN_VA_NULL);
 
   membuffer = svn_cache__get_global_membuffer_cache();
 

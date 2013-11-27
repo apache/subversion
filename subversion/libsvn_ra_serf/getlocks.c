@@ -215,7 +215,7 @@ create_getlocks_body(serf_bucket_t **body_bkt,
 
   svn_ra_serf__add_open_tag_buckets(
     buckets, alloc, "S:get-locks-report", "xmlns:S", SVN_XML_NAMESPACE,
-    "depth", svn_depth_to_word(lock_ctx->requested_depth), NULL);
+    "depth", svn_depth_to_word(lock_ctx->requested_depth), SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:get-locks-report");
 
   *body_bkt = buckets;

@@ -338,9 +338,11 @@ close_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
 {
   const char *l2p_index_path
-    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_L2P_INDEX, NULL);
+    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_L2P_INDEX,
+                  SVN_VA_NULL);
   const char *p2l_index_path
-    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_P2L_INDEX, NULL);
+    = apr_pstrcat(pool, context->pack_file_path, PATH_EXT_P2L_INDEX,
+                  SVN_VA_NULL);
   const char *proto_l2p_index_path;
   const char *proto_p2l_index_path;
 

@@ -1931,10 +1931,8 @@ def verify_invalid_path_changes(sbox):
 
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
-  B_url = sbox.repo_url + '/B'
-  C_url = sbox.repo_url + '/C'
 
-  # Create A/B/E/bravo in r2.
+  # Create a number of revisions each adding a single path
   for r in range(2,20):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'mkdir', '-m', 'log_msg',
@@ -1953,11 +1951,13 @@ def verify_invalid_path_changes(sbox):
 
   # del non-existent node
   set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '6'),
-                        "_0.0.t5-2 del-dir false false /C\n\n")
+                        "_0.0.t5-2 delete-dir false false /C\n\n")
 
   # del existent node of the wrong kind
+  # THIS WILL NOT BE DETECTED
+  # since dump mechanism and file don't care about the types of deleted nodes
   set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '8'),
-                        "_0.0.t7-2 dev-file false false /B3\n\n")
+                        "_0.0.t7-2 delete-file false false /B3\n\n")
 
   # copy from non-existent node
   set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '10'),
@@ -1995,7 +1995,7 @@ def verify_invalid_path_changes(sbox):
                                            ".*Verified revision 5.",
                                            ".*Error verifying revision 6.",
                                            ".*Verified revision 7.",
-                                           ".*Error verifying revision 8.",
+                                           ".*Verified revision 8.",
                                            ".*Verified revision 9.",
                                            ".*Error verifying revision 10.",
                                            ".*Verified revision 11.",
@@ -2037,6 +2037,58 @@ def verify_invalid_path_changes(sbox):
                                    None, errput, None, "svnadmin: E165011:.*"):
     raise svntest.Failure
 
+
+def verify_denormalized_names(sbox):
+  "detect denormalized names and name collisions"
+
+  sbox.build(create_wc = False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'normalization_check.dump')
+  load_dumpstream(sbox, open(dumpfile_location).read())
+
+  exit_code, output, errput = svntest.main.run_svnadmin(
+    "verify", "--check-ucs-normalization", sbox.repo_dir)
+
+  expected_output_regex_list = [
+    ".*Verified revision 0.",
+                                                # A/{Eacute}
+    "WARNING 0x0003: Denormalized directory name 'A/.*'",
+                                           # A/{icircumflex}{odiaeresis}ta
+    "WARNING 0x0003: Denormalized file name 'A/.*ta'",
+    ".*Verified revision 1.",
+    ".*Verified revision 2.",
+    ".*Verified revision 3.",
+                                           # A/{Eacute}/{aring}lpha
+    "WARNING 0x0003: Denormalized file name 'A/.*/.*lpha'",
+    "WARNING 0x0004: Duplicate representation of path 'A/.*/.*lpha'",
+    ".*Verified revision 4.",
+    ".*Verified revision 5.",
+                                       # Q/{aring}lpha
+    "WARNING 0x0005: Denormalized path '/Q/.*lpha'"
+                                  # A/{Eacute}
+    " in svn:mergeinfo property of 'A/.*'",
+                                                      # Q/{aring}lpha
+    "WARNING 0x0006: Duplicate representation of path '/Q/.*lpha'"
+                                  # A/{Eacute}
+    " in svn:mergeinfo property of 'A/.*'",
+    ".*Verified revision 6."]
+
+  # The BDB backend doesn't do global metadata verification.
+  if not svntest.main.is_fs_type_bdb():
+    expected_output_regex_list.insert(0, ".*Verifying repository metadata")
+
+  exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
+
+  if svntest.verify.verify_outputs(
+      "Unexpected error while running 'svnadmin verify'.",
+      output, errput, exp_out, None):
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -2075,6 +2127,7 @@ test_list = [ None,
               recover_old,
               verify_keep_going,
               verify_invalid_path_changes,
+              verify_denormalized_names,
              ]
 
 if __name__ == '__main__':

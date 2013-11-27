@@ -121,7 +121,7 @@ class JNIUtil
    * Throw a Java exception corresponding to err, and run
    * svn_error_clear() on err.
    */
-  static void handleSVNError(svn_error_t *err);
+  static void handleSVNError(svn_error_t *err, jthrowable jcause = NULL);
 
   static std::string makeSVNErrorMessage(svn_error_t *err,
                                          jstring *jerror_message,
@@ -158,7 +158,7 @@ class JNIUtil
   static JNIMutex *g_configMutex;
 
  private:
-  static void wrappedHandleSVNError(svn_error_t *err);
+  static void wrappedHandleSVNError(svn_error_t *err, jthrowable jcause);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
 

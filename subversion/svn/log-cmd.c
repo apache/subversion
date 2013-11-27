@@ -566,7 +566,7 @@ log_entry_receiver_xml(void *baton,
   revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
-                        "revision", revstr, NULL);
+                        "revision", revstr, SVN_VA_NULL);
 
   /* <author>xxx</author> */
   svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
@@ -587,7 +587,7 @@ log_entry_receiver_xml(void *baton,
 
       /* <paths> */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths",
-                            NULL);
+                            SVN_VA_NULL);
 
       /* Get an array of sorted hash keys. */
       sorted_paths = svn_sort__hash(log_entry->changed_paths2,
@@ -619,7 +619,7 @@ log_entry_receiver_xml(void *baton,
                                                      log_item->text_modified),
                                     "prop-mods", svn_tristate__to_word(
                                                      log_item->props_modified),
-                                    NULL);
+                                    SVN_VA_NULL);
             }
           else
             {
@@ -632,7 +632,7 @@ log_entry_receiver_xml(void *baton,
                                                      log_item->text_modified),
                                     "prop-mods", svn_tristate__to_word(
                                                      log_item->props_modified),
-                                    NULL);
+                                    SVN_VA_NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -652,7 +652,7 @@ log_entry_receiver_xml(void *baton,
   svn_compat_log_revprops_clear(log_entry->revprops);
   if (log_entry->revprops && apr_hash_count(log_entry->revprops) > 0)
     {
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", NULL);
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops", SVN_VA_NULL);
       SVN_ERR(svn_cmdline__print_xml_prop_hash(&sb, log_entry->revprops,
                                                FALSE, /* name_only */
                                                FALSE, pool));

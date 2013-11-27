@@ -1796,6 +1796,11 @@ svn_repos_fs(svn_repos_t *repos)
   return repos->fs;
 }
 
+const char *
+svn_repos_fs_type(svn_repos_t *repos, apr_pool_t *pool)
+{
+  return apr_pstrdup(pool, repos->fs_type);
+}
 
 /* For historical reasons, for the Berkeley DB backend, this code uses
  * repository locking, which is motivated by the need to support the

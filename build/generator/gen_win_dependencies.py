@@ -51,7 +51,7 @@ class SVNCommonLibrary:
   def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               is_src=False, defines=[], forced_includes=[]):
+               is_src=False, defines=[], forced_includes=[], extra_bin=[]):
     self.name = name
     if include_dirs:
       self.include_dirs = include_dirs if isinstance(include_dirs, list) \
@@ -89,6 +89,8 @@ class SVNCommonLibrary:
       self.debug_dll_name = debug_dll_name
     else:
       self.debug_dll_name = dll_name
+      
+    self.extra_bin = extra_bin
 
 class GenDependenciesBase(gen_base.GeneratorBase):
   """This intermediate base class exists to be instantiated by win-tests.py,
@@ -284,6 +286,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       self.find_libraries(False)
       
   def find_libraries(self, show_warnings):
+    "find required and optional libraries"
 
     # Required dependencies
     self._find_apr()
@@ -292,6 +295,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_sqlite(show_warnings)
 
     # Optional dependencies
+    self._find_httpd(show_warnings)
     self._find_bdb(show_warnings)
     self._find_openssl(show_warnings)
     self._find_serf(show_warnings)
@@ -387,6 +391,19 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         dll_dir = os.path.join(self.apr_path, 'bin')
         debug_dll_dir = None
+        
+    bin_files = os.listdir(dll_dir)
+    if debug_dll_dir:
+      debug_bin_files = os.listdir(debug_dll_dir)
+    else:
+      debug_bin_files = bin_files 
+    
+    extra_bin = []
+    
+    for bin in bin_files:
+      if bin in debug_bin_files:
+        if re.match('^(lib)?apr[-_].*' + suffix + '(d)?.dll$', bin):
+          extra_bin.append(bin)
       
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
@@ -394,7 +411,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               dll_dir=dll_dir,
                                               dll_name=dll_name,
                                               debug_dll_dir=debug_dll_dir,
-                                              defines=defines)
+                                              defines=defines,
+                                              extra_bin=extra_bin)
 
   def _find_apr_util_and_expat(self):
     "Find the APR-util library and version"
@@ -479,6 +497,19 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         dll_dir = os.path.join(self.apr_util_path, 'bin')
         debug_dll_dir = None
 
+    bin_files = os.listdir(dll_dir)
+    if debug_dll_dir:
+      debug_bin_files = os.listdir(debug_dll_dir)
+    else:
+      debug_bin_files = bin_files 
+
+    extra_bin = []
+
+    for bin in bin_files:
+      if bin in debug_bin_files:
+        if re.match('^(lib)?aprutil[-_].*' + suffix + '(d)?.dll$', bin):
+          extra_bin.append(bin)
+
     self._libraries['aprutil'] = SVNCommonLibrary('apr-util', inc_path, lib_dir,
                                                    lib_name,
                                                    aprutil_version,
@@ -486,7 +517,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                    dll_dir=dll_dir,
                                                    dll_name=dll_name,
                                                    debug_dll_dir=debug_dll_dir,
-                                                   defines=defines)
+                                                   defines=defines,
+                                                   extra_bin=extra_bin)
 
     # And now find expat
     # If we have apr-util as a source location, it is in a subdir.
@@ -499,14 +531,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_path = os.path.join(self.apr_util_path, 'include')
       lib_dir = os.path.join(self.apr_util_path, 'lib')
       debug_lib_dir = None
-      
+
     version_file_path = os.path.join(inc_path, 'expat.h')
 
     if not os.path.exists(version_file_path):
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
       sys.stderr.write("Use '--with-apr-util' option to configure APR-Util's XML location.\n");
       sys.exit(1)
-      
+
     txt = open(version_file_path).read()
 
     vermatch = re.search(r'^\s*#define\s+XML_MAJOR_VERSION\s+(\d+)', txt, re.M)
@@ -518,13 +550,129 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+XML_MICRO_VERSION\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
 
+    # apr-Util 0.9-1.4 compiled expat to 'xml.lib', but apr-util 1.5 switched
+    # to the more common 'libexpat.lib'
+    libname = 'libexpat.lib'
+    if not os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
+      libname = 'xml.lib'
+
     version = (major, minor, patch)
     xml_version = '%d.%d.%d' % version
 
     self._libraries['xml'] = SVNCommonLibrary('expat', inc_path, lib_dir,
-                                               'xml.lib', xml_version,
+                                               libname, xml_version,
                                                debug_lib_dir = debug_lib_dir,
                                                defines=['XML_STATIC'])
+
+  def _find_httpd(self, show_warning):
+    "Find Apache HTTPD and version"
+
+    minimal_httpd_version = (2, 0, 0)
+    if not self.httpd_path:
+      return
+
+    inc_base = os.path.join(self.httpd_path, 'include')
+
+    if os.path.isfile(os.path.join(inc_base, 'apache26', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache26')
+    elif os.path.isfile(os.path.join(inc_base, 'apache24', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache24')
+    elif os.path.isfile(os.path.join(inc_base, 'apache22', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache22')
+    elif os.path.isfile(os.path.join(inc_base, 'apache20', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache20')
+    elif os.path.isfile(os.path.join(inc_base, 'apache2', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache2')
+    elif os.path.isfile(os.path.join(inc_base, 'apache', 'ap_release.h')):
+      inc_path = os.path.join(inc_base, 'apache')
+    elif os.path.isfile(os.path.join(inc_base, 'ap_release.h')):
+      inc_path = inc_base
+    else:
+      if show_warning:
+        print('WARNING: \'ap_release.h\' not found')
+        print("Use '--with-httpd' to configure openssl location.");
+      return
+
+    version_file_path = os.path.join(inc_path, 'ap_release.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MAJORVERSION_NUMBER\s+(\d+)',
+                         txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MINORVERSION_NUMBER\s+(\d+)',
+                         txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+AP_SERVER_PATCHLEVEL_NUMBER\s+(\d+)',
+                         txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+    httpd_version = '%d.%d.%d' % version
+
+    if version < minimal_httpd_version:
+      if show_warning:
+        print("WARNING: httpd %s or higher is required "
+                        "(%s found)\n" % (
+                          '.'.join(str(v) for v in minimal_httpd_version),
+                          httpd_version))
+      return
+
+    lib_name = 'libhttpd.lib'
+    lib_base = self.httpd_path
+
+    debug_lib_dir = None
+
+    if os.path.isfile(os.path.join(lib_base, 'lib', lib_name)):
+      # Install location
+      lib_dir = os.path.join(lib_base, 'lib')
+    elif os.path.isfile(os.path.join(lib_base, 'Release', lib_name)):
+      # Source location
+      lib_dir = os.path.join(lib_base, 'Release')
+      if os.path.isfile(os.path.join(lib_base, 'Debug', lib_name)):
+        debug_lib_dir = os.path.join(lib_base, 'Debug')
+
+    # Our modules run inside httpd, so we don't have to find binaries
+
+    self._libraries['httpd'] = SVNCommonLibrary('httpd', inc_path, lib_dir, lib_name,
+                                                httpd_version,
+                                                debug_lib_dir=debug_lib_dir,
+                                                defines=['AP_DECLARE_EXPORT'])
+
+    # And now find mod_dav
+
+    if os.path.isfile(os.path.join(inc_path, 'mod_dav.h')):
+      # Install location, we are lucky
+      inc_path = inc_path
+    elif os.path.isfile(os.path.join(lib_base, 'modules/dav/main/mod_dav.h')):
+      # Source location
+      inc_path = os.path.join(lib_base, 'modules/dav/main')
+    else:
+      if show_warning:
+        print("WARNING: Can't find mod_dav.h in the httpd directory")
+        return
+
+    lib_name = 'mod_dav.lib'
+    if os.path.isfile(os.path.join(lib_dir, lib_name)):
+      # Same location as httpd
+      lib_dir = lib_dir
+    elif os.path.isfile(os.path.join(lib_base, 'modules/dav/main/Release', lib_name)):
+      # Source location
+      lib_dir = os.path.join(lib_base, 'modules/dav/main/Release')
+
+      if os.path.isfile(os.path.join(lib_base, 'modules/dav/main/Debug', lib_name)):
+        debug_lib_dir = os.path.join(lib_base, 'modules/dav/main/Debug')
+      else:
+        debug_lib_dir = None
+    else:
+      if show_warning:
+        print("WARNING: Can't find mod_dav.lib in the httpd directory")
+        return
+
+    self._libraries['mod_dav'] = SVNCommonLibrary('mod_dav', inc_path, lib_dir, lib_name,
+                                                  httpd_version,
+                                                  debug_lib_dir=debug_lib_dir)
 
   def _find_zlib(self):
     "Find the ZLib library and version"
@@ -732,8 +880,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       line = fp.readline()
       if line:
         perl_version = line.strip()
-        perlv = perl_version.split('.')
-        perl_lib = 'perl%s%s.lib' % (perlv[0], perlv[1])
+        perl_ver = perl_version.split('.')
+        perl_lib = 'perl%s%s.lib' % (perl_ver[0], perl_ver[1])
       else:
         return
 
@@ -744,8 +892,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     finally:
       fp.close()
 
+    perl_ver = tuple(map(int, perl_ver))
+    forced_includes = []
+
+    if perl_ver >= (5, 18, 0):
+      forced_includes.append('swigutil_pl__pre_perl.h')
+
     self._libraries['perl'] = SVNCommonLibrary('perl', inc_dir, lib_dir,
-                                               perl_lib, perl_version)
+                                               perl_lib, perl_version,
+                                               forced_includes=forced_includes)
 
   def _find_ruby(self, show_warnings):
     "Find the right Ruby library name to link swig bindings with"

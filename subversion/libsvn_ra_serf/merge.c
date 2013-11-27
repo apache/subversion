@@ -294,7 +294,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
   svn_ra_serf__add_open_tag_buckets(body, alloc,
                                     "S:lock-token-list",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   for (hi = apr_hash_first(pool, lock_tokens);
        hi;
@@ -313,9 +313,9 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       if (parent && !svn_relpath_skip_ancestor(parent, key))
         continue;
 
-      svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);
+      svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", SVN_VA_NULL);
 
-      svn_ra_serf__add_open_tag_buckets(body, alloc, "lock-path", NULL);
+      svn_ra_serf__add_open_tag_buckets(body, alloc, "lock-path", SVN_VA_NULL);
       svn_ra_serf__add_cdata_len_buckets(body, alloc, path.data, path.len);
       svn_ra_serf__add_close_tag_buckets(body, alloc, "lock-path");
 
@@ -341,9 +341,9 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:merge",
                                     "xmlns:D", "DAV:",
-                                    NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:source", NULL);
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
+                                    SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:source", SVN_VA_NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", SVN_VA_NULL);
 
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
                                      ctx->merge_resource_url,
@@ -355,7 +355,7 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_tag_buckets(body_bkt, "D:no-auto-merge", NULL, alloc);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:no-checkout", NULL, alloc);
 
-  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", SVN_VA_NULL);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:checked-in", NULL, alloc);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:" SVN_DAV__VERSION_NAME, NULL, alloc);
   svn_ra_serf__add_tag_buckets(body_bkt, "D:resourcetype", NULL, alloc);

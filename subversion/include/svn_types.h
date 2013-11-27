@@ -89,6 +89,24 @@ extern "C" {
 # endif
 #endif
 
+/** Macro used to mark functions that require a final null sentinel argument.
+ *
+ * @since New in 1.9.
+ */
+#ifndef SVN_NEEDS_SENTINEL_NULL
+#  if defined(__has_attribute)
+#    if __has_attribute(__sentinel__)
+#      define SVN_NEEDS_SENTINEL_NULL __attribute__((sentinel))
+#    else
+#      define SVN_NEEDS_SENTINEL_NULL
+#    endif
+#  elif defined(__GNUC__) && (__GNUC__ >= 4)
+#    define SVN_NEEDS_SENTINEL_NULL __attribute__((sentinel))
+#  else
+#    define SVN_NEEDS_SENTINEL_NULL
+#  endif
+#endif
+
 
 /** Indicate whether the current platform supports unaligned data access.
  *

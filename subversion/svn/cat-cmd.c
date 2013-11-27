@@ -84,7 +84,7 @@ svn_cl__cat(apr_getopt_t *os,
                            SVN_ERR_ENTRY_NOT_FOUND,
                            SVN_ERR_CLIENT_IS_DIRECTORY,
                            SVN_ERR_FS_NOT_FOUND,
-                           SVN_NO_ERROR));
+                           0));
     }
   svn_pool_destroy(subpool);
 

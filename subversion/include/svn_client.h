@@ -5716,10 +5716,12 @@ svn_client_ls(apr_hash_t **dirents,
 /**
  * Output the content of a file.
  *
- * @param[in] out           The stream to which the content will be written.
- * @param[in] path_or_url   The path or URL of the file.
- * @param[in] peg_revision  The peg revision.
- * @param[in] revision  The operative revision.
+ * @param[out] props           Optional output argument to obtain properties.
+ * @param[in] out              The stream to which the content will be written.
+ * @param[in] path_or_url      The path or URL of the file.
+ * @param[in] peg_revision     The peg revision.
+ * @param[in] revision         The operative revision.
+ * @param[in] expand_keywords  When true, keywords (when set) are expanded.
  * @param[in] ctx   The standard client context, used for possible
  *                  authentication.
  * @param[in] pool  Used for any temporary allocation.
@@ -5734,11 +5736,29 @@ svn_client_ls(apr_hash_t **dirents,
  *         determined. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.2.
- *
  * @see #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_client_cat3(apr_hash_t **props,
+                svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t expand_keywords,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_cat3() except without the option of directly
+ * reading the properties, and with @a expand_keywords always TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cat2(svn_stream_t *out,
                 const char *path_or_url,
