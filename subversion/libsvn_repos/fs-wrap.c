@@ -67,7 +67,9 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
   SVN_ERR(svn_repos__hooks_pre_commit(repos, hooks_env, txn_name, pool));
 
-  /* Remove any ephemeral transaction properties. */
+  /* Remove any ephemeral transaction properties.  If the commit fails
+     we will attempt to restore the properties but if that fails, or
+     the process is killed, the properties will be lost. */
   SVN_ERR(svn_fs_txn_proplist(&props, txn, pool));
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
@@ -88,7 +90,25 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   /* Commit. */
   err = svn_fs_commit_txn2(conflict_p, new_rev, txn, TRUE, pool);
   if (! SVN_IS_VALID_REVNUM(*new_rev))
-    return err;
+    {
+      /* The commit failed, try to restore the ephemeral properties. */
+      iterpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this(hi, &key, NULL, &val);
+
+          svn_pool_clear(iterpool);
+
+          if (strncmp(key, SVN_PROP_TXN_PREFIX,
+                      (sizeof(SVN_PROP_TXN_PREFIX) - 1)) == 0)
+            svn_error_clear(svn_fs_change_txn_prop(txn, key, val, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+      
+      return err;
+    }
 
   /* Run post-commit hooks. */
   if ((err2 = svn_repos__hooks_post_commit(repos, hooks_env,
