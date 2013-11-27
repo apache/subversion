@@ -2231,7 +2231,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
   apr_array_header_t *error_summary;
-  int i;
   svn_boolean_t found_corruption = FALSE;
   svn_cache__t *verified_dirents_cache = NULL;
 
@@ -2348,6 +2347,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   /* Show the summary. */
   if (notify_func && keep_going && found_corruption)
     {
+      int i;
+
       notify_verification_summary(err, notify_func, notify_baton, iterpool);
       for (i = 0; i < error_summary->nelts; i++)
         {
