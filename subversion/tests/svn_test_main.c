@@ -489,10 +489,11 @@ test_thread(apr_thread_t *tid, void *data)
   return NULL;
 }
 
-/* Log an error with message MSG if the APR status RV is not 0.
+/* Log an error with message MSG if the APR status of EXPR is not 0.
  */
-#define CHECK_STATUS(rv,msg) \
+#define CHECK_STATUS(expr,msg) \
   do { \
+    apr_status_t rv = (expr); \
     if (rv) \
       { \
         svn_error_t *svn_err__temp = svn_error_wrap_apr(rv, msg); \
