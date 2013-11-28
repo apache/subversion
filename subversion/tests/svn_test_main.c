@@ -514,7 +514,6 @@ do_tests_concurrently(const char *progname,
                       svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
-  apr_status_t status;
   int i;
   apr_thread_t **threads;
 
