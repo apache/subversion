@@ -2101,18 +2101,19 @@ def verify_denormalized_names(sbox):
     "WARNING 0x0006: Duplicate representation of path '/Q/.*lpha'"
                                   # A/{Eacute}
     " in svn:mergeinfo property of 'A/.*'",
-    ".*Verified revision 6."]
+    ".*Verified revision 6.",
+    ".*Verified revision 7."]
 
   # The BDB backend doesn't do global metadata verification.
   if not svntest.main.is_fs_type_bdb():
     expected_output_regex_list.insert(0, ".*Verifying repository metadata")
 
   exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
+  exp_err = svntest.verify.ExpectedOutput([])
 
-  if svntest.verify.verify_outputs(
-      "Unexpected error while running 'svnadmin verify'.",
-      output, errput, exp_out, None):
-    raise svntest.Failure
+  svntest.verify.verify_outputs(
+    "Unexpected error while running 'svnadmin verify'.",
+    output, errput, exp_out, exp_err)
 
 
 ########################################################################
