@@ -489,6 +489,18 @@ test_thread(apr_thread_t *tid, void *data)
   return NULL;
 }
 
+/* Log an error with message MSG if the APR status RV is not 0.
+ */
+#define CHECK_STATUS(rv,msg) \
+  do { \
+    if (rv) \
+      { \
+        svn_error_t *svn_err__temp = svn_error_wrap_apr(rv, msg); \
+        svn_handle_error2(svn_err__temp, stdout, FALSE, "svn_tests: "); \
+        svn_error_clear(svn_err__temp); \
+      } \
+  } while (0);
+
 /* Execute all ARRAY_SIZE tests concurrently using MAX_THREADS threads.
    Pass PROGNAME and OPTS to the individual tests.  Return TRUE if at least
    one of the tests failed.  Allocate all data in POOL.
@@ -506,6 +518,7 @@ do_tests_concurrently(const char *progname,
   int i;
   apr_thread_t **threads;
 
+  /* Prepare thread parameters. */
   test_params_t params;
   params.got_error = FALSE;
   params.opts = opts;
@@ -513,34 +526,23 @@ do_tests_concurrently(const char *progname,
   params.test_num = 1;
   params.test_count = array_size;
 
+  /* Start all threads. */
   threads = apr_pcalloc(pool, max_threads * sizeof(*threads));
   for (i = 0; i < max_threads; ++i)
     {
-      status = apr_thread_create(&threads[i], NULL, test_thread, &params,
-                                 pool);
-      if (status)
-        {
-          printf("creating test thread failed.\n");
-          return TRUE;
-        }
+      CHECK_STATUS(apr_thread_create(&threads[i], NULL, test_thread, &params,
+                                     pool),
+                   "creating test thread failed.\n");
     }
 
-  /* Wait for all tasks (tests) to complete.  As it turns out, this is the
-     variant with the least run-time overhead to the test threads. */
+  /* Wait for all tasks (tests) to complete. */
   for (i = 0; i < max_threads; ++i)
     {
       apr_status_t result;
-      status = apr_thread_join(&result, threads[i]);
-      if (status)
-        {
-          printf("waiting for test thread to finish failed.\n");
-          return TRUE;
-        }
-      if (result)
-        {
-          printf("test thread returned an error.\n");
-          return TRUE;
-        }
+      CHECK_STATUS(apr_thread_join(&result, threads[i]),
+                   "Waiting for test thread to finish failed.");
+      CHECK_STATUS(result,
+                   "Test thread returned an error.");
     }
   
   return params.got_error != FALSE;
