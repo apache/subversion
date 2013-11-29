@@ -54,6 +54,8 @@ Option in fsfs.conf:
 
         Default value: false
 
+Note that this option cannot be enabled by default, since it might
+prevent users from modifying existing files.
 
 
 Glossary
