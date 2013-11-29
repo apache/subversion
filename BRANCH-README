@@ -1,68 +1,52 @@
-The purpose of this [fsfs-ucsnorm] branch is to implement two optional
-checks related to Unicode normalisation to FSFS.
+Enabling Normalized Path Lookup in FSFS
+=======================================
+
+The purpose of this [fsfs-ucsnorm] branch is to implement
+normalization-insensitive path lookups in FSFS. This will prevent the
+creation of paths that differ only in normalization, and will also
+remove the current constraint that paths used in the FS API must be
+byte-for-byte identical to those stored in the filesystem.
+
+The filesystem will *not* impose a particular normalization form, and
+it *will* preserve whatever representation it receives when a new path
+is created.
+
+This option would be enabled by default for all new FSFS-based
+repositories and *disabled* during repository format upgrade. The
+option can be disabled or enabled at any time during the lifetime of
+the repository; however, it is not safe to enable it without first
+running:
+
+        svnadmin verify REPOS --check-ucs-normalization
 
 
-Option: Prevent name collisions
-===============================
+Proposed argument to 'svnadmin create':
 
-If this option is enabled, FSFS will reject operations that would
-create two different representations of the same name in the same
-directory. This will prevent situations where a user could see more
-than one form of the name in a directory listing:
+        svnadmin create REPOS --disable-normalized-lookup
 
-        /Namárië.txt
-        /Namárië.txt
-        /Namárië.txt
-        /Namárië.txt
+Proposed argument to 'svnadmin upgrade':
 
-Note that the representations of these names are all different.
+        svnadmin upgrade REPOS --enable-normalized-lookup
 
-FSFS would not require newly created paths to be normalised, nor would
-it normalise them when thy are stored; it would only forbid collisions
-of identical names.
+Proposed option in fsfs.conf:
 
-Option in fsfs.conf:
-
-        [path-representation]
-        prevent-name-collisions = true|false
+        [normalization]
+        enable-normalized-lookup = true|false
 
         Default value: true
 
-Note: turning on this option would have some performance impact since
-all paths would have to be normalised for lookups.
 
+References
+==========
 
-Option: Require normalised paths
-================================
-
-If this option is enabled, FSFS will reject operations that would
-create paths in the filesystem that are not in NFC. For example, the
-attempt to create a file called
-
-        /Namárië.txt
-
-would fail, because the name is in NFD; but creating a file named
-
-        /Namárië.txt
-
-would succeed.
-
-Option in fsfs.conf:
-
-        [path-representation]
-        require-normalized-paths = true|false
-
-        Default value: false
-
-Note that this option cannot be enabled by default, since it might
-prevent users from modifying existing files.
-
-
-Glossary
-========
-
-NFC     Unicode Normalization Form C
+Unicode Normalization Forms
         http://unicode.org/reports/tr15/#Norm_Forms
 
-NFD     Unicode Normalization Form D
-        http://unicode.org/reports/tr15/#Norm_Forms
+Normalization Insensitivity (blog post)
+        https://blogs.oracle.com/nico/entry/normalization_insensitivity_should_be_the
+
+zfs(1M)
+        http://www.freebsd.org/cgi/man.cgi?query=zfs&apropos=0&sektion=0&manpath=FreeBSD+8.1-RELEASE&format=html
+
+zfs_share(1M)
+        http://docs.oracle.com/cd/E23824_01/html/821-1462/zfs-share-1m.html#scrolltoc

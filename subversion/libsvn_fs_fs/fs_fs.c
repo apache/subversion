@@ -616,6 +616,32 @@ write_config(svn_fs_t *fs,
 "### unless you often modify revprops after packing."                        NL
 "### Compressing packed revprops is disabled by default."                    NL
 "# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
+""                                                                           NL
+"[" CONFIG_SECTION_NORMALIZATION "]"                                         NL
+"### Subversion decrees that paths in the repository must be in the Unicode" NL
+"### character set, and further requires that they are encoded in UTF-8."    NL
+"### Unfortunately it does not prescribe whether or how the names should"    NL
+"### be normalized. Consequently, it is possible to create two paths that"   NL
+"### appear to be identical on screen, but contain different Unicode code"   NL
+"### points for the same glyphs. Apart from being confusing, this is not"    NL
+"### supported by some filesystems (e.g., OSX HFS+, ZFS with normalization"  NL
+"### enabled)."                                                              NL
+"###"                                                                        NL
+"### When this option is enabled, FSFS will perform all path lookups in a"   NL
+"### normalization-insensitive way. This will prevent the creation of new"   NL
+"### paths with conflicting names, and will also remove the restriction on"  NL
+"### clients to send paths in exactly the same form as is stored in the"     NL
+"### filesystem. The representation of new paths will still be preserved;"   NL
+"### FSFS will not normalize them, and will return them from queries in the" NL
+"### same form in which they were created."                                  NL
+"### Normalized lookup is enabled by default for new FSFS repositories."     NL
+"# " CONFIG_OPTION_ENABLE_NORMALIZED_LOOKUP " = true"                        NL
+"###"                                                                        NL
+"### WARNING: Before enabling this option for existing repositories, you "   NL
+"###          must verify that there are no extant name collisions by"       NL
+"###          running the following command:"                                NL
+"###"                                                                        NL
+"###              svnadmin verify <REPOS-PATH> --check-ucs-normalization"    NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),

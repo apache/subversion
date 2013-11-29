@@ -101,6 +101,8 @@ extern "C" {
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
+#define CONFIG_SECTION_NORMALIZATION     "normalization"
+#define CONFIG_OPTION_ENABLE_NORMALIZED_LOOKUP  "enable-normalized-lookup"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
