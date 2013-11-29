@@ -1,0 +1,66 @@
+The purpose of this [fsfs-ucsnorm] branch is to implement two optional
+checks related to Unicode normalisation to FSFS.
+
+
+Option: Prevent name collisions
+===============================
+
+If this option is enabled, FSFS will reject operations that would
+create two different representations of the same name in the same
+directory. This will prevent situations where a user could see more
+than one form of the name in a directory listing:
+
+        /Namárië.txt
+        /Namárië.txt
+        /Namárië.txt
+        /Namárië.txt
+
+Note that the representations of these names are all different.
+
+FSFS would not require newly created paths to be normalised, nor would
+it normalise them when thy are stored; it would only forbid collisions
+of identical names.
+
+Option in fsfs.conf:
+
+        [path-representation]
+        prevent-name-collisions = true|false
+
+        Default value: true
+
+Note: turning on this option would have some performance impact since
+all paths would have to be normalised for lookups.
+
+
+Option: Require normalised paths
+================================
+
+If this option is enabled, FSFS will reject operations that would
+create paths in the filesystem that are not in NFC. For example, the
+attempt to create a file called
+
+        /Namárië.txt
+
+would fail, because the name is in NFD; but creating a file named
+
+        /Namárië.txt
+
+would succeed.
+
+Option in fsfs.conf:
+
+        [path-representation]
+        require-normalized-paths = true|false
+
+        Default value: false
+
+
+
+Glossary
+========
+
+NFC     Unicode Normalization Form C
+        http://unicode.org/reports/tr15/#Norm_Forms
+
+NFD     Unicode Normalization Form D
+        http://unicode.org/reports/tr15/#Norm_Forms
