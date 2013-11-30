@@ -63,8 +63,8 @@
 
 /* A pool common to all FS objects.  See the documentation on the
    open/create functions in fs-loader.h and for svn_fs_initialize(). */
-static apr_pool_t *common_pool;
-static svn_mutex__t *common_pool_lock;
+static apr_pool_t *common_pool = NULL;
+static svn_mutex__t *common_pool_lock = NULL;
 static svn_atomic_t common_pool_initialized = FALSE;
 
 
@@ -372,6 +372,9 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
 static apr_status_t uninit(void *data)
 {
   common_pool = NULL;
+  common_pool_lock = NULL;
+  common_pool_initialized = 0;
+
   return APR_SUCCESS;
 }
 
