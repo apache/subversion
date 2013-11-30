@@ -52,7 +52,7 @@
    figure of 1000 is reasonable for VFAT filesystems, which are by far
    the worst performers in this area. */
 #ifndef SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR
-#define SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR 4
+#define SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR 1000
 #endif
 
 /* Begin deltification after a node history exceeded this this limit.
