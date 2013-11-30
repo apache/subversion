@@ -52,7 +52,7 @@
    figure of 1000 is reasonable for VFAT filesystems, which are by far
    the worst performers in this area. */
 #ifndef SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR
-#define SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR 1000
+#define SVN_FS_X_DEFAULT_MAX_FILES_PER_DIR 4
 #endif
 
 /* Begin deltification after a node history exceeded this this limit.
@@ -800,7 +800,7 @@ svn_fs_x__create(svn_fs_t *fs,
           case 6:
           case 7:
           case 8: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                  _("FSFS is not compatible with Subversion prior to 1.9"));
+                  _("FSX is not compatible with Subversion prior to 1.9"));
 
           default:format = SVN_FS_X__FORMAT_NUMBER;
         }
