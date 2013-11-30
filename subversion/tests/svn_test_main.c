@@ -442,7 +442,7 @@ typedef struct test_params_t
    catch segfaults.  All parameters are given as a test_params_t in DATA.
  */
 static void * APR_THREAD_FUNC
-test_thread(apr_thread_t *tid, void *data)
+test_thread(apr_thread_t *thread, void *data)
 {
   svn_boolean_t skip, xfail, wimp;
   svn_error_t *err = NULL;
@@ -486,6 +486,9 @@ test_thread(apr_thread_t *tid, void *data)
   /* release all test memory */
   svn_pool_destroy(pool);
 
+  /* End thread explicitly to prevent APR_INCOMPLETE return codes in
+     apr_thread_join(). */
+  apr_thread_exit(thread, 0);
   return NULL;
 }
 
@@ -538,7 +541,7 @@ do_tests_concurrently(const char *progname,
   /* Wait for all tasks (tests) to complete. */
   for (i = 0; i < max_threads; ++i)
     {
-      apr_status_t result;
+      apr_status_t result = 0;
       CHECK_STATUS(apr_thread_join(&result, threads[i]),
                    "Waiting for test thread to finish failed.");
       CHECK_STATUS(result,
