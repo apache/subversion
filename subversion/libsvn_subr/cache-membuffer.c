@@ -27,7 +27,6 @@
 
 #include "svn_pools.h"
 #include "svn_checksum.h"
-#include "md5.h"
 #include "svn_private_config.h"
 #include "cache.h"
 #include "svn_string.h"
