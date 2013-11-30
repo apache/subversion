@@ -259,11 +259,6 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_error_trace(svn_stream_puts(stream, translated));
 }
 
-/* Size that 90% of the lines we encounter will be not longer than.
-   used by stream_readline_bytewise() and stream_readline_chunky().
- */
-#define LINE_CHUNK_SIZE 80
-
 /* Guts of svn_stream_readline().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
  * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
@@ -286,7 +281,7 @@ stream_readline_bytewise(svn_stringbuf_t **stringbuf,
      optimize for the 90% case.  90% of the time, we can avoid the
      stringbuf ever having to realloc() itself if we start it out at
      80 chars.  */
-  str = svn_stringbuf_create_ensure(LINE_CHUNK_SIZE, pool);
+  str = svn_stringbuf_create_ensure(SVN__LINE_CHUNK_SIZE, pool);
 
   /* Read into STR up to and including the next EOL sequence. */
   match = eol;
@@ -330,7 +325,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
    * larger value because filling the buffer from the stream takes
    * time as well.
    */
-  char buffer[LINE_CHUNK_SIZE+1];
+  char buffer[SVN__LINE_CHUNK_SIZE+1];
 
   /* variables */
   svn_stream_mark_t *mark;
@@ -347,7 +342,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   SVN_ERR(svn_stream_mark(stream, &mark, pool));
 
   /* Read the first chunk. */
-  numbytes = LINE_CHUNK_SIZE;
+  numbytes = SVN__LINE_CHUNK_SIZE;
   SVN_ERR(svn_stream_read(stream, buffer, &numbytes));
   buffer[numbytes] = '\0';
 
@@ -359,7 +354,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
       *stringbuf = svn_stringbuf_ncreate(buffer, eol_pos - buffer, pool);
       total_parsed = eol_pos - buffer + eol_len;
     }
-  else if (numbytes < LINE_CHUNK_SIZE)
+  else if (numbytes < SVN__LINE_CHUNK_SIZE)
     {
       /* We hit EOF but not EOL.
        */
@@ -371,7 +366,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
     {
       /* A larger buffer for the string is needed. */
       svn_stringbuf_t *str;
-      str = svn_stringbuf_create_ensure(2*LINE_CHUNK_SIZE, pool);
+      str = svn_stringbuf_create_ensure(2*SVN__LINE_CHUNK_SIZE, pool);
       svn_stringbuf_appendbytes(str, buffer, numbytes);
       *stringbuf = str;
 
@@ -381,8 +376,8 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
       {
         /* Append the next chunk to the string read so far.
          */
-        svn_stringbuf_ensure(str, str->len + LINE_CHUNK_SIZE);
-        numbytes = LINE_CHUNK_SIZE;
+        svn_stringbuf_ensure(str, str->len + SVN__LINE_CHUNK_SIZE);
+        numbytes = SVN__LINE_CHUNK_SIZE;
         SVN_ERR(svn_stream_read(stream, str->data + str->len, &numbytes));
         str->len += numbytes;
         str->data[str->len] = '\0';
@@ -393,7 +388,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
          */
         eol_pos = strstr(str->data + str->len - numbytes - (eol_len-1), eol);
 
-        if ((numbytes < LINE_CHUNK_SIZE) && (eol_pos == NULL))
+        if ((numbytes < SVN__LINE_CHUNK_SIZE) && (eol_pos == NULL))
         {
           /* We hit EOF instead of EOL. */
           *eof = TRUE;
