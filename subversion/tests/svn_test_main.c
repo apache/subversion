@@ -52,11 +52,8 @@
 
 #include "svn_private_config.h"
 
-#if APR_HAS_THREADS && APR_VERSION_AT_LEAST(1,3,0)
-#  include <apr_thread_pool.h>
-#  define HAVE_THREADPOOLS 1
-#else
-#  define HAVE_THREADPOOLS 0
+#if APR_HAS_THREADS
+#  include <apr_thread_proc.h>
 #endif
 
 /* Some Subversion test programs may want to parse options in the
@@ -420,7 +417,7 @@ do_test_num(const char *progname,
   return skip_cleanup;
 }
 
-#if HAVE_THREADPOOLS
+#if APR_HAS_THREADS
 
 /* Per-test parameters used by test_thread */
 typedef struct test_params_t
@@ -428,66 +425,85 @@ typedef struct test_params_t
   /* Name of the application */
   const char *progname;
 
-  /* Number / index of the test to execute */
-  int test_num;
+  /* Total number of tests to execute */
+  svn_atomic_t test_count;
 
   /* Global test options as provided by main() */
   svn_test_opts_t *opts;
 
-  /* Thread-safe parent pool for the test-specific pool.  We expect the
-     test thread to create a sub-pool and destroy it after test completion. */
-  apr_pool_t *pool;
-
   /* Reference to the global failure flag.  Set this if any test failed. */
-  svn_atomic_t *got_error;
+  svn_atomic_t got_error;
 
-  /* Reference to the global completed test counter. */
-  svn_atomic_t *run_count;
+  /* Test to execute next. */
+  svn_atomic_t test_num;
 } test_params_t;
 
 /* Thread function similar to do_test_num() but with fewer options.  We do
    catch segfaults.  All parameters are given as a test_params_t in DATA.
  */
 static void * APR_THREAD_FUNC
-test_thread(apr_thread_t *tid, void *data)
+test_thread(apr_thread_t *thread, void *data)
 {
   svn_boolean_t skip, xfail, wimp;
   svn_error_t *err = NULL;
   const struct svn_test_descriptor_t *desc;
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
   test_params_t *params = data;
+  svn_atomic_t test_num;
 
-  apr_pool_t *test_pool = svn_pool_create(params->pool);
+  apr_pool_t *pool
+    = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
-  desc = &test_funcs[params->test_num];
-  skip = desc->mode == svn_test_skip;
-  xfail = desc->mode == svn_test_xfail;
-  wimp = xfail && desc->wip;
-  run_this_test = mode_filter == svn_test_all || mode_filter == desc->mode;
+  for (test_num = svn_atomic_inc(&params->test_num);
+       test_num <= params->test_count;
+       test_num = svn_atomic_inc(&params->test_num))
+    {
+      svn_pool_clear(pool);
 
-  /* Do test */
-  if (skip || !run_this_test)
-    ; /* pass */
-  else if (desc->func2)
-    err = (*desc->func2)(test_pool);
-  else
-    err = (*desc->func_opts)(params->opts, test_pool);
+      desc = &test_funcs[test_num];
+      skip = desc->mode == svn_test_skip;
+      xfail = desc->mode == svn_test_xfail;
+      wimp = xfail && desc->wip;
+      run_this_test = mode_filter == svn_test_all
+                   || mode_filter == desc->mode;
 
-  /* Write results to console */
-  svn_error_clear(svn_mutex__lock(log_mutex));
-  if (log_results(params->progname, params->test_num, FALSE, run_this_test,
-                  skip, xfail, wimp, err, desc->msg, desc))
-    svn_atomic_set(params->got_error, TRUE);
-  svn_error_clear(svn_mutex__unlock(log_mutex, NULL));
+      /* Do test */
+      if (skip || !run_this_test)
+        ; /* pass */
+      else if (desc->func2)
+        err = (*desc->func2)(pool);
+      else
+        err = (*desc->func_opts)(params->opts, pool);
+
+      /* Write results to console */
+      svn_error_clear(svn_mutex__lock(log_mutex));
+      if (log_results(params->progname, test_num, FALSE, run_this_test,
+                      skip, xfail, wimp, err, desc->msg, desc))
+        svn_atomic_set(&params->got_error, TRUE);
+      svn_error_clear(svn_mutex__unlock(log_mutex, NULL));
+    }
 
   /* release all test memory */
-  svn_pool_destroy(test_pool);
+  svn_pool_destroy(pool);
 
-  /* one more test completed */
-  svn_atomic_inc(params->run_count);
-    
+  /* End thread explicitly to prevent APR_INCOMPLETE return codes in
+     apr_thread_join(). */
+  apr_thread_exit(thread, 0);
   return NULL;
 }
+
+/* Log an error with message MSG if the APR status of EXPR is not 0.
+ */
+#define CHECK_STATUS(expr,msg) \
+  do { \
+    apr_status_t rv = (expr); \
+    if (rv) \
+      { \
+        svn_error_t *svn_err__temp = svn_error_wrap_apr(rv, msg); \
+        svn_handle_error2(svn_err__temp, stdout, FALSE, "svn_tests: "); \
+        svn_error_clear(svn_err__temp); \
+      } \
+  } while (0);
 
 /* Execute all ARRAY_SIZE tests concurrently using MAX_THREADS threads.
    Pass PROGNAME and OPTS to the individual tests.  Return TRUE if at least
@@ -502,56 +518,37 @@ do_tests_concurrently(const char *progname,
                       svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
-  apr_thread_pool_t *threads;
-  apr_status_t status;
-  svn_atomic_t got_error = FALSE;
   int i;
-  svn_atomic_t run_count = 0;
+  apr_thread_t **threads;
 
-  /* Create the thread pool. */
-  status = apr_thread_pool_create(&threads, max_threads, max_threads, pool);
-  if (status)
+  /* Prepare thread parameters. */
+  test_params_t params;
+  params.got_error = FALSE;
+  params.opts = opts;
+  params.progname = progname;
+  params.test_num = 1;
+  params.test_count = array_size;
+
+  /* Start all threads. */
+  threads = apr_pcalloc(pool, max_threads * sizeof(*threads));
+  for (i = 0; i < max_threads; ++i)
     {
-      printf("apr_thread_pool_create() failed.\n");
-      return TRUE;
+      CHECK_STATUS(apr_thread_create(&threads[i], NULL, test_thread, &params,
+                                     pool),
+                   "creating test thread failed.\n");
     }
 
-  /* Don't queue requests unless we reached the worker thread limit. */
-  apr_thread_pool_threshold_set(threads, 0);
-
-  /* Generate one task per test and queue them in the thread pool. */
-  for (i = 1; i <= array_size; i++)
+  /* Wait for all tasks (tests) to complete. */
+  for (i = 0; i < max_threads; ++i)
     {
-      test_params_t *params = apr_pcalloc(pool, sizeof(*params));
-      params->got_error = &got_error;
-      params->opts = opts;
-      params->pool = pool;
-      params->progname = progname;
-      params->test_num = i;
-      params->run_count = &run_count;
-
-      apr_thread_pool_push(threads, test_thread, params, 0, NULL);
+      apr_status_t result = 0;
+      CHECK_STATUS(apr_thread_join(&result, threads[i]),
+                   "Waiting for test thread to finish failed.");
+      CHECK_STATUS(result,
+                   "Test thread returned an error.");
     }
-
-  /* Wait for all tasks (tests) to complete.  As it turns out, this is the
-     variant with the least run-time overhead to the test threads. */
-  while (   apr_thread_pool_tasks_count(threads)
-         || apr_thread_pool_busy_count(threads))
-    apr_thread_yield();
   
-  /* For some unknown reason, cleaning POOL (TEST_POOL in main()) does not
-     call the following reliably for all users. */
-  apr_thread_pool_destroy(threads);
-
-  /* Verify that we didn't skip any tasks. */
-  if (run_count != array_size)
-    {
-      printf("Parallel test failure: only %d of %d tests executed.\n",
-             (int)run_count, array_size);
-      return TRUE;
-    }
-
-  return got_error != FALSE;
+  return params.got_error != FALSE;
 }
 
 #endif
@@ -798,7 +795,7 @@ main(int argc, const char *argv[])
               }
             break;
           }
-#if HAVE_THREADPOOLS
+#if APR_HAS_THREADS
         case parallel_opt:
           parallel = TRUE;
           break;
@@ -888,7 +885,7 @@ main(int argc, const char *argv[])
               svn_pool_clear(cleanup_pool);
             }
         }
-#if HAVE_THREADPOOLS
+#if APR_HAS_THREADS
       else
         {
           got_error = do_tests_concurrently(prog_name, array_size,

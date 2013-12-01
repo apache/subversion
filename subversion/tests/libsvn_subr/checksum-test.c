@@ -303,5 +303,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "zero checksum cross-type matching"),
     SVN_TEST_OPTS_PASS(zlib_expansion_test,
                        "zlib expansion test (zlib regression)"),
+    SVN_TEST_PASS2(zero_cross_match,
+                   "zero checksum cross-type matching"),
     SVN_TEST_NULL
   };

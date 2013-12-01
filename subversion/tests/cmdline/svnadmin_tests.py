@@ -1964,21 +1964,26 @@ def verify_keep_going(sbox):
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  if (svntest.main.options.server_minor_version < 9):
-    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                             ".*Verified revision 0.",
-                                             ".*Verified revision 1.",
-                                             ".*Error verifying revision 2.",
-                                             ".*Error verifying revision 3."])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                             "svnadmin: E165011:.*"], False)
-  else:
+  if svntest.main.is_fs_log_addressing():
     exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0",
                                              ".*Verified revision 0.",
                                              ".*Verified revision 1.",
                                              ".*Verified revision 2.",
                                              ".*Verified revision 3."])
     exp_err = svntest.verify.RegexListOutput(["svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                              ".*Verified revision 0.",
+                                              ".*Verified revision 1.",
+                                              ".*Error verifying revision 2.",
+                                              ".*Error verifying revision 3.",
+                                              ".*",
+                                              ".*Summary.*",
+                                              ".*r2: E160004:.*",
+                                              ".*r3: E160004:.*",
+                                              ".*r3: E160004:.*"])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                              "svnadmin: E165011:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -2095,10 +2100,28 @@ def verify_invalid_path_changes(sbox):
                                            ".*Error verifying revision 16.",
                                            ".*Verified revision 17.",
                                            ".*Error verifying revision 18.",
-                                           ".*Verified revision 19."])
+                                           ".*Verified revision 19.",
+                                           ".*",
+                                           ".*Summary.*",
+                                           ".*r2: E160020:.*",
+                                           ".*r2: E160020:.*",
+                                           ".*r4: E160013:.*",
+                                           ".*r6: E160013:.*",
+                                           ".*r6: E160013:.*",
+                                           ".*r10: E160013:.*",
+                                           ".*r10: E160013:.*",
+                                           ".*r12: E145001:.*",
+                                           ".*r12: E145001:.*",
+                                           ".*r14: E160013:.*",
+                                           ".*r14: E160013:.*",
+                                           ".*r16: E145001:.*",
+                                           ".*r16: E145001:.*",
+                                           ".*r18: E160013:.*",
+                                           ".*r18: E160013:.*"])
 
   exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
-                                            "svnadmin: E165011:.*"], False)
+                                            "svnadmin: E145001:.*",
+                                            "svnadmin: E160013:.*"], False)
 
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
@@ -2108,14 +2131,16 @@ def verify_invalid_path_changes(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  if repo_format(sbox) < 7:
-    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                            ".*Verified revision 0.",
-                                            ".*Verified revision 1.",
-                                            ".*Error verifying revision 2."])
-  else:
+  if svntest.main.is_fs_log_addressing():
     exp_out = svntest.verify.RegexListOutput([first_line])
     exp_err = svntest.verify.RegexListOutput(["svnadmin: E160058:.*",
+                                              "svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                              ".*Verified revision 0.",
+                                              ".*Verified revision 1.",
+                                              ".*Error verifying revision 2."])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
                                               "svnadmin: E165011:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
@@ -2169,7 +2194,8 @@ def verify_denormalized_names(sbox):
     "WARNING 0x0006: Duplicate representation of path '/Q/.*lpha'"
                                   # A/{Eacute}
     " in svn:mergeinfo property of 'A/.*'",
-    ".*Verified revision 6."]
+    ".*Verified revision 6.",
+    ".*Verified revision 7."]
 
   # The BDB backend doesn't do global metadata verification.
   if not svntest.main.is_fs_type_bdb():
@@ -2179,11 +2205,11 @@ def verify_denormalized_names(sbox):
       expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0 ...")
 
   exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
+  exp_err = svntest.verify.ExpectedOutput([])
 
-  if svntest.verify.verify_outputs(
-      "Unexpected error while running 'svnadmin verify'.",
-      output, errput, exp_out, None):
-    raise svntest.Failure
+  svntest.verify.verify_outputs(
+    "Unexpected error while running 'svnadmin verify'.",
+    output, errput, exp_out, exp_err)
 
 
 ########################################################################

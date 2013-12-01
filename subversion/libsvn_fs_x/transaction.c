@@ -2852,23 +2852,27 @@ verify_locks(svn_fs_t *fs,
 
 /* If CHANGE is move, verify that there is no other move with the same
    copy-from path in SOURCE_PATHS already (parent or sub-node moves are fine).
-   Add the source path to SOURCE_PATHS after successful verification. */
+   Add the source path to SOURCE_PATHS after successful verification.
+   Allocate the hashed strings in POOL. */
 static svn_error_t *
 check_for_duplicate_move_source(apr_hash_t *source_paths,
-                                change_t *change)
+                                svn_fs_path_change2_t *change,
+                                apr_pool_t *pool)
 {
-  if (   change->info.change_kind == svn_fs_path_change_move
-      || change->info.change_kind == svn_fs_path_change_movereplace)
-    if (change->info.copyfrom_path)
+  if (   change->change_kind == svn_fs_path_change_move
+      || change->change_kind == svn_fs_path_change_movereplace)
+    if (change->copyfrom_path)
       {
-        if (apr_hash_get(source_paths, change->info.copyfrom_path,
-                         APR_HASH_KEY_STRING))
+        apr_size_t len = strlen(change->copyfrom_path);
+        if (apr_hash_get(source_paths, change->copyfrom_path, len))
           return svn_error_createf(SVN_ERR_FS_AMBIGUOUS_MOVE, NULL,
                       _("Path '%s' has been moved to more than one target"),
-                                   change->info.copyfrom_path);
+                                   change->copyfrom_path);
 
-        apr_hash_set(source_paths, change->info.copyfrom_path,
-                     APR_HASH_KEY_STRING, change->info.copyfrom_path);
+        apr_hash_set(source_paths,
+                     apr_pstrmemdup(pool, change->copyfrom_path, len),
+                     len,
+                     change->copyfrom_path);
       }
 
   return SVN_NO_ERROR;
@@ -2887,7 +2891,7 @@ verify_moves(svn_fs_t *fs,
 {
   apr_hash_t *source_paths = apr_hash_make(pool);
   svn_revnum_t revision;
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
   apr_array_header_t *moves
@@ -2901,12 +2905,12 @@ verify_moves(svn_fs_t *fs,
     {
       const char *path;
       apr_ssize_t len;
-      change_t *change;
+      svn_fs_path_change2_t *change;
       apr_hash_this(hi, (const void**)&path, &len, (void**)&change);
 
-      if (   change->info.copyfrom_path
-          && (   change->info.change_kind == svn_fs_path_change_move
-              || change->info.change_kind == svn_fs_path_change_movereplace))
+      if (   change->copyfrom_path
+          && (   change->change_kind == svn_fs_path_change_move
+              || change->change_kind == svn_fs_path_change_movereplace))
         {
           svn_sort__item_t *item = apr_array_push(moves);
           item->key = path;
@@ -2914,9 +2918,9 @@ verify_moves(svn_fs_t *fs,
           item->value = change;
         }
 
-      if (   change->info.change_kind == svn_fs_path_change_delete
-          || change->info.change_kind == svn_fs_path_change_replace
-          || change->info.change_kind == svn_fs_path_change_movereplace)
+      if (   change->change_kind == svn_fs_path_change_delete
+          || change->change_kind == svn_fs_path_change_replace
+          || change->change_kind == svn_fs_path_change_movereplace)
         APR_ARRAY_PUSH(deletions, const char *) = path;
     }
 
@@ -2947,10 +2951,9 @@ verify_moves(svn_fs_t *fs,
                                        deleted_path);
           if (relpath)
             {
-              change_t *closed_move = closest_move_item->value;
+              svn_fs_path_change2_t *closed_move = closest_move_item->value;
               APR_ARRAY_IDX(deletions, i, const char*)
-                = svn_dirent_join(closed_move->info.copyfrom_path, relpath,
-                                  pool);
+                = svn_dirent_join(closed_move->copyfrom_path, relpath, pool);
             }
         }
     }
@@ -2963,46 +2966,50 @@ verify_moves(svn_fs_t *fs,
 
   for (i = 0; moves->nelts; ++i)
     SVN_ERR(check_for_duplicate_move_source (source_paths,
-                          APR_ARRAY_IDX(moves, i, svn_sort__item_t).value));
+                          APR_ARRAY_IDX(moves, i, svn_sort__item_t).value,
+                          pool));
 
   for (revision = txn_id->revision + 1; revision <= old_rev; ++revision)
     {
       apr_array_header_t *changes;
       change_t **changes_p;
 
-      svn_pool_clear(iter_pool);
-      svn_fs_x__get_changes(&changes, fs, revision, iter_pool);
+      svn_pool_clear(iterpool);
+      svn_fs_x__get_changes(&changes, fs, revision, iterpool);
 
       changes_p = (change_t **)&changes->elts;
       for (i = 0; i < changes->nelts; ++i)
-        SVN_ERR(check_for_duplicate_move_source(source_paths, changes_p[i]));
+        SVN_ERR(check_for_duplicate_move_source(source_paths,
+                                                &changes_p[i]->info,
+                                                pool));
     }
 
   /* The move source paths must been deleted in this txn. */
 
   for (i = 0; i < moves->nelts; ++i)
     {
-      change_t *change = APR_ARRAY_IDX(moves, i, svn_sort__item_t).value;
+      svn_fs_path_change2_t *change
+        = APR_ARRAY_IDX(moves, i, svn_sort__item_t).value;
 
       /* there must be a deletion of move's copy-from path
          (or any of its parents) */
 
       int closest_deletion_idx
-        = svn_sort__bsearch_lower_bound(change->info.copyfrom_path, deletions,
+        = svn_sort__bsearch_lower_bound(change->copyfrom_path, deletions,
                                         svn_sort_compare_paths);
       if (closest_deletion_idx < deletions->nelts)
         {
           const char *closest_deleted_path
             = APR_ARRAY_IDX(deletions, closest_deletion_idx, const char *);
           if (!svn_dirent_is_ancestor(closest_deleted_path,
-                                      change->info.copyfrom_path))
+                                      change->copyfrom_path))
             return svn_error_createf(SVN_ERR_FS_INCOMPLETE_MOVE, NULL,
                         _("Path '%s' has been moved without being deleted"),
-                                     change->info.copyfrom_path);
+                                     change->copyfrom_path);
         }
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
