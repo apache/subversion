@@ -779,6 +779,9 @@ process_changes(apr_hash_t *changed_paths,
 
   for (i = 0; i < changes->nelts; ++i)
     {
+      /* The ITERPOOL will be cleared at the end of this function
+       * since it is only used rarely and for a single hash iterator.
+       */
       change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
 
       SVN_ERR(fold_change(changed_paths, change));
@@ -2935,7 +2938,7 @@ verify_moves(svn_fs_t *fs,
 {
   apr_hash_t *source_paths = apr_hash_make(pool);
   svn_revnum_t revision;
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
   apr_array_header_t *moves
@@ -3018,8 +3021,8 @@ verify_moves(svn_fs_t *fs,
       apr_array_header_t *changes;
       change_t **changes_p;
 
-      svn_pool_clear(iter_pool);
-      svn_fs_fs__get_changes(&changes, fs, revision, iter_pool);
+      svn_pool_clear(iterpool);
+      svn_fs_fs__get_changes(&changes, fs, revision, iterpool);
 
       changes_p = (change_t **)&changes->elts;
       for (i = 0; i < changes->nelts; ++i)
@@ -3053,7 +3056,7 @@ verify_moves(svn_fs_t *fs,
         }
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -3158,7 +3161,11 @@ commit_body(void *baton, apr_pool_t *pool)
      race with another caller writing to the prototype revision file
      before we commit it. */
 
-  /* Remove any temporary txn props representing 'flags'. */
+  /* Remove any temporary txn props representing 'flags'. 
+
+     ### This is a permanent change to the transaction.  If this
+     ### commit does not complete for any reason the transaction will
+     ### still exist but will have lost these properties. */
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
   txnprop_list = apr_array_make(pool, 3, sizeof(svn_prop_t));
   prop.value = NULL;
@@ -3215,7 +3222,11 @@ commit_body(void *baton, apr_pool_t *pool)
         }
     }
 
-  /* Move the finished rev file into place. */
+  /* Move the finished rev file into place.
+
+     ### This "breaks" the transaction by removing the protorev file
+     ### but the revision is not yet complete.  If this commit does
+     ### not complete for any reason the transaction will be lost. */
   old_rev_filename = svn_fs_fs__path_rev_absolute(cb->fs, old_rev, pool);
   rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
   proto_filename = svn_fs_fs__path_txn_proto_rev(cb->fs, txn_id, pool);
