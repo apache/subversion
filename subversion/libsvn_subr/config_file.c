@@ -412,7 +412,7 @@ svn_config__sys_config_path(const char **path_p,
 #ifdef WIN32
   {
     const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
+    SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool, pool));
     *path_p = svn_dirent_join_many(pool, folder,
                                    SVN_CONFIG__SUBDIRECTORY, fname,
                                    SVN_VA_NULL);
@@ -1370,7 +1370,11 @@ svn_config_get_user_config_path(const char **path,
 #ifdef WIN32
   {
     const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
+    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool, pool));
+
+    if (! folder)
+      return SVN_NO_ERROR;
+
     *path = svn_dirent_join_many(pool, folder,
                                  SVN_CONFIG__SUBDIRECTORY, fname, SVN_VA_NULL);
   }

@@ -46,8 +46,12 @@
 #include "svn_utf.h"
 #include "private/svn_utf_private.h"
 
+#include "config_impl.h"
+
 svn_error_t *
-svn_config__win_config_path(const char **folder, int system_path,
+svn_config__win_config_path(const char **folder,
+                            svn_boolean_t system_path,
+                            apr_pool_t *scratch_pool,
                             apr_pool_t *result_pool)
 {
   /* ### Adding CSIDL_FLAG_CREATE here, because those folders really
@@ -57,6 +61,30 @@ svn_config__win_config_path(const char **folder, int system_path,
                      | CSIDL_FLAG_CREATE);
 
   WCHAR folder_ucs2[MAX_PATH];
+  const char *folder_utf8;
+
+  if (! system_path)
+    {
+      HKEY hkey_tmp;
+
+      /* Verify if we actually have a *per user* profile to read from */
+      if (ERROR_SUCCESS == RegOpenCurrentUser(KEY_SET_VALUE, &hkey_tmp))
+        RegCloseKey(hkey_tmp); /* We have a profile */
+      else
+        {
+          /* The user is not properly logged in. (Most likely we are running
+             in a service process). In this case Windows will return a default
+             read only 'roaming profile' directory, which we assume to be
+             writable. We will then spend many seconds trying to create a
+             configuration and then fail, because we are not allowed to write
+             there, but the retry loop in io.c doesn't know that.
+
+             We just answer that there is no user configuration directory. */
+
+          *folder = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
 
   if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
                                folder_ucs2))
@@ -65,16 +93,17 @@ svn_config__win_config_path(const char **folder, int system_path,
                            ? "Can't determine the system config path"
                            : "Can't determine the user's config path"));
 
-  return svn_error_trace(svn_utf__win32_utf16_to_utf8(folder, folder_ucs2,
-                                                      NULL, result_pool));
+  SVN_ERR(svn_utf__win32_utf16_to_utf8(&folder_utf8, folder_ucs2,
+                                       NULL, scratch_pool));
+  *folder = svn_dirent_internal_style(folder_utf8, result_pool);
+
+  return SVN_NO_ERROR;
 }
 
 
-#include "config_impl.h"
 
-/* ### These constants are insanely large, but (a) we want to avoid
-   reallocating strings if possible, and (b) the realloc logic might
-   not actually work -- you never know with Win32 ... */
+/* ### These constants are insanely large, but we want to avoid
+   reallocating strings if possible. */
 #define SVN_REG_DEFAULT_NAME_SIZE  2048
 #define SVN_REG_DEFAULT_VALUE_SIZE 8192
 
