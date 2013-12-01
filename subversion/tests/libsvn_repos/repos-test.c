@@ -3545,7 +3545,7 @@ test_repos_fs_type(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 4;
+int svn_test_max_threads = 2;
 
 struct svn_test_descriptor_t test_funcs[] =
   {
