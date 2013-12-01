@@ -803,6 +803,20 @@ def mergeinfo_log(sbox):
                                      '--log', sbox.repo_url + '/A',
                                      sbox.ospath('A2'))
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4301)
+def mergeinfo_local_move(sbox):
+  "'mergeinfo' on a locally moved path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_move('A', 'A2')
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'mergeinfo', sbox.repo_url + '/A',
+                                     sbox.ospath('A2'))
+
 
 ########################################################################
 # Run the tests
@@ -822,6 +836,7 @@ test_list = [ None,
               natural_history_is_not_eligible_nor_merged,
               noninheritable_mergeinfo_not_always_eligible,
               mergeinfo_log,
+              mergeinfo_local_move,
              ]
 
 if __name__ == '__main__':

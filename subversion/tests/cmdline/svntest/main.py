@@ -1336,6 +1336,9 @@ def is_fs_type_fsx():
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
 
+def is_fs_log_addressing():
+  return is_fs_type_fsx()
+
 def is_os_windows():
   return os.name == 'nt'
 

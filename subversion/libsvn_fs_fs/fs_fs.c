@@ -42,7 +42,6 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_string_private.h"
-#include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 /* The default maximum number of files per directory to store in the
@@ -988,14 +987,36 @@ svn_fs_fs__create(svn_fs_t *fs,
   /* See if compatibility with older versions was explicitly requested. */
   if (fs->config)
     {
-      if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE))
-        format = 1;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE))
-        format = 2;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE))
-        format = 3;
-      else if (svn_hash_gets(fs->config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE))
-        format = 4;
+      svn_version_t *compatible_version;
+      SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
+                                         pool));
+
+      /* select format number */
+      switch(compatible_version->minor)
+        {
+          case 0: return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                 _("FSFS is not compatible with Subversion prior to 1.1"));
+
+          case 1:
+          case 2:
+          case 3: format = 1;
+                  break;
+
+          case 4: format = 2;
+                  break;
+
+          case 5: format = 3;
+                  break;
+
+          case 6:
+          case 7: format = 4;
+                  break;
+
+          case 8: format = 6;
+                  break;
+
+          default:format = SVN_FS_FS__FORMAT_NUMBER;
+        }
     }
   ffd->format = format;
 

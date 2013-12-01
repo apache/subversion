@@ -225,3 +225,35 @@ V 26
 PROPS-END
 
 
+Revision-number: 7
+Prop-content-length: 130
+Content-length: 130
+
+K 10
+svn:author
+V 7
+jrandom
+K 8
+svn:date
+V 27
+2013-11-24T18:04:51.128158Z
+K 7
+svn:log
+V 25
+Update mergeinfo on A/É
+PROPS-END
+
+Node-path: A/É
+Node-kind: dir
+Node-action: change
+Prop-content-length: 64
+Content-length: 64
+
+K 13
+svn:mergeinfo
+V 29
+/Q/ålpha:71
+/Q/ålpha:69,71
+PROPS-END
+
+

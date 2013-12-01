@@ -670,14 +670,17 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session = getSession();
 
         byte[] ignoreval = "*.pyc\n.gitignore\n".getBytes(UTF8);
+        byte[] binaryval = new byte[]{(byte)0, (byte)13, (byte)255, (byte)8,
+                                      (byte)127, (byte)128, (byte)129};
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
         props.put("svn:ignore", ignoreval);
+        props.put("binaryprop", binaryval);
 
         CommitContext cc =
             (cb != null
-             ? new CommitContext(session, "Add svn:ignore",
+             ? new CommitContext(session, "Add svn:ignore and binaryprop",
                                  cb.getBase, cb.getProps, cb.getKind)
-             : new CommitContext(session, "Add svn:ignore"));
+             : new CommitContext(session, "Add svn:ignore and binaryprop"));
         try {
             cc.editor.alterDirectory("", 1, null, props);
             cc.editor.complete();
@@ -690,6 +693,11 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(ignoreval,
                                  client.propertyGet(session.getSessionUrl(),
                                                     "svn:ignore",
+                                                    Revision.HEAD,
+                                                    Revision.HEAD)));
+        assertTrue(Arrays.equals(binaryval,
+                                 client.propertyGet(session.getSessionUrl(),
+                                                    "binaryprop",
                                                     Revision.HEAD,
                                                     Revision.HEAD)));
     }
