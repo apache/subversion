@@ -198,7 +198,7 @@ enum svnadmin__cmdline_options_t
     svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible,
     svnadmin__compatible_version,
-    svnadmin__check_ucs_normalization
+    svnadmin__check_normalization
   };
 
 /* Option codes and descriptions.
@@ -303,7 +303,7 @@ static const apr_getopt_option_t options_table[] =
 
     {"file", 'F', 1, N_("read repository paths from file ARG")},
 
-    {"check-ucs-normalization", svnadmin__check_ucs_normalization, 0,
+    {"check-normalization", svnadmin__check_normalization, 0,
      N_("report paths in the filesystem and mergeinfo\n"
         "                             that are not normalized to Unicode Normalization\n"
         "                             Form C, and any names within the same directory\n"
@@ -504,7 +504,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verify the data stored in the repository.\n"),
    {'t', 'r', 'q', svnadmin__keep_going, 'M',
-    svnadmin__check_ucs_normalization} },
+    svnadmin__check_normalization} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -533,7 +533,7 @@ struct svnadmin_opt_state
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   svn_boolean_t wait;                               /* --wait */
   svn_boolean_t keep_going;                         /* --keep-going */
-  svn_boolean_t check_ucs_norm;                     /* --check-ucs-normalization */
+  svn_boolean_t check_normalization;                /* --check-normalization */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
@@ -1752,7 +1752,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   verify_err = svn_repos_verify_fs3(repos, lower, upper,
                                     opt_state->keep_going,
-                                    opt_state->check_ucs_norm,
+                                    opt_state->check_normalization,
                                     !opt_state->quiet
                                     ? repos_notify_handler : NULL,
                                     &notify_baton, check_cancel,
@@ -2430,8 +2430,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case svnadmin__keep_going:
         opt_state.keep_going = TRUE;
         break;
-      case svnadmin__check_ucs_normalization:
-        opt_state.check_ucs_norm = TRUE;
+      case svnadmin__check_normalization:
+        opt_state.check_normalization = TRUE;
         break;
       case svnadmin__fs_type:
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));
