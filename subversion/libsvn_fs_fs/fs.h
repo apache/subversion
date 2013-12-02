@@ -102,7 +102,7 @@ extern "C" {
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
 #define CONFIG_SECTION_NORMALIZATION     "normalization"
-#define CONFIG_OPTION_ENABLE_NORMALIZED_LOOKUP  "enable-normalized-lookup"
+#define CONFIG_OPTION_NORMALIZED_LOOKUP  "normalized-lookup"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -152,6 +152,9 @@ extern "C" {
 
 /* Minimum format number that will record moves */
 #define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
+
+/* Minimum format where normalized lookup should be enabled by default. */
+#define SVN_FS_FS__MIN_DEFAULT_NORMALIZED_LOOKUP_FORMAT 7
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4
@@ -400,6 +403,9 @@ typedef struct fs_fs_data_t
   /* Maximum number of length of the linear part at the top of the
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
+
+  /* Whether normalization-insensitive path lookup is enabled. */
+  svn_boolean_t normalized_lookup;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,

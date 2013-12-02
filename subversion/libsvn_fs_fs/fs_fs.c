@@ -420,6 +420,9 @@ read_config(fs_fs_data_t *ffd,
             const char *fs_path,
             apr_pool_t *pool)
 {
+  const svn_boolean_t default_normalized_lookup =
+    (ffd->format >= SVN_FS_FS__MIN_DEFAULT_NORMALIZED_LOOKUP_FORMAT);
+
   SVN_ERR(svn_config_read3(&ffd->config,
                            svn_dirent_join(fs_path, PATH_CONFIG, pool),
                            FALSE, FALSE, FALSE, pool));
@@ -481,6 +484,16 @@ read_config(fs_fs_data_t *ffd,
       ffd->revprop_pack_size = 0x10000;
       ffd->compress_packed_revprops = FALSE;
     }
+
+  /* Initialize normalization settings in ffd.
+
+     Note: enable-normalized-lookups does not affect the filesystem
+           contents; therefore, its availability does not have to be
+           limited to any particular FS format version. */
+  SVN_ERR(svn_config_get_bool(ffd->config, &ffd->normalized_lookup,
+                              CONFIG_SECTION_NORMALIZATION,
+                              CONFIG_OPTION_NORMALIZED_LOOKUP,
+                              default_normalized_lookup));
 
   return SVN_NO_ERROR;
 }
@@ -634,14 +647,14 @@ write_config(svn_fs_t *fs,
 "### filesystem. The representation of new paths will still be preserved;"   NL
 "### FSFS will not normalize them, and will return them from queries in the" NL
 "### same form in which they were created."                                  NL
-"### Normalized lookup is enabled by default for new FSFS repositories."     NL
-"# " CONFIG_OPTION_ENABLE_NORMALIZED_LOOKUP " = true"                        NL
+"### Normalized lookup is enabled by default for new FSFSv7 repositories."   NL
+"# " CONFIG_OPTION_NORMALIZED_LOOKUP " = true"                               NL
 "###"                                                                        NL
 "### WARNING: Before enabling this option for existing repositories, you "   NL
 "###          must verify that there are no extant name collisions by"       NL
 "###          running the following command:"                                NL
 "###"                                                                        NL
-"###              svnadmin verify <REPOS-PATH> --check-ucs-normalization"    NL
+"###              svnadmin verify <REPOS-PATH> --check-normalization"        NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),

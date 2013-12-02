@@ -17,23 +17,29 @@ option can be disabled or enabled at any time during the lifetime of
 the repository; however, it is not safe to enable it without first
 running:
 
-        svnadmin verify REPOS --check-ucs-normalization
+        svnadmin verify REPOS --check-normalization
 
 
 Proposed argument to 'svnadmin create':
 
         svnadmin create REPOS --disable-normalized-lookup
 
+        Without this option, normalized lookup will be enabled by
+        default.
+
 Proposed argument to 'svnadmin upgrade':
 
         svnadmin upgrade REPOS --enable-normalized-lookup
 
+        Without this option, normalized lookup will be disabled during
+        format upgrade, unless it was already enabled in fsfs.conf.
+
 Proposed option in fsfs.conf:
 
         [normalization]
-        enable-normalized-lookup = true|false
+        normalized-lookup = true|false
 
-        Default value: true
+        Default value: true (in FSFSv7; false for older formats)
 
 
 References
