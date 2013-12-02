@@ -948,6 +948,8 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
   int i, k;
   svn_test_opts_t temp_opts;
   svn_fs_root_t *root;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
   static const char * const paths[SHARD_SIZE][2]
     = {
         { "A/mu",        "A/B/lambda" },
@@ -1001,9 +1003,10 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
         {
           svn_stream_t *stream;
           const char *file_path = paths[i][k];
+          svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_fs_apply_text(&stream, root, file_path, NULL, pool));
-          SVN_ERR(svn_stream_printf(stream, pool,
+          SVN_ERR(svn_fs_apply_text(&stream, root, file_path, NULL, iterpool));
+          SVN_ERR(svn_stream_printf(stream, iterpool,
                                     "This is file %s in txn %d",
                                     file_path, i));
           SVN_ERR(svn_stream_close(stream));
@@ -1023,8 +1026,10 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
     {
       svn_fs_txn_t *txn;
       const char *txn_name = APR_ARRAY_IDX(txn_names, i, const char *);
-      SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
-      SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, iterpool));
+      SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, iterpool));
     }
 
   /* Further changes to fill the shard */
@@ -1038,13 +1043,19 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
       if (rev % SHARD_SIZE == 0)
         break;
 
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
-      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, iterpool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, iterpool));
       SVN_ERR(svn_test__set_file_contents(root, "iota",
-                                          get_rev_contents(rev + 1, pool),
-                                          pool));
-      SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+                                          get_rev_contents(rev + 1, iterpool),
+                                          iterpool));
+      SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
     }
+
+  /* Make sure to close all file handles etc. from the last iteration */
+
+  svn_pool_clear(iterpool);
 
   /* Pack repo to verify that old and new shard get packed according to
      their respective addressing mode */
@@ -1063,8 +1074,10 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
           svn_string_t *string;
           const char *expected;
 
-          SVN_ERR(svn_fs_file_contents(&stream, root, file_path, pool));
-          SVN_ERR(svn_string_from_stream(&string, stream, pool, pool));
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_fs_file_contents(&stream, root, file_path, iterpool));
+          SVN_ERR(svn_string_from_stream(&string, stream, iterpool, iterpool));
 
           expected = apr_psprintf(pool,"This is file %s in txn %d",
                                   file_path, i);
@@ -1079,8 +1092,9 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
                         NULL, NULL, NULL, NULL, pool));
   for (; rev >= 0; --rev)
     {
-      SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
-      SVN_ERR(svn_fs_verify_root(root, pool));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_revision_root(&root, fs, rev, iterpool));
+      SVN_ERR(svn_fs_verify_root(root, iterpool));
     }
 
   return SVN_NO_ERROR;
