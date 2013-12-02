@@ -97,8 +97,8 @@ svn_error_t *svn_config__parse_stream(svn_config_t *cfg,
 /* Get the common or user-specific AppData folder */
 svn_error_t *svn_config__win_config_path(const char **folder,
                                          svn_boolean_t system_path,
-                                         apr_pool_t *scratch_pool,
-                                         apr_pool_t *result_pool);
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /* Read sections and options from the Windows Registry. */
 svn_error_t *svn_config__parse_registry(svn_config_t *cfg,
