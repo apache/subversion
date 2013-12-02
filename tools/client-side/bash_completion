@@ -167,7 +167,7 @@ _svn()
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
-	cmds="$cmds  switch unlock update upgrade"
+	cmds="$cmds switch unlock update upgrade youngest"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -814,7 +814,8 @@ _svn()
                          --force"
 		;;
 	cleanup)
-		cmdOpts="--diff3-cmd $pOpts"
+		cmdOpts="--diff3-cmd $pOpts --include-externals -q --quiet\
+			--remove-ignored --remove-unversioned"
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
@@ -865,7 +866,7 @@ _svn()
 		         --incremental --xml $qOpts -l --limit -c --change \
                          $gOpts --with-all-revprops --with-revprop --depth \
 		         --diff --diff-cmd -x --extensions --internal-diff \
-		         --with-no-revprops --search --search-and"
+		         --with-no-revprops --search --search-and --auto-moves"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
@@ -874,7 +875,8 @@ _svn()
 		         --allow-mixed-revisions -v --verbose"
 		;;
 	mergeinfo)
-	        cmdOpts="$rOpts $pOpts --depth --show-revs -R --recursive"
+	        cmdOpts="$rOpts $pOpts --depth --show-revs -R --recursive \
+			--log"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
@@ -947,6 +949,9 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	youngest)
+		cmdOpts="$pOpts --no-newline"
 		;;
 	*)
 		;;
