@@ -382,7 +382,7 @@ struct edit_baton
   svn_boolean_t verify;
 
   /* True if checking UCS normalization during a verify. */
-  svn_boolean_t check_ucs_norm;
+  svn_boolean_t check_normalization;
 
   /* The first revision dumped in this dumpstream. */
   svn_revnum_t oldest_dumped_rev;
@@ -1155,7 +1155,7 @@ dump_node(struct edit_baton *eb,
       /* If we're checking UCS normalization, also parse any changed
          mergeinfo and warn about denormalized paths and name
          collisions there. */
-      if (eb->verify && eb->check_ucs_norm && eb->notify_func)
+      if (eb->verify && eb->check_normalization && eb->notify_func)
         {
           /* N.B.: This hash lookup happens only once; the conditions
              for verifying historic mergeinfo references and checking
@@ -1372,7 +1372,7 @@ add_directory(const char *path,
 
   /* Check for UCS normalization and name clashes, but only if this is
      actually a new name in the parent, not a replacement. */
-  if (!val && eb->verify && eb->check_ucs_norm && eb->notify_func)
+  if (!val && eb->verify && eb->check_normalization && eb->notify_func)
     {
       pb->check_name_collision = TRUE;
       SVN_ERR(check_path_normalization(
@@ -1481,7 +1481,7 @@ add_file(const char *path,
 
   /* Check for UCS normalization and name clashes, but only if this is
      actually a new name in the parent, not a replacement. */
-  if (!val && eb->verify && eb->check_ucs_norm && eb->notify_func)
+  if (!val && eb->verify && eb->check_normalization && eb->notify_func)
     {
       pb->check_name_collision = TRUE;
       SVN_ERR(check_path_normalization(
@@ -1656,7 +1656,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_revnum_t oldest_dumped_rev,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
-                svn_boolean_t check_ucs_norm,
+                svn_boolean_t check_normalization,
                 svn_cache__t *verified_dirents_cache,
                 apr_pool_t *pool)
 {
@@ -1680,7 +1680,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->current_rev = to_rev;
   eb->use_deltas = use_deltas;
   eb->verify = verify;
-  eb->check_ucs_norm = check_ucs_norm;
+  eb->check_normalization = check_normalization;
   eb->found_old_reference = found_old_reference;
   eb->found_old_mergeinfo = found_old_mergeinfo;
   eb->verified_dirents_cache = verified_dirents_cache;
@@ -2163,7 +2163,7 @@ verify_one_revision(svn_fs_t *fs,
                     svn_repos_notify_func_t notify_func,
                     void *notify_baton,
                     svn_revnum_t start_rev,
-                    svn_boolean_t check_ucs_norm,
+                    svn_boolean_t check_normalization,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     svn_cache__t *verified_dirents_cache,
@@ -2185,7 +2185,7 @@ verify_one_revision(svn_fs_t *fs,
                           notify_func, notify_baton,
                           start_rev,
                           FALSE, TRUE, /* use_deltas, verify */
-                          check_ucs_norm,
+                          check_normalization,
                           verified_dirents_cache,
                           scratch_pool));
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
@@ -2263,7 +2263,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
                      svn_revnum_t end_rev,
                      svn_boolean_t keep_going,
-                     svn_boolean_t check_ucs_norm,
+                     svn_boolean_t check_normalization,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -2359,7 +2359,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
 
       /* Wrapper function to catch the possible errors. */
       err = verify_one_revision(fs, rev, notify_func, notify_baton,
-                                start_rev, check_ucs_norm,
+                                start_rev, check_normalization,
                                 cancel_func, cancel_baton,
                                 verified_dirents_cache, iterpool);
 

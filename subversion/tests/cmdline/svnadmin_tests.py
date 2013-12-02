@@ -2077,7 +2077,7 @@ def verify_denormalized_names(sbox):
   load_dumpstream(sbox, open(dumpfile_location).read())
 
   exit_code, output, errput = svntest.main.run_svnadmin(
-    "verify", "--check-ucs-normalization", sbox.repo_dir)
+    "verify", "--check-normalization", sbox.repo_dir)
 
   expected_output_regex_list = [
     ".*Verified revision 0.",
