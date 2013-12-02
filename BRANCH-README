@@ -1,6 +1,18 @@
-This is an integration branch to review and format 6 compatible changes
-from the fsfs-format7 branch.  After review, the whole branch will get 
-merged into /trunk.
+This is an integration / development branch to copy / implement and
+review the logical addressing feature originally developed on the
+fsfs-format7 branch.  After review and after the fsfs-improvements
+branch got merged into /trunk, this whole branch will get merged
+into /trunk as well.
+
+Features to implement here:
+
+* support for logical addressing
+* switch to format 7; use log addressing after for new shards created
+  after svnadmin upgrade
+* block read / data prefetch for f7 rev / pack file data
+* reorder data upon pack
+* add checksums to index data
+* improve verification to cover all f7 rev / pack file data
 
 More on this here:
 http://svn.haxx.se/dev/archive-2013-06/0755.shtml

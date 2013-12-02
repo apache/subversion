@@ -71,6 +71,10 @@ extern "C" {
 #define PATH_PACKED           "pack"             /* Packed revision data file */
 #define PATH_EXT_PACKED_SHARD ".pack"            /* Extension for packed
                                                     shards */
+#define PATH_EXT_L2P_INDEX    ".l2p"             /* extension of the log-
+                                                    to-phys index */
+#define PATH_EXT_P2L_INDEX    ".p2l"             /* extension of the phys-
+                                                    to-log index */
 /* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
 #define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
@@ -84,6 +88,10 @@ extern "C" {
 #define PATH_EXT_PROPS     ".props"        /* Extension for node props */
 #define PATH_EXT_REV       ".rev"          /* Extension of protorev file */
 #define PATH_EXT_REV_LOCK  ".rev-lock"     /* Extension of protorev lock file */
+#define PATH_TXN_ITEM_INDEX "itemidx"      /* File containing the current item
+                                              index number */
+#define PATH_INDEX          "index"        /* name of index files w/o ext */
+
 /* Names of files in legacy FS formats */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
@@ -101,11 +109,19 @@ extern "C" {
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
+#define CONFIG_SECTION_IO                "io"
+#define CONFIG_OPTION_BLOCK_SIZE         "block-size"
+#define CONFIG_OPTION_L2P_PAGE_SIZE      "l2p-page-size"
+#define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
-   independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   6
+   independent of any other FS back ends.
+
+   Note: If you bump this, please update the switch statement in
+         svn_fs_fs__create() as well.
+ */
+#define SVN_FS_FS__FORMAT_NUMBER   7
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -147,6 +163,9 @@ extern "C" {
 
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT 6
+
+/* The minimum format number that supports packed revprops. */
+#define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
 
 /* Minimum format number that will record moves */
 #define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
@@ -244,8 +263,8 @@ typedef struct representation_cache_key_t
   /* Packed or non-packed representation? */
   svn_boolean_t is_packed;
 
-  /* Item offset of the representation */
-  apr_uint64_t offset;
+  /* Item index of the representation */
+  apr_uint64_t item_index;
 } representation_cache_key_t;
 
 /* Key type that identifies a txdelta window. */
@@ -257,8 +276,8 @@ typedef struct window_cache_key_t
   /* Window number within that representation */
   apr_int32_t chunk_index;
 
-  /* Offset of the representation within REVISION */
-  apr_uint64_t offset;
+  /* Item index of the representation */
+  apr_uint64_t item_index;
 } window_cache_key_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
@@ -267,10 +286,26 @@ typedef struct fs_fs_data_t
 {
   /* The format number of this FS. */
   int format;
+
   /* The maximum number of files to store per directory (for sharded
      layouts) or zero (for linear layouts). */
   int max_files_per_dir;
 
+  /* The first revision that uses logical addressing.  SVN_INVALID_REVNUM
+     if there is no such revision (pre-f7 or non-sharded).  May be a
+     future revision if the current shard started with physical addressing
+     and is not complete, yet. */
+  svn_revnum_t min_log_addressing_rev;
+
+  /* Rev / pack file read granularity. */
+  apr_int64_t block_size;
+
+  /* Capacity in entries of log-to-phys index pages */
+  apr_int64_t l2p_page_size;
+
+  /* Rev / pack file granularity covered by phys-to-log index pages */
+  apr_int64_t p2l_page_size;
+  
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
@@ -332,7 +367,7 @@ typedef struct fs_fs_data_t
      the key is window_cache_key_t */
   svn_cache__t *combined_window_cache;
 
-  /* Cache for node_revision_t objects; the key is (revision, id offset) */
+  /* Cache for node_revision_t objects; the key is (revision, item_index) */
   svn_cache__t *node_revision_cache;
 
   /* Cache for change lists as APR arrays of change_t * objects; the key
@@ -340,7 +375,7 @@ typedef struct fs_fs_data_t
   svn_cache__t *changes_cache;
 
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
-     (revision, is_packed, offset) set */
+     (revision, item index) pair */
   svn_cache__t *rep_header_cache;
 
   /* Cache for svn_mergeinfo_t objects; the key is a combination of
@@ -351,6 +386,23 @@ typedef struct fs_fs_data_t
      combination of revision, inheritance flags and path; value is "1"
      if the node has mergeinfo, "0" if it doesn't. */
   svn_cache__t *mergeinfo_existence_cache;
+
+  /* Cache for l2p_header_t objects; the key is (revision, is-packed).
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *l2p_header_cache;
+
+  /* Cache for l2p_page_t objects; the key is svn_fs_fs__page_cache_key_t.
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *l2p_page_cache;
+
+  /* Cache for p2l_header_t objects; the key is (revision, is-packed).
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *p2l_header_cache;
+
+  /* Cache for apr_array_header_t objects containing svn_fs_fs__p2l_entry_t
+     elements; the key is svn_fs_fs__page_cache_key_t.
+     Will be NULL for pre-format7 repos */
+  svn_cache__t *p2l_page_cache;
 
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;
@@ -449,8 +501,8 @@ typedef struct representation_t
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
-  /* Offset into the revision file where it is located. */
-  svn_filesize_t offset;
+  /* Item index with the the revision. */
+  apr_uint64_t item_index;
 
   /* The size of the representation in bytes as seen in the revision
      file. */

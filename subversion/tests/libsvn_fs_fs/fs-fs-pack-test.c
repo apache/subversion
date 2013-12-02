@@ -55,16 +55,35 @@ write_format(const char *path,
 
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
-      if (max_files_per_dir)
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout sharded %d\n",
-                                format, max_files_per_dir);
+      if (format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+        {
+          if (max_files_per_dir)
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout sharded %d\n"
+                                    "addressing logical 0\n",
+                                    format, max_files_per_dir);
+          else
+            /* linear layouts never use logical addressing */
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout linear\n"
+                                    "addressing physical\n",
+                                    format);
+        }
       else
-        contents = apr_psprintf(pool,
-                                "%d\n"
-                                "layout linear",
-                                format);
+        {
+          if (max_files_per_dir)
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout sharded %d\n",
+                                    format, max_files_per_dir);
+          else
+            contents = apr_psprintf(pool,
+                                    "%d\n"
+                                    "layout linear\n",
+                                    format);
+        }
     }
   else
     {
@@ -312,14 +331,37 @@ pack_filesystem(const svn_test_opts_t *opts,
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                  "Expected pack file '%s' not found", path);
 
-      path = svn_dirent_join_many(pool, REPO_NAME, "revs",
-                                  apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
-                                  "manifest", SVN_VA_NULL);
-      SVN_ERR(svn_io_check_path(path, &kind, pool));
-      if (kind != svn_node_file)
-        return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                 "Expected manifest file '%s' not found",
-                                 path);
+      if (opts->server_minor_version && (opts->server_minor_version < 9))
+        {
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "manifest", SVN_VA_NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected manifest file '%s' not found",
+                                     path);
+        }
+      else
+        {
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "pack.l2p", SVN_VA_NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected log-to-phys index file '%s' not found",
+                                     path);
+
+          path = svn_dirent_join_many(pool, REPO_NAME, "revs",
+                                      apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                      "pack.p2l", NULL);
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                                     "Expected phys-to-log index file '%s' not found",
+                                     path);
+        }
 
       /* This directory should not exist. */
       path = svn_dirent_join_many(pool, REPO_NAME, "revs",
@@ -891,6 +933,191 @@ get_set_multiple_huge_revprops_packed_fs(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
+#define SHARD_SIZE 4
+static svn_error_t *
+upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
+                               const char *repo_name,
+                               svn_revnum_t max_rev,
+                               svn_boolean_t upgrade_before_txns,
+                               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+  apr_array_header_t *txns;
+  apr_array_header_t *txn_names;
+  int i, k;
+  svn_test_opts_t temp_opts;
+  svn_fs_root_t *root;
+  static const char * const paths[SHARD_SIZE][2]
+    = {
+        { "A/mu",        "A/B/lambda" },
+        { "A/B/E/alpha", "A/D/H/psi"  },
+        { "A/D/gamma",   "A/B/E/beta" },
+        { "A/D/G/pi",    "A/D/G/rho"  }
+      };
+
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 9)))
+    return SVN_NO_ERROR;
+
+  /* Create the packed FS in phys addressing format and open it. */
+  temp_opts = *opts;
+  temp_opts.server_minor_version = 8;
+  SVN_ERR(prepare_revprop_repo(&fs, repo_name, max_rev, SHARD_SIZE,
+                               &temp_opts, pool));
+
+  if (upgrade_before_txns)
+    {
+      /* upgrade to final repo format (using log addressing) and re-open */
+      SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
+      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+    }
+
+  /* Create 4 concurrent transactions */
+  txns = apr_array_make(pool, SHARD_SIZE, sizeof(svn_fs_txn_t *));
+  txn_names = apr_array_make(pool, SHARD_SIZE, sizeof(const char *));
+  for (i = 0; i < SHARD_SIZE; ++i)
+    {
+      svn_fs_txn_t *txn;
+      const char *txn_name;
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, max_rev, pool));
+      APR_ARRAY_PUSH(txns, svn_fs_txn_t *) = txn;
+
+      SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
+      APR_ARRAY_PUSH(txn_names, const char *) = txn_name;
+    }
+
+  /* Let all txns touch at least 2 files.
+   * Thus, the addressing data of at least one representation in the txn
+   * will differ between addressing modes. */
+  for (i = 0; i < SHARD_SIZE; ++i)
+    {
+      svn_fs_txn_t *txn = APR_ARRAY_IDX(txns, i, svn_fs_txn_t *);
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+
+      for (k = 0; k < 2; ++k)
+        {
+          svn_stream_t *stream;
+          const char *file_path = paths[i][k];
+
+          SVN_ERR(svn_fs_apply_text(&stream, root, file_path, NULL, pool));
+          SVN_ERR(svn_stream_printf(stream, pool,
+                                    "This is file %s in txn %d",
+                                    file_path, i));
+          SVN_ERR(svn_stream_close(stream));
+        }
+    }
+
+  if (!upgrade_before_txns)
+    {
+      /* upgrade to final repo format (using log addressing) and re-open */
+      SVN_ERR(svn_fs_upgrade2(repo_name, NULL, NULL, NULL, NULL, pool));
+      SVN_ERR(svn_fs_open(&fs, repo_name, svn_fs_config(fs, pool), pool));
+    }
+
+  /* Commit all transactions
+   * (in reverse order to make things more interesting) */
+  for (i = SHARD_SIZE - 1; i >= 0; --i)
+    {
+      svn_fs_txn_t *txn;
+      const char *txn_name = APR_ARRAY_IDX(txn_names, i, const char *);
+      SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
+      SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+    }
+
+  /* Further changes to fill the shard */
+
+  SVN_ERR(svn_fs_youngest_rev(&rev, fs, pool));
+  SVN_TEST_ASSERT(rev == SHARD_SIZE + max_rev + 1);
+
+  while ((rev + 1) % SHARD_SIZE)
+    {
+      svn_fs_txn_t *txn;
+      if (rev % SHARD_SIZE == 0)
+        break;
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+      SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+      SVN_ERR(svn_test__set_file_contents(root, "iota",
+                                          get_rev_contents(rev + 1, pool),
+                                          pool));
+      SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+    }
+
+  /* Pack repo to verify that old and new shard get packed according to
+     their respective addressing mode */
+
+  SVN_ERR(svn_fs_pack(repo_name, NULL, NULL, NULL, NULL, pool));
+
+  /* verify that our changes got in */
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  for (i = 0; i < SHARD_SIZE; ++i)
+    {
+      for (k = 0; k < 2; ++k)
+        {
+          svn_stream_t *stream;
+          const char *file_path = paths[i][k];
+          svn_string_t *string;
+          const char *expected;
+
+          SVN_ERR(svn_fs_file_contents(&stream, root, file_path, pool));
+          SVN_ERR(svn_string_from_stream(&string, stream, pool, pool));
+
+          expected = apr_psprintf(pool,"This is file %s in txn %d",
+                                  file_path, i);
+          SVN_TEST_STRING_ASSERT(string->data, expected);
+        }
+    }
+
+  /* verify that the indexes are consistent, we calculated the correct
+     low-level checksums etc. */
+  SVN_ERR(svn_fs_verify(repo_name, NULL,
+                        SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                        NULL, NULL, NULL, NULL, pool));
+  for (; rev >= 0; --rev)
+    {
+      SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+      SVN_ERR(svn_fs_verify_root(root, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+#undef SHARD_SIZE
+
+#define REPO_NAME "upgrade_new_txns_to_log_addressing"
+#define MAX_REV 8
+static svn_error_t *
+upgrade_new_txns_to_log_addressing(const svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
+{
+  SVN_ERR(upgrade_txns_to_log_addressing(opts, REPO_NAME, MAX_REV, TRUE,
+                                         pool));
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef MAX_REV
+
+/* ------------------------------------------------------------------------ */
+#define REPO_NAME "upgrade_old_txns_to_log_addressing"
+#define MAX_REV 8
+static svn_error_t *
+upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
+{
+  SVN_ERR(upgrade_txns_to_log_addressing(opts, REPO_NAME, MAX_REV, FALSE,
+                                         pool));
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+#undef MAX_REV
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -923,5 +1150,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test packing with shard size = 1"),
     SVN_TEST_OPTS_PASS(get_set_multiple_huge_revprops_packed_fs,
                        "set multiple huge revprops in packed FSFS"),
+    SVN_TEST_OPTS_PASS(upgrade_new_txns_to_log_addressing,
+                       "upgrade txns to log addressing in shared FSFS"),
+    SVN_TEST_OPTS_PASS(upgrade_old_txns_to_log_addressing,
+                       "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_NULL
   };
