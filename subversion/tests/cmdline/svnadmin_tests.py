@@ -245,18 +245,77 @@ def load_dumpstream(sbox, dump, *varargs):
   return load_and_verify_dumpstream(sbox, None, None, None, False, dump,
                                     *varargs)
 
-def set_changed_path_list(filename, changes):
-  """ Replace the changed paths list in the file given by FILENAME
+def read_l2p(sbox, revision, item):
+  """ For the format 7+ repository in SBOX, return the physical offset
+      of ITEM in REVISION.  This code supports only small, nonpacked revs. """
+
+  filename = fsfs_file(sbox.repo_dir, 'revs', str(revision) + ".l2p")
+
+  fp = open(filename, 'rb')
+  contents = fp.read()
+  length = len(contents)
+  fp.close()
+
+  # decode numbers
+  numbers = []
+  value = 0
+  shift = 0
+  for c in contents:
+    char = ord(c)
+    value += (char & 127) << shift
+    if char < 128:
+      numbers.append(value)
+      shift = 0
+      value = 0
+    else:
+      shift += 7
+
+  # decode offsets
+  numbers[7] = -1
+  for i in range(8, len(numbers)):
+    if numbers[i] & 1 == 1:
+      numbers[i] = - (numbers[i] + 1) / 2
+    else:
+      numbers[i] = numbers[i] / 2
+    numbers[i] += numbers[i-1]
+
+  # we support only small, unpacked rev files
+  if numbers[1] < len(numbers) or numbers[3] != 1 :
+    raise svntest.Failure("More than 1 page in %s" % filename)
+  if numbers[2] != 1:
+    raise svntest.Failure("More than 1 rev in %s" % filename)
+
+  return numbers[item + 7]
+
+def repo_format(sbox):
+  """ Return the repository format number for SBOX."""
+
+  format_file = open(os.path.join(sbox.repo_dir, "db", "format"))
+  format = int(format_file.read()[:1])
+  format_file.close()
+
+  return format
+
+def set_changed_path_list(sbox, revision, changes):
+  """ Replace the changed paths list in the revision file REVISION in SBOX
       with the text CHANGES."""
 
   # read full file
-  fp = open(filename, 'r+b')
+  fp = open(fsfs_file(sbox.repo_dir, 'revs', str(revision)), 'r+b')
   contents = fp.read()
 
-  # replace the changed paths list
-  length = len(contents)
-  header = contents[contents.rfind('\n', length - 64, length - 1):]
-  body_len = long(header.split(' ')[1])
+  if repo_format(sbox) < 7:
+    # replace the changed paths list
+    length = len(contents)
+    header = contents[contents.rfind('\n', length - 64, length - 1):]
+    body_len = long(header.split(' ')[1])
+
+  else:
+    # we will invalidate the l2p index but that's ok for the
+    # kind of tests we run here. The p2l index remains valid
+    # because the offset of the last item does not change
+    body_len = read_l2p(sbox, revision, 1)
+    header = '\n'
 
   contents = contents[:body_len] + changes + header
 
@@ -272,7 +331,7 @@ def set_changed_path_list(filename, changes):
 
 #----------------------------------------------------------------------
 
-def test_create(sbox):
+def test_create(sbox, minor_version=None):
   "'svnadmin create'"
 
 
@@ -282,7 +341,7 @@ def test_create(sbox):
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.main.safe_rmtree(wc_dir)
 
-  svntest.main.create_repos(repo_dir)
+  svntest.main.create_repos(repo_dir, minor_version)
 
   svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
                                      ["Checked out revision 0.\n"], [],
@@ -581,7 +640,9 @@ def verify_windows_paths_in_repos(sbox):
 
   # unfortunately, some backends needs to do more checks than other
   # resulting in different progress output
-  if svntest.main.is_fs_type_fsx():
+  if svntest.main.is_fs_type_fsx() or \
+    (svntest.main.is_fs_type_fsfs() and \
+        svntest.main.options.server_minor_version >= 9):
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDERR', ["* Verifying metadata at revision 0 ...\n",
@@ -634,7 +695,9 @@ def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
   # setup a repo with a directory 'c:hi'
-  sbox.build(create_wc = False)
+  # use physical addressing as this is hard to provoke with logical addressing
+  sbox.build(create_wc = False,
+             minor_version = min(svntest.main.options.server_minor_version,8))
   repo_url = sbox.repo_url
   E_url = sbox.repo_url + '/A/B/E'
 
@@ -1458,7 +1521,11 @@ def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
 
   dumpfile = clean_dumpfile()
-  test_create(sbox)
+
+  # Corruption only possible in physically addressed revisions created
+  # with pre-1.6 servers.
+  test_create(sbox,
+              minor_version = min(svntest.main.options.server_minor_version,8))
 
   # Load the dumpstream
   load_and_verify_dumpstream(sbox, [], [], dumpfile_revisions, False,
@@ -1476,11 +1543,14 @@ def verify_non_utf8_paths(sbox):
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write("\xE6\n")
     elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
-      # fix up the representation checksum
+      # phys, PLAIN directories: fix up the representation checksum
       fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
     elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
-      # fix up the representation checksum
+      # phys, deltified directories: fix up the representation checksum
       fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
+    elif line == "text: 1 6 31 0 90f306aa9bfd72f456072076a2bd94f7\n":
+      # log addressing: fix up the representation checksum
+      fp_new.write("text: 1 6 31 0 db2d4a0bad5dff0aea9a288dec02f1fb\n")
     elif line == "cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")
@@ -1654,9 +1724,13 @@ def hotcopy_incremental_packed(sbox):
   backup_dir, backup_url = sbox.add_repo_path('backup')
   os.mkdir(backup_dir)
   cwd = os.getcwd()
+
   # Configure two files per shard to trigger packing
   format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
-  format_file.write("6\nlayout sharded 2\n")
+  if svntest.main.options.server_minor_version >= 9:
+    format_file.write("7\nlayout sharded 2\naddressing logical 0\n")
+  else:
+    format_file.write("6\nlayout sharded 2\n")
   format_file.close()
 
   # Pack revisions 0 and 1.
@@ -1890,20 +1964,26 @@ def verify_keep_going(sbox):
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                           ".*Verified revision 0.",
-                                           ".*Verified revision 1.",
-                                           ".*Error verifying revision 2.",
-                                           ".*Error verifying revision 3.",
-                                           ".*",
-                                           ".*Summary.*",
-                                           ".*r2: E160004:.*",
-                                           ".*r3: E160004:.*",
-                                           ".*r3: E160004:.*"])
-
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                           "svnadmin: E165011:.*"], False)
-
+  if svntest.main.is_fs_log_addressing():
+    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0",
+                                             ".*Verified revision 0.",
+                                             ".*Verified revision 1.",
+                                             ".*Verified revision 2.",
+                                             ".*Verified revision 3."])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                              ".*Verified revision 0.",
+                                              ".*Verified revision 1.",
+                                              ".*Error verifying revision 2.",
+                                              ".*Error verifying revision 3.",
+                                              ".*",
+                                              ".*Summary.*",
+                                              ".*r2: E160004:.*",
+                                              ".*r3: E160004:.*",
+                                              ".*r3: E160004:.*"])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
+                                              "svnadmin: E165011:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -1912,10 +1992,13 @@ def verify_keep_going(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                           ".*Verified revision 0.",
-                                           ".*Verified revision 1.",
-                                           ".*Error verifying revision 2."])
+  if (svntest.main.options.server_minor_version < 9):
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                             ".*Verified revision 0.",
+                                             ".*Verified revision 1.",
+                                             ".*Error verifying revision 2."])
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0"])
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -1947,43 +2030,44 @@ def verify_invalid_path_changes(sbox):
   # "carried over" but that all corrupts we get detected independently
 
   # add existing node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '2'),
+  set_changed_path_list(sbox, 2,
                         "_0.0.t1-1 add-dir false false /A\n\n")
 
   # add into non-existent parent
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '4'),
+  set_changed_path_list(sbox, 4,
                         "_0.0.t3-2 add-dir false false /C/X\n\n")
 
   # del non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '6'),
+  set_changed_path_list(sbox, 6,
                         "_0.0.t5-2 delete-dir false false /C\n\n")
 
   # del existent node of the wrong kind
+  #
   # THIS WILL NOT BE DETECTED
   # since dump mechanism and file don't care about the types of deleted nodes
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '8'),
+  set_changed_path_list(sbox, 8,
                         "_0.0.t7-2 delete-file false false /B3\n\n")
 
   # copy from non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '10'),
+  set_changed_path_list(sbox, 10,
                         "_0.0.t9-2 add-dir false false /B10\n"
                         "6 /B8\n")
 
   # copy from existing node of the wrong kind
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '12'),
+  set_changed_path_list(sbox, 12,
                         "_0.0.t11-2 add-file false false /B12\n"
                         "9 /B8\n")
 
   # modify non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '14'),
+  set_changed_path_list(sbox, 14,
                         "_0.0.t13-2 modify-file false false /A/D/H/foo\n\n")
 
   # modify existent node of the wrong kind
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '16'),
+  set_changed_path_list(sbox, 16,
                         "_0.0.t15-2 modify-file false false /B12\n\n")
 
   # replace non-existent node
-  set_changed_path_list(fsfs_file(sbox.repo_dir, 'revs', '18'),
+  set_changed_path_list(sbox, 18,
                         "_0.0.t17-2 replace-file false false /A/D/H/foo\n\n")
 
   # find corruptions
@@ -1991,7 +2075,12 @@ def verify_invalid_path_changes(sbox):
                                                         "--keep-going",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+  if repo_format(sbox) < 7:
+    first_line = ".*Verifying repository metadata"
+  else:
+    first_line = ".*Verifying metadata at revision 0"
+
+  exp_out = svntest.verify.RegexListOutput([first_line,
                                            ".*Verified revision 0.",
                                            ".*Verified revision 1.",
                                            ".*Error verifying revision 2.",
@@ -2042,13 +2131,17 @@ def verify_invalid_path_changes(sbox):
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         sbox.repo_dir)
 
-  exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
-                                           ".*Verified revision 0.",
-                                           ".*Verified revision 1.",
-                                           ".*Error verifying revision 2."])
-
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
-                                            "svnadmin: E165011:.*"], False)
+  if svntest.main.is_fs_log_addressing():
+    exp_out = svntest.verify.RegexListOutput([first_line])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160058:.*",
+                                              "svnadmin: E165011:.*"], False)
+  else:
+    exp_out = svntest.verify.RegexListOutput([".*Verifying repository metadata",
+                                              ".*Verified revision 0.",
+                                              ".*Verified revision 1.",
+                                              ".*Error verifying revision 2."])
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
+                                              "svnadmin: E165011:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
