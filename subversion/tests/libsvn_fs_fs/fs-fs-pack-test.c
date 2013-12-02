@@ -169,7 +169,8 @@ create_packed_filesystem(const char *dir,
 
   /* Bail (with success) on known-untestable scenarios */
   if (opts->server_minor_version && (opts->server_minor_version < 6))
-    return SVN_ERR_TEST_SKIPPED;
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.6 SVN doesn't support FSFS packing");
 
   /* Create a filesystem, then close it */
   SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
