@@ -2545,6 +2545,7 @@ def verify_move_log(sbox, flag, has_moves):
       raise SVNLogParseError("Replace of '/trunk/D' with '/trunk/C' expected, %s of %s found" % paths[1])
 
 @Issue(4355)
+@SkipUnless(server_has_auto_move)
 def log_auto_move(sbox):
   "test --auto-moves flag"
 

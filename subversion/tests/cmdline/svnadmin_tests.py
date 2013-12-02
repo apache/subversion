@@ -2077,7 +2077,7 @@ def verify_denormalized_names(sbox):
   load_dumpstream(sbox, open(dumpfile_location).read())
 
   exit_code, output, errput = svntest.main.run_svnadmin(
-    "verify", "--check-ucs-normalization", sbox.repo_dir)
+    "verify", "--check-normalization", sbox.repo_dir)
 
   expected_output_regex_list = [
     ".*Verified revision 0.",
@@ -2107,6 +2107,9 @@ def verify_denormalized_names(sbox):
   # The BDB backend doesn't do global metadata verification.
   if not svntest.main.is_fs_type_bdb():
     expected_output_regex_list.insert(0, ".*Verifying repository metadata")
+
+    if svntest.main.is_fs_log_addressing():
+      expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0 ...")
 
   exp_out = svntest.verify.RegexListOutput(expected_output_regex_list)
   exp_err = svntest.verify.ExpectedOutput([])

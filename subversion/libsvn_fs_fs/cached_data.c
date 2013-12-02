@@ -2014,9 +2014,6 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
-/* Fetch the list of change in revision REV in FS and return it in *CHANGES.
- * Allocate the result in POOL.
- */
 svn_error_t *
 svn_fs_fs__get_changes(apr_array_header_t **changes,
                        svn_fs_t *fs,
