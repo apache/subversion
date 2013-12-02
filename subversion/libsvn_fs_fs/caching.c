@@ -493,7 +493,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->node_revision_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       32, 32, /* ~200 byte / entry; 1k entries total */
                        svn_fs_fs__serialize_node_revision,
                        svn_fs_fs__deserialize_node_revision,
                        sizeof(pair_cache_key_t),
@@ -507,7 +507,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->rep_header_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       1, 1000, /* ~8 bytes / entry; 1k entries total */
                        svn_fs_fs__serialize_rep_header,
                        svn_fs_fs__deserialize_rep_header,
                        sizeof(representation_cache_key_t),
@@ -521,7 +521,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->changes_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       1, 8, /* 1k / entry; 8 entries total, rarely used */
                        svn_fs_fs__serialize_changes,
                        svn_fs_fs__deserialize_changes,
                        sizeof(svn_revnum_t),
@@ -661,7 +661,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       SVN_ERR(create_cache(&(ffd->l2p_header_cache),
                            NULL,
                            membuffer,
-                           0, 0, /* Do not use inprocess cache */
+                           64, 16, /* entry size varies but we must cover
+                                      a reasonable number of revisions (1k) */
                            svn_fs_fs__serialize_l2p_header,
                            svn_fs_fs__deserialize_l2p_header,
                            sizeof(pair_cache_key_t),
@@ -674,7 +675,8 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       SVN_ERR(create_cache(&(ffd->l2p_page_cache),
                            NULL,
                            membuffer,
-                           0, 0, /* Do not use inprocess cache */
+                           64, 16, /* entry size varies but we must cover
+                                      a reasonable number of revisions (1k) */
                            svn_fs_fs__serialize_l2p_page,
                            svn_fs_fs__deserialize_l2p_page,
                            sizeof(svn_fs_fs__page_cache_key_t),
@@ -687,7 +689,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       SVN_ERR(create_cache(&(ffd->p2l_header_cache),
                            NULL,
                            membuffer,
-                           0, 0, /* Do not use inprocess cache */
+                           4, 1, /* Large entries. Rarely used. */
                            svn_fs_fs__serialize_p2l_header,
                            svn_fs_fs__deserialize_p2l_header,
                            sizeof(pair_cache_key_t),
@@ -700,7 +702,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       SVN_ERR(create_cache(&(ffd->p2l_page_cache),
                            NULL,
                            membuffer,
-                           0, 0, /* Do not use inprocess cache */
+                           4, 16, /* Variably sized entries. Rarely used. */
                            svn_fs_fs__serialize_p2l_page,
                            svn_fs_fs__deserialize_p2l_page,
                            sizeof(svn_fs_fs__page_cache_key_t),
