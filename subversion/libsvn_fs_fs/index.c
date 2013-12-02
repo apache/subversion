@@ -628,6 +628,9 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
         }
     }
 
+  /* close the source file */
+  SVN_ERR(svn_io_file_close(proto_index, local_pool));
+
   /* create the target file */
   SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
                            | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
@@ -1660,6 +1663,9 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
 
       last_entry_end = entry_end;
     }
+
+  /* close the source file */
+  SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* store length of last table */
   APR_ARRAY_PUSH(table_sizes, apr_uint64_t)
