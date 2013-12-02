@@ -51,8 +51,8 @@
 svn_error_t *
 svn_config__win_config_path(const char **folder,
                             svn_boolean_t system_path,
-                            apr_pool_t *scratch_pool,
-                            apr_pool_t *result_pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   /* ### Adding CSIDL_FLAG_CREATE here, because those folders really
      must exist.  I'm not too sure about the SHGFP_TYPE_CURRENT
