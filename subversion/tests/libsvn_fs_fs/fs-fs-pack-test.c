@@ -167,6 +167,10 @@ create_packed_filesystem(const char *dir,
   apr_pool_t *iterpool;
   int version;
 
+  /* Bail (with success) on known-untestable scenarios */
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    return SVN_ERR_TEST_SKIPPED;
+
   /* Create a filesystem, then close it */
   SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
   svn_pool_destroy(subpool);
