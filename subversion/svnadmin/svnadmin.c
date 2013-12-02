@@ -720,7 +720,8 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                  opt_state->compatible_version->patch,
                                  opt_state->compatible_version->tag
                                  ? "-" : "",
-                                 opt_state->compatible_version->tag));
+                                 opt_state->compatible_version->tag
+                                 ? opt_state->compatible_version->tag : ""));
     }
 
   if (opt_state->compatible_version)
