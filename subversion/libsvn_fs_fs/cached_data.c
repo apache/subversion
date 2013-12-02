@@ -2169,7 +2169,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  apr_off_t changes_offset;
+  apr_off_t changes_offset = -1;
   svn_fs_fs__revision_file_t *revision_file;
   svn_boolean_t found;
   fs_fs_data_t *ffd = fs->fsap_data;
