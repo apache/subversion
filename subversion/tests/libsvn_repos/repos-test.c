@@ -2462,7 +2462,8 @@ node_location_segments(const svn_test_opts_t *opts,
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "bdb") == 0)
       && (opts->server_minor_version == 4))
-    return SVN_NO_ERROR;
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "not supported for BDB in SVN 1.4");
 
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
@@ -3060,6 +3061,11 @@ test_get_file_revs(const svn_test_opts_t *opts,
     if (!trunk_results[i].result_of_merge)
       apr_hash_set(ht_reverse_results, &trunk_results[i].rev,
                    sizeof(svn_revnum_t), &trunk_results[i]);
+
+  /* Check for feature support */
+  if (opts->server_minor_version && (opts->server_minor_version < 5))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "not supported in pre-1.5 SVN");
 
   /* Create the repository and verify blame results. */
   SVN_ERR(svn_test__create_blame_repository(&repos, "test-repo-get-filerevs",
