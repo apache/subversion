@@ -380,7 +380,7 @@ find_repos_config(svn_config_t **cfg,
     }
 
   /* store the (path,rev) -> checksum mapping as well */
-  if (*cfg)
+  if (*cfg && checksum)
     SVN_MUTEX__WITH_LOCK(svn_object_pool__mutex(config_pool->object_pool),
                          add_checksum(config_pool, url, repos_root_dirent,
                                       youngest_rev, checksum));
