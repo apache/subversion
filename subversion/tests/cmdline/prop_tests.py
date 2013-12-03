@@ -2060,7 +2060,7 @@ def atomic_over_ra(sbox):
     expected_stderr = ".*doesn't advertise.*ATOMIC_REVPROP"
     svntest.actions.run_and_verify_atomic_ra_revprop_change(
        None, None, expected_stderr, 1, repo_url, 0, 'flower',
-       old_value, proposed_value)
+       old_value, proposed_value, True)
 
     # The original value is still there.
     svntest.actions.check_prop('flower', repo_url, [s1], 0)
