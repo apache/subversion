@@ -56,7 +56,6 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_error_t *err;
       svn_fs_fs__revision_file_t *file;
       svn_pool_clear(iterpool);
-      svn_pool_clear(iterpool);
 
       err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -79,7 +78,6 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_revnum_t probe = left + ((right - left) / 2);
       svn_error_t *err;
       svn_fs_fs__revision_file_t *file;
-      svn_pool_clear(iterpool);
       svn_pool_clear(iterpool);
 
       err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool);
