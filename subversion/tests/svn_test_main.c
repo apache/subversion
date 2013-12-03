@@ -788,7 +788,7 @@ main(int argc, const char *argv[])
                 exit(1);
               }
             if ((opts.server_minor_version < 3)
-                || (opts.server_minor_version > 8))
+                || (opts.server_minor_version > 9))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
