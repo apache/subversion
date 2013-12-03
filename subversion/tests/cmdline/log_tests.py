@@ -2070,6 +2070,7 @@ def log_on_nonexistent_path_and_valid_rev(sbox):
 #----------------------------------------------------------------------
 # Test for issue #4022 'svn log -g interprets change in inherited mergeinfo
 # due to move as a merge'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(4022)
 def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   "log -g on copied path with inherited mergeinfo"

@@ -367,6 +367,7 @@ def resolved_on_wc_root(sbox):
   svntest.actions.run_and_verify_unquiet_status(wc, expected_status)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.server_has_mergeinfo)
 def resolved_on_deleted_item(sbox):
   "resolved on deleted item"
 

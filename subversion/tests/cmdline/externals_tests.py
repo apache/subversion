@@ -1588,6 +1588,7 @@ def wc_repos_file_externals(sbox):
                                         True)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.server_has_mergeinfo)
 @Issue(3843)
 def merge_target_with_externals(sbox):
   "merge target with externals"

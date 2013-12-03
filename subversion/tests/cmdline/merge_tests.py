@@ -1057,6 +1057,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
                           (svntest.tree.get_text('mu'), orig_mu_text))
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 @Issue(785)
 def merge_with_implicit_target_using_r(sbox):
   "merging a file w/no explicit target path using -r"
@@ -10188,6 +10189,7 @@ def dont_add_mergeinfo_from_own_history(sbox):
                                        None, 1)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 @Issue(3094)
 def merge_range_predates_history(sbox):
   "merge range predates history"
@@ -12093,6 +12095,7 @@ def subtrees_with_empty_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3240 'commits to subtrees added by merge
 # corrupt working copy and repos'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3240)
 def commit_to_subtree_added_by_merge(sbox):
   "commits to subtrees added by merge wreak havoc"
@@ -14469,6 +14472,7 @@ def noop_file_merge(sbox):
                                      chi_COPY_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 @Issue(2690)
 def copy_then_replace_via_merge(sbox):
   "copy then replace via merge"
@@ -14951,6 +14955,7 @@ def merge_automatic_conflict_resolution(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3440 'Skipped paths get incorrect override mergeinfo
 # during merge'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3440)
 def skipped_files_get_correct_mergeinfo(sbox):
   "skipped files get correct mergeinfo set"
@@ -15225,6 +15230,7 @@ def committed_case_only_move_and_revert(sbox):
 #----------------------------------------------------------------------
 # This is a test for issue #3221 'Unable to merge into working copy of
 # deleted branch'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3221)
 def merge_into_wc_for_deleted_branch(sbox):
   "merge into WC of deleted branch should work"
@@ -15486,6 +15492,7 @@ def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3646 'cyclic --record-only merges create self-referential
 # mergeinfo'
+@SkipUnless(server_has_mergeinfo)
 @Issue(3646)
 def record_only_merge_creates_self_referential_mergeinfo(sbox):
   "merge creates self referential mergeinfo"
@@ -15837,6 +15844,7 @@ def merge_into_locally_added_directory(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2915 'Handle mergeinfo for subtrees missing due to removal
 # by non-svn command'
+@SkipUnless(server_has_mergeinfo)
 @Issue(2915)
 def merge_with_os_deleted_subtrees(sbox):
   "merge tracking fails if target missing subtrees"
@@ -16123,6 +16131,7 @@ def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
 # Test for issue #3686 'executable flag not correctly set on merge'
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3686
 @Issue(3686)
+@SkipUnless(server_has_mergeinfo)
 @SkipUnless(svntest.main.is_posix_os)
 def merge_change_to_file_with_executable(sbox):
   "executable flag is maintained during binary merge"
@@ -17729,6 +17738,7 @@ def merge_target_selection(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', '^/dir', '-c', '4', 'binary-file')
 
+@SkipUnless(server_has_mergeinfo)
 @Issue(3405) # seems to be the wrong issue number
 def merge_properties_on_adds(sbox):
   "merged directory properties are added"
