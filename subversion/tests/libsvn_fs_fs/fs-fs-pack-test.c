@@ -168,6 +168,10 @@ create_packed_filesystem(const char *dir,
   int version;
 
   /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
   if (opts->server_minor_version && (opts->server_minor_version < 6))
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "pre-1.6 SVN doesn't support FSFS packing");
@@ -314,11 +318,6 @@ pack_filesystem(const svn_test_opts_t *opts,
   apr_file_t *file;
   apr_size_t len;
 
-  /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 6)))
-    return SVN_NO_ERROR;
-
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
 
@@ -416,11 +415,6 @@ pack_even_filesystem(const svn_test_opts_t *opts,
 {
   svn_node_kind_t kind;
   const char *path;
-
-  /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 6)))
-    return SVN_NO_ERROR;
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
                                    pool));
@@ -710,11 +704,6 @@ recover_fully_packed(const svn_test_opts_t *opts,
   svn_revnum_t after_rev;
   svn_error_t *err;
 
-  /* Bail (with success) on known-untestable scenarios */
-  if ((strcmp(opts->fs_type, "fsfs") != 0)
-      || (opts->server_minor_version && (opts->server_minor_version < 6)))
-    return SVN_NO_ERROR;
-
   /* Create a packed FS for which every revision will live in a pack
      digest file, and then recover it. */
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
@@ -966,7 +955,8 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 9)))
-    return SVN_NO_ERROR;
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.9 SVN doesn't support log addressing");
 
   /* Create the packed FS in phys addressing format and open it. */
   temp_opts = *opts;
