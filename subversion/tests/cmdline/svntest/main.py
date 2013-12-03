@@ -1340,6 +1340,14 @@ def is_fs_log_addressing():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 9)
 
+def fs_has_rep_sharing():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
+def fs_has_pack():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
 def is_os_windows():
   return os.name == 'nt'
 

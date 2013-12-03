@@ -212,6 +212,9 @@ class RegexOutput(ExpectedOutput):
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (regexp)', label)
 
+  def insert(self, index, line):
+    self.expected.insert(index, line)
+    self.expected_re = re.compile(self.expected)
 
 class RegexListOutput(ExpectedOutput):
   """Matches an ordered list of regular expressions.
@@ -227,7 +230,7 @@ class RegexListOutput(ExpectedOutput):
 
   def __init__(self, expected, match_all=True):
     "EXPECTED is a list of regular expression strings."
-    assert isinstance(expected, list) and expected != []
+    assert isinstance(expected, list)
     ExpectedOutput.__init__(self, expected, match_all)
     self.expected_res = [re.compile(e) for e in expected]
 
@@ -250,6 +253,10 @@ class RegexListOutput(ExpectedOutput):
 
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (regexp)', label)
+
+  def insert(self, index, line):
+    self.expected.insert(index, line)
+    self.expected_res = [re.compile(e) for e in self.expected]
 
 
 class UnorderedOutput(ExpectedOutput):
