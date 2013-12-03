@@ -1943,8 +1943,9 @@ def mergeinfo_race(sbox):
 def recover_old(sbox):
   "recover --pre-1.4-compatible"
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir, minor_version=0)
-  svntest.main.run_svnadmin("recover", sbox.repo_dir)
+  svntest.main.create_repos(sbox.repo_dir, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                          "recover", sbox.repo_dir)
 
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
