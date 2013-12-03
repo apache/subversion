@@ -851,7 +851,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
   if (format == SVN_FS_FS__FORMAT_NUMBER)
     return SVN_NO_ERROR;
 
-  /* If our filesystem predates the existance of the 'txn-current
+  /* If our filesystem predates the existence of the 'txn-current
      file', make that file and its corresponding lock file. */
   if (format < SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     {
@@ -863,7 +863,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
                            pool));
     }
 
-  /* If our filesystem predates the existance of the 'txn-protorevs'
+  /* If our filesystem predates the existence of the 'txn-protorevs'
      dir, make that directory.  */
   if (format < SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     {
