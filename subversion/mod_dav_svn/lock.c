@@ -274,8 +274,13 @@ parse_locktoken(apr_pool_t *pool,
 static const char *
 format_locktoken(apr_pool_t *p, const dav_locktoken *locktoken)
 {
-  /* libsvn_fs already produces a valid locktoken URI. */
-  return apr_pstrdup(p, locktoken->uuid_str);
+  svn_stringbuf_t *formatted
+    = svn_stringbuf_create_ensure(strlen(locktoken->uuid_str), p);
+
+  /* libsvn_fs produces a locktoken URI that will be valid XML when
+     escaped. */
+  svn_xml_escape_cdata_cstring(&formatted, locktoken->uuid_str, p);
+  return formatted->data;
 }
 
 
