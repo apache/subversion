@@ -245,12 +245,11 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
   svn_ra_initialize(g_pool);
 
-  /* We shouldn't fill the JVMs memory with FS cache data unless explictly
-     requested. */
+  /* We shouldn't fill the JVMs memory with FS cache data unless
+     explictly requested. And we don't either, because the caches get
+     allocated outside the JVM heap. Duh. */
   {
     svn_cache_config_t settings = *svn_cache_config_get();
-    settings.cache_size = 0;
-    settings.file_handle_count = 0;
     settings.single_threaded = FALSE;
     svn_cache_config_set(&settings);
   }

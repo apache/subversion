@@ -25,6 +25,7 @@
 #include "id.h"
 #include "dag.h"
 #include "tree.h"
+#include "index.h"
 #include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
@@ -403,7 +404,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * - Data that can be reconstructed from other elements has low prio
    *   (e.g. fulltexts, directories etc.)
    * - Index data required to find any of the other data has high prio
-   *   (e.g. noderevs)
+   *   (e.g. noderevs, L2P and P2L index pages)
    * - everthing else should use default prio
    */
 
@@ -492,7 +493,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->node_revision_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       32, 32, /* ~200 byte / entry; 1k entries total */
                        svn_fs_fs__serialize_node_revision,
                        svn_fs_fs__deserialize_node_revision,
                        sizeof(pair_cache_key_t),
@@ -506,7 +507,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->rep_header_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       1, 1000, /* ~8 bytes / entry; 1k entries total */
                        svn_fs_fs__serialize_rep_header,
                        svn_fs_fs__deserialize_rep_header,
                        sizeof(representation_cache_key_t),
@@ -520,7 +521,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->changes_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       1, 8, /* 1k / entry; 8 entries total, rarely used */
                        svn_fs_fs__serialize_changes,
                        svn_fs_fs__deserialize_changes,
                        sizeof(svn_revnum_t),
@@ -653,6 +654,71 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     {
       ffd->txdelta_window_cache = NULL;
       ffd->combined_window_cache = NULL;
+    }
+
+  if (ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT)
+    {
+      SVN_ERR(create_cache(&(ffd->l2p_header_cache),
+                           NULL,
+                           membuffer,
+                           64, 16, /* entry size varies but we must cover
+                                      a reasonable number of revisions (1k) */
+                           svn_fs_fs__serialize_l2p_header,
+                           svn_fs_fs__deserialize_l2p_header,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "L2P_HEADER",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+      SVN_ERR(create_cache(&(ffd->l2p_page_cache),
+                           NULL,
+                           membuffer,
+                           64, 16, /* entry size varies but we must cover
+                                      a reasonable number of revisions (1k) */
+                           svn_fs_fs__serialize_l2p_page,
+                           svn_fs_fs__deserialize_l2p_page,
+                           sizeof(svn_fs_fs__page_cache_key_t),
+                           apr_pstrcat(pool, prefix, "L2P_PAGE",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+      SVN_ERR(create_cache(&(ffd->p2l_header_cache),
+                           NULL,
+                           membuffer,
+                           4, 1, /* Large entries. Rarely used. */
+                           svn_fs_fs__serialize_p2l_header,
+                           svn_fs_fs__deserialize_p2l_header,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "P2L_HEADER",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+      SVN_ERR(create_cache(&(ffd->p2l_page_cache),
+                           NULL,
+                           membuffer,
+                           4, 16, /* Variably sized entries. Rarely used. */
+                           svn_fs_fs__serialize_p2l_page,
+                           svn_fs_fs__deserialize_p2l_page,
+                           sizeof(svn_fs_fs__page_cache_key_t),
+                           apr_pstrcat(pool, prefix, "P2L_PAGE",
+                                       (char *)NULL),
+                           SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+    }
+  else
+    {
+      ffd->l2p_header_cache = NULL;
+      ffd->l2p_page_cache = NULL;
+      ffd->p2l_header_cache = NULL;
+      ffd->p2l_page_cache = NULL;
     }
 
   return SVN_NO_ERROR;

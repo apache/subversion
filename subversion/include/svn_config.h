@@ -106,8 +106,11 @@ typedef struct svn_config_t svn_config_t;
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_KWALLET_WALLET            "kwallet-wallet"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID "kwallet-svn-application-name-with-pid"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE_PROMPT "ssl-client-cert-file-prompt"
@@ -131,7 +134,9 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
+/** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
+/** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE  "diff-ignore-content-type"

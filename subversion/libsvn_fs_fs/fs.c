@@ -221,6 +221,8 @@ static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
+  ffd->min_log_addressing_rev = SVN_INVALID_REVNUM;
+
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
   return SVN_NO_ERROR;
