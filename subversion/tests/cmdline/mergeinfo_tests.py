@@ -74,6 +74,7 @@ def no_mergeinfo(sbox):
                                            sbox.repo_url + '/A2',
                                            "--show-revs=merged")
 
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo(sbox):
   "'mergeinfo' on a path with mergeinfo"
 
@@ -172,6 +173,7 @@ def mergeinfo_non_source(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3138
+@SkipUnless(server_has_mergeinfo)
 @Issue(3138)
 def mergeinfo_on_unknown_url(sbox):
   "mergeinfo of an unknown url should return error"
@@ -195,6 +197,7 @@ def mergeinfo_on_unknown_url(sbox):
 # Test for issue #3126 'svn mergeinfo shows too few or too many
 # eligible revisions'.  Specifically
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3126)
 def non_inheritable_mergeinfo(sbox):
   "non-inheritable mergeinfo shows as merged"

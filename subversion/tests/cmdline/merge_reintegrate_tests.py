@@ -328,6 +328,7 @@ def basic_reintegrate(sbox):
                                        None, True, True)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_with_rename(sbox):
   "merge --reintegrate with renamed file on branch"
 
@@ -568,6 +569,7 @@ def reintegrate_with_rename(sbox):
                                         expected_status, None, wc_dir)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_branch_never_merged_to(sbox):
   "merge --reintegrate on a never-updated branch"
 
@@ -699,6 +701,7 @@ def reintegrate_branch_never_merged_to(sbox):
                                         expected_status, None, wc_dir)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_modified_wc(sbox):
   "merge --reintegrate should fail in modified wc"
   sbox.build()
@@ -722,6 +725,7 @@ def reintegrate_fail_on_modified_wc(sbox):
     True, False)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_mixed_rev_wc(sbox):
   "merge --reintegrate should fail in mixed-rev wc"
   sbox.build()
@@ -745,6 +749,7 @@ def reintegrate_fail_on_mixed_rev_wc(sbox):
     True, False)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_switched_wc(sbox):
   "merge --reintegrate should fail in switched wc"
   sbox.build()
@@ -813,6 +818,7 @@ def reintegrate_fail_on_switched_wc(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
 # missing subtrees'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3603)
 def reintegrate_on_shallow_wc(sbox):
   "merge --reintegrate in shallow wc"
@@ -1003,6 +1009,7 @@ def reintegrate_fail_on_stale_source(sbox):
                                        [], True, True)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def merge_file_with_space_in_its_path(sbox):
   "merge a file with space in its path"
 
@@ -1716,6 +1723,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
 #
 # Also tests Issue #3591 'reintegrate merges update subtree mergeinfo
 # unconditionally'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3591)
 def reintegrate_with_self_referential_mergeinfo(sbox):
   "source has target's history as explicit mergeinfo"
@@ -2002,6 +2010,7 @@ def reintegrate_with_subtree_merges(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3654)
 def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   "added subtrees with mergeinfo break reintegrate"
@@ -2195,6 +2204,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
 # for merge target'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3648)
 def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   "2-URL merge removes valid mergeinfo from target"
@@ -2355,6 +2365,7 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3867 'reintegrate merges create mergeinfo for
 # non-existent paths'.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3867)
 def reintegrate_creates_bogus_mergeinfo(sbox):
   "reintegrate creates bogus mergeinfo"
@@ -2445,6 +2456,7 @@ def reintegrate_creates_bogus_mergeinfo(sbox):
 # subtree mergeinfo is reintegrated into a target with subtree
 # mergeinfo.  Deliberately written in a style that works with the 1.6
 # testsuite.
+@SkipUnless(server_has_mergeinfo)
 @Issue(3957)
 def no_source_subtree_mergeinfo(sbox):
   "source without subtree mergeinfo"
@@ -2686,6 +2698,7 @@ def reintegrate_replaced_source(sbox):
 
 #----------------------------------------------------------------------
 @SkipUnless(svntest.main.is_posix_os)
+@SkipUnless(server_has_mergeinfo)
 @Issue(4052)
 def reintegrate_symlink_deletion(sbox):
   "reintegrate symlink deletion"
@@ -2722,6 +2735,7 @@ def reintegrate_symlink_deletion(sbox):
   run_reintegrate(A_COPY_url, A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def no_op_reintegrate(sbox):
   """no-op reintegrate"""
 
@@ -2742,6 +2756,7 @@ def no_op_reintegrate(sbox):
   run_reintegrate(sbox.repo_url + '/A_COPY', A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def renamed_branch_reintegrate(sbox):
   """reintegrate a branch that has been renamed"""
 

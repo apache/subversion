@@ -1300,6 +1300,7 @@ def create_superflous_actual_node(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3859)
+@SkipUnless(svntest.main.server_has_mergeinfo)
 def revert_empty_actual(sbox):
   "revert with superfluous actual node"
 
@@ -1316,8 +1317,9 @@ def revert_empty_actual(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 @Issue(3859)
+@SkipUnless(svntest.main.server_has_mergeinfo)
 def revert_empty_actual_recursive(sbox):
-  "recusive revert with superfluous actual node"
+  "recursive revert with superfluous actual node"
 
   create_superflous_actual_node(sbox)
   wc_dir = sbox.wc_dir
