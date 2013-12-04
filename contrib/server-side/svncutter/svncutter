@@ -5,7 +5,7 @@
 # under the prevailing license of their project.
 
 """
-svncutter - clique-squash, range-selection, property mutations, and skeletonization on SVN dump files 
+svncutter - stream surgery on SVN dump files 
 general usage: svncutter [-q] [-r SELECTION] SUBCOMMAND
 
 In all commands, the -r (or --range) option limits the selection of revisions
@@ -29,7 +29,7 @@ Available subcommands:
    proprename
    log
    setlog
-   skeleton
+   strip
    expunge
    renumber
    reduce
@@ -43,7 +43,7 @@ oneliners = {
     "proprename": "Renaming revision properties",
     "log":        "Extracting log entries",
     "setlog":     "Mutating log entries",
-    "skeleton":   "Replace content with unique cookies, preserving structure",
+    "strip":      "Replace content with unique cookies, preserving structure",
     "expunge":    "Expunge operations by Node-path header",
     "renumber":   "Renumber revisions so they're contiguous",
     "reduce":     "Topologically reduce a dump.",
@@ -127,8 +127,8 @@ Replace the log entries in the input dumpfile with the corresponding entries
 in the LOGFILE, which should be in the format of an svn log output.
 Replacements may be restricted to a specified range.
 """,
-    "skeleton": """\
-skeleton: usage: svncutter [-r SELECTION] skeleton PATTERN...
+    "strip": """\
+strip: usage: svncutter [-r SELECTION] strip PATTERN...
 
 Replace content with unique generated cookies on all node paths
 matching the specified regular expressions; if no expressions are
@@ -751,9 +751,9 @@ def setlog(source, logpatch, selection):
         return (propkeys, propdict)
     source.apply_property_hook(selection, loghook)
 
-def skeletonize(source, selection, patterns):
-    "Skeletonize a portion of the dump file defined by a revision selection."
-    def __skeletonize(header, properties, content):
+def strip(source, selection, patterns):
+    "Strip a portion of the dump file defined by a revision selection."
+    def __strip(header, properties, content):
         def get_header(hd, name):
             m = re.search(name + ": (.*)", hd)
             return m and m.group(1)
@@ -766,7 +766,7 @@ def skeletonize(source, selection, patterns):
             filepath = header[11:header.index("\n")]
             for pattern in patterns:
                 if re.search(pattern, filepath):
-                    #sys.stderr.write("skeletonize skipping: %s\n" % filepath)
+                    #sys.stderr.write("strip skipping: %s\n" % filepath)
                     ok = False
                     break
         if not ok:
@@ -790,7 +790,7 @@ def skeletonize(source, selection, patterns):
         header = re.sub("Text-copy-source-md5:.*\n", "", header)
         header = re.sub("Text-copy-source-sha1:.*\n", "", header)
         return header + properties + content
-    source.report(selection, __skeletonize)
+    source.report(selection, __strip)
 
 def doreduce(source):
     "Topologically reduce a dump, removing spans of plain file modifications."
@@ -903,8 +903,8 @@ if __name__ == '__main__':
             if not logpatch:
                 sys.stderr.write("svncutter: setlog requires a log entries file.\n")
             setlog(DumpfileSource(sys.stdin, baton), logpatch, selection)
-        elif arguments[0] == "skeleton":
-            skeletonize(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
+        elif arguments[0] == "strip":
+            strip(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
         elif arguments[0] == "expunge":
             expunge(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
         elif arguments[0] == "renumber":
