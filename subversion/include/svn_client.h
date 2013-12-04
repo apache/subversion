@@ -3990,8 +3990,15 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * If a depth other than #svn_depth_empty or #svn_depth_infinity is
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
- * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log5().  Use @a scratch_pool for all temporary allocations.
+ * In addition to the behavior of @a discover_changed_paths described in
+ * svn_client_log5(), if set to TRUE it enables detection of sub-tree
+ * merges that are complete but can't be detected as complete without
+ * access to the changed paths.  Sub-tree merges detected as complete will
+ * be included if @a finding_merged is TRUE or filtered if @a finding_merged
+ * is FALSE.
+ *
+ * @a revprops is the same as for svn_client_log5().  Use @a scratch_pool for
+ * all temporary allocations.
  *
  * @a ctx is a context used for authentication.
  *
