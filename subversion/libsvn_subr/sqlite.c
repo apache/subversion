@@ -1354,6 +1354,8 @@ svn_sqlite__hotcopy(const char *src_path,
 
   SVN_ERR(svn_sqlite__close(src_db));
 
+  SVN_ERR(svn_io_copy_perms(src_path, dst_path, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
