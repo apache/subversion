@@ -32,6 +32,7 @@ Available subcommands:
    skeleton
    expunge
    renumber
+   reduce
 """
 
 oneliners = {
@@ -45,6 +46,7 @@ oneliners = {
     "skeleton":   "Replace content with unique cookies, preserving structure",
     "expunge":    "Expunge operations by Node-path header",
     "renumber":   "Renumber revisions so they're contiguous",
+    "reduce":     "Topologically reduce a dump.",
     }
 
 helpdict = {
@@ -145,6 +147,22 @@ renumber: usage: svncutter renumber
 
 Renumber all revisions, patching Node-copyfrom headers as required.
 Any selection option is ignored. Takes no arguments.
+""",
+    "reduce": """\
+reduce: usage: svncutter reduce INPUT-FILE
+
+Strip revisions out of a dump so the only parts left those likely to
+be relevant to a conversion problem. A revision is interesting if it
+either (a) contains any operation that is not a plain file
+modification - any directory operation, or any add, or any delete, or
+any copy, or any operation on properties - or (b) it is referenced by
+a later copy operation. Any commit that is neither interesting nor
+has interesting neighbors is dropped.
+
+Because the 'interesting' status of a commit is not known for sure
+until all future commits have been checked for copy operations, this
+command requires an input file.  It cannot operate on standard input.
+The reduced dump is emitted to standard output.
 """,
     }
 
@@ -302,17 +320,20 @@ class DumpfileSource(LineBufferedSource):
             if property_hook:
                 (props.propkeys, props.properties) = property_hook(props.propkeys, props.properties)
             properties = str(props)
-        content = ""
+        # use a list since extending the string gets slow
+        content_list = []
         if "Text-content-length" in header:
             while True:
                 line = self.readline()
                 #print "I see contents line", repr(line)
                 if not line:
                     break
-                if line.startswith("Node-path:") or line.startswith("Revision-number"):
+                if line.startswith(("Node-path:", "Revision-number")):
                     self.push(line)
                     break
-                content += line
+                content_list.append(line)
+        content = "".join(content_list)
+        del content_list
         #print "READ NODE ENDS"
         if property_hook:
             header = DumpfileSource.set_length("Prop-content", header,
@@ -340,9 +361,9 @@ class DumpfileSource(LineBufferedSource):
                     oldrev = line.split()[1]
                     line = line.replace(oldrev, `revmap[int(oldrev)]`) 
                 stash += line
-    def report(self, selection, nodehook, prophook=None):
+    def report(self, selection, nodehook, prophook=None, passthrough=True):
         "Report a filtered portion of content."
-        emit = 0 in selection
+        emit = passthrough and 0 in selection
         stash = self.read_until_next("Revision-number:")
         if emit:
             sys.stdout.write(stash)
@@ -363,12 +384,14 @@ class DumpfileSource(LineBufferedSource):
                 if not line:
                     return
                 elif line == '\n':
-                    sys.stdout.write(line)
+                    if passthrough:
+                        sys.stdout.write(line)
                     continue
                 elif line.startswith("Revision-number:"):
                     self.push(line)
                     if stash and nodecount == 0:
-                        sys.stdout.write(stash)
+                        if passthrough:
+                            sys.stdout.write(stash)
                     break
                 elif line.startswith("Node-path:"):
                     nodecount += 1
@@ -378,7 +401,8 @@ class DumpfileSource(LineBufferedSource):
                     if emit and stash:
                         emit = stash + emit
                         stash = ""
-                    sys.stdout.write(emit)
+                    if passthrough:
+                        sys.stdout.write(emit)
                     continue
                 else:
                     sys.stderr.write("svncutter: parse at %s doesn't look right (%s), aborting!\n" % (self.revision, repr(line)))
@@ -738,11 +762,13 @@ def skeletonize(source, selection, patterns):
 
         # first check against the pattern
         ok = True
-        for pattern in patterns:
-            if header.startswith("Node-path: ") and re.search(pattern, header[11:]):
-                #sys.stderr.write("skeletonize skipping: " + header[11:header.index("\n")] +"\n")
-                ok = False
-                break
+        if header.startswith("Node-path: "):
+            filepath = header[11:header.index("\n")]
+            for pattern in patterns:
+                if re.search(pattern, filepath):
+                    #sys.stderr.write("skeletonize skipping: %s\n" % filepath)
+                    ok = False
+                    break
         if not ok:
             return header + properties + content
         del ok
@@ -766,13 +792,33 @@ def skeletonize(source, selection, patterns):
         return header + properties + content
     source.report(selection, __skeletonize)
 
+def doreduce(source):
+    "Topologically reduce a dump, removing spans of plain file modifications."
+    interesting = set([0])
+    def __reduce(header, properties, content):
+        def get_header(name):
+            m = re.search(name + ": (.*)", header)
+            return m and m.group(1)
+        if not (get_header("Node-kind") == "file" and get_header("Node-action") == "change") or properties:
+            interesting.add(source.revision)
+        copysource = get_header("Node-copyfrom-rev")
+        if copysource is not None:
+            interesting.add(int(copysource))
+        return None
+    source.report(SubversionRange("0:HEAD"), __reduce, passthrough=False)
+    selection = SubversionRange(",".join([str(x) for x in interesting or x+1 in interesting or x-1 in interesting]))
+    source.file.seek(0)
+    select(source, selection)
+
 def expunge(source, selection, patterns):
     "Strip out ops defined by a revision selection and a path regexp."
     def __expunge(header, properties, content):
-        for pattern in patterns:
-            if header.startswith("Node-path: ") and re.search(pattern, header[11:]):
-                #sys.stderr.write("expunge skipping: " + header[11:header.index("\n")] +"\n")
-                return ""
+        if header.startswith("Node-path: "):
+            filepath = header[11:header.index("\n")]
+            for pattern in patterns:
+                if re.search(pattern, filepath):
+                    #sys.stderr.write("expunge skipping: " + header[11:header.index("\n")] +"\n")
+                    return ""
         else:
             return header + properties + content
     source.report(selection, __expunge)
@@ -795,6 +841,9 @@ def renumber(source):
             sys.stdout.write("Node-copyfrom-rev: %s\n" % renumbering[oldrev])
         else:
             sys.stdout.write(line)
+
+def patterns_compile(patterns):
+    return [re.compile(pattern) for pattern in patterns]
 
 if __name__ == '__main__':
     try:
@@ -855,11 +904,13 @@ if __name__ == '__main__':
                 sys.stderr.write("svncutter: setlog requires a log entries file.\n")
             setlog(DumpfileSource(sys.stdin, baton), logpatch, selection)
         elif arguments[0] == "skeleton":
-            skeletonize(DumpfileSource(sys.stdin, baton), selection, arguments[1:])
+            skeletonize(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
         elif arguments[0] == "expunge":
-            expunge(DumpfileSource(sys.stdin, baton), selection, arguments[1:])
+            expunge(DumpfileSource(sys.stdin, baton), selection, patterns_compile(arguments[1:]))
         elif arguments[0] == "renumber":
             renumber(DumpfileSource(sys.stdin, baton))
+        elif arguments[0] == "reduce":
+            doreduce(DumpfileSource(open(arguments[1]), baton))
         elif arguments[0] == "help":
             if len(arguments) == 1:
                 sys.stdout.write(__doc__)
