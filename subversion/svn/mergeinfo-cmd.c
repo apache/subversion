@@ -334,7 +334,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
                                     src_start_revision,
                                     src_end_revision,
                                     log_reciever, NULL,
-                                    FALSE, depth, revprops, ctx,
+                                    TRUE, depth, revprops, ctx,
                                     pool));
 
   return SVN_NO_ERROR;
