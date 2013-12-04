@@ -1314,6 +1314,12 @@ svn_sqlite__hotcopy(const char *src_path,
     svn_sqlite__db_t *dst_db;
     sqlite3_backup *backup;
     int rc1, rc2;
+    svn_node_kind_t kind;
+
+    /* Create empty file first to avoid SQLITE_DEFAULT_FILE_PERMISSIONS. */
+    SVN_ERR(svn_io_check_path(dst_path, &kind, scratch_pool));
+    if (kind == svn_node_none)
+      SVN_ERR(svn_io_file_create_empty(dst_path, scratch_pool));
 
     SVN_ERR(svn_sqlite__open(&dst_db, dst_path, svn_sqlite__mode_rwcreate,
                              NULL, 0, NULL, scratch_pool, scratch_pool));
