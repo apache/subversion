@@ -187,6 +187,14 @@ Candidate changes:
    Votes:
      +1: breser (without r1544895), rhuijben
 
+ * r1548105
+   mod_dav_svn: Fix SVNAllowBulkUpdates directive merging.
+   Justification:
+     'SVNAllowBulkUpdates on' does not override other values
+     configured for other <Location>
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
