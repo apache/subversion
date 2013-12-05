@@ -87,7 +87,6 @@ do_cleanup(const char *local_abspath,
   if (fix_timestamps)
     svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
 
-  /* ### TODO: We should obtain a wc lock around the following block */
   if (remove_unversioned_items || remove_ignored_items || include_externals)
     {
       struct cleanup_status_walk_baton b;
@@ -103,7 +102,9 @@ do_cleanup(const char *local_abspath,
       b.ctx = ctx;
 
       SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
-      SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath,
+
+      SVN_WC__CALL_WITH_WRITE_LOCK(
+              svn_wc_walk_status(ctx->wc_ctx, local_abspath,
                                  svn_depth_infinity,
                                  TRUE,  /* get all */
                                  remove_ignored_items,
@@ -112,7 +113,11 @@ do_cleanup(const char *local_abspath,
                                  cleanup_status_walk, &b,
                                  ctx->cancel_func,
                                  ctx->cancel_baton,
-                                 scratch_pool));
+                                 scratch_pool),
+              ctx->wc_ctx,
+              local_abspath,
+              FALSE /* lock_anchor */,
+              scratch_pool);
     }
 
   return SVN_NO_ERROR;
