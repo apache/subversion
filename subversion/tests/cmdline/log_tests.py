@@ -2554,6 +2554,33 @@ def log_auto_move(sbox):
   verify_move_log(sbox, '--auto-moves', server_has_auto_move())
   verify_move_log(sbox, '-v', 0)
 
+@SkipUnless(server_has_mergeinfo)
+def mergeinfo_log(sbox):
+  "'mergeinfo --log' on a path with mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # make a branch 'A2'
+  sbox.simple_repo_copy('A', 'A2')  # r2
+  # make a change in branch 'A'
+  sbox.simple_mkdir('A/newdir')
+  sbox.simple_commit(message="Log message for revision 3.")  # r3
+  sbox.simple_update()
+
+  # Dummy up some mergeinfo.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', SVN_PROP_MERGEINFO, '/A:3',
+                                     sbox.ospath('A2'))
+
+  # test --log
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'mergeinfo', '--show-revs=merged',
+                                     '--log', sbox.repo_url + '/A',
+                                     sbox.ospath('A2'))
+  check_log_chain(parse_log_output(output), [3])
+
 
 
 ########################################################################
@@ -2603,6 +2630,7 @@ test_list = [ None,
               merge_sensitive_log_with_search,
               log_multiple_revs_spanning_rename,
               log_auto_move,
+              mergeinfo_log,
              ]
 
 if __name__ == '__main__':
