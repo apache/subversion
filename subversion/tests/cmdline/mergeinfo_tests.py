@@ -783,30 +783,6 @@ def noninheritable_mergeinfo_not_always_eligible(sbox):
     '--show-revs', 'eligible', '-R')
 
 @SkipUnless(server_has_mergeinfo)
-def mergeinfo_log(sbox):
-  "'mergeinfo --log' on a path with mergeinfo"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # make a branch 'A2'
-  sbox.simple_repo_copy('A', 'A2')  # r2
-  # make a change in branch 'A'
-  sbox.simple_mkdir('A/newdir')
-  sbox.simple_commit()  # r3
-  sbox.simple_update()
-
-  # Dummy up some mergeinfo.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ps', SVN_PROP_MERGEINFO, '/A:3',
-                                     sbox.ospath('A2'))
-  svntest.actions.run_and_verify_svn(None,
-                                     None, [],
-                                     'mergeinfo', '--show-revs=merged',
-                                     '--log', sbox.repo_url + '/A',
-                                     sbox.ospath('A2'))
-
-@SkipUnless(server_has_mergeinfo)
 @Issue(4301)
 def mergeinfo_local_move(sbox):
   "'mergeinfo' on a locally moved path"
@@ -824,6 +800,7 @@ def mergeinfo_local_move(sbox):
 ########################################################################
 # Run the tests
 
+# Note that mergeinfo --log is tested in log_tests.py
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -838,7 +815,6 @@ test_list = [ None,
               wc_target_inherits_mergeinfo_from_repos,
               natural_history_is_not_eligible_nor_merged,
               noninheritable_mergeinfo_not_always_eligible,
-              mergeinfo_log,
               mergeinfo_local_move,
              ]
 
