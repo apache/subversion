@@ -315,9 +315,9 @@ test_uri_decode(apr_pool_t *pool)
     const char *path;
     const char *result;
   } tests[] = {
-    { "http://c.r.a/s%\0008me",
+    { "http://c.r.a/s%\0" "8me",
          "http://c.r.a/s%"},
-    { "http://c.r.a/s%6\000me",
+    { "http://c.r.a/s%6\0" "me",
          "http://c.r.a/s%6" },
     { "http://c.r.a/s%68me",
          "http://c.r.a/shme" },
