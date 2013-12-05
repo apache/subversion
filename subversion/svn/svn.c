@@ -1142,7 +1142,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
-    {'r', 'R', opt_depth, opt_show_revs, opt_mergeinfo_log} },
+    {'r', 'R', 'q', 'v', opt_depth, opt_show_revs, opt_mergeinfo_log } },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
