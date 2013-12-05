@@ -3006,6 +3006,19 @@ svn_client_cleanup(const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_client_cleanup2(path, FALSE, FALSE, FALSE, ctx,
-                                             scratch_pool));
+  const char *local_abspath;
+
+  if (svn_path_is_url(path))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  return svn_error_trace(svn_client_cleanup2(local_abspath,
+                                             TRUE /* break_locks */,
+                                             TRUE /* fix_recorded_timestamps */,
+                                             TRUE /* clear_dav_cache */,
+                                             TRUE /* vacuum_pristines */,
+                                             FALSE /* include_externals */,
+                                             ctx, scratch_pool));
 }
