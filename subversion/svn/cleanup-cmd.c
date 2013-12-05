@@ -95,6 +95,8 @@ svn_cl__cleanup(apr_getopt_t *os,
                                      _("Cannot remove unversioned or ignored "
                                        "items from something that is not a "
                                        "working copy"));
+
+          SVN_ERR(err);
         }
       else
         {
