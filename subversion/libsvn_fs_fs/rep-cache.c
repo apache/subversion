@@ -79,16 +79,10 @@ open_rep_cache(void *baton,
   svn_sqlite__db_t *sdb;
   const char *db_path;
   int version;
-  svn_boolean_t exists;
-
-  SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
 
   /* Open (or create) the sqlite database.  It will be automatically
-     closed when fs->pool is destoyed.  We create the empty file first
-     to avoid SQLITE_DEFAULT_FILE_PERMISSIONS. */
+     closed when fs->pool is destoyed.  */
   db_path = path_rep_cache_db(fs->path, pool);
-  if (!exists)
-    SVN_ERR(svn_io_file_create_empty(db_path, pool));
   SVN_ERR(svn_sqlite__open(&sdb, db_path,
                            svn_sqlite__mode_rwcreate, statements,
                            0, NULL,

@@ -808,6 +808,21 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
        somebody initialized SQLite before us it is needed anyway.  */
     flags |= SQLITE_OPEN_NOMUTEX;
 
+#if !defined(WIN32) && !defined(SVN_SQLITE_INLINE)
+    if (mode == svn_sqlite__mode_rwcreate)
+      {
+        svn_node_kind_t kind;
+
+        /* Create the file before SQLite to avoid any permissions
+           problems with an SQLite build that uses the default
+           SQLITE_DEFAULT_FILE_PERMISSIONS of 644 modified by umask.
+           We simply want umask permissions. */
+        SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+        if (kind == svn_node_none)
+          SVN_ERR(svn_io_file_create_empty(path, scratch_pool));
+      }
+#endif
+
     /* Open the database. Note that a handle is returned, even when an error
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */
@@ -1314,12 +1329,6 @@ svn_sqlite__hotcopy(const char *src_path,
     svn_sqlite__db_t *dst_db;
     sqlite3_backup *backup;
     int rc1, rc2;
-    svn_node_kind_t kind;
-
-    /* Create empty file first to avoid SQLITE_DEFAULT_FILE_PERMISSIONS. */
-    SVN_ERR(svn_io_check_path(dst_path, &kind, scratch_pool));
-    if (kind == svn_node_none)
-      SVN_ERR(svn_io_file_create_empty(dst_path, scratch_pool));
 
     SVN_ERR(svn_sqlite__open(&dst_db, dst_path, svn_sqlite__mode_rwcreate,
                              NULL, 0, NULL, scratch_pool, scratch_pool));
