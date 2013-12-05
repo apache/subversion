@@ -2581,6 +2581,22 @@ def mergeinfo_log(sbox):
                                      sbox.ospath('A2'))
   check_log_chain(parse_log_output(output), [3])
 
+  # test --log -v
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'mergeinfo', '--show-revs=merged',
+                                     '--log', '-v', sbox.repo_url + '/A',
+                                     sbox.ospath('A2'))
+  check_log_chain(parse_log_output(output), [3], [1])
+
+  # test --log -q
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'mergeinfo', '--show-revs=merged',
+                                     '--log', '-q', sbox.repo_url + '/A',
+                                     sbox.ospath('A2'))
+  # TODO: Validate the output, the check_log_chain() function assumes it
+  # gets the output of the message
 
 
 ########################################################################

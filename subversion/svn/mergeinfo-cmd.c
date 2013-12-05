@@ -271,6 +271,8 @@ mergeinfo_log(svn_boolean_t finding_merged,
               const svn_opt_revision_t *src_end_revision,
               svn_depth_t depth,
               svn_boolean_t include_log_details,
+              svn_boolean_t quiet,
+              svn_boolean_t verbose,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
@@ -285,15 +287,19 @@ mergeinfo_log(svn_boolean_t finding_merged,
       revprops = apr_array_make(pool, 3, sizeof(const char *));
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
-      APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
+      if (!quiet)
+        APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
 
-      log_receiver = print_log_details;
+      if (verbose)
+        log_receiver = svn_cl__log_entry_receiver;
+      else
+        log_receiver = print_log_details;
 
       baton = apr_palloc(pool, sizeof(svn_cl__log_receiver_baton));
       baton->ctx = ctx;
       baton->target_path_or_url = target;
       baton->target_peg_revision = *tgt_peg_revision;
-      baton->omit_log_message = FALSE;
+      baton->omit_log_message = quiet;
       baton->show_diff = FALSE;
       baton->depth = depth;
       baton->diff_extensions = NULL;
@@ -390,6 +396,19 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   else
     src_end_revision = &(opt_state->end_revision);
 
+  if (!opt_state->mergeinfo_log)
+    {
+      if (opt_state->quiet)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--quiet (-q) option valid only with --log "
+                                  "option"));
+
+      if (opt_state->verbose)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--verbose (-v) option valid only with "
+                                  "--log option"));
+    }
+
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
@@ -398,6 +417,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                             src_start_revision,
                             src_end_revision,
                             depth, opt_state->mergeinfo_log,
+                            opt_state->quiet, opt_state->verbose,
                             ctx, pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
@@ -407,6 +427,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                             src_start_revision,
                             src_end_revision,
                             depth, opt_state->mergeinfo_log,
+                            opt_state->quiet, opt_state->verbose,
                             ctx, pool));
     }
   else
