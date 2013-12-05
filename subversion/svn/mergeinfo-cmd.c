@@ -319,6 +319,9 @@ mergeinfo_log(svn_boolean_t finding_merged,
                                     TRUE, depth, revprops, ctx,
                                     pool));
 
+  if (include_log_details)
+    SVN_ERR(svn_cmdline_printf(pool, SVN_CL__LOG_SEP_STRING));
+
   return SVN_NO_ERROR;
 }
 

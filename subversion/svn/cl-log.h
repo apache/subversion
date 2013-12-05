@@ -37,6 +37,10 @@ extern "C" {
 
 
 
+/* The separator between log messages. */
+#define SVN_CL__LOG_SEP_STRING \
+  "------------------------------------------------------------------------\n"
+
 /* Baton for log_entry_receiver() and log_entry_receiver_xml(). */
 typedef struct svn_cl__log_receiver_baton
 {

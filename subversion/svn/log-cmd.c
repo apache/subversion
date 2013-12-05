@@ -46,9 +46,6 @@
 
 /*** Code. ***/
 
-/* The separator between log messages. */
-#define SEP_STRING \
-  "------------------------------------------------------------------------\n"
 
 
 /* Display a diff of the subtree TARGET_PATH_OR_URL@TARGET_PEG_REVISION as
@@ -340,7 +337,7 @@ svn_cl__log_entry_receiver(void *baton,
     }
 
   SVN_ERR(svn_cmdline_printf(pool,
-                             SEP_STRING "r%ld | %s | %s",
+                             SVN_CL__LOG_SEP_STRING "r%ld | %s | %s",
                              log_entry->revision, author, date));
 
   if (message != NULL)
@@ -840,7 +837,7 @@ svn_cl__log(apr_getopt_t *os,
                               pool));
 
       if (! opt_state->incremental)
-        SVN_ERR(svn_cmdline_printf(pool, SEP_STRING));
+        SVN_ERR(svn_cmdline_printf(pool, SVN_CL__LOG_SEP_STRING));
     }
 
   return SVN_NO_ERROR;
