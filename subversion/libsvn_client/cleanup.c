@@ -46,9 +46,13 @@
 
 struct cleanup_status_walk_baton
 {
-  svn_boolean_t include_externals;
+  svn_boolean_t break_locks;
+  svn_boolean_t fix_timestamps;
+  svn_boolean_t clear_dav_cache;
+  svn_boolean_t vacuum_pristines;
   svn_boolean_t remove_unversioned_items;
   svn_boolean_t remove_ignored_items;
+  svn_boolean_t include_externals;
   svn_client_ctx_t *ctx;
 };
 
@@ -61,41 +65,38 @@ cleanup_status_walk(void *baton,
 
 static svn_error_t *
 do_cleanup(const char *local_abspath,
-           svn_boolean_t include_externals,
+           svn_boolean_t break_locks,
+           svn_boolean_t fix_timestamps,
+           svn_boolean_t clear_dav_cache,
+           svn_boolean_t vacuum_pristines,
            svn_boolean_t remove_unversioned_items,
            svn_boolean_t remove_ignored_items,
+           svn_boolean_t include_externals,
            svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  SVN_ERR(svn_wc_cleanup4(ctx->wc_ctx,
+                          local_abspath,
+                          break_locks,
+                          fix_timestamps,
+                          clear_dav_cache,
+                          vacuum_pristines,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          scratch_pool));
 
-  if (remove_unversioned_items || remove_ignored_items)
-    {
-      svn_boolean_t is_locked_here;
-      svn_boolean_t is_locked;
+  if (fix_timestamps)
+    svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
 
-      /* Check if someone else owns a lock for LOCAL_ABSPATH. */
-      SVN_ERR(svn_wc_locked2(&is_locked_here, &is_locked, ctx->wc_ctx,
-                             local_abspath, scratch_pool));
-      if (is_locked && !is_locked_here)
-        return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
-                                 _("Working copy at '%s' is already locked."),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
-    }
-
-  err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
-                        ctx->cancel_baton, scratch_pool);
-  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
-  if (err)
-    return svn_error_trace(err);
-
+  /* ### TODO: We should obtain a wc lock around the following block */
   if (remove_unversioned_items || remove_ignored_items || include_externals)
     {
       struct cleanup_status_walk_baton b;
       apr_array_header_t *ignores;
 
-      b.include_externals = include_externals;
+      b.break_locks = break_locks;
+      b.fix_timestamps = fix_timestamps;
+      b.clear_dav_cache = clear_dav_cache;
+      b.vacuum_pristines = vacuum_pristines;
       b.remove_unversioned_items = remove_unversioned_items;
       b.remove_ignored_items = remove_ignored_items;
       b.include_externals = include_externals;
@@ -145,10 +146,15 @@ cleanup_status_walk(void *baton,
                                       scratch_pool);
             }
 
-          err = do_cleanup(local_abspath, b->include_externals,
-                            b->remove_unversioned_items,
-                            b->remove_ignored_items,
-                            b->ctx, scratch_pool);
+          err = do_cleanup(local_abspath,
+                           b->break_locks,
+                           b->fix_timestamps,
+                           b->clear_dav_cache,
+                           b->vacuum_pristines,
+                           b->remove_unversioned_items,
+                           b->remove_ignored_items,
+                           TRUE /* include_externals */,
+                           b->ctx, scratch_pool);
           if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
             {
               svn_error_clear(err);
@@ -203,22 +209,50 @@ cleanup_status_walk(void *baton,
 }
 
 svn_error_t *
-svn_client_cleanup2(const char *path,
+svn_client_cleanup2(const char *dir_abspath,
+                    svn_boolean_t break_locks,
+                    svn_boolean_t fix_recorded_timestamps,
+                    svn_boolean_t clear_dav_cache,
+                    svn_boolean_t vacuum_pristines,
                     svn_boolean_t include_externals,
-                    svn_boolean_t remove_unversioned_items,
-                    svn_boolean_t remove_ignored_items,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"), path);
+  SVN_ERR(do_cleanup(dir_abspath,
+                     break_locks,
+                     fix_recorded_timestamps,
+                     clear_dav_cache,
+                     vacuum_pristines,
+                     FALSE /* remove_unversioned_items */,
+                     FALSE /* remove_ignored_items */,
+                     include_externals,
+                     ctx, scratch_pool));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(do_cleanup(local_abspath, include_externals,
-                     remove_unversioned_items, remove_ignored_items,
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_vacuum(const char *dir_abspath,
+                  svn_boolean_t remove_unversioned_items,
+                  svn_boolean_t remove_ignored_items,
+                  svn_boolean_t fix_recorded_timestamps,
+                  svn_boolean_t vacuum_pristines,
+                  svn_boolean_t include_externals,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
+  SVN_ERR(do_cleanup(dir_abspath,
+                     FALSE /* break_locks */,
+                     fix_recorded_timestamps,
+                     FALSE /* clear_dav_cache */,
+                     vacuum_pristines,
+                     remove_unversioned_items,
+                     remove_ignored_items,
+                     include_externals,
                      ctx, scratch_pool));
 
   return SVN_NO_ERROR;
