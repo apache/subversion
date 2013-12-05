@@ -4185,7 +4185,25 @@ svn_wc_relocate(const char *path,
 }
 
 
-/*** From log.c ***/
+/*** From log.c / cleanup.c ***/
+
+svn_error_t *
+svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_wc_cleanup4(wc_ctx,
+                            local_abspath,
+                            TRUE /* break_locks */,
+                            TRUE /* fix_recorded_timestamps */,
+                            TRUE /* clear_dav_cache */,
+                            TRUE /* clean_pristines */,
+                            cancel_func, cancel_baton,
+                            scratch_pool));
+}
 
 svn_error_t *
 svn_wc_cleanup2(const char *path,
