@@ -819,7 +819,13 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
            We simply want umask permissions. */
         SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
         if (kind == svn_node_none)
-          SVN_ERR(svn_io_file_create_empty(path, scratch_pool));
+          {
+            /* Another thread may have created the file, that's OK. */
+            svn_error_t *err = svn_io_file_create_empty(path, scratch_pool);
+            if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
+              return svn_error_trace(err);
+            svn_error_clear(err);
+          }
       }
 #endif
 
