@@ -37,6 +37,7 @@
 #include "svn_error_codes.h"
 #include "svn_types.h"
 #include "cl.h"
+#include "cl-log.h"
 
 #include "svn_private_config.h"
 
@@ -57,59 +58,23 @@ print_log_rev(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* The separator between log messages. */
-#define SEP_STRING \
-  "------------------------------------------------------------------------\n"
-
-/* Implements the svn_log_entry_receiver_t interface. */
+/* Implements a svn_log_entry_receiver_t interface that filters out changed
+ * paths data before calling the svn_cl__log_entry_receiver().  Right now we
+ * always have to pass TRUE for discover_changed_paths for
+ * svn_client_mergeinfo_log2() due to the side effect of that option.  The
+ * svn_cl__log_entry_receiver() discovers if it should print the changed paths
+ * implicitly by the path info existing.  As a result this filter is needed
+ * to allow expected output without changed paths.
+ */
 static svn_error_t *
 print_log_details(void *baton,
                   svn_log_entry_t *log_entry,
                   apr_pool_t *pool)
 {
-  const char *author;
-  const char *date;
-  const char *message;
+  log_entry->changed_paths = NULL;
+  log_entry->changed_paths2 = NULL;
 
-  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
-
-  if (author == NULL)
-    author = _("(no author)");
-
-  if (date && date[0])
-    /* Convert date to a format for humans. */
-    SVN_ERR(svn_cl__time_cstring_to_human_cstring(&date, date, pool));
-  else
-    date = _("(no date)");
-
-  if (log_entry->non_inheritable)
-    SVN_ERR(svn_cmdline_printf(pool,
-                               SEP_STRING "r%ld* | %s | %s",
-                               log_entry->revision, author, date));
-  else
-    SVN_ERR(svn_cmdline_printf(pool,
-                               SEP_STRING "r%ld | %s | %s",
-                               log_entry->revision, author, date));
-
-  if (message != NULL)
-    {
-      /* Number of lines in the msg. */
-      int lines = svn_cstring_count_newlines(message) + 1;
-
-      SVN_ERR(svn_cmdline_printf(pool,
-                                 Q_(" | %d line", " | %d lines", lines),
-                                 lines));
-    }
-
-  SVN_ERR(svn_cmdline_printf(pool, "\n"));
-
-  if (message != NULL)
-    {
-      /* A blank line always precedes the log message. */
-      SVN_ERR(svn_cmdline_printf(pool, "\n%s\n", message));
-    }
-
-  return SVN_NO_ERROR;
+  return svn_cl__log_entry_receiver(baton, log_entry, pool);
 }
 
 /* Draw a diagram (by printing text to the console) summarizing the state
@@ -311,21 +276,38 @@ mergeinfo_log(svn_boolean_t finding_merged,
 {
   apr_array_header_t *revprops;
   svn_log_entry_receiver_t log_reciever;
+  void *log_receiver_baton;
 
   if (include_log_details)
     {
+      svn_cl__log_receiver_baton *baton;
+
       revprops = apr_array_make(pool, 3, sizeof(const char *));
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
 
       log_reciever = print_log_details;
+
+      baton = apr_palloc(pool, sizeof(svn_cl__log_receiver_baton));
+      baton->ctx = ctx;
+      baton->target_path_or_url = target;
+      baton->target_peg_revision = *tgt_peg_revision;
+      baton->omit_log_message = FALSE;
+      baton->show_diff = FALSE;
+      baton->depth = depth;
+      baton->diff_extensions = NULL;
+      baton->merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+      baton->search_patterns = NULL;
+      baton->pool = pool;
+      log_receiver_baton = baton; 
     }
   else
     {
       /* We need only revisions number, not revision properties. */
       revprops = apr_array_make(pool, 0, sizeof(const char *));
       log_reciever = print_log_rev;
+      log_receiver_baton = NULL;
     }
 
   SVN_ERR(svn_client_mergeinfo_log2(finding_merged, target,
@@ -333,7 +315,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
                                     source, src_peg_revision,
                                     src_start_revision,
                                     src_end_revision,
-                                    log_reciever, NULL,
+                                    log_reciever, log_receiver_baton,
                                     TRUE, depth, revprops, ctx,
                                     pool));
 

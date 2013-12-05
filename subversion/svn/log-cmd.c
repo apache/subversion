@@ -39,45 +39,12 @@
 #include "private/svn_cmdline_private.h"
 
 #include "cl.h"
+#include "cl-log.h"
 
 #include "svn_private_config.h"
 
 
 /*** Code. ***/
-
-/* Baton for log_entry_receiver() and log_entry_receiver_xml(). */
-struct log_receiver_baton
-{
-  /* Client context. */
-  svn_client_ctx_t *ctx;
-
-  /* The target of the log operation. */
-  const char *target_path_or_url;
-  svn_opt_revision_t target_peg_revision;
-
-  /* Don't print log message body nor its line count. */
-  svn_boolean_t omit_log_message;
-
-  /* Whether to show diffs in the log. (maps to --diff) */
-  svn_boolean_t show_diff;
-
-  /* Depth applied to diff output. */
-  svn_depth_t depth;
-
-  /* Diff arguments received from command line. */
-  const char *diff_extensions;
-
-  /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
-  apr_array_header_t *merge_stack;
-
-  /* Log message search patterns. Log entries will only be shown if the author,
-   * the log message, or a changed path matches one of these patterns. */
-  apr_array_header_t *search_patterns;
-
-  /* Pool for persistent allocations. */
-  apr_pool_t *pool;
-};
-
 
 /* The separator between log messages. */
 #define SEP_STRING \
@@ -249,7 +216,7 @@ match_search_patterns(apr_array_header_t *search_patterns,
 /* Implement `svn_log_entry_receiver_t', printing the logs in
  * a human-readable and machine-parseable format.
  *
- * BATON is of type `struct log_receiver_baton'.
+ * BATON is of type `svn_cl__log_receiver_baton'.
  *
  * First, print a header line.  Then if CHANGED_PATHS is non-null,
  * print all affected paths in a list headed "Changed paths:\n",
@@ -323,12 +290,12 @@ match_search_patterns(apr_array_header_t *search_patterns,
  * ------------------------------------------------------------------------
  *
  */
-static svn_error_t *
-log_entry_receiver(void *baton,
-                   svn_log_entry_t *log_entry,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_cl__log_entry_receiver(void *baton,
+                           svn_log_entry_t *log_entry,
+                           apr_pool_t *pool)
 {
-  struct log_receiver_baton *lb = baton;
+  svn_cl__log_receiver_baton *lb = baton;
   const char *author;
   const char *date;
   const char *message;
@@ -481,7 +448,7 @@ log_entry_receiver(void *baton,
 
 /* This implements `svn_log_entry_receiver_t', printing the logs in XML.
  *
- * BATON is of type `struct log_receiver_baton'.
+ * BATON is of type `svn_cl__log_receiver_baton'.
  *
  * Here is an example of the output; note that the "<log>" and
  * "</log>" tags are not emitted by this function:
@@ -515,12 +482,12 @@ log_entry_receiver(void *baton,
  * </log>
  *
  */
-static svn_error_t *
-log_entry_receiver_xml(void *baton,
-                       svn_log_entry_t *log_entry,
-                       apr_pool_t *pool)
+svn_error_t *
+svn_cl__log_entry_receiver_xml(void *baton,
+                               svn_log_entry_t *log_entry,
+                               apr_pool_t *pool)
 {
-  struct log_receiver_baton *lb = baton;
+  svn_cl__log_receiver_baton *lb = baton;
   /* Collate whole log message into sb before printing. */
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
   char *revstr;
@@ -677,7 +644,7 @@ svn_cl__log(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  struct log_receiver_baton lb;
+  svn_cl__log_receiver_baton lb;
   const char *target;
   int i;
   apr_array_header_t *revprops;
@@ -843,7 +810,7 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->use_merge_history,
                               move_behavior,
                               revprops,
-                              log_entry_receiver_xml,
+                              svn_cl__log_entry_receiver_xml,
                               &lb,
                               ctx,
                               pool));
@@ -867,7 +834,7 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->use_merge_history,
                               move_behavior,
                               revprops,
-                              log_entry_receiver,
+                              svn_cl__log_entry_receiver,
                               &lb,
                               ctx,
                               pool));
