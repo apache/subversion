@@ -2539,6 +2539,9 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    for pathnames contained in EXCLUDE_RELPATHS are not touched by this
    function.  These pathnames should be paths relative to the wcroot.
 
+   If EMPTY_UPDATE is TRUE then no nodes at or below LOCAL_ABSPATH have been
+   affected by the update/switch yet.
+
    If WCROOT_IPROPS is not NULL it is a hash mapping const char * absolute
    working copy paths to depth-first ordered arrays of
    svn_prop_inherited_item_t * structures.  If LOCAL_ABSPATH exists in
@@ -2555,6 +2558,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
                                          apr_hash_t *wcroot_iprops,
+                                         svn_boolean_t empty_update,
                                          svn_wc_notify_func2_t notify_func,
                                          void *notify_baton,
                                          apr_pool_t *scratch_pool);

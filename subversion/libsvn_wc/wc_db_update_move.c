@@ -1627,6 +1627,7 @@ replace_moved_layer(const char *src_relpath,
       svn_error_t *err;
       svn_sqlite__stmt_t *stmt2;
       const char *src_cp_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_node_kind_t kind = svn_sqlite__column_token(stmt, 1, kind_map);
       const char *dst_cp_relpath
         = svn_relpath_join(dst_relpath,
                            svn_relpath_skip_ancestor(src_relpath,
@@ -1643,6 +1644,11 @@ replace_moved_layer(const char *src_relpath,
                                                     scratch_pool));
       if (!err)
         err = svn_sqlite__step_done(stmt2);
+
+      if (!err && strlen(dst_cp_relpath) > strlen(dst_relpath))
+        err = svn_wc__db_extend_parent_delete(wcroot, dst_cp_relpath, kind,
+                                              dst_op_depth, scratch_pool);
+
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
