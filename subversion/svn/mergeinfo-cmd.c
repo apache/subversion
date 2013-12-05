@@ -275,7 +275,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
               apr_pool_t *pool)
 {
   apr_array_header_t *revprops;
-  svn_log_entry_receiver_t log_reciever;
+  svn_log_entry_receiver_t log_receiver;
   void *log_receiver_baton;
 
   if (include_log_details)
@@ -287,7 +287,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
 
-      log_reciever = print_log_details;
+      log_receiver = print_log_details;
 
       baton = apr_palloc(pool, sizeof(svn_cl__log_receiver_baton));
       baton->ctx = ctx;
@@ -306,7 +306,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
     {
       /* We need only revisions number, not revision properties. */
       revprops = apr_array_make(pool, 0, sizeof(const char *));
-      log_reciever = print_log_rev;
+      log_receiver = print_log_rev;
       log_receiver_baton = NULL;
     }
 
@@ -315,7 +315,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
                                     source, src_peg_revision,
                                     src_start_revision,
                                     src_end_revision,
-                                    log_reciever, log_receiver_baton,
+                                    log_receiver, log_receiver_baton,
                                     TRUE, depth, revprops, ctx,
                                     pool));
 
