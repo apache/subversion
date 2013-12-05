@@ -52,8 +52,11 @@ extern "C" {
 /* a pool-key for the shared dav_svn_root used by autoversioning  */
 #define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
 
-/* Option values for SVNAllowBulkUpdates */
+/* Option values for SVNAllowBulkUpdates.  Note that
+   it's important that CONF_BULKUPD_DEFAULT is 0 to make
+   dav_svn_merge_dir_config do the right thing. */
 typedef enum dav_svn__bulk_upd_conf {
+    CONF_BULKUPD_DEFAULT,
     CONF_BULKUPD_ON,
     CONF_BULKUPD_OFF,
     CONF_BULKUPD_PREFER
