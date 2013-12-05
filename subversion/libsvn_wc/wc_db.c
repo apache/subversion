@@ -11625,6 +11625,7 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                            svn_revnum_t new_revision,
                            apr_hash_t *exclude_relpaths,
                            apr_hash_t *wcroot_iprops,
+                           svn_boolean_t empty_update,
                            svn_wc_notify_func2_t notify_func,
                            void *notify_baton,
                            apr_pool_t *scratch_pool)
@@ -11676,6 +11677,7 @@ bump_revisions_post_update(svn_wc__db_wcroot_t *wcroot,
                              TRUE /* is_root */, FALSE, db,
                              scratch_pool));
 
+  /* ### TODO: Use empty_update flag for change knowledge */
   SVN_ERR(svn_wc__db_bump_moved_away(wcroot, local_relpath, depth, db,
                                      scratch_pool));
 
@@ -11696,6 +11698,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          svn_revnum_t new_revision,
                                          apr_hash_t *exclude_relpaths,
                                          apr_hash_t *wcroot_iprops,
+                                         svn_boolean_t empty_update,
                                          svn_wc_notify_func2_t notify_func,
                                          void *notify_baton,
                                          apr_pool_t *scratch_pool)
@@ -11718,7 +11721,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
     bump_revisions_post_update(wcroot, local_relpath, db,
                                depth, new_repos_relpath, new_repos_root_url,
                                new_repos_uuid, new_revision,
-                               exclude_relpaths, wcroot_iprops,
+                               exclude_relpaths, wcroot_iprops, empty_update,
                                notify_func, notify_baton, scratch_pool),
     wcroot);
 
