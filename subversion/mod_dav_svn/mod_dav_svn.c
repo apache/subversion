@@ -215,9 +215,9 @@ create_dir_config(apr_pool_t *p, char *dir)
   if (dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_BULKUPD_DEFAULT;
-  conf->v2_protocol = CONF_FLAG_ON;
+  conf->v2_protocol = CONF_FLAG_DEFAULT;
   conf->hooks_env = NULL;
-  conf->txdelta_cache = CONF_FLAG_ON;
+  conf->txdelta_cache = CONF_FLAG_DEFAULT;
 
   return conf;
 }
@@ -613,6 +613,16 @@ SVNHooksEnv_cmd(cmd_parms *cmd, void *config, const char *arg1)
   return NULL;
 }
 
+static svn_boolean_t
+get_conf_flag(enum conf_flag flag, svn_boolean_t default_value)
+{
+  if (flag == CONF_FLAG_ON)
+    return TRUE;
+  else if (flag == CONF_FLAG_OFF)
+    return FALSE;
+  else /* CONF_FLAG_DEFAULT*/
+    return default_value;
+}
 
 /** Accessor functions for the module's configuration state **/
 
@@ -829,7 +839,7 @@ dav_svn__check_httpv2_support(request_rec *r)
   svn_boolean_t available;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  available = conf->v2_protocol == CONF_FLAG_ON;
+  available = get_conf_flag(conf->v2_protocol, TRUE);
 
   /* If our configuration says that HTTPv2 is available, but we are
      proxying requests to a master Subversion server which lacks
@@ -912,7 +922,9 @@ dav_svn__get_txdelta_cache_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->txdelta_cache == CONF_FLAG_ON;
+
+  /* txdelta caching is enabled by default. */
+  return get_conf_flag(conf->txdelta_cache, TRUE);
 }
 
 
