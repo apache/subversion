@@ -273,6 +273,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
               svn_boolean_t include_log_details,
               svn_boolean_t quiet,
               svn_boolean_t verbose,
+              svn_boolean_t incremental,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
@@ -325,7 +326,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
                                     TRUE, depth, revprops, ctx,
                                     pool));
 
-  if (include_log_details)
+  if (include_log_details && !incremental)
     SVN_ERR(svn_cmdline_printf(pool, SVN_CL__LOG_SEP_STRING));
 
   return SVN_NO_ERROR;
@@ -407,6 +408,11 @@ svn_cl__mergeinfo(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("--verbose (-v) option valid only with "
                                   "--log option"));
+
+      if (opt_state->incremental)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("--incremental option valid only with "
+                                  "--log option"));
     }
 
   /* Do the real work, depending on the requested data flavor. */
@@ -418,7 +424,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                             src_end_revision,
                             depth, opt_state->mergeinfo_log,
                             opt_state->quiet, opt_state->verbose,
-                            ctx, pool));
+                            opt_state->incremental, ctx, pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
@@ -428,7 +434,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                             src_end_revision,
                             depth, opt_state->mergeinfo_log,
                             opt_state->quiet, opt_state->verbose,
-                            ctx, pool));
+                            opt_state->incremental, ctx, pool));
     }
   else
     {
