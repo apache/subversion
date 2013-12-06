@@ -304,7 +304,7 @@ mergeinfo_log(svn_boolean_t finding_merged,
       baton->show_diff = FALSE;
       baton->depth = depth;
       baton->diff_extensions = NULL;
-      baton->merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+      baton->merge_stack = NULL; 
       baton->search_patterns = NULL;
       baton->pool = pool;
       log_receiver_baton = baton; 

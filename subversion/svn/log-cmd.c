@@ -307,7 +307,9 @@ svn_cl__log_entry_receiver(void *baton,
 
   if (! SVN_IS_VALID_REVNUM(log_entry->revision))
     {
-      apr_array_pop(lb->merge_stack);
+      if (lb->merge_stack)
+        apr_array_pop(lb->merge_stack);
+
       return SVN_NO_ERROR;
     }
 
@@ -331,7 +333,12 @@ svn_cl__log_entry_receiver(void *baton,
                               log_entry->changed_paths2, pool))
     {
       if (log_entry->has_children)
-        APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+        {
+          if (! lb->merge_stack)
+            lb->merge_stack = apr_array_make(lb->pool, 1, sizeof(svn_revnum_t));
+
+          APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+        }
 
       return SVN_NO_ERROR;
     }
@@ -389,7 +396,7 @@ svn_cl__log_entry_receiver(void *baton,
         }
     }
 
-  if (lb->merge_stack->nelts > 0)
+  if (lb->merge_stack && lb->merge_stack->nelts > 0)
     {
       int i;
 
@@ -437,7 +444,12 @@ svn_cl__log_entry_receiver(void *baton,
     }
 
   if (log_entry->has_children)
-    APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+    {
+      if (! lb->merge_stack)
+        lb->merge_stack = apr_array_make(lb->pool, 1, sizeof(svn_revnum_t));
+
+      APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -504,7 +516,8 @@ svn_cl__log_entry_receiver_xml(void *baton,
     {
       svn_xml_make_close_tag(&sb, pool, "logentry");
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-      apr_array_pop(lb->merge_stack);
+      if (lb->merge_stack)
+        apr_array_pop(lb->merge_stack);
 
       return SVN_NO_ERROR;
     }
@@ -515,7 +528,12 @@ svn_cl__log_entry_receiver_xml(void *baton,
                               log_entry->changed_paths2, pool))
     {
       if (log_entry->has_children)
-        APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+        {
+          if (! lb->merge_stack)
+            lb->merge_stack = apr_array_make(lb->pool, 1, sizeof(svn_revnum_t));
+
+          APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+        }
 
       return SVN_NO_ERROR;
     }
@@ -624,7 +642,12 @@ svn_cl__log_entry_receiver_xml(void *baton,
     }
 
   if (log_entry->has_children)
-    APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+    {
+      if (! lb->merge_stack)
+        lb->merge_stack = apr_array_make(lb->pool, 1, sizeof(svn_revnum_t));
+
+      APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+    }
   else
     svn_xml_make_close_tag(&sb, pool, "logentry");
 
@@ -752,7 +775,7 @@ svn_cl__log(apr_getopt_t *os,
   lb.depth = opt_state->depth == svn_depth_unknown ? svn_depth_infinity
                                                    : opt_state->depth;
   lb.diff_extensions = opt_state->extensions;
-  lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+  lb.merge_stack = NULL;
   lb.search_patterns = opt_state->search_patterns;
   lb.pool = pool;
 
