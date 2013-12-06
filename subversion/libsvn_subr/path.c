@@ -1252,7 +1252,7 @@ svn_path_splitext(const char **path_root,
      anything after it?  We look for the "rightmost" period in the
      string. */
   last_dot = strrchr(path, '.');
-  if (last_dot && (last_dot + 1 != '\0'))
+  if (last_dot && (*(last_dot + 1) != '\0'))
     {
       /* If we have a period, we need to make sure it occurs in the
          final path component -- that there's no path separator
