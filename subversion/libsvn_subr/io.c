@@ -4614,7 +4614,7 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
 
       /* As long as a file is not at the end yet, and it is still
        * potentially identical to another file, we read the next chunk.*/
-      if (!eof1 && (identical_p12 || identical_p13))
+      if (!eof1 && (*identical_p12 || *identical_p13))
         {
           err = svn_io_file_read_full2(file1_h, buf1,
                                    SVN__STREAM_CHUNK_SIZE, &bytes_read1,
@@ -4624,7 +4624,7 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
           read_1 = TRUE;
         }
 
-      if (!eof2 && (identical_p12 || identical_p23))
+      if (!eof2 && (*identical_p12 || *identical_p23))
         {
           err = svn_io_file_read_full2(file2_h, buf2,
                                    SVN__STREAM_CHUNK_SIZE, &bytes_read2,
@@ -4634,7 +4634,7 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
           read_2 = TRUE;
         }
 
-      if (!eof3 && (identical_p13 || identical_p23))
+      if (!eof3 && (*identical_p13 || *identical_p23))
         {
           err = svn_io_file_read_full2(file3_h, buf3,
                                    SVN__STREAM_CHUNK_SIZE, &bytes_read3,
