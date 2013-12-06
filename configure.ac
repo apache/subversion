@@ -937,16 +937,6 @@ AC_CHECK_HEADER(termios.h,[
 
 dnl Process some configuration options ----------
 
-AC_ARG_WITH(openssl,
-AS_HELP_STRING([--with-openssl],
-               [This option does NOT affect the Subversion build process in any
-                way. It tells an integrated Serf HTTP client library build
-                process where to locate the OpenSSL library when (and only when)
-                building Serf as an integrated part of the Subversion build
-                process. When linking to a previously installed version of Serf
-                instead, you do not need to use this option.]),
-[])
-
 AC_ARG_ENABLE(debug,
 AS_HELP_STRING([--enable-debug],
                [Turn on debugging]),
