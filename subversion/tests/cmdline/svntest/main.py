@@ -141,8 +141,9 @@ stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 os.environ['LC_ALL'] = 'C'
 
 ######################################################################
-# The locations of the svn, svnadmin and svnlook binaries, relative to
-# the only scripts that import this file right now (they live in ../).
+# The locations of the svn binaries (svn, svnadmin, svnlook and others),
+# relative to the only scripts that import this file right now (they
+# live in ../).
 # Use --bin to override these defaults.
 svn_binary = os.path.abspath('../../svn/svn' + _exe)
 svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
@@ -1959,6 +1960,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
+  global svnrdump_binary
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
@@ -2076,6 +2078,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
       svnadmin_binary = os.path.join(options.svn_bin, 'svnadmin' + _exe)
       svnlook_binary = os.path.join(options.svn_bin, 'svnlook' + _exe)
+      svnrdump_binary = os.path.join(options.svn_bin, 'svnrdump' + _exe)
       svnsync_binary = os.path.join(options.svn_bin, 'svnsync' + _exe)
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
