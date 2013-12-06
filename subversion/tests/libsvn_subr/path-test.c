@@ -1210,6 +1210,7 @@ test_path_splitext(apr_pool_t *pool)
     { "yep.still/no-ext",          "yep.still/no-ext",       "" },
     { "folder.with/period.log",    "folder.with/period.",    "log" },
     { "period.",                   "period.",                "" },
+    { "dir/period.",               "dir/period.",            "" },
     { "file.ends-with/period.",    "file.ends-with/period.", "" },
     { "two-periods..txt",          "two-periods..",          "txt" },
     { ".dot-file",                 ".dot-file",              "" },
