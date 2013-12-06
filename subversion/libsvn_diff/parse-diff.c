@@ -386,7 +386,6 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_diff_hunk_t dummy;
   svn_stringbuf_t *line;
   apr_size_t max_len;
   apr_off_t pos;
@@ -416,33 +415,10 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
 
   if (hunk->patch->reverse)
     {
-      if (parse_hunk_header(line->data, &dummy, "@@", scratch_pool))
-        {
-          /* Line is a hunk header, reverse it. */
-          line = svn_stringbuf_createf(result_pool,
-                                       "@@ -%lu,%lu +%lu,%lu @@",
-                                       hunk->modified_start,
-                                       hunk->modified_length,
-                                       hunk->original_start,
-                                       hunk->original_length);
-        }
-      else if (parse_hunk_header(line->data, &dummy, "##", scratch_pool))
-        {
-          /* Line is a hunk header, reverse it. */
-          line = svn_stringbuf_createf(result_pool,
-                                       "## -%lu,%lu +%lu,%lu ##",
-                                       hunk->modified_start,
-                                       hunk->modified_length,
-                                       hunk->original_start,
-                                       hunk->original_length);
-        }
-      else
-        {
-          if (line->data[0] == '+')
-            line->data[0] = '-';
-          else if (line->data[0] == '-')
-            line->data[0] = '+';
-        }
+      if (line->data[0] == '+')
+        line->data[0] = '-';
+      else if (line->data[0] == '-')
+        line->data[0] = '+';
     }
 
   *stringbuf = line;
