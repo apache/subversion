@@ -161,11 +161,12 @@ svn_fs_x__id_serialize(struct svn_temp_serializer__context_t *context,
                         const svn_fs_id_t * const *id);
 
 /**
- * Deserialize an @a id within the @a buffer.
+ * Deserialize an @a id within the @a buffer and associate it with @a pool.
  */
 void
 svn_fs_x__id_deserialize(void *buffer,
-                          svn_fs_id_t **id);
+                         svn_fs_id_t **id,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

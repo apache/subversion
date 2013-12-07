@@ -41,6 +41,8 @@ typedef struct fs_x__id_t
   svn_fs_x__id_part_t copy_id;
   svn_fs_x__id_part_t txn_id;
   svn_fs_x__id_part_t rev_item;
+
+  apr_pool_t *pool; /* pool that was used to allocate this struct */
 } fs_x__id_t;
 
 
@@ -286,7 +288,7 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
     return TRUE;
 
   return memcmp(&id_a->node_id, &id_b->node_id,
-                sizeof(*id_a) - sizeof(id_a->generic_id)) == 0;
+                4 * sizeof(svn_fs_x__id_part_t)) == 0;
 }
 
 
@@ -356,6 +358,7 @@ svn_fs_x__id_txn_create_root(const svn_fs_x__id_part_t *txn_id,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
+  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -371,6 +374,7 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
+  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -390,6 +394,7 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
+  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -410,6 +415,7 @@ svn_fs_x__id_rev_create(const svn_fs_x__id_part_t *node_id,
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
+  id->pool = pool;
 
   return (svn_fs_id_t *)id;
 }
@@ -419,10 +425,10 @@ svn_fs_id_t *
 svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
   fs_x__id_t *id = (fs_x__id_t *)source;
-  fs_x__id_t *new_id = apr_palloc(pool, sizeof(*new_id));
+  fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*id));
 
-  *new_id = *id;
   new_id->generic_id.fsap_data = new_id;
+  new_id->pool = pool;
 
   return (svn_fs_id_t *)new_id;
 }
@@ -444,6 +450,7 @@ svn_fs_x__id_parse(const char *data,
   id = apr_pcalloc(pool, sizeof(*id));
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = &id;
+  id->pool = pool;
 
   /* Now, we basically just need to "split" this data on `.'
      characters.  We will use svn_cstring_tokenize, which will put
@@ -531,7 +538,9 @@ svn_fs_x__id_serialize(svn_temp_serializer__context_t *context,
 /* Deserialize an ID inside the BUFFER.
  */
 void
-svn_fs_x__id_deserialize(void *buffer, svn_fs_id_t **in_out)
+svn_fs_x__id_deserialize(void *buffer,
+                         svn_fs_id_t **in_out,
+                         apr_pool_t *pool)
 {
     fs_x__id_t *id;
 
@@ -549,5 +558,6 @@ svn_fs_x__id_deserialize(void *buffer, svn_fs_id_t **in_out)
   /* the stored vtable is bogus at best -> set the right one */
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
+  id->pool = pool;
 }
 
