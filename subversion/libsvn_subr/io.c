@@ -4566,7 +4566,6 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
                            apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  apr_size_t bytes_read1, bytes_read2, bytes_read3;
   char *buf1 = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
   char *buf2 = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
   char *buf3 = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
@@ -4576,7 +4575,6 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
   svn_boolean_t eof1 = FALSE;
   svn_boolean_t eof2 = FALSE;
   svn_boolean_t eof3 = FALSE;
-  svn_boolean_t read_1, read_2, read_3;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            scratch_pool));
@@ -4610,6 +4608,9 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
             || (*identical_p23 && !eof2 && !eof3)
             || (*identical_p13 && !eof1 && !eof3)))
     {
+      apr_size_t bytes_read1, bytes_read2, bytes_read3;
+      svn_boolean_t read_1, read_2, read_3;
+
       read_1 = read_2 = read_3 = FALSE;
 
       /* As long as a file is not at the end yet, and it is still
