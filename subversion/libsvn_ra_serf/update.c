@@ -2613,7 +2613,8 @@ make_simple_xml_tag(svn_stringbuf_t **buf_p,
                     const char *cdata,
                     apr_pool_t *pool)
 {
-  svn_xml_make_open_tag(buf_p, pool, svn_xml_protect_pcdata, tagname, NULL);
+  svn_xml_make_open_tag(buf_p, pool, svn_xml_protect_pcdata, tagname,
+                        SVN_VA_NULL);
   svn_xml_escape_cdata_cstring(buf_p, cdata, pool);
   svn_xml_make_close_tag(buf_p, pool, tagname);
 }
@@ -2635,7 +2636,7 @@ set_path(void *report_baton,
                         "lock-token", lock_token,
                         "depth", svn_depth_to_word(depth),
                         "start-empty", start_empty ? "true" : NULL,
-                        NULL);
+                        SVN_VA_NULL);
   svn_xml_escape_cdata_cstring(&buf, path, pool);
   svn_xml_make_close_tag(&buf, pool, "S:entry");
 
@@ -2708,7 +2709,7 @@ link_path(void *report_baton,
                         "depth", svn_depth_to_word(depth),
                         "linkpath", link,
                         "start-empty", start_empty ? "true" : NULL,
-                        NULL);
+                        SVN_VA_NULL);
   svn_xml_escape_cdata_cstring(&buf, path, pool);
   svn_xml_make_close_tag(&buf, pool, "S:entry");
 
@@ -3355,14 +3356,14 @@ make_update_reporter(svn_ra_session_t *ra_session,
       svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                             "S:update-report",
                             "xmlns:S", SVN_XML_NAMESPACE, "send-all", "true",
-                            NULL);
+                            SVN_VA_NULL);
     }
   else
     {
       svn_xml_make_open_tag(&buf, scratch_pool, svn_xml_normal,
                             "S:update-report",
                             "xmlns:S", SVN_XML_NAMESPACE,
-                            NULL);
+                            SVN_VA_NULL);
       /* Subversion 1.8+ servers can be told to send properties for newly
          added items inline even when doing a skelta response. */
       make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);

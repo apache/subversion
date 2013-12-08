@@ -927,7 +927,7 @@ class SVNTests extends TestCase
 
         public Status[] getStatusArray()
         {
-            return (Status[]) statuses.toArray(new Status[statuses.size()]);
+            return statuses.toArray(new Status[statuses.size()]);
         }
     }
 }

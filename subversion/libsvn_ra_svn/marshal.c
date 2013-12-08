@@ -148,6 +148,12 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+apr_pool_t *
+svn_ra_svn__get_pool(svn_ra_svn_conn_t *conn)
+{
+  return conn->pool;
+}
+
 svn_error_t *
 svn_ra_svn__set_shim_callbacks(svn_ra_svn_conn_t *conn,
                                svn_delta_shim_callbacks_t *shim_callbacks)
@@ -382,7 +388,9 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   apr_size_t len;
 
   SVN_ERR_ASSERT(conn->read_ptr == conn->read_end);
-  SVN_ERR(writebuf_flush(conn, pool));
+  if (conn->write_pos)
+    SVN_ERR(writebuf_flush(conn, pool));
+
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len, pool));
   conn->read_ptr = conn->read_buf;
@@ -1225,6 +1233,34 @@ svn_ra_svn__read_item(svn_ra_svn_conn_t *conn,
   return read_item(conn, pool, *item, c, 0);
 }
 
+/* Drain existing whitespace from the receive buffer of CONN until either
+   there is no data in the underlying receive socket anymore or we found
+   a non-whitespace char.  Set *HAS_ITEM to TRUE in the latter case.
+ */
+static svn_error_t *
+svn_ra_svn__has_item(svn_boolean_t *has_item,
+                     svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool)
+{
+  do
+    {
+      if (conn->read_ptr == conn->read_end)
+        {
+          if (conn->write_pos)
+            SVN_ERR(writebuf_flush(conn, pool));
+
+          if (!svn_ra_svn__input_waiting(conn, pool))
+            break;
+
+          SVN_ERR(readbuf_fill(conn, pool));
+        }
+    }
+  while (svn_iswhitespace(*conn->read_ptr) && ++conn->read_ptr);
+
+  *has_item = conn->read_ptr != conn->read_end;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                  apr_pool_t *pool)
@@ -1513,20 +1549,39 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
                            status);
 }
 
-static svn_error_t *
+svn_error_t *
+svn_ra_svn__has_command(svn_boolean_t *has_command,
+                        svn_boolean_t *terminated,
+                        svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool)
+{
+  svn_error_t *err = svn_ra_svn__has_item(has_command, conn, pool);
+  if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+    {
+      *terminated = TRUE;
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+
+  *terminated = FALSE;
+  return svn_error_trace(err);
+}
+
+svn_error_t *
 svn_ra_svn__handle_command(svn_boolean_t *terminate,
                            apr_hash_t *cmd_hash,
                            void *baton,
                            svn_ra_svn_conn_t *conn,
                            svn_boolean_t error_on_disconnect,
-                           apr_pool_t *iterpool)
+                           apr_pool_t *pool)
 {
   const char *cmdname;
   svn_error_t *err, *write_err;
   apr_array_header_t *params;
   const svn_ra_svn_cmd_entry_t *command;
 
-  err = svn_ra_svn__read_tuple(conn, iterpool, "wl", &cmdname, &params);
+  *terminate = FALSE;
+  err = svn_ra_svn__read_tuple(conn, pool, "wl", &cmdname, &params);
   if (err)
     {
       if (!error_on_disconnect
@@ -1538,10 +1593,13 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
         }
       return err;
     }
-  command = svn_hash_gets(cmd_hash, cmdname);
 
+  command = svn_hash_gets(cmd_hash, cmdname);
   if (command)
-    err = (*command->handler)(conn, iterpool, params, baton);
+    {
+      err = (*command->handler)(conn, pool, params, baton);
+      *terminate = command->terminate;
+    }
   else
     {
       err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
@@ -1552,17 +1610,13 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
   if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
     {
       write_err = svn_ra_svn__write_cmd_failure(
-                      conn, iterpool,
+                      conn, pool,
                       svn_ra_svn__locate_real_error_child(err));
       svn_error_clear(err);
-      if (write_err)
-        return write_err;
+      return write_err ? write_err : SVN_NO_ERROR;
     }
-  else if (err)
-    return err;
 
-  *terminate = (command && command->terminate);
-  return SVN_NO_ERROR;
+  return err;
 }
 
 svn_error_t *

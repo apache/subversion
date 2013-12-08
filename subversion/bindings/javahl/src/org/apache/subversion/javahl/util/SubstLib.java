@@ -78,42 +78,36 @@ public class SubstLib
     /**
      * @see SVNUtil.translateStream
      */
-    public /*native*/ InputStream translateInputStream(
-                                      InputStream source,
-                                      byte[] eolMarker,
-                                      boolean repairEol,
-                                      Map<String, byte[]> keywords,
-                                      boolean useKeywordsMap,
-                                      boolean expandKeywords,
-                                      byte[] keywordsValue,
-                                      long revision,
-                                      String url,
-                                      String reposRootUrl,
-                                      Date date,
-                                      String author)
-        throws SubversionException, ClientException//;
-    {
-        throw new RuntimeException("Not implemented: SubstLib.translateInputStream");
-    }
+    public native InputStream translateInputStream(
+                                  InputStream source,
+                                  byte[] eolMarker,
+                                  boolean repairEol,
+                                  Map<String, byte[]> keywords,
+                                  boolean useKeywordsMap,
+                                  boolean expandKeywords,
+                                  byte[] keywordsValue,
+                                  long revision,
+                                  String url,
+                                  String reposRootUrl,
+                                  Date date,
+                                  String author)
+        throws SubversionException, ClientException;
 
     /**
      * @see SVNUtil.translateStream
      */
-    public /*native*/ OutputStream translateOutputStream(
-                                      OutputStream destination,
-                                      byte[] eolMarker,
-                                      boolean repairEol,
-                                      Map<String, byte[]> keywords,
-                                      boolean useKeywordsMap,
-                                      boolean expandKeywords,
-                                      byte[] keywordsValue,
-                                      long revision,
-                                      String url,
-                                      String reposRootUrl,
-                                      Date date,
-                                      String author)
-        throws SubversionException, ClientException//;
-    {
-        throw new RuntimeException("Not implemented: SubstLib.translateOutputStream");
-    }
+    public native OutputStream translateOutputStream(
+                                   OutputStream destination,
+                                   byte[] eolMarker,
+                                   boolean repairEol,
+                                   Map<String, byte[]> keywords,
+                                   boolean useKeywordsMap,
+                                   boolean expandKeywords,
+                                   byte[] keywordsValue,
+                                   long revision,
+                                   String url,
+                                   String reposRootUrl,
+                                   Date date,
+                                   String author)
+        throws SubversionException, ClientException;
 }

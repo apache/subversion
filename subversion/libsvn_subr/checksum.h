@@ -1,5 +1,5 @@
 /*
- * md5.h: Converting and comparing MD5 checksums
+ * checksum.h: Converting and comparing checksums
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,12 +21,12 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_SUBR_MD5_H
-#define SVN_LIBSVN_SUBR_MD5_H
+#ifndef SVN_LIBSVN_SUBR_CHECKSUM_H
+#define SVN_LIBSVN_SUBR_CHECKSUM_H
 
 #include <apr_pools.h>
 
-#include "svn_types.h"
+#include "svn_checksum.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,38 +34,41 @@ extern "C" {
 
 
 
-/* The MD5 digest for the empty string. */
+/* The digest of the given KIND for the empty string. */
 const unsigned char *
-svn_md5__empty_string_digest(void);
+svn__empty_string_digest(svn_checksum_kind_t kind);
 
 
 /* Return the hex representation of DIGEST, which must be
- * APR_MD5_DIGESTSIZE bytes long, allocating the string in POOL.
+ * DIGEST_SIZE bytes long, allocating the string in POOL.
  */
 const char *
-svn_md5__digest_to_cstring_display(const unsigned char digest[],
-                                   apr_pool_t *pool);
+svn__digest_to_cstring_display(const unsigned char digest[],
+                               apr_size_t digest_size,
+                               apr_pool_t *pool);
 
 
 /* Return the hex representation of DIGEST, which must be
- * APR_MD5_DIGESTSIZE bytes long, allocating the string in POOL.
+ * DIGEST_SIZE bytes long, allocating the string in POOL.
  * If DIGEST is all zeros, then return NULL.
  */
 const char *
-svn_md5__digest_to_cstring(const unsigned char digest[],
-                           apr_pool_t *pool);
+svn__digest_to_cstring(const unsigned char digest[],
+                       apr_size_t digest_size,
+                       apr_pool_t *pool);
 
 
-/** Compare digests D1 and D2, each APR_MD5_DIGESTSIZE bytes long.
+/* Compare digests D1 and D2, each DIGEST_SIZE bytes long.
  * If neither is all zeros, and they do not match, then return FALSE;
  * else return TRUE.
  */
 svn_boolean_t
-svn_md5__digests_match(const unsigned char d1[],
-                        const unsigned char d2[]);
+svn__digests_match(const unsigned char d1[],
+                   const unsigned char d2[],
+                   apr_size_t digest_size);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_SUBR_MD5_H */
+#endif /* SVN_LIBSVN_SUBR_CHECKSUM_H */

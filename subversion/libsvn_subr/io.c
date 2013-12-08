@@ -2307,12 +2307,11 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
      efficient memory handling, we'll try to do so. */
   if (check_size)
     {
-      apr_finfo_t finfo;
+      apr_finfo_t finfo = { 0 };
 
       /* In some cases we get size 0 and no error for non files,
           so we also check for the name. (= cached in apr_file_t) */
-      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_NAME, file)
-          && finfo.name != NULL)
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file) && finfo.fname)
         {
           /* we've got the file length. Now, read it in one go. */
           svn_boolean_t eof;
@@ -4777,7 +4776,7 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
 
       /* As long as a file is not at the end yet, and it is still
        * potentially identical to another file, we read the next chunk.*/
-      if (!eof1 && (identical_p12 || identical_p13))
+      if (!eof1 && (*identical_p12 || *identical_p13))
         {
           err = svn_io_file_read_full2(file1_h, buf1,
                                    SVN__STREAM_CHUNK_SIZE, &bytes_read1,
@@ -4787,7 +4786,7 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
           read_1 = TRUE;
         }
 
-      if (!eof2 && (identical_p12 || identical_p23))
+      if (!eof2 && (*identical_p12 || *identical_p23))
         {
           err = svn_io_file_read_full2(file2_h, buf2,
                                    SVN__STREAM_CHUNK_SIZE, &bytes_read2,
@@ -4797,7 +4796,7 @@ contents_three_identical_p(svn_boolean_t *identical_p12,
           read_2 = TRUE;
         }
 
-      if (!eof3 && (identical_p13 || identical_p23))
+      if (!eof3 && (*identical_p13 || *identical_p23))
         {
           err = svn_io_file_read_full2(file3_h, buf3,
                                    SVN__STREAM_CHUNK_SIZE, &bytes_read3,

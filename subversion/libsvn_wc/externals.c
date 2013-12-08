@@ -963,6 +963,7 @@ close_edit(void *edit_baton,
                                                        *eb->target_revision,
                                                        apr_hash_make(pool),
                                                        wcroot_iprops,
+                                                       TRUE /* empty update */,
                                                        eb->notify_func,
                                                        eb->notify_baton,
                                                        pool));

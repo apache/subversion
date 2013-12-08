@@ -229,6 +229,28 @@ remove_unused_objects(svn_object_pool__t *object_pool)
   object_pool->objects_hash_pool = new_pool;
 }
 
+/* If ERR is not SVN_NO_ERROR, handle it and terminate the application.
+ *
+ * Please make this generic if necessary instead of duplicating this code.
+ */
+static void
+exit_on_error(const char *file, int line, svn_error_t *err)
+{
+  if (err)
+    {
+      char buffer[1024];
+
+      /* The svn_error_clear() is to make static analyzers happy.
+         svn_error__malfunction() will never return */
+      svn_error_clear(
+            svn_error__malfunction(FALSE /* can_return */, file, line,
+                                   svn_err_best_message(err, buffer,
+                                                        sizeof(buffer))
+                                   ));
+      abort(); /* Only reached by broken malfunction handlers */
+    }
+}
+
 /* Cleanup function called when an object_ref_t gets released.
  */
 static apr_status_t
@@ -237,7 +259,28 @@ object_ref_cleanup(void *baton)
   object_ref_t *object = baton;
   svn_object_pool__t *object_pool = object->object_pool;
 
-  SVN_INT_ERR(svn_mutex__lock(object_pool->mutex));
+  /* if we don't share objects and we are not allowed to hold on to
+   * unused object, delete them immediately. */
+  if (!object_pool->share_objects && object_pool->max_unused == 0)
+    {
+       /* there must only be the one references we are releasing right now */
+      assert(object->ref_count == 1);
+      svn_pool_destroy(object->pool);
+
+      /* see below for a more info on this final cleanup check */
+      if (   svn_atomic_dec(&object_pool->used_count) == 0
+          && svn_atomic_cas(&object_pool->ready_for_cleanup, FALSE, TRUE)
+             == TRUE)
+        {
+          destroy_object_pool(object_pool);
+        }
+
+     return APR_SUCCESS;
+    }
+
+  /* begin critical section */
+  exit_on_error(__FILE__, __LINE__,
+                svn_error_trace(svn_mutex__lock(object_pool->mutex)));
 
   /* put back into "available" container */
   if (!object_pool->share_objects)
@@ -256,7 +299,9 @@ object_ref_cleanup(void *baton)
       remove_unused_objects(object_pool);
     }
 
-  SVN_INT_ERR(svn_mutex__unlock(object_pool->mutex, NULL));
+  /* end critical section */
+  exit_on_error(__FILE__, __LINE__,
+                svn_error_trace(svn_mutex__unlock(object_pool->mutex, NULL)));
 
   /* Maintain reference counters and handle object cleanup */
   if (svn_atomic_dec(&object->ref_count) == 0)

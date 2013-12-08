@@ -44,6 +44,15 @@ extern "C" {
 #define SVN__APR_FINFO_MASK_OUT (0)
 #endif
 
+/* 90% of the lines we encounter will be less than this many chars.
+ *
+ * Line-based functions like svn_stream_readline should fetch data in
+ * blocks no longer than this.  Although using a larger prefetch size is
+ * not illegal and must not break any functionality, it may be
+ * significantly less efficient in certain situations.
+ */
+#define SVN__LINE_CHUNK_SIZE 80
+
 
 /** Set @a *executable TRUE if @a file_info is executable for the
  * user, FALSE otherwise.

@@ -1152,10 +1152,11 @@ svn_fs_x__dag_deserialize(void **out,
   node->fs = NULL;
 
   /* fixup all references to sub-structures */
-  svn_fs_x__id_deserialize(node, &node->id);
+  svn_fs_x__id_deserialize(node, &node->id, pool);
   svn_fs_x__id_deserialize(node,
-                            (svn_fs_id_t **)&node->fresh_root_predecessor_id);
-  svn_fs_x__noderev_deserialize(node, &node->node_revision);
+                           (svn_fs_id_t **)&node->fresh_root_predecessor_id,
+                           pool);
+  svn_fs_x__noderev_deserialize(node, &node->node_revision, pool);
   node->node_pool = pool;
 
   svn_temp_deserializer__resolve(node, (void**)&node->created_path);

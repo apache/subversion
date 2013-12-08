@@ -131,17 +131,51 @@ svn_fs_fs__path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                               apr_psprintf(pool, "%ld", rev), SVN_VA_NULL);
 }
 
+/* Set *PATH to the path of REV in FS with PACKED selecting whether the
+   (potential) pack file or single revision file name is returned.
+   Allocate *PATH in POOL.
+*/
+static const char *
+path_rev_absolute_internal(svn_fs_t *fs,
+                           svn_revnum_t rev,
+                           svn_boolean_t packed,
+                           apr_pool_t *pool)
+{
+  return packed
+       ? svn_fs_fs__path_rev_packed(fs, rev, PATH_PACKED, pool)
+       : svn_fs_fs__path_rev(fs, rev, pool);
+}
+
+const char *
+svn_fs_fs__path_l2p_index(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          svn_boolean_t packed,
+                          apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%s" PATH_EXT_L2P_INDEX,
+                      path_rev_absolute_internal(fs, rev, packed, pool));
+}
+
+const char *
+svn_fs_fs__path_p2l_index(svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          svn_boolean_t packed,
+                          apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "%s" PATH_EXT_P2L_INDEX,
+                      path_rev_absolute_internal(fs, rev, packed, pool));
+}
+
 const char *
 svn_fs_fs__path_rev_absolute(svn_fs_t *fs,
                              svn_revnum_t rev,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t is_packed = ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT
+                         && svn_fs_fs__is_packed_rev(fs, rev);
 
-  return (   ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
-          || ! svn_fs_fs__is_packed_rev(fs, rev))
-       ? svn_fs_fs__path_rev(fs, rev, pool)
-       : svn_fs_fs__path_rev_packed(fs, rev, PATH_PACKED, pool);
+  return path_rev_absolute_internal(fs, rev, is_packed, pool);
 }
 
 const char *
@@ -214,6 +248,33 @@ svn_fs_fs__path_txn_dir(svn_fs_t *fs,
                               SVN_VA_NULL);
 }
 
+const char*
+svn_fs_fs__path_l2p_proto_index(svn_fs_t *fs,
+                                const svn_fs_fs__id_part_t *txn_id,
+                                apr_pool_t *pool)
+{
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_INDEX PATH_EXT_L2P_INDEX, pool);
+}
+
+const char*
+svn_fs_fs__path_p2l_proto_index(svn_fs_t *fs,
+                                const svn_fs_fs__id_part_t *txn_id,
+                                apr_pool_t *pool)
+{
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_INDEX PATH_EXT_P2L_INDEX, pool);
+}
+
+const char *
+svn_fs_fs__path_txn_item_index(svn_fs_t *fs,
+                               const svn_fs_fs__id_part_t *txn_id,
+                               apr_pool_t *pool)
+{
+  return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
+                         PATH_TXN_ITEM_INDEX, pool);
+}
+
 const char *
 svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
                               const svn_fs_fs__id_part_t *txn_id,
@@ -229,6 +290,7 @@ svn_fs_fs__path_txn_proto_rev(svn_fs_t *fs,
     return svn_dirent_join(svn_fs_fs__path_txn_dir(fs, txn_id, pool),
                            PATH_REV, pool);
 }
+
 
 const char *
 svn_fs_fs__path_txn_proto_rev_lock(svn_fs_t *fs,
@@ -567,77 +629,13 @@ svn_fs_fs__move_into_place(const char *old_filename,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__open_pack_or_rev_file(apr_file_t **file,
-                                 svn_fs_t *fs,
-                                 svn_revnum_t rev,
-                                 apr_pool_t *pool)
+svn_boolean_t
+svn_fs_fs__use_log_addressing(svn_fs_t *fs,
+                              svn_revnum_t rev)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_error_t *err;
-  svn_boolean_t retry = FALSE;
-
-  do
-    {
-      const char *path = svn_fs_fs__path_rev_absolute(fs, rev, pool);
-
-      /* open the revision file in buffered r/o mode */
-      err = svn_io_file_open(file, path,
-                            APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-            {
-              /* Could not open the file. This may happen if the
-               * file once existed but got packed later. */
-              svn_error_clear(err);
-
-              /* if that was our 2nd attempt, leave it at that. */
-              if (retry)
-                return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                         _("No such revision %ld"), rev);
-
-              /* We failed for the first time. Refresh cache & retry. */
-              SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
-
-              retry = TRUE;
-            }
-          else
-            {
-              svn_error_clear(err);
-              return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                       _("No such revision %ld"), rev);
-            }
-        }
-      else
-        {
-          retry = FALSE;
-        }
-    }
-  while (retry);
-
-  return svn_error_trace(err);
-}
-
-svn_error_t *
-svn_fs_fs__item_offset(apr_off_t *absolute_position,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_off_t offset,
-                       apr_pool_t *pool)
-{
-  if (svn_fs_fs__is_packed_rev(fs, rev))
-    {
-      apr_off_t rev_offset;
-      SVN_ERR(svn_fs_fs__get_packed_offset(&rev_offset, fs, rev, pool));
-      *absolute_position = rev_offset + offset;
-    }
-  else
-    {
-      *absolute_position = offset;
-    }
-
-  return SVN_NO_ERROR;
+  return ffd->min_log_addressing_rev != SVN_INVALID_REVNUM
+      && ffd->min_log_addressing_rev <= rev;
 }
 
 svn_boolean_t

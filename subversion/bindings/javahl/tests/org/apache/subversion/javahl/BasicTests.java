@@ -219,6 +219,33 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test RuntimeVersion
+     */
+    public void testRuntimeVersion() throws Throwable
+    {
+        try
+        {
+            RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+            String versionString = runtimeVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("RuntimeVersion should always be available unless the " +
+                 "native libraries failed to initialize: " + e);
+        }
+
+        RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+        Version version = client.getVersion();
+        assertTrue(runtimeVersion.getMajor() > version.getMajor()
+                   || (runtimeVersion.getMajor() == version.getMajor()
+                       && runtimeVersion.getMinor() >= version.getMinor()));
+    }
+
+    /**
      * Test the JNIError class functionality
      * @throws Throwable
      */
@@ -2350,7 +2377,7 @@ public class BasicTests extends SVNTests
         List<RevisionRange> ranges = mergeInfo.getRevisions(mergeSrc);
         assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
                    targetPath + '\'', ranges != null && !ranges.isEmpty());
-        RevisionRange range = (RevisionRange) ranges.get(0);
+        RevisionRange range = ranges.get(0);
         String expectedMergedRevs = expectedMergeStart + "-" + expectedMergeEnd;
         assertEquals("Unexpected first merged revision range for '" +
                      mergeSrc + "' on '" + targetPath + '\'',
@@ -2613,6 +2640,7 @@ public class BasicTests extends SVNTests
      * @throws Throwable
      * @since 1.5
      */
+    @SuppressWarnings("deprecation")
     public void testMergeReintegrate() throws Throwable
     {
         OneTest thisTest = setupAndPerformMerge();
@@ -3269,7 +3297,7 @@ public class BasicTests extends SVNTests
 
         // Rigorously inspect one of our DiffSummary notifications.
         final String BETA_PATH = "A/B/E/beta";
-        DiffSummary betaDiff = (DiffSummary) summaries.get(BETA_PATH);
+        DiffSummary betaDiff = summaries.get(BETA_PATH);
         assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
         assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
                      betaDiff.getPath());
@@ -3963,6 +3991,8 @@ public class BasicTests extends SVNTests
         extends HashMap<String, Collection<String>>
         implements ChangelistCallback
     {
+        private static final long serialVersionUID = 1L;
+
         public void doChangelist(String path, String changelist)
         {
             path = fileToSVNPath(new File(path), true);

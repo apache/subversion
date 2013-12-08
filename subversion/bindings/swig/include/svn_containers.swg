@@ -954,3 +954,16 @@
   %append_output(svn_swig_rb_apr_array_to_array_auth_provider_object(*$1));
 }
 #endif
+
+/* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <svn_diff_hunk_t *>
+*/
+#ifdef SWIGPYTHON
+%typemap(out) apr_array_header_t *hunks {
+  %append_output(svn_swig_py_pointerlist_to_list($1, $descriptor(svn_diff_hunk_t *),
+                                                 _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif

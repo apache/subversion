@@ -141,8 +141,9 @@ stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 os.environ['LC_ALL'] = 'C'
 
 ######################################################################
-# The locations of the svn, svnadmin and svnlook binaries, relative to
-# the only scripts that import this file right now (they live in ../).
+# The locations of the svn binaries (svn, svnadmin, svnlook and others),
+# relative to the only scripts that import this file right now (they
+# live in ../).
 # Use --bin to override these defaults.
 svn_binary = os.path.abspath('../../svn/svn' + _exe)
 svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
@@ -892,7 +893,7 @@ def create_repos(path, minor_version = None):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
-  if not minor_version or minor_version > options.server_minor_version:
+  if minor_version is None or minor_version > options.server_minor_version:
     minor_version = options.server_minor_version
   opts += ("--compatible-version=1.%d" % (minor_version),)
   if options.fs_type is not None:
@@ -1335,6 +1336,18 @@ def is_fs_type_fsx():
 
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
+
+def is_fs_log_addressing():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 9)
+
+def fs_has_rep_sharing():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
+def fs_has_pack():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
 
 def is_os_windows():
   return os.name == 'nt'
@@ -1947,6 +1960,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
+  global svnrdump_binary
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
@@ -2064,6 +2078,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
       svnadmin_binary = os.path.join(options.svn_bin, 'svnadmin' + _exe)
       svnlook_binary = os.path.join(options.svn_bin, 'svnlook' + _exe)
+      svnrdump_binary = os.path.join(options.svn_bin, 'svnrdump' + _exe)
       svnsync_binary = os.path.join(options.svn_bin, 'svnsync' + _exe)
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
@@ -2145,7 +2160,11 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
   if not options.is_child_process and not options.keep_local_tmp:
-    safe_rmtree(temp_dir, 1)
+    try:
+      safe_rmtree(temp_dir, 1)
+    except:
+      logger.error("ERROR: cleanup of '%s' directory failed." % temp_dir)
+      exit_code = 1
 
   # Cleanup after ourselves.
   svntest.sandbox.cleanup_deferred_test_paths()

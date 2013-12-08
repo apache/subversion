@@ -385,10 +385,20 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "%s -g -target 1.5 -source 1.5 -classpath %s -d %s " \
-                   "-sourcepath %s $(InputPath)" \
+          per_project_flags = ""
+
+          if target.name.find("-compat-"):
+            per_project_flags += "-Xlint:-deprecation -Xlint:-dep-ann" \
+                                 " -Xlint:-rawtypes"
+
+          cbuild = ("%s -g -Xlint -Xlint:-options " +
+                    per_project_flags +
+                    " -target 1.5 -source 1.5 -classpath "
+                    " %s -d %s "
+                    " -sourcepath %s $(InputPath)") \
                    % tuple(map(self.quote, (javac_exe, classes,
                                             targetdir, sourcepath)))
+
 
           ctarget = self.path(object.filename)
           cdesc = "Compiling %s" % (source)
@@ -768,8 +778,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
   def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
 
-    fakeincludes = [ "subversion/include",
-                     "subversion" ]
+    fakeincludes = [ "subversion/include" ]
                      
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
@@ -781,12 +790,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           fakeincludes.extend(lib.include_dirs)
 
-    if target.name == 'mod_authz_svn':
-      fakeincludes.extend([ os.path.join(self.httpd_path, "modules/aaa") ])
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes.extend([ os.path.join(self.httpd_path, "include") ])
-    elif (isinstance(target, gen_base.TargetSWIG)
+    if (isinstance(target, gen_base.TargetSWIG)
           or isinstance(target, gen_base.TargetSWIGLib)):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
@@ -828,6 +832,16 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     fakelibdirs = []
 
+    if (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang in self._libraries:
+        lib = self._libraries[target.lang]
+
+        if debug and lib.debug_lib_dir:
+          fakelibdirs.append(lib.debug_lib_dir)
+        elif lib.lib_dir:
+          fakelibdirs.append(lib.lib_dir)
+
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib:
         for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
@@ -847,12 +861,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           fakelibdirs.append(lib_dir)
 
-    if isinstance(target, gen_base.TargetApacheMod):
-      fakelibdirs.append(self.apath(self.httpd_path, cfg))
-      if target.name == 'mod_dav_svn':
-        fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main",
-                                      cfg))
-
     return gen_base.unique(fakelibdirs)
 
   def get_win_libs(self, target, cfg):
@@ -870,6 +878,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
+
+    if (isinstance(target, gen_base.TargetSWIG)
+          or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang in self._libraries:
+        lib = self._libraries[target.lang]
+        if debug and lib.debug_lib_name:
+          nondeplibs.append(lib.debug_lib_name)
+        elif lib.lib_name:
+          nondeplibs.append(lib.lib_name)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)

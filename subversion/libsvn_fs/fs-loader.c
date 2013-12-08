@@ -44,6 +44,7 @@
 #include "svn_string.h"
 #include "svn_sorts.h"
 
+#include "private/svn_atomic.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_utf_private.h"
@@ -62,8 +63,9 @@
 
 /* A pool common to all FS objects.  See the documentation on the
    open/create functions in fs-loader.h and for svn_fs_initialize(). */
-static apr_pool_t *common_pool;
-svn_mutex__t *common_pool_lock;
+static apr_pool_t *common_pool = NULL;
+static svn_mutex__t *common_pool_lock = NULL;
+static svn_atomic_t common_pool_initialized = FALSE;
 
 
 /* --- Utility functions for the loader --- */
@@ -196,8 +198,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
        unloaded.  This function makes a best effort by creating the
        common pool as a child of the global pool; the window of failure
        due to thread collision is small. */
-    if (!common_pool)
-      SVN_ERR(svn_fs_initialize(NULL));
+    SVN_ERR(svn_fs_initialize(NULL));
 
     /* Invoke the FS module's initfunc function with the common
        pool protected by a lock. */
@@ -280,8 +281,8 @@ get_library_vtable(fs_library_vtable_t **vtable, const char *fs_type,
   if (!known)
     {
       fst = &(*fst)->next;
-      if (!common_pool)  /* Best-effort init, see get_library_vtable_direct. */
-        SVN_ERR(svn_fs_initialize(NULL));
+      /* Best-effort init, see get_library_vtable_direct. */
+      SVN_ERR(svn_fs_initialize(NULL));
       SVN_MUTEX__WITH_LOCK(common_pool_lock,
                            get_or_allocate_third(fst, fs_type));
       known = TRUE;
@@ -371,16 +372,15 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
 static apr_status_t uninit(void *data)
 {
   common_pool = NULL;
+  common_pool_lock = NULL;
+  common_pool_initialized = 0;
+
   return APR_SUCCESS;
 }
 
-svn_error_t *
-svn_fs_initialize(apr_pool_t *pool)
+static svn_error_t *
+synchronized_initialize(void *baton, apr_pool_t *pool)
 {
-  /* Protect against multiple calls. */
-  if (common_pool)
-    return SVN_NO_ERROR;
-
   common_pool = svn_pool_create(pool);
   base_defn.next = NULL;
   SVN_ERR(svn_mutex__init(&common_pool_lock, TRUE, common_pool));
@@ -393,6 +393,15 @@ svn_fs_initialize(apr_pool_t *pool)
      ### work around this by explicitly calling svn_fs_initialize. */
   apr_pool_cleanup_register(common_pool, NULL, uninit, apr_pool_cleanup_null);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_initialize(apr_pool_t *pool)
+{
+  /* Protect against multiple calls. */
+  return svn_error_trace(svn_atomic__init_once(&common_pool_initialized,
+                                               synchronized_initialize,
+                                               NULL, pool));
 }
 
 /* A default warning handling function.  */
@@ -1518,10 +1527,10 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
                                  token, "opaquelocktoken");
 
       for (c = token; *c; c++)
-        if (! svn_ctype_isascii(*c))
+        if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
           return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                   _("Lock token '%s' is not ASCII "
-                                     "at byte %u"),
+                                   _("Lock token '%s' is not ASCII or is a "
+                                     "control character at byte %u"),
                                    token, (unsigned)(c - token));
 
       /* strlen(token) == c - token. */

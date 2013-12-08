@@ -489,7 +489,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"),
-    {'r'} },
+    {'r', opt_ignore_keywords} },
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate (or dissociate) changelist CLNAME with the named files.\n"
@@ -1172,7 +1172,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
-    {'r', 'R', opt_depth, opt_show_revs, opt_mergeinfo_log} },
+    {'r', 'R', 'q', 'v', opt_depth, opt_show_revs, opt_mergeinfo_log,
+      opt_incremental } },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"
@@ -1771,23 +1772,13 @@ add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
 
 /*** Main. ***/
 
-/* Report and clear the error ERR, and return EXIT_FAILURE. Suppress the
- * error message if it is SVN_ERR_IO_PIPE_WRITE_ERROR. */
-#define EXIT_ERROR(err)                                                 \
-  svn_cmdline_handle_exit_error(err, NULL, "svn: ")
-
-/* A redefinition of the public SVN_INT_ERR macro, that suppresses the
- * error message if it is SVN_ERR_IO_PIPE_WRITE_ERROR. */
-#undef SVN_INT_ERR
-#define SVN_INT_ERR(expr)                                        \
-  do {                                                           \
-    svn_error_t *svn_err__temp = (expr);                         \
-    if (svn_err__temp)                                           \
-      return EXIT_ERROR(svn_err__temp);                          \
-  } while (0)
-
-static int
-sub_main(int argc, const char *argv[], apr_pool_t *pool)
+/*
+ * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
+ * either return an error to be displayed, or set *EXIT_CODE to non-zero and
+ * return SVN_NO_ERROR.
+ */
+static svn_error_t *
+sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err;
   int opt_id;
@@ -1814,18 +1805,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
-  SVN_INT_ERR(check_lib_versions());
+  SVN_ERR(check_lib_versions());
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
   if (getenv("SVN_ASP_DOT_NET_HACK"))
     {
-      SVN_INT_ERR(svn_wc_set_adm_dir("_svn", pool));
+      SVN_ERR(svn_wc_set_adm_dir("_svn", pool));
     }
 #endif
 
   /* Initialize the RA library. */
-  SVN_INT_ERR(svn_ra_initialize(pool));
+  SVN_ERR(svn_ra_initialize(pool));
 
   /* Init our changelists hash. */
   changelists = apr_hash_make(pool);
@@ -1843,12 +1834,13 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   /* No args?  Show usage. */
   if (argc <= 1)
     {
-      SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
-      return EXIT_FAILURE;
+      SVN_ERR(svn_cl__help(NULL, NULL, pool));
+      *exit_code = EXIT_FAILURE;
+      return SVN_NO_ERROR;
     }
 
   /* Else, parse options. */
-  SVN_INT_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
+  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   os->interleave = 1;
   while (1)
@@ -1863,8 +1855,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       else if (apr_err)
         {
-          SVN_INT_ERR(svn_cl__help(NULL, NULL, pool));
-          return EXIT_FAILURE;
+          SVN_ERR(svn_cl__help(NULL, NULL, pool));
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
 
       /* Stash the option code in an array before parsing it. */
@@ -1873,19 +1866,17 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       switch (opt_id) {
       case 'l':
         {
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
           err = svn_cstring_atoi(&opt_state.limit, utf8_opt_arg);
           if (err)
             {
-              err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                                     _("Non-numeric limit argument given"));
-              return EXIT_ERROR(err);
+              return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                                      _("Non-numeric limit argument given"));
             }
           if (opt_state.limit <= 0)
             {
-              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                    _("Argument to --limit must be positive"));
-              return EXIT_ERROR(err);
+              return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                      _("Argument to --limit must be positive"));
             }
         }
         break;
@@ -1898,16 +1889,14 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           apr_array_header_t *change_revs;
 
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
           change_revs = svn_cstring_split(utf8_opt_arg, ", \n\r\t\v", TRUE,
                                           pool);
 
           if (opt_state.old_target)
             {
-              err = svn_error_create
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                 _("Can't specify -c with --old"));
-              return EXIT_ERROR(err);
+              return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Can't specify -c with --old"));
             }
 
           for (i = 0; i < change_revs->nelts; i++)
@@ -1935,12 +1924,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                 {
                   if (changeno < 0 || is_negative)
                     {
-                      err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                              NULL,
-                                              _("Negative number in range (%s)"
-                                                " not supported with -c"),
-                                              change_str);
-                      return EXIT_ERROR(err);
+                      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                               NULL,
+                                               _("Negative number in range (%s)"
+                                                 " not supported with -c"),
+                                               change_str);
                     }
                   s = end + 1;
                   while (*s == 'r')
@@ -1949,17 +1937,15 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                 }
               if (end == change_str || *end != '\0')
                 {
-                  err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                          _("Non-numeric change argument (%s) "
-                                            "given to -c"), change_str);
-                  return EXIT_ERROR(err);
+                  return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                           _("Non-numeric change argument (%s) "
+                                             "given to -c"), change_str);
                 }
 
               if (changeno == 0)
                 {
-                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                         _("There is no change 0"));
-                  return EXIT_ERROR(err);
+                  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                          _("There is no change 0"));
                 }
 
               if (is_negative)
@@ -1995,15 +1981,13 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'r':
         opt_state.used_revision_arg = TRUE;
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         if (svn_opt_parse_revision_to_range(opt_state.revision_ranges,
                                             utf8_opt_arg, pool) != 0)
           {
-            err = svn_error_createf
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Syntax error in revision argument '%s'"),
                  utf8_opt_arg);
-            return EXIT_ERROR(err);
           }
         break;
       case 'v':
@@ -2026,9 +2010,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         /* We read the raw file content here.  We will convert it to UTF-8
          * later (if it's a log/lock message or an svn:* prop value),
          * according to the value of the '--encoding' option. */
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        SVN_INT_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
-                                             utf8_opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
+                                         utf8_opt_arg, pool));
         reading_file_from_stdin = (strcmp(utf8_opt_arg, "-") == 0);
         dash_F_arg = utf8_opt_arg;
         break;
@@ -2036,9 +2020,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_stringbuf_t *buffer, *buffer_utf8;
 
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-          SVN_INT_ERR(svn_stringbuf_from_file2(&buffer, utf8_opt_arg, pool));
-          SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+          SVN_ERR(svn_stringbuf_from_file2(&buffer, utf8_opt_arg, pool));
+          SVN_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
           opt_state.targets = svn_cstring_split(buffer_utf8->data, "\n\r",
                                                 TRUE, pool);
         }
@@ -2064,51 +2048,47 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_depth:
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
         if (err)
-          return EXIT_ERROR
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                               _("Error converting depth "
-                                 "from locale to UTF-8")));
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                                   _("Error converting depth "
+                                     "from locale to UTF-8"));
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
         if (opt_state.depth == svn_depth_unknown
             || opt_state.depth == svn_depth_exclude)
           {
-            return EXIT_ERROR
-              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a valid depth; try "
-                                   "'empty', 'files', 'immediates', "
-                                   "or 'infinity'"),
-                                 utf8_opt_arg));
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("'%s' is not a valid depth; try "
+                                       "'empty', 'files', 'immediates', "
+                                       "or 'infinity'"),
+                                     utf8_opt_arg);
           }
         break;
       case opt_set_depth:
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
         if (err)
-          return EXIT_ERROR
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                               _("Error converting depth "
-                                 "from locale to UTF-8")));
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                                   _("Error converting depth "
+                                     "from locale to UTF-8"));
         opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
         /* svn_depth_exclude is okay for --set-depth. */
         if (opt_state.set_depth == svn_depth_unknown)
           {
-            return EXIT_ERROR
-              (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a valid depth; try "
-                                   "'exclude', 'empty', 'files', "
-                                   "'immediates', or 'infinity'"),
-                                 utf8_opt_arg));
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("'%s' is not a valid depth; try "
+                                       "'exclude', 'empty', 'files', "
+                                       "'immediates', or 'infinity'"),
+                                     utf8_opt_arg);
           }
         break;
       case opt_version:
         opt_state.version = TRUE;
         break;
       case opt_auth_username:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_username,
-                                            opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_username,
+                                        opt_arg, pool));
         break;
       case opt_auth_password:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
-                                            opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
+                                        opt_arg, pool));
         break;
       case opt_encoding:
         opt_state.encoding = apr_pstrdup(pool, opt_arg);
@@ -2162,8 +2142,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.relocate = TRUE;
         break;
       case 'x':
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&opt_state.extensions,
-                                            opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.extensions,
+                                        opt_arg, pool));
         break;
       case opt_diff_cmd:
         opt_state.diff.diff_cmd = apr_pstrdup(pool, opt_arg);
@@ -2183,20 +2163,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       case opt_old_cmd:
         if (opt_state.used_change_arg)
           {
-            err = svn_error_create
-              (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-               _("Can't specify -c with --old"));
-            return EXIT_ERROR(err);
+            return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                    _("Can't specify -c with --old"));
           }
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.old_target = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case opt_new_cmd:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.new_target = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case opt_config_dir:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
         break;
       case opt_config_options:
@@ -2205,9 +2183,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                    apr_array_make(pool, 1,
                                   sizeof(svn_cmdline__config_argument_t*));
 
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        SVN_INT_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
-                                                     utf8_opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
+                                                 utf8_opt_arg, pool));
         break;
       case opt_autoprops:
         opt_state.autoprops = TRUE;
@@ -2216,17 +2194,15 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.no_autoprops = TRUE;
         break;
       case opt_native_eol:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         if ( !strcmp("LF", utf8_opt_arg) || !strcmp("CR", utf8_opt_arg) ||
              !strcmp("CRLF", utf8_opt_arg))
           opt_state.native_eol = utf8_opt_arg;
         else
           {
-            err = svn_error_createf
-                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Syntax error in native-eol argument '%s'"),
                  utf8_opt_arg);
-            return EXIT_ERROR(err);
           }
         break;
       case opt_no_unlock:
@@ -2239,12 +2215,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.remove = TRUE;
         break;
       case opt_changelist:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         if (utf8_opt_arg[0] == '\0')
           {
-            err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                   _("Changelist names must not be empty"));
-            return EXIT_ERROR(err);
+            return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                    _("Changelist names must not be empty"));
           }
         svn_hash_sets(changelists, utf8_opt_arg, (void *)1);
         break;
@@ -2263,8 +2238,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.no_revprops = TRUE;
         break;
       case opt_with_revprop:
-        SVN_INT_ERR(svn_opt_parse_revprop(&opt_state.revprop_table,
-                                          opt_arg, pool));
+        SVN_ERR(svn_opt_parse_revprop(&opt_state.revprop_table,
+                                      opt_arg, pool));
         break;
       case opt_parents:
         opt_state.parents = TRUE;
@@ -2276,22 +2251,20 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.auto_moves = TRUE;
         break;
       case opt_accept:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.accept_which = svn_cl__accept_from_word(utf8_opt_arg);
         if (opt_state.accept_which == svn_cl__accept_invalid)
-          return EXIT_ERROR
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid --accept value"),
-                               utf8_opt_arg));
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("'%s' is not a valid --accept value"),
+                                   utf8_opt_arg);
         break;
       case opt_show_revs:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.show_revs = svn_cl__show_revs_from_word(utf8_opt_arg);
         if (opt_state.show_revs == svn_cl__show_revs_invalid)
-          return EXIT_ERROR
-            (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid --show-revs value"),
-                               utf8_opt_arg));
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("'%s' is not a valid --show-revs value"),
+                                   utf8_opt_arg);
         break;
       case opt_mergeinfo_log:
         opt_state.mergeinfo_log = TRUE;
@@ -2301,20 +2274,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_strip:
         {
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
           err = svn_cstring_atoi(&opt_state.strip, utf8_opt_arg);
           if (err)
             {
-              err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                                      _("Invalid strip count '%s'"),
-                                      utf8_opt_arg);
-              return EXIT_ERROR(err);
+              return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                                       _("Invalid strip count '%s'"),
+                                       utf8_opt_arg);
             }
           if (opt_state.strip < 0)
             {
-              err = svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                     _("Argument to --strip must be positive"));
-              return EXIT_ERROR(err);
+              return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                      _("Argument to --strip must be positive"));
             }
         }
         break;
@@ -2352,11 +2323,11 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.properties_only = TRUE;
         break;
       case opt_search:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         add_search_pattern_group(&opt_state, utf8_opt_arg, pool);
         break;
       case opt_search_and:
-        SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         add_search_pattern_to_latest_group(&opt_state, utf8_opt_arg, pool);
       case opt_remove_unversioned:
         opt_state.remove_unversioned = TRUE;
@@ -2378,10 +2349,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
    * exclusive. */
   if (opt_state.non_interactive && force_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--non-interactive and --force-interactive "
-                               "are mutually exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--non-interactive and --force-interactive "
+                                "are mutually exclusive"));
     }
   else
     opt_state.non_interactive = !svn_cmdline__be_interactive(
@@ -2389,7 +2359,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                   force_interactive);
 
   /* Turn our hash of changelists into an array of unique ones. */
-  SVN_INT_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));
+  SVN_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));
 
   /* ### This really belongs in libsvn_client.  The trouble is,
      there's no one place there to run it from, no
@@ -2401,7 +2371,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
      hand, the alternative is effectively to demand that they call
      svn_config_ensure() instead, so maybe we should have a generic
      init function anyway.  Thoughts?  */
-  SVN_INT_ERR(svn_config_ensure(opt_state.config_dir, pool));
+  SVN_ERR(svn_config_ensure(opt_state.config_dir, pool));
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -2435,7 +2405,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Subcommand argument required\n")));
               svn_error_clear(svn_cl__help(NULL, NULL, pool));
-              return EXIT_FAILURE;
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
       else
@@ -2446,8 +2417,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           if (subcommand == NULL)
             {
               const char *first_arg_utf8;
-              SVN_INT_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                                  first_arg, pool));
+              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
+                                              first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Unknown subcommand: '%s'\n"),
@@ -2464,7 +2435,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                                            "command.\n")));
                 }
 
-              return EXIT_FAILURE;
+              *exit_code = EXIT_FAILURE;
+              return SVN_NO_ERROR;
             }
         }
     }
@@ -2497,7 +2469,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svn help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
-          return EXIT_FAILURE;
+          *exit_code = EXIT_FAILURE;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -2507,11 +2480,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     {
       if (opt_state.revision_ranges->nelts > 1)
         {
-          err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("Multiple revision arguments "
-                                   "encountered; can't specify -c twice, "
-                                   "or both -c and -r"));
-          return EXIT_ERROR(err);
+          return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("Multiple revision arguments "
+                                    "encountered; can't specify -c twice, "
+                                    "or both -c and -r"));
         }
     }
 
@@ -2519,30 +2491,27 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   if ((opt_state.depth != svn_depth_unknown)
       && (opt_state.set_depth != svn_depth_unknown))
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--depth and --set-depth are mutually "
-                               "exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--depth and --set-depth are mutually "
+                                "exclusive"));
     }
 
   /* Disallow simultaneous use of both --with-all-revprops and
      --with-no-revprops.  */
   if (opt_state.all_revprops && opt_state.no_revprops)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--with-all-revprops and --with-no-revprops "
-                               "are mutually exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--with-all-revprops and --with-no-revprops "
+                                "are mutually exclusive"));
     }
 
   /* Disallow simultaneous use of both --with-revprop and
      --with-no-revprops.  */
   if (opt_state.revprop_table && opt_state.no_revprops)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--with-revprop and --with-no-revprops "
-                               "are mutually exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--with-revprop and --with-no-revprops "
+                                "are mutually exclusive"));
     }
 
 #ifdef SVN_CL__OPTION_WITH_REVPROP_CAN_SET_PROPERTIES_IN_SVN_NAMESPACE
@@ -2556,9 +2525,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
       for (hi = apr_hash_first(pool, opt_state.revprop_table);
            hi; hi = apr_hash_next(hi))
         {
-          SVN_INT_ERR(svn_cl__check_svn_prop_name(svn__apr_hash_index_key(hi),
-                                                  TRUE, svn_cl__prop_use_use,
-                                                  pool));
+          SVN_ERR(svn_cl__check_svn_prop_name(svn__apr_hash_index_key(hi),
+                                              TRUE, svn_cl__prop_use_use,
+                                              pool));
         }
     }
 #endif /* SVN_CL__OPTION_WITH_REVPROP_CAN_SET_PROPERTIES_IN_SVN_NAMESPACE */
@@ -2570,29 +2539,26 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   if (opt_state.filedata && opt_state.message
       && subcommand->cmd_func != svn_cl__propset)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--message (-m) and --file (-F) "
-                               "are mutually exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--message (-m) and --file (-F) "
+                                "are mutually exclusive"));
     }
 
   /* --trust-server-cert can only be used with --non-interactive */
   if (opt_state.trust_server_cert && !opt_state.non_interactive)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--trust-server-cert requires "
-                               "--non-interactive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--trust-server-cert requires "
+                                "--non-interactive"));
     }
 
   /* Disallow simultaneous use of --diff-cmd, --invoke-diff-cmd and
      --internal-diff.  */
   if (opt_state.diff.diff_cmd && opt_state.diff.internal_diff)
     {
-      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("--diff-cmd and --internal-diff "
-                               "are mutually exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--diff-cmd and --internal-diff "
+                                "are mutually exclusive"));
     }
 
   if (opt_state.diff.invoke_diff_cmd && opt_state.diff.internal_diff)
@@ -2639,7 +2605,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
           cfg_hash = NULL;
         }
       else
-        return EXIT_ERROR(err);
+        return err;
     }
 
   /* Relocation is infinite-depth only. */
@@ -2647,18 +2613,16 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     {
       if (opt_state.depth != svn_depth_unknown)
         {
-          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                                 _("--relocate and --depth are mutually "
-                                   "exclusive"));
-          return EXIT_ERROR(err);
+          return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                  _("--relocate and --depth are mutually "
+                                    "exclusive"));
         }
       if (! descend)
         {
-          err = svn_error_create(
+          return svn_error_create(
                     SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                     _("--relocate and --non-recursive (-N) are mutually "
                       "exclusive"));
-          return EXIT_ERROR(err);
         }
     }
 
@@ -2672,8 +2636,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     {
       if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
         {
-          err = svn_error_create(SVN_ERR_CLIENT_REVISION_RANGE, NULL, NULL);
-          return EXIT_ERROR(err);
+          return svn_error_create(SVN_ERR_CLIENT_REVISION_RANGE, NULL, NULL);
         }
     }
 
@@ -2740,7 +2703,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
-  SVN_INT_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
+  SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
   command_baton.ctx = ctx;
 
   /* If we're running a command that could result in a commit, verify
@@ -2776,19 +2739,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                 {
                   if (subcommand->cmd_func != svn_cl__lock)
                     {
-                      err = svn_error_create(
+                      return svn_error_create(
                          SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                          _("Log message file is a versioned file; "
                            "use '--force-log' to override"));
                     }
                   else
                     {
-                      err = svn_error_create(
+                      return svn_error_create(
                          SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
                          _("Lock comment file is a versioned file; "
                            "use '--force-log' to override"));
                     }
-                  return EXIT_ERROR(err);
                 }
             }
           svn_error_clear(err);
@@ -2804,19 +2766,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
             {
               if (subcommand->cmd_func != svn_cl__lock)
                 {
-                  err = svn_error_create
+                  return svn_error_create
                     (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                      _("The log message is a pathname "
                        "(was -F intended?); use '--force-log' to override"));
                 }
               else
                 {
-                  err = svn_error_create
+                  return svn_error_create
                     (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                      _("The lock comment is a pathname "
                        "(was -F intended?); use '--force-log' to override"));
                 }
-              return EXIT_ERROR(err);
             }
         }
     }
@@ -2839,10 +2800,9 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   /* Check for mutually exclusive args --auto-props and --no-auto-props */
   if (opt_state.autoprops && opt_state.no_autoprops)
     {
-      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                             _("--auto-props and --no-auto-props are "
-                               "mutually exclusive"));
-      return EXIT_ERROR(err);
+      return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                              _("--auto-props and --no-auto-props are "
+                                "mutually exclusive"));
     }
 
   /* Update auto-props-enable option, and populate the MIME types map,
@@ -2856,8 +2816,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                      SVN_CONFIG_OPTION_MIMETYPES_FILE, FALSE);
       if (mimetypes_file && *mimetypes_file)
         {
-          SVN_INT_ERR(svn_io_parse_mimetypes_file(&(ctx->mimetypes_map),
-                                                  mimetypes_file, pool));
+          SVN_ERR(svn_io_parse_mimetypes_file(&(ctx->mimetypes_map),
+                                              mimetypes_file, pool));
         }
 
       if (opt_state.autoprops)
@@ -2895,8 +2855,8 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     use_notifier = FALSE;
   if (use_notifier)
     {
-      SVN_INT_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
-                                       conflict_stats, pool));
+      SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
+                                   conflict_stats, pool));
     }
 
   /* Set up our cancellation support. */
@@ -2926,35 +2886,36 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
 #endif
 
   /* Set up Authentication stuff. */
-  SVN_INT_ERR(svn_cmdline_create_auth_baton(&ab,
-                                            opt_state.non_interactive,
-                                            opt_state.auth_username,
-                                            opt_state.auth_password,
-                                            opt_state.config_dir,
-                                            opt_state.no_auth_cache,
-                                            opt_state.trust_server_cert,
-                                            cfg_config,
-                                            ctx->cancel_func,
-                                            ctx->cancel_baton,
-                                            pool));
+  SVN_ERR(svn_cmdline_create_auth_baton(&ab,
+                                        opt_state.non_interactive,
+                                        opt_state.auth_username,
+                                        opt_state.auth_password,
+                                        opt_state.config_dir,
+                                        opt_state.no_auth_cache,
+                                        opt_state.trust_server_cert,
+                                        cfg_config,
+                                        ctx->cancel_func,
+                                        ctx->cancel_baton,
+                                        pool));
 
   ctx->auth_baton = ab;
 
   if (opt_state.non_interactive)
     {
       if (opt_state.accept_which == svn_cl__accept_edit)
-        return EXIT_ERROR(
-                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+        {
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("--accept=%s incompatible with"
                                      " --non-interactive"),
-                                   SVN_CL__ACCEPT_EDIT));
-
+                                   SVN_CL__ACCEPT_EDIT);
+        }
       if (opt_state.accept_which == svn_cl__accept_launch)
-        return EXIT_ERROR(
-                 svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+        {
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("--accept=%s incompatible with"
                                      " --non-interactive"),
-                                   SVN_CL__ACCEPT_LAUNCH));
+                                   SVN_CL__ACCEPT_LAUNCH);
+        }
 
       /* The default action when we're non-interactive is to postpone
        * conflict resolution. */
@@ -2965,10 +2926,10 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
   /* Check whether interactive conflict resolution is disabled by
    * the configuration file. If no --accept option was specified
    * we postpone all conflicts in this case. */
-  SVN_INT_ERR(svn_config_get_bool(cfg_config, &interactive_conflicts,
-                                  SVN_CONFIG_SECTION_MISCELLANY,
-                                  SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
-                                  TRUE));
+  SVN_ERR(svn_config_get_bool(cfg_config, &interactive_conflicts,
+                              SVN_CONFIG_SECTION_MISCELLANY,
+                              SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS,
+                              TRUE));
   if (!interactive_conflicts)
     {
       /* Make 'svn resolve' non-interactive. */
@@ -2989,7 +2950,7 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
     ctx->conflict_baton = NULL;
 
     ctx->conflict_func2 = svn_cl__conflict_func_interactive;
-    SVN_INT_ERR(svn_cl__get_conflict_func_interactive_baton(
+    SVN_ERR(svn_cl__get_conflict_func_interactive_baton(
                 &b,
                 opt_state.accept_which,
                 ctx->config, opt_state.editor_cmd, conflict_stats,
@@ -3062,27 +3023,18 @@ sub_main(int argc, const char *argv[], apr_pool_t *pool)
                          "Subversion"));
         }
 
-      /* Ensure that stdout is flushed, so the user will see any write errors.
-         This makes sure that output is not silently lost. */
-      SVN_INT_ERR(svn_cmdline_fflush(stdout));
-
-      return EXIT_ERROR(err);
+      return err;
     }
-  else
-    {
-      /* Ensure that stdout is flushed, so the user will see any write errors.
-         This makes sure that output is not silently lost. */
-      SVN_INT_ERR(svn_cmdline_fflush(stdout));
 
-      return EXIT_SUCCESS;
-    }
+  return SVN_NO_ERROR;
 }
 
 int
 main(int argc, const char *argv[])
 {
   apr_pool_t *pool;
-  int exit_code;
+  int exit_code = EXIT_SUCCESS;
+  svn_error_t *err;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -3093,7 +3045,17 @@ main(int argc, const char *argv[])
    */
   pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
 
-  exit_code = sub_main(argc, argv, pool);
+  err = sub_main(&exit_code, argc, argv, pool);
+
+  /* Flush stdout and report if it fails. It would be flushed on exit anyway
+     but this makes sure that output is not silently lost if it fails. */
+  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
+
+  if (err)
+    {
+      exit_code = EXIT_FAILURE;
+      svn_cmdline_handle_exit_error(err, NULL, "svn: ");
+    }
 
   svn_pool_destroy(pool);
   return exit_code;

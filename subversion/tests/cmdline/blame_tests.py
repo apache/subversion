@@ -619,6 +619,7 @@ def blame_file_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, [], expected_err,
                                      'blame', notexisting_url)
 
+@SkipUnless(server_has_mergeinfo)
 def blame_output_after_merge(sbox):
   "blame -g output with inserted lines"
 

@@ -12681,7 +12681,8 @@ svn_client_get_merging_summary(svn_boolean_t *needs_reintegration,
 
   target_is_wc = (! svn_path_is_url(target_path_or_url))
                  && (target_revision->kind == svn_opt_revision_unspecified
-                     || target_revision->kind == svn_opt_revision_working);
+                     || target_revision->kind == svn_opt_revision_working
+                     || target_revision->kind == svn_opt_revision_base);
   if (target_is_wc)
     {
       const char *target_abspath;

@@ -145,7 +145,7 @@ create_mergeinfo_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
                                     "S:" SVN_DAV__MERGEINFO_REPORT,
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:" SVN_DAV__REVISION,

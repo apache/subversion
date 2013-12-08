@@ -87,7 +87,12 @@ tool_versions = {
   'trunk' : {
             'autoconf' : '2.69',
             'libtool'  : '2.4.2',
-            'swig'     : '2.0.9',
+            'swig'     : '2.0.11',
+  },
+  '1.9' : {
+            'autoconf' : '2.69',
+            'libtool'  : '2.4.2',
+            'swig'     : '2.0.11'
   },
   '1.8' : {
             'autoconf' : '2.69',

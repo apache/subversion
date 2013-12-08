@@ -36,6 +36,8 @@
 #include "SVNBase.h"
 #include "CommitCallback.h"
 
+#include "jniwrapper/jni_globalref.hpp"
+
 class RemoteSession;
 
 // Forward-declare the currently private EV2 editor struct.
@@ -52,7 +54,10 @@ public:
                               jobject jrevprops,
                               jobject jcommit_callback,
                               jobject jlock_tokens,
-                              jboolean jkeep_locks);
+                              jboolean jkeep_locks,
+                              jobject jget_base_cb,
+                              jobject jget_props_cb,
+                              jobject jget_kind_cb);
   virtual ~CommitEditor();
 
   virtual void dispose(jobject jthis);
@@ -87,7 +92,9 @@ public:
 private:
   CommitEditor(RemoteSession* session,
                jobject jrevprops, jobject jcommit_callback,
-               jobject jlock_tokens, jboolean jkeep_locks);
+               jobject jlock_tokens, jboolean jkeep_locks,
+               jobject jget_base_cb, jobject jget_props_cb,
+               jobject jget_kind_cb);
 
   // This is our private callbacks for the commit editor.
   static svn_error_t* provide_base_cb(svn_stream_t **contents,
@@ -111,6 +118,10 @@ private:
   PersistentCommitCallback m_callback;
   RemoteSession* m_session;
   svn_editor_t* m_editor;
+
+  Java::GlobalObject m_get_base_cb;
+  Java::GlobalObject m_get_props_cb;
+  Java::GlobalObject m_get_kind_cb;
 
   // Temporary, while EV2 shims are in place
   svn_ra_session_t* m_callback_session;

@@ -286,7 +286,7 @@ create_file_revs_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_open_tag_buckets(buckets, alloc,
                                     "S:file-revs-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:start-revision", apr_ltoa(pool, blame_ctx->start),

@@ -185,7 +185,25 @@ skip_to_eoln(parse_context_t *ctx, int *c)
 
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != '\n' && ch != EOF)
-    SVN_ERR(parser_getc_plain(ctx, &ch));
+    {
+      /* This is much faster than checking individual bytes.
+       * We use this function a lot when skipping comment lines.
+       *
+       * This assumes that the ungetc buffer is empty, but that is a
+       * safe assumption right after reading a character (which would
+       * clear the buffer. */
+      const char *newline = memchr(ctx->parser_buffer + ctx->buffer_pos, '\n',
+                                   ctx->buffer_size - ctx->buffer_pos);
+      if (newline)
+        {
+          ch = '\n';
+          ctx->buffer_pos = newline - ctx->parser_buffer + 1;
+          break;
+        }
+
+      /* refill buffer, check for EOF */
+      SVN_ERR(parser_getc_plain(ctx, &ch));
+    }
 
   *c = ch;
   return SVN_NO_ERROR;
@@ -394,7 +412,7 @@ svn_config__sys_config_path(const char **path_p,
 #ifdef WIN32
   {
     const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool));
+    SVN_ERR(svn_config__win_config_path(&folder, TRUE, pool, pool));
     *path_p = svn_dirent_join_many(pool, folder,
                                    SVN_CONFIG__SUBDIRECTORY, fname,
                                    SVN_VA_NULL);
@@ -1357,7 +1375,11 @@ svn_config_get_user_config_path(const char **path,
 #ifdef WIN32
   {
     const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
+    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool, pool));
+
+    if (! folder)
+      return SVN_NO_ERROR;
+
     *path = svn_dirent_join_many(pool, folder,
                                  SVN_CONFIG__SUBDIRECTORY, fname, SVN_VA_NULL);
   }

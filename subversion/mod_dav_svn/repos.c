@@ -2159,7 +2159,7 @@ get_resource(request_rec *r,
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                     dav_svn__get_fulltext_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
-                    dav_svn__get_revprop_cache_flag(r) ? "1" :"0");
+                    dav_svn__get_revprop_cache_flag(r) ? "2" :"0");
 
       /* Disallow BDB/event until issue 4157 is fixed. */
       if (!strcmp(ap_show_mpm(), "event"))
@@ -2191,9 +2191,16 @@ get_resource(request_rec *r,
              leak that path back to the client, because that would be
              a security risk, but we do want to log the real error on
              the server side. */
-          return dav_svn__sanitize_error(serr, "Could not open the requested "
-                                         "SVN filesystem",
-                                         HTTP_INTERNAL_SERVER_ERROR, r);
+
+          apr_status_t cause = svn_error_root_cause(serr)->apr_err;
+          if (APR_STATUS_IS_ENOENT(cause) || APR_STATUS_IS_ENOTDIR(cause))
+            return dav_svn__sanitize_error(
+                serr, "Could not find the requested SVN filesystem",
+                HTTP_NOT_FOUND, r);
+          else
+            return dav_svn__sanitize_error(
+                serr, "Could not open the requested SVN filesystem",
+                HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
       /* Cache the open repos for the next request on this connection */

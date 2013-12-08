@@ -217,24 +217,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_initEnv = env;
 
   svn_error_t *err;
-  apr_status_t status;
-
-
-  /* Initialize the APR subsystem, and register an atexit() function
-   * to Uninitialize that subsystem at program exit. */
-  status = apr_initialize();
-  if (status)
-    {
-      if (stderr)
-        {
-          char buf[1024];
-          apr_strerror(status, buf, sizeof(buf) - 1);
-          fprintf(stderr,
-                  "%s: error: cannot initialize APR: %s\n",
-                  "svnjavahl", buf);
-        }
-      return FALSE;
-    }
 
   /* This has to happen before any pools are created. */
   if ((err = svn_dso_initialize2()))
@@ -246,16 +228,8 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
-  if (0 > atexit(apr_terminate))
-    {
-      if (stderr)
-        fprintf(stderr,
-                "%s: error: atexit registration failed\n",
-                "svnjavahl");
-      return FALSE;
-    }
-
-  /* Create our top-level pool. */
+  /* Create our top-level pool.
+     N.B.: APR was initialized by JNI_OnLoad. */
   g_pool = svn_pool_create(NULL);
 
   apr_allocator_t* allocator = apr_pool_allocator_get(g_pool);
@@ -271,12 +245,11 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
   svn_ra_initialize(g_pool);
 
-  /* We shouldn't fill the JVMs memory with FS cache data unless explictly
-     requested. */
+  /* We shouldn't fill the JVMs memory with FS cache data unless
+     explictly requested. And we don't either, because the caches get
+     allocated outside the JVM heap. Duh. */
   {
     svn_cache_config_t settings = *svn_cache_config_get();
-    settings.cache_size = 0;
-    settings.file_handle_count = 0;
     settings.single_threaded = FALSE;
     svn_cache_config_set(&settings);
   }
@@ -643,7 +616,7 @@ std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
   return buffer;
 }
 
-void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
+void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
 {
   jstring jmessage;
   jobject jstack;
@@ -700,12 +673,14 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;"
+                                   "Ljava/lang/Throwable;"
                                    "Ljava/lang/String;I"
                                    "Ljava/util/List;)V");
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
-  jobject nativeException = env->NewObject(clazz, mid, jmessage, jsource,
-                                           jint(err->apr_err), jstack);
+  jobject nativeException = env->NewObject(clazz, mid, jmessage, jcause,
+                                           jsource, jint(err->apr_err),
+                                           jstack);
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -776,10 +751,10 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err)
   env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
 }
 
-void JNIUtil::handleSVNError(svn_error_t *err)
+void JNIUtil::handleSVNError(svn_error_t *err, jthrowable jcause)
 {
   try {
-    wrappedHandleSVNError(err);
+    wrappedHandleSVNError(err, jcause);
   } catch (...) {
     svn_error_clear(err);
     throw;

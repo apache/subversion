@@ -4060,8 +4060,15 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
  * If a depth other than #svn_depth_empty or #svn_depth_infinity is
  * requested then return a #SVN_ERR_UNSUPPORTED_FEATURE error.
  *
- * @a discover_changed_paths and @a revprops are the same as for
- * svn_client_log5().  Use @a scratch_pool for all temporary allocations.
+ * In addition to the behavior of @a discover_changed_paths described in
+ * svn_client_log5(), if set to TRUE it enables detection of sub-tree
+ * merges that are complete but can't be detected as complete without
+ * access to the changed paths.  Sub-tree merges detected as complete will
+ * be included if @a finding_merged is TRUE or filtered if @a finding_merged
+ * is FALSE.
+ *
+ * @a revprops is the same as for svn_client_log5().  Use @a scratch_pool for
+ * all temporary allocations.
  *
  * @a ctx is a context used for authentication.
  *
@@ -4158,11 +4165,11 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * @{
  */
 
-/** Recursively cleanup a working copy directory @a dir, finishing any
- * incomplete operations, removing lockfiles, etc.
+/** Recursively vacuum a working copy directory @a dir, removing unnecessary
+ * data.
  *
- * If @a include_externals is @c TRUE, recurse into externals and clean
- * them up as well.
+ * If @a include_externals is @c TRUE, recurse into externals and vacuum them
+ * as well.
  *
  * If @a remove_unversioned_items is @c TRUE, remove unversioned items
  * in @a dir after successfull working copy cleanup.
@@ -4170,10 +4177,10 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * in @a dir after successfull working copy cleanup.
  *
  * When asked to remove unversioned or ignored items, and the working copy
- * is already locked via a different client or WC context than @a ctx, return
- * #SVN_ERR_WC_LOCKED. This prevents accidental working copy corruption in
- * case users run the cleanup operation to remove unversioned items while
- * another client is performing some other operation on the working copy.
+ * is already locked, return #SVN_ERR_WC_LOCKED. This prevents accidental
+ * working copy corruption in case users run the cleanup operation to
+ * remove unversioned items while another client is performing some other
+ * operation on the working copy.
  *
  * If @a ctx->cancel_func is non-NULL, invoke it with @a
  * ctx->cancel_baton at various points during the operation.  If it
@@ -4185,15 +4192,43 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_cleanup2(const char *dir,
+svn_client_vacuum(const char *dir_abspath,
+                  svn_boolean_t remove_unversioned_items,
+                  svn_boolean_t remove_ignored_items,
+                  svn_boolean_t fix_recorded_timestamps,
+                  svn_boolean_t vacuum_pristines,
+                  svn_boolean_t include_externals,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool);
+
+
+/** Recursively cleanup a working copy directory @a dir, finishing any
+ * incomplete operations, removing lockfiles, etc.
+ *
+ * If @a include_externals is @c TRUE, recurse into externals and clean
+ * them up as well.
+ *
+ * If @a ctx->cancel_func is non-NULL, invoke it with @a
+ * ctx->cancel_baton at various points during the operation.  If it
+ * returns an error (typically #SVN_ERR_CANCELLED), return that error
+ * immediately.
+ *
+ * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_cleanup2(const char *dir_abspath,
+                    svn_boolean_t break_locks,
+                    svn_boolean_t fix_recorded_timestamps,
+                    svn_boolean_t clear_dav_cache,
+                    svn_boolean_t vacuum_pristines,
                     svn_boolean_t include_externals,
-                    svn_boolean_t remove_unversioned_items,
-                    svn_boolean_t remove_ignored_items,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool);
 
-/* Like svn_client_cleanup2(), but no support for removing unversioned items
- * and cleaning up externals.
+/* Like svn_client_cleanup2(), but no support for not breaking locks and
+ * cleaning up externals and using a potentially non absolute path.
  *
  * @deprecated Provided for limited backwards compatibility with the 1.8 API.
  */
@@ -5786,10 +5821,12 @@ svn_client_ls(apr_hash_t **dirents,
 /**
  * Output the content of a file.
  *
- * @param[in] out           The stream to which the content will be written.
- * @param[in] path_or_url   The path or URL of the file.
- * @param[in] peg_revision  The peg revision.
- * @param[in] revision  The operative revision.
+ * @param[out] props           Optional output argument to obtain properties.
+ * @param[in] out              The stream to which the content will be written.
+ * @param[in] path_or_url      The path or URL of the file.
+ * @param[in] peg_revision     The peg revision.
+ * @param[in] revision         The operative revision.
+ * @param[in] expand_keywords  When true, keywords (when set) are expanded.
  * @param[in] ctx   The standard client context, used for possible
  *                  authentication.
  * @param[in] pool  Used for any temporary allocation.
@@ -5804,11 +5841,29 @@ svn_client_ls(apr_hash_t **dirents,
  *         determined. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.2.
- *
  * @see #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_client_cat3(apr_hash_t **props,
+                svn_stream_t *out,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t expand_keywords,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_client_cat3() except without the option of directly
+ * reading the properties, and with @a expand_keywords always TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cat2(svn_stream_t *out,
                 const char *path_or_url,

@@ -38,6 +38,7 @@
 #include "svn_props.h"
 #include "svn_version.h"
 
+#include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 
 #include "../svn_test_fs.h"
@@ -1020,7 +1021,7 @@ static svn_error_t *
 check_entry_present(svn_fs_root_t *root, const char *path,
                     const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = FALSE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (! present)
@@ -1037,7 +1038,7 @@ static svn_error_t *
 check_entry_absent(svn_fs_root_t *root, const char *path,
                    const char *name, apr_pool_t *pool)
 {
-  svn_boolean_t present;
+  svn_boolean_t present = TRUE;
   SVN_ERR(check_entry(root, path, name, &present, pool));
 
   if (present)
@@ -5074,9 +5075,135 @@ test_fs_info_format(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+commit_timestamp(const svn_test_opts_t *opts,
+                 apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_string_t *date = svn_string_create("Yesterday", pool);
+  svn_revnum_t rev = 0;
+  apr_hash_t *proplist;
+  svn_string_t *svn_date;
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-commit-timestamp",
+                              opts, pool));
+
+  /* Commit with a specified svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, FALSE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date && !strcmp(svn_date->data, date->data));
+
+  /* Commit that overwrites the specified svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date && strcmp(svn_date->data, date->data));
+
+  /* Commit with a missing svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zag", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, NULL, pool));
+  SVN_ERR(svn_fs_txn_prop(&svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(!svn_date);
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, FALSE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(!svn_date);
+
+  /* Commit that overwites a missing svn:date. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/zig", pool));
+  SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, NULL, pool));
+  SVN_ERR(svn_fs_txn_prop(&svn_date, txn, SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(!svn_date);
+  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+
+  SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
+  svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
+                          APR_HASH_KEY_STRING);
+  SVN_TEST_ASSERT(svn_date);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_compat_version(const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_version_t *compatible_version;
+  apr_hash_t *config = apr_hash_make(pool);
+  
+  svn_version_t vcurrent = {SVN_VER_MAJOR, SVN_VER_MINOR, 0, ""};
+  svn_version_t v1_2_0 = {1, 2, 0, ""};
+  svn_version_t v1_3_0 = {1, 3, 0, ""};
+  svn_version_t v1_5_0 = {1, 5, 0, ""};
+
+  /* no version specified -> default to the current one */
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &vcurrent));
+
+  /* test specific compat option */
+  svn_hash_sets(config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE, "1");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_5_0));
+
+  /* test precedence amongst compat options */
+  svn_hash_sets(config, SVN_FS_CONFIG_PRE_1_8_COMPATIBLE, "1");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_5_0));
+
+  svn_hash_sets(config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "1");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_3_0));
+
+  /* precedence should work with the generic option as well */
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.4.17-??");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_3_0));
+
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.2.3-no!");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_2_0));
+
+  /* test generic option alone */
+  config = apr_hash_make(pool);
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.2.3-no!");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &v1_2_0));
+
+  /* out of range values should be caped by the current tool version */
+  svn_hash_sets(config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "2.3.4-x");
+  SVN_ERR(svn_fs__compatible_version(&compatible_version, config, pool));
+  SVN_TEST_ASSERT(svn_ver_equal(compatible_version, &vcurrent));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
+
+int svn_test_max_threads = 8;
 
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -5093,6 +5220,12 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check that transaction names are not reused"),
     SVN_TEST_OPTS_PASS(write_and_read_file,
                        "write and read a file's contents"),
+    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
+                       "create and modify almostmedium file"),
+    SVN_TEST_OPTS_PASS(medium_file_integrity,
+                       "create and modify medium file"),
+    SVN_TEST_OPTS_PASS(large_file_integrity,
+                       "create and modify large file"),
     SVN_TEST_OPTS_PASS(create_mini_tree_transaction,
                        "test basic file and subdirectory creation"),
     SVN_TEST_OPTS_PASS(create_greek_tree_transaction,
@@ -5124,12 +5257,6 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check old revisions"),
     SVN_TEST_OPTS_PASS(check_all_revisions,
                        "after each commit, check all revisions"),
-    SVN_TEST_OPTS_PASS(almostmedium_file_integrity,
-                       "create and modify almostmedium file"),
-    SVN_TEST_OPTS_PASS(medium_file_integrity,
-                       "create and modify medium file"),
-    SVN_TEST_OPTS_PASS(large_file_integrity,
-                       "create and modify large file"),
     SVN_TEST_OPTS_PASS(check_root_revision,
                        "ensure accurate storage of root node"),
     SVN_TEST_OPTS_PASS(test_node_created_rev,
@@ -5160,5 +5287,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "filenames with trailing \\n might be rejected"),
     SVN_TEST_OPTS_PASS(test_fs_info_format,
                        "test svn_fs_info_format"),
+    SVN_TEST_OPTS_PASS(commit_timestamp,
+                       "commit timestamp"),
+    SVN_TEST_OPTS_PASS(test_compat_version,
+                       "test svn_fs__compatible_version"),
     SVN_TEST_NULL
   };

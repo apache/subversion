@@ -29,13 +29,15 @@
 
 #include "../include/org_apache_subversion_javahl_util_PropLib.h"
 
-#include "JNIStackElement.h"
-#include "JNIStringHolder.h"
-#include "JNIByteArray.h"
-#include "JNIUtil.h"
-#include "InputStream.h"
+#include "jniwrapper/jni_stack.hpp"
+#include "jniwrapper/jni_array.hpp"
+#include "jniwrapper/jni_list.hpp"
+#include "jniwrapper/jni_string.hpp"
+#include "jniwrapper/jni_io_stream.hpp"
+#include "ExternalItem.hpp"
+#include "SubversionException.hpp"
+
 #include "EnumMapper.h"
-#include "Path.h"
 #include "Pool.h"
 
 #include "svn_props.h"
@@ -82,74 +84,7 @@ private:
   const char* m_mime_type;
   svn_stream_t* m_contents;
 };
-} // anonymous namespace
 
-
-JNIEXPORT jbyteArray JNICALL
-Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
-    JNIEnv* env, jobject jthis,
-    jstring jname, jbyteArray jvalue, jstring jpath, jobject jkind,
-    jstring jmime_type, jobject jfile_contents,
-    jboolean jskip_some_checks)
-{
-  JNIEntry(PropLib, checkLocalProp);
-
-  JNIStringHolder name(jname);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  JNIByteArray value(jvalue);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  JNIStringHolder path(jpath);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  svn_node_kind_t kind = EnumMapper::toNodeKind(jkind);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  JNIStringHolder mime_type(jmime_type);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  InputStream contents(jfile_contents);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // Using a "global" request pool since we don't keep a context with
-  // its own pool around for these functions.
-  SVN::Pool pool;
-
-  PropGetter getter(mime_type.c_str(),
-                    (jfile_contents ? contents.getStream(pool) : NULL));
-
-  svn_string_t propval;
-  propval.data = reinterpret_cast<const char*>(value.getBytes());
-  propval.len = value.getLength();
-
-  const svn_string_t* canonval;
-  SVN_JNI_ERR(svn_wc_canonicalize_svn_prop(
-                  &canonval, name.c_str(), &propval, path.c_str(),
-                  kind, svn_boolean_t(jskip_some_checks),
-                  PropGetter::callback, &getter,
-                  pool.getPool()),
-              NULL);
-
-  return JNIUtil::makeJByteArray(canonval->data, int(canonval->len));
-}
-
-
-#include "jniwrapper/jni_stack.hpp"
-#include "jniwrapper/jni_array.hpp"
-#include "jniwrapper/jni_list.hpp"
-#include "jniwrapper/jni_string.hpp"
-#include "ExternalItem.hpp"
-#include "SubversionException.hpp"
-
-
-namespace {
 struct FormatRevision
 {
   explicit FormatRevision(const svn_opt_revision_t* const& revarg,
@@ -278,6 +213,51 @@ private:
 } // anoymous namespace
 
 
+JNIEXPORT jbyteArray JNICALL
+Java_org_apache_subversion_javahl_util_PropLib_checkNodeProp(
+    JNIEnv* jenv, jobject jthis,
+    jstring jname, jbyteArray jvalue, jstring jpath, jobject jkind,
+    jstring jmime_type, jobject jfile_contents,
+    jboolean jskip_some_checks)
+{
+  SVN_JAVAHL_JNI_TRY(PropLib, checkLocalProp)
+    {
+      const Java::Env env(jenv);
+
+      const svn_node_kind_t kind = EnumMapper::toNodeKind(jkind);
+      SVN_JAVAHL_OLDSTYLE_EXCEPTION_CHECK(env);
+
+      const Java::String name_str(env, jname);
+      const Java::ByteArray value(env, jvalue);
+      const Java::String path_str(env, jpath);
+      const Java::String mime_type_str(env, jmime_type);
+      Java::InputStream file_contents(env, jfile_contents);
+
+      // Using a "global" request pool since we don't keep a context
+      // with its own pool around for these functions.
+      SVN::Pool pool;
+
+      const Java::String::Contents name(name_str);
+      const Java::String::Contents path(path_str);
+      const Java::String::Contents mime_type(mime_type_str);
+      PropGetter getter(mime_type.c_str(), file_contents.get_stream(pool));
+
+      const svn_string_t* canonval;
+      SVN_JAVAHL_CHECK(env,
+                       svn_wc_canonicalize_svn_prop(
+                           &canonval, name.c_str(),
+                           Java::ByteArray::Contents(value).get_string(pool),
+                           path.c_str(), kind,
+                           svn_boolean_t(jskip_some_checks),
+                           PropGetter::callback, &getter,
+                           pool.getPool()));
+      return Java::ByteArray(env, canonval->data, jint(canonval->len)).get();
+    }
+  SVN_JAVAHL_JNI_CATCH;
+  return NULL;
+}
+
+
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
     JNIEnv* jenv, jobject jthis,
@@ -302,7 +282,8 @@ Java_org_apache_subversion_javahl_util_PropLib_parseExternals(
         svn_string_t* const description_contents =
           Java::ByteArray::Contents(description).get_string(pool);
 
-        SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+        SVN_JAVAHL_CHECK(env,
+                         svn_wc_parse_externals_description3(
                              &externals,
                              Java::String::Contents(parent_dir).c_str(),
                              description_contents->data,
@@ -355,7 +336,8 @@ Java_org_apache_subversion_javahl_util_PropLib_unparseExternals(
 
       // Validate the result. Even though we generated the string
       // ourselves, we did not validate the input paths and URLs.
-      SVN_JAVAHL_CHECK(svn_wc_parse_externals_description3(
+      SVN_JAVAHL_CHECK(env,
+                       svn_wc_parse_externals_description3(
                            NULL,
                            Java::String::Contents(parent_dir).c_str(),
                            description.c_str(),
@@ -385,7 +367,8 @@ Java_org_apache_subversion_javahl_util_PropLib_resolveExternalsUrl(
       SVN::Pool pool;
 
       const char* resolved_url;
-      SVN_JAVAHL_CHECK(svn_wc__resolve_relative_external_url(
+      SVN_JAVAHL_CHECK(env,
+                       svn_wc__resolve_relative_external_url(
                            &resolved_url,
                            item.get_external_item(pool),
                            Java::String::Contents(repos_root_url).c_str(),

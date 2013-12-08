@@ -193,7 +193,7 @@ changes_fetch_raw(const svn_test_opts_t *opts,
   struct changes_args args;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch", opts,
+  SVN_ERR(svn_test__create_bdb_fs(&fs, "test-repo-changes-fetch-raw", opts,
                                   pool));
 
   /* First, verify that we can request changes for an arbitrary key
@@ -902,6 +902,8 @@ changes_bad_sequences(const svn_test_opts_t *opts,
 
 
 /* The test table.  */
+
+int svn_test_max_threads = 4;
 
 struct svn_test_descriptor_t test_funcs[] =
   {

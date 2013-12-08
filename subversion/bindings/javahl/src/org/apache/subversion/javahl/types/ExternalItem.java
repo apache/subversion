@@ -46,10 +46,10 @@ public class ExternalItem implements java.io.Serializable
      *
      * @param targetDir See {@link #getTargetDir}
      * @param url See {@link #getUrl}
--     * @param revision See {@link #getRevision};
--     *     <code>null</code> will be interpreted as <code>pegRevision</code>
--     * @param pegRevision See {@link #getPegRevision};
--     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
+     * @param revision See {@link #getRevision};
+     *     <code>null</code> will be interpreted as <code>pegRevision</code>
+     * @param pegRevision See {@link #getPegRevision};
+     *     <code>null</code> will be interpreted as {@link Revision#HEAD}
      */
     public ExternalItem(String targetDir, String url,
                         Revision revision, Revision pegRevision)
@@ -130,6 +130,11 @@ public class ExternalItem implements java.io.Serializable
     /* Exception class for failed revision kind validation. */
     private static class BadRevisionKindException extends SubversionException
     {
+        // Update the serialVersionUID when there is a incompatible change made to
+        // this class.  See the java documentation for when a change is incompatible.
+        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        private static final long serialVersionUID = 1L;
+
         public BadRevisionKindException(String param)
         {
             super("the '" + param + "' constructor argument" +

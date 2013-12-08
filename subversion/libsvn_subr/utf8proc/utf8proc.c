@@ -182,10 +182,10 @@ ssize_t utf8proc_encode_char(int32_t uc, uint8_t *dst) {
   if (uc < 0x00) {
     return 0;
   } else if (uc < 0x80) {
-    dst[0] = uc;
+    dst[0] = (uint8_t)uc;
     return 1;
   } else if (uc < 0x800) {
-    dst[0] = 0xC0 + (uc >> 6);
+    dst[0] = 0xC0 + (uint8_t)(uc >> 6);
     dst[1] = 0x80 + (uc & 0x3F);
     return 2;
   } else if (uc == 0xFFFF) {
@@ -195,12 +195,12 @@ ssize_t utf8proc_encode_char(int32_t uc, uint8_t *dst) {
     dst[0] = 0xFE;
     return 1;
   } else if (uc < 0x10000) {
-    dst[0] = 0xE0 + (uc >> 12);
+    dst[0] = 0xE0 + (uint8_t)(uc >> 12);
     dst[1] = 0x80 + ((uc >> 6) & 0x3F);
     dst[2] = 0x80 + (uc & 0x3F);
     return 3;
   } else if (uc < 0x110000) {
-    dst[0] = 0xF0 + (uc >> 18);
+    dst[0] = 0xF0 + (uint8_t)(uc >> 18);
     dst[1] = 0x80 + ((uc >> 12) & 0x3F);
     dst[2] = 0x80 + ((uc >> 6) & 0x3F);
     dst[3] = 0x80 + (uc & 0x3F);

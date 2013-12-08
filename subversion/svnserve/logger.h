@@ -37,6 +37,14 @@ extern "C" {
  */
 typedef struct logger_t logger_t;
 
+/* In POOL, create a writer object that will write log messages to stderr
+ * and return it in *LOGGER.  The log file will not add any buffering
+ * on top of stderr.
+ */
+svn_error_t *
+logger__create_for_stderr(logger_t **logger,
+                          apr_pool_t *pool);
+
 /* In POOL, create a writer object for log file FILENAME and return it
  * in *LOGGER.  The log file will be flushed & closed when POOL gets
  * cleared or destroyed.

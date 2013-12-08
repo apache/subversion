@@ -1293,6 +1293,29 @@ svn_relpath_split(const char **dirpath,
     *base_name = svn_relpath_basename(relpath, pool);
 }
 
+const char *
+svn_relpath_limit(const char *relpath,
+                  int max_components,
+                  apr_pool_t *result_pool)
+{
+  const char *end;
+  assert(relpath_is_canonical(relpath));
+
+  if (max_components <= 0)
+    return "";
+
+  for (end = relpath; *end; end++)
+    {
+      if (*end == '/')
+        {
+          if (!--max_components)
+            break;
+        }
+    }
+
+  return apr_pstrmemdup(result_pool, relpath, end-relpath);
+}
+
 char *
 svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {

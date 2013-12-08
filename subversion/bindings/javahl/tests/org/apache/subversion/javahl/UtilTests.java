@@ -30,12 +30,16 @@ import org.apache.subversion.javahl.types.Revision;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Tests the JavaHL SVNUtil APIs.
@@ -396,17 +400,191 @@ public class UtilTests extends SVNTests
 
     public void testBuildKeywords() throws Throwable
     {
-        final byte[] kwval = "TEST=%H%_%b%_%u".getBytes();
+        final byte[] kwval = "Id TEST=%H%_%b%_%u".getBytes();
 
         Map<String, byte[]> result;
 
         result = SVNUtil.buildKeywords(kwval, Revision.SVN_INVALID_REVNUM,
                                        null, null, null, null);
+        assertEquals("   ", new String(result.get("Id")));
         assertEquals("     ", new String(result.get("TEST")));
 
-        result = SVNUtil.buildKeywords(kwval, 48, "http://a/b/c",
+        result = SVNUtil.buildKeywords(kwval, 42, "http://a/b/c",
                                        "http://a", new Date(1), "X");
-        assertEquals("b/c 48 1970-01-01 00:00:00Z X c http://a/b/c",
+        assertEquals("c 42 1970-01-01 00:00:00Z X",
+                     new String(result.get("Id")));
+        assertEquals("b/c 42 1970-01-01 00:00:00Z X c http://a/b/c",
                      new String(result.get("TEST")));
+    }
+
+    public void testTranslateStream() throws Throwable
+    {
+        final byte[] keywordsValue = "Id TEST=%H%_%b%_%u".getBytes();
+        final byte[] contentsContracted = "$Id$\n$TEST$\n".getBytes();
+        final byte[] contentsExpanded =
+            ("$Id: c 42 1970-01-01 00:00:00Z X $\r" +
+             "$TEST: b/c 42 1970-01-01 00:00:00Z X c http://a/b/c $\r"
+             ) .getBytes();
+        final Map<String, byte[]> keywords =
+            SVNUtil.buildKeywords(keywordsValue, 42, "http://a/b/c",
+                                  "http://a", new Date(1), "X");
+        final Map<String, byte[]> null_keywords = new HashMap<String, byte[]>();
+        byte[] buffer = new byte[1024];
+
+        for (Map.Entry<String, byte[]> e : keywords.entrySet())
+            null_keywords.put(e.getKey(), null);
+
+        // InputStream; expand
+        InputStream testin = null;
+        try {
+            testin = SVNUtil.translateStream(
+                         new ByteArrayInputStream(contentsContracted),
+                         SVNUtil.EOL_CR, true, keywords, true);
+            final int size = testin.read(buffer);
+            testin.close();
+            testin = null;
+
+            assertEquals("expand InputStream with concrete keywords",
+                         new String(contentsExpanded),
+                         new String(buffer, 0, size));
+        } finally {
+            if (testin != null) {
+                testin.close();
+                testin = null;
+            }
+        }
+
+        try {
+            testin = SVNUtil.translateStream(
+                         new ByteArrayInputStream(contentsContracted),
+                         SVNUtil.EOL_CR, true, true,
+                         keywordsValue, 42, "http://a/b/c",
+                         "http://a", new Date(1), "X");
+            final int size = testin.read(buffer);
+            testin.close();
+            testin = null;
+
+            assertEquals("expand InputStream with implied keywords",
+                         new String(contentsExpanded),
+                         new String(buffer, 0, size));
+        } finally {
+            if (testin != null) {
+                testin.close();
+                testin = null;
+            }
+        }
+
+        // InputStream; contract
+        try {
+            testin = SVNUtil.translateStream(
+                         new ByteArrayInputStream(contentsExpanded),
+                         SVNUtil.EOL_LF, true, null_keywords, false);
+            final int size = testin.read(buffer);
+            testin.close();
+            testin = null;
+
+            assertEquals("contract InputStream with concrete keywords",
+                         new String(contentsContracted),
+                         new String(buffer, 0, size));
+        } finally {
+            if (testin != null) {
+                testin.close();
+                testin = null;
+            }
+        }
+
+        try {
+            testin = SVNUtil.translateStream(
+                         new ByteArrayInputStream(contentsExpanded),
+                         SVNUtil.EOL_LF, true, false,
+                         keywordsValue, 0, "", "", new Date(1), "");
+            final int size = testin.read(buffer);
+            testin.close();
+            testin = null;
+
+            assertEquals("contract InputStream with implied keywords",
+                         new String(contentsContracted),
+                         new String(buffer, 0, size));
+        } finally {
+            if (testin != null) {
+                testin.close();
+                testin = null;
+            }
+        }
+
+
+        // OutputStream; expand
+        OutputStream testout = null;
+        try {
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            testout = SVNUtil.translateStream(
+                         result, SVNUtil.EOL_CR, true, keywords, true);
+            testout.write(contentsContracted);
+            testout.close();
+            testout = null;
+
+            assertEquals("expand OutputStream with concrete keywords",
+                         new String(contentsExpanded), result.toString());
+        } finally {
+            if (testout != null) {
+                testout.close();
+                testout = null;
+            }
+        }
+
+        try {
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            testout = SVNUtil.translateStream(
+                         result, SVNUtil.EOL_CR, true, true,
+                         keywordsValue, 42, "http://a/b/c",
+                         "http://a", new Date(1), "X");
+            testout.write(contentsContracted);
+            testout.close();
+            testout = null;
+
+            assertEquals("expand OutputStream with implied keywords",
+                         new String(contentsExpanded), result.toString());
+        } finally {
+            if (testout != null) {
+                testout.close();
+                testout = null;
+            }
+        }
+
+        // OutputStream; contract
+        try {
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            testout = SVNUtil.translateStream(
+                         result, SVNUtil.EOL_LF, true, null_keywords, false);
+            testout.write(contentsExpanded);
+            testout.close();
+            testout = null;
+
+            assertEquals("contract OutputStream with concrete keywords",
+                         new String(contentsContracted), result.toString());
+        } finally {
+            if (testout != null) {
+                testout.close();
+                testout = null;
+            }
+        }
+
+        try {
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            testout = SVNUtil.translateStream(
+                         result, SVNUtil.EOL_LF, true, false,
+                         keywordsValue, 0, "", "", new Date(1), "");
+            testout.write(contentsExpanded);
+            testout.close();
+            testout = null;
+
+            assertEquals("contract OutputStream with implied keywords",
+                         new String(contentsContracted), result.toString());
+        } finally {
+            if (testout != null) {
+                testout.close();
+                testout = null;
+            }
+        }
     }
 }

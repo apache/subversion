@@ -58,8 +58,8 @@ protected:
    * @c std::vector.
    */
   explicit BaseList(Env env, jobject jlist)
-    : Object(env, m_class_name, jlist),
-      m_contents(convert_to_vector(env, m_class, m_jthis))
+    : Object(env, ClassCache::get_list(), jlist),
+      m_contents(convert_to_vector(env, m_jthis))
     {}
 
   /**
@@ -74,8 +74,12 @@ protected:
   const ovector m_contents;
 
 private:
+  friend class ClassCache;
+  static void static_init(Env env);
   static const char* const m_class_name;
-  static ovector convert_to_vector(Env env, jclass cls, jobject jlist);
+  static MethodID m_mid_size;
+  static MethodID m_mid_get;
+  static ovector convert_to_vector(Env env, jobject jlist);
 };
 
 /**
@@ -148,12 +152,18 @@ public:
   /**
    * Clears the contents of the list.
    */
-  void clear();
+  void clear()
+    {
+      m_env.CallVoidMethod(m_jthis, m_mid_clear);
+    }
 
   /**
    * Returns the number of elements in the list.
    */
-  jint length() const;
+  jint length() const
+    {
+      return m_env.CallIntMethod(m_jthis, m_mid_size);
+    }
 
   /**
    * Checks if the list is empty.
@@ -175,25 +185,38 @@ protected:
    * Constructs and wraps an empty list of type @c java.util.ArrayList
    * with initial allocation size @a length.
    */
-  explicit BaseMutableList(Env env, jint length);
+  explicit BaseMutableList(Env env, jint length)
+    : Object(env, ClassCache::get_array_list(),
+             env.NewObject(ClassCache::get_array_list(), m_mid_ctor, length))
+    {}
+
 
   /**
    * Appends @a obj to the end of the list.
    */
-  void add(jobject obj);
+  void add(jobject obj)
+    {
+      m_env.CallBooleanMethod(m_jthis, m_mid_add, obj);
+    }
 
   /**
    * Returns the object reference at @a index.
    * @note Throws a Java exception if the index value is not valid.
    */
-  jobject operator[](jint index) const;
+  jobject operator[](jint index) const
+    {
+      return m_env.CallObjectMethod(m_jthis, m_mid_get, index);
+    }
 
 private:
+  friend class ClassCache;
+  static void static_init(Env env);
   static const char* const m_class_name;
-  MethodID m_mid_add;
-  MethodID m_mid_clear;
-  mutable MethodID m_mid_get;
-  mutable MethodID m_mid_size;
+  static MethodID m_mid_ctor;
+  static MethodID m_mid_add;
+  static MethodID m_mid_clear;
+  static MethodID m_mid_get;
+  static MethodID m_mid_size;
 };
 
 /**

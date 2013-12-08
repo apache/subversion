@@ -107,7 +107,7 @@ create_getdate_body(serf_bucket_t **body_bkt,
   svn_ra_serf__add_open_tag_buckets(buckets, alloc, "S:dated-rev-report",
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     "xmlns:D", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "D:" SVN_DAV__CREATIONDATE,

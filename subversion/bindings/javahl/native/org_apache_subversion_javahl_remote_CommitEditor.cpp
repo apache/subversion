@@ -56,13 +56,15 @@ Java_org_apache_subversion_javahl_remote_CommitEditor_nativeDispose(
 JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_remote_CommitEditor_nativeCreateInstance(
     JNIEnv *env, jclass thisclass, jobject jsession, jobject jrevprops,
-    jobject jcommit_callback, jobject jlock_tokens, jboolean jkeep_locks)
+    jobject jcommit_callback, jobject jlock_tokens, jboolean jkeep_locks,
+    jobject jget_base_cb, jobject jget_props_cb, jobject jget_kind_cb)
 {
   jobject jthis = NULL;         // Placeholder -- this is a static method
   JNIEntry(CommitEditor, nativeCreateInstance);
 
-  return CommitEditor::createInstance(jsession, jrevprops, jcommit_callback,
-                                      jlock_tokens, jkeep_locks);
+  return CommitEditor::createInstance(
+      jsession, jrevprops, jcommit_callback, jlock_tokens, jkeep_locks,
+      jget_base_cb, jget_props_cb, jget_kind_cb);
 }
 
 JNIEXPORT void JNICALL

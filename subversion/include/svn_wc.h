@@ -7324,19 +7324,45 @@ svn_wc_get_pristine_copy_path(const char *path,
 
 
 /**
- * Recurse from @a local_abspath, cleaning up unfinished log business.  Perform
- * any temporary allocations in @a scratch_pool.  Any working copy locks under
- * @a local_abspath will be taken over and then cleared by this function.
+ * Recurse from @a local_abspath, cleaning up unfinished tasks.  Perform
+ * any temporary allocations in @a scratch_pool.  If @a break_locks is TRUE
+ * Any working copy locks under @a local_abspath will be taken over and then
+ * cleared by this function.
+ * WARNING: If @a break_locks is TRUE there is no mechanism that will protect
+ * locks that are still being used.
  *
- * WARNING: there is no mechanism that will protect locks that are still being
- * used.
+ * If @a fix_recorded_timestamps is TRUE the recorded timestamps of unmodified
+ * files will be updated, which will improve performance of future is-modified
+ * checks.
+ *
+ * If @a vacuum_pristines is TRUE, try to remove unreferenced pristines from
+ * the working copy.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
  * #SVN_ERR_CANCELLED), return that error immediately.
  *
- * @since New in 1.7.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_wc_cleanup4(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                svn_boolean_t break_locks,
+                svn_boolean_t fix_recorded_timestamps,
+                svn_boolean_t clear_dav_cache,
+                svn_boolean_t vacuum_pristines,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_cleanup4() but will always break locks, fix recorded
+ * timestamps, clear the dav cache and vacuum pristines.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,

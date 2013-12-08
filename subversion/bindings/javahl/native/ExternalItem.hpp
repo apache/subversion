@@ -100,7 +100,14 @@ public:
   svn_wc_external_item2_t* get_external_item(SVN::Pool& pool) const;
 
 private:
+  friend class ::Java::ClassCache;
   static const char* const m_class_name;
+  static void static_init(::Java::Env env);
+  static ::Java::MethodID m_mid_ctor;
+  static ::Java::FieldID m_fid_target_dir;
+  static ::Java::FieldID m_fid_url;
+  static ::Java::FieldID m_fid_revision;
+  static ::Java::FieldID m_fid_peg_revision;
 
   ::Java::String m_target_dir;
   ::Java::String m_url;

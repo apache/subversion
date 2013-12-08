@@ -53,10 +53,6 @@
 
 #include "../svn_test.h"
 
-#ifdef _MSC_VER
-#pragma warning(disable: 4221) /* nonstandard extension used */
-#endif
-
 /* Compare strings, like strcmp but either or both may be NULL which
  * compares equal to NULL and not equal to any non-NULL string. */
 static int
@@ -908,7 +904,7 @@ test_adds_change_kind(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "adds", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "test_adds_change_kind", opts, pool));
   SVN_ERR(sbox_add_and_commit_greek_tree(&b));
 
   /* replace dir with file */
@@ -5776,6 +5772,8 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
                                    sbox_wc_path(b, wc_path),
                                    b->pool, b->pool));
 
+  SVN_TEST_ASSERT(conflict != NULL);
+
   SVN_ERR(svn_wc__conflict_read_info(&operation, &locations,
                                      &text_conflicted, &prop_conflicted,
                                      &tree_conflicted,
@@ -7253,7 +7251,7 @@ movedto_opdepth(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "moved_to_op_depth",
+  SVN_ERR(svn_test__sandbox_create(&b, "movedto_opdepth",
                                    opts, pool));
 
   SVN_ERR(sbox_wc_mkdir(&b, "A"));
@@ -9019,7 +9017,7 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_edit_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_edit_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9039,7 +9037,7 @@ del4_update_delete_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_delete_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_delete_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9059,7 +9057,7 @@ del4_update_add_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_add_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_add_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9079,7 +9077,7 @@ del4_update_delself_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(init_move4(&b, "move4_update_delself_AAA", opts, FALSE, pool));
+  SVN_ERR(init_move4(&b, "del4_update_delself_AAA", opts, FALSE, pool));
 
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
@@ -9458,6 +9456,8 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
+
+int svn_test_max_threads = 2;
 
 struct svn_test_descriptor_t test_funcs[] =
   {
