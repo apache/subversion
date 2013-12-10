@@ -536,7 +536,6 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
 static svn_error_t *
 index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
 {
-  int i;
   svn_boolean_t first = TRUE;
   svn_error_t *err;
 
