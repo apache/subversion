@@ -533,6 +533,33 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                                     pool));
 }
 
+static svn_error_t *
+index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
+{
+  int i;
+  svn_boolean_t first = TRUE;
+  svn_error_t *err;
+
+  while (TRUE)
+    {
+      err = svn_io_file_open(index_file, file_name,
+                             APR_WRITE | APR_CREATE | APR_TRUNCATE
+                             | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool);
+
+      /* ### Do we need another check, EEXIST say, on Windows FAT32? */
+      if (!err || !first || !APR_STATUS_IS_EACCES(err->apr_err))
+        break;
+
+      /* File may exist and be read-only from a previous, failed, commit. */
+      svn_error_clear(err);
+      svn_error_clear(svn_io_remove_file2(file_name, TRUE, pool));
+      first = FALSE;
+    }
+
+  return err;
+}
+
 svn_error_t *
 svn_fs_fs__l2p_index_create(svn_fs_t *fs,
                             const char *file_name,
@@ -632,9 +659,7 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* create the target file */
-  SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
-                           | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, local_pool));
+  SVN_ERR(index_create(&index_file, file_name, local_pool));
 
   /* write header info */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
@@ -1672,9 +1697,7 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
   /* create the target file */
-  SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
-                           | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, local_pool));
+  SVN_ERR(index_create(&index_file, file_name, local_pool));
 
   /* write the start revision, file size and page size */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
