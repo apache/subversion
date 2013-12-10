@@ -1213,7 +1213,7 @@ recursive_proplist_receiver(void *baton,
 {
   struct recursive_proplist_receiver_baton *b = baton;
   const char *path;
-  const apr_array_header_t *iprops = NULL;
+  apr_array_header_t *iprops = NULL;
 
   if (b->iprops
       && ! strcmp(local_abspath, b->anchor_abspath))
