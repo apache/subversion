@@ -285,6 +285,23 @@ typedef struct window_cache_key_t
   apr_uint64_t item_index;
 } window_cache_key_t;
 
+/* Structure used to propagate paths throught the FSFS implementation. */
+typedef struct fs_fs_path_t
+{
+  /* The original path, as found on disk or received by the API. */
+  const char *path;
+
+  /* The representation of PATH used for cache keys and
+     lookups. Depending on whether normalized lookups are enabled,
+     this will either be exactly the same pointer as PATH (i.e.,
+     normalization is disabled), or it will be a normalized
+     representation of PATH. The invariant is:
+
+         (path == keypath) ==> (normalized_lookup == false)
+  */
+  const char *keypath;
+}; fs_fs_path_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t

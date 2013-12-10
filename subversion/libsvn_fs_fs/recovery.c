@@ -56,7 +56,6 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_error_t *err;
       svn_fs_fs__revision_file_t *file;
       svn_pool_clear(iterpool);
-      svn_pool_clear(iterpool);
 
       err = svn_fs_fs__open_pack_or_rev_file(&file, fs, right, iterpool);
       if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
@@ -79,7 +78,6 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
       svn_revnum_t probe = left + ((right - left) / 2);
       svn_error_t *err;
       svn_fs_fs__revision_file_t *file;
-      svn_pool_clear(iterpool);
       svn_pool_clear(iterpool);
 
       err = svn_fs_fs__open_pack_or_rev_file(&file, fs, probe, iterpool);
@@ -290,10 +288,10 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs,
   SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
 
   SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, youngest, pool));
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
   SVN_ERR(svn_fs_fs__item_offset(&root_offset, fs, rev_file, youngest, NULL,
                                  svn_fs_fs__id_item(root_id), pool));
 
-  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
                                max_node_id, max_copy_id, pool));
   SVN_ERR(svn_fs_fs__close_revision_file(rev_file));

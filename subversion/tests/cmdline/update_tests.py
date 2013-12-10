@@ -5186,6 +5186,7 @@ def update_empty_hides_entries(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3573 'local non-inheritable mergeinfo changes not
 # properly merged with updated mergeinfo'
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_updates_merge_with_local_mods(sbox):
   "local mergeinfo changes are merged with updates"
 

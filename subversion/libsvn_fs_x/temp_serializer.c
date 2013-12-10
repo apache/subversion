@@ -324,7 +324,7 @@ deserialize_dir(void *buffer, hash_data_t *hash_data, apr_pool_t *pool)
 
       /* pointer fixup */
       svn_temp_deserializer__resolve(entry, (void **)&entry->name);
-      svn_fs_x__id_deserialize(entry, (svn_fs_id_t **)&entry->id);
+      svn_fs_x__id_deserialize(entry, (svn_fs_id_t **)&entry->id, pool);
 
       /* add the entry to the hash */
       svn_hash_sets(result, entry->name, entry);
@@ -364,7 +364,8 @@ svn_fs_x__noderev_serialize(svn_temp_serializer__context_t *context,
 
 void
 svn_fs_x__noderev_deserialize(void *buffer,
-                              node_revision_t **noderev_p)
+                              node_revision_t **noderev_p,
+                              apr_pool_t *pool)
 {
   node_revision_t *noderev;
 
@@ -378,8 +379,10 @@ svn_fs_x__noderev_deserialize(void *buffer,
     return;
 
   /* fixup of sub-structures */
-  svn_fs_x__id_deserialize(noderev, (svn_fs_id_t **)&noderev->id);
-  svn_fs_x__id_deserialize(noderev, (svn_fs_id_t **)&noderev->predecessor_id);
+  svn_fs_x__id_deserialize(noderev, (svn_fs_id_t **)&noderev->id, pool);
+  svn_fs_x__id_deserialize(noderev,
+                           (svn_fs_id_t **)&noderev->predecessor_id,
+                           pool);
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->prop_rep);
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->data_rep);
 
@@ -687,7 +690,7 @@ svn_fs_x__deserialize_id(void **out,
   svn_fs_id_t *id = (svn_fs_id_t *)data;
 
   /* fixup of all pointers etc. */
-  svn_fs_x__id_deserialize(id, &id);
+  svn_fs_x__id_deserialize(id, &id, pool);
 
   /* done */
   *out = id;
@@ -733,7 +736,7 @@ svn_fs_x__deserialize_node_revision(void **item,
   node_revision_t *noderev = (node_revision_t *)buffer;
 
   /* fixup of all pointers etc. */
-  svn_fs_x__noderev_deserialize(noderev, &noderev);
+  svn_fs_x__noderev_deserialize(noderev, &noderev, pool);
 
   /* done */
   *item = noderev;
@@ -891,7 +894,8 @@ svn_fs_x__extract_dir_entry(void **out,
       memcpy(new_entry, source, size);
 
       svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->name);
-      svn_fs_x__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id);
+      svn_fs_x__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id,
+                               pool);
       *(svn_fs_dirent_t **)out = new_entry;
     }
 
@@ -1085,7 +1089,9 @@ serialize_change(svn_temp_serializer__context_t *context,
  * serialization CONTEXT.
  */
 static void
-deserialize_change(void *buffer, change_t **change_p)
+deserialize_change(void *buffer,
+                   change_t **change_p,
+                   apr_pool_t *pool)
 {
   change_t * change;
 
@@ -1097,7 +1103,9 @@ deserialize_change(void *buffer, change_t **change_p)
     return;
 
   /* fix-up of sub-structures */
-  svn_fs_x__id_deserialize(change, (svn_fs_id_t **)&change->info.node_rev_id);
+  svn_fs_x__id_deserialize(change,
+                           (svn_fs_id_t **)&change->info.node_rev_id,
+                           pool);
 
   svn_temp_deserializer__resolve(change, (void **)&change->path.data);
   svn_temp_deserializer__resolve(change, (void **)&change->info.copyfrom_path);
@@ -1177,7 +1185,8 @@ svn_fs_x__deserialize_changes(void **out,
   for (i = 0; i < changes->count; ++i)
     {
       deserialize_change((void*)changes->changes,
-                         (change_t **)&changes->changes[i]);
+                         (change_t **)&changes->changes[i],
+                         pool);
       APR_ARRAY_PUSH(array, change_t *) = changes->changes[i];
     }
 

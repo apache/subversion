@@ -5772,6 +5772,8 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
                                    sbox_wc_path(b, wc_path),
                                    b->pool, b->pool));
 
+  SVN_TEST_ASSERT(conflict != NULL);
+
   SVN_ERR(svn_wc__conflict_read_info(&operation, &locations,
                                      &text_conflicted, &prop_conflicted,
                                      &tree_conflicted,

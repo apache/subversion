@@ -66,6 +66,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
+#include "private/svn_utf_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
 
@@ -609,6 +610,28 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
 
   svn_pool_destroy(iterpool);
   svn_pool_destroy(b.pool);
+  return SVN_NO_ERROR;
+}
+
+
+/* Create a key for path lookup. The path in the key struct will
+   always be canonical. */
+static svn_error_t *
+create_path_key(fs_fs_path_t *result,
+                const char *path,
+                svn_boolean_t normalize,
+                apr_pool_t *result_pool)
+{
+  result->path = svn_fs__canonicalize_abspath(path, result_pool);
+  if (normalize)
+    {
+      svn_membuf_t buffer;
+      svn_membuf__create(&buffer, 0, result_pool);
+      SVN_ERR(svn_utf__normalize(&result->keypath, result->path,
+                                 SVN_UTF__UNKNOWN_LENGTH, &buffer));
+    }
+  else
+    result->keypath = result->path;
   return SVN_NO_ERROR;
 }
 
@@ -1477,12 +1500,14 @@ fs_change_node_prop(svn_fs_root_t *root,
 {
   parent_path_t *parent_path;
   apr_hash_t *proplist;
+  fs_fs_path_t path_key;
   const svn_fs_fs__id_part_t *txn_id;
 
   if (! root->is_txn_root)
     return SVN_FS__NOT_TXN(root);
   txn_id = root_txn_id(root);
 
+  SVN_ERR(create_path_key(&path_key, path, XXXXX
   path = svn_fs__canonicalize_abspath(path, pool);
   SVN_ERR(open_path(&parent_path, root, path, 0, TRUE, pool));
 

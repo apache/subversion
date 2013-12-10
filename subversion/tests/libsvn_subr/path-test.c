@@ -315,9 +315,9 @@ test_uri_decode(apr_pool_t *pool)
     const char *path;
     const char *result;
   } tests[] = {
-    { "http://c.r.a/s%\0008me",
+    { "http://c.r.a/s%\0" "8me",
          "http://c.r.a/s%"},
-    { "http://c.r.a/s%6\000me",
+    { "http://c.r.a/s%6\0" "me",
          "http://c.r.a/s%6" },
     { "http://c.r.a/s%68me",
          "http://c.r.a/shme" },
@@ -1210,6 +1210,7 @@ test_path_splitext(apr_pool_t *pool)
     { "yep.still/no-ext",          "yep.still/no-ext",       "" },
     { "folder.with/period.log",    "folder.with/period.",    "log" },
     { "period.",                   "period.",                "" },
+    { "dir/period.",               "dir/period.",            "" },
     { "file.ends-with/period.",    "file.ends-with/period.", "" },
     { "two-periods..txt",          "two-periods..",          "txt" },
     { ".dot-file",                 ".dot-file",              "" },

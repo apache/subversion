@@ -258,6 +258,9 @@ struct edit_baton
   /* Absolute path of the working copy root or NULL if not initialized yet */
   const char *wcroot_abspath;
 
+  /* After closing the root directory a copy of its edited value */
+  svn_boolean_t edited;
+
   apr_pool_t *pool;
 };
 
@@ -2960,6 +2963,9 @@ close_directory(void *dir_baton,
       eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }
 
+  if (db->edited)
+    eb->edited = db->edited;
+
   /* We're done with this directory, so remove one reference from the
      bump information. */
   SVN_ERR(maybe_release_dir_info(db));
@@ -4733,6 +4739,7 @@ close_edit(void *edit_baton,
                                                        *(eb->target_revision),
                                                        eb->skipped_trees,
                                                        eb->wcroot_iprops,
+                                                       ! eb->edited,
                                                        eb->notify_func,
                                                        eb->notify_baton,
                                                        eb->pool));

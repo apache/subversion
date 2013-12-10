@@ -1527,10 +1527,10 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
                                  token, "opaquelocktoken");
 
       for (c = token; *c; c++)
-        if (! svn_ctype_isascii(*c))
+        if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
           return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                   _("Lock token '%s' is not ASCII "
-                                     "at byte %u"),
+                                   _("Lock token '%s' is not ASCII or is a "
+                                     "control character at byte %u"),
                                    token, (unsigned)(c - token));
 
       /* strlen(token) == c - token. */

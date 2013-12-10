@@ -460,7 +460,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"),
-    {'r'} },
+    {'r', opt_ignore_keywords} },
 
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate (or dissociate) changelist CLNAME with the named files.\n"
@@ -1142,7 +1142,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  and the default for TARGET is HEAD for a URL or BASE for a WC path.\n"
      "\n"
      "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"),
-    {'r', 'R', opt_depth, opt_show_revs, opt_mergeinfo_log} },
+    {'r', 'R', 'q', 'v', opt_depth, opt_show_revs, opt_mergeinfo_log,
+      opt_incremental } },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
     ("Create a new directory under version control.\n"

@@ -43,11 +43,13 @@ svn_fs_x__noderev_serialize(struct svn_temp_serializer__context_t *context,
                             node_revision_t * const *noderev_p);
 
 /**
- * Deserialize a @a noderev_p within the @a buffer.
+ * Deserialize a @a noderev_p within the @a buffer and associate it with
+ * @a pool.
  */
 void
 svn_fs_x__noderev_deserialize(void *buffer,
-                              node_revision_t **noderev_p);
+                              node_revision_t **noderev_p,
+                              apr_pool_t *pool);
 
 /**
  * Serialize APR array @a *a within the serialization @a context.
