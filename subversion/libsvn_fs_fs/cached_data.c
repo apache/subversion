@@ -2177,8 +2177,14 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
   /* try cache lookup first */
 
   if (ffd->changes_cache)
-    SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
-                           &rev, pool));
+    {
+      SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
+                             &rev, pool));
+    }
+  else
+    {
+      found = FALSE;
+    }
 
   if (!found)
     {
