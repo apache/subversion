@@ -213,6 +213,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1549858
+   Make svn_client_proplist4() behave as documented when reporting inherited
+   properties.
+   Justification:
+     The current implementation with multiple callbacks for the same path
+     just makes things hard on api users that want to use inherited properties
+     as intended.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
