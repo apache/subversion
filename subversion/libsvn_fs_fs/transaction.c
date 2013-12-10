@@ -3645,6 +3645,7 @@ write_final_revprop(const char **path,
 {
   apr_hash_t *txnprops;
   svn_boolean_t final_mods = FALSE;
+  svn_string_t date;
 
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, txn, pool));
 
@@ -3665,8 +3666,6 @@ write_final_revprop(const char **path,
      requested. */
   if (set_timestamp)
     {
-      svn_string_t date;
-
       date.data = svn_time_to_cstring(apr_time_now(), pool);
       date.len = strlen(date.data);
       svn_hash_sets(txnprops, SVN_PROP_REVISION_DATE, &date);
