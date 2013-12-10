@@ -992,3 +992,192 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
         raise
 
 
+### Bummer.  It would be really nice to have easy access to the URL
+### member of our entries files so that switches could be testing by
+### examining the modified ancestry.  But status doesn't show this
+### information.  Hopefully in the future the cmdline binary will have
+### a subcommand for dumping multi-line detailed information about
+### versioned things.  Until then, we'll stick with the traditional
+### verification methods.
+###
+### gjs says: we have 'svn info' now
+
+def get_routine_status_state(wc_dir):
+  """get the routine status list for WC_DIR at the completion of an
+  initial call to do_routine_switching()"""
+
+  # Construct some paths for convenience
+  ADH_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  chi_path = os.path.join(ADH_path, 'chi')
+  omega_path = os.path.join(ADH_path, 'omega')
+  psi_path = os.path.join(ADH_path, 'psi')
+  pi_path = os.path.join(ADH_path, 'pi')
+  tau_path = os.path.join(ADH_path, 'tau')
+  rho_path = os.path.join(ADH_path, 'rho')
+
+  # Now generate a state
+  state = svntest.actions.get_virginal_state(wc_dir, 1)
+  state.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
+  state.add({
+    'A/B/pi' : Item(status='  ', wc_rev=1),
+    'A/B/tau' : Item(status='  ', wc_rev=1),
+    'A/B/rho' : Item(status='  ', wc_rev=1),
+    })
+
+  return state
+
+#----------------------------------------------------------------------
+
+def get_routine_disk_state(wc_dir):
+  """get the routine disk list for WC_DIR at the completion of an
+  initial call to do_routine_switching()"""
+
+  disk = svntest.main.greek_state.copy()
+
+  # iota has the same contents as gamma
+  disk.tweak('iota', contents=disk.desc['A/D/gamma'].contents)
+
+  # A/B/* no longer exist, but have been replaced by copies of A/D/G/*
+  disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
+  disk.add({
+    'A/B/pi' : Item("This is the file 'pi'.\n"),
+    'A/B/rho' : Item("This is the file 'rho'.\n"),
+    'A/B/tau' : Item("This is the file 'tau'.\n"),
+    })
+
+  return disk
+
+#----------------------------------------------------------------------
+
+def do_routine_switching(wc_dir, repo_url, verify):
+  """perform some routine switching of the working copy WC_DIR for
+  other tests to use.  If VERIFY, then do a full verification of the
+  switching, else don't bother."""
+
+  ### Switch the file `iota' to `A/D/gamma'.
+
+  # Construct some paths for convenience
+  iota_path = os.path.join(wc_dir, 'iota')
+  gamma_url = repo_url + '/A/D/gamma'
+
+  if verify:
+    # Create expected output tree
+    expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(status='U '),
+      })
+
+    # Create expected disk tree (iota will have gamma's contents)
+    expected_disk = svntest.main.greek_state.copy()
+    expected_disk.tweak('iota',
+                        contents=expected_disk.desc['A/D/gamma'].contents)
+
+    # Create expected status tree
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.tweak('iota', switched='S')
+
+    # Do the switch and check the results in three ways.
+    svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None,
+                                          False, '--ignore-ancestry')
+  else:
+    svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
+                         gamma_url, iota_path)
+
+  ### Switch the directory `A/B' to `A/D/G'.
+
+  # Construct some paths for convenience
+  AB_path = os.path.join(wc_dir, 'A', 'B')
+  ADG_url = repo_url + '/A/D/G'
+
+  if verify:
+    # Create expected output tree
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/B/E'       : Item(status='D '),
+      'A/B/F'       : Item(status='D '),
+      'A/B/lambda'  : Item(status='D '),
+      'A/B/pi' : Item(status='A '),
+      'A/B/tau' : Item(status='A '),
+      'A/B/rho' : Item(status='A '),
+      })
+
+    # Create expected disk tree (iota will have gamma's contents,
+    # A/B/* will look like A/D/G/*)
+    expected_disk = get_routine_disk_state(wc_dir)
+
+    # Create expected status
+    expected_status = get_routine_status_state(wc_dir)
+    expected_status.tweak('iota', 'A/B', switched='S')
+
+    # Do the switch and check the results in three ways.
+    svntest.actions.run_and_verify_switch(wc_dir, AB_path, ADG_url,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None,
+                                          False, '--ignore-ancestry')
+  else:
+    svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
+                         ADG_url, AB_path)
+
+
+#----------------------------------------------------------------------
+
+def commit_routine_switching(wc_dir, verify):
+  "Commit some stuff in a routinely-switched working copy."
+
+  # Make some local mods
+  iota_path = os.path.join(wc_dir, 'iota')
+  Bpi_path = os.path.join(wc_dir, 'A', 'B', 'pi')
+  Gpi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  Z_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z')
+  zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
+
+  svntest.main.file_append(iota_path, "apple")
+  svntest.main.file_append(Bpi_path, "melon")
+  svntest.main.file_append(Gpi_path, "banana")
+  os.mkdir(Z_path)
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n")
+  svntest.main.run_svn(None, 'add', Z_path)
+
+  # Try to commit.  We expect this to fail because, if all the
+  # switching went as expected, A/B/pi and A/D/G/pi point to the
+  # same URL.  We don't allow this.
+  svntest.actions.run_and_verify_commit(
+    wc_dir, None, None,
+    "svn: E195003: Cannot commit both .* as they refer to the same URL$",
+    wc_dir)
+
+  # Okay, that all taken care of, let's revert the A/D/G/pi path and
+  # move along.  Afterward, we should be okay to commit.  (Sorry,
+  # holsta, that banana has to go...)
+  svntest.main.run_svn(None, 'revert', Gpi_path)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/Z' : Item(verb='Adding'),
+    'A/D/G/Z/zeta' : Item(verb='Adding'),
+    'iota' : Item(verb='Sending'),
+    'A/B/pi' : Item(verb='Sending'),
+    })
+
+  # Created expected status tree.
+  expected_status = get_routine_status_state(wc_dir)
+  expected_status.tweak('iota', 'A/B', switched='S')
+  expected_status.tweak('iota', 'A/B/pi', wc_rev=2, status='  ')
+  expected_status.add({
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit should succeed
+  if verify:
+    svntest.actions.run_and_verify_commit(wc_dir,
+                                          expected_output,
+                                          expected_status,
+                                          None, wc_dir)
+  else:
+    svntest.main.run_svn(None,
+                         'ci', '-m', 'log msg', wc_dir)
