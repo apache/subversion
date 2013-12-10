@@ -359,7 +359,7 @@ svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
   id->private_id.rev_item.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = &id;
+  id->generic_id.fsap_data = id;
 
   return (svn_fs_id_t *)id;
 }
@@ -374,7 +374,7 @@ svn_fs_id_t *svn_fs_fs__id_create_root(const svn_revnum_t revision,
   id->private_id.rev_item.number = SVN_FS_FS__ITEM_INDEX_ROOT_NODE;
 
   id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = &id;
+  id->generic_id.fsap_data = id;
 
   return (svn_fs_id_t *)id;
 }
@@ -393,7 +393,7 @@ svn_fs_fs__id_txn_create(const svn_fs_fs__id_part_t *node_id,
   id->private_id.rev_item.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = &id;
+  id->generic_id.fsap_data = id;
 
   return (svn_fs_id_t *)id;
 }
@@ -413,7 +413,7 @@ svn_fs_fs__id_rev_create(const svn_fs_fs__id_part_t *node_id,
   id->private_id.rev_item = *rev_item;
 
   id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = &id;
+  id->generic_id.fsap_data = id;
 
   return (svn_fs_id_t *)id;
 }
@@ -447,7 +447,7 @@ svn_fs_fs__id_parse(const char *data,
   /* Alloc a new svn_fs_id_t structure. */
   id = apr_pcalloc(pool, sizeof(*id));
   id->generic_id.vtable = &id_vtable;
-  id->generic_id.fsap_data = &id;
+  id->generic_id.fsap_data = id;
 
   /* Now, we basically just need to "split" this data on `.'
      characters.  We will use svn_cstring_tokenize, which will put
