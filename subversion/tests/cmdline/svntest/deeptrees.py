@@ -196,11 +196,7 @@ deep_trees_after_leaf_del = wc.State('', {
 
 # deep trees state after a call to deep_trees_leaf_del with no commit
 def deep_trees_after_leaf_del_no_ci(wc_dir):
-  if svntest.main.wc_is_singledb(wc_dir):
-    return deep_trees_after_leaf_del
-  else:
-    return deep_trees_empty_dirs
-
+  return deep_trees_after_leaf_del
 
 def deep_trees_tree_del(base):
   """Helper function for deep trees test cases.  Delete top-level dirs."""
@@ -240,31 +236,9 @@ deep_trees_after_tree_del = wc.State('', {
   'DDD'               : Item(),
   })
 
-# deep trees state without any files
-deep_trees_empty_dirs = wc.State('', {
-  'F'               : Item(),
-  'D'               : Item(),
-  'D/D1'            : Item(),
-  'DF'              : Item(),
-  'DF/D1'           : Item(),
-  'DD'              : Item(),
-  'DD/D1'           : Item(),
-  'DD/D1/D2'        : Item(),
-  'DDF'             : Item(),
-  'DDF/D1'          : Item(),
-  'DDF/D1/D2'       : Item(),
-  'DDD'             : Item(),
-  'DDD/D1'          : Item(),
-  'DDD/D1/D2'       : Item(),
-  'DDD/D1/D2/D3'    : Item(),
-  })
-
 # deep trees state after a call to deep_trees_tree_del with no commit
 def deep_trees_after_tree_del_no_ci(wc_dir):
-  if svntest.main.wc_is_singledb(wc_dir):
-    return deep_trees_after_tree_del
-  else:
-    return deep_trees_empty_dirs
+  return deep_trees_after_tree_del
 
 def deep_trees_tree_del_repos(base):
   """Helper function for deep trees test cases.  Delete top-level dirs,

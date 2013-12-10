@@ -109,8 +109,7 @@ def check_format(sbox, expected_format):
       raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
                             (found_format, expected_format, root))
 
-    if svntest.main.wc_is_singledb(sbox.wc_dir):
-      dirs[:] = []
+    dirs[:] = []
 
     if dot_svn in dirs:
       dirs.remove(dot_svn)
