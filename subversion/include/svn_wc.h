@@ -7353,11 +7353,14 @@ svn_wc_cleanup4(svn_wc_context_t *wc_ctx,
                 svn_boolean_t vacuum_pristines,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
                 apr_pool_t *scratch_pool);
 
 /**
  * Similar to svn_wc_cleanup4() but will always break locks, fix recorded
- * timestamps, clear the dav cache and vacuum pristines.
+ * timestamps, clear the dav cache and vacuum pristines. This function also
+ * doesn't support notifications.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.

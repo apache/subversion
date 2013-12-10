@@ -4202,6 +4202,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
                             TRUE /* clear_dav_cache */,
                             TRUE /* clean_pristines */,
                             cancel_func, cancel_baton,
+                            NULL, NULL /* notify */,
                             scratch_pool));
 }
 
