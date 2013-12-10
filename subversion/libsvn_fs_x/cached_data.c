@@ -2335,6 +2335,10 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
                              &rev, pool));
     }
+  else
+    {
+      found = FALSE;
+    }
 
   if (!found)
     {
