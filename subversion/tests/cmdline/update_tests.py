@@ -4189,8 +4189,6 @@ disk_after_leaf_edit = svntest.deeptrees.deep_trees_after_leaf_edit
 disk_after_leaf_del = svntest.deeptrees.deep_trees_after_leaf_del
 disk_after_tree_del = svntest.deeptrees.deep_trees_after_tree_del
 
-disk_empty_dirs = svntest.deeptrees.deep_trees_empty_dirs
-
 deep_trees_conflict_output = svntest.deeptrees.deep_trees_conflict_output
 deep_trees_conflict_output_skipped = \
     svntest.deeptrees.deep_trees_conflict_output_skipped
@@ -4223,11 +4221,14 @@ def tree_conflicts_on_update_1_1(sbox):
     'DF/D1/beta'        : Item(status='  ', treeconflict='U'),
   })
 
-  expected_disk = disk_empty_dirs.copy()
-  expected_disk.remove('D/D1', 'DF/D1', 'DD/D1', 'DD/D1/D2',
-                       'DDF/D1', 'DDF/D1/D2',
-                       'DDD/D1', 'DDD/D1/D2', 'DDD/D1/D2/D3')
-
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
   # The files delta, epsilon, and zeta are incoming additions, but since
   # they are all within locally deleted trees they should also be schedule
   # for deletion.
@@ -4307,7 +4308,14 @@ def tree_conflicts_on_update_1_2(sbox):
     'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='D'),
   })
 
-  expected_disk = disk_empty_dirs.copy()
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
 
   expected_status = deep_trees_status_local_tree_del.copy()
 
@@ -4329,14 +4337,6 @@ def tree_conflicts_on_update_1_2(sbox):
                          'DDD/D1/D2/D3',
                          'DDF/D1/D2/gamma',
                          'DF/D1/beta')
-
-  ### Why does the deep trees state not include files?
-  expected_disk.remove('D/D1',
-                       'DD/D1/D2',
-                       'DDD/D1/D2/D3',
-                       'DF/D1', 'DD/D1',
-                       'DDF/D1', 'DDF/D1/D2',
-                       'DDD/D1', 'DDD/D1/D2')
 
   expected_info = {
     'F/alpha' : {
@@ -4486,7 +4486,14 @@ def tree_conflicts_on_update_2_2(sbox):
   ### when dirs_same_p() is implemented)
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs.copy()
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
 
   expected_status = svntest.deeptrees.deep_trees_virginal_state.copy()
   expected_status.add({'' : Item()})
@@ -4518,16 +4525,6 @@ def tree_conflicts_on_update_2_2(sbox):
                          'DDD/D1/D2/D3',
                          'DDF/D1/D2',
                          'DDF/D1/D2/gamma',)
-
-  expected_disk.remove('D/D1',
-                       'DD/D1',
-                       'DD/D1/D2',
-                       'DF/D1',
-                       'DDD/D1',
-                       'DDD/D1/D2',
-                       'DDD/D1/D2/D3',
-                       'DDF/D1',
-                       'DDF/D1/D2',)
 
   expected_info = {
     'F/alpha' : {
@@ -4659,8 +4656,14 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = disk_empty_dirs.copy()
-
+  expected_disk = svntest.wc.State('', {
+    'F'               : Item(),
+    'D'               : Item(),
+    'DF'              : Item(),
+    'DD'              : Item(),
+    'DDF'             : Item(),
+    'DDD'             : Item(),
+  })
   expected_status = deep_trees_status_local_tree_del.copy()
 
   # Expect the incoming tree deletes and the local tree deletes to mean
@@ -4680,16 +4683,6 @@ def tree_conflicts_on_update_3(sbox):
                          'DDD/D1/D2/D3',
                          'DDF/D1/D2',
                          'DDF/D1/D2/gamma',)
-
-  expected_disk.remove('D/D1',
-                       'DD/D1',
-                       'DD/D1/D2',
-                       'DF/D1',
-                       'DDD/D1',
-                       'DDD/D1/D2',
-                       'DDD/D1/D2/D3',
-                       'DDF/D1',
-                       'DDF/D1/D2',)
 
   expected_info = {
     'F/alpha' : {
