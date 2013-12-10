@@ -213,7 +213,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1549858
+ * r1549858, r1549874
    Make svn_client_proplist4() behave as documented when reporting inherited
    properties.
    Justification:
