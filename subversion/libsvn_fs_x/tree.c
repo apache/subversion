@@ -1976,7 +1976,6 @@ svn_error_t *
 svn_fs_x__commit_txn(const char **conflict_p,
                      svn_revnum_t *new_rev,
                      svn_fs_txn_t *txn,
-                     svn_boolean_t set_timestamp,
                      apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
@@ -2073,7 +2072,7 @@ svn_fs_x__commit_txn(const char **conflict_p,
       txn->base_rev = youngish_rev;
 
       /* Try to commit. */
-      err = svn_fs_x__commit(new_rev, fs, txn, set_timestamp, iterpool);
+      err = svn_fs_x__commit(new_rev, fs, txn, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
         {
           /* Did someone else finish committing a new revision while we

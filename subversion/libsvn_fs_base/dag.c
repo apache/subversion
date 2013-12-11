@@ -1575,13 +1575,13 @@ svn_error_t *
 svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
                             svn_fs_txn_t *txn,
                             trail_t *trail,
-                            svn_boolean_t set_timestamp,
                             apr_pool_t *pool)
 {
   revision_t revision;
   apr_hash_t *txnprops;
   svn_fs_t *fs = txn->fs;
   const char *txn_id = txn->id;
+  const svn_string_t *client_date;
 
   /* Remove any temporary transaction properties initially created by
      begin_txn().  */
@@ -1600,11 +1600,16 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
 
+  client_date = svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CLIENT_DATE);
+  if (client_date)
+    SVN_ERR(svn_fs_base__set_txn_prop
+            (fs, txn_id, SVN_FS__PROP_TXN_CLIENT_DATE, NULL, trail, pool));
+
   /* Promote the unfinished transaction to a committed one. */
   SVN_ERR(svn_fs_base__txn_make_committed(fs, txn_id, *new_rev,
                                           trail, pool));
 
-  if (set_timestamp)
+  if (!client_date || strcmp(client_date->data, "1"))
     {
       /* Set a date on the commit if requested.  We wait until now to fetch the
          date, so it's definitely newer than any previous revision's date. */

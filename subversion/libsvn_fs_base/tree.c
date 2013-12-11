@@ -2578,7 +2578,6 @@ struct commit_args
 {
   svn_fs_txn_t *txn;
   svn_revnum_t new_rev;
-  svn_boolean_t set_timestamp;
 };
 
 
@@ -2638,7 +2637,7 @@ txn_body_commit(void *baton, trail_t *trail)
 
   /* Else, commit the txn. */
   return svn_fs_base__dag_commit_txn(&(args->new_rev), txn, trail,
-                                     args->set_timestamp, trail->pool);
+                                     trail->pool);
 }
 
 
@@ -2648,7 +2647,6 @@ svn_error_t *
 svn_fs_base__commit_txn(const char **conflict_p,
                         svn_revnum_t *new_rev,
                         svn_fs_txn_t *txn,
-                        svn_boolean_t set_timestamp,
                         apr_pool_t *pool)
 {
   /* How do commits work in Subversion?
@@ -2752,7 +2750,6 @@ svn_fs_base__commit_txn(const char **conflict_p,
 
       /* Try to commit. */
       commit_args.txn = txn;
-      commit_args.set_timestamp = set_timestamp;
       err = svn_fs_base__retry_txn(fs, txn_body_commit, &commit_args,
                                    FALSE, subpool);
       if (err && (err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE))
