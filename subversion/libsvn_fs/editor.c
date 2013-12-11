@@ -789,10 +789,9 @@ svn_fs__editor_commit(svn_revnum_t *revision,
      it placed into RESULT_POOL.  */
 
   if (!err)
-    err = svn_fs_commit_txn2(&inner_conflict_path,
+    err = svn_fs_commit_txn(&inner_conflict_path,
                              revision,
                              eb->txn,
-                             TRUE,
                              scratch_pool);
   if (SVN_IS_VALID_REVNUM(*revision))
     {

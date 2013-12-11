@@ -910,7 +910,7 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
  * exception: the svn:date property will be automatically set on new
  * transactions to the date that the transaction was created, and can
  * be overwritten when the transaction is committed by the current
- * time; see svn_fs_commit_txn2.)
+ * time; see svn_fs_commit_txn.)
  *
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
@@ -951,6 +951,12 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
+/** Allow the client to specify the final svn:date of the revision by
+ * setting or deleting the corresponding transaction property rather
+ * than have it set automatically when the transaction is committed.
+ */
+#define SVN_FS_TXN_CLIENT_DATE                   0x00004
 
 /** @} */
 
@@ -1005,15 +1011,16 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * a new filesystem revision containing the changes made in @a txn,
  * storing that new revision number in @a *new_rev, and return zero.
  *
- * If @a set_timestamp is FALSE any svn:date on the transaction will
- * be become the unversioned property svn:date on the revision.
- * svn:date can have any value, it does not have to be a timestamp.
- * If the transaction has no svn:date the revision will have no
- * svn:date.
+ * If #SVN_FS_TXN_CLIENT_DATE was passed to #svn_fs_begin_txn2 any
+ * svn:date on the transaction will be become the unversioned property
+ * svn:date on the revision.  svn:date can have any value, it does not
+ * have to be a timestamp.  If the transaction has no svn:date the
+ * revision will have no svn:date.
  *
- * If @a set_timestamp is TRUE the new revision will have svn:date set
- * to the current time at some point during the commit and any
- * svn:date on the transaction will be lost.
+ * If #SVN_FS_TXN_CLIENT_DATE was not passed to #svn_fs_begin_txn2 the
+ * new revision will have svn:date set to the current time at some
+ * point during the commit and any svn:date on the transaction will be
+ * lost.
  * 
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
@@ -1053,22 +1060,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
  * ###     to a valid, committed revision number
  *
- * @since New in 1.9.
  */
-svn_error_t *
-svn_fs_commit_txn2(const char **conflict_p,
-                   svn_revnum_t *new_rev,
-                   svn_fs_txn_t *txn,
-                   svn_boolean_t set_timestamp,
-                   apr_pool_t *pool);
-
-/*
- * Same as svn_fs_commit_txn2(), but with @a set_timestamp
- * always set to @c TRUE.
- *
- * @deprecated Provided for backward compatibility with the 1.8 API.
- */
-SVN_DEPRECATED
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
                   svn_revnum_t *new_rev,

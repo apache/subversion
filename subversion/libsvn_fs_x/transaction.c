@@ -1169,6 +1169,11 @@ change_txn_props(svn_fs_txn_t *txn,
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
+      if (svn_hash_gets(txn_prop, SVN_FS__PROP_TXN_CLIENT_DATE)
+          && !strcmp(prop->name, SVN_PROP_REVISION_DATE))
+        svn_hash_sets(txn_prop, SVN_FS__PROP_TXN_CLIENT_DATE,
+                      svn_string_create("1", pool));
+
       svn_hash_sets(txn_prop, prop->name, prop->value);
     }
 
@@ -3033,7 +3038,6 @@ verify_moves(svn_fs_t *fs,
    commit flags. */
 static svn_error_t *
 write_final_revprop(const char **path,
-                    svn_boolean_t set_timestamp,
                     svn_fs_txn_t *txn,
                     const svn_fs_x__id_part_t *txn_id,
                     apr_pool_t *pool)
@@ -3042,6 +3046,7 @@ write_final_revprop(const char **path,
   apr_array_header_t *final_mods = NULL;
   svn_string_t date;
   svn_prop_t prop;
+  svn_string_t *client_date;
 
   SVN_ERR(svn_fs_x__txn_proplist(&txnprops, txn, pool));
 
@@ -3063,9 +3068,18 @@ write_final_revprop(const char **path,
       APR_ARRAY_PUSH(final_mods, svn_prop_t) = prop;
     }
 
+  client_date = svn_hash_gets(txnprops, SVN_FS__PROP_TXN_CLIENT_DATE);
+  if (client_date)
+    {
+      if (!final_mods)
+        final_mods = apr_array_make(pool, 3, sizeof(svn_prop_t));
+      prop.name = SVN_FS__PROP_TXN_CLIENT_DATE;
+      APR_ARRAY_PUSH(final_mods, svn_prop_t) = prop;
+    }
+
   /* Update commit time to ensure that svn:date revprops remain ordered if
      requested. */
-  if (set_timestamp)
+  if (!client_date || strcmp(client_date->data, "1"))
     {
       if (!final_mods)
         final_mods = apr_array_make(pool, 3, sizeof(svn_prop_t));
@@ -3094,7 +3108,6 @@ struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_boolean_t set_timestamp;
   apr_array_header_t *reps_to_cache;
   apr_hash_t *reps_hash;
   apr_pool_t *reps_pool;
@@ -3234,8 +3247,7 @@ commit_body(void *baton, apr_pool_t *pool)
 
   /* Move the revprops file into place. */
   SVN_ERR_ASSERT(! svn_fs_x__is_packed_revprop(cb->fs, new_rev));
-  SVN_ERR(write_final_revprop(&revprop_filename, cb->set_timestamp,
-                              cb->txn, txn_id, pool));
+  SVN_ERR(write_final_revprop(&revprop_filename, cb->txn, txn_id, pool));
   final_revprop = svn_fs_x__path_revprops(cb->fs, new_rev, pool);
   SVN_ERR(svn_fs_x__move_into_place(revprop_filename, final_revprop,
                                     old_rev_filename, pool));
@@ -3284,7 +3296,6 @@ svn_error_t *
 svn_fs_x__commit(svn_revnum_t *new_rev_p,
                  svn_fs_t *fs,
                  svn_fs_txn_t *txn,
-                 svn_boolean_t set_timestamp,
                  apr_pool_t *pool)
 {
   struct commit_baton cb;
@@ -3293,7 +3304,6 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
   cb.new_rev_p = new_rev_p;
   cb.fs = fs;
   cb.txn = txn;
-  cb.set_timestamp = set_timestamp;
 
   if (ffd->rep_sharing_allowed)
     {
@@ -3546,6 +3556,13 @@ svn_fs_x__begin_txn(svn_fs_txn_t **txn_p,
     {
       prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
       prop.value = svn_string_create("true", pool);
+      APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+    }
+
+  if (flags & SVN_FS_TXN_CLIENT_DATE)
+    {
+      prop.name = SVN_FS__PROP_TXN_CLIENT_DATE;
+      prop.value = svn_string_create("0", pool);
       APR_ARRAY_PUSH(props, svn_prop_t) = prop;
     }
 

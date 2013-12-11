@@ -818,9 +818,8 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
 
 
 svn_error_t *
-svn_fs_commit_txn2(const char **conflict_p, svn_revnum_t *new_rev,
-                   svn_fs_txn_t *txn, svn_boolean_t set_timestamp,
-                   apr_pool_t *pool)
+svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
+                   svn_fs_txn_t *txn, apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -828,7 +827,7 @@ svn_fs_commit_txn2(const char **conflict_p, svn_revnum_t *new_rev,
   if (conflict_p)
     *conflict_p = NULL;
 
-  err = txn->vtable->commit(conflict_p, new_rev, txn, set_timestamp, pool);
+  err = txn->vtable->commit(conflict_p, new_rev, txn, pool);
 
 #ifdef SVN_DEBUG
   /* Check postconditions. */
@@ -859,13 +858,6 @@ svn_fs_commit_txn2(const char **conflict_p, svn_revnum_t *new_rev,
 #endif
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
-                  svn_fs_txn_t *txn, apr_pool_t *pool)
-{
-  return svn_fs_commit_txn2(conflict_p, new_rev, txn, TRUE, pool);
 }
 
 svn_error_t *
@@ -924,6 +916,10 @@ svn_error_t *
 svn_fs_change_txn_prop(svn_fs_txn_t *txn, const char *name,
                        const svn_string_t *value, apr_pool_t *pool)
 {
+  /* Silently drop attempts to modify the internal property. */
+  if (!strcmp(name, SVN_FS__PROP_TXN_CLIENT_DATE))
+    return SVN_NO_ERROR;
+
   return svn_error_trace(txn->vtable->change_prop(txn, name, value, pool));
 }
 
@@ -931,6 +927,29 @@ svn_error_t *
 svn_fs_change_txn_props(svn_fs_txn_t *txn, const apr_array_header_t *props,
                         apr_pool_t *pool)
 {
+  int i;
+
+  /* Silently drop attempts to modify the internal property. */
+  for (i = 0; i < props->nelts; ++i)
+    {
+      svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+
+      if (!strcmp(prop->name, SVN_FS__PROP_TXN_CLIENT_DATE))
+        {
+          apr_array_header_t *reduced_props
+            = apr_array_make(pool, props->nelts - 1, sizeof(svn_prop_t));
+
+          for (i = 0; i < props->nelts; ++i)
+            {
+              prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
+              if (strcmp(prop->name, SVN_FS__PROP_TXN_CLIENT_DATE))
+                APR_ARRAY_PUSH(reduced_props, svn_prop_t) = *prop;
+            }
+          props = reduced_props;
+          break;
+        }
+    }
+
   return svn_error_trace(txn->vtable->change_props(txn, props, pool));
 }
 

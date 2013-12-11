@@ -3444,7 +3444,7 @@ test_config_pool(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_make_file(root, "dir/config", pool));
   SVN_ERR(svn_test__set_file_contents(root, "dir/config",
                                       cfg_buffer1->data, pool));
-  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
 
   /* reading the config from the repo should still give cfg1 */
   SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
@@ -3462,7 +3462,7 @@ test_config_pool(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_copy(rev_root, "dir", root, "another-dir", pool));
   SVN_ERR(svn_test__set_file_contents(root, "dir/config",
                                       cfg_buffer2->data, pool));
-  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
 
   /* reading the config from the repo should give cfg2 now */
   SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
