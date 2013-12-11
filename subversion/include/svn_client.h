@@ -6265,6 +6265,9 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * is TRUE also send nodes that don't exist as versioned but are still
  * tree conflicted.
  *
+ * If @a include_externals is @c TRUE, recurse into externals and report about
+ * them as well.
+ *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose info is
  * reported; that is, don't report info about any item unless
@@ -6273,6 +6276,27 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  *
  * @since New in 1.7.
  */
+svn_error_t *
+svn_client_info4(const char *abspath_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 svn_depth_t depth,
+                 svn_boolean_t fetch_excluded,
+                 svn_boolean_t fetch_actual_only,
+                 svn_boolean_t include_externals,
+                 const apr_array_header_t *changelists,
+                 svn_client_info_receiver2_t receiver,
+                 void *receiver_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool);
+
+
+/** Similar to svn_client_info4, but doesn't support walking externals.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
