@@ -1264,7 +1264,11 @@ typedef enum svn_wc_notify_action_t
   /** The operation failed because the operation (E.g. commit) is only valid
    * if the operation includes this path.
    * @since New in 1.9. */
-  svn_wc_notify_failed_requires_target
+  svn_wc_notify_failed_requires_target,
+
+  /** Running info on an external module.
+   * @since New in 1.9. */
+  svn_wc_notify_info_external
 
 } svn_wc_notify_action_t;
 
