@@ -6274,7 +6274,7 @@ typedef svn_error_t *(*svn_client_info_receiver2_t)(
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.7.
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_client_info4(const char *abspath_or_url,
