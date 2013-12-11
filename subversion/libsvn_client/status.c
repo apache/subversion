@@ -31,6 +31,7 @@
 
 #include "svn_private_config.h"
 #include "svn_pools.h"
+#include "svn_sorts.h"
 #include "client.h"
 
 #include "svn_path.h"
@@ -247,25 +248,29 @@ do_external_status(svn_client_ctx_t *ctx,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
+                   const apr_array_header_t *changelists,
                    const char *anchor_abspath,
                    const char *anchor_relpath,
                    svn_client_status_func_t status_func,
                    void *status_baton,
                    apr_pool_t *scratch_pool)
 {
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_array_header_t *externals;
+  int i;
+
+  externals = svn_sort__hash(external_map, svn_sort_compare_items_lexically,
+                             scratch_pool);
 
   /* Loop over the hash of new values (we don't care about the old
      ones).  This is a mapping of versioned directories to property
      values. */
-  for (hi = apr_hash_first(scratch_pool, external_map);
-       hi;
-       hi = apr_hash_next(hi))
+  for (i = 0; i < externals->nelts; i++)
     {
       svn_node_kind_t external_kind;
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      const char *defining_abspath = svn__apr_hash_index_val(hi);
+      svn_sort__item_t item = APR_ARRAY_IDX(externals, i, svn_sort__item_t);
+      const char *local_abspath = item.key;
+      const char *defining_abspath = item.value;
       svn_node_kind_t kind;
       svn_opt_revision_t opt_rev;
       const char *status_path;
@@ -310,8 +315,10 @@ do_external_status(svn_client_ctx_t *ctx,
 
       /* And then do the status. */
       SVN_ERR(svn_client_status5(NULL, ctx, status_path, &opt_rev, depth,
-                                 get_all, update, no_ignore, FALSE, FALSE,
-                                 NULL, status_func, status_baton,
+                                 get_all, update, no_ignore,
+                                 FALSE /* ignore_exernals */,
+                                 FALSE /* depth_as_sticky */,
+                                 changelists, status_func, status_baton,
                                  iterpool));
     }
 
@@ -590,14 +597,7 @@ svn_client_status5(svn_revnum_t *result_rev,
       SVN_ERR(err);
     }
 
-  /* If there are svn:externals set, we don't want those to show up as
-     unversioned or unrecognized, so patch up the hash.  If caller wants
-     all the statuses, we will change unversioned status items that
-     are interesting to an svn:externals property to
-     svn_wc_status_unversioned, otherwise we'll just remove the status
-     item altogether.
-
-     We only descend into an external if depth is svn_depth_infinity or
+  /* We only descend into an external if depth is svn_depth_infinity or
      svn_depth_unknown.  However, there are conceivable behaviors that
      would involve descending under other circumstances; thus, we pass
      depth anyway, so the code will DTRT if we change the conditional
@@ -613,7 +613,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
       SVN_ERR(do_external_status(ctx, external_map,
                                  depth, get_all,
-                                 update, no_ignore,
+                                 update, no_ignore, changelists,
                                  sb.anchor_abspath, sb.anchor_relpath,
                                  status_func, status_baton, pool));
     }
