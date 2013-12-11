@@ -1940,6 +1940,7 @@ def mergeinfo_race(sbox):
 
 
 @Issue(4213)
+@Skip(svntest.main.is_fs_type_fsx)
 def recover_old(sbox):
   "recover --pre-1.4-compatible"
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
