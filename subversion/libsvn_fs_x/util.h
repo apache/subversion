@@ -187,6 +187,11 @@ svn_fs_x__path_txn_props(svn_fs_t *fs,
                          apr_pool_t *pool);
 
 const char *
+svn_fs_x__path_txn_props_final(svn_fs_t *fs,
+                               const svn_fs_x__id_part_t *txn_id,
+                               apr_pool_t *pool);
+
+const char *
 svn_fs_x__path_txn_next_ids(svn_fs_t *fs,
                             const svn_fs_x__id_part_t *txn_id,
                             apr_pool_t *pool);

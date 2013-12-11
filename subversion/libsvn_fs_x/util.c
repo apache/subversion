@@ -286,6 +286,15 @@ svn_fs_x__path_txn_props(svn_fs_t *fs,
                          PATH_TXN_PROPS, pool);
 }
 
+const char *
+svn_fs_x__path_txn_props_final(svn_fs_t *fs,
+                               const svn_fs_x__id_part_t *txn_id,
+                               apr_pool_t *pool)
+{
+  return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
+                         PATH_TXN_PROPS_FINAL, pool);
+}
+
 const char*
 svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
                                const svn_fs_x__id_part_t *txn_id,
