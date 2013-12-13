@@ -676,6 +676,75 @@ commit_directory(const svn_delta_editor_t *editor,
   return svn_error_trace(editor->close_directory(dir_baton, scratch_pool));
 }
 
+
+/* Helper function to recursively create svn_client_commit_item3_t items
+   to provide to the log message callback */
+static svn_error_t *
+add_commit_items(svn_client_mtcc_op_t *op,
+                 const char *url,
+                 apr_array_header_t *commit_items,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  if ((op->kind != OP_OPEN_DIR && op->kind != OP_OPEN_FILE)
+      || (op->prop_mods && op->prop_mods->nelts)
+      || (op->src_stream))
+    {
+      svn_client_commit_item3_t *item;
+
+      item = svn_client_commit_item3_create(result_pool);
+
+      item->path = NULL;
+      if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
+        item->kind = svn_node_dir;
+      else if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
+        item->kind = svn_node_file;
+      else
+        item->kind = svn_node_unknown;
+
+      item->url = apr_pstrdup(result_pool, url);
+
+      if (op->kind == OP_ADD_DIR || op->kind == OP_ADD_FILE)
+        item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+      else if (op->kind == OP_DELETE)
+        item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+      /* else item->state_flags = 0; */
+
+      if (op->prop_mods && op->prop_mods->nelts)
+        item->state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+
+      if (op->src_stream)
+        item->state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
+
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
+    }
+
+  if (op->children && op->children->nelts)
+    {
+      int i;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+      for (i = 0; i < op->children->nelts; i++)
+        {
+          svn_client_mtcc_op_t *cop;
+          const char * child_url;
+
+          cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
+
+          svn_pool_clear(iterpool);
+
+          child_url = svn_path_url_add_component2(url, cop->name, iterpool);
+
+          SVN_ERR(add_commit_items(cop, child_url, commit_items,
+                                   result_pool, iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_mtcc_commit(apr_hash_t *revprop_table,
                        svn_commit_callback2_t commit_callback,
@@ -684,15 +753,40 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
                        apr_pool_t *scratch_pool)
 {
   const svn_delta_editor_t *editor;
+  apr_hash_t *commit_revprops;
   void *edit_baton;
   svn_error_t *err;
   void *root_baton;
   const char *session_url;
+  const char *log_msg;
 
   SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url, scratch_pool));
 
+    /* Create new commit items and add them to the array. */
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(mtcc->ctx))
+    {
+      svn_client_commit_item3_t *item;
+      const char *tmp_file;
+      apr_array_header_t *commit_items
+                = apr_array_make(scratch_pool, 32, sizeof(item));
+
+      SVN_ERR(add_commit_items(mtcc->root_op, session_url, commit_items,
+                               scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                      mtcc->ctx, scratch_pool));
+
+      if (! log_msg)
+        return SVN_NO_ERROR;
+    }
+  else
+    log_msg = "";
+
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
+                                           log_msg, mtcc->ctx, scratch_pool));
+
   SVN_ERR(svn_ra_get_commit_editor3(mtcc->ra_session, &editor, &edit_baton,
-                                    revprop_table,
+                                    commit_revprops,
                                     commit_callback, commit_baton,
                                     NULL /* lock_tokens */,
                                     FALSE /* keep_locks */,
