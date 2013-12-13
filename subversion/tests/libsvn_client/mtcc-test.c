@@ -38,7 +38,7 @@ verify_mtcc_commit(svn_client_mtcc_t *mtcc,
                    apr_pool_t *pool)
 {
   /* TODO: Verify actual commit, etc. */
-  SVN_ERR(svn_client_mtcc_commit(apr_hash_make(pool), NULL, NULL, mtcc, pool));
+  SVN_ERR(svn_client_mtcc_commit(NULL, NULL, NULL, mtcc, pool));
 
   return SVN_NO_ERROR;
 };
@@ -103,7 +103,7 @@ test_mkdir(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 0, ctx, pool, pool));
 
   SVN_ERR(svn_client_mtcc_add_mkdir("branches", mtcc, pool));
   SVN_ERR(svn_client_mtcc_add_mkdir("trunk", mtcc, pool));
@@ -119,7 +119,7 @@ test_mkdir(const svn_test_opts_t *opts,
 
 static svn_error_t *
 test_mkgreek(const svn_test_opts_t *opts,
-           apr_pool_t *pool)
+             apr_pool_t *pool)
 {
   svn_client_mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
@@ -135,9 +135,38 @@ test_mkgreek(const svn_test_opts_t *opts,
   SVN_ERR(make_greek_tree(repos_url, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 2, ctx, pool, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
   SVN_ERR(svn_client_mtcc_add_copy("A", 1, "greek_A", mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_swap(const svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+ svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
+
+  repos_abspath = svn_test_data_path("mtcc-swap", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+
+  SVN_ERR(svn_client_mtcc_add_move("A/B", "B", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_move("A/D", "A/B", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_copy("A/B", 1, "A/D", mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, pool));
 
@@ -157,6 +186,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test mtcc mkdir"),
     SVN_TEST_OPTS_PASS(test_mkgreek,
                        "test making greek tree"),
+    SVN_TEST_OPTS_PASS(test_swap,
+                       "swapping some trees"),
     SVN_TEST_NULL
   };
  
