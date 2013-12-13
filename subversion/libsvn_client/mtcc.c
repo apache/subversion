@@ -704,8 +704,8 @@ add_commit_items(svn_client_mtcc_op_t *op,
         item->kind = svn_node_unknown;
 
       item->url = apr_pstrdup(result_pool, url);
-      item->session_relpath = svn_relpath_skip_ancestor(session_url, item->url,
-                                                        result_pool);
+      item->session_relpath = svn_uri_skip_ancestor(session_url, item->url,
+                                                    result_pool);
 
       if (op->src_relpath)
         {
@@ -783,8 +783,8 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
       apr_array_header_t *commit_items
                 = apr_array_make(scratch_pool, 32, sizeof(item));
 
-      SVN_ERR(add_commit_items(mtcc->root_op, session_url, commit_items,
-                               scratch_pool, scratch_pool));
+      SVN_ERR(add_commit_items(mtcc->root_op, session_url, session_url,
+                               commit_items, scratch_pool, scratch_pool));
 
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       mtcc->ctx, scratch_pool));
