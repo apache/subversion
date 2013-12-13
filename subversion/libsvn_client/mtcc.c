@@ -91,7 +91,7 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
 
   if (child)
     {
-      name = apr_pstrmemdup(scratch_pool, relpath, (relpath-child));
+      name = apr_pstrmemdup(scratch_pool, relpath, (child-relpath));
       child++; /* Skip '/' */
     }
   else
@@ -134,6 +134,7 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
 
     if (!child)
       {
+        *op = cop;
         *created = TRUE;
         return SVN_NO_ERROR;
       }
@@ -157,7 +158,7 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
 
   mtcc_pool = svn_pool_create(result_pool);
 
-  *mtcc = apr_pcalloc(mtcc_pool, sizeof(*mtcc));
+  *mtcc = apr_pcalloc(mtcc_pool, sizeof(**mtcc));
   (*mtcc)->pool = mtcc_pool;
   (*mtcc)->base_revision = base_revision;
 
@@ -591,7 +592,7 @@ commit_file(const svn_delta_editor_t *editor,
 }
 
 static svn_error_t *
-commit_directory(svn_delta_editor_t *editor,
+commit_directory(const svn_delta_editor_t *editor,
                  svn_client_mtcc_op_t *op,
                  const char *relpath,
                  svn_revnum_t base_rev,
@@ -669,7 +670,7 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
                        svn_client_mtcc_t *mtcc,
                        apr_pool_t *scratch_pool)
 {
-  svn_delta_editor_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_error_t *err;
   void *root_baton;
