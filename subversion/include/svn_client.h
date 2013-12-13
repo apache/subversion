@@ -6653,6 +6653,183 @@ svn_client_open_ra_session(svn_ra_session_t **session,
 
 /** @} end group: Client session related functions */
 
+/**
+ *
+ * @defgroup clnt_mtcc Multi Command Context related functions
+ *
+ * @{
+ *
+ */
+
+/** This is a structure which stores a list of repository commands
+ * that can be played to a repository as a single operation
+ *
+ * Use svn_client_mtcc_create() to create instances
+ *
+ * @since New in 1.9.
+ */
+typedef struct svn_client_mtcc_t svn_client_mtcc_t;
+
+/** Creates a new multicommand context for an operation on @a anchor_url and
+ * its descendants.
+ *
+ * Allocate the context in @a result_pool and perform temporary allocations in
+ * @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
+                       const char *anchor_url,
+                       svn_revnum_t base_revision,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+/** Calculates a relative path @a *relpath for @a url, reparenting the
+ * @a mtcc to a higher anchor url if necessary.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_get_relpath(const char **relpath,
+                            const char *url,
+                            svn_client_mtcc_t *mtcc,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/** Adds a file add operation of @a relpath to @a mtcc. If @a src_checksum
+ * is not null it will be provided to the repository to verify if the file
+ * was transfered succesfull.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @note The current implementation keeps @a src_stream open until @a mtcc
+ * is committed.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_add_file(const char *relpath,
+                             svn_stream_t *src_stream,
+                             const svn_checksum_t *src_checksum,
+                             svn_client_mtcc_t *mtcc,
+                             apr_pool_t *scratch_pool);
+
+/** Adds a copy operation of the node @a src_relpath at revision @a revision
+ * to @a dst_relpath to @a mtcc.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_copy(const char *src_relpath,
+                         svn_revnum_t revision,
+                         const char *dst_relpath,
+                         svn_client_mtcc_t *mtcc,
+                         apr_pool_t *scratch_pool);
+
+/** Adds a delete of @a relpath to @a mtcc.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_delete(const char *relpath,
+                          svn_client_mtcc_t *mtcc,
+                          apr_pool_t *scratch_pool);
+
+/** Adds an mkdir operation of @a relpath to @a mtcc.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_mkdir(const char *relpath,
+                          svn_client_mtcc_t *mtcc,
+                          apr_pool_t *scratch_pool);
+
+
+/** Adds a move operation of the node @a src_relpath to @a dst_relpath to
+ * @a mtcc.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_move(const char *src_relpath,
+                         const char *dst_relpath,
+                         svn_client_mtcc_t *mtcc,
+                         apr_pool_t *scratch_pool);
+
+/** Adds a propset operation for the property @a propname to @a propval
+ * (which can be NULL for a delete) on @a relpath to @a mtcc.
+ *
+ * If @a skip_checks is not FALSE Subversion defined properties are verified
+ * for correctness like svn_client_propset_remote()
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_propset(const char *relpath,
+                            const char *propname,
+                            const svn_string_t *propval,
+                            svn_boolean_t skip_checks,
+                            svn_client_mtcc_t *mtcc,
+                            apr_pool_t *scratch_pool);
+
+
+/** Adds an update file operation for @a relpath to @a mtcc.
+ *
+ * The final version of the file is provided with @a src_stream. If @a
+ * src_checksum is provided it will be provided to the repository to verify
+ * the final result.
+ *
+ * If @a base_checksum is provided it will be used by the repository to verify
+ * if the base file matches this checksum.
+ *
+ * If @a base_stream is not NULL only the binary diff from @a base_stream to
+ * @a src_stream is written to the repository.
+ *
+ * Perform temporary allocations in @a scratch_pool.
+ *
+ * @note Callers should assume that the mtcc requires @a src_stream and @a
+ * base_stream to be valid until @a mtcc is committed.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_add_update_file(const char *relpath,
+                                svn_stream_t *src_stream,
+                                const svn_checksum_t *src_checksum,
+                                svn_stream_t *base_stream,
+                                const svn_checksum_t *base_checksum,
+                                svn_client_mtcc_t *mtcc,
+                                apr_pool_t *scratch_pool);
+
+/** Commits all operations stored in @a mtcc as a new revision and destroys
+ * @a mtcc.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_commit(apr_hash_t *revprop_table,
+                       svn_commit_callback2_t commit_callback,
+                       void *commit_baton,
+                       svn_client_mtcc_t *mtcc,
+                       apr_pool_t *scratch_pool);
+
+
+/** @} end group: Multi Command Context related functions */
+
+
+
 /** @} */
 
 #ifdef __cplusplus
