@@ -597,6 +597,7 @@ commit_directory(const svn_delta_editor_t *editor,
                  const char *relpath,
                  svn_revnum_t base_rev,
                  void *dir_baton,
+                 const char *session_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
@@ -628,23 +629,35 @@ commit_directory(const svn_delta_editor_t *editor,
 
               case OP_ADD_DIR:
                 SVN_ERR(editor->add_directory(child_relpath, dir_baton,
-                                              cop->src_relpath, cop->src_rev,
+                                              cop->src_relpath
+                                                ? svn_path_url_add_component2(
+                                                              session_url,
+                                                              cop->src_relpath,
+                                                              iterpool)
+                                                : NULL,
+                                              cop->src_rev,
                                               iterpool, &child_baton));
                 SVN_ERR(commit_directory(editor, cop, child_relpath,
-                                         SVN_INVALID_REVNUM, child_baton, ctx,
-                                         iterpool));
+                                         SVN_INVALID_REVNUM, child_baton,
+                                         session_url, ctx, iterpool));
                 break;
               case OP_OPEN_DIR:
                 SVN_ERR(editor->open_directory(child_relpath, dir_baton,
                                                base_rev, iterpool, &child_baton));
                 SVN_ERR(commit_directory(editor, cop, child_relpath,
-                                         SVN_INVALID_REVNUM, child_baton, ctx,
-                                         iterpool));
+                                         base_rev, child_baton,
+                                         session_url, ctx, iterpool));
                 break;
 
               case OP_ADD_FILE:
                 SVN_ERR(editor->add_file(child_relpath, dir_baton,
-                                         cop->src_relpath, cop->src_rev,
+                                         cop->src_relpath
+                                            ? svn_path_url_add_component2(
+                                                            session_url,
+                                                            cop->src_relpath,
+                                                            iterpool)
+                                            : NULL,
+                                         cop->src_rev,
                                          iterpool, &child_baton));
                 SVN_ERR(commit_file(editor, cop, child_baton, ctx, iterpool));
                 break;
@@ -674,6 +687,9 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
   void *edit_baton;
   svn_error_t *err;
   void *root_baton;
+  const char *session_url;
+
+  SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url, scratch_pool));
 
   SVN_ERR(svn_ra_get_commit_editor3(mtcc->ra_session, &editor, &edit_baton,
                                     revprop_table,
@@ -686,7 +702,7 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
 
   if (!err)
     err = commit_directory(editor, mtcc->root_op, "", mtcc->base_revision,
-                           root_baton, mtcc->ctx, scratch_pool);
+                           root_baton, session_url, mtcc->ctx, scratch_pool);
 
   if (!err)
     SVN_ERR(editor->close_edit(edit_baton, scratch_pool));
