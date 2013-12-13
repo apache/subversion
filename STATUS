@@ -223,6 +223,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1541638, r1545302
+   Fix automatic relocate during update for working copies that are
+   not at repository root.
+   Justification:
+     Makes it much easier on users when their hoster migrates from http
+     to https. (Too bad that there is no way to safely transfer credentials..)
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
