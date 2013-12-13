@@ -232,6 +232,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1550803
+   Fix pool lifetime of variables in svn_client_commit_item3_t when duplicated.
+   Justification:
+     Pool lifetime issues are bad, and debugging them hard.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
