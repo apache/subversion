@@ -84,7 +84,7 @@ make_greek_tree(const char *repos_url,
   subpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
-  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, subpool, subpool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
 
   for (i = 0; svn_test__greek_tree_nodes[i].path; i++)
     {
@@ -297,6 +297,41 @@ test_update_files(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_overwrite(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
+
+  repos_abspath = svn_test_data_path("mtcc-overwrite", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+
+  SVN_ERR(svn_client_mtcc_add_copy("A", 1, "AA", mtcc, pool));
+
+  SVN_TEST_ASSERT_ERROR(svn_client_mtcc_add_mkdir("AA/B", mtcc, pool),
+                        SVN_ERR_FS_ALREADY_EXISTS);
+
+  SVN_TEST_ASSERT_ERROR(svn_client_mtcc_add_mkdir("AA/D/H/chi", mtcc, pool),
+                        SVN_ERR_FS_ALREADY_EXISTS);
+
+  SVN_ERR(svn_client_mtcc_add_mkdir("AA/BB", mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
+  return SVN_NO_ERROR;
+}
+
+
 /* ========================================================================== */
 
 
@@ -315,6 +350,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test propset and propdel"),
     SVN_TEST_OPTS_PASS(test_update_files,
                        "test update files"),
+    SVN_TEST_OPTS_PASS(test_overwrite,
+                       "test overwrite"),
     SVN_TEST_NULL
   };
  
