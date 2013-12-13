@@ -32,40 +32,58 @@
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
-#include "../libsvn_wc/utils.h"
 
-
-/* Create a repository with a filesystem based on OPTS in a subdir NAME,
- * commit the standard Greek tree as revision 1, and set *REPOS_URL to
- * the URL we will use to access it.
- *
- * ### This always returns a file: URL. We should upgrade this to use the
- *     test suite's specified URL scheme instead. */
 static svn_error_t *
-create_greek_repos(const char **repos_url,
-                   const char *name,
-                   const svn_test_opts_t *opts,
+verify_mtcc_commit(svn_client_mtcc_t *mtcc,
                    apr_pool_t *pool)
 {
-  svn_repos_t *repos;
-  svn_revnum_t committed_rev;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
+  /* TODO: Verify actual commit, etc. */
+  SVN_ERR(svn_client_mtcc_commit(apr_hash_make(pool), NULL, NULL, mtcc, pool));
 
-  /* Create a filesytem and repository. */
-  SVN_ERR(svn_test__create_repos(
-              &repos, svn_test_data_path(name, pool), opts, pool));
+  return SVN_NO_ERROR;
+};
 
-  /* Prepare and commit a txn containing the Greek tree. */
-  SVN_ERR(svn_fs_begin_txn2(&txn, svn_repos_fs(repos), 0 /* rev */,
-                            0 /* flags */, pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(
-              repos_url, svn_test_data_path(name, pool), pool));
+/* Constructs a greek tree as revision 1 in the repository at repos_url */
+static svn_error_t *
+make_greek_tree(const char *repos_url,
+                apr_pool_t *scratch_pool)
+{
+  svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  apr_pool_t *subpool;
+  int i;
+
+  subpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, subpool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, subpool, subpool));
+
+  for (i = 0; svn_test__greek_tree_nodes[i].path; i++)
+    {
+      if (svn_test__greek_tree_nodes[i].contents)
+        {
+          SVN_ERR(svn_client_mtcc_add_add_file(
+                                svn_test__greek_tree_nodes[i].path,
+                                svn_stream_from_string(
+                                    svn_string_create(
+                                        svn_test__greek_tree_nodes[i].contents,
+                                        subpool),
+                                    subpool),
+                                NULL /* src_checksum */,
+                                mtcc, subpool));
+        }
+      else
+        {
+          SVN_ERR(svn_client_mtcc_add_mkdir(
+                                svn_test__greek_tree_nodes[i].path,
+                                mtcc, subpool));
+        }
+    }
+
+  SVN_ERR(verify_mtcc_commit(mtcc, subpool));
+
+  svn_pool_clear(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -73,25 +91,59 @@ static svn_error_t *
 test_mkdir(const svn_test_opts_t *opts,
            apr_pool_t *pool)
 {
-  svn_test__sandbox_t b;
   svn_client_mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "mtcc-mkdir", opts, pool));
+  repos_abspath = svn_test_data_path("mtcc-mkdir", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
 
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
 
-  SVN_ERR(svn_client_mtcc_create(&mtcc, b.repos_url, 1, ctx, pool, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("branches", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("trunk", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("branches/1.x", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("tags", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("tags/1.0", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("tags/1.1", mtcc, pool));
 
-  SVN_ERR(svn_client_mtcc_add_mkdir("A", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("B", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("A/C", mtcc, pool));
-  SVN_ERR(svn_client_mtcc_add_mkdir("A/D", mtcc, pool));
-
-  SVN_ERR(svn_client_mtcc_commit(apr_hash_make(pool), NULL, NULL, mtcc, pool));
+  SVN_ERR(verify_mtcc_commit(mtcc, pool));
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_mkgreek(const svn_test_opts_t *opts,
+           apr_pool_t *pool)
+{
+  svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
+
+  repos_abspath = svn_test_data_path("mtcc-mkgreek", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 2, ctx, pool, pool));
+
+  SVN_ERR(svn_client_mtcc_add_copy("A", 1, "greek_A", mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ========================================================================== */
 
@@ -103,6 +155,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_mkdir,
                        "test mtcc mkdir"),
+    SVN_TEST_OPTS_PASS(test_mkgreek,
+                       "test making greek tree"),
     SVN_TEST_NULL
   };
  
