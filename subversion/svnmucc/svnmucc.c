@@ -76,43 +76,6 @@ check_lib_versions(void)
 }
 
 static svn_error_t *
-open_tmp_file(apr_file_t **fp,
-              void *callback_baton,
-              apr_pool_t *pool)
-{
-  /* Open a unique file;  use APR_DELONCLOSE. */
-  return svn_io_open_unique_file3(fp, NULL, NULL, svn_io_file_del_on_close,
-                                  pool, pool);
-}
-
-static svn_error_t *
-create_ra_callbacks(svn_ra_callbacks2_t **callbacks,
-                    const char *username,
-                    const char *password,
-                    const char *config_dir,
-                    svn_config_t *cfg_config,
-                    svn_boolean_t non_interactive,
-                    svn_boolean_t trust_server_cert,
-                    svn_boolean_t no_auth_cache,
-                    apr_pool_t *pool)
-{
-  SVN_ERR(svn_ra_create_callbacks(callbacks, pool));
-
-  SVN_ERR(svn_cmdline_create_auth_baton(&(*callbacks)->auth_baton,
-                                        non_interactive,
-                                        username, password, config_dir,
-                                        no_auth_cache,
-                                        trust_server_cert,
-                                        cfg_config, NULL, NULL, pool));
-
-  (*callbacks)->open_tmp_file = open_tmp_file;
-
-  return SVN_NO_ERROR;
-}
-
-
-
-static svn_error_t *
 commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool)
@@ -706,14 +669,9 @@ static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor,
         apr_hash_t *revprops,
-        const char *username,
-        const char *password,
-        const char *config_dir,
-        const apr_array_header_t *config_options,
-        svn_boolean_t non_interactive,
-        svn_boolean_t trust_server_cert,
-        svn_boolean_t no_auth_cache,
         svn_revnum_t base_revision,
+        svn_boolean_t non_interactive,
+        svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
   svn_ra_session_t *session;
@@ -721,18 +679,10 @@ execute(const apr_array_header_t *actions,
   const char *repos_root;
   svn_revnum_t head;
   const svn_delta_editor_t *editor;
-  svn_ra_callbacks2_t *ra_callbacks;
   void *editor_baton;
   struct operation root;
   svn_error_t *err;
-  apr_hash_t *config;
-  svn_config_t *cfg_config;
   int i;
-
-  SVN_ERR(svn_config_get_config(&config, config_dir, pool));
-  SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
-                                            "svnmucc: ", "--config-option"));
-  cfg_config = svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG);
 
   if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG))
     {
@@ -749,21 +699,19 @@ execute(const apr_array_header_t *actions,
       else
         {
           SVN_ERR(svn_cmdline__edit_string_externally(
-                      &msg, NULL, NULL, "", msg, "svnmucc-commit", config,
+                      &msg, NULL, NULL, "", msg, "svnmucc-commit", ctx->config,
                       TRUE, NULL, apr_hash_pool_get(revprops)));
         }
 
       svn_hash_sets(revprops, SVN_PROP_REVISION_LOG, msg);
     }
 
-  SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password, config_dir,
-                              cfg_config, non_interactive, trust_server_cert,
-                              no_auth_cache, pool));
-  SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
-                       NULL, config, pool));
+  SVN_ERR(svn_client_open_ra_session2(&session, anchor, NULL /* wri_abspath */,
+                                      ctx, pool, pool));
   /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
-  SVN_ERR(svn_ra_open4(&aux_session, NULL, anchor, NULL, ra_callbacks,
-                       NULL, config, pool));
+  SVN_ERR(svn_client_open_ra_session2(&aux_session, anchor, NULL /* wri_abspath */,
+                                      ctx, pool, pool));
+
   SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
   SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
@@ -1077,6 +1025,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
+  apr_hash_t *cfg_hash;
+  svn_config_t *cfg_config;
+  svn_client_ctx_t *ctx;
   int i;
 
   /* Check library versions */
@@ -1219,6 +1170,46 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);
     }
+
+  /* Now initialize the client context */
+
+  err = svn_config_get_config(&cfg_hash, config_dir, pool);
+  if (err)
+    {
+      /* Fallback to default config if the config directory isn't readable
+         or is not a directory. */
+      if (APR_STATUS_IS_EACCES(err->apr_err)
+          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
+        {
+          svn_handle_warning2(stderr, err, "svnmucc: ");
+          svn_error_clear(err);
+          cfg_hash = NULL;
+        }
+      else
+        return err;
+    }
+
+  cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
+  if (config_options)
+    {
+      svn_error_clear(
+          svn_cmdline__apply_config_options(cfg_hash, config_options,
+                                            "svnmucc: ", "--config-option"));
+    }
+
+  SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
+
+  SVN_ERR(svn_cmdline_create_auth_baton(&ctx->auth_baton,
+                                        non_interactive,
+                                        username,
+                                        password,
+                                        config_dir,
+                                        no_auth_cache,
+                                        trust_server_cert,
+                                        cfg_config,
+                                        ctx->cancel_func,
+                                        ctx->cancel_baton,
+                                        pool));
 
   /* Now, we iterate over the combined set of arguments -- our actions. */
   for (i = 0; i < action_args->nelts; )
@@ -1401,6 +1392,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if ((++i == action_args->nelts) && (j + 1 < num_url_args))
             return insufficient();
         }
+
       APR_ARRAY_PUSH(actions, struct action *) = action;
     }
 
@@ -1411,9 +1403,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
 
-  if ((err = execute(actions, anchor, revprops, username, password,
-                     config_dir, config_options, non_interactive,
-                     trust_server_cert, no_auth_cache, base_revision, pool)))
+  if ((err = execute(actions, anchor, revprops, base_revision,
+                     non_interactive, ctx, pool)))
     {
       if (err->apr_err == SVN_ERR_AUTHN_FAILED && non_interactive)
         err = svn_error_quick_wrap(err,
