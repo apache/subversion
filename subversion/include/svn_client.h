@@ -6813,6 +6813,20 @@ svn_client_mtcc_add_update_file(const char *relpath,
                                 svn_client_mtcc_t *mtcc,
                                 apr_pool_t *scratch_pool);
 
+/** Obtains the kind of node at @a relpath in the current state of @a mtcc.
+ * This value might be from the cache (in case of modifications, copies)
+ * or fetched from the repository.
+ *
+ * When a node does not exist this functions sets @a *kind to @c svn_node_node.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_client_mtcc_check_path(svn_node_kind_t *kind,
+                           const char *relpath,
+                           svn_client_mtcc_t *mtcc,
+                           apr_pool_t *scratch_pool);
+
 /** Commits all operations stored in @a mtcc as a new revision and destroys
  * @a mtcc.
  *
