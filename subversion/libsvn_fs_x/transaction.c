@@ -3130,9 +3130,6 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
   apr_off_t initial_offset, changed_path_offset;
-  apr_hash_t *txnprops;
-  apr_array_header_t *txnprop_list;
-  svn_prop_t prop;
   const svn_fs_x__id_part_t *txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
 
