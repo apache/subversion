@@ -175,7 +175,7 @@ static svn_error_t *
 test_swap(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
- svn_client_mtcc_t *mtcc;
+  svn_client_mtcc_t *mtcc;
   svn_client_ctx_t *ctx;
   const char *repos_abspath;
   const char *repos_url;
@@ -200,6 +200,44 @@ test_swap(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_propset(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
+
+  repos_abspath = svn_test_data_path("mtcc-propset", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+
+  SVN_ERR(svn_client_mtcc_add_propset("iota", "key",
+                                      svn_string_create("val", pool), FALSE,
+                                      mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_propset("A", "A-key",
+                                      svn_string_create("val-A", pool), FALSE,
+                                      mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_propset("A/B", "B-key",
+                                      svn_string_create("val-B", pool), FALSE,
+                                      mtcc, pool));
+
+  /* The repository ignores propdeletes of properties that aren't there,
+     so this just works */
+  SVN_ERR(svn_client_mtcc_add_propset("A/D", "D-key", NULL, FALSE,
+                                      mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
+  return SVN_NO_ERROR;
+}
 
 /* ========================================================================== */
 
@@ -215,6 +253,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test making greek tree"),
     SVN_TEST_OPTS_PASS(test_swap,
                        "swapping some trees"),
+    SVN_TEST_OPTS_PASS(test_propset,
+                       "test propset and propdel"),
     SVN_TEST_NULL
   };
  

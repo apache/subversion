@@ -75,7 +75,8 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
   int i;
 
   assert(svn_relpath_is_canonical(relpath));
-  *created = FALSE;
+  if (created)
+    *created = FALSE;
 
   if (!*relpath)
     {
