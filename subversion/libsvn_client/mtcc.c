@@ -561,7 +561,7 @@ commit_file(const svn_delta_editor_t *editor,
       if (window_handler != svn_delta_noop_window_handler)
         {
           if (!src_checksum || src_checksum->kind != svn_checksum_md5)
-            src_stream = svn_stream_checksummed2(src_stream, NULL, &src_checksum,
+            src_stream = svn_stream_checksummed2(src_stream, &src_checksum, NULL,
                                                  svn_checksum_md5,
                                                  TRUE, scratch_pool);
 
@@ -576,17 +576,14 @@ commit_file(const svn_delta_editor_t *editor,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     scratch_pool, scratch_pool));
         }
-      else
-        {
-          if (op->src_stream)
-            SVN_ERR(svn_stream_close(op->src_stream));
-          if (op->base_stream)
-            SVN_ERR(svn_stream_close(op->base_stream));
-        }
+
+      SVN_ERR(svn_stream_close(src_stream));
+      if (op->base_stream)
+        SVN_ERR(svn_stream_close(op->base_stream));
     }
 
-  if (op->src_checksum && op->src_checksum->kind == svn_checksum_md5)
-    text_checksum = svn_checksum_to_cstring(op->src_checksum, scratch_pool);
+  if (src_checksum && src_checksum->kind == svn_checksum_md5)
+    text_checksum = svn_checksum_to_cstring(src_checksum, scratch_pool);
 
   return svn_error_trace(editor->close_file(file_baton, text_checksum,
                                             scratch_pool));
