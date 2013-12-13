@@ -185,7 +185,7 @@ Candidate changes:
    Notes:
      The relevant code is #ifdeffed out on anything but linux.
    Votes:
-     +1: breser (without r1544895), rhuijben
+     +1: breser (without r1544895), rhuijben, danielsh
 
  * r1548105
    mod_dav_svn: Fix SVNAllowBulkUpdates directive merging.
@@ -237,7 +237,7 @@ Candidate changes:
    Justification:
      Pool lifetime issues are bad, and debugging them hard.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
 Veto-blocked changes:
 =====================
