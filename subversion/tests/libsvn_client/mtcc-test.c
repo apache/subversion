@@ -239,6 +239,64 @@ test_propset(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_update_files(const svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
+
+  repos_abspath = svn_test_data_path("mtcc-update-files", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+
+  /* Update iota with knowledge of the old data */
+  SVN_ERR(svn_client_mtcc_add_update_file(svn_test__greek_tree_nodes[0].path,
+                                          svn_stream_from_string(
+                                            svn_string_create(
+                                                "new-iota", pool),
+                                            pool),
+                                            NULL,
+                                            svn_stream_from_string(
+                                              svn_string_create(
+                                                svn_test__greek_tree_nodes[0]
+                                                    .contents,
+                                                pool),
+                                              pool),
+                                            NULL,
+                                            mtcc, pool));
+
+  SVN_ERR(svn_client_mtcc_add_update_file("A/mu",
+                                          svn_stream_from_string(
+                                            svn_string_create(
+                                                "new-MU", pool),
+                                            pool),
+                                          NULL,
+                                          NULL, NULL,
+                                          mtcc, pool));
+
+  /* Set a property on the same node */
+  SVN_ERR(svn_client_mtcc_add_propset("A/mu", "mu-key",
+                                      svn_string_create("mu-A", pool), FALSE,
+                                      mtcc, pool));
+  /* And some other node */
+  SVN_ERR(svn_client_mtcc_add_propset("A/B", "B-key",
+                                      svn_string_create("val-B", pool), FALSE,
+                                      mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -255,6 +313,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "swapping some trees"),
     SVN_TEST_OPTS_PASS(test_propset,
                        "test propset and propdel"),
+    SVN_TEST_OPTS_PASS(test_update_files,
+                       "test update files"),
     SVN_TEST_NULL
   };
  
