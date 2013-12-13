@@ -542,129 +542,6 @@ struct action {
   const svn_string_t *prop_value;
 };
 
-struct fetch_baton
-{
-  svn_ra_session_t *session;
-  svn_revnum_t head;
-};
-
-static svn_error_t *
-fetch_base_func(const char **filename,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fb = baton;
-  svn_stream_t *fstream;
-  svn_error_t *err;
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = fb->head;
-
-  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 result_pool, scratch_pool));
-
-  err = svn_ra_get_file(fb->session, path, base_revision, fstream, NULL, NULL,
-                         scratch_pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      SVN_ERR(svn_stream_close(fstream));
-
-      *filename = NULL;
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_trace(err);
-
-  SVN_ERR(svn_stream_close(fstream));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_props_func(apr_hash_t **props,
-                 void *baton,
-                 const char *path,
-                 svn_revnum_t base_revision,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fb = baton;
-  svn_node_kind_t node_kind;
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = fb->head;
-
-  SVN_ERR(svn_ra_check_path(fb->session, path, base_revision, &node_kind,
-                            scratch_pool));
-
-  if (node_kind == svn_node_file)
-    {
-      SVN_ERR(svn_ra_get_file(fb->session, path, base_revision, NULL, NULL,
-                              props, result_pool));
-    }
-  else if (node_kind == svn_node_dir)
-    {
-      apr_array_header_t *tmp_props;
-
-      SVN_ERR(svn_ra_get_dir2(fb->session, NULL, NULL, props, path,
-                              base_revision, 0 /* Dirent fields */,
-                              result_pool));
-      tmp_props = svn_prop_hash_to_array(*props, result_pool);
-      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
-                                   result_pool));
-      *props = svn_prop_array_to_hash(tmp_props, result_pool);
-    }
-  else
-    {
-      *props = apr_hash_make(result_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_kind_func(svn_node_kind_t *kind,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *scratch_pool)
-{
-  struct fetch_baton *fb = baton;
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = fb->head;
-
-  SVN_ERR(svn_ra_check_path(fb->session, path, base_revision, kind,
-                             scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_delta_shim_callbacks_t *
-get_shim_callbacks(svn_ra_session_t *session,
-                   svn_revnum_t head,
-                   apr_pool_t *result_pool)
-{
-  svn_delta_shim_callbacks_t *callbacks =
-                            svn_delta_shim_callbacks_default(result_pool);
-  struct fetch_baton *fb = apr_pcalloc(result_pool, sizeof(*fb));
-
-  fb->session = session;
-  fb->head = head;
-
-  callbacks->fetch_props_func = fetch_props_func;
-  callbacks->fetch_kind_func = fetch_kind_func;
-  callbacks->fetch_base_func = fetch_base_func;
-  callbacks->fetch_baton = fb;
-
-  return callbacks;
-}
-
 static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor,
@@ -675,8 +552,6 @@ execute(const apr_array_header_t *actions,
         apr_pool_t *pool)
 {
   svn_ra_session_t *session;
-  svn_ra_session_t *aux_session;
-  const char *repos_root;
   svn_revnum_t head;
   const svn_delta_editor_t *editor;
   void *editor_baton;
@@ -708,21 +583,13 @@ execute(const apr_array_header_t *actions,
 
   SVN_ERR(svn_client_open_ra_session2(&session, anchor, NULL /* wri_abspath */,
                                       ctx, pool, pool));
-  /* Open, then reparent to avoid AUTHZ errors when opening the reposroot */
-  SVN_ERR(svn_client_open_ra_session2(&aux_session, anchor, NULL /* wri_abspath */,
-                                      ctx, pool, pool));
-
-  SVN_ERR(svn_ra_get_repos_root2(aux_session, &repos_root, pool));
-  SVN_ERR(svn_ra_reparent(aux_session, repos_root, pool));
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
-
   /* Reparent to ANCHOR's dir, if ANCHOR is not a directory. */
   {
     svn_node_kind_t kind;
 
-    SVN_ERR(svn_ra_check_path(aux_session,
-                              svn_uri_skip_ancestor(repos_root, anchor, pool),
-                              head, &kind, pool));
+    SVN_ERR(svn_ra_check_path(session, "", head, &kind, pool));
+
     if (kind != svn_node_dir)
       {
         anchor = svn_uri_dirname(anchor, pool);
@@ -802,8 +669,6 @@ execute(const apr_array_header_t *actions,
         }
     }
 
-  SVN_ERR(svn_ra__register_editor_shim_callbacks(session,
-                            get_shim_callbacks(aux_session, head, pool)));
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &editor_baton, revprops,
                                     commit_callback, NULL, NULL, FALSE, pool));
 
