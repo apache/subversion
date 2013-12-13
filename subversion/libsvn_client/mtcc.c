@@ -681,6 +681,7 @@ commit_directory(const svn_delta_editor_t *editor,
    to provide to the log message callback */
 static svn_error_t *
 add_commit_items(svn_client_mtcc_op_t *op,
+                 const char *session_url,
                  const char *url,
                  apr_array_header_t *commit_items,
                  apr_pool_t *result_pool,
@@ -703,6 +704,18 @@ add_commit_items(svn_client_mtcc_op_t *op,
         item->kind = svn_node_unknown;
 
       item->url = apr_pstrdup(result_pool, url);
+      item->session_relpath = svn_relpath_skip_ancestor(session_url, item->url,
+                                                        result_pool);
+
+      if (op->src_relpath)
+        {
+          item->copyfrom_url = svn_path_url_add_component2(session_url,
+                                                           op->src_relpath,
+                                                           result_pool);
+          item->copyfrom_rev = op->src_rev;
+        }
+      else
+        item->copyfrom_rev = SVN_INVALID_REVNUM;
 
       if (op->kind == OP_ADD_DIR || op->kind == OP_ADD_FILE)
         item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
@@ -735,7 +748,7 @@ add_commit_items(svn_client_mtcc_op_t *op,
 
           child_url = svn_path_url_add_component2(url, cop->name, iterpool);
 
-          SVN_ERR(add_commit_items(cop, child_url, commit_items,
+          SVN_ERR(add_commit_items(cop, session_url, child_url, commit_items,
                                    result_pool, iterpool));
         }
 
