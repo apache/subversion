@@ -33,12 +33,39 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
+/* Baton for verify_commit_callback*/
+struct verify_commit_baton
+{
+  const svn_commit_info_t *commit_info;
+  apr_pool_t *result_pool;
+};
+
+/* Commit result collector for verify_mtcc_commit */
+static svn_error_t *
+verify_commit_callback(const svn_commit_info_t *commit_info,
+                       void *baton,
+                       apr_pool_t *pool)
+{
+  struct verify_commit_baton *vcb = baton;
+
+  vcb->commit_info = svn_commit_info_dup(commit_info, vcb->result_pool);
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 verify_mtcc_commit(svn_client_mtcc_t *mtcc,
+                   svn_revnum_t expected_rev,
                    apr_pool_t *pool)
 {
-  /* TODO: Verify actual commit, etc. */
-  SVN_ERR(svn_client_mtcc_commit(NULL, NULL, NULL, mtcc, pool));
+  struct verify_commit_baton vcb;
+  vcb.commit_info = NULL;
+  vcb.result_pool = pool;
+
+  SVN_ERR(svn_client_mtcc_commit(NULL, verify_commit_callback, &vcb, mtcc, pool));
+
+  SVN_TEST_ASSERT(vcb.commit_info != NULL);
+  SVN_TEST_ASSERT(vcb.commit_info->revision == expected_rev);
 
   return SVN_NO_ERROR;
 };
@@ -81,7 +108,7 @@ make_greek_tree(const char *repos_url,
         }
     }
 
-  SVN_ERR(verify_mtcc_commit(mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 1, subpool));
 
   svn_pool_clear(subpool);
   return SVN_NO_ERROR;
@@ -112,7 +139,7 @@ test_mkdir(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_mtcc_add_mkdir("tags/1.0", mtcc, pool));
   SVN_ERR(svn_client_mtcc_add_mkdir("tags/1.1", mtcc, pool));
 
-  SVN_ERR(verify_mtcc_commit(mtcc, pool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 1, pool));
 
   return SVN_NO_ERROR;
 }
@@ -139,7 +166,7 @@ test_mkgreek(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_mtcc_add_copy("A", 1, "greek_A", mtcc, pool));
 
-  SVN_ERR(verify_mtcc_commit(mtcc, pool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -168,7 +195,7 @@ test_swap(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_mtcc_add_move("A/D", "A/B", mtcc, pool));
   SVN_ERR(svn_client_mtcc_add_copy("A/B", 1, "A/D", mtcc, pool));
 
-  SVN_ERR(verify_mtcc_commit(mtcc, pool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
 
   return SVN_NO_ERROR;
 }
