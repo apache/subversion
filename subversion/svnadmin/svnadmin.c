@@ -1842,6 +1842,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   int fs_format;
+  const char *uuid;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1852,6 +1853,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              svn_dirent_local_style(svn_repos_path(repos, pool),
                                                     pool)));
 
+  SVN_ERR(svn_fs_get_uuid(fs, &uuid, pool));
+  SVN_ERR(svn_cmdline_printf(pool, _("UUID: %s\n"), uuid));
   {
     int repos_format, minor;
     svn_version_t *repos_version, *fs_version;
