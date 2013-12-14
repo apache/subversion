@@ -547,9 +547,12 @@ make_dir_baton(struct dir_baton **d_p,
               /* This node is NOT the target of the switch (one of our
                  children is the target); therefore, it must already exist.
                  Get its old REPOS_RELPATH, as it won't be changing.  */
-              SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
-                                                 eb->db, d->local_abspath,
-                                                 dir_pool, scratch_pool));
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                               &d->new_relpath, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               eb->db, d->local_abspath,
+                                               dir_pool, scratch_pool));
             }
         }
       else
@@ -580,9 +583,11 @@ make_dir_baton(struct dir_baton **d_p,
         }
       else
         {
-          SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
-                                             eb->db, d->local_abspath,
-                                             dir_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &d->new_relpath,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           eb->db, d->local_abspath,
+                                           dir_pool, scratch_pool));
           SVN_ERR_ASSERT(d->new_relpath);
         }
     }
@@ -803,9 +808,12 @@ make_file_baton(struct file_baton **f_p,
         f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
       else
         {
-          SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
-                                             eb->db, f->local_abspath,
-                                             file_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &f->new_relpath,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL,
+                                           eb->db, f->local_abspath,
+                                           file_pool, scratch_pool));
           SVN_ERR_ASSERT(f->new_relpath);
         }
     }
@@ -4860,9 +4868,11 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Get the anchor's repository root and uuid. The anchor must already exist
      in BASE. */
-  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root, &repos_uuid,
-                                     db, anchor_abspath,
-                                     result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, &repos_root,
+                                   &repos_uuid, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, anchor_abspath,
+                                   result_pool, scratch_pool));
 
   /* With WC-NG we need a valid repository root */
   SVN_ERR_ASSERT(repos_root != NULL && repos_uuid != NULL);

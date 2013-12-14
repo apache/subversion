@@ -11845,39 +11845,6 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_scan_base_repos(const char **repos_relpath,
-                           const char **repos_root_url,
-                           const char **repos_uuid,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  apr_int64_t repos_id;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
-                                            repos_relpath, &repos_id,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            wcroot, local_relpath,
-                                            result_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid, wcroot->sdb,
-                                      repos_id, result_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* A helper for scan_addition().
  * Compute moved-from information for the node at LOCAL_RELPATH which
  * has been determined as having been moved-here.

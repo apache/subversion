@@ -2622,30 +2622,6 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
    @{
 */
 
-/* Read a BASE node's repository information.
-
-   For the BASE node implied by LOCAL_ABSPATH, its location in the repository
-   returned in *REPOS_ROOT_URL and *REPOS_UUID will be returned in
-   *REPOS_RELPATH. Any of the OUT parameters may be NULL, indicating no
-   interest in that piece of information.
-
-   All returned data will be allocated in RESULT_POOL. All temporary
-   allocations will be made in SCRATCH_POOL.
-
-   ### Either delete this function and use _base_get_info instead, or
-   ### add a 'revision' output to make a complete repository node location
-   ### and rename to not say 'scan', because it doesn't.
-*/
-svn_error_t *
-svn_wc__db_scan_base_repos(const char **repos_relpath,
-                           const char **repos_root_url,
-                           const char **repos_uuid,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-
 /* Scan upwards for information about a known addition to the WORKING tree.
 
    IFF a node's status as returned by svn_wc__db_read_info() is
