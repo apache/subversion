@@ -417,6 +417,42 @@ test_anchoring(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_replace_tree(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  svn_client_mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_abspath;
+  const char *repos_url;
+  svn_repos_t* repos;
+
+  repos_abspath = svn_test_data_path("mtcc-replace_tree", pool);
+  SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath, pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, repos_abspath, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_abspath, opts, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+
+  /* Update a file as root operation */
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+
+  SVN_ERR(svn_client_mtcc_add_delete("A", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_delete("iota", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("A", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("A/B", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("A/B/C", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("M", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("M/N", mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_mkdir("M/N/O", mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -439,6 +475,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test overwrite"),
     SVN_TEST_OPTS_PASS(test_anchoring,
                        "test mtcc anchoring for root operations"),
+    SVN_TEST_OPTS_PASS(test_replace_tree,
+                       "test mtcc replace tree"),
     SVN_TEST_NULL
   };
  
