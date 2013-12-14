@@ -58,6 +58,8 @@ mtcc_op_create(const char *name,
     op->children = apr_array_make(result_pool, 4,
                                   sizeof(svn_client_mtcc_op_t *));
 
+  op->src_rev = SVN_INVALID_REVNUM;
+
   return op;
 }
 
