@@ -36,6 +36,8 @@
 
 #include <assert.h>
 
+#define SVN_PATH_IS_EMPTY(s) ((s)[0] == '\0')
+
 static svn_client_mtcc_op_t *
 mtcc_op_create(const char *name,
                svn_boolean_t add,
@@ -78,7 +80,7 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
   if (created)
     *created = FALSE;
 
-  if (!*relpath)
+  if (SVN_PATH_IS_EMPTY(relpath))
     {
       if (find_existing)
         *op = base_op;
@@ -98,13 +100,21 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
   else
     name = relpath;
 
-  if (child && !base_op->children)
-    return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                             _("Can't operate on '%s' because '%s' is not a "
-                               "directory"),
-                             child, base_op->name);
+  if (!base_op->children)
+    {
+      if (!created)
+        {
+          *op = NULL;
+           return SVN_NO_ERROR;
+        }
+      else
+        return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                                 _("Can't operate on '%s' because '%s' is not a "
+                                   "directory"),
+                                 name, base_op->name);
+    }
 
-  for (i = 0; i < base_op->children->nelts; i++)
+  for (i = base_op->children->nelts-1; i >= 0 ; i--)
     {
       svn_client_mtcc_op_t *cop;
 
@@ -150,7 +160,8 @@ mtcc_op_find(svn_client_mtcc_op_t **op,
 /* Gets the original repository location of RELPATH, checking things
    like copies, moves, etc.  */
 static svn_error_t *
-get_origin(const char **origin_relpath,
+get_origin(svn_boolean_t *done,
+           const char **origin_relpath,
            svn_revnum_t *rev,
            svn_client_mtcc_op_t *op,
            const char *relpath,
@@ -159,7 +170,7 @@ get_origin(const char **origin_relpath,
 {
   const char *child;
   const char *name;
-  if (!*relpath)
+  if (SVN_PATH_IS_EMPTY(relpath))
     {
       *origin_relpath = op->src_relpath
                                 ? apr_pstrdup(result_pool, op->src_relpath)
@@ -181,19 +192,25 @@ get_origin(const char **origin_relpath,
     {
       int i;
 
-      for (i = 0; i < op->children->nelts; i++)
+      for (i = op->children->nelts-1; i >= 0; i--)
         {
            svn_client_mtcc_op_t *cop;
 
            cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
 
-           if (! strcmp(cop->name, name) &&  cop->kind != OP_DELETE)
+           if (! strcmp(cop->name, name))
             {
-              SVN_ERR(get_origin(origin_relpath, rev,
+              if (cop->kind == OP_DELETE)
+                {
+                  *done = TRUE;
+                  return SVN_NO_ERROR;
+                }
+
+              SVN_ERR(get_origin(done, origin_relpath, rev,
                                  cop, child ? child : "",
                                  result_pool, scratch_pool));
 
-              if (*origin_relpath)
+              if (*origin_relpath || *done)
                 return SVN_NO_ERROR;
 
               break;
@@ -201,34 +218,47 @@ get_origin(const char **origin_relpath,
         }
     }
 
-  if (op->src_relpath)
+  if (op->kind == OP_ADD_DIR || op->kind == OP_ADD_FILE)
     {
-      *origin_relpath = svn_relpath_join(op->src_relpath, relpath,
-                                         result_pool);
-      *rev = op->src_rev;
+      *done = TRUE;
+      if (op->src_relpath)
+        {
+          *origin_relpath = svn_relpath_join(op->src_relpath, relpath,
+                                             result_pool);
+          *rev = op->src_rev;
+        }
     }
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t * /* ### Make public? */
-svn_client_mtcc_get_origin(const char **origin_relpath,
-                           svn_revnum_t *rev,
-                           const char *relpath,
-                           svn_client_mtcc_t *mtcc,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+mtcc_get_origin(const char **origin_relpath,
+                svn_revnum_t *rev,
+                const char *relpath,
+                svn_boolean_t ignore_enoent,
+                svn_client_mtcc_t *mtcc,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
+  svn_boolean_t done = FALSE;
+
   *origin_relpath = NULL;
   *rev = SVN_INVALID_REVNUM;
 
-  SVN_ERR(get_origin(origin_relpath, rev, mtcc->root_op, relpath,
+  SVN_ERR(get_origin(&done, origin_relpath, rev, mtcc->root_op, relpath,
                      result_pool, scratch_pool));
 
-  if (!*origin_relpath)
+  if (!*origin_relpath && !done)
     {
       *origin_relpath = apr_pstrdup(result_pool, relpath);
       *rev = mtcc->base_revision;
+    }
+  else if (!ignore_enoent)
+    {
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("No origin found for node at '%s'"),
+                               relpath);
     }
 
   return SVN_NO_ERROR;
@@ -257,6 +287,16 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
   SVN_ERR(svn_client_open_ra_session2(&(*mtcc)->ra_session, anchor_url,
                                       NULL /* wri_abspath */, ctx,
                                       mtcc_pool, scratch_pool));
+
+  SVN_ERR(svn_ra_get_latest_revnum((*mtcc)->ra_session, &(*mtcc)->head_revision,
+                                   scratch_pool));
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = (*mtcc)->head_revision;
+  else if (base_revision > (*mtcc)->head_revision)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld (HEAD is %ld)"),
+                             base_revision, (*mtcc)->head_revision);
 
   return SVN_NO_ERROR;
 }
@@ -353,8 +393,7 @@ mtcc_verify_create(svn_client_mtcc_t *mtcc,
 
       if (op)
         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Can't create '%s': target already "
-                                   "operated on"),
+                                 _("Path '%s' already exists"),
                                  new_relpath);
 
       SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, TRUE,
@@ -371,7 +410,7 @@ mtcc_verify_create(svn_client_mtcc_t *mtcc,
 
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                             _("Can't copy to '%s': target already exists"),
+                             _("Path '%s' already exists"),
                              new_relpath);
 
   return SVN_NO_ERROR;
@@ -391,7 +430,7 @@ svn_client_mtcc_add_add_file(const char *relpath,
 
   SVN_ERR(mtcc_verify_create(mtcc, relpath, scratch_pool));
 
-  if (!*relpath && MTCC_UNMODIFIED(mtcc))
+  if (SVN_PATH_IS_EMPTY(relpath) && MTCC_UNMODIFIED(mtcc))
     {
       /* Turn the root operation into a file addition */
       op = mtcc->root_op;
@@ -429,8 +468,15 @@ svn_client_mtcc_add_copy(const char *src_relpath,
   svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(src_relpath)
-                 && svn_relpath_is_canonical(dst_relpath)
-                 && SVN_IS_VALID_REVNUM(revision));
+                 && svn_relpath_is_canonical(dst_relpath));
+
+  if (! SVN_IS_VALID_REVNUM(revision))
+    revision = mtcc->head_revision;
+  else if (revision > mtcc->head_revision)
+    {
+      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                               _("No such revision %ld"), revision);
+    }
 
   SVN_ERR(mtcc_verify_create(mtcc, dst_relpath, scratch_pool));
 
@@ -440,9 +486,8 @@ svn_client_mtcc_add_copy(const char *src_relpath,
 
   if (kind != svn_node_dir && kind != svn_node_file)
     {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Can't create a copy of '%s' at revision %ld "
-                                 "as it does not exist"),
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("Path '%s' not found in revision %ld"),
                                src_relpath, revision);
     }
 
@@ -483,7 +528,7 @@ svn_client_mtcc_add_delete(const char *relpath,
                                 "does not exist"),
                              relpath);
 
-  if (! *relpath || MTCC_UNMODIFIED(mtcc))
+  if (SVN_PATH_IS_EMPTY(relpath) && MTCC_UNMODIFIED(mtcc))
     {
       /* Turn root operation into delete */
       op = mtcc->root_op;
@@ -519,7 +564,7 @@ svn_client_mtcc_add_mkdir(const char *relpath,
 
   SVN_ERR(mtcc_verify_create(mtcc, relpath, scratch_pool));
 
-  if (! *relpath && MTCC_UNMODIFIED(mtcc))
+  if (SVN_PATH_IS_EMPTY(relpath) && MTCC_UNMODIFIED(mtcc))
     {
       /* Turn the root of the operation in an MKDIR */
       mtcc->root_op->kind = OP_ADD_DIR;
@@ -551,9 +596,9 @@ svn_client_mtcc_add_move(const char *src_relpath,
   const char *origin_relpath;
   svn_revnum_t origin_rev;
 
-  SVN_ERR(svn_client_mtcc_get_origin(&origin_relpath, &origin_rev,
-                                     src_relpath, mtcc,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(mtcc_get_origin(&origin_relpath, &origin_rev,
+                          src_relpath, FALSE, mtcc,
+                          scratch_pool, scratch_pool));
 
   SVN_ERR(svn_client_mtcc_add_copy(src_relpath, mtcc->base_revision,
                                    dst_relpath, mtcc, scratch_pool));
@@ -602,7 +647,7 @@ svn_client_mtcc_add_propset(const char *relpath,
       /* ### TODO: Call svn_wc_canonicalize_svn_prop() */
     }
 
-  if (!*relpath && MTCC_UNMODIFIED(mtcc))
+  if (SVN_PATH_IS_EMPTY(relpath) && MTCC_UNMODIFIED(mtcc))
     {
       svn_node_kind_t kind;
 
@@ -724,9 +769,8 @@ svn_client_mtcc_check_path(svn_node_kind_t *kind,
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
-  if (!*relpath
-      && !mtcc->root_op->performed_stat
-      && MTCC_UNMODIFIED(mtcc))
+  if (SVN_PATH_IS_EMPTY(relpath) && MTCC_UNMODIFIED(mtcc)
+      && !mtcc->root_op->performed_stat)
     {
       /* We know nothing about the root. Perhaps it is a file? */
       SVN_ERR(svn_ra_check_path(mtcc->ra_session, "", mtcc->base_revision,
@@ -746,12 +790,15 @@ svn_client_mtcc_check_path(svn_node_kind_t *kind,
 
   if (!op || (check_repository && !op->performed_stat))
     {
-      SVN_ERR(svn_client_mtcc_get_origin(&origin_relpath, &origin_rev,
-                                     relpath, mtcc,
-                                     scratch_pool, scratch_pool));
+      SVN_ERR(mtcc_get_origin(&origin_relpath, &origin_rev,
+                              relpath, TRUE, mtcc,
+                              scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_ra_check_path(mtcc->ra_session, origin_relpath,
-                                origin_rev, kind, scratch_pool));
+      if (!origin_relpath)
+        *kind = svn_node_none;
+      else
+        SVN_ERR(svn_ra_check_path(mtcc->ra_session, origin_relpath,
+                                  origin_rev, kind, scratch_pool));
 
       if (op && *kind == svn_node_dir)
         {

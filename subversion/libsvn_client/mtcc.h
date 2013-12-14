@@ -55,14 +55,18 @@ typedef struct svn_client_mtcc_op_t
 } svn_client_mtcc_op_t;
 
 /* Check if the mtcc doesn't contain any modifications yet */
-#define MTCC_UNMODIFIED(mtcc)                                                  \
-    ((mtcc->root_op->kind == OP_OPEN_DIR)                                      \
-     && (mtcc->root_op->prop_mods == NULL || !mtcc->root_op->prop_mods->nelts) \
-     && (mtcc->root_op->children == NULL || !mtcc->root_op->children->nelts))
+#define MTCC_UNMODIFIED(mtcc)                                               \
+    ((mtcc->root_op->kind == OP_OPEN_DIR                                    \
+                            || mtcc->root_op->kind == OP_OPEN_FILE)         \
+     && (mtcc->root_op->prop_mods == NULL                                   \
+                            || !mtcc->root_op->prop_mods->nelts)            \
+     && (mtcc->root_op->children == NULL                                    \
+                            || !mtcc->root_op->children->nelts))
 
 struct svn_client_mtcc_t
 {
   apr_pool_t *pool;
+  svn_revnum_t head_revision;
   svn_revnum_t base_revision;
 
   svn_ra_session_t *ra_session;
