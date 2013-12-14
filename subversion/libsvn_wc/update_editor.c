@@ -489,6 +489,86 @@ cleanup_edit_baton(void *edit_baton)
   return APR_SUCCESS;
 }
 
+/* Calculate the new repos_relpath for a directory or file */
+static svn_error_t *
+calculate_new_relpath(const char **new_relpath,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      svn_boolean_t adding,
+                      struct edit_baton *eb,
+                      struct dir_baton *pb,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  const char *name = svn_dirent_basename(local_abspath, NULL);
+
+  /* Figure out the new_relpath for this directory. */
+  if (eb->switch_relpath)
+    {
+      /* Handle switches... */
+
+      if (pb == NULL)
+        {
+          if (*eb->target_basename == '\0')
+            {
+              /* No parent baton and target_basename=="" means that we are
+                 the target of the switch. Thus, our NEW_RELPATH will be
+                 the SWITCH_RELPATH.  */
+              *new_relpath = eb->switch_relpath;
+            }
+          else
+            {
+              /* This node is NOT the target of the switch (one of our
+                 children is the target); therefore, it must already exist.
+                 Get its old REPOS_RELPATH, as it won't be changing.  */
+              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                               new_relpath, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               db, local_abspath,
+                                               result_pool, scratch_pool));
+            }
+        }
+      else
+        {
+          /* This directory is *not* the root (has a parent). If there is
+             no grandparent, then we may have anchored at the parent,
+             and self is the target. If we match the target, then set
+             NEW_RELPATH to the SWITCH_RELPATH.
+
+             Otherwise, we simply extend NEW_RELPATH from the parent.  */
+
+          if (pb->parent_baton == NULL
+              && strcmp(eb->target_basename, name) == 0)
+            *new_relpath = eb->switch_relpath;
+          else
+            *new_relpath = svn_relpath_join(pb->new_relpath, name,
+                                            result_pool);
+        }
+    }
+  else  /* must be an update */
+    {
+      /* If we are adding the node, then simply extend the parent's
+         relpath for our own.  */
+      if (adding)
+        {
+          SVN_ERR_ASSERT(pb != NULL);
+          *new_relpath = svn_relpath_join(pb->new_relpath, name, result_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, new_relpath,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           result_pool, scratch_pool));
+          SVN_ERR_ASSERT(*new_relpath);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Make a new dir baton in a subpool of PB->pool. PB is the parent baton.
    If PATH and PB are NULL, this is the root directory of the edit; in this
    case, make the new dir baton in a subpool of EB->pool.
@@ -528,69 +608,8 @@ make_dir_baton(struct dir_baton **d_p,
       d->local_abspath = eb->anchor_abspath;
     }
 
-  /* Figure out the new_relpath for this directory. */
-  if (eb->switch_relpath)
-    {
-      /* Handle switches... */
-
-      if (pb == NULL)
-        {
-          if (*eb->target_basename == '\0')
-            {
-              /* No parent baton and target_basename=="" means that we are
-                 the target of the switch. Thus, our NEW_RELPATH will be
-                 the SWITCH_RELPATH.  */
-              d->new_relpath = eb->switch_relpath;
-            }
-          else
-            {
-              /* This node is NOT the target of the switch (one of our
-                 children is the target); therefore, it must already exist.
-                 Get its old REPOS_RELPATH, as it won't be changing.  */
-              SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
-                                               &d->new_relpath, NULL, NULL,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               eb->db, d->local_abspath,
-                                               dir_pool, scratch_pool));
-            }
-        }
-      else
-        {
-          /* This directory is *not* the root (has a parent). If there is
-             no grandparent, then we may have anchored at the parent,
-             and self is the target. If we match the target, then set
-             NEW_RELPATH to the SWITCH_RELPATH.
-
-             Otherwise, we simply extend NEW_RELPATH from the parent.  */
-          if (pb->parent_baton == NULL
-              && strcmp(eb->target_basename, d->name) == 0)
-            d->new_relpath = eb->switch_relpath;
-          else
-            d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
-                                              dir_pool);
-        }
-    }
-  else  /* must be an update */
-    {
-      /* If we are adding the node, then simply extend the parent's
-         relpath for our own.  */
-      if (adding)
-        {
-          SVN_ERR_ASSERT(pb != NULL);
-          d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
-                                            dir_pool);
-        }
-      else
-        {
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &d->new_relpath,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           eb->db, d->local_abspath,
-                                           dir_pool, scratch_pool));
-          SVN_ERR_ASSERT(d->new_relpath);
-        }
-    }
+  SVN_ERR(calculate_new_relpath(&d->new_relpath, eb->db, d->local_abspath, adding,
+                                eb, pb, dir_pool, scratch_pool));
 
   d->edit_baton   = eb;
   d->parent_baton = pb;
@@ -621,7 +640,6 @@ make_dir_baton(struct dir_baton **d_p,
   *d_p = d;
   return SVN_NO_ERROR;
 }
-
 
 /* Forward declarations. */
 static svn_error_t *
@@ -784,39 +802,8 @@ make_file_baton(struct file_baton **f_p,
   SVN_ERR(path_join_under_root(&f->local_abspath,
                                pb->local_abspath, f->name, file_pool));
 
-  /* Figure out the new URL for this file. */
-  if (eb->switch_relpath)
-    {
-      /* Handle switches... */
-
-      /* This file has a parent directory. If there is
-         no grandparent, then we may have anchored at the parent,
-         and self is the target. If we match the target, then set
-         NEW_RELPATH to the SWITCH_RELPATH.
-
-         Otherwise, we simply extend NEW_RELPATH from the parent.  */
-      if (pb->parent_baton == NULL
-          && strcmp(eb->target_basename, f->name) == 0)
-        f->new_relpath = eb->switch_relpath;
-      else
-        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name,
-                                          file_pool);
-    }
-  else  /* must be an update */
-    {
-      if (adding)
-        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
-      else
-        {
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &f->new_relpath,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL,
-                                           eb->db, f->local_abspath,
-                                           file_pool, scratch_pool));
-          SVN_ERR_ASSERT(f->new_relpath);
-        }
-    }
+  SVN_ERR(calculate_new_relpath(&f->new_relpath, eb->db, f->local_abspath, adding,
+                                eb, pb, file_pool, scratch_pool));
 
   f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
