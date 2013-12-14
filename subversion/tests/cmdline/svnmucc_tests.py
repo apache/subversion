@@ -310,22 +310,21 @@ def basic_svnmucc(sbox):
 
   # Expected cannot be younger error
   xtest_svnmucc(sbox.repo_url,
-                ['svnmucc: E205000: Copy source revision cannot be younger ' +
-                 'than base revision',
+                ['svnmucc: E160006: No such revision 42',
                  ], #---------
                 '-m', 'log msg',
                 'cp', '42', 'a', 'b')
 
   # Expected already exists error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E125002: 'foo' already exists",
+                ["svnmucc: E160020: Path 'foo' already exists",
                  ], #---------
                 '-m', 'log msg',
                 'cp', '17', 'a', 'foo')
 
   # Expected copy_src already exists error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E125002: 'a/bar' (from 'foo/bar:17') already exists",
+                ["svnmucc: E160020: Path 'a/bar' already exists",
                  ], #---------
                 '-m', 'log msg',
                 'cp', '17', 'foo', 'a',
@@ -333,7 +332,7 @@ def basic_svnmucc(sbox):
 
   # Expected not found error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E125002: 'a' not found",
+                ["svnmucc: E160013: Path 'a' not found in revision 17",
                  ], #---------
                 '-m', 'log msg',
                 'cp', '17', 'a', 'b')
