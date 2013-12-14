@@ -234,7 +234,10 @@ get_origin(svn_boolean_t *done,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t * /* ### Make public? */
+/* Obtains the original repository location for an mtcc relpath as
+   *ORIGIN_RELPATH @ *REV, if it has one. If it has not and IGNORE_ENOENT
+   is TRUE report *ORIGIN_RELPATH as NULL, otherwise return an error */
+static svn_error_t *
 mtcc_get_origin(const char **origin_relpath,
                 svn_revnum_t *rev,
                 const char *relpath,
@@ -877,10 +880,13 @@ commit_properties(const svn_delta_editor_t *editor,
   return SVN_NO_ERROR;
 }
 
+/* Handles updating a file to a delta editor and then closes it */
 static svn_error_t *
 commit_file(const svn_delta_editor_t *editor,
             svn_client_mtcc_op_t *op,
             void *file_baton,
+            const char *session_url,
+            const char *relpath,
             svn_client_ctx_t *ctx,
             apr_pool_t *scratch_pool)
 {
@@ -903,6 +909,22 @@ commit_file(const svn_delta_editor_t *editor,
                    files after the true edit operation, like a wc commit */
       SVN_ERR(editor->apply_textdelta(file_baton, base_checksum, txdelta_pool,
                                       &window_handler, &handler_baton));
+
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify_url(
+                            svn_path_url_add_component2(session_url, relpath,
+                                                        scratch_pool),
+                            svn_wc_notify_commit_postfix_txdelta,
+                            scratch_pool);
+
+          notify->path = relpath;
+          notify->kind = svn_node_file;
+
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+        }
 
       if (window_handler != svn_delta_noop_window_handler)
         {
@@ -935,6 +957,7 @@ commit_file(const svn_delta_editor_t *editor,
                                             scratch_pool));
 }
 
+/* Handles updating a directory to a delta editor and then closes it */
 static svn_error_t *
 commit_directory(const svn_delta_editor_t *editor,
                  svn_client_mtcc_op_t *op,
@@ -961,6 +984,9 @@ commit_directory(const svn_delta_editor_t *editor,
           cop = APR_ARRAY_IDX(op->children, i, svn_client_mtcc_op_t *);
 
           svn_pool_clear(iterpool);
+
+          if (ctx->cancel_func)
+            SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
           child_relpath = svn_relpath_join(relpath, cop->name, iterpool);
 
@@ -1003,12 +1029,14 @@ commit_directory(const svn_delta_editor_t *editor,
                                             : NULL,
                                          cop->src_rev,
                                          iterpool, &child_baton));
-                SVN_ERR(commit_file(editor, cop, child_baton, ctx, iterpool));
+                SVN_ERR(commit_file(editor, cop, child_baton,
+                                    session_url, child_relpath, ctx, iterpool));
                 break;
               case OP_OPEN_FILE:
                 SVN_ERR(editor->open_file(child_relpath, dir_baton, base_rev,
                                           iterpool, &child_baton));
-                SVN_ERR(commit_file(editor, cop, child_baton, ctx, iterpool));
+                SVN_ERR(commit_file(editor, cop, child_baton,
+                                    session_url, child_relpath, ctx, iterpool));
                 break;
 
               default:
