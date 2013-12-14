@@ -50,8 +50,15 @@ typedef struct svn_client_mtcc_op_t
 
   apr_array_header_t *prop_mods;        /* For all except DELETE
                                            List of svn_prop_t */
+
+  svn_boolean_t performed_stat;         /* Verified type with repository */
 } svn_client_mtcc_op_t;
 
+/* Check if the mtcc doesn't contain any modifications yet */
+#define MTCC_UNMODIFIED(mtcc)                                                  \
+    ((mtcc->root_op->kind == OP_OPEN_DIR)                                      \
+     && (mtcc->root_op->prop_mods == NULL || !mtcc->root_op->prop_mods->nelts) \
+     && (mtcc->root_op->children == NULL || !mtcc->root_op->children->nelts))
 
 struct svn_client_mtcc_t
 {

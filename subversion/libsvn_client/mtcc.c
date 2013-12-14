@@ -287,44 +287,34 @@ update_copy_src(svn_client_mtcc_op_t *op,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_mtcc_get_relpath(const char **relpath,
-                            const char *url,
-                            svn_client_mtcc_t *mtcc,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+static svn_error_t *
+mtcc_reparent(const char *new_anchor_url,
+              svn_client_mtcc_t *mtcc,
+              apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  const char *new_anchor;
   const char *session_url;
   const char *up;
-
-  err = svn_ra_get_path_relative_to_session(mtcc->ra_session, relpath, url,
-                                            result_pool);
-
-  if (! err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
-    return svn_error_trace(err);
-
-  svn_error_clear(err);
 
   SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url,
                                  scratch_pool));
 
-  new_anchor = svn_uri_get_longest_ancestor(url, session_url, scratch_pool);
+  up = svn_uri_skip_ancestor(new_anchor_url, session_url, scratch_pool);
 
-  if (svn_path_is_empty(new_anchor))
+  if (! up)
     {
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("'%s' is not in the same repository as '%s'"),
-                               url, session_url);
+                               _("'%s' is not an ancestor of  '%s'"),
+                               new_anchor_url, session_url);
     }
-
-  up = svn_uri_skip_ancestor(new_anchor, session_url, scratch_pool);
+  else if (!*up)
+    {
+      return SVN_NO_ERROR; /* Same url */
+    }
 
   /* Update copy origins recursively...:( */
   SVN_ERR(update_copy_src(mtcc->root_op, up, mtcc->pool));
 
-  SVN_ERR(svn_ra_reparent(mtcc->ra_session, new_anchor, scratch_pool));
+  SVN_ERR(svn_ra_reparent(mtcc->ra_session, new_anchor_url, scratch_pool));
 
   /* Create directory open operations for new ancestors */
   while (*up)
@@ -342,9 +332,7 @@ svn_client_mtcc_get_relpath(const char **relpath,
       mtcc->root_op = root_op;
     }
 
-  return svn_error_trace(
-            svn_ra_get_path_relative_to_session(mtcc->ra_session, relpath, url,
-                                                result_pool));
+  return SVN_NO_ERROR;
 }
 
 /* Check if it is safe to create a new node at NEW_RELPATH. Return a proper
@@ -354,26 +342,32 @@ mtcc_verify_create(svn_client_mtcc_t *mtcc,
                    const char *new_relpath,
                    apr_pool_t *scratch_pool)
 {
-  svn_client_mtcc_op_t *op;
   svn_node_kind_t kind;
 
-  SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, FALSE,
-                       FALSE, mtcc->pool, scratch_pool));
+  if (*new_relpath || !MTCC_UNMODIFIED(mtcc))
+    {
+      svn_client_mtcc_op_t *op;
 
-  if (op)
-    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                             _("Can't copy to '%s': target already operated on"),
-                             new_relpath);
+      SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, FALSE,
+                           FALSE, mtcc->pool, scratch_pool));
 
-  SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, TRUE,
-                       FALSE, mtcc->pool, scratch_pool));
+      if (op)
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                 _("Can't create '%s': target already "
+                                   "operated on"),
+                                 new_relpath);
 
-  if (op)
-    return SVN_NO_ERROR; /* Node is explicitly deleted. We can replace */
+      SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, TRUE,
+                           FALSE, mtcc->pool, scratch_pool));
+
+      if (op)
+        return SVN_NO_ERROR; /* Node is explicitly deleted. We can replace */
+    }
 
   /* mod_dav_svn allows overwriting existing directories. Let's hide that
      for users of this api */
-  SVN_ERR(svn_client_mtcc_check_path(&kind, new_relpath, mtcc, scratch_pool));
+  SVN_ERR(svn_client_mtcc_check_path(&kind, new_relpath, FALSE,
+                                     mtcc, scratch_pool));
 
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
@@ -397,14 +391,22 @@ svn_client_mtcc_add_add_file(const char *relpath,
 
   SVN_ERR(mtcc_verify_create(mtcc, relpath, scratch_pool));
 
-  SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, FALSE, FALSE,
-                       TRUE, mtcc->pool, scratch_pool));
-
-  if (!op || !created)
+  if (!*relpath && MTCC_UNMODIFIED(mtcc))
     {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Can't add file at '%s'"),
-                               relpath);
+      /* Turn the root operation into a file addition */
+      op = mtcc->root_op;
+    }
+  else
+    {
+      SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, FALSE, FALSE,
+                           TRUE, mtcc->pool, scratch_pool));
+
+      if (!op || !created)
+        {
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   _("Can't add file at '%s'"),
+                                   relpath);
+        }
     }
 
   op->kind = OP_ADD_FILE;
@@ -472,7 +474,8 @@ svn_client_mtcc_add_delete(const char *relpath,
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
-  SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, mtcc, scratch_pool));
+  SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
+                                     mtcc, scratch_pool));
 
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
@@ -480,17 +483,27 @@ svn_client_mtcc_add_delete(const char *relpath,
                                 "does not exist"),
                              relpath);
 
-  SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, FALSE, TRUE,
-                       TRUE, mtcc->pool, scratch_pool));
-
-  if (!op || !created)
+  if (! *relpath || MTCC_UNMODIFIED(mtcc))
     {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Can't delete node at '%s'"),
-                               relpath);
+      /* Turn root operation into delete */
+      op = mtcc->root_op;
+    }
+  else
+    {
+      SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, FALSE, TRUE,
+                           TRUE, mtcc->pool, scratch_pool));
+
+      if (!op || !created)
+        {
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   _("Can't delete node at '%s'"),
+                                   relpath);
+        }
     }
 
   op->kind = OP_DELETE;
+  op->children = NULL;
+  op->prop_mods = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -505,6 +518,14 @@ svn_client_mtcc_add_mkdir(const char *relpath,
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
   SVN_ERR(mtcc_verify_create(mtcc, relpath, scratch_pool));
+
+  if (! *relpath && MTCC_UNMODIFIED(mtcc))
+    {
+      /* Turn the root of the operation in an MKDIR */
+      mtcc->root_op->kind = OP_ADD_DIR;
+
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, FALSE, FALSE,
                        FALSE, mtcc->pool, scratch_pool));
@@ -581,29 +602,50 @@ svn_client_mtcc_add_propset(const char *relpath,
       /* ### TODO: Call svn_wc_canonicalize_svn_prop() */
     }
 
-  SVN_ERR(mtcc_op_find(&op, NULL, relpath, mtcc->root_op, TRUE, FALSE,
-                       FALSE, mtcc->pool, scratch_pool));
-
-  if (!op)
+  if (!*relpath && MTCC_UNMODIFIED(mtcc))
     {
       svn_node_kind_t kind;
-      svn_boolean_t created;
 
-      /* ### TODO: Check if this node is within a newly copied directory,
-                   and update origin values accordingly */
+      /* Probing the node for an unmodified root will fix the node type to
+         a file if necessary */
 
-      SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, mtcc, scratch_pool));
+      SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
+                                         mtcc, scratch_pool));
 
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("Can't set properties at not existing '%s'"),
-                                 relpath);
+                                   relpath);
 
-      SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, TRUE, FALSE,
-                           (kind != svn_node_dir),
-                           mtcc->pool, scratch_pool));
+      op = mtcc->root_op;
+    }
+  else
+    {
+      SVN_ERR(mtcc_op_find(&op, NULL, relpath, mtcc->root_op, TRUE, FALSE,
+                           FALSE, mtcc->pool, scratch_pool));
 
-      SVN_ERR_ASSERT(op != NULL);
+      if (!op)
+        {
+          svn_node_kind_t kind;
+          svn_boolean_t created;
+
+          /* ### TODO: Check if this node is within a newly copied directory,
+                       and update origin values accordingly */
+
+          SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
+                                             mtcc, scratch_pool));
+
+          if (kind == svn_node_none)
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                     _("Can't set properties at not existing '%s'"),
+                                     relpath);
+
+          SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, TRUE, FALSE,
+                               (kind != svn_node_dir),
+                               mtcc->pool, scratch_pool));
+
+          SVN_ERR_ASSERT(op != NULL);
+        }
     }
 
   if (!op->prop_mods)
@@ -638,7 +680,8 @@ svn_client_mtcc_add_update_file(const char *relpath,
   svn_node_kind_t kind;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath) && src_stream);
 
-  SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, mtcc, scratch_pool));
+  SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE,
+                                     mtcc, scratch_pool));
 
   if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
@@ -671,6 +714,7 @@ svn_client_mtcc_add_update_file(const char *relpath,
 svn_error_t *
 svn_client_mtcc_check_path(svn_node_kind_t *kind,
                            const char *relpath,
+                           svn_boolean_t check_repository,
                            svn_client_mtcc_t *mtcc,
                            apr_pool_t *scratch_pool)
 {
@@ -680,32 +724,77 @@ svn_client_mtcc_check_path(svn_node_kind_t *kind,
 
   SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
 
+  if (!*relpath
+      && !mtcc->root_op->performed_stat
+      && MTCC_UNMODIFIED(mtcc))
+    {
+      /* We know nothing about the root. Perhaps it is a file? */
+      SVN_ERR(svn_ra_check_path(mtcc->ra_session, "", mtcc->base_revision,
+                                kind, scratch_pool));
+
+      mtcc->root_op->performed_stat = TRUE;
+      if (*kind == svn_node_file)
+        {
+          mtcc->root_op->kind = OP_OPEN_FILE;
+          mtcc->root_op->children = NULL;
+        }
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(mtcc_op_find(&op, NULL, relpath, mtcc->root_op, TRUE, FALSE,
                        FALSE, mtcc->pool, scratch_pool));
 
-  if (op)
+  if (!op || (check_repository && !op->performed_stat))
     {
-      if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
-        {
-          *kind = svn_node_dir;
-          return SVN_NO_ERROR;
-        }
-      else if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
-        {
-          *kind = svn_node_file;
-          return SVN_NO_ERROR;
-        }
-      SVN_ERR_MALFUNCTION(); /* No other kinds defined as delete is filtered */
-    }
-
-  SVN_ERR(svn_client_mtcc_get_origin(&origin_relpath, &origin_rev,
+      SVN_ERR(svn_client_mtcc_get_origin(&origin_relpath, &origin_rev,
                                      relpath, mtcc,
                                      scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_ra_check_path(mtcc->ra_session, origin_relpath,
-                            origin_rev, kind, scratch_pool));
+      SVN_ERR(svn_ra_check_path(mtcc->ra_session, origin_relpath,
+                                origin_rev, kind, scratch_pool));
 
-  return SVN_NO_ERROR;
+      if (op && *kind == svn_node_dir)
+        {
+          if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
+            op->performed_stat = TRUE;
+          else if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
+            return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                                     _("Can't perform directory operation "
+                                       "on '%s' as it is not a directory"),
+                                     relpath);
+        }
+      else if (op && *kind == svn_node_dir)
+        {
+          if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
+            op->performed_stat = TRUE;
+          else if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
+            return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                                     _("Can't perform file operation "
+                                       "on '%s' as it is not a file"),
+                                     relpath);
+        }
+      else if (op && (op->kind == OP_OPEN_DIR || op->kind == OP_OPEN_FILE))
+        {
+          return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                   _("Can't open '%s' as it does not exist"),
+                                   relpath);
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* op != NULL */
+  if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
+    {
+      *kind = svn_node_dir;
+      return SVN_NO_ERROR;
+    }
+  else if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
+    {
+      *kind = svn_node_file;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR_MALFUNCTION(); /* No other kinds defined as delete is filtered */
 }
 
 static svn_error_t *
@@ -981,6 +1070,20 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
 
   SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url, scratch_pool));
 
+  if (mtcc->root_op->kind != OP_OPEN_DIR)
+    {
+      const char *name;
+
+      svn_uri_split(&session_url, &name, session_url, scratch_pool);
+
+      if (*name)
+        {
+          SVN_ERR(mtcc_reparent(session_url, mtcc, scratch_pool));
+
+          SVN_ERR(svn_ra_reparent(mtcc->ra_session, session_url, scratch_pool));
+        }
+    }
+
     /* Create new commit items and add them to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(mtcc->ctx))
     {
@@ -1003,6 +1106,40 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, mtcc->ctx, scratch_pool));
+
+  /* Ugly corner case: The ra session might have died while we were waiting
+     for the callback */
+  {
+    svn_node_kind_t kind;
+    svn_error_t *err = svn_ra_check_path(mtcc->ra_session, "",
+                                         mtcc->base_revision, &kind,
+                                         scratch_pool);
+
+    if (err)
+      {
+        svn_error_t *err2 = svn_client_open_ra_session2(&mtcc->ra_session,
+                                                        session_url,
+                                                        NULL, mtcc->ctx,
+                                                        mtcc->pool,
+                                                        scratch_pool);
+
+        if (err2)
+          {
+            svn_pool_destroy(mtcc->pool);
+            return svn_error_trace(svn_error_compose_create(err, err2));
+          }
+        svn_error_clear(err);
+
+        SVN_ERR(svn_ra_check_path(mtcc->ra_session, "",
+                                  mtcc->base_revision, &kind, scratch_pool));
+      }
+
+    if (kind != svn_node_dir)
+      return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                               _("Can't commit to '%s' because it "
+                                 "is not a directory"),
+                               session_url);
+  }
 
   SVN_ERR(svn_ra_get_commit_editor3(mtcc->ra_session, &editor, &edit_baton,
                                     commit_revprops,

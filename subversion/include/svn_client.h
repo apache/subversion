@@ -6686,18 +6686,6 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
-/** Calculates a relative path @a *relpath for @a url, reparenting the
- * @a mtcc to a higher anchor url if necessary.
- *
- * @since New in 1.9.
- */
-svn_error_t *
-svn_client_mtcc_get_relpath(const char **relpath,
-                            const char *url,
-                            svn_client_mtcc_t *mtcc,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
 /** Adds a file add operation of @a relpath to @a mtcc. If @a src_checksum
  * is not null it will be provided to the repository to verify if the file
  * was transfered succesfull.
@@ -6817,6 +6805,9 @@ svn_client_mtcc_add_update_file(const char *relpath,
  * This value might be from the cache (in case of modifications, copies)
  * or fetched from the repository.
  *
+ * If @a check_repository is TRUE, verify the node type with the repository at
+ * least once and cache the result for further checks.
+ *
  * When a node does not exist this functions sets @a *kind to @c svn_node_node.
  *
  * @since New in 1.9.
@@ -6824,6 +6815,7 @@ svn_client_mtcc_add_update_file(const char *relpath,
 svn_error_t *
 svn_client_mtcc_check_path(svn_node_kind_t *kind,
                            const char *relpath,
+                           svn_boolean_t check_repository,
                            svn_client_mtcc_t *mtcc,
                            apr_pool_t *scratch_pool);
 
