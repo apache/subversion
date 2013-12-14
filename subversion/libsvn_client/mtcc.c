@@ -1108,10 +1108,11 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
                        apr_pool_t *scratch_pool)
 {
   const svn_delta_editor_t *editor;
-  apr_hash_t *commit_revprops;
   void *edit_baton;
-  svn_error_t *err;
   void *root_baton;
+  apr_hash_t *commit_revprops;
+  svn_node_kind_t kind;
+  svn_error_t *err;
   const char *session_url;
   const char *log_msg;
 
@@ -1156,37 +1157,34 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
 
   /* Ugly corner case: The ra session might have died while we were waiting
      for the callback */
-  {
-    svn_node_kind_t kind;
-    svn_error_t *err = svn_ra_check_path(mtcc->ra_session, "",
-                                         mtcc->base_revision, &kind,
-                                         scratch_pool);
 
-    if (err)
-      {
-        svn_error_t *err2 = svn_client_open_ra_session2(&mtcc->ra_session,
-                                                        session_url,
-                                                        NULL, mtcc->ctx,
-                                                        mtcc->pool,
-                                                        scratch_pool);
+  err = svn_ra_check_path(mtcc->ra_session, "", mtcc->base_revision, &kind,
+                          scratch_pool);
 
-        if (err2)
-          {
-            svn_pool_destroy(mtcc->pool);
-            return svn_error_trace(svn_error_compose_create(err, err2));
-          }
-        svn_error_clear(err);
+  if (err)
+    {
+      svn_error_t *err2 = svn_client_open_ra_session2(&mtcc->ra_session,
+                                                      session_url,
+                                                      NULL, mtcc->ctx,
+                                                      mtcc->pool,
+                                                      scratch_pool);
 
-        SVN_ERR(svn_ra_check_path(mtcc->ra_session, "",
-                                  mtcc->base_revision, &kind, scratch_pool));
-      }
+      if (err2)
+        {
+          svn_pool_destroy(mtcc->pool);
+          return svn_error_trace(svn_error_compose_create(err, err2));
+        }
+      svn_error_clear(err);
 
-    if (kind != svn_node_dir)
-      return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                               _("Can't commit to '%s' because it "
-                                 "is not a directory"),
-                               session_url);
-  }
+      SVN_ERR(svn_ra_check_path(mtcc->ra_session, "",
+                                mtcc->base_revision, &kind, scratch_pool));
+    }
+
+  if (kind != svn_node_dir)
+    return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                             _("Can't commit to '%s' because it "
+                               "is not a directory"),
+                             session_url);
 
   SVN_ERR(svn_ra_get_commit_editor3(mtcc->ra_session, &editor, &edit_baton,
                                     commit_revprops,
