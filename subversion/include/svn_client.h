@@ -6673,10 +6673,6 @@ typedef struct svn_client_mtcc_t svn_client_mtcc_t;
 /** Creates a new multicommand context for an operation on @a anchor_url and
  * its descendants.
  *
- * If @a anchor_url does not specify an existing directory returns an
- * SVN_ERR_FS_NOT_DIRECTORY error, except when new_anchor_url is not NULL, and
- * the mtcc can be rooted on an ancestor.
- *
  * Allocate the context in @a result_pool and perform temporary allocations in
  * @a scratch_pool.
  *
@@ -6684,7 +6680,6 @@ typedef struct svn_client_mtcc_t svn_client_mtcc_t;
  */
 svn_error_t *
 svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
-                       const char **new_anchor_url,
                        const char *anchor_url,
                        svn_revnum_t base_revision,
                        svn_client_ctx_t *ctx,
@@ -6699,7 +6694,6 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
 svn_error_t *
 svn_client_mtcc_get_relpath(const char **relpath,
                             const char *url,
-                            svn_boolean_t need_anchor,
                             svn_client_mtcc_t *mtcc,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);

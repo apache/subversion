@@ -236,7 +236,6 @@ svn_client_mtcc_get_origin(const char **origin_relpath,
 
 svn_error_t *
 svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
-                       const char **new_anchor_url,
                        const char *anchor_url,
                        svn_revnum_t base_revision,
                        svn_client_ctx_t *ctx,
@@ -244,10 +243,6 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
                        apr_pool_t *scratch_pool)
 {
   apr_pool_t *mtcc_pool;
-  svn_node_kind_t kind;
-
-  if (new_anchor_url)
-    *new_anchor_url = NULL;
 
   mtcc_pool = svn_pool_create(result_pool);
 
@@ -262,26 +257,6 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
   SVN_ERR(svn_client_open_ra_session2(&(*mtcc)->ra_session, anchor_url,
                                       NULL /* wri_abspath */, ctx,
                                       mtcc_pool, scratch_pool));
-
-  SVN_ERR(svn_ra_check_path((*mtcc)->ra_session, "", base_revision, &kind,
-                            scratch_pool));
-
-  if (kind != svn_node_dir)
-    {
-      if (!new_anchor_url)
-        {
-          svn_pool_clear(mtcc_pool);
-          *mtcc = NULL;
-          return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                                   _("Can't open session on '%s' because "
-                                     "it is not a directory."),
-                                   anchor_url);
-        }
-
-      *new_anchor_url = svn_uri_dirname(anchor_url, result_pool);
-      SVN_ERR(svn_ra_reparent((*mtcc)->ra_session, *new_anchor_url,
-                              scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
@@ -315,7 +290,6 @@ update_copy_src(svn_client_mtcc_op_t *op,
 svn_error_t *
 svn_client_mtcc_get_relpath(const char **relpath,
                             const char *url,
-                            svn_boolean_t need_anchor,
                             svn_client_mtcc_t *mtcc,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -328,9 +302,7 @@ svn_client_mtcc_get_relpath(const char **relpath,
   err = svn_ra_get_path_relative_to_session(mtcc->ra_session, relpath, url,
                                             result_pool);
 
-  if (! err && (*relpath || !need_anchor))
-    return SVN_NO_ERROR;
-  if (err && err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
+  if (! err || err->apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_trace(err);
 
   svn_error_clear(err);
@@ -338,10 +310,7 @@ svn_client_mtcc_get_relpath(const char **relpath,
   SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url,
                                  scratch_pool));
 
-  if (!err && !*relpath && need_anchor)
-    new_anchor = svn_uri_dirname(session_url, scratch_pool);
-  else
-    new_anchor = svn_uri_get_longest_ancestor(url, session_url, scratch_pool);
+  new_anchor = svn_uri_get_longest_ancestor(url, session_url, scratch_pool);
 
   if (svn_path_is_empty(new_anchor))
     {
