@@ -631,10 +631,12 @@ check_can_add_to_parent(const char **repos_root_url,
                                          db, parent_abspath,
                                          result_pool, scratch_pool));
       else
-        SVN_ERR(svn_wc__db_scan_base_repos(NULL,
-                                           repos_root_url, repos_uuid,
-                                           db, parent_abspath,
-                                           result_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                         repos_root_url, repos_uuid, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         db, parent_abspath,
+                                         result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -887,11 +889,13 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
       const char *repos_relpath, *inner_repos_root_url, *inner_repos_uuid;
       const char *inner_url;
 
-      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                         &inner_repos_root_url,
-                                         &inner_repos_uuid,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                       &inner_repos_root_url,
+                                       &inner_repos_uuid, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
 
       if (strcmp(inner_repos_uuid, repos_uuid)
           || strcmp(repos_root_url, inner_repos_root_url))
