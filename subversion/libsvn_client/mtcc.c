@@ -1146,6 +1146,13 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
   const char *session_url;
   const char *log_msg;
 
+  if (MTCC_UNMODIFIED(mtcc))
+    {
+      /* No changes -> no revision. Easy out */
+      svn_pool_destroy(mtcc->pool);
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_ra_get_session_url(mtcc->ra_session, &session_url, scratch_pool));
 
   if (mtcc->root_op->kind != OP_OPEN_DIR)
