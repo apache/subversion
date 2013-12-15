@@ -608,9 +608,6 @@ make_dir_baton(struct dir_baton **d_p,
       d->local_abspath = eb->anchor_abspath;
     }
 
-  SVN_ERR(calculate_new_relpath(&d->new_relpath, eb->db, d->local_abspath, adding,
-                                eb, pb, dir_pool, scratch_pool));
-
   d->edit_baton   = eb;
   d->parent_baton = pb;
   d->pool         = dir_pool;
@@ -790,7 +787,6 @@ make_file_baton(struct file_baton **f_p,
                 svn_boolean_t adding,
                 apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *file_pool = svn_pool_create(pb->pool);
   struct file_baton *f = apr_pcalloc(file_pool, sizeof(*f));
 
@@ -801,9 +797,6 @@ make_file_baton(struct file_baton **f_p,
   f->old_revision = SVN_INVALID_REVNUM;
   SVN_ERR(path_join_under_root(&f->local_abspath,
                                pb->local_abspath, f->name, file_pool));
-
-  SVN_ERR(calculate_new_relpath(&f->new_relpath, eb->db, f->local_abspath, adding,
-                                eb, pb, file_pool, scratch_pool));
 
   f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
@@ -1231,21 +1224,29 @@ open_root(void *edit_baton,
     }
   else if (have_work)
     {
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
+                                       &db->old_revision,
+                                       &db->old_repos_relpath, NULL, NULL,
+                                       &db->changed_rev, &db->changed_date,
+                                       &db->changed_author,
+                                       &db->ambient_depth,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       eb->db, db->local_abspath,
+                                       db->pool, pool));
+    }
+  else
+    base_status = status;
+
+  SVN_ERR(calculate_new_relpath(&db->new_relpath, eb->db, db->local_abspath,
+                                FALSE, eb, NULL, db->pool, pool));
+
+  if (have_work)
+    {
       const char *move_src_root_abspath;
 
       SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, &move_src_root_abspath,
                                        NULL, eb->db, db->local_abspath,
                                        pool, pool));
-      if (move_src_root_abspath || *eb->target_basename == '\0')
-        SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
-                                         &db->old_revision,
-                                         &db->old_repos_relpath, NULL, NULL,
-                                         &db->changed_rev, &db->changed_date,
-                                         &db->changed_author,
-                                         &db->ambient_depth,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
-                                         eb->db, db->local_abspath,
-                                         db->pool, pool));
 
       if (move_src_root_abspath)
         {
@@ -1285,8 +1286,6 @@ open_root(void *edit_baton,
       db->shadowed = TRUE; /* Needed for the close_directory() on the root, to
                               make sure it doesn't use the ACTUAL tree */
     }
-  else
-    base_status = status;
 
   if (*eb->target_basename == '\0')
     {
@@ -1998,6 +1997,8 @@ add_directory(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
+  SVN_ERR(calculate_new_relpath(&db->new_relpath, eb->db, db->local_abspath,
+                                TRUE, eb, pb, db->pool, pool));
   *child_baton = db;
 
   if (db->skip_this)
@@ -2411,6 +2412,9 @@ open_directory(const char *path,
                                      db->pool, pool));
 
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
+
+  SVN_ERR(calculate_new_relpath(&db->new_relpath, eb->db, db->local_abspath,
+                                FALSE, eb, pb, db->pool, pool));
 
   /* Is this path a conflict victim? */
   if (db->shadowed)
@@ -3154,6 +3158,8 @@ add_file(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
+  SVN_ERR(calculate_new_relpath(&fb->new_relpath, eb->db, fb->local_abspath,
+                                TRUE, eb, pb, fb->pool, pool));
   *file_baton = fb;
 
   if (fb->skip_this)
@@ -3535,6 +3541,9 @@ open_file(const char *path,
                                      NULL, NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
+
+  SVN_ERR(calculate_new_relpath(&fb->new_relpath, eb->db, fb->local_abspath,
+                                FALSE, eb, pb, fb->pool, scratch_pool));
 
   /* Is this path a conflict victim? */
   if (fb->shadowed)
