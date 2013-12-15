@@ -3512,7 +3512,6 @@ open_file(const char *path,
 
   /* Sanity check. */
 
-  /* If replacing, make sure the .svn entry already exists. */
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision,
                                &fb->old_repos_relpath, NULL, NULL,
                                &fb->changed_rev, &fb->changed_date,
