@@ -25,6 +25,7 @@
 
 #include "svn_mergeinfo.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_client.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
@@ -241,6 +242,41 @@ test_propset(const svn_test_opts_t *opts,
                                       mtcc, pool));
 
   SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
+
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, 2, ctx, pool, pool));
+  SVN_TEST_ASSERT_ERROR(
+      svn_client_mtcc_add_propset("A", SVN_PROP_MIME_TYPE,
+                                  svn_string_create("text/plain", pool),
+                                  FALSE, mtcc, pool),
+      SVN_ERR_ILLEGAL_TARGET);
+
+  SVN_TEST_ASSERT_ERROR(
+      svn_client_mtcc_add_propset("iota", SVN_PROP_IGNORE,
+                                  svn_string_create("iota", pool),
+                                  FALSE, mtcc, pool),
+      SVN_ERR_ILLEGAL_TARGET);
+
+  SVN_ERR(svn_client_mtcc_add_propset("iota", SVN_PROP_EOL_STYLE,
+                                      svn_string_create("LF", pool),
+                                      FALSE, mtcc, pool));
+
+  SVN_ERR(svn_client_mtcc_add_add_file("ok", cstr_stream("line\nline\n", pool),
+                                       NULL, mtcc, pool));
+  SVN_ERR(svn_client_mtcc_add_add_file("bad", cstr_stream("line\nno\r\n", pool),
+                                       NULL, mtcc, pool));
+
+  SVN_ERR(svn_client_mtcc_add_propset("ok", SVN_PROP_EOL_STYLE,
+                                      svn_string_create("LF", pool),
+                                      FALSE, mtcc, pool));
+
+  SVN_TEST_ASSERT_ERROR(
+          svn_client_mtcc_add_propset("bad", SVN_PROP_EOL_STYLE,
+                                      svn_string_create("LF", pool),
+                                      FALSE, mtcc, pool),
+          SVN_ERR_ILLEGAL_TARGET);
+
+  SVN_ERR(verify_mtcc_commit(mtcc, 3, pool));
+
   return SVN_NO_ERROR;
 }
 
