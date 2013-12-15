@@ -174,6 +174,8 @@ get_origin(svn_boolean_t *done,
   const char *name;
   if (SVN_PATH_IS_EMPTY(relpath))
     {
+      if (op->kind == OP_ADD_DIR || op->kind == OP_ADD_FILE)
+        *done = TRUE;
       *origin_relpath = op->src_relpath
                                 ? apr_pstrdup(result_pool, op->src_relpath)
                                 : NULL;
@@ -612,6 +614,103 @@ svn_client_mtcc_add_move(const char *src_relpath,
   return SVN_NO_ERROR;
 }
 
+/* Baton for mtcc_prop_getter */
+struct mtcc_prop_get_baton
+{
+  svn_client_mtcc_t *mtcc;
+  const char *relpath;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
+/* Implements svn_wc_canonicalize_svn_prop_get_file_t */
+static svn_error_t *
+mtcc_prop_getter(const svn_string_t **mime_type,
+                 svn_stream_t *stream,
+                 void *baton,
+                 apr_pool_t *pool)
+{
+  struct mtcc_prop_get_baton *mpgb = baton;
+  const char *origin_relpath;
+  svn_revnum_t origin_rev;
+  apr_hash_t *props = NULL;
+
+  svn_client_mtcc_op_t *op;
+
+  if (mime_type)
+    *mime_type = NULL;
+
+  /* Check if we have the information locally */
+  SVN_ERR(mtcc_op_find(&op, NULL, mpgb->relpath, mpgb->mtcc->root_op, TRUE,
+                       FALSE, FALSE, pool, pool));
+
+  if (op)
+    {
+      if (mime_type)
+        {
+          int i;
+
+          for (i = 0; op->prop_mods && i < op->prop_mods->nelts; i++)
+            {
+              const svn_prop_t *mod = &APR_ARRAY_IDX(op->prop_mods, i,
+                                                     svn_prop_t);
+
+              if (! strcmp(mod->name, SVN_PROP_MIME_TYPE))
+                {
+                  *mime_type = mod->value ? svn_string_dup(mod->value, pool)
+                                          : NULL;
+                  mime_type = NULL;
+                }
+            }
+        }
+
+      if (stream && op->src_stream)
+        {
+          svn_stream_mark_t *mark;
+          svn_error_t *err;
+
+          /* Is the source stream capable of being read multiple times? */
+          err = svn_stream_mark(op->src_stream, &mark, pool);
+
+          if (err && err->apr_err != SVN_ERR_STREAM_SEEK_NOT_SUPPORTED)
+            return svn_error_trace(err);
+          svn_error_clear(err);
+
+          if (!err)
+            {
+              err = svn_stream_copy3(svn_stream_disown(op->src_stream, pool),
+                                     svn_stream_disown(stream, pool),
+                                     mpgb->cancel_func, mpgb->cancel_baton,
+                                     pool);
+
+              SVN_ERR(svn_error_compose_create(
+                            err,
+                            svn_stream_seek(op->src_stream, mark)));
+            }
+          /* else: ### Create tempfile? */
+
+          stream = NULL; /* Stream is handled */
+        }
+    }
+
+  if (!stream && !mime_type)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(mtcc_get_origin(&origin_relpath, &origin_rev, mpgb->relpath, TRUE,
+                          mpgb->mtcc, pool, pool));
+
+  if (!origin_relpath)
+    return SVN_NO_ERROR; /* Nothing to fetch at repository */
+
+  SVN_ERR(svn_ra_get_file(mpgb->mtcc->ra_session, origin_relpath, origin_rev,
+                          stream, NULL, mime_type ? &props : NULL, pool));
+
+  if (mime_type && props)
+    *mime_type = svn_hash_gets(props, SVN_PROP_MIME_TYPE);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_mtcc_add_propset(const char *relpath,
                             const char *propname,
@@ -640,16 +739,31 @@ svn_client_mtcc_add_propset(const char *relpath,
   if (!skip_checks && svn_prop_needs_translation(propname))
     {
       svn_string_t *translated_value;
-       SVN_ERR_W(svn_subst_translate_string2(&translated_value, NULL,
-                                             NULL, propval,
-                                             NULL, FALSE,
-                                             scratch_pool, scratch_pool),
-                 _("Error normalizing property value"));
+      SVN_ERR_W(svn_subst_translate_string2(&translated_value, NULL,
+                                            NULL, propval,
+                                            NULL, FALSE,
+                                            scratch_pool, scratch_pool),
+                _("Error normalizing property value"));
+
+      propval = translated_value;
     }
 
   if (propval && svn_prop_is_svn_prop(propname))
     {
-      /* ### TODO: Call svn_wc_canonicalize_svn_prop() */
+      struct mtcc_prop_get_baton mpbg;
+      svn_node_kind_t kind;
+      SVN_ERR(svn_client_mtcc_check_path(&kind, relpath, FALSE, mtcc,
+                                         scratch_pool));
+
+      mpbg.mtcc = mtcc;
+      mpbg.relpath = relpath;
+      mpbg.cancel_func = mtcc->ctx->cancel_func;
+      mpbg.cancel_baton = mtcc->ctx->cancel_baton;
+
+      SVN_ERR(svn_wc_canonicalize_svn_prop(&propval, propname, propval,
+                                           relpath, kind, skip_checks,
+                                           mtcc_prop_getter, &mpbg,
+                                           scratch_pool));
     }
 
   if (SVN_PATH_IS_EMPTY(relpath) && MTCC_UNMODIFIED(mtcc))
