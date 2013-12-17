@@ -1230,7 +1230,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
+#ifdef ENABLE_EV2_SHIMS
   apr_hash_t *relpath_map = NULL;
+#endif
   void *edit_baton;
   svn_client__committables_t *committables;
   apr_array_header_t *commit_items;
@@ -1480,22 +1482,17 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 #endif
 
-  /* Close the initial session, to reopen a new session with commit handling */
-  svn_pool_clear(session_pool);
-
-  /* Open a new RA session to DST_URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
-                                               NULL, commit_items,
-                                               FALSE, FALSE, ctx,
-                                               session_pool, session_pool));
+  SVN_ERR(svn_ra_reparent(ra_session, top_dst_url, session_pool));
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, session_pool));
 
   /* Fetch RA commit editor. */
+#ifdef ENABLE_EV2_SHIMS
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx, relpath_map,
                                                        session_pool)));
+#endif
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,
