@@ -1553,7 +1553,6 @@ def copy_move_commit(sbox):
   sbox.simple_move('A/D/GG', 'A/D/GG-moved')
   sbox.simple_commit('A/D/GG-moved')
 
-@XFail()
 def move_to_from_external(sbox):
   "move to and from an external"
 
@@ -1572,7 +1571,7 @@ def move_to_from_external(sbox):
                                      sbox.ospath('GG/tau'))
                                      
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ic',
+                                     'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))
   
