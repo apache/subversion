@@ -85,6 +85,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, jcorvel
 
+ * ^/subversion/branches/1.7.x-r1551579
+   Fix moving files from externals to ancestor directories and vice versa.
+   Justification:
+     "Moves should just work" or "be nice to api users, like Markus"
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
