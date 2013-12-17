@@ -239,6 +239,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, danielsh
 
+ * r1551524, 1551579
+   Fix an 'No Write Lock' error when moving files between externals and
+   parent working copies or vice versa.
+   Justification:
+     svn move should just work in these cases.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
