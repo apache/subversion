@@ -86,9 +86,6 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
   { INITIAL, D_, "prop", PROP,
     FALSE, { NULL }, FALSE },
 
-  { PROPSTAT, D_, "prop", PROP,
-    FALSE, { NULL }, FALSE },
-
   { PROP, D_, "lockdiscovery", LOCK_DISCOVERY,
     FALSE, { NULL }, FALSE },
 
