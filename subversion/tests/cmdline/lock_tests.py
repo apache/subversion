@@ -1911,9 +1911,9 @@ def copy_with_lock(sbox):
     'A/B/E2/beta'  : Item(status='  ', wc_rev=2),
     })
 
-  # This is really a regression test for httpd: 2.2.25 and 2.4.6 have
-  # a bug that causes mod_dav to check for locks on the copy source
-  # and so the commit fails.
+  # This is really a regression test for httpd: 2.2.25 and 2.4.6, and
+  # earlier, have a bug that causes mod_dav to check for locks on the
+  # copy source and so the commit fails.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
