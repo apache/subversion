@@ -1460,8 +1460,7 @@ def lock_path_not_in_head(sbox):
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
   expected_lock_fail_err_re = "svn: warning: W160042: " \
-  "((Path .* doesn't exist in HEAD revision)" \
-  "|(L(ock|OCK) request (on '.*' )?failed: 405 Method Not Allowed))"
+  "(Path .* doesn't exist in HEAD revision)"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
@@ -1876,11 +1875,11 @@ def drop_locks_on_parent_deletion(sbox):
     
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B',
-						'A/B/E',
-						'A/B/E/alpha',
-						'A/B/F',
-						'A/B/lambda',
-						wc_rev='3')
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/F',
+                        'A/B/lambda',
+                        wc_rev='3')
   expected_status.remove('A/B/E/beta')
    
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1888,7 +1887,7 @@ def drop_locks_on_parent_deletion(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-	
+
 
 def copy_with_lock(sbox):
   """copy with lock on source"""
@@ -1919,7 +1918,7 @@ def copy_with_lock(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-										
+
 ########################################################################
 # Run the tests
 
