@@ -281,7 +281,6 @@ run_locks(svn_ra_serf__session_t *sess,
 
           if (ctx->handler->done)
             {
-              svn_error_t *err;
               svn_error_t *server_err = NULL;
               svn_error_t *cb_err = NULL;
 
