@@ -247,6 +247,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1552064
+   Stop rewriting a shared file in every buildstep to allow running the httpd
+   tests in parallel on Windows.
+   Justification:
+     Allows using one than one cpu core to run test, which saves developer
+     time.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
