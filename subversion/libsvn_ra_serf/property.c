@@ -636,16 +636,12 @@ svn_error_t *
 svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
                             apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  svn_error_t *err2;
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  err = svn_ra_serf__context_run_one(handler, scratch_pool);
-
-  err2 = svn_ra_serf__error_on_status(handler->sline,
-                                      handler->path,
-                                      handler->location);
-
-  return svn_error_compose_create(err2, err);
+  return svn_error_trace(
+                svn_ra_serf__error_on_status(handler->sline,
+                                             handler->path,
+                                             handler->location));
 }
 
 /*

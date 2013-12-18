@@ -300,11 +300,13 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->handler = handler;
 
   err = svn_ra_serf__context_run_one(handler, pool);
-  err = svn_error_compose_create(
-                    svn_ra_serf__error_on_status(handler->sline,
-                                                 handler->path,
-                                                 handler->location),
-                    err);
+
+  if (!err)
+    {
+      err = svn_ra_serf__error_on_status(handler->sline,
+                                         handler->path,
+                                         handler->location);
+    }
 
   if (err)
     {

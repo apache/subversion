@@ -2968,18 +2968,15 @@ finish_report(void *report_baton,
           waittime_left = sess->timeout;
         }
 
-      if (status && handler->sline.code != 200)
-        {
-          return svn_error_trace(
-                    svn_error_compose_create(
-                        svn_ra_serf__error_on_status(handler->sline,
-                                                     handler->path,
-                                                     handler->location),
-                        err));
-        }
       SVN_ERR(err);
+
       if (status)
         {
+          if (handler->sline.code != 200)
+            SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                                 handler->path,
+                                                 handler->location));
+
           return svn_ra_serf__wrap_err(status, _("Error retrieving REPORT"));
         }
 
