@@ -483,7 +483,6 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    apr_pool_t *pool)
 {
   options_context_t *opt_ctx;
-  svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
