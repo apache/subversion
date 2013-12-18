@@ -206,27 +206,31 @@ static svn_error_t *
 return_response_err(svn_ra_serf__handler_t *handler)
 {
   svn_error_t *err;
+  svn_error_t *status_err;
 
   /* We should have captured SLINE and LOCATION in the HANDLER.  */
   SVN_ERR_ASSERT(handler->handler_pool != NULL);
 
   /* Ye Olde Fallback Error */
-  err = svn_error_compose_create(
-            handler->server_error != NULL
+  err = (handler->server_error != NULL)
               ? handler->server_error->error
-              : SVN_NO_ERROR,
-            svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("%s of '%s': %d %s"),
-                              handler->method, handler->path,
-                              handler->sline.code, handler->sline.reason));
+              : SVN_NO_ERROR;
 
-  /* Try to return one of the standard errors for 301, 404, etc.,
-     then look for an error embedded in the response.  */
-  return svn_error_compose_create(svn_ra_serf__error_on_status(
-                                    handler->sline,
-                                    handler->path,
-                                    handler->location),
-                                  err);
+  status_err = svn_ra_serf__error_on_status(handler->sline,
+                                            handler->path,
+                                            handler->location);
+
+  /* This function should only be called on error conditions */
+  SVN_ERR_ASSERT(err || status_err);
+
+  /* If we have a detailed server error that agrees with the status code
+     report this error first, otherwise report the status first as that
+     really determines our behavior */
+  if (status_err && err
+      && status_err->apr_err == err->apr_err)
+    return svn_error_trace(svn_error_compose_create(err, status_err));
+  else
+    return svn_error_trace(svn_error_compose_create(status_err, err));
 }
 
 /* Implements svn_ra_serf__request_body_delegate_t */
