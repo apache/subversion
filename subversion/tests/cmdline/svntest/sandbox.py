@@ -98,9 +98,6 @@ class Sandbox:
     svntest.actions.make_repo_and_wc(self, create_wc, read_only, minor_version)
     self._is_built = True
 
-    if not os.path.exists(svntest.main.work_dir):
-      os.makedirs(svntest.main.work_dir)
-
   def _ensure_authz(self):
     "make sure the repository is accessible"
 
