@@ -149,8 +149,8 @@ logger__log_error(logger_t *logger,
           if (len > sizeof(errstr) - sizeof(APR_EOL_STR)) {
             len = sizeof(errstr) - sizeof(APR_EOL_STR);
           }
-          strcpy(errstr + len, APR_EOL_STR);
-          len += strlen(APR_EOL_STR);
+          len += apr_snprintf(errstr + len, sizeof(APR_EOL_STR),
+                              "%s", APR_EOL_STR);
           svn_error_clear(svn_stream_write(logger->stream, errstr, &len));
 
           continuation = "-";
