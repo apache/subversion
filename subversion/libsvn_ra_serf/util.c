@@ -2148,21 +2148,15 @@ handle_response(serf_request_t *request,
         {
           handler->discard_body = TRUE;
 
-          if (!handler->session->pending_error)
+          if (!handler->session->pending_error
+              && !handler->no_fail_on_http_failure_status)
             {
-              apr_status_t apr_err = SVN_ERR_RA_DAV_REQUEST_FAILED;
-
-              /* 405 == Method Not Allowed (Occurs when trying to lock a working
-                copy path which no longer exists at HEAD in the repository. */
-              if (handler->sline.code == 405
-                  && strcmp(handler->method, "LOCK") == 0)
-                apr_err = SVN_ERR_FS_OUT_OF_DATE;
-
               handler->session->pending_error =
-                  svn_error_createf(apr_err, NULL,
-                                    _("%s request on '%s' failed: %d %s"),
-                                   handler->method, handler->path,
-                                   handler->sline.code, handler->sline.reason);
+                            svn_ra_serf__error_on_status(handler->sline,
+                                                         handler->path,
+                                                         handler->location);
+
+              SVN_ERR_ASSERT(handler->session->pending_error != NULL);
             }
         }
     }
