@@ -27,6 +27,7 @@
 #include <serf.h>
 
 #include "svn_dav.h"
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 
@@ -431,6 +432,66 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
   iterpool = svn_pool_create(scratch_pool);
 
+  /* If we are stealing locks we need the lock tokens */
+  if (force)
+    {
+      /* Theoretically this part can be improved (for performance) by using
+         svn_ra_get_locks() to obtain all the locks in a single request, but
+         do we really want to improve the performance of
+            $ svn unlock --force *
+       */
+
+      for (hi = apr_hash_first(scratch_pool, path_tokens);
+       hi;
+       hi = apr_hash_next(hi))
+        {
+          const char *path;
+          const char *token;
+          svn_lock_t *existing_lock;
+          svn_error_t *err;
+
+          svn_pool_clear(iterpool);
+
+          path = svn__apr_hash_index_key(hi);
+          token = svn__apr_hash_index_val(hi);
+
+          if (token && token[0])
+            continue;
+
+          if (session->cancel_func)
+            SVN_ERR(session->cancel_func(session->cancel_baton));
+
+          err = svn_ra_serf__get_lock(ra_session, &existing_lock, path,
+                                      iterpool);
+
+          if (!err && existing_lock->token)
+            {
+              svn_hash_sets(path_tokens, path,
+                            apr_pstrdup(scratch_pool, existing_lock->token));
+              continue;
+            }
+
+          err = svn_error_createf(SVN_ERR_RA_NOT_LOCKED, err,
+                                  _("'%s' is not locked in the repository"),
+                                  path);
+
+          if (lock_func)
+            {
+              svn_error_t *err2;
+              err2 = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
+              svn_error_clear(err);
+
+              SVN_ERR(err2);
+            }
+          else
+            {
+              svn_error_clear(err);
+            }
+
+          svn_hash_sets(path_tokens, path, NULL);
+        }
+    }
+
   /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
      ### loop is just a temporary shim.
      ### an alternative, which is backwards-compat with all servers is to
@@ -452,36 +513,6 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       path = svn__apr_hash_index_key(hi);
       token = svn__apr_hash_index_val(hi);
-
-      if (force && (!token || token[0] == '\0'))
-        {
-          SVN_ERR(svn_ra_serf__get_lock(ra_session, &existing_lock, path,
-                                        iterpool));
-          token = existing_lock->token;
-          if (!token)
-            {
-              err = svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
-                                      _("'%s' is not locked in the repository"),
-                                      path);
-
-              if (lock_func)
-                {
-                  svn_error_t *err2;
-                  err2 = lock_func(lock_baton, path, FALSE, NULL, err,
-                                   iterpool);
-                  svn_error_clear(err);
-                  err = NULL;
-                  if (err2)
-                    return svn_error_trace(err2);
-                }
-              else
-                {
-                  svn_error_clear(err);
-                  err = NULL;
-                }
-              continue;
-            }
-        }
 
       unlock_ctx.force = force;
       unlock_ctx.token = apr_pstrcat(iterpool, "<", token, ">", SVN_VA_NULL);
