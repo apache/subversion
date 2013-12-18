@@ -191,7 +191,6 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
-  svn_error_t *err;
   mergeinfo_context_t *mergeinfo_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
@@ -227,14 +226,12 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   handler->body_delegate_baton = mergeinfo_ctx;
   handler->body_type = "text/xml";
 
-  err = svn_ra_serf__context_run_one(handler, pool);
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_error_compose_create(
-                svn_ra_serf__error_on_status(handler->sline, handler->path,
-                                             handler->location),
-                err));
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline, handler->path,
+                                       handler->location));
 
-  if (handler->done && apr_hash_count(mergeinfo_ctx->result_catalog))
+  if (apr_hash_count(mergeinfo_ctx->result_catalog))
     *catalog = mergeinfo_ctx->result_catalog;
 
   return SVN_NO_ERROR;

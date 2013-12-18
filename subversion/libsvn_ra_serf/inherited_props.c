@@ -230,7 +230,6 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
   iprops_context_t *iprops_ctx;
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
@@ -273,12 +272,11 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   handler->body_type = "text/xml";
   handler->handler_pool = scratch_pool;
 
-  err = svn_ra_serf__context_run_one(handler, scratch_pool);
-  SVN_ERR(svn_error_compose_create(
-                    svn_ra_serf__error_on_status(handler->sline,
-                                                 handler->path,
-                                                 handler->location),
-                    err));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       handler->path,
+                                       handler->location));
 
   *iprops = iprops_ctx->iprops;
 

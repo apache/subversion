@@ -1358,19 +1358,12 @@ open_root(void *edit_baton,
 
       if (handler->sline.code != 201)
         {
-          apr_status_t status = SVN_ERR_RA_DAV_REQUEST_FAILED;
+          /* If there is some standard error code: use it */
+          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                               handler->path,
+                                               handler->location));
 
-          switch (handler->sline.code)
-            {
-              case 403:
-                status = SVN_ERR_RA_DAV_FORBIDDEN;
-                break;
-              case 404:
-                status = SVN_ERR_FS_NOT_FOUND;
-                break;
-            }
-
-          return svn_error_createf(status, NULL,
+          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
                                    handler->sline.code, handler->sline.reason,

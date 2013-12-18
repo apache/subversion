@@ -159,7 +159,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url;
-  svn_error_t *err;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
@@ -189,13 +188,11 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  err = svn_ra_serf__context_run_one(handler, pool);
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(handler->sline,
-                                           req_url,
-                                           handler->location),
-              err));
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       handler->path,
+                                       handler->location));
 
   return SVN_NO_ERROR;
 }

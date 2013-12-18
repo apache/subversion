@@ -131,7 +131,6 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *report_target;
-  svn_error_t *err;
 
   date_ctx = apr_palloc(pool, sizeof(*date_ctx));
   date_ctx->time = tm;
@@ -156,13 +155,11 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
 
   *date_ctx->revision = SVN_INVALID_REVNUM;
 
-  err = svn_ra_serf__context_run_one(handler, pool);
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(handler->sline,
-                                           report_target,
-                                           handler->location),
-              err));
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       report_target,
+                                       handler->location));
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*revision));
 

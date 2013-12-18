@@ -488,7 +488,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
 
-  err = svn_ra_serf__context_run_one(opt_ctx->handler, pool);
+  SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, pool));
 
   /* If our caller cares about server redirections, and our response
      carries such a thing, report as much.  We'll disregard ERR --
@@ -496,16 +496,13 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
      successfully parsing as XML or somesuch. */
   if (corrected_url && (opt_ctx->handler->sline.code == 301))
     {
-      svn_error_clear(err);
       *corrected_url = opt_ctx->handler->location;
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(opt_ctx->handler->sline,
-                                           serf_sess->session_url.path,
-                                           opt_ctx->handler->location),
-              err));
+  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
+                                       serf_sess->session_url.path,
+                                       opt_ctx->handler->location));
 
   /* Opportunistically cache any reported activity URL.  (We don't
      want to have to ask for this again later, potentially against an
@@ -558,6 +555,7 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
 
   /* We need a simple body, in order to send it in chunked format.  */
   handler->body_delegate = create_simple_options_body;
+  handler->no_fail_on_http_failure_status = TRUE;
 
   /* No special headers.  */
 

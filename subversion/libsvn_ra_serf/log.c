@@ -542,7 +542,6 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_context_t *xmlctx;
   svn_boolean_t want_custom_revprops;
   svn_revnum_t peg_rev;
-  svn_error_t *err;
   const char *req_url;
 
   log_ctx = apr_pcalloc(pool, sizeof(*log_ctx));
@@ -617,13 +616,10 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
-  err = svn_ra_serf__context_run_one(handler, pool);
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_error_compose_create(
+  return svn_error_trace(
               svn_ra_serf__error_on_status(handler->sline,
                                            req_url,
-                                           handler->location),
-              err));
-
-  return SVN_NO_ERROR;
+                                           handler->location));
 }

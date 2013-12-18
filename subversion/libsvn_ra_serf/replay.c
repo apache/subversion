@@ -555,7 +555,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
-  svn_error_t *err;
   const char *report_target;
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL,
@@ -591,15 +590,13 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  err = svn_ra_serf__context_run_wait(&handler->done, session, scratch_pool);
+  SVN_ERR(svn_ra_serf__context_run_wait(&handler->done, session,
+                                        scratch_pool));
 
-  SVN_ERR(svn_error_compose_create(
+  return svn_error_trace(
               svn_ra_serf__error_on_status(handler->sline,
                                            handler->path,
-                                           handler->location),
-              err));
-
-  return SVN_NO_ERROR;
+                                           handler->location));
 }
 
 /* The maximum number of outstanding requests at any time. When this
