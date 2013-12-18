@@ -538,20 +538,25 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       switch (handler->sline.code)
         {
-          case 204:
-            break; /* OK */
           case 403:
             /* Api users expect this specific error code to detect failures */
             err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
-                                    _("Unlock request failed: %d %s"),
+                                    _("Unlock of '%s' failed: %d %s"),
+                                    path,
+                                    handler->sline.code,
+                                    handler->sline.reason);
+            break;
+          case 400:
+            err = svn_error_createf(SVN_ERR_FS_NO_SUCH_LOCK, NULL,
+                                    _("No lock on path '%s': %d %s"),
+                                    path,
                                     handler->sline.code,
                                     handler->sline.reason);
             break;
           default:
-            err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                    _("Unlock request failed: %d %s"),
-                                    handler->sline.code,
-                                    handler->sline.reason);
+            err = svn_ra_serf__error_on_status(handler->sline,
+                                               handler->path,
+                                               handler->location);
         }
 
       if (lock_func)
