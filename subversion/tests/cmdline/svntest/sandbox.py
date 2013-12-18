@@ -101,7 +101,7 @@ class Sandbox:
     if not os.path.exists(svntest.main.work_dir):
       os.makedirs(svntest.main.work_dir)
 
-  def _ensure_authz(sef):
+  def _ensure_authz(self):
     "make sure the repository is accessible"
 
     if self.repo_url.startswith("http"):
