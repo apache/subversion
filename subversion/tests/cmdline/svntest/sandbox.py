@@ -72,10 +72,13 @@ class Sandbox:
       if not os.path.exists(svntest.main.work_dir):
         os.makedirs(svntest.main.work_dir)
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
-      tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
-      open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
-      shutil.move(tmp_authz_file, self.authz_file)
       self.groups_file = os.path.join(svntest.main.work_dir, "groups")
+
+      if svntest.main.options.parallel == 0:
+        # Never, ever do this when running the tests in parallel.
+        tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
+        open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
+        shutil.move(tmp_authz_file, self.authz_file)
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
