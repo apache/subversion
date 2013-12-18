@@ -247,7 +247,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1552064
+ * r1552064, r1552079, r1552091, r1552093, r1552097
    Stop rewriting a shared file in every buildstep to allow running the httpd
    tests in parallel on Windows.
    Justification:
