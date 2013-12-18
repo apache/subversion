@@ -56,7 +56,7 @@ Item = svntest.wc.StateItem
 def basic_authz(sbox):
   "verify that unreadable content is not synced"
 
-  sbox.build("svnsync-basic-authz")
+  sbox.build(create_wc = False)
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
@@ -99,7 +99,7 @@ def basic_authz(sbox):
 def copy_from_unreadable_dir(sbox):
   "verify that copies from unreadable dirs work"
 
-  sbox.build("svnsync-copy-from-unreadable-dir")
+  sbox.build()
 
   B_url = sbox.repo_url + '/A/B'
   P_url = sbox.repo_url + '/A/P'
@@ -207,7 +207,7 @@ def copy_from_unreadable_dir(sbox):
 def copy_with_mod_from_unreadable_dir(sbox):
   "verify copies with mods from unreadable dirs"
 
-  sbox.build("svnsync-copy-with-mod-from-unreadable-dir")
+  sbox.build()
 
   # Make a copy of the B directory.
   svntest.actions.run_and_verify_svn(None,
@@ -315,7 +315,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
 def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   "verify copies with mods from unreadable dirs +copy"
 
-  sbox.build("svnsync-copy-with-mod-from-unreadable-dir-and-copy")
+  sbox.build()
 
   # Make a copy of the B directory.
   svntest.actions.run_and_verify_svn(None,
@@ -396,6 +396,9 @@ def copy_with_mod_from_unreadable_dir_and_copy(sbox):
 
 def identity_copy(sbox):
   "copy UTF-8 svn:* props identically"
+
+  sbox.build(create_wc = False)
+
   orig_lc_all = locale.setlocale(locale.LC_ALL)
   other_locales = [ "English.1252", "German.1252", "French.1252",
                     "en_US.ISO-8859-1", "en_GB.ISO-8859-1", "de_DE.ISO-8859-1",
@@ -420,7 +423,7 @@ def identity_copy(sbox):
 def specific_deny_authz(sbox):
   "verify if specifically denied paths dont sync"
 
-  sbox.build("specific-deny-authz")
+  sbox.build()
 
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
@@ -440,18 +443,19 @@ def specific_deny_authz(sbox):
   # For mod_dav_svn's parent path setup we need per-repos permissions in
   # the authz file...
   if sbox.repo_url.startswith('http'):
+    args = tuple(s.authz_name() for s in [sbox, sbox, sbox, dest_sbox])
     svntest.main.file_write(sbox.authz_file,
-                            "[specific-deny-authz:/]\n"
+                            "[%s:/]\n"
                             "* = r\n"
                             "\n"
-                            "[specific-deny-authz:/A]\n"
+                            "[%s:/A]\n"
                             "* = \n"
                             "\n"
-                            "[specific-deny-authz:/A_COPY/B/lambda]\n"
+                            "[%s:/A_COPY/B/lambda]\n"
                             "* = \n"
                             "\n"
-                            "[specific-deny-authz-1:/]\n"
-                            "* = rw\n")
+                            "[%s:/]\n"
+                            "* = rw\n" % args)
   # Otherwise we can just go with the permissions needed for the source
   # repository.
   else:
@@ -481,7 +485,7 @@ def copy_delete_unreadable_child(sbox):
   "copy, then rm at-src-unreadable child"
 
   # Prepare the source: Greek tree (r1), cp+rm (r2).
-  sbox.build("copy-delete-unreadable-child")
+  sbox.build(create_wc = False)
   svntest.actions.run_and_verify_svnmucc(None, None, [],
                                          '-m', 'r2',
                                          '-U', sbox.repo_url,
