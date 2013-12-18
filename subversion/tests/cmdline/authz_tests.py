@@ -1532,7 +1532,6 @@ def authz_del_from_subdir(sbox):
                                       '-m', '')
 
 
-@XFail()
 @SkipUnless(svntest.main.is_ra_type_dav) # dontdothat is dav only
 @SkipUnless(svntest.main.is_os_windows) # until the buildbots are configured
 def log_diff_dontdothat(sbox):
@@ -1547,7 +1546,8 @@ def log_diff_dontdothat(sbox):
 
   # We should expect a PASS or a proper error message instead of
   # svn: E175009: XML parsing failed: (403 Forbidden)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  expected_err = ".*E175013: Access to '.*authz_tests-28.*' forbidden"
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                       'log', ddt_url,
                                       '-c', 1, '--diff')
 
