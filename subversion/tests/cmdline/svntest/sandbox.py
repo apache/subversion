@@ -94,11 +94,15 @@ class Sandbox:
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
     self._set_name(name, read_only)
+    self._ensure_authz()
     svntest.actions.make_repo_and_wc(self, create_wc, read_only, minor_version)
     self._is_built = True
 
     if not os.path.exists(svntest.main.work_dir):
       os.makedirs(svntest.main.work_dir)
+
+  def _ensure_authz(sef):
+    "make sure the repository is accessible"
 
     if self.repo_url.startswith("http"):
       default_authz = "[/]\n* = rw\n"
