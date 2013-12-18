@@ -1,5 +1,5 @@
 /*
- * locks.c :  entry point for locking RA functions for ra_serf
+ * lock.c :  entry point for locking RA functions for ra_serf
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -44,9 +44,6 @@
  */
 enum {
   INITIAL = 0,
-  MULTISTATUS,
-  RESPONSE,
-  PROPSTAT,
   PROP,
   LOCK_DISCOVERY,
   ACTIVE_LOCK,
@@ -59,7 +56,8 @@ enum {
   HREF
 };
 
-typedef struct lock_info_t {
+
+typedef struct lock_ctx_t {
   apr_pool_t *pool;
 
   const char *path;
@@ -77,7 +75,8 @@ typedef struct lock_info_t {
   svn_ra_serf__response_handler_t inner_handler;
   void *inner_baton;
 
-} lock_info_t;
+} lock_ctx_t;
+
 
 #define D_ "DAV:"
 #define S_ SVN_XML_NAMESPACE
@@ -85,14 +84,6 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
   /* The INITIAL state can transition into D:prop (LOCK) or
      to D:multistatus (PROPFIND)  */
   { INITIAL, D_, "prop", PROP,
-    FALSE, { NULL }, FALSE },
-  { INITIAL, D_, "multistatus", MULTISTATUS,
-    FALSE, { NULL }, FALSE },
-
-  { MULTISTATUS, D_, "response", RESPONSE,
-    FALSE, { NULL }, FALSE },
-
-  { RESPONSE, D_, "propstat", PROPSTAT,
     FALSE, { NULL }, FALSE },
 
   { PROPSTAT, D_, "prop", PROP,
@@ -142,11 +133,6 @@ static const svn_ra_serf__xml_transition_t locks_ttable[] = {
   { 0 }
 };
 
-static const int locks_expected_status[] = {
-  207,
-  0
-};
-
 /* Conforms to svn_ra_serf__xml_closed_t  */
 static svn_error_t *
 locks_closed(svn_ra_serf__xml_estate_t *xes,
@@ -156,7 +142,7 @@ locks_closed(svn_ra_serf__xml_estate_t *xes,
              apr_hash_t *attrs,
              apr_pool_t *scratch_pool)
 {
-  lock_info_t *lock_ctx = baton;
+  lock_ctx_t *lock_ctx = baton;
 
   if (leaving_state == TIMEOUT)
     {
@@ -194,7 +180,7 @@ set_lock_headers(serf_bucket_t *headers,
                  void *baton,
                  apr_pool_t *pool)
 {
-  lock_info_t *lock_ctx = baton;
+  lock_ctx_t *lock_ctx = baton;
 
   if (lock_ctx->force)
     {
@@ -248,7 +234,7 @@ handle_lock(serf_request_t *request,
             void *handler_baton,
             apr_pool_t *pool)
 {
-  lock_info_t *ctx = handler_baton;
+  lock_ctx_t *ctx = handler_baton;
 
   /* 403 (Forbidden) when a lock doesn't exist.
      423 (Locked) when a lock already exists.  */
@@ -290,46 +276,12 @@ handle_lock(serf_request_t *request,
 
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
-create_getlock_body(serf_bucket_t **body_bkt,
-                    void *baton,
-                    serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
-{
-  serf_bucket_t *buckets;
-
-  buckets = serf_bucket_aggregate_create(alloc);
-
-  svn_ra_serf__add_xml_header_buckets(buckets, alloc);
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "propfind",
-                                    "xmlns", "DAV:",
-                                    SVN_VA_NULL);
-  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", SVN_VA_NULL);
-  svn_ra_serf__add_tag_buckets(buckets, "lockdiscovery", NULL, alloc);
-  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "prop");
-  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "propfind");
-
-  *body_bkt = buckets;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t*
-setup_getlock_headers(serf_bucket_t *headers,
-                      void *baton,
-                      apr_pool_t *pool)
-{
-  serf_bucket_headers_setn(headers, "Depth", "0");
-
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_ra_serf__request_body_delegate_t */
-static svn_error_t *
 create_lock_body(serf_bucket_t **body_bkt,
                  void *baton,
                  serf_bucket_alloc_t *alloc,
                  apr_pool_t *pool)
 {
-  lock_info_t *ctx = baton;
+  lock_ctx_t *ctx = baton;
   serf_bucket_t *buckets;
 
   buckets = serf_bucket_aggregate_create(alloc);
@@ -360,73 +312,6 @@ create_lock_body(serf_bucket_t **body_bkt,
 }
 
 svn_error_t *
-svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      apr_pool_t *pool)
-{
-  svn_ra_serf__session_t *session = ra_session->priv;
-  svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_context_t *xmlctx;
-  lock_info_t *lock_ctx;
-  const char *req_url;
-  svn_error_t *err;
-
-  req_url = svn_path_url_add_component2(session->session_url.path, path, pool);
-
-  lock_ctx = apr_pcalloc(pool, sizeof(*lock_ctx));
-
-  lock_ctx->pool = pool;
-  lock_ctx->path = req_url;
-  lock_ctx->lock = svn_lock_create(pool);
-  lock_ctx->lock->path = apr_pstrdup(pool, path); /* be sure  */
-
-  xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                           NULL, locks_closed, NULL, NULL,
-                                           lock_ctx,
-                                           pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, locks_expected_status, pool);
-
-  handler->method = "PROPFIND";
-  handler->path = req_url;
-  handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
-
-  handler->body_delegate = create_getlock_body;
-  handler->body_delegate_baton = lock_ctx;
-
-  handler->header_delegate = setup_getlock_headers;
-  handler->header_delegate_baton = lock_ctx;
-
-  lock_ctx->inner_handler = handler->response_handler;
-  lock_ctx->inner_baton = handler->response_baton;
-  handler->response_handler = handle_lock;
-  handler->response_baton = lock_ctx;
-
-  lock_ctx->handler = handler;
-
-  err = svn_ra_serf__context_run_one(handler, pool);
-  err = svn_error_trace(determine_error(handler, err));
-
-  if (handler->sline.code == 404)
-    {
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, err,
-                              _("Malformed URL for repository"));
-    }
-  if (err)
-    {
-      /* TODO Shh.  We're telling a white lie for now. */
-      return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                              _("Server does not support locking features"));
-    }
-
-  *lock = lock_ctx->lock;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_ra_serf__lock(svn_ra_session_t *ra_session,
                   apr_hash_t *path_revs,
                   const char *comment,
@@ -453,7 +338,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__xml_context_t *xmlctx;
       const char *req_url;
-      lock_info_t *lock_ctx;
+      lock_ctx_t *lock_ctx;
       svn_error_t *err;
       svn_error_t *new_err = NULL;
 
