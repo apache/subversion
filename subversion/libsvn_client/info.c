@@ -389,8 +389,7 @@ svn_client_info4(const char *abspath_or_url,
   svn_uri_split(NULL, &base_name, pathrev->url, pool);
 
   /* Get the dirent for the URL itself. */
-  SVN_ERR(svn_client__ra_stat_compatible(ra_session, pathrev->rev, &the_ent,
-                                         DIRENT_FIELDS, ctx, pool));
+  SVN_ERR(svn_ra_stat(ra_session, "", pathrev->rev, &the_ent, pool));
 
   if (! the_ent)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
