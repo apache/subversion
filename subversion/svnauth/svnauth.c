@@ -413,7 +413,7 @@ load_cert(serf_ssl_certificate_t **cert,
                                  ascii_cert));
       return SVN_NO_ERROR;
     }
-  SVN_ERR(svn_io_file_flush_to_disk(pem_file, scratch_pool));
+  SVN_ERR(svn_io_file_flush(pem_file, scratch_pool));
 
   status = serf_ssl_load_cert_file(cert, pem_path, result_pool);
   if (status)
