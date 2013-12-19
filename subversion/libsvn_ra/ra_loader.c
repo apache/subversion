@@ -36,6 +36,7 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_version.h"
+#include "svn_time.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
@@ -965,8 +966,98 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
                          svn_dirent_t **dirent,
                          apr_pool_t *pool)
 {
+  svn_error_t *err;
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
-  return session->vtable->stat(session, path, revision, dirent, pool);
+  err = session->vtable->stat(session, path, revision, dirent, pool);
+
+  /* svnserve before 1.2 doesn't support the above, so fall back on
+     a far less efficient, but still correct method. */
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      /* ### TODO: Find out if we can somehow move this code in libsvn_ra_svn.
+       */
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+      svn_node_kind_t kind;
+
+      svn_error_clear(err);
+
+      SVN_ERR(svn_ra_check_path(session, "", revision, &kind, scratch_pool));
+
+      if (kind != svn_node_none)
+        {
+          const char *repos_root_url;
+          const char *session_url;
+
+          SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
+          SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
+
+          if (strcmp(session_url, repos_root_url) != 0)
+            {
+              svn_ra_session_t *parent_session;
+              apr_hash_t *parent_ents;
+              const char *parent_url, *base_name;
+
+              /* Open another session to the path's parent.  This server
+                 doesn't support svn_ra_reparent anyway, so don't try it. */
+              svn_uri_split(&parent_url, &base_name, session_url,
+                            scratch_pool);
+
+              SVN_ERR(svn_ra_dup_session(&parent_session, session, parent_url,
+                                         scratch_pool, scratch_pool));
+
+              /* Get all parent's entries, no props. */
+              SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,
+                                      NULL, "", revision, SVN_DIRENT_ALL,
+                                      scratch_pool));
+
+              /* Get the relevant entry. */
+              *dirent = svn_hash_gets(parent_ents, base_name);
+
+              if (*dirent)
+                *dirent = svn_dirent_dup(*dirent, pool);
+            }
+          else
+            {
+              apr_hash_t *props;
+              const svn_string_t *val;
+
+              /* We can't get the directory entry for the repository root,
+                 but we can still get the information we want.
+                 The created-rev of the repository root must, by definition,
+                 be rev. */
+              *dirent = apr_pcalloc(pool, sizeof(*dirent));
+              (*dirent)->kind = kind;
+              (*dirent)->size = SVN_INVALID_FILESIZE;
+
+              SVN_ERR(svn_ra_get_dir2(session, NULL, NULL, &props,
+                                      "", revision, 0 /* no dirent fields */,
+                                      scratch_pool));
+              (*dirent)->has_props = (apr_hash_count(props) != 0);
+
+              (*dirent)->created_rev = revision;
+
+              SVN_ERR(svn_ra_rev_proplist(session, revision, &props,
+                                          scratch_pool));
+
+              val = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
+              if (val)
+                SVN_ERR(svn_time_from_cstring(&(*dirent)->time, val->data,
+                                              scratch_pool));
+
+              val = svn_hash_gets(props, SVN_PROP_REVISION_AUTHOR);
+              (*dirent)->last_author = val ? apr_pstrdup(pool, val->data)
+                                           : NULL;
+            }
+        }
+      else
+        *dirent = NULL;
+
+      svn_pool_clear(scratch_pool);
+    }
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_get_uuid2(svn_ra_session_t *session,
