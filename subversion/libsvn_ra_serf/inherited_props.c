@@ -235,6 +235,20 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url;
+  svn_boolean_t iprop_capable;
+
+  SVN_ERR(svn_ra_serf__has_capability(ra_session, &iprop_capable,
+                                      SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                      scratch_pool));
+
+  if (!iprop_capable)
+    {
+      /* ### TODO: Use pipelined propfind requests to obtain properties,
+                   without waiting for every intermediate response */
+
+      /* For now, use implementation in libsvn_ra */
+      return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+    }
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url,
                                       NULL /* latest_revnum */,

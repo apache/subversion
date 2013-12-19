@@ -1457,27 +1457,24 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_boolean_t iprop_capable;
-
+  svn_error_t *err;
   /* Path must be relative. */
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
 
-  SVN_ERR(svn_ra_has_capability(session, &iprop_capable,
-                                SVN_RA_CAPABILITY_INHERITED_PROPS,
-                                scratch_pool));
+  err = session->vtable->get_inherited_props(session, iprops, path,
+                                             revision, result_pool,
+                                             scratch_pool);
 
-  if (iprop_capable)
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
     {
-      SVN_ERR(session->vtable->get_inherited_props(session, iprops, path,
-                                                   revision, result_pool,
-                                                   scratch_pool));
-    }
-  else
-    {
+      svn_error_clear(err);
+
       /* Fallback for legacy servers. */
       SVN_ERR(svn_ra__get_inherited_props_walk(session, path, revision, iprops,
                                                result_pool, scratch_pool));
     }
+  else
+    SVN_ERR(err);
 
   return SVN_NO_ERROR;
 }
