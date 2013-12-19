@@ -2272,13 +2272,15 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
       mergeinfo = NULL;
     }
 
+  /* ### Should we only add the last source or all copy sources back to
+         the origin? */
   SVN_ERR(svn_client__get_copy_source(&copyfrom_path, &copyfrom_rev,
                                       path_or_url, peg_revision, ra_session,
                                       ctx, session_pool, session_pool));
   if (copyfrom_path)
     {
       APR_ARRAY_PUSH(list, const char *) =
-        svn_path_url_add_component2(repos_root, copyfrom_path, session_pool);
+        svn_path_url_add_component2(repos_root, copyfrom_path, pool);
     }
 
   if (mergeinfo)
