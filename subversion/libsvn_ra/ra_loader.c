@@ -526,6 +526,45 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra_dup_session(svn_ra_session_t **new_session,
+                   svn_ra_session_t *old_session,
+                   const char *session_url,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *session;
+
+  if (session_url)
+    {
+      const char *dummy;
+
+      /* This verifies in new_session_url is in the repository */
+      SVN_ERR(svn_ra_get_path_relative_to_root(old_session,
+                                               &dummy,
+                                               session_url,
+                                               scratch_pool));
+    }
+  else
+    SVN_ERR(svn_ra_get_session_url(old_session, &session_url, scratch_pool));
+
+  /* Create the session object. */
+  session = apr_pcalloc(result_pool, sizeof(*session));
+  session->cancel_func = old_session->cancel_func;
+  session->cancel_baton = old_session->cancel_baton;
+  session->vtable = old_session->vtable;
+  session->pool = result_pool;
+
+  SVN_ERR(old_session->vtable->dup_session(session,
+                                           old_session,
+                                           session_url,
+                                           result_pool,
+                                           scratch_pool));
+
+  *new_session = session;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
                              const char *url,
                              apr_pool_t *pool)

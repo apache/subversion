@@ -613,6 +613,53 @@ svn_ra_local__open(svn_ra_session_t *session,
 }
 
 static svn_error_t *
+svn_ra_local__dup_session(svn_ra_session_t *new_session,
+                          svn_ra_session_t *session,
+                          const char *new_session_url,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_ra_local__session_baton_t *old_sess = session->priv;
+  svn_ra_local__session_baton_t *new_sess;
+  const char *fs_path;
+
+  /* Allocate and stash the session_sess args we have already. */
+  new_sess = apr_pcalloc(result_pool, sizeof(*new_sess));
+  new_sess->callbacks = old_sess->callbacks;
+  new_sess->callback_baton = old_sess->callback_baton;
+
+  /* ### Re-use existing FS handle? */
+
+  /* Reuse existing code */
+  SVN_ERR(svn_ra_local__split_URL(&(new_sess->repos),
+                                  &(new_sess->repos_url),
+                                  &fs_path,
+                                  new_session_url,
+                                  result_pool));
+
+  new_sess->fs_path = svn_stringbuf_create(fs_path, result_pool);
+
+  /* Cache the filesystem object from the repos here for
+     convenience. */
+  new_sess->fs = svn_repos_fs(new_sess->repos);
+
+  /* Ignore FS warnings. */
+  svn_fs_set_warning_func(new_sess->fs, ignore_warnings, NULL);
+
+  /* Cache the repository UUID as well */
+  new_sess->uuid = apr_pstrdup(result_pool, old_sess->uuid);
+
+  new_sess->username = old_sess->username
+                            ? apr_pstrdup(result_pool, old_sess->username)
+                            : NULL;
+
+  new_sess->useragent = apr_pstrdup(result_pool, old_sess->useragent);
+  new_session->priv = new_sess;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 svn_ra_local__reparent(svn_ra_session_t *session,
                        const char *url,
                        apr_pool_t *pool)
@@ -1702,6 +1749,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_description,
   svn_ra_local__get_schemes,
   svn_ra_local__open,
+  svn_ra_local__dup_session,
   svn_ra_local__reparent,
   svn_ra_local__get_session_url,
   svn_ra_local__get_latest_revnum,
