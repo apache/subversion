@@ -129,8 +129,9 @@ svn_client__get_copy_source(const char **original_repos_relpath,
           SVN_ERR(svn_client_url_from_path2(&url, path_or_url, ctx, sesspool,
                                             sesspool));
 
-          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                   _("'%s' has no URL"), path_or_url);
+          if (! url)
+            return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                     _("'%s' has no URL"), path_or_url);
         }
 
       SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
