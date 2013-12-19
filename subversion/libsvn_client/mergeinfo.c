@@ -2231,6 +2231,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   svn_mergeinfo_catalog_t mergeinfo_cat;
   svn_mergeinfo_t mergeinfo;
   apr_hash_index_t *hi;
+  apr_pool_t *session_pool = svn_pool_create(pool);
+  svn_ra_session_t *ra_session;
 
   list = apr_array_make(pool, 1, sizeof(const char *));
 
@@ -2249,17 +2251,21 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
         1. The copyfrom source.
         2. All remaining merge sources (unordered).
   */
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, NULL, path_or_url,
+                                            NULL, peg_revision, peg_revision,
+                                            ctx, session_pool));
 
-  /* ### TODO: Share ra_session batons to improve efficiency? */
   SVN_ERR(get_mergeinfo(&mergeinfo_cat, &repos_root, path_or_url,
-                        peg_revision, FALSE, FALSE, ctx, NULL, pool, pool));
+                        peg_revision, FALSE, FALSE,
+                        ctx, ra_session, session_pool, session_pool));
 
   if (mergeinfo_cat && apr_hash_count(mergeinfo_cat))
     {
       /* We asked only for the PATH_OR_URL's mergeinfo, not any of its
          descendants.  So if there is anything in the catalog it is the
          mergeinfo for PATH_OR_URL. */
-      mergeinfo = svn__apr_hash_index_val(apr_hash_first(pool, mergeinfo_cat));
+      mergeinfo = svn__apr_hash_index_val(apr_hash_first(session_pool,
+                                                         mergeinfo_cat));
     }
   else
     {
@@ -2267,17 +2273,19 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
     }
 
   SVN_ERR(svn_client__get_copy_source(&copyfrom_path, &copyfrom_rev,
-                                      path_or_url, peg_revision, ctx,
-                                      pool, pool));
+                                      path_or_url, peg_revision, ra_session,
+                                      ctx, session_pool, session_pool));
   if (copyfrom_path)
     {
       APR_ARRAY_PUSH(list, const char *) =
-        svn_path_url_add_component2(repos_root, copyfrom_path, pool);
+        svn_path_url_add_component2(repos_root, copyfrom_path, session_pool);
     }
 
   if (mergeinfo)
     {
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(session_pool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
         {
           const char *rel_path = svn__apr_hash_index_key(hi);
 
@@ -2286,6 +2294,8 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
               svn_path_url_add_component2(repos_root, rel_path + 1, pool);
         }
     }
+
+  svn_pool_destroy(session_pool);
 
   *suggestions = list;
   return SVN_NO_ERROR;
