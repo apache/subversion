@@ -2847,6 +2847,16 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *iproplist;
+  svn_boolean_t iprop_capable;
+
+  SVN_ERR(ra_svn_has_capability(session, &iprop_capable,
+                                SVN_RA_CAPABILITY_INHERITED_PROPS,
+                                scratch_pool));
+
+  /* If we don't support native iprop handling, use the implementation
+     in libsvn_ra */
+  if (!iprop_capable)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 
   SVN_ERR(svn_ra_svn__write_cmd_get_iprops(conn, scratch_pool,
                                            path, revision));
