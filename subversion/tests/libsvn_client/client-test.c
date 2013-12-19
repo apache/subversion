@@ -778,6 +778,8 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
   svn_client_mtcc_t *mtcc;
   apr_array_header_t *results;
   svn_opt_revision_t peg_rev;
+  svn_opt_revision_t head_rev;
+  const char *wc_dir;
 
   peg_rev.kind = svn_opt_revision_unspecified;
 
@@ -794,6 +796,26 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
                     &results,
                     svn_path_url_add_component2(repos_url, "AA", pool),
                     &peg_rev, ctx, pool));
+  SVN_TEST_ASSERT(results != NULL);
+  SVN_TEST_ASSERT(results->nelts >= 1);
+  SVN_TEST_STRING_ASSERT(APR_ARRAY_IDX(results, 0, const char *),
+                          svn_path_url_add_component2(repos_url, "A", pool));
+
+  /* And now test the same thing with a minimal working copy */
+  wc_dir = svn_test_data_path("mergesources-wc", pool);
+  svn_test_add_dir_cleanup(wc_dir);
+
+  head_rev.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client_checkout3(NULL,
+                               svn_path_url_add_component2(repos_url, "AA", pool),
+                               wc_dir,
+                               &head_rev, &head_rev, svn_depth_empty,
+                               FALSE, FALSE, ctx, pool));
+
+
+  SVN_ERR(svn_client_suggest_merge_sources(&results,
+                                           wc_dir,
+                                           &peg_rev, ctx, pool));
   SVN_TEST_ASSERT(results != NULL);
   SVN_TEST_ASSERT(results->nelts >= 1);
   SVN_TEST_STRING_ASSERT(APR_ARRAY_IDX(results, 0, const char *),
