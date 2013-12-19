@@ -93,12 +93,17 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 /* Set *ORIGINAL_REPOS_RELPATH and *ORIGINAL_REVISION to the original location
    that served as the source of the copy from which PATH_OR_URL at REVISION was
    created, or NULL and SVN_INVALID_REVNUM (respectively) if PATH_OR_URL at
-   REVISION was not the result of a copy operation. */
+   REVISION was not the result of a copy operation.
+
+   If RA_SESSION is not NULL it is an existing session to the repository that
+   might be reparented temporarily to obtain the information.
+   */
 svn_error_t *
 svn_client__get_copy_source(const char **original_repos_relpath,
                             svn_revnum_t *original_revision,
                             const char *path_or_url,
                             const svn_opt_revision_t *revision,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);

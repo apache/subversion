@@ -96,6 +96,7 @@ svn_client__get_copy_source(const char **original_repos_relpath,
                             svn_revnum_t *original_revision,
                             const char *path_or_url,
                             const svn_opt_revision_t *revision,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -103,18 +104,49 @@ svn_client__get_copy_source(const char **original_repos_relpath,
   svn_error_t *err;
   copyfrom_info_t copyfrom_info = { 0 };
   apr_pool_t *sesspool = svn_pool_create(scratch_pool);
-  svn_ra_session_t *ra_session;
   svn_client__pathrev_t *at_loc;
+  const char *old_session_url = NULL;
 
   copyfrom_info.is_first = TRUE;
   copyfrom_info.path = NULL;
   copyfrom_info.rev = SVN_INVALID_REVNUM;
   copyfrom_info.pool = result_pool;
 
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
-                                            path_or_url, NULL,
-                                            revision, revision,
-                                            ctx, sesspool));
+  if (!ra_session)
+    {
+      SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &at_loc,
+                                                path_or_url, NULL,
+                                                revision, revision,
+                                                ctx, sesspool));
+    }
+  else
+    {
+      const char *url;
+      if (svn_path_is_url(path_or_url))
+        url = path_or_url;
+      else
+        {
+          SVN_ERR(svn_client_url_from_path2(&url, path_or_url, ctx, sesspool,
+                                            sesspool));
+
+          return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                   _("'%s' has no URL"), path_or_url);
+        }
+
+      SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                                url, sesspool));
+
+      err = svn_client__resolve_rev_and_url(&at_loc, ra_session, path_or_url,
+                                            revision, revision, ctx,
+                                            sesspool);
+
+      /* On error reparent back (and return), otherwise reparent to new
+         location */
+      SVN_ERR(svn_error_compose_create(
+                err,
+                svn_ra_reparent(ra_session, err ? old_session_url
+                                                : at_loc->url, sesspool)));
+    }
 
   /* Find the copy source.  Walk the location segments to find the revision
      at which this node was created (copied or added). */
@@ -123,6 +155,11 @@ svn_client__get_copy_source(const char **original_repos_relpath,
                                      SVN_INVALID_REVNUM,
                                      copyfrom_info_receiver, &copyfrom_info,
                                      scratch_pool);
+
+  if (old_session_url)
+    err = svn_error_compose_create(
+                    err,
+                    svn_ra_reparent(ra_session, old_session_url, sesspool));
 
   svn_pool_destroy(sesspool);
 

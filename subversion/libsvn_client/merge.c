@@ -7066,7 +7066,8 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
               SVN_ERR(svn_client__get_copy_source(&original_repos_relpath,
                                                   &original_revision,
                                                   segment_url,
-                                                  &range_start_rev, ctx,
+                                                  &range_start_rev,
+                                                  ra_session, ctx,
                                                   result_pool, scratch_pool));
               /* Got copyfrom data?  Fix up the first segment to cover
                  back to COPYFROM_REV + 1, and then prepend a new
