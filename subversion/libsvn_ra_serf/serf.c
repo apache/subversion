@@ -611,14 +611,6 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
   svn_ra_serf__session_t *new_sess;
   apr_status_t status;
 
-  if (new_session_url)
-    {
-      const char *dummy;
-      SVN_ERR(svn_ra_get_path_relative_to_root(old_session, &dummy,
-                                               new_session_url,
-                                               scratch_pool));
-    }
-
   new_sess = apr_pmemdup(result_pool, old_sess, sizeof(*new_sess));
 
   new_sess->pool = result_pool;
