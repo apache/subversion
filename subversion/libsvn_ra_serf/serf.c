@@ -494,6 +494,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);
+  serf_sess->config = config;
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
   serf_sess->progress_func = callbacks->progress_func;
@@ -594,6 +595,181 @@ svn_ra_serf__open(svn_ra_session_t *session,
   if ((corrected_url == NULL || *corrected_url == NULL)
       && serf_sess->detect_chunking && !serf_sess->http10)
     SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_ra__vtable_t.dup_session */
+static svn_error_t *
+ra_serf_dup_session(svn_ra_session_t *new_session,
+                    svn_ra_session_t *old_session,
+                    const char *new_session_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__session_t *old_sess = old_session->priv;
+  svn_ra_serf__session_t *new_sess;
+  apr_status_t status;
+
+  if (new_session_url)
+    {
+      const char *dummy;
+      SVN_ERR(svn_ra_get_path_relative_to_root(old_session, &dummy,
+                                               new_session_url,
+                                               scratch_pool));
+    }
+
+  new_sess = apr_pmemdup(result_pool, old_sess, sizeof(*new_sess));
+
+  new_sess->pool = result_pool;
+  /* config */
+  /* max_connections */
+  /* using_ssl */
+  /* using_compression */
+  /* http10 */
+  /* using_chunked_requests */
+  /* detect_chunking */
+
+  if (new_sess->useragent)
+    new_sess->useragent = apr_pstrdup(result_pool, new_sess->useragent);
+
+  if (new_sess->vcc_url)
+    new_sess->vcc_url = apr_pstrdup(result_pool, new_sess->vcc_url);
+
+  new_sess->auth_state = NULL;
+  new_sess->auth_attempts = 0;
+
+  /* Callback functions to get info from WC */
+  /* wc_callbacks */
+  /* wc_callback_baton */
+
+  /* progress_func */
+  /* progress_baton */
+
+  /* cancel_func */
+  /* cancel_baton */
+
+  /* shim_callbacks */
+
+  new_sess->pending_error = NULL;
+
+  /* authn_types */
+
+  /* Keys and values are static */
+  if (new_sess->capabilities)
+    new_sess->capabilities = apr_hash_copy(result_pool, new_sess->capabilities);
+
+  if (new_sess->activity_collection_url)
+    {
+      new_sess->activity_collection_url
+                = apr_pstrdup(result_pool, new_sess->activity_collection_url);
+    }
+
+   /* using_proxy */
+
+  if (new_sess->proxy_username)
+    {
+      new_sess->proxy_username
+                = apr_pstrdup(result_pool, new_sess->proxy_username);
+    }
+
+  if (new_sess->proxy_password)
+    {
+      new_sess->proxy_username
+                = apr_pstrdup(result_pool, new_sess->proxy_password);
+    }
+
+  new_sess->proxy_auth_attempts = 0;
+
+  /* trust_default_ca */
+
+  if (new_sess->ssl_authorities)
+    {
+      new_sess->ssl_authorities = apr_pstrdup(result_pool,
+                                              new_sess->ssl_authorities);
+    }
+
+  if (new_sess->uuid)
+    new_sess->uuid = apr_pstrdup(result_pool, new_sess->uuid);
+
+  /* timeout */
+  /* supports_deadprop_count */
+
+  if (new_sess->me_resource)
+    new_sess->me_resource = apr_pstrdup(result_pool, new_sess->me_resource);
+  if (new_sess->rev_stub)
+    new_sess->rev_stub = apr_pstrdup(result_pool, new_sess->rev_stub);
+  if (new_sess->txn_stub)
+    new_sess->txn_stub = apr_pstrdup(result_pool, new_sess->txn_stub);
+  if (new_sess->txn_root_stub)
+    new_sess->txn_root_stub = apr_pstrdup(result_pool,
+                                          new_sess->txn_root_stub);
+  if (new_sess->vtxn_stub)
+    new_sess->vtxn_stub = apr_pstrdup(result_pool, new_sess->vtxn_stub);
+  if (new_sess->vtxn_root_stub)
+    new_sess->vtxn_root_stub = apr_pstrdup(result_pool,
+                                           new_sess->vtxn_root_stub);
+
+  /* Keys and values are static */
+  if (new_sess->supported_posts)
+    new_sess->supported_posts = apr_hash_copy(result_pool,
+                                              new_sess->supported_posts);
+
+  /* ### Can we copy this? */
+  SVN_ERR(svn_ra_serf__blncache_create(&new_sess->blncache,
+                                       new_sess->pool));
+
+  if (new_sess->server_allows_bulk)
+    new_sess->server_allows_bulk = apr_pstrdup(result_pool,
+                                               new_sess->server_allows_bulk);
+
+  new_sess->repos_root_str = apr_pstrdup(result_pool,
+                                         new_sess->repos_root_str);
+  status = apr_uri_parse(result_pool, new_sess->repos_root_str,
+                         &new_sess->repos_root);
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+
+  new_sess->session_url_str = apr_pstrdup(result_pool, new_session_url);
+
+  status = apr_uri_parse(result_pool, new_sess->session_url_str,
+                         &new_sess->session_url);
+
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+
+  /* svn_boolean_t supports_inline_props */
+  /* supports_rev_rsrc_replay */
+
+  new_sess->context = serf_context_create(result_pool);
+
+  SVN_ERR(load_config(new_sess, old_sess->config, result_pool));
+
+  new_sess->conns[0] = apr_pcalloc(result_pool,
+                                   sizeof(*new_sess->conns[0]));
+  new_sess->conns[0]->bkt_alloc =
+          serf_bucket_allocator_create(result_pool, NULL, NULL);
+  new_sess->conns[0]->session = new_sess;
+  new_sess->conns[0]->last_status_code = -1;
+
+  /* go ahead and tell serf about the connection. */
+  status =
+    serf_connection_create2(&new_sess->conns[0]->conn,
+                            new_sess->context,
+                            new_sess->session_url,
+                            svn_ra_serf__conn_setup, new_sess->conns[0],
+                            svn_ra_serf__conn_closed, new_sess->conns[0],
+                            result_pool);
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+
+  /* Set the progress callback. */
+  serf_context_set_progress_cb(new_sess->context, svn_ra_serf__progress,
+                               new_sess);
+
+  new_sess->num_conns = 1;
+
+  new_session->priv = new_sess;
 
   return SVN_NO_ERROR;
 }
@@ -1270,6 +1446,7 @@ static const svn_ra__vtable_t serf_vtable = {
   ra_serf_get_description,
   ra_serf_get_schemes,
   svn_ra_serf__open,
+  ra_serf_dup_session,
   svn_ra_serf__reparent,
   svn_ra_serf__get_session_url,
   svn_ra_serf__get_latest_revnum,

@@ -131,6 +131,7 @@ struct svn_ra_svn__session_baton_t {
   const char **tunnel_argv;
   const svn_ra_callbacks2_t *callbacks;
   void *callbacks_baton;
+  apr_hash_t *config;
   apr_off_t bytes_read, bytes_written; /* apr_off_t's because that's what
                                           the callback interface uses */
   const char *useragent;

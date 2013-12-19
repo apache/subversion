@@ -747,6 +747,28 @@ svn_ra_open4(svn_ra_session_t **session_p,
              apr_hash_t *config,
              apr_pool_t *pool);
 
+/**
+ * Open a new ra session @a *new_session to the same repository as an existing
+ * ra session @a old_session, copying the callbacks, auth baton, etc. from the
+ * old session.
+ *
+ * If @a session_url is not NULL, parent the new session at session_url. Note
+ * that @a session_url MUST BE in the same repository as @a old_session.
+ * Otherwise the same root will be used.
+ *
+ * Allocate @a new_session in @a result_pool. Perform temporary allocations
+ * in @a scratch_pool
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_ra_dup_session(svn_ra_session_t **new_session,
+                   svn_ra_session_t *old_session,
+                   const char *session_url,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
+
+
 /** Similar to svn_ra_open4(), but with @a corrected_url always passed
  * as @c NULL.
  *

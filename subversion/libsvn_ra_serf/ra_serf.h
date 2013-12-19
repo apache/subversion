@@ -99,10 +99,13 @@ typedef struct svn_ra_serf__connection_t {
  * The master serf RA session.
  *
  * This is stored in the ra session ->priv field.
+ *
+ * ### Check ra_serf_dup_session when adding fields.
  */
 struct svn_ra_serf__session_t {
   /* Pool for allocations during this session */
   apr_pool_t *pool;
+  apr_hash_t *config; /* For duplicating */
 
   /* The current context */
   serf_context_t *context;
