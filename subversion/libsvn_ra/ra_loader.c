@@ -981,15 +981,21 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
 
       svn_error_clear(err);
 
-      SVN_ERR(svn_ra_check_path(session, "", revision, &kind, scratch_pool));
+      SVN_ERR(svn_ra_check_path(session, path, revision, &kind, scratch_pool));
 
       if (kind != svn_node_none)
         {
           const char *repos_root_url;
           const char *session_url;
 
-          SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, scratch_pool));
-          SVN_ERR(svn_ra_get_session_url(session, &session_url, scratch_pool));
+          SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url,
+                                         scratch_pool));
+          SVN_ERR(svn_ra_get_session_url(session, &session_url,
+                                         scratch_pool));
+
+          if (!svn_path_is_empty(path))
+            session_url = svn_path_url_add_component2(session_url, path,
+                                                      scratch_pool);
 
           if (strcmp(session_url, repos_root_url) != 0)
             {
