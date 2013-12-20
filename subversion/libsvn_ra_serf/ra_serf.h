@@ -1495,6 +1495,12 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 /** RA functions **/
 
+/* Implements svn_ra__vtable_t.reparent(). */
+svn_error_t *
+svn_ra_serf__reparent(svn_ra_session_t *ra_session,
+                      const char *url,
+                      apr_pool_t *pool);
+
 /* Implements svn_ra__vtable_t.get_log(). */
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *session,
