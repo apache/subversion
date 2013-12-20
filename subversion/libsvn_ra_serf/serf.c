@@ -767,7 +767,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 }
 
 /* Implements svn_ra__vtable_t.reparent(). */
-static svn_error_t *
+svn_error_t *
 svn_ra_serf__reparent(svn_ra_session_t *ra_session,
                       const char *url,
                       apr_pool_t *pool)
