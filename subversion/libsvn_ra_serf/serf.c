@@ -494,7 +494,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);
-  serf_sess->config = config;
+  if (config)
+    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, pool));
+  else
+    serf_sess->config = NULL;
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
   serf_sess->progress_func = callbacks->progress_func;
@@ -614,7 +617,11 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
   new_sess = apr_pmemdup(result_pool, old_sess, sizeof(*new_sess));
 
   new_sess->pool = result_pool;
-  /* config */
+
+  if (new_sess->config)
+    SVN_ERR(svn_config_copy_config(&new_sess->config, new_sess->config,
+                                   result_pool));
+
   /* max_connections */
   /* using_ssl */
   /* using_compression */

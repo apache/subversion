@@ -623,7 +623,11 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   sess->callbacks = callbacks;
   sess->callbacks_baton = callbacks_baton;
   sess->bytes_read = sess->bytes_written = 0;
-  sess->config = config;
+
+  if (config)
+    SVN_ERR(svn_config_copy_config(&sess->config, config, pool));
+  else
+    sess->config = NULL;
 
   if (tunnel_name)
     {
