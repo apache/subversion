@@ -57,7 +57,7 @@ TEMPDIR=$BASEDIR/temp
 
 HTTP_FETCH=
 [ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -q -nc"
-[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -sO"
+[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -sOL"
 [ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch -q"
 
 # Need this uncommented if any of the specific versions of the ASF tarballs to
@@ -101,10 +101,10 @@ get_zlib() {
     test -d $BASEDIR/zlib && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.gz
+    $HTTP_FETCH http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz/download
     cd $BASEDIR
 
-    gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
+    gzip -dc $TEMPDIR/download | tar -xf -
 
     mv $ZLIB zlib
 }
