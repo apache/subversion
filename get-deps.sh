@@ -101,10 +101,10 @@ get_zlib() {
     test -d $BASEDIR/zlib && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz/download
+    $HTTP_FETCH http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz
     cd $BASEDIR
 
-    gzip -dc $TEMPDIR/download | tar -xf -
+    gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
 
     mv $ZLIB zlib
 }
