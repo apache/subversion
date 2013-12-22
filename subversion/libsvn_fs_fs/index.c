@@ -544,7 +544,7 @@ index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
    * either just work or fail indicating a serious problem. */
   SVN_ERR(svn_io_file_open(index_file, file_name,
                            APR_WRITE | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool);
+                           APR_OS_DEFAULT, pool));
 
   return SVN_NO_ERROR;
 }
