@@ -399,13 +399,6 @@ struct edit_baton
   char buffer[SVN__STREAM_CHUNK_SIZE];
   apr_size_t bufsize;
 
-  /* map nodeID -> node kind.  May be NULL.
-     The key is the string representation of the node ID given in
-     directory entries.  If we find an entry in this cache, the
-     respective node has already been verified as readable and being
-     of the type stored as value in the cache. */
-  svn_cache__t *verified_dirents_cache;
-
   /* Structure allows us to verify the paths currently being dumped.
      If NULL, validity checks are being skipped. */
   path_tracker_t *path_tracker;
@@ -1657,7 +1650,6 @@ get_dump_editor(const svn_delta_editor_t **editor,
                 svn_boolean_t use_deltas,
                 svn_boolean_t verify,
                 svn_boolean_t check_normalization,
-                svn_cache__t *verified_dirents_cache,
                 apr_pool_t *pool)
 {
   /* Allocate an edit baton to be stored in every directory baton.
@@ -1683,7 +1675,6 @@ get_dump_editor(const svn_delta_editor_t **editor,
   eb->check_normalization = check_normalization;
   eb->found_old_reference = found_old_reference;
   eb->found_old_mergeinfo = found_old_mergeinfo;
-  eb->verified_dirents_cache = verified_dirents_cache;
 
   /* In non-verification mode, we will allow anything to be dumped because
      it might be an incremental dump with possible manual intervention.
@@ -1889,7 +1880,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                               &found_old_mergeinfo, NULL,
                               notify_func, notify_baton,
                               start_rev, use_deltas_for_rev, FALSE, FALSE,
-                              NULL, subpool));
+                              subpool));
 
       /* Drive the editor in one way or another. */
       SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, subpool));
@@ -2002,66 +1993,38 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
   struct dir_baton *db = baton;
   svn_fs_dirent_t *dirent = (svn_fs_dirent_t *)val;
   char *path;
-  apr_hash_t *dirents;
-  svn_filesize_t len;
+  svn_boolean_t right_kind;
   svn_string_t *unparsed_id;
-
-  /* most directory entries will be unchanged from previous revs.
-     We should find those in the cache and they must match the
-     type defined in the DIRENT. */
-  if (db->edit_baton->verified_dirents_cache)
-    {
-      svn_node_kind_t *kind;
-      svn_boolean_t found;
-      unparsed_id = svn_fs_unparse_id(dirent->id, pool);
-
-      SVN_ERR(svn_cache__get((void **)&kind, &found,
-                             db->edit_baton->verified_dirents_cache,
-                             unparsed_id->data, pool));
-
-      if (found)
-        {
-          if (*kind == dirent->kind)
-            return SVN_NO_ERROR;
-          else
-            {
-              path = svn_relpath_join(db->path, (const char *)key, pool);
-
-              return
-                  svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                    _("Unexpected node kind %d for '%s'. "
-                                      "Expected kind was %d."),
-                                    dirent->kind, path, *kind);
-            }
-        }
-    }
 
   path = svn_relpath_join(db->path, (const char *)key, pool);
 
   /* since we can't access the directory entries directly by their ID,
      we need to navigate from the FS_ROOT to them (relatively expensive
-     because we may start at a never rev than the last change to node). */
+     because we may start at a never rev than the last change to node).
+     We check that the node kind stored in the noderev matches the dir
+     entry.  This also ensures that all entries point to valid noderevs.
+   */
   switch (dirent->kind) {
   case svn_node_dir:
-    /* Getting this directory's contents is enough to ensure that our
-       link to it is correct. */
-    SVN_ERR(svn_fs_dir_entries(&dirents, db->edit_baton->fs_root, path, pool));
+    SVN_ERR(svn_fs_is_dir(&right_kind, db->edit_baton->fs_root, path, pool));
+    if (!right_kind)
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Node '%s' is not a directory."),
+                               path);
+
     break;
   case svn_node_file:
-    /* Getting this file's size is enough to ensure that our link to it
-       is correct. */
-    SVN_ERR(svn_fs_file_length(&len, db->edit_baton->fs_root, path, pool));
+    SVN_ERR(svn_fs_is_file(&right_kind, db->edit_baton->fs_root, path, pool));
+    if (!right_kind)
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Node '%s' is not a file."),
+                               path);
     break;
   default:
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Unexpected node kind %d for '%s'"),
                              dirent->kind, path);
   }
-
-  /* remember ID, kind pair */
-  if (db->edit_baton->verified_dirents_cache)
-    SVN_ERR(svn_cache__set(db->edit_baton->verified_dirents_cache,
-                           unparsed_id->data, &dirent->kind, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2166,7 +2129,6 @@ verify_one_revision(svn_fs_t *fs,
                     svn_boolean_t check_normalization,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
-                    svn_cache__t *verified_dirents_cache,
                     apr_pool_t *scratch_pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -2186,7 +2148,6 @@ verify_one_revision(svn_fs_t *fs,
                           start_rev,
                           FALSE, TRUE, /* use_deltas, verify */
                           check_normalization,
-                          verified_dirents_cache,
                           scratch_pool));
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                             dump_editor, dump_edit_baton,
@@ -2234,30 +2195,6 @@ verify_fs2_notify_func(svn_revnum_t revision,
                             notify_baton->notify, pool);
 }
 
-/* cache entry (de-)serialization support for svn_node_kind_t. */
-static svn_error_t *
-serialize_node_kind(void **data,
-                    apr_size_t *data_len,
-                    void *in,
-                    apr_pool_t *pool)
-{
-  *data_len = sizeof(svn_node_kind_t);
-  *data = in;
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-deserialize_node_kind(void **out,
-                      void *data,
-                      apr_size_t data_len,
-                      apr_pool_t *pool)
-{
-  *out = data;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
@@ -2279,7 +2216,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   struct verify_fs2_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
   svn_boolean_t found_corruption = FALSE;
-  svn_cache__t *verified_dirents_cache = NULL;
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -2341,18 +2277,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       svn_error_clear(err);
     }
 
-  if (svn_cache__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache
-                                 (&verified_dirents_cache,
-                                  svn_cache__get_global_membuffer_cache(),
-                                  serialize_node_kind,
-                                  deserialize_node_kind,
-                                  APR_HASH_KEY_STRING,
-                                  svn_uuid_generate(pool),
-                                  SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                                  FALSE,
-                                  pool));
-
   for (rev = start_rev; rev <= end_rev; rev++)
     {
       svn_pool_clear(iterpool);
@@ -2361,7 +2285,7 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       err = verify_one_revision(fs, rev, notify_func, notify_baton,
                                 start_rev, check_normalization,
                                 cancel_func, cancel_baton,
-                                verified_dirents_cache, iterpool);
+                                iterpool);
 
       if (err)
         {
