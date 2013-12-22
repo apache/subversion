@@ -536,27 +536,17 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
 static svn_error_t *
 index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
 {
-  svn_boolean_t first = TRUE;
-  svn_error_t *err;
+  /* remove any old index file
+   * (it would probably be r/o and simply re-writing it would fail) */
+  SVN_ERR(svn_io_remove_file2(file_name, TRUE, pool));
 
-  while (TRUE)
-    {
-      err = svn_io_file_open(index_file, file_name,
-                             APR_WRITE | APR_CREATE | APR_TRUNCATE
-                             | APR_BUFFERED,
-                             APR_OS_DEFAULT, pool);
+  /* We most likely own the write lock to the repo, so this should
+   * either just work or fail indicating a serious problem. */
+  SVN_ERR(svn_io_file_open(index_file, file_name,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool);
 
-      /* ### Do we need another check, EEXIST say, on Windows FAT32? */
-      if (!err || !first || !APR_STATUS_IS_EACCES(err->apr_err))
-        break;
-
-      /* File may exist and be read-only from a previous, failed, commit. */
-      svn_error_clear(err);
-      svn_error_clear(svn_io_remove_file2(file_name, TRUE, pool));
-      first = FALSE;
-    }
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
