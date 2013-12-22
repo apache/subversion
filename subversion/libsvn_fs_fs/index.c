@@ -714,6 +714,8 @@ retry_open_l2p_index(svn_fs_fs__revision_file_t *rev_file,
   /* reopen rep file if necessary */
   if (rev_file->file)
     SVN_ERR(svn_fs_fs__reopen_revision_file(rev_file, fs, revision));
+  else
+    rev_file->is_packed = svn_fs_fs__is_packed_rev(fs, revision);
 
   /* re-try opening this index (keep the p2l closed) */
   SVN_ERR(packed_stream_open(&rev_file->l2p_stream,
@@ -1496,13 +1498,22 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
       err = l2p_index_lookup(absolute_position, fs, rev_file, revision,
                              item_index, pool);
 
-      /* retry upon intermittent pack */
-      if (err && svn_fs_fs__is_packed_rev(fs, revision) != rev_file->is_packed)
+      if (err && !rev_file->is_packed)
         {
-          svn_error_clear(err);
-          SVN_ERR(retry_open_l2p_index(rev_file, fs, revision));
-          err = l2p_index_lookup(absolute_position, fs, rev_file, revision,
-                                 item_index, pool);
+          /* REVISION might have been packed in the meantime.
+             Refresh cache & retry. */
+          err = svn_error_compose_create(err,
+                                         svn_fs_fs__update_min_unpacked_rev
+                                            (fs, pool));
+
+          /* retry upon intermittent pack */
+          if (svn_fs_fs__is_packed_rev(fs, revision) != rev_file->is_packed)
+            {
+              svn_error_clear(err);
+              SVN_ERR(retry_open_l2p_index(rev_file, fs, revision));
+              err = l2p_index_lookup(absolute_position, fs, rev_file,
+                                     revision, item_index, pool);
+            }
         }
     }
   else if (rev_file->is_packed)
