@@ -913,7 +913,8 @@ svn_client_log6(const apr_array_header_t *targets,
 
       segment->range_start = oldest_rev;
       segment->range_end = actual_loc->rev;
-      segment->path = "";
+      segment->path = svn_uri_skip_ancestor(actual_loc->repos_root_url,
+                                            actual_loc->url, pool);
       APR_ARRAY_PUSH(log_segments, svn_location_segment_t *) = segment;
     }
   else
@@ -927,6 +928,7 @@ svn_client_log6(const apr_array_header_t *targets,
                                                   oldest_rev,      /* end */
                                                   ctx, pool));
     }
+
 
   SVN_ERR(run_ra_get_log(revision_ranges, relative_targets, log_segments,
                          actual_loc, ra_session, targets, limit,
