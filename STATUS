@@ -247,7 +247,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1553101
+ * r1553101, r1553105
    Resolve performance regression in certain 'svn log' scenarios, especially
    against pre Subversion 1.5 servers.
    Justification:
