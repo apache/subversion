@@ -1994,7 +1994,6 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
   svn_fs_dirent_t *dirent = (svn_fs_dirent_t *)val;
   char *path;
   svn_boolean_t right_kind;
-  svn_string_t *unparsed_id;
 
   path = svn_relpath_join(db->path, (const char *)key, pool);
 
