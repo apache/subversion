@@ -151,7 +151,13 @@ it will run just one suite or just one test:
      $ ./davautocheck.sh basic
      $ ./davautocheck.sh basic 15
 
-It also respects some environment variables.
+With '--no-tests' argument, it will start httpd but not run any tests.  This is
+useful for manual testing --- create repositories in
+./svn-test-work/repositories/<$repo> and they will be accessible at
+<URL>/svn-test-work/repositories/<$repo>.  You can also run individual tests by passing the --url option to them, as described above.
+
+davautocheck.sh also respects some environment variables; see the comments at
+the top of the script for details.
 
 Running over ra_svn
 -------------------
