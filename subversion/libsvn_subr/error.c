@@ -261,8 +261,7 @@ svn_error_compose_create(svn_error_t *err1,
   if (err1 && err2)
     {
       svn_error_compose(err1,
-                        svn_error_quick_wrap(err2,
-                                             _("Additional errors:")));
+                        svn_error_create(SVN_ERR_COMPOSED_ERROR, err2, NULL));
       return err1;
     }
   return err1 ? err1 : err2;
@@ -314,7 +313,10 @@ svn_error_root_cause(svn_error_t *err)
 {
   while (err)
     {
-      if (err->child)
+      /* I don't think we can change the behavior here, but the additional
+         error chain doesn't define the root cause. Perhaps we should rev
+         this function. */
+      if (err->child /*&& err->child->apr_err != SVN_ERR_COMPOSED_ERROR*/)
         err = err->child;
       else
         break;

@@ -1400,6 +1400,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 41,
              "Packed data stream is corrupt")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_COMPOSED_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 42,
+             "Additional errors:")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
