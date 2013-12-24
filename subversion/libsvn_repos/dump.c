@@ -585,41 +585,10 @@ node_must_not_exist(struct edit_baton *eb,
   return SVN_NO_ERROR;
 }
 
-
+/* Unique string pointers used by verify_mergeinfo_normalization()
+   and check_name_collision() */
 static const char normalized_unique[] = "normalized_unique";
 static const char normalized_collision[] = "normalized_collision";
-
-static svn_error_t *
-check_path_normalization(const char *path,
-                         svn_node_kind_t kind,
-                         svn_repos_notify_func_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *scratch_pool)
-{
-  const char *const name = svn_relpath_basename(path, scratch_pool);
-  if (!svn_utf__is_normalized(name, scratch_pool))
-    {
-      svn_repos_notify_t *const notify =
-        svn_repos_notify_create(svn_repos_notify_warning, scratch_pool);
-      notify->warning = svn_repos_notify_warning_denormalized_name;
-      switch (kind)
-        {
-        case svn_node_dir:
-          notify->warning_str = apr_psprintf(
-              scratch_pool, _("Denormalized directory name '%s'"), path);
-          break;
-        case svn_node_file:
-          notify->warning_str = apr_psprintf(
-              scratch_pool, _("Denormalized file name '%s'"), path);
-          break;
-        default:
-          notify->warning_str = apr_psprintf(
-              scratch_pool, _("Denormalized entry name '%s'"), path);
-        }
-      notify_func(notify_baton, notify, scratch_pool);
-    }
-  return SVN_NO_ERROR;
-}
 
 
 /* Baton for extract_mergeinfo_paths */
@@ -696,18 +665,6 @@ verify_mergeinfo_normalization(void *baton, const void *key, apr_ssize_t klen,
   const char *found;
 
   SVN_ERR(svn_utf__normalize(&normpath, path, klen, &vb->buffer));
-  if (0 != strcmp(path, normpath))
-    {
-      /* Report denormlized mergeinfo path */
-      svn_repos_notify_t *const notify =
-        svn_repos_notify_create(svn_repos_notify_warning, iterpool);
-      notify->warning = svn_repos_notify_warning_denormalized_mergeinfo;
-      notify->warning_str = apr_psprintf(
-          iterpool, _("Denormalized path '%s' in %s property of '%s'"),
-          path, SVN_PROP_MERGEINFO, vb->path);
-      vb->notify_func(vb->notify_baton, notify, iterpool);
-    }
-
   found = svn_hash_gets(vb->normalized_paths, normpath);
   if (!found)
       svn_hash_sets(vb->normalized_paths,
@@ -1363,14 +1320,11 @@ add_directory(const char *path,
     /* Delete the path, it's now been dumped. */
     svn_hash_sets(pb->deleted_entries, path, NULL);
 
-  /* Check for UCS normalization and name clashes, but only if this is
-     actually a new name in the parent, not a replacement. */
+  /* Check for normalized name clashes, but only if this is actually a
+     new name in the parent, not a replacement. */
   if (!val && eb->verify && eb->check_normalization && eb->notify_func)
     {
       pb->check_name_collision = TRUE;
-      SVN_ERR(check_path_normalization(
-                  path, svn_node_dir,
-                  eb->notify_func, eb->notify_baton, pool));
     }
 
   new_db->written_out = TRUE;
@@ -1472,19 +1426,16 @@ add_file(const char *path,
                     is_copy ? copyfrom_rev : SVN_INVALID_REVNUM,
                     pool));
 
-  /* Check for UCS normalization and name clashes, but only if this is
-     actually a new name in the parent, not a replacement. */
-  if (!val && eb->verify && eb->check_normalization && eb->notify_func)
-    {
-      pb->check_name_collision = TRUE;
-      SVN_ERR(check_path_normalization(
-                  path, svn_node_file,
-                  eb->notify_func, eb->notify_baton, pool));
-    }
-
   if (val)
     /* delete the path, it's now been dumped. */
     svn_hash_sets(pb->deleted_entries, path, NULL);
+
+  /* Check for normalized name clashes, but only if this is actually a
+     new name in the parent, not a replacement. */
+  if (!val && eb->verify && eb->check_normalization && eb->notify_func)
+    {
+      pb->check_name_collision = TRUE;
+    }
 
   *file_baton = NULL;  /* muhahahaha */
   return SVN_NO_ERROR;
