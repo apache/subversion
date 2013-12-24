@@ -30,6 +30,7 @@
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_diff.h"
+#include "svn_fs.h"
 #include "svn_io.h"
 #include "svn_utf.h"
 #include "svn_dirent_uri.h"
@@ -42,6 +43,11 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_cache.h"
+
+#include "../libsvn_fs_fs/fs.h"
+#include "../libsvn_fs_fs/pack.h"
+#include "../libsvn_fs_fs/rev_file.h"
+#include "../libsvn_fs/fs-loader.h"
 
 #ifndef _
 #define _(x) x
@@ -116,7 +122,7 @@ typedef struct revision_info_t
   svn_revnum_t revision;
 
   /* pack file offset (manifest value), 0 for non-packed files */
-  apr_size_t offset;
+  apr_off_t offset;
 
   /* offset of the changes list relative to OFFSET */
   apr_size_t changes;
@@ -129,7 +135,7 @@ typedef struct revision_info_t
 
   /* first offset behind the revision data in the pack file (file length
    * for non-packed revs) */
-  apr_size_t end;
+  apr_off_t end;
 
   /* number of directory noderevs in this revision */
   apr_size_t dir_noderev_count;
@@ -233,23 +239,8 @@ typedef struct extension_info_t
  */
 typedef struct fs_t
 {
-  /* repository to reorg */
-  const char *path;
-
-  /* revision to start at (must be 0, ATM) */
-  svn_revnum_t start_revision;
-
-  /* FSFS format number */
-  int format;
-
-  /* highest revision number in the repo */
-  svn_revnum_t max_revision;
-
-  /* first non-packed revision */
-  svn_revnum_t min_unpacked_rev;
-
-  /* sharing size*/
-  int max_files_per_dir;
+  /* FS API object*/
+  svn_fs_t *fs;
 
   /* all revisions */
   apr_array_header_t *revisions;
@@ -307,30 +298,6 @@ typedef struct fs_t
   apr_hash_t *by_extension;
 } fs_t;
 
-/* Return the rev pack folder for revision REV in FS.
- */
-static const char *
-get_pack_folder(fs_t *fs,
-                svn_revnum_t rev,
-                apr_pool_t *pool)
-{
-  return apr_psprintf(pool, "%s/db/revs/%ld.pack",
-                      fs->path, rev / fs->max_files_per_dir);
-}
-
-/* Return the path of the file containing revision REV in FS.
- */
-static const char *
-rev_or_pack_file_name(fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_pool_t *pool)
-{
-  return fs->min_unpacked_rev > rev
-     ? svn_dirent_join(get_pack_folder(fs, rev, pool), "pack", pool)
-     : apr_psprintf(pool, "%s/db/revs/%ld/%ld", fs->path,
-                          rev / fs->max_files_per_dir, rev);
-}
-
 /* Open the file containing revision REV in FS and return it in *FILE.
  */
 static svn_error_t *
@@ -339,11 +306,11 @@ open_rev_or_pack_file(apr_file_t **file,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
-  return svn_io_file_open(file,
-                          rev_or_pack_file_name(fs, rev, pool),
-                          APR_READ | APR_BUFFERED,
-                          APR_OS_DEFAULT,
-                          pool);
+  svn_fs_fs__revision_file_t *rev_file;
+  SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs->fs, rev, pool));
+
+  *file = rev_file->file;
+  return SVN_NO_ERROR;
 }
 
 /* Return the length of FILE in *FILE_SIZE.  Use POOL for allocations.
@@ -593,51 +560,6 @@ add_change(fs_t *fs,
     }
 }
 
-/* Given rev pack PATH in FS, read the manifest file and return the offsets
- * in *MANIFEST. Use POOL for allocations.
- */
-static svn_error_t *
-read_manifest(apr_array_header_t **manifest,
-              fs_t *fs,
-              const char *path,
-              apr_pool_t *pool)
-{
-  svn_stream_t *manifest_stream;
-  apr_pool_t *iterpool;
-
-  /* Open the manifest file. */
-  SVN_ERR(svn_stream_open_readonly(&manifest_stream,
-                                   svn_dirent_join(path, "manifest", pool),
-                                   pool, pool));
-
-  /* While we're here, let's just read the entire manifest file into an array,
-     so we can cache the entire thing. */
-  iterpool = svn_pool_create(pool);
-  *manifest = apr_array_make(pool, fs->max_files_per_dir, sizeof(apr_size_t));
-  while (1)
-    {
-      svn_stringbuf_t *sb;
-      svn_boolean_t eof;
-      apr_uint64_t val;
-      svn_error_t *err;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_stream_readline(manifest_stream, &sb, "\n", &eof, iterpool));
-      if (eof)
-        break;
-
-      err = svn_cstring_strtoui64(&val, sb->data, 0, APR_SIZE_MAX, 10);
-      if (err)
-        return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                                 _("Manifest offset '%s' too large"),
-                                 sb->data);
-      APR_ARRAY_PUSH(*manifest, apr_size_t) = (apr_size_t)val;
-    }
-  svn_pool_destroy(iterpool);
-
-  return svn_stream_close(manifest_stream);
-}
-
 /* Read header information for the revision stored in FILE_CONTENT (one
  * whole revision).  Return the offsets within FILE_CONTENT for the
  * *ROOT_NODEREV, the list of *CHANGES and its len in *CHANGES_LEN.
@@ -693,137 +615,24 @@ read_revision_header(apr_size_t *changes,
   return SVN_NO_ERROR;
 }
 
-/* Read the FSFS format number and sharding size from the format file at
- * PATH and return it in *PFORMAT and *MAX_FILES_PER_DIR respectively.
- * Use POOL for temporary allocations.
- */
-static svn_error_t *
-read_format(int *pformat, int *max_files_per_dir,
-            const char *path, apr_pool_t *pool)
-{
-  svn_error_t *err;
-  apr_file_t *file;
-  char buf[80];
-  apr_size_t len;
-
-  /* open format file and read the first line */
-  err = svn_io_file_open(&file, path, APR_READ | APR_BUFFERED,
-                         APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      /* Treat an absent format file as format 1.  Do not try to
-         create the format file on the fly, because the repository
-         might be read-only for us, or this might be a read-only
-         operation, and the spirit of FSFS is to make no changes
-         whatseover in read-only operations.  See thread starting at
-         http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
-         for more. */
-      svn_error_clear(err);
-      *pformat = 1;
-      *max_files_per_dir = 0;
-
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
-  len = sizeof(buf);
-  err = svn_io_read_length_line(file, buf, &len, pool);
-  if (err && APR_STATUS_IS_EOF(err->apr_err))
-    {
-      /* Return a more useful error message. */
-      svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-                               _("Can't read first line of format file '%s'"),
-                               svn_dirent_local_style(path, pool));
-    }
-  SVN_ERR(err);
-
-  /* Check that the first line contains only digits. */
-  SVN_ERR(svn_cstring_atoi(pformat, buf));
-
-  /* Set the default values for anything that can be set via an option. */
-  *max_files_per_dir = 0;
-
-  /* Read any options. */
-  while (1)
-    {
-      len = sizeof(buf);
-      err = svn_io_read_length_line(file, buf, &len, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          /* No more options; that's okay. */
-          svn_error_clear(err);
-          break;
-        }
-      SVN_ERR(err);
-
-      if (strncmp(buf, "layout ", 7) == 0)
-        {
-          if (strcmp(buf+7, "linear") == 0)
-            {
-              *max_files_per_dir = 0;
-              continue;
-            }
-
-          if (strncmp(buf+7, "sharded ", 8) == 0)
-            {
-              /* Check that the argument is numeric. */
-              SVN_ERR(svn_cstring_atoi(max_files_per_dir, buf + 15));
-              continue;
-            }
-        }
-
-      return svn_error_createf(SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
-         _("'%s' contains invalid filesystem format option '%s'"),
-         svn_dirent_local_style(path, pool), buf);
-    }
-
-  return svn_io_file_close(file, pool);
-}
-
-/* Read the content of the file at PATH and return it in *RESULT.
- * Use POOL for temporary allocations.
- */
-static svn_error_t *
-read_number(svn_revnum_t *result, const char *path, apr_pool_t *pool)
-{
-  svn_stringbuf_t *content;
-  apr_uint64_t number;
-
-  SVN_ERR(svn_stringbuf_from_file2(&content, path, pool));
-
-  content->data[content->len-1] = 0;
-  SVN_ERR(svn_cstring_strtoui64(&number, content->data, 0, LONG_MAX, 10));
-  *result = (svn_revnum_t)number;
-
-  return SVN_NO_ERROR;
-}
-
 /* Create *FS for the repository at PATH and read the format and size info.
  * Use POOL for temporary allocations.
  */
 static svn_error_t *
 fs_open(fs_t **fs, const char *path, apr_pool_t *pool)
 {
-  *fs = apr_pcalloc(pool, sizeof(**fs));
-  (*fs)->path = apr_pstrdup(pool, path);
-  (*fs)->max_files_per_dir = 1000;
+  fs_fs_data_t *ffd;
 
-  /* Read the FS format number. */
-  SVN_ERR(read_format(&(*fs)->format,
-                      &(*fs)->max_files_per_dir,
-                      svn_dirent_join(path, "db/format", pool),
-                      pool));
-  if (((*fs)->format != 4) && ((*fs)->format != 6))
+  *fs = apr_pcalloc(pool, sizeof(**fs));
+  SVN_ERR(svn_fs_open(&(*fs)->fs, svn_dirent_join(path, "db", pool),
+                      NULL, pool));
+
+  /* Check the FS format number. */
+  ffd = (*fs)->fs->fsap_data;
+  if ((ffd->format != 4) && (ffd->format != 6))
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL, NULL);
 
-  /* read size (HEAD) info */
-  SVN_ERR(read_number(&(*fs)->min_unpacked_rev,
-                      svn_dirent_join(path, "db/min-unpacked-rev", pool),
-                      pool));
-  return read_number(&(*fs)->max_revision,
-                     svn_dirent_join(path, "db/current", pool),
-                     pool);
+  return SVN_NO_ERROR;
 }
 
 /* Utility function that returns true if STRING->DATA matches KEY.
@@ -873,9 +682,7 @@ find_representation(int *idx,
   info = revision_info ? *revision_info : NULL;
   if (info == NULL || info->revision != revision)
     {
-      info = APR_ARRAY_IDX(fs->revisions,
-                           revision - fs->start_revision,
-                           revision_info_t*);
+      info = APR_ARRAY_IDX(fs->revisions, revision, revision_info_t*);
       if (revision_info)
         *revision_info = info;
     }
@@ -1039,11 +846,11 @@ get_rep_content(svn_stringbuf_t **content,
   apr_off_t offset;
   svn_revnum_t revision = representation->revision;
   revision_info_t *revision_info = APR_ARRAY_IDX(fs->revisions,
-                                            revision - fs->start_revision,
-                                            revision_info_t*);
+                                                 revision,
+                                                 revision_info_t*);
 
   /* not in cache. Is the revision valid at all? */
-  if (revision - fs->start_revision > fs->revisions->nelts)
+  if (revision > fs->revisions->nelts)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              _("Unknown revision %ld"), revision);
 
@@ -1433,24 +1240,18 @@ read_pack_file(fs_t *fs,
                svn_revnum_t base,
                apr_pool_t *pool)
 {
-  apr_array_header_t *manifest = NULL;
   apr_pool_t *local_pool = svn_pool_create(pool);
   apr_pool_t *iter_pool = svn_pool_create(local_pool);
   int i;
   apr_off_t file_size = 0;
   apr_file_t *file;
-  const char *pack_folder = get_pack_folder(fs, base, local_pool);
-
-  /* parse the manifest file */
-  SVN_ERR(read_manifest(&manifest, fs, pack_folder, local_pool));
-  if (manifest->nelts != fs->max_files_per_dir)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL, NULL);
+  fs_fs_data_t *ffd = fs->fs->fsap_data;
 
   SVN_ERR(open_rev_or_pack_file(&file, fs, base, local_pool));
   SVN_ERR(get_file_size(&file_size, file, local_pool));
 
   /* process each revision in the pack file */
-  for (i = 0; i < manifest->nelts; ++i)
+  for (i = 0; i < ffd->max_files_per_dir; ++i)
     {
       apr_size_t root_node_offset;
       svn_stringbuf_t *rev_content;
@@ -1460,10 +1261,13 @@ read_pack_file(fs_t *fs,
       info->representations = apr_array_make(iter_pool, 4, sizeof(rep_stats_t*));
 
       info->revision = base + i;
-      info->offset = APR_ARRAY_IDX(manifest, i, apr_size_t);
-      info->end = i+1 < manifest->nelts
-                         ? APR_ARRAY_IDX(manifest, i+1 , apr_size_t)
-                         : file_size;
+      SVN_ERR(svn_fs_fs__get_packed_offset(&info->offset, fs->fs, base + i,
+                                           iter_pool));
+      if (i + 1 == ffd->max_files_per_dir)
+        SVN_ERR(svn_io_file_seek(file, APR_END, &info->end, iter_pool));
+      else
+        SVN_ERR(svn_fs_fs__get_packed_offset(&info->end, fs->fs,
+                                             base + i + 1, iter_pool));
 
       SVN_ERR(get_content(&rev_content, file, fs, info->revision,
                           info->offset,
@@ -1510,6 +1314,7 @@ read_revision_file(fs_t *fs,
   revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
   apr_off_t file_size = 0;
   apr_file_t *file;
+  fs_fs_data_t *ffd = fs->fs->fsap_data;
 
   /* read the whole pack file into memory */
   SVN_ERR(open_rev_or_pack_file(&file, fs, revision, local_pool));
@@ -1544,7 +1349,7 @@ read_revision_file(fs_t *fs,
                        pool, local_pool));
 
   /* show progress every 1000 revs or so */
-  if (revision % fs->max_files_per_dir == 0)
+  if (revision % ffd->max_files_per_dir == 0)
     print_progress(revision);
 
   svn_pool_destroy(local_pool);
@@ -1565,6 +1370,7 @@ read_revisions(fs_t **fs,
 {
   svn_revnum_t revision;
   svn_cache_config_t cache_config = *svn_cache_config_get();
+  fs_fs_data_t *ffd;
 
   /* determine cache sizes */
 
@@ -1575,12 +1381,11 @@ read_revisions(fs_t **fs,
   svn_cache_config_set(&cache_config);
 
   SVN_ERR(fs_open(fs, path, pool));
+  ffd = (*fs)->fs->fsap_data;
 
   /* create data containers and caches */
-  (*fs)->start_revision = start_revision
-                        - (start_revision % (*fs)->max_files_per_dir);
   (*fs)->revisions = apr_array_make(pool,
-                                    (*fs)->max_revision + 1 - (*fs)->start_revision,
+                                    ffd->youngest_rev_cache + 1,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
   initialize_largest_changes(*fs, 64, pool);
@@ -1596,12 +1401,12 @@ read_revisions(fs_t **fs,
 
   /* read all packed revs */
   for ( revision = start_revision
-      ; revision < (*fs)->min_unpacked_rev
-      ; revision += (*fs)->max_files_per_dir)
+      ; revision < ffd->min_unpacked_rev
+      ; revision += ffd->max_files_per_dir)
     SVN_ERR(read_pack_file(*fs, revision, pool));
 
   /* read non-packed revs */
-  for ( ; revision <= (*fs)->max_revision; ++revision)
+  for ( ; revision <= ffd->youngest_rev_cache; ++revision)
     SVN_ERR(read_revision_file(*fs, revision, pool));
 
   return SVN_NO_ERROR;
