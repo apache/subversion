@@ -2598,6 +2598,10 @@ svn_ra_serf__error_on_status(serf_status_line sline,
                       "server or an intermediate proxy does not accept "
                       "chunked encoding. Try setting 'http-chunked-requests' "
                       "to 'auto' or 'no' in your client configuration."));
+      case 500:
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                 _("Unexpected server error %d '%s' on '%s'"),
+                                 sline.code, sline.reason, path);
       case 501:
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("The requested feature is not supported by "
@@ -2606,7 +2610,7 @@ svn_ra_serf__error_on_status(serf_status_line sline,
 
   if (sline.code >= 300)
     return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                             _("Unexpected HTTP status %d '%s' on '%s'\n"),
+                             _("Unexpected HTTP status %d '%s' on '%s'"),
                              sline.code, sline.reason, path);
 
   return SVN_NO_ERROR;

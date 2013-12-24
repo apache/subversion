@@ -419,20 +419,6 @@ handle_lock(serf_request_t *request,
       ctx->read_headers = TRUE;
     }
 
-  /* 403 (Forbidden) when a lock doesn't exist.
-     423 (Locked) when a lock already exists.
-     405 (Method not allowed) when a node does not exist in HEAD */
-  if (ctx->handler->sline.code == 403
-      || ctx->handler->sline.code == 423
-      || ctx->handler->sline.code == 405)
-    {
-      /* Go look in the body for a server-provided error. This will
-         reset flags for the core handler to Do The Right Thing. We
-         won't be back to this handler again.  */
-      return svn_error_trace(svn_ra_serf__expect_empty_body(
-                               request, response, ctx->handler, pool));
-    }
-
   return ctx->inner_handler(request, response, ctx->inner_baton, pool);
 }
 
