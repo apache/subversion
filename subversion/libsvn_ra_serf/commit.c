@@ -1441,19 +1441,11 @@ open_root(void *edit_baton,
 
       if (handler->sline.code != 201)
         {
-          apr_status_t status = SVN_ERR_RA_DAV_REQUEST_FAILED;
+          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                               handler->path,
+                                               handler->location));
 
-          switch (handler->sline.code)
-            {
-              case 403:
-                status = SVN_ERR_RA_DAV_FORBIDDEN;
-                break;
-              case 404:
-                status = SVN_ERR_FS_NOT_FOUND;
-                break;
-            }
-
-          return svn_error_createf(status, NULL,
+          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
                                    handler->sline.code, handler->sline.reason,
@@ -1709,11 +1701,11 @@ add_directory(const char *path,
       case 204: /* No Content: item successfully replaced an existing target */
         break;
 
-      case 403:
-        return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
-                                _("Access to '%s' forbidden"),
-                                 handler->path);
       default:
+        SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                             handler->path,
+                                             handler->location));
+
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Adding directory failed: %s on %s "
                                    "(%d %s)"),
@@ -1927,6 +1919,7 @@ add_file(const char *path,
         path, new_file->pool);
       handler->response_handler = svn_ra_serf__expect_empty_body;
       handler->response_baton = handler;
+      handler->no_fail_on_http_failure_status = TRUE;
 
       SVN_ERR(svn_ra_serf__context_run_one(handler, new_file->pool));
 
@@ -1936,7 +1929,7 @@ add_file(const char *path,
                                                handler->path,
                                                handler->location));
 
-         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
                                    _("File '%s' already exists"), path);
         }
     }
@@ -2265,6 +2258,7 @@ abort_edit(void *edit_baton,
 
   handler->response_handler = svn_ra_serf__expect_empty_body;
   handler->response_baton = handler;
+  handler->no_fail_on_http_failure_status = TRUE;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(ctx)) /* HTTP v2 */
     handler->path = ctx->txn_url;
@@ -2281,6 +2275,10 @@ abort_edit(void *edit_baton,
       && handler->sline.code != 404
       )
     {
+      SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                           handler->path,
+                                           handler->location));
+
       return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("DELETE returned unexpected status: %d"),
                                handler->sline.code);
