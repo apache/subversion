@@ -412,6 +412,7 @@ create_options_req(options_context_t **opt_ctx,
   handler->body_type = "text/xml";
   handler->conn = conn;
   handler->session = session;
+  handler->no_fail_on_http_failure_status = TRUE;
 
   new_ctx->handler = handler;
 
