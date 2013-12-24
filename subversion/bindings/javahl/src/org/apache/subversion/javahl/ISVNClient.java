@@ -1222,7 +1222,8 @@ public interface ISVNClient
     /**
      * Recursively get the paths which belong to a changelist
      * @param rootPath    the wc path under which to check
-     * @param changelists the changelists to look under
+     * @param changelists the changelists to look under;
+     *     if <code>null</code>, all changelists will be considered.
      * @param depth       the depth to recurse
      * @param callback    the callback to return the changelists through
      */
