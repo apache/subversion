@@ -2346,6 +2346,33 @@ public class BasicTests extends SVNTests
         assertTrue(clCallback.isEmpty());
     }
 
+    public void testGetAllChangelists() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        final String cl1 = "changelist_one";
+        final String cl2 = "changelist_too";
+        MyChangelistCallback clCallback = new MyChangelistCallback();
+
+        String path = fileToSVNPath(new File(thisTest.getWCPath(), "iota"),
+                                    true);
+        Set<String> paths = new HashSet<String>(1);
+        paths.add(path);
+        client.addToChangelist(paths, cl1, Depth.infinity, null);
+        paths.remove(path);
+
+        path = fileToSVNPath(new File(thisTest.getWCPath(), "A/B/lambda"),
+                             true);
+        paths.add(path);
+        client.addToChangelist(paths, cl2, Depth.infinity, null);
+
+        client.getChangelists(thisTest.getWCPath(), null,
+                              Depth.infinity, clCallback);
+        Collection<String> changelists = clCallback.getChangelists();
+        assertEquals(2, changelists.size());
+        assertTrue("Contains " + cl1, changelists.contains(cl1));
+        assertTrue("Contains " + cl2, changelists.contains(cl2));
+    }
+
     /**
      * Helper method for testing mergeinfo retrieval.  Assumes
      * that <code>targetPath</code> has both merge history and
@@ -3993,8 +4020,13 @@ public class BasicTests extends SVNTests
     {
         private static final long serialVersionUID = 1L;
 
+        private HashSet<String> allChangelists = new HashSet<String>();
+
         public void doChangelist(String path, String changelist)
         {
+            if (changelist != null)
+                allChangelists.add(changelist);
+
             path = fileToSVNPath(new File(path), true);
             if (super.containsKey(path))
             {
@@ -4014,6 +4046,11 @@ public class BasicTests extends SVNTests
         public Collection<String> get(String path)
         {
             return super.get(path);
+        }
+
+        public Collection<String> getChangelists()
+        {
+            return allChangelists;
         }
     }
 

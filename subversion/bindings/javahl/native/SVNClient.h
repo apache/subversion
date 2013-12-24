@@ -167,7 +167,7 @@ class SVNClient :public SVNBase
                        svn_depth_t depth, StringArray &changelists);
   void removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
                              StringArray &changelists);
-  void getChangelists(const char *path, StringArray &changelists,
+  void getChangelists(const char *path, StringArray *changelists,
                       svn_depth_t depth, ChangelistCallback *callback);
   void status(const char *path, svn_depth_t depth, bool onServer,
               bool getAll, bool noIgnore, bool ignoreExternals,
