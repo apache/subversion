@@ -1472,8 +1472,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
                                          info->dir->pool));
       SVN_ERR_ASSERT(info->propfind_handler);
 
-      info->propfind_handler->no_fail_on_http_failure_status = FALSE;
-
       /* Create a serf request for the PROPFIND.  */
       svn_ra_serf__request_create(info->propfind_handler);
 
@@ -2208,8 +2206,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
                                              &ctx->done_dir_propfinds,
                                              info->dir->pool));
           SVN_ERR_ASSERT(info->dir->propfind_handler);
-
-          info->dir->propfind_handler->no_fail_on_http_failure_status = FALSE;
 
           /* Create a serf request for the PROPFIND.  */
           svn_ra_serf__request_create(info->dir->propfind_handler);
