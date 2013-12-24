@@ -259,6 +259,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
+  handler->no_fail_on_http_failure_status = TRUE;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 

@@ -732,6 +732,9 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                                              NULL,
                                              replay_ctx->pool));
 
+          /* Default is not to fail for this PROPFIND */
+          replay_ctx->propfind_handler->no_fail_on_http_failure_status = FALSE;
+
           /* Spin up the serf request for the PROPFIND.  */
           svn_ra_serf__request_create(replay_ctx->propfind_handler);
 

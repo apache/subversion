@@ -616,6 +616,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
   handler->body_delegate_baton = new_prop_ctx;
   handler->header_delegate = setup_propfind_headers;
   handler->header_delegate_baton = new_prop_ctx;
+  handler->no_fail_on_http_failure_status = TRUE;
 
   handler->session = new_prop_ctx->sess;
   handler->conn = new_prop_ctx->conn;

@@ -1117,7 +1117,9 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
  * DEPTH ("0","1","infinity").
  *
  * This function will not block waiting for the response. Callers are
- * expected to call svn_ra_serf__wait_for_props().
+ * expected to call svn_ra_serf__wait_for_props(), and should verify the
+ * http status or set propfind_handler->no_fail_on_http_failure_status
+ * to TRUE.
  */
 svn_error_t *
 svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,

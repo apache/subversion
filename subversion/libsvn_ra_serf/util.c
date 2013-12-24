@@ -1705,66 +1705,6 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
 }
 #undef PENDING_TO_PARSE
 
-
-/* ### this is still broken conceptually. just shifting incrementally... */
-static svn_error_t *
-handle_server_error(serf_request_t *request,
-                    serf_bucket_t *response,
-                    apr_pool_t *scratch_pool)
-{
-  svn_ra_serf__server_error_t server_err = { 0 };
-  serf_bucket_t *hdrs;
-  const char *val;
-  apr_status_t err;
-
-  hdrs = serf_bucket_response_get_headers(response);
-  val = serf_bucket_headers_get(hdrs, "Content-Type");
-  if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
-    {
-      /* ### we should figure out how to reuse begin_error_parsing  */
-
-      server_err.error = svn_error_create(APR_SUCCESS, NULL, NULL);
-      server_err.contains_precondition_error = FALSE;
-      server_err.cdata = svn_stringbuf_create_empty(scratch_pool);
-      server_err.collect_cdata = FALSE;
-      server_err.parser.pool = server_err.error->pool;
-      server_err.parser.user_data = &server_err;
-      server_err.parser.start = start_error;
-      server_err.parser.end = end_error;
-      server_err.parser.cdata = cdata_error;
-      server_err.parser.done = &server_err.done;
-      server_err.parser.ignore_errors = TRUE;
-
-      /* We don't care about any errors except for SERVER_ERR.ERROR  */
-      svn_error_clear(svn_ra_serf__handle_xml_parser(request,
-                                                     response,
-                                                     &server_err.parser,
-                                                     scratch_pool));
-
-      /* ### checking DONE is silly. the above only parses whatever has
-         ### been received at the network interface. totally wrong. but
-         ### it is what we have for now (maintaining historical code),
-         ### until we fully migrate.  */
-      if (server_err.done && server_err.error->apr_err == APR_SUCCESS)
-        {
-          svn_error_clear(server_err.error);
-          server_err.error = SVN_NO_ERROR;
-        }
-
-      return svn_error_trace(server_err.error);
-    }
-
-  /* The only error that we will return is from the XML response body.
-     Otherwise, ignore the entire body but allow SUCCESS/EOF/EAGAIN to
-     surface. */
-  err = drain_bucket(response);
-  if (err && !SERF_BUCKET_READ_ERROR(err))
-    return svn_ra_serf__wrap_err(err, NULL);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
 svn_ra_serf__handle_xml_parser(serf_request_t *request,
@@ -1782,17 +1722,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   if (SERF_BUCKET_READ_ERROR(status))
     {
       return svn_ra_serf__wrap_err(status, NULL);
-    }
-
-  /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404 && !ctx->ignore_errors)
-    {
-      err = handle_server_error(request, response, pool);
-
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        add_done_item(ctx);
-
-      return svn_error_trace(err);
     }
 
   if (!ctx->xmlp)
@@ -2119,8 +2048,7 @@ handle_response(serf_request_t *request,
     }
   handler->conn->last_status_code = handler->sline.code;
 
-  if (handler->sline.code >= 400
-      && handler->sline.code != 404)
+  if (handler->sline.code >= 400)
     {
       /* 405 Method Not allowed.
          408 Request Timeout
@@ -2145,17 +2073,6 @@ handle_response(serf_request_t *request,
       else
         {
           handler->discard_body = TRUE;
-
-          if (!handler->session->pending_error
-              && !handler->no_fail_on_http_failure_status)
-            {
-              handler->session->pending_error =
-                            svn_ra_serf__error_on_status(handler->sline,
-                                                         handler->path,
-                                                         handler->location);
-
-              SVN_ERR_ASSERT(handler->session->pending_error != NULL);
-            }
         }
     }
 
@@ -2174,7 +2091,19 @@ handle_response(serf_request_t *request,
          our context loops.
        */
       if (!handler->done && APR_STATUS_IS_EOF(*serf_status))
+        {
           handler->done = TRUE;
+
+          if (handler->sline.code >= 400
+              && !handler->session->pending_error
+              && !handler->no_fail_on_http_failure_status)
+            {
+              handler->session->pending_error
+                        = svn_ra_serf__error_on_status(handler->sline,
+                                                       handler->path,
+                                                       handler->location);
+            }
+        }
 
       return SVN_NO_ERROR;
     }
@@ -2272,9 +2201,12 @@ handle_response_cb(serf_request_t *request,
   if (!outer_status)
     outer_status = inner_status;
 
-  /* Make sure the DONE flag is set properly.  */
+  /* Make sure the DONE flag is set properly and requests are cleaned up. */
   if (APR_STATUS_IS_EOF(outer_status) || APR_STATUS_IS_EOF(inner_status))
-    handler->done = TRUE;
+    {
+      handler->done = TRUE;
+      outer_status = APR_EOF;
+    }
 
   return outer_status;
 }
