@@ -26,7 +26,6 @@
 #include <apr.h>
 #include <apr_general.h>
 #include <apr_file_io.h>
-#include <apr_poll.h>
 
 #include "svn_private_config.h"
 #include "svn_pools.h"
@@ -76,7 +75,7 @@ typedef enum rep_kind_t
 
 /* A representation fragment.
  */
-typedef struct representation_t
+typedef struct rep_stats_t
 {
   /* absolute offset in the file */
   apr_size_t offset;
@@ -88,7 +87,7 @@ typedef struct representation_t
   apr_size_t expanded_size;
 
   /* deltification base, or NULL if there is none */
-  struct representation_t *delta_base;
+  struct rep_stats_t *delta_base;
 
   /* revision that contains this representation
    * (may be referenced by other revisions, though) */
@@ -107,7 +106,7 @@ typedef struct representation_t
    * source content into the target */
   char is_plain;
 
-} representation_t;
+} rep_stats_t;
 
 /* Represents a single revision.
  * There will be only one instance per revision. */
@@ -144,7 +143,7 @@ typedef struct revision_info_t
   /* total size of file noderevs (i.e. the structs - not the rep) */
   apr_size_t file_noderev_size;
 
-  /* all representation_t of this revision (in no particular order),
+  /* all rep_stats_t of this revision (in no particular order),
    * i.e. those that point back to this struct */
   apr_array_header_t *representations;
 } revision_info_t;
@@ -152,14 +151,14 @@ typedef struct revision_info_t
 /* Data type to identify a representation. It will be used to address
  * cached combined (un-deltified) windows.
  */
-typedef struct window_cache_key_t
+typedef struct cache_key_t
 {
   /* revision of the representation */
   svn_revnum_t revision;
 
   /* its offset */
   apr_size_t offset;
-} window_cache_key_t;
+} cache_key_t;
 
 /* Description of one large representation.  It's content will be reused /
  * overwritten when it gets replaced by an even larger representation.
@@ -232,7 +231,7 @@ typedef struct extension_info_t
 
 /* Root data structure containing all information about a given repository.
  */
-typedef struct fs_fs_t
+typedef struct fs_t
 {
   /* repository to reorg */
   const char *path;
@@ -257,7 +256,7 @@ typedef struct fs_fs_t
 
   /* empty representation.
    * Used as a dummy base for DELTA reps without base. */
-  representation_t *null_base;
+  rep_stats_t *null_base;
 
   /* undeltified txdelta window cache */
   svn_cache__t *window_cache;
@@ -306,12 +305,12 @@ typedef struct fs_fs_t
 
   /* extension -> extension_info_t* map */
   apr_hash_t *by_extension;
-} fs_fs_t;
+} fs_t;
 
 /* Return the rev pack folder for revision REV in FS.
  */
 static const char *
-get_pack_folder(fs_fs_t *fs,
+get_pack_folder(fs_t *fs,
                 svn_revnum_t rev,
                 apr_pool_t *pool)
 {
@@ -322,7 +321,7 @@ get_pack_folder(fs_fs_t *fs,
 /* Return the path of the file containing revision REV in FS.
  */
 static const char *
-rev_or_pack_file_name(fs_fs_t *fs,
+rev_or_pack_file_name(fs_t *fs,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
@@ -336,7 +335,7 @@ rev_or_pack_file_name(fs_fs_t *fs,
  */
 static svn_error_t *
 open_rev_or_pack_file(apr_file_t **file,
-                      fs_fs_t *fs,
+                      fs_t *fs,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
@@ -370,7 +369,7 @@ get_file_size(apr_off_t *file_size,
 static svn_error_t *
 get_content(svn_stringbuf_t **content,
             apr_file_t *file,
-            fs_fs_t *fs,
+            fs_t *fs,
             svn_revnum_t revision,
             apr_off_t offset,
             apr_size_t len,
@@ -409,12 +408,12 @@ get_content(svn_stringbuf_t **content,
  */
 static svn_error_t *
 get_cached_window(svn_stringbuf_t **result,
-                  fs_fs_t *fs,
-                  representation_t *representation,
+                  fs_t *fs,
+                  rep_stats_t *representation,
                   apr_pool_t *pool)
 {
   svn_boolean_t found = FALSE;
-  window_cache_key_t key;
+  cache_key_t key;
   key.revision = representation->revision;
   key.offset = representation->offset;
 
@@ -428,13 +427,13 @@ get_cached_window(svn_stringbuf_t **result,
  * Use POOL for temporaries.
  */
 static svn_error_t *
-set_cached_window(fs_fs_t *fs,
-                  representation_t *representation,
+set_cached_window(fs_t *fs,
+                  rep_stats_t *representation,
                   svn_stringbuf_t *window,
                   apr_pool_t *pool)
 {
   /* select entry */
-  window_cache_key_t key;
+  cache_key_t key;
   key.revision = representation->revision;
   key.offset = representation->offset;
 
@@ -446,7 +445,7 @@ set_cached_window(fs_fs_t *fs,
  * entries.  Use POOL for allocations.
  */
 static void
-initialize_largest_changes(fs_fs_t *fs,
+initialize_largest_changes(fs_t *fs,
                            apr_size_t count,
                            apr_pool_t *pool)
 {
@@ -496,7 +495,7 @@ add_to_histogram(histogram_t *histogram,
  * PLAIN_ADDED indicates whether the node has a deltification predecessor.
  */
 static void
-add_change(fs_fs_t *fs,
+add_change(fs_t *fs,
            apr_int64_t rep_size,
            apr_int64_t expanded_size,
            svn_revnum_t revision,
@@ -599,7 +598,7 @@ add_change(fs_fs_t *fs,
  */
 static svn_error_t *
 read_manifest(apr_array_header_t **manifest,
-              fs_fs_t *fs,
+              fs_t *fs,
               const char *path,
               apr_pool_t *pool)
 {
@@ -804,7 +803,7 @@ read_number(svn_revnum_t *result, const char *path, apr_pool_t *pool)
  * Use POOL for temporary allocations.
  */
 static svn_error_t *
-fs_open(fs_fs_t **fs, const char *path, apr_pool_t *pool)
+fs_open(fs_t **fs, const char *path, apr_pool_t *pool)
 {
   *fs = apr_pcalloc(pool, sizeof(**fs));
   (*fs)->path = apr_pstrdup(pool, path);
@@ -836,13 +835,13 @@ key_matches(svn_string_t *string, const char *key)
 }
 
 /* Comparator used for binary search comparing the absolute file offset
- * of a representation to some other offset. DATA is a *representation_t,
+ * of a representation to some other offset. DATA is a *rep_stats_t,
  * KEY is a pointer to an apr_size_t.
  */
 static int
 compare_representation_offsets(const void *data, const void *key)
 {
-  apr_ssize_t diff = (*(const representation_t *const *)data)->offset
+  apr_ssize_t diff = (*(const rep_stats_t *const *)data)->offset
                      - *(const apr_size_t *)key;
 
   /* sizeof(int) may be < sizeof(ssize_t) */
@@ -855,14 +854,14 @@ compare_representation_offsets(const void *data, const void *key)
  * it in *REVISION_INFO. For performance reasons, we skip the lookup if
  * the info is already provided.
  *
- * In that revision, look for the representation_t object for offset OFFSET.
+ * In that revision, look for the rep_stats_t object for offset OFFSET.
  * If it already exists, set *IDX to its index in *REVISION_INFO's
  * representations list and return the representation object. Otherwise,
  * set the index to where it must be inserted and return NULL.
  */
-static representation_t *
+static rep_stats_t *
 find_representation(int *idx,
-                    fs_fs_t *fs,
+                    fs_t *fs,
                     revision_info_t **revision_info,
                     svn_revnum_t revision,
                     apr_size_t offset)
@@ -894,8 +893,8 @@ find_representation(int *idx,
   if (*idx < info->representations->nelts)
     {
       /* return the representation, if this is the one we were looking for */
-      representation_t *result
-        = APR_ARRAY_IDX(info->representations, *idx, representation_t *);
+      rep_stats_t *result
+        = APR_ARRAY_IDX(info->representations, *idx, rep_stats_t *);
       if (result->offset == offset)
         return result;
     }
@@ -912,10 +911,10 @@ find_representation(int *idx,
  * Use POOL for allocations and SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
-read_rep_base(representation_t **representation,
+read_rep_base(rep_stats_t **representation,
               apr_size_t *header_size,
               svn_boolean_t *is_plain,
-              fs_fs_t *fs,
+              fs_t *fs,
               svn_stringbuf_t *file_content,
               apr_size_t offset,
               apr_pool_t *pool,
@@ -972,15 +971,15 @@ read_rep_base(representation_t **representation,
  * allocations.
  */
 static svn_error_t *
-parse_representation(representation_t **representation,
-                     fs_fs_t *fs,
+parse_representation(rep_stats_t **representation,
+                     fs_t *fs,
                      svn_stringbuf_t *file_content,
                      svn_string_t *value,
                      revision_info_t *revision_info,
                      apr_pool_t *pool,
                      apr_pool_t *scratch_pool)
 {
-  representation_t *result;
+  rep_stats_t *result;
   svn_revnum_t revision;
 
   apr_uint64_t offset;
@@ -1032,8 +1031,8 @@ parse_representation(representation_t **representation,
  */
 static svn_error_t *
 get_rep_content(svn_stringbuf_t **content,
-                fs_fs_t *fs,
-                representation_t *representation,
+                fs_t *fs,
+                rep_stats_t *representation,
                 svn_stringbuf_t *file_content,
                 apr_pool_t *pool)
 {
@@ -1076,8 +1075,8 @@ get_rep_content(svn_stringbuf_t **content,
  */
 static svn_error_t *
 read_windows(apr_array_header_t **windows,
-             fs_fs_t *fs,
-             representation_t *representation,
+             fs_t *fs,
+             rep_stats_t *representation,
              svn_stringbuf_t *file_content,
              apr_pool_t *pool)
 {
@@ -1126,8 +1125,8 @@ read_windows(apr_array_header_t **windows,
  */
 static svn_error_t *
 get_combined_window(svn_stringbuf_t **content,
-                    fs_fs_t *fs,
-                    representation_t *representation,
+                    fs_t *fs,
+                    rep_stats_t *representation,
                     svn_stringbuf_t *file_content,
                     apr_pool_t *pool)
 {
@@ -1197,7 +1196,7 @@ get_combined_window(svn_stringbuf_t **content,
 
 /* forward declaration */
 static svn_error_t *
-read_noderev(fs_fs_t *fs,
+read_noderev(fs_t *fs,
              svn_stringbuf_t *file_content,
              apr_size_t offset,
              revision_info_t *revision_info,
@@ -1211,9 +1210,9 @@ read_noderev(fs_fs_t *fs,
  * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
-parse_dir(fs_fs_t *fs,
+parse_dir(fs_t *fs,
           svn_stringbuf_t *file_content,
-          representation_t *representation,
+          rep_stats_t *representation,
           revision_info_t *revision_info,
           apr_pool_t *pool,
           apr_pool_t *scratch_pool)
@@ -1291,7 +1290,7 @@ parse_dir(fs_fs_t *fs,
  * Use POOL for persistent allocations and SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
-read_noderev(fs_fs_t *fs,
+read_noderev(fs_t *fs,
              svn_stringbuf_t *file_content,
              apr_size_t offset,
              revision_info_t *revision_info,
@@ -1299,8 +1298,8 @@ read_noderev(fs_fs_t *fs,
              apr_pool_t *scratch_pool)
 {
   svn_string_t *line;
-  representation_t *text = NULL;
-  representation_t *props = NULL;
+  rep_stats_t *text = NULL;
+  rep_stats_t *props = NULL;
   apr_size_t start_offset = offset;
   svn_boolean_t is_dir = FALSE;
   svn_boolean_t has_predecessor = FALSE;
@@ -1430,7 +1429,7 @@ print_progress(svn_revnum_t revision)
  * in FS.  Use POOL for allocations.
  */
 static svn_error_t *
-read_pack_file(fs_fs_t *fs,
+read_pack_file(fs_t *fs,
                svn_revnum_t base,
                apr_pool_t *pool)
 {
@@ -1458,7 +1457,7 @@ read_pack_file(fs_fs_t *fs,
 
       /* create the revision info for the current rev */
       revision_info_t *info = apr_pcalloc(pool, sizeof(*info));
-      info->representations = apr_array_make(iter_pool, 4, sizeof(representation_t*));
+      info->representations = apr_array_make(iter_pool, 4, sizeof(rep_stats_t*));
 
       info->revision = base + i;
       info->offset = APR_ARRAY_IDX(manifest, i, apr_size_t);
@@ -1501,7 +1500,7 @@ read_pack_file(fs_fs_t *fs,
  * Use POOL for allocations.
  */
 static svn_error_t *
-read_revision_file(fs_fs_t *fs,
+read_revision_file(fs_t *fs,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
@@ -1517,7 +1516,7 @@ read_revision_file(fs_fs_t *fs,
   SVN_ERR(get_file_size(&file_size, file, local_pool));
 
   /* create the revision info for the current rev */
-  info->representations = apr_array_make(pool, 4, sizeof(representation_t*));
+  info->representations = apr_array_make(pool, 4, sizeof(rep_stats_t*));
 
   info->revision = revision;
   info->offset = 0;
@@ -1558,7 +1557,7 @@ read_revision_file(fs_fs_t *fs,
  * capacity.  Use POOL for non-cache allocations.
  */
 static svn_error_t *
-read_revisions(fs_fs_t **fs,
+read_revisions(fs_t **fs,
                const char *path,
                svn_revnum_t start_revision,
                apr_size_t memsize,
@@ -1590,7 +1589,7 @@ read_revisions(fs_fs_t **fs,
   SVN_ERR(svn_cache__create_membuffer_cache(&(*fs)->window_cache,
                                             svn_cache__get_global_membuffer_cache(),
                                             NULL, NULL,
-                                            sizeof(window_cache_key_t),
+                                            sizeof(cache_key_t),
                                             "",
                                             SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE, pool));
@@ -1662,7 +1661,7 @@ typedef struct node_stats_t
  */
 static void
 add_rep_pack_stats(rep_pack_stats_t *stats,
-                   representation_t *rep)
+                   rep_stats_t *rep)
 {
   stats->count++;
 
@@ -1675,7 +1674,7 @@ add_rep_pack_stats(rep_pack_stats_t *stats,
  */
 static void
 add_rep_stats(representation_stats_t *stats,
-              representation_t *rep)
+              rep_stats_t *rep)
 {
   add_rep_pack_stats(&stats->total, rep);
   if (rep->ref_count == 1)
@@ -1802,7 +1801,7 @@ compare_rep_size(const svn_sort__item_t *a,
  * Allocate results in POOL.
  */
 static apr_array_header_t *
-get_by_extensions(fs_fs_t *fs,
+get_by_extensions(fs_t *fs,
                   int (*comparison_func)(const svn_sort__item_t *,
                                          const svn_sort__item_t *),
                   apr_pool_t *pool)
@@ -1850,7 +1849,7 @@ merge_by_extension(apr_array_header_t *target,
  * Use POOL for allocations.
  */
 static void
-print_extensions_by_changes(fs_fs_t *fs,
+print_extensions_by_changes(fs_t *fs,
                             apr_pool_t *pool)
 {
   apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
@@ -1879,7 +1878,7 @@ print_extensions_by_changes(fs_fs_t *fs,
  * changed file content.  Use POOL for allocations.
  */
 static void
-print_extensions_by_nodes(fs_fs_t *fs,
+print_extensions_by_nodes(fs_t *fs,
                           apr_pool_t *pool)
 {
   apr_array_header_t *data = get_by_extensions(fs, compare_node_size, pool);
@@ -1908,7 +1907,7 @@ print_extensions_by_nodes(fs_fs_t *fs,
  * changed file content.  Use POOL for allocations.
  */
 static void
-print_extensions_by_reps(fs_fs_t *fs,
+print_extensions_by_reps(fs_t *fs,
                          apr_pool_t *pool)
 {
   apr_array_header_t *data = get_by_extensions(fs, compare_rep_size, pool);
@@ -1936,7 +1935,7 @@ print_extensions_by_reps(fs_fs_t *fs,
 /* Print per-extension histograms for the most frequent extensions in FS.
  * Use POOL for allocations. */
 static void
-print_histograms_by_extension(fs_fs_t *fs,
+print_histograms_by_extension(fs_t *fs,
                               apr_pool_t *pool)
 {
   apr_array_header_t *data = get_by_extensions(fs, compare_count, pool);
@@ -1960,7 +1959,7 @@ print_histograms_by_extension(fs_fs_t *fs,
  * Use POOL for allocations.
  */
 static void
-print_stats(fs_fs_t *fs,
+print_stats(fs_t *fs,
             apr_pool_t *pool)
 {
   int i, k;
@@ -2003,8 +2002,8 @@ print_stats(fs_fs_t *fs,
       /* process representations */
       for (k = 0; k < revision->representations->nelts; ++k)
         {
-          representation_t *rep = APR_ARRAY_IDX(revision->representations,
-                                                k, representation_t *);
+          rep_stats_t *rep = APR_ARRAY_IDX(revision->representations,
+                                                k, rep_stats_t *);
 
           /* accumulate in the right bucket */
           switch(rep->kind)
@@ -2152,7 +2151,7 @@ int main(int argc, const char *argv[])
   svn_revnum_t start_revision = 0;
   apr_size_t memsize = 100;
   apr_uint64_t temp = 0;
-  fs_fs_t *fs;
+  fs_t *fs;
 
   apr_initialize();
   atexit(apr_terminate);
