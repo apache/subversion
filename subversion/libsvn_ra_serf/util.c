@@ -2075,6 +2075,10 @@ handle_response(serf_request_t *request,
           handler->discard_body = TRUE;
         }
     }
+  else if (handler->sline.code <= 199)
+    {
+      handler->discard_body = TRUE;
+    }
 
   /* Stop processing the above, on every packet arrival.  */
   handler->reading_body = TRUE;
@@ -2094,7 +2098,7 @@ handle_response(serf_request_t *request,
         {
           handler->done = TRUE;
 
-          if (handler->sline.code >= 400
+          if ((handler->sline.code >= 400 || handler->sline.code <= 199)
               && !handler->session->pending_error
               && !handler->no_fail_on_http_failure_status)
             {
@@ -2206,6 +2210,13 @@ handle_response_cb(serf_request_t *request,
     {
       handler->done = TRUE;
       outer_status = APR_EOF;
+    }
+  else if (SERF_BUCKET_READ_ERROR(outer_status)
+           && handler->session->pending_error)
+    {
+      handler->discard_body = TRUE; /* Discard further data */
+      handler->done = TRUE; /* Mark as done */
+      return APR_EAGAIN; /* Exit context loop */
     }
 
   return outer_status;
@@ -2506,7 +2517,9 @@ svn_ra_serf__error_on_status(serf_status_line sline,
     {
       case 301:
       case 302:
+      case 303:
       case 307:
+      case 308:
         return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
                                  (sline.code == 301)
                                  ? _("Repository moved permanently to '%s';"
@@ -2540,7 +2553,7 @@ svn_ra_serf__error_on_status(serf_status_line sline,
                                    "'%s'"), path);
     }
 
-  if (sline.code >= 300)
+  if (sline.code >= 300 || sline.code <= 199)
     return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                              _("Unexpected HTTP status %d '%s' on '%s'"),
                              sline.code, sline.reason, path);
