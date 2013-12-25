@@ -968,6 +968,7 @@ typedef struct replay_baton_t {
   svn_revnum_t current_revision;
   subcommand_baton_t *sb;
   svn_boolean_t has_commit_revprops_capability;
+  svn_boolean_t has_atomic_revprops_capability;
   int normalized_rev_props_count;
   int normalized_node_props_count;
   const char *to_root;
@@ -1295,6 +1296,7 @@ replay_rev_finished(svn_revnum_t revision,
   apr_hash_t *filtered, *existing_props;
   int filtered_count;
   int normalized_count;
+  svn_string_t *rev_str;
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
@@ -1334,21 +1336,24 @@ replay_rev_finished(svn_revnum_t revision,
 
   svn_pool_clear(subpool);
 
+  rev_str = svn_string_create(apr_psprintf(pool, "%ld", revision), subpool);
+
   /* Ok, we're done, bring the last-merged-rev property up to date. */
   SVN_ERR(svn_ra_change_rev_prop2(
            rb->to_session,
            0,
            SVNSYNC_PROP_LAST_MERGED_REV,
            NULL,
-           svn_string_create(apr_psprintf(pool, "%ld", revision),
-                             subpool),
+           rev_str,
            subpool));
 
   /* And finally drop the currently copying prop, since we're done
      with this revision. */
   SVN_ERR(svn_ra_change_rev_prop2(rb->to_session, 0,
                                   SVNSYNC_PROP_CURRENTLY_COPYING,
-                                  NULL, NULL, subpool));
+                                  rb->has_atomic_revprops_capability
+                                    ? &rev_str : NULL,
+                                  NULL, subpool));
 
   /* Notify the user that we copied revision properties. */
   if (! rb->sb->quiet)
@@ -1476,6 +1481,11 @@ do_synchronize(svn_ra_session_t *to_session,
   SVN_ERR(svn_ra_has_capability(rb->to_session,
                                 &rb->has_commit_revprops_capability,
                                 SVN_RA_CAPABILITY_COMMIT_REVPROPS,
+                                pool));
+
+  SVN_ERR(svn_ra_has_capability(rb->to_session,
+                                &rb->has_atomic_revprops_capability,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
 
   start_revision = last_merged + 1;
