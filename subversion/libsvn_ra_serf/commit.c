@@ -203,34 +203,22 @@ typedef struct file_context_t {
 /* Setup routines and handlers for various requests we'll invoke. */
 
 static svn_error_t *
-return_response_err(svn_ra_serf__handler_t *handler)
+unexpected_status_error(svn_ra_serf__handler_t *handler)
 {
   svn_error_t *err;
-  svn_error_t *status_err;
 
-  /* We should have captured SLINE and LOCATION in the HANDLER.  */
-  SVN_ERR_ASSERT(handler->handler_pool != NULL);
+  err = svn_ra_serf__error_on_status(handler->sline,
+                                     handler->path,
+                                     handler->location);
 
-  /* Ye Olde Fallback Error */
-  err = (handler->server_error != NULL)
-              ? handler->server_error->error
-              : SVN_NO_ERROR;
+  if (err)
+    return err;
 
-  status_err = svn_ra_serf__error_on_status(handler->sline,
-                                            handler->path,
-                                            handler->location);
-
-  /* This function should only be called on error conditions */
-  SVN_ERR_ASSERT(err || status_err);
-
-  /* If we have a detailed server error that agrees with the status code
-     report this error first, otherwise report the status first as that
-     really determines our behavior */
-  if (status_err && err
-      && status_err->apr_err == err->apr_err)
-    return svn_error_trace(svn_error_compose_create(err, status_err));
-  else
-    return svn_error_trace(svn_error_compose_create(status_err, err));
+  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                           _("Unexpected HTTP status %d '%s' on '%s' "
+                             "request to '%s'"),
+                           handler->sline.code, handler->sline.reason,
+                           handler->method, handler->path);
 }
 
 /* Implements svn_ra_serf__request_body_delegate_t */
@@ -318,7 +306,7 @@ checkout_node(const char **working_url,
   SVN_ERR(svn_ra_serf__context_run_one(&handler, scratch_pool));
 
   if (handler.sline.code != 201)
-    return svn_error_trace(return_response_err(&handler));
+    return svn_error_trace(unexpected_status_error(&handler));
 
   if (handler.location == NULL)
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -976,16 +964,8 @@ proppatch_resource(proppatch_context_t *proppatch,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  if (handler->sline.code != 207
-      || (handler->server_error != NULL
-          && handler->server_error->error != NULL))
-    {
-      return svn_error_create(
-               SVN_ERR_RA_DAV_PROPPATCH_FAILED,
-               return_response_err(handler),
-               _("At least one property change failed; repository"
-                 " is unchanged"));
-    }
+  if (handler->sline.code != 207)
+    return svn_error_trace(unexpected_status_error(handler));
 
   return SVN_NO_ERROR;
 }
@@ -1581,26 +1561,18 @@ delete_entry(const char *path,
     {
       svn_error_clear(err);
 
-      /* An error has been registered on the connection. Reset the thing
-         so that we can use it again.  */
-      serf_connection_reset(handler->conn->conn);
-
       handler->body_delegate = create_delete_body;
       handler->body_delegate_baton = delete_ctx;
       handler->body_type = "text/xml";
 
       SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
     }
-  else if (err)
-    {
-      return err;
-    }
+  else
+   SVN_ERR(err);
 
   /* 204 No Content: item successfully deleted */
   if (handler->sline.code != 204)
-    {
-      return svn_error_trace(return_response_err(handler));
-    }
+    return svn_error_trace(unexpected_status_error(handler));
 
   svn_hash_sets(dir->commit->deleted_entries,
                 apr_pstrdup(dir->commit->pool, path), (void *)1);
@@ -2105,9 +2077,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 201 && handler->sline.code != 204)
-        {
-          return svn_error_trace(return_response_err(handler));
-        }
+        return svn_error_trace(unexpected_status_error(handler));
     }
 
   /* If we got no stream of changes, but this is an added-without-history
@@ -2150,9 +2120,7 @@ close_file(void *file_baton,
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 204 && handler->sline.code != 201)
-        {
-          return svn_error_trace(return_response_err(handler));
-        }
+        return svn_error_trace(unexpected_status_error(handler));
     }
 
   if (ctx->svndiff)
