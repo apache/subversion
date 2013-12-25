@@ -2638,9 +2638,22 @@ def xml_unsafe_author(sbox):
   svntest.actions.run_and_verify_info(expected_info, wc_dir)
 
   # mod_dav_svn sends svn:author (via PROPFIND for DAV)
+  # Since r1553367 this works correctly on ra_serf, since we now request
+  # a single property value which somehow triggers different behavior
   svntest.actions.run_and_verify_svn(None, ['foo\bbar'], [],
                                      'propget', '--revprop', '-r', '1',
                                      'svn:author', '--strict', wc_dir)
+
+  # But a proplist of this property value still fails via DAV.
+  expected_output = [
+    'Unversioned properties on revision 1:\n',
+    '  svn:author\n',
+    '  svn:date\n',
+    '  svn:log\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '--revprop', '-r', '1',
+                                     wc_dir)
 
 
 ########################################################################
