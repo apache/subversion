@@ -257,6 +257,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1553376, r1553377
+   Fix pool lifetime issue in serf commit processing for copied files and dirs
+   Justification:
+     Pool lifetime issues are bad. Reported by several git-svn users.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
