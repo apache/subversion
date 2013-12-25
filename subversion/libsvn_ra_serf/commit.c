@@ -2348,16 +2348,36 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   const char *proppatch_target;
   const char *ns;
   svn_error_t *err;
+  svn_string_t *tmp_old_value;
+  svn_boolean_t atomic_capable = FALSE;
+
+  if (old_value_p || !value)
+    SVN_ERR(svn_ra_serf__has_capability(ra_session, &atomic_capable,
+                                        SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                        pool));
 
   if (old_value_p)
     {
-      svn_boolean_t capable;
-      SVN_ERR(svn_ra_serf__has_capability(ra_session, &capable,
-                                          SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-                                          pool));
-
       /* How did you get past the same check in svn_ra_change_rev_prop2()? */
-      SVN_ERR_ASSERT(capable);
+      SVN_ERR_ASSERT(atomic_capable);
+    }
+  else if (! value && atomic_capable)
+    {
+      /* mod_dav_svn doesn't report a failure when a property delete fails. The
+         atomic revprop change behavior is a nice workaround, to allow getting
+         access to the error anyway.
+
+         Somehow the mod_dav maintainers think that returning an error from
+         mod_dav's property delete is an RFC violation.
+         See https://issues.apache.org/bugzilla/show_bug.cgi?id=53525 */
+
+      SVN_ERR(svn_ra_serf__rev_prop(ra_session, rev, name, &tmp_old_value,
+                                    pool));
+
+      if (!tmp_old_value)
+        return SVN_NO_ERROR; /* Nothing to delete */
+
+      old_value_p = &tmp_old_value;
     }
 
   commit = apr_pcalloc(pool, sizeof(*commit));
@@ -2399,12 +2419,12 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   proppatch_ctx->pool = pool;
   proppatch_ctx->commit = commit;
   proppatch_ctx->path = proppatch_target;
-  proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
-  proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
+  proppatch_ctx->changed_props = apr_hash_make(pool);
+  proppatch_ctx->removed_props = apr_hash_make(pool);
   if (old_value_p)
     {
-      proppatch_ctx->previous_changed_props = apr_hash_make(proppatch_ctx->pool);
-      proppatch_ctx->previous_removed_props = apr_hash_make(proppatch_ctx->pool);
+      proppatch_ctx->previous_changed_props = apr_hash_make(pool);
+      proppatch_ctx->previous_removed_props = apr_hash_make(pool);
     }
   proppatch_ctx->base_revision = SVN_INVALID_REVNUM;
 
@@ -2412,35 +2432,34 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     {
       svn_ra_serf__set_prop(proppatch_ctx->previous_changed_props,
                             proppatch_ctx->path,
-                            ns, name, *old_value_p, proppatch_ctx->pool);
+                            ns, name, *old_value_p, pool);
     }
   else if (old_value_p)
     {
-      svn_string_t *dummy_value = svn_string_create_empty(proppatch_ctx->pool);
+      svn_string_t *dummy_value = svn_string_create_empty(pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->previous_removed_props,
                             proppatch_ctx->path,
-                            ns, name, dummy_value, proppatch_ctx->pool);
+                            ns, name, dummy_value, pool);
     }
 
   if (value)
     {
       svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                            ns, name, value, proppatch_ctx->pool);
+                            ns, name, value, pool);
     }
   else
     {
-      value = svn_string_create_empty(proppatch_ctx->pool);
+      value = svn_string_create_empty(pool);
 
       svn_ra_serf__set_prop(proppatch_ctx->removed_props, proppatch_ctx->path,
-                            ns, name, value, proppatch_ctx->pool);
+                            ns, name, value, pool);
     }
 
-  err = proppatch_resource(proppatch_ctx, commit, proppatch_ctx->pool);
+  err = proppatch_resource(proppatch_ctx, commit, pool);
   if (err)
     return
-      svn_error_create
-      (SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+      svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED, err,
        _("DAV request failed; it's possible that the repository's "
          "pre-revprop-change hook either failed or is non-existent"));
 
