@@ -1844,7 +1844,7 @@ add_file(const char *path,
   new_file->name = svn_relpath_basename(new_file->relpath, NULL);
   new_file->added = TRUE;
   new_file->base_revision = SVN_INVALID_REVNUM;
-  new_file->copy_path = copy_path;
+  new_file->copy_path = apr_pstrdup(new_file->pool, copy_path);
   new_file->copy_revision = copy_revision;
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
