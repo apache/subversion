@@ -965,14 +965,17 @@ open_target_session(svn_ra_session_t **target_session_p,
 typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
-  /* Extra 'backdoor' session for fetching data *from* the target repo. */
-  svn_ra_session_t *extra_to_session;
   svn_revnum_t current_revision;
   subcommand_baton_t *sb;
   svn_boolean_t has_commit_revprops_capability;
   int normalized_rev_props_count;
   int normalized_node_props_count;
   const char *to_root;
+
+#ifdef ENABLE_EV2_SHIMS
+  /* Extra 'backdoor' session for fetching data *from* the target repo. */
+  svn_ra_session_t *extra_to_session;
+#endif
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
@@ -1049,7 +1052,7 @@ filter_include_log(const char *key)
   return ! filter_exclude_log(key);
 }
 
-
+#ifdef ENABLE_EV2_SHIMS
 static svn_error_t *
 fetch_base_func(const char **filename,
                 void *baton,
@@ -1177,6 +1180,7 @@ get_shim_callbacks(replay_baton_t *rb,
 
   return callbacks;
 }
+#endif
 
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
@@ -1245,8 +1249,10 @@ replay_rev_started(svn_revnum_t revision,
                                      rb->sb->source_prop_encoding, pool));
   rb->normalized_rev_props_count += normalized_count;
 
+#ifdef ENABLE_EV2_SHIMS
   SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->to_session,
                                 get_shim_callbacks(rb, pool)));
+#endif
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
                                     filtered,
