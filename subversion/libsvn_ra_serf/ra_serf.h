@@ -1501,6 +1501,14 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
                       const char *url,
                       apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.rev_prop(). */
+svn_error_t *
+svn_ra_serf__rev_prop(svn_ra_session_t *session,
+                      svn_revnum_t rev,
+                      const char *name,
+                      svn_string_t **value,
+                      apr_pool_t *pool);
+
 /* Implements svn_ra__vtable_t.get_log(). */
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *session,

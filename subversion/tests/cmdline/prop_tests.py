@@ -808,7 +808,6 @@ def copy_inherits_special_props(sbox):
 # non-Posix platforms, we won't have to skip here:
 @Skip(is_non_posix_and_non_windows_os)
 @Issue(3086)
-@XFail(svntest.main.is_ra_type_dav)
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
 

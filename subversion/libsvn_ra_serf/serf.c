@@ -40,6 +40,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "svn_time.h"
 #include "svn_version.h"
 
@@ -850,12 +851,13 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                            latest_revnum, session, pool));
 }
 
-/* Implements svn_ra__vtable_t.rev_proplist(). */
+/* Implementation of svn_ra_serf__rev_proplist(). */
 static svn_error_t *
-svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
-                          svn_revnum_t rev,
-                          apr_hash_t **ret_props,
-                          apr_pool_t *pool)
+serf__rev_proplist(svn_ra_session_t *ra_session,
+                   svn_revnum_t rev,
+                   const svn_ra_serf__dav_props_t *fetch_props,
+                   apr_hash_t **ret_props,
+                   apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
@@ -879,7 +881,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 
   /* ### fix: fetch hash of *just* the PATH@REV props. no nested hash.  */
   SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
-                                      propfind_path, rev, "0", all_props,
+                                      propfind_path, rev, "0", fetch_props,
                                       pool, pool));
 
   SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
@@ -888,8 +890,21 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_ra__vtable_t.rev_prop(). */
+/* Implements svn_ra__vtable_t.rev_proplist(). */
 static svn_error_t *
+svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
+                          svn_revnum_t rev,
+                          apr_hash_t **ret_props,
+                          apr_pool_t *pool)
+{
+  return svn_error_trace(
+            serf__rev_proplist(ra_session, rev, all_props,
+                               ret_props, pool));
+}
+
+
+/* Implements svn_ra__vtable_t.rev_prop(). */
+svn_error_t *
 svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       svn_revnum_t rev,
                       const char *name,
@@ -897,8 +912,25 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       apr_pool_t *pool)
 {
   apr_hash_t *props;
+  svn_ra_serf__dav_props_t specific_props[2];
+  const svn_ra_serf__dav_props_t *fetch_props = all_props;
 
-  SVN_ERR(svn_ra_serf__rev_proplist(session, rev, &props, pool));
+  /* The DAV propfind doesn't allow property fetches for any property name
+     as there is no defined way to quote values. If we are just fetching a
+     "svn:property" we can safely do this. In other cases we just fetch all
+     revision properties and filter the right one out */
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX)-1) == 0
+      && !strchr(name + sizeof(SVN_PROP_PREFIX)-1, ':'))
+    {
+      specific_props[0].namespace = SVN_DAV_PROP_NS_SVN;
+      specific_props[0].name = name + sizeof(SVN_PROP_PREFIX)-1;
+      specific_props[1].namespace = NULL;
+      specific_props[1].name = NULL;
+
+      fetch_props = specific_props;
+    }
+
+  SVN_ERR(serf__rev_proplist(session, rev, fetch_props, &props, pool));
 
   *value = svn_hash_gets(props, name);
 
