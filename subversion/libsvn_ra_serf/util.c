@@ -2404,11 +2404,6 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
 
               /* Okay, strip off a component from PATH. */
               path = svn_urlpath__dirname(path, pool);
-
-              /* An error occurred on conns. serf 0.4.0 remembers that
-                 the connection had a problem. We need to reset it, in
-                 order to use it again.  */
-              serf_connection_reset(conn->conn);
             }
         }
     }
