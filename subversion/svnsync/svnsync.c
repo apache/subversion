@@ -1296,7 +1296,7 @@ replay_rev_finished(svn_revnum_t revision,
   apr_hash_t *filtered, *existing_props;
   int filtered_count;
   int normalized_count;
-  svn_string_t *rev_str;
+  const svn_string_t *rev_str;
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
