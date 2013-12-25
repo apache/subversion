@@ -2348,7 +2348,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
   const char *proppatch_target;
   const char *ns;
   svn_error_t *err;
-  svn_string_t *tmp_old_value;
+  const svn_string_t *tmp_old_value;
   svn_boolean_t atomic_capable = FALSE;
 
   if (old_value_p || !value)
@@ -2363,6 +2363,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
     }
   else if (! value && atomic_capable)
     {
+      svn_string_t *old_value;
       /* mod_dav_svn doesn't report a failure when a property delete fails. The
          atomic revprop change behavior is a nice workaround, to allow getting
          access to the error anyway.
@@ -2371,12 +2372,14 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
          mod_dav's property delete is an RFC violation.
          See https://issues.apache.org/bugzilla/show_bug.cgi?id=53525 */
 
-      SVN_ERR(svn_ra_serf__rev_prop(ra_session, rev, name, &tmp_old_value,
+      SVN_ERR(svn_ra_serf__rev_prop(ra_session, rev, name, &old_value,
                                     pool));
 
-      if (!tmp_old_value)
+      if (!old_value)
         return SVN_NO_ERROR; /* Nothing to delete */
 
+      /* The api expects a double const pointer. Let's make one */
+      tmp_old_value = old_value;
       old_value_p = &tmp_old_value;
     }
 
