@@ -1074,8 +1074,7 @@ setup_copy_file_headers(serf_bucket_t *headers,
 
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
 
-  serf_bucket_headers_setn(headers, "Depth", "0");
-  serf_bucket_headers_setn(headers, "Overwrite", "T");
+  serf_bucket_headers_setn(headers, "Overwrite", "F");
 
   return SVN_NO_ERROR;
 }
@@ -1194,7 +1193,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   serf_bucket_headers_set(headers, "Destination", absolute_uri);
 
   serf_bucket_headers_setn(headers, "Depth", "infinity");
-  serf_bucket_headers_setn(headers, "Overwrite", "T");
+  serf_bucket_headers_setn(headers, "Overwrite", "F");
 
   /* Implicitly checkout this dir now. */
   dir->working_url = apr_pstrdup(dir->pool, uri.path);
