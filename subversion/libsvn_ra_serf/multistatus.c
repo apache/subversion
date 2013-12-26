@@ -288,12 +288,12 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
     {
       case MS_RESPONSE_HREF:
         {
-          apr_status_t status;
+          apr_status_t result;
           apr_uri_t uri;
 
-          status = apr_uri_parse(scratch_pool, cdata->data, &uri);
-          if (status)
-            return svn_ra_serf__wrap_err(status, NULL);
+          result = apr_uri_parse(scratch_pool, cdata->data, &uri);
+          if (result)
+            return svn_ra_serf__wrap_err(result, NULL);
           svn_ra_serf__xml_note(xes, MS_RESPONSE, "path",
                                 svn_urlpath__canonicalize(uri.path, scratch_pool));
         }
@@ -308,7 +308,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
           svn_ra_serf__xml_note(xes, MS_RESPONSE, "errcode", errcode);
         break;
       case MS_RESPONSE:
-        if (status = svn_hash_gets(attrs, "status"))
+        if ((status = svn_hash_gets(attrs, "status")) != NULL)
           {
             error_item_t *item;
 
@@ -328,9 +328,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
             if (item->message)
               {
-                const char *errcode = svn_hash_gets(attrs, "errcode");
-
-                if (errcode)
+                if ((errcode = svn_hash_gets(attrs, "errcode")) != NULL)
                   {
                     apr_int64_t val;
 
@@ -364,7 +362,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
         break;
 
       case MS_PROPSTAT:
-        if (status = svn_hash_gets(attrs, "status"))
+        if ((status = svn_hash_gets(attrs, "status")) != NULL)
           {
             apr_hash_t *response_attrs;
             error_item_t *item;
@@ -388,9 +386,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
             if (item->message)
               {
-                const char *errcode = svn_hash_gets(attrs, "errcode");
-
-                if (errcode)
+                if ((errcode = svn_hash_gets(attrs, "errcode")) != NULL)
                   {
                     apr_int64_t val;
 
@@ -429,9 +425,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
           if (item->message)
             {
-              const char *errcode = svn_hash_gets(attrs, "errcode");
-
-              if (errcode)
+              if ((errcode = svn_hash_gets(attrs, "errcode")) != NULL)
                 {
                   apr_int64_t val;
 
