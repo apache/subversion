@@ -1738,9 +1738,9 @@ def post_revprop_change_hook(sbox):
   svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
                                       error_msg)
 
-  # serf/neon/mod_dav_svn give SVN_ERR_RA_DAV_REQUEST_FAILED
+  # serf/mod_dav_svn give SVN_ERR_RA_DAV_PROPPATCH_FAILED
   # file/svn give SVN_ERR_REPOS_HOOK_FAILURE
-  expected_error = 'svn: (E175002|E165001).*post-revprop-change hook failed'
+  expected_error = 'svn: (E175008|E165001).*post-revprop-change hook failed'
 
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'ps', '--revprop', '-r0', 'p', 'v',
