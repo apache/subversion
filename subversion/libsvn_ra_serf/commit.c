@@ -1408,19 +1408,8 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_one(handler, ctx->pool));
 
       if (handler->sline.code != 201)
-        {
-          /* If there is some standard error code: use it */
-          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                               handler->path,
-                                               handler->location));
+        return svn_error_trace(unexpected_status_error(handler));
 
-          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                   _("%s of '%s': %d %s (%s://%s)"),
-                                   handler->method, handler->path,
-                                   handler->sline.code, handler->sline.reason,
-                                   ctx->session->session_url.scheme,
-                                   ctx->session->session_url.hostinfo);
-        }
       if (! (ctx->txn_root_url && ctx->txn_url))
         {
           return svn_error_createf(
@@ -1491,18 +1480,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_one(handler, ctx->pool));
 
       if (handler->sline.code != 201)
-        {
-          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                               handler->path,
-                                               handler->location));
-
-          return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                   _("%s of '%s': %d %s (%s://%s)"),
-                                   handler->method, handler->path,
-                                   handler->sline.code, handler->sline.reason,
-                                   ctx->session->session_url.scheme,
-                                   ctx->session->session_url.hostinfo);
-        }
+        return svn_error_trace(unexpected_status_error(handler));
 
       /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
       SVN_ERR(svn_ra_serf__discover_vcc(&(ctx->vcc_url), ctx->session,
@@ -1723,10 +1701,7 @@ add_directory(const char *path,
   SVN_ERR(svn_ra_serf__context_run_one(handler, dir->pool));
 
   if (handler->sline.code != 201)
-    {
-      /* ### Do we need the same overwrite allow as add_file() here? */
-      return svn_error_trace(unexpected_status_error(handler));
-    }
+    return svn_error_trace(unexpected_status_error(handler));
 
   *child_baton = dir;
 
@@ -1958,44 +1933,7 @@ add_file(const char *path,
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 201)
-        {
-          dir_context_t *pb;
-          const char *expected_path;
-          apr_uri_t parent_uri;
-
-          if (handler->sline.code != 204)
-            return svn_error_trace(unexpected_status_error(handler));
-
-          /* The FS layer allows overwriting a copied descendant by a
-             different revision of the same path. Let's calculate if
-             that is the case here and then (and only then) accept
-             status 204 as OK.
-
-             This path is excercised by copy_tests.py, when it creates
-             a copy to URL of a mixed revision workingcopy. */
-
-          pb = dir;
-
-          while (pb && !pb->added)
-            pb = pb->parent_dir;
-
-          if (!pb || !pb->copy_path)
-            return svn_error_trace(unexpected_status_error(handler));
-
-          status = apr_uri_parse(scratch_pool, dir->copy_path, &parent_uri);
-          if (status)
-            return svn_ra_serf__wrap_err(status, NULL);
-
-          expected_path = svn_path_url_add_component2(
-                                parent_uri.path,
-                                svn_relpath_skip_ancestor(pb->relpath, path),
-                                scratch_pool);
-
-          if (strcmp(expected_path, uri.path) != 0)
-            return svn_error_trace(unexpected_status_error(handler));
-
-          /* Ok, we accept the overwrite operation as non-error */
-        }
+        return svn_error_trace(unexpected_status_error(handler));
     }
   else if (! ((dir->added && !dir->copy_path) ||
            (deleted_parent && deleted_parent[0] != '\0')))
@@ -2327,16 +2265,9 @@ abort_edit(void *edit_baton,
      404 if the activity wasn't found. */
   if (handler->sline.code != 204
       && handler->sline.code != 403
-      && handler->sline.code != 404
-      )
+      && handler->sline.code != 404)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                           handler->path,
-                                           handler->location));
-
-      return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                               _("DELETE returned unexpected status: %d"),
-                               handler->sline.code);
+      return svn_error_trace(unexpected_status_error(handler));
     }
 
   return SVN_NO_ERROR;
