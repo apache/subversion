@@ -654,7 +654,6 @@ def up_sw_dir_del_onto_del(sbox):
 #   Adding         branch1\dC\D
 #
 #   Committed revision 4.
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3314)
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"

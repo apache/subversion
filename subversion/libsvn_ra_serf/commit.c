@@ -210,6 +210,11 @@ unexpected_status_error(svn_ra_serf__handler_t *handler)
   if (err)
     return err;
 
+  if (handler->sline.code == 204)
+    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                             _("Path '%s' already exists"),
+                             handler->path);
+
   return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                            _("Unexpected HTTP status %d '%s' on '%s' "
                              "request to '%s'"),
@@ -1717,22 +1722,10 @@ add_directory(const char *path,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, dir->pool));
 
-  switch (handler->sline.code)
+  if (handler->sline.code != 201)
     {
-      case 201: /* Created:    item was successfully copied */
-      case 204: /* No Content: item successfully replaced an existing target */
-        break;
-
-      default:
-        SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                             handler->path,
-                                             handler->location));
-
-        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                 _("Adding directory failed: %s on %s "
-                                   "(%d %s)"),
-                                 handler->method, handler->path,
-                                 handler->sline.code, handler->sline.reason);
+      /* ### Do we need the same overwrite allow as add_file() here? */
+      return svn_error_trace(unexpected_status_error(handler));
     }
 
   *child_baton = dir;
@@ -1882,6 +1875,7 @@ add_file(const char *path,
   dir_context_t *dir = parent_baton;
   file_context_t *new_file;
   const char *deleted_parent = path;
+  apr_pool_t *scratch_pool = svn_pool_create(file_pool);
 
   new_file = apr_pcalloc(file_pool, sizeof(*new_file));
   new_file->pool = file_pool;
@@ -1926,36 +1920,114 @@ add_file(const char *path,
       deleted_parent = svn_relpath_dirname(deleted_parent, file_pool);
     }
 
-  if (! ((dir->added && !dir->copy_path) ||
-         (deleted_parent && deleted_parent[0] != '\0')))
+  if (copy_path)
     {
       svn_ra_serf__handler_t *handler;
+      apr_uri_t uri;
+      const char *req_url;
+      
+      apr_status_t status;
 
-      handler = apr_pcalloc(new_file->pool, sizeof(*handler));
-      handler->handler_pool = new_file->pool;
+      /* Create the copy directly as cheap 'does exist/out of date'
+         check. We update the copy (if needed) from close_file() */
+
+      status = apr_uri_parse(scratch_pool, copy_path, &uri);
+      if (status)
+        return svn_ra_serf__wrap_err(status, NULL);
+
+      /* ### conn==NULL for session->conns[0]. same as commit->conn.  */
+      SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
+                                          dir->commit->session,
+                                          NULL /* conn */,
+                                          uri.path, copy_revision,
+                                          scratch_pool, scratch_pool));
+
+      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+      handler->handler_pool = scratch_pool;
+      handler->method = "COPY";
+      handler->path = req_url;
+      handler->conn = dir->commit->conn;
+      handler->session = dir->commit->session;
+
+      handler->response_handler = svn_ra_serf__expect_empty_body;
+      handler->response_baton = handler;
+
+      handler->header_delegate = setup_copy_file_headers;
+      handler->header_delegate_baton = new_file;
+
+      SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+      if (handler->sline.code != 201)
+        {
+          dir_context_t *pb;
+          const char *expected_path;
+          apr_uri_t parent_uri;
+
+          if (handler->sline.code != 204)
+            return svn_error_trace(unexpected_status_error(handler));
+
+          /* The FS layer allows overwriting a copied descendant by a
+             different revision of the same path. Let's calculate if
+             that is the case here and then (and only then) accept
+             status 204 as OK.
+
+             This path is excercised by copy_tests.py, when it creates
+             a copy to URL of a mixed revision workingcopy. */
+
+          pb = dir;
+
+          while (pb && !pb->added)
+            pb = pb->parent_dir;
+
+          if (!pb || !pb->copy_path)
+            return svn_error_trace(unexpected_status_error(handler));
+
+          status = apr_uri_parse(scratch_pool, dir->copy_path, &parent_uri);
+          if (status)
+            return svn_ra_serf__wrap_err(status, NULL);
+
+          expected_path = svn_path_url_add_component2(
+                                parent_uri.path,
+                                svn_relpath_skip_ancestor(pb->relpath, path),
+                                scratch_pool);
+
+          if (strcmp(expected_path, uri.path) != 0)
+            return svn_error_trace(unexpected_status_error(handler));
+
+          /* Ok, we accept the overwrite operation as non-error */
+        }
+    }
+  else if (! ((dir->added && !dir->copy_path) ||
+           (deleted_parent && deleted_parent[0] != '\0')))
+    {
+      svn_ra_serf__handler_t *handler;
+      svn_error_t *err;
+
+      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
+      handler->handler_pool = scratch_pool;
       handler->session = new_file->commit->session;
       handler->conn = new_file->commit->conn;
       handler->method = "HEAD";
       handler->path = svn_path_url_add_component2(
-        dir->commit->session->session_url.path,
-        path, new_file->pool);
+                                        dir->commit->session->session_url.path,
+                                        path, scratch_pool);
       handler->response_handler = svn_ra_serf__expect_empty_body;
       handler->response_baton = handler;
-      handler->no_fail_on_http_failure_status = TRUE;
 
-      SVN_ERR(svn_ra_serf__context_run_one(handler, new_file->pool));
+      err = svn_ra_serf__context_run_one(handler, scratch_pool);
 
-      if (handler->sline.code != 404)
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
-          SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                               handler->path,
-                                               handler->location));
-
-          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                   _("File '%s' already exists"), path);
+          svn_error_clear(err); /* Great. We can create a new file! */
         }
+      else if (err)
+        return svn_error_trace(err);
+      else
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                 _("File '%s' already exists"), path);
     }
 
+  svn_pool_destroy(scratch_pool);
   *file_baton = new_file;
 
   return SVN_NO_ERROR;
@@ -2086,49 +2158,8 @@ close_file(void *file_baton,
 {
   file_context_t *ctx = file_baton;
   svn_boolean_t put_empty_file = FALSE;
-  apr_status_t status;
 
   ctx->result_checksum = text_checksum;
-
-  if (ctx->copy_path)
-    {
-      svn_ra_serf__handler_t *handler;
-      apr_uri_t uri;
-      const char *req_url;
-
-      status = apr_uri_parse(scratch_pool, ctx->copy_path, &uri);
-      if (status)
-        {
-          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                   _("Unable to parse URL '%s'"),
-                                   ctx->copy_path);
-        }
-
-      /* ### conn==NULL for session->conns[0]. same as commit->conn.  */
-      SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                          ctx->commit->session,
-                                          NULL /* conn */,
-                                          uri.path, ctx->copy_revision,
-                                          scratch_pool, scratch_pool));
-
-      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-      handler->handler_pool = scratch_pool;
-      handler->method = "COPY";
-      handler->path = req_url;
-      handler->conn = ctx->commit->conn;
-      handler->session = ctx->commit->session;
-
-      handler->response_handler = svn_ra_serf__expect_empty_body;
-      handler->response_baton = handler;
-
-      handler->header_delegate = setup_copy_file_headers;
-      handler->header_delegate_baton = ctx;
-
-      SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
-
-      if (handler->sline.code != 201 && handler->sline.code != 204)
-        return svn_error_trace(unexpected_status_error(handler));
-    }
 
   /* If we got no stream of changes, but this is an added-without-history
    * file, make a note that we'll be PUTting a zero-byte file to the server.
@@ -2140,6 +2171,7 @@ close_file(void *file_baton,
   if (ctx->stream || put_empty_file)
     {
       svn_ra_serf__handler_t *handler;
+      int expected_result;
 
       handler = apr_pcalloc(scratch_pool, sizeof(*handler));
       handler->handler_pool = scratch_pool;
@@ -2169,7 +2201,12 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-      if (handler->sline.code != 204 && handler->sline.code != 201)
+      if (ctx->added && ! ctx->copy_path)
+        expected_result = 201; /* Created */
+      else
+        expected_result = 204; /* Updated */
+
+      if (handler->sline.code != expected_result)
         return svn_error_trace(unexpected_status_error(handler));
     }
 
