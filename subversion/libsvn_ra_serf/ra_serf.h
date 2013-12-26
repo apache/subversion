@@ -890,7 +890,6 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
                           const char *data,
                           apr_size_t len);
 
-
 /*
  * Parses a server-side error message into a local Subversion error.
  */
@@ -898,23 +897,17 @@ struct svn_ra_serf__server_error_t {
   /* Our local representation of the error. */
   svn_error_t *error;
 
-  /* Are we done with the response? */
-  svn_boolean_t done;
+  apr_pool_t *pool;
 
-  /* Have we seen an error tag? */
-  svn_boolean_t in_error;
-
-  /* Have we seen a HTTP "412 Precondition Failed" error? */
-  svn_boolean_t contains_precondition_error;
-
-  /* Should we be collecting the XML cdata? */
-  svn_boolean_t collect_cdata;
-
-  /* Collected cdata. NULL if cdata not needed. */
-  svn_stringbuf_t *cdata;
+  /* The partial errors to construct the final error from */
+  apr_array_header_t *items;
+  const char *method;
 
   /* XML parser and namespace used to parse the remote response */
-  svn_ra_serf__xml_parser_t parser;
+  svn_ra_serf__xml_context_t *xmlctx;
+
+  svn_ra_serf__response_handler_t response_handler;
+  void *response_baton;
 };
 
 
@@ -972,6 +965,27 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
                                void *baton,
                                apr_pool_t *scratch_pool);
 
+
+/*
+ * This function sets up error parsing for an existing request
+ */
+svn_error_t *
+svn_ra_serf__setup_error_parsing(svn_ra_serf__server_error_t **server_err,
+                                 svn_ra_serf__handler_t *handler,
+                                 svn_boolean_t expect_207_only,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/*
+ * Forwards response data to the server error parser
+ */
+svn_error_t *
+svn_ra_serf__handle_server_error(svn_ra_serf__server_error_t *server_error,
+                                 svn_ra_serf__handler_t *handler,
+                                 serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 apr_status_t *serf_status,
+                                 apr_pool_t *scratch_pool);
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
