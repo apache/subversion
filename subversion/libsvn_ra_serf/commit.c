@@ -798,7 +798,7 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
 {
   const char *token;
 
-  if (! (relpath && commit_ctx->lock_tokens))
+  if (! (*relpath && commit_ctx->lock_tokens))
     return SVN_NO_ERROR;
 
   if (! svn_hash_gets(commit_ctx->deleted_entries, relpath))
@@ -840,8 +840,9 @@ setup_proppatch_headers(serf_bucket_t *headers,
                                            proppatch->base_revision));
     }
 
-  SVN_ERR(maybe_set_lock_token_header(headers, proppatch->commit,
-                                      proppatch->relpath, pool));
+  if (proppatch->relpath)
+    SVN_ERR(maybe_set_lock_token_header(headers, proppatch->commit,
+                                        proppatch->relpath, pool));
 
   return SVN_NO_ERROR;
 }
@@ -943,6 +944,7 @@ proppatch_resource(proppatch_context_t *proppatch,
 {
   svn_ra_serf__handler_t *handler;
   struct proppatch_body_baton_t pbb;
+  svn_error_t *err;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
   handler->handler_pool = pool;
@@ -962,12 +964,25 @@ proppatch_resource(proppatch_context_t *proppatch,
   handler->response_handler = svn_ra_serf__handle_multistatus_only;
   handler->response_baton = handler;
 
-  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+  err = svn_ra_serf__context_run_one(handler, pool);
 
-  if (handler->sline.code != 207)
-    return svn_error_trace(unexpected_status_error(handler));
+  if (!err && handler->sline.code != 207)
+    err = svn_error_trace(unexpected_status_error(handler));
 
-  return SVN_NO_ERROR;
+  /* Use specific error code for property handling errors.
+     Use loop to provide the right result with tracing */
+  if (err && err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+    {
+      svn_error_t *e = err;
+
+      while (e && e->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+        {
+          e->apr_err = SVN_ERR_RA_DAV_PROPPATCH_FAILED;
+          e = e->child;
+        }
+    }
+
+  return svn_error_trace(err);
 }
 
 /* Implements svn_ra_serf__request_body_delegate_t */
@@ -2459,12 +2474,5 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
                             ns, name, value, pool);
     }
 
-  err = proppatch_resource(proppatch_ctx, commit, pool);
-  if (err)
-    return
-      svn_error_create(SVN_ERR_RA_DAV_PROPPATCH_FAILED, err,
-       _("DAV request failed; it's possible that the repository's "
-         "pre-revprop-change hook either failed or is non-existent"));
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(proppatch_resource(proppatch_ctx, commit, pool));
 }
