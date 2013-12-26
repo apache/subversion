@@ -65,7 +65,7 @@ typedef enum merge_state_e {
   AUTHOR,
   POST_COMMIT_ERR,
 
-  PROP_VAL
+  STATUS
 } merge_state_e;
 
 
