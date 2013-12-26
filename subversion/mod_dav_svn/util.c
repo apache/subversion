@@ -96,9 +96,11 @@ dav_svn__new_error_tag(apr_pool_t *pool,
 static dav_error *
 build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
 {
-  char *msg = err->message ? apr_pstrdup(pool, err->message) : NULL;
+  char buffer[128];
+  const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
 
-  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err, msg,
+  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err,
+                                           apr_pstrdup(pool, msg),
                                            SVN_DAV_ERROR_NAMESPACE,
                                            SVN_DAV_ERROR_TAG);
 
