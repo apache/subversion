@@ -102,6 +102,7 @@ fixup_commit_error(const char *local_abspath,
     }
   else if (svn_error_find_cause(err, SVN_ERR_FS_NO_LOCK_TOKEN)
            || err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH
+           || err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN
            || err->apr_err == SVN_ERR_RA_NOT_LOCKED)
     {
       if (ctx->notify_func2)
