@@ -1083,7 +1083,7 @@ static svn_error_t *
 setup_if_header_recursive(svn_boolean_t *added,
                           serf_bucket_t *headers,
                           commit_context_t *commit_ctx,
-                          const char *relpath,
+                          const char *rq_relpath,
                           apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = NULL;
@@ -1108,7 +1108,7 @@ setup_if_header_recursive(svn_boolean_t *added,
       const char *relpath = svn__apr_hash_index_key(hi);
       apr_uri_t uri;
 
-      if (!svn_relpath_skip_ancestor(relpath, relpath))
+      if (!svn_relpath_skip_ancestor(rq_relpath, relpath))
         continue;
       else if (svn_hash_gets(commit_ctx->deleted_entries, relpath))
         {
