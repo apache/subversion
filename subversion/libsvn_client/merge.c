@@ -3753,13 +3753,6 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                             younger_rev, older_rev, ctx,
                                             scratch_pool);
 
-  /* If PRIMARY_URL@peg_rev doesn't exist then
-      svn_client__repos_location_segments() typically returns an
-      SVN_ERR_FS_NOT_FOUND error, but if it doesn't exist for a
-      forward merge over ra_neon then we get SVN_ERR_RA_DAV_REQUEST_FAILED.
-      http://subversion.tigris.org/issues/show_bug.cgi?id=3137 fixed some of
-      the cases where different RA layers returned different error codes to
-      signal the "path not found"...but it looks like there is more to do. */
   if (err)
     {
       const char *rel_source_path;  /* PRIMARY_URL relative to RA_SESSION */
