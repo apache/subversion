@@ -769,9 +769,11 @@ harvest_status_callback(void *status_baton,
            && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
+      const char *dir_repos_relpath = NULL;
 
-      if (!copy_mode_root && !status->switched && !is_added)
-        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, NULL, NULL, NULL, NULL,
+      if (!copy_mode_root && !is_added)
+        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, &dir_repos_relpath, NULL,
+                                      NULL, NULL,
                                       wc_ctx, svn_dirent_dirname(local_abspath,
                                                                  scratch_pool),
                                       FALSE /* ignore_enoent */,
@@ -794,6 +796,25 @@ harvest_status_callback(void *status_baton,
               /* Copy BASE location, to represent a mixed-rev or switch copy */
               cf_rev = status->revision;
               cf_relpath = status->repos_relpath;
+            }
+
+          if (!copy_mode_root && !is_added && baton->check_url_func
+              && dir_repos_relpath)
+            {
+              svn_node_kind_t me_kind;
+              /* Maybe we need to issue an delete (mixed rev/switched) */
+
+              SVN_ERR(baton->check_url_func(
+                            baton->check_url_baton, &me_kind,
+                            svn_path_url_add_component2(repos_root_url,
+                                        svn_relpath_join(dir_repos_relpath,
+                                            svn_dirent_basename(local_abspath,
+                                                                NULL),
+                                            scratch_pool),
+                                        scratch_pool),
+                                        dir_rev, scratch_pool));
+              if (me_kind != svn_node_none)
+                state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
             }
         }
     }
@@ -1618,6 +1639,7 @@ do_item_commit(void **dir_baton,
         }
       else
         notify = NULL;
+
 
       if (notify)
         {
