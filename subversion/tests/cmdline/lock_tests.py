@@ -1520,7 +1520,6 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
@@ -1553,11 +1552,9 @@ def replace_and_propset_locked_path(sbox):
   # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_path)
-  # Recreate path for single-db
-  if not os.path.exists(G_path):
-    os.mkdir(G_path)
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'add', G_path)
+                                     'mkdir', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', rho_path)
