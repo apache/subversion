@@ -1192,24 +1192,6 @@ setup_delete_headers(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
-/* Helper function to write the svndiff stream to temporary file. */
-static svn_error_t *
-svndiff_stream_write(void *file_baton,
-                     const char *data,
-                     apr_size_t *len)
-{
-  file_context_t *ctx = file_baton;
-  apr_status_t status;
-
-  status = apr_file_write_full(ctx->svndiff, data, *len, NULL);
-  if (status)
-      return svn_error_wrap_apr(status, _("Failed writing updated file"));
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /* POST against 'me' resource handlers. */
 
 /* Implements svn_ra_serf__request_body_delegate_t */
@@ -1996,6 +1978,23 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_stream_lazyopen_func_t for apply_textdelta */
+static svn_error_t *
+delayed_commit_stream_open(svn_stream_t **stream,
+                           void *baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  file_context_t *file_ctx = baton;
+
+  SVN_ERR(svn_io_open_unique_file3(&file_ctx->svndiff, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   file_ctx->pool, scratch_pool));
+
+  *stream = svn_stream_from_aprfile2(file_ctx->svndiff, TRUE, result_pool);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -2018,12 +2017,8 @@ apply_textdelta(void *file_baton,
    * avoid too many simultaneously open files.
    */
 
-  SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   ctx->pool, pool));
-
-  ctx->stream = svn_stream_create(ctx, pool);
-  svn_stream_set_write(ctx->stream, svndiff_stream_write);
+  ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,
+                                           ctx, FALSE, ctx->pool);
 
   svn_txdelta_to_svndiff3(handler, handler_baton, ctx->stream, 0,
                           SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
@@ -2085,11 +2080,11 @@ close_file(void *file_baton,
   /* If we got no stream of changes, but this is an added-without-history
    * file, make a note that we'll be PUTting a zero-byte file to the server.
    */
-  if ((!ctx->stream) && ctx->added && (!ctx->copy_path))
+  if ((!ctx->svndiff) && ctx->added && (!ctx->copy_path))
     put_empty_file = TRUE;
 
   /* If we had a stream of changes, push them to the server... */
-  if (ctx->stream || put_empty_file)
+  if (ctx->svndiff || put_empty_file)
     {
       svn_ra_serf__handler_t *handler;
       int expected_result;
