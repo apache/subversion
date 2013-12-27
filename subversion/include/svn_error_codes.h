@@ -1034,6 +1034,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 13,
              "URL access forbidden for unknown reason")
 
+  /** @since New in 1.9 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_PRECONDITION_FAILED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 14,
+             "The server state conflicts with the requested preconditions")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,

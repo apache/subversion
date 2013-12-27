@@ -899,17 +899,16 @@ struct svn_ra_serf__server_error_t {
 
   apr_pool_t *pool;
 
-  /* The partial errors to construct the final error from */
-  apr_array_header_t *items;
-  const char *method;
-
   /* XML parser and namespace used to parse the remote response */
   svn_ra_serf__xml_context_t *xmlctx;
 
   svn_ra_serf__response_handler_t response_handler;
   void *response_baton;
-};
 
+  /* The partial errors to construct the final error from */
+  apr_array_header_t *items;
+  serf_status_line sline;
+};
 
 /*
  * Handler that discards the entire @a response body associated with a

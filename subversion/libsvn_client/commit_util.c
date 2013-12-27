@@ -62,10 +62,12 @@ fixup_commit_error(const char *local_abspath,
                    apr_pool_t *scratch_pool)
 {
   if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+      || err->apr_err == SVN_ERR_FS_CONFLICT
       || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS
       || err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE
       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
       || err->apr_err == SVN_ERR_RA_DAV_ALREADY_EXISTS
+      || err->apr_err == SVN_ERR_RA_DAV_PRECONDITION_FAILED
       || svn_error_find_cause(err, SVN_ERR_RA_OUT_OF_DATE))
     {
       if (ctx->notify_func2)
