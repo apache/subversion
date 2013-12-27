@@ -301,20 +301,15 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_one(handler, pool);
 
-  if (!err)
-    {
-      err = svn_ra_serf__error_on_status(handler->sline,
-                                         handler->path,
-                                         handler->location);
-    }
-
-  if (err)
-    {
-      /* TODO Shh.  We're telling a white lie for now. */
-      return svn_error_trace(
+  if ((err && (handler->sline.code == 500 || handler->sline.code == 501))
+      || svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE))
+    return svn_error_trace(
              svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
                               _("Server does not support locking features")));
-    }
+  else if (err)
+    return svn_error_trace(err);
+  else if (handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   *lock = lock_ctx->lock;
 

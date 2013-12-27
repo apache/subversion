@@ -376,7 +376,6 @@ create_merge_body(serf_bucket_t **bkt,
 
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
-                       int *response_code,
                        svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
@@ -423,8 +422,10 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
+  if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
   *commit_info = merge_ctx->commit_info;
-  *response_code = handler->sline.code;
 
   return SVN_NO_ERROR;
 }

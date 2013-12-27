@@ -1128,10 +1128,7 @@ handle_fetch(serf_request_t *request,
      data as its probably an error message. Just bail out instead. */
   if (fetch_ctx->handler->sline.code != 200)
     {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("GET request failed: %d %s"),
-                              fetch_ctx->handler->sline.code,
-                              fetch_ctx->handler->sline.reason);
+      err = svn_error_trace(svn_ra_serf__unexpected_status(fetch_ctx->handler));
       return error_fetch(request, fetch_ctx, err);
     }
 
@@ -2970,13 +2967,11 @@ finish_report(void *report_baton,
 
       SVN_ERR(err);
 
+      if (handler->sline.code && handler->sline.code != 200)
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
       if (status)
         {
-          if (handler->sline.code != 200)
-            SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                                 handler->path,
-                                                 handler->location));
-
           return svn_ra_serf__wrap_err(status, _("Error retrieving REPORT"));
         }
 

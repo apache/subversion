@@ -265,11 +265,16 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   /* We get a 404 when a path doesn't exist in HEAD, but it might
      have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
-  if (handler->sline.code != 404)
+  if (handler->sline.code != 200
+      && handler->sline.code != 404)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                           handler->path,
-                                           handler->location));
+      svn_error_t *err = svn_ra_serf__unexpected_status(handler);
+
+      if (handler->sline.code == 500 || handler->sline.code == 501)
+        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                                _("Server does not support locking features"));
+
+      return svn_error_trace(err);
     }
 
   *locks = lock_ctx->hash;
