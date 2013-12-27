@@ -2236,7 +2236,7 @@ svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
   switch (handler->sline.code)
     {
       case 201:
-        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' unexpectedly created"),
                                  handler->path);
       case 204:
