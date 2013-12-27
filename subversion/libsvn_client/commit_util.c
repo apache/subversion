@@ -1494,6 +1494,7 @@ struct file_mod_t
 {
   const svn_client_commit_item3_t *item;
   void *file_baton;
+  apr_pool_t *file_pool;
 };
 
 
@@ -1558,6 +1559,9 @@ do_item_commit(void **dir_baton,
     file_pool = apr_hash_pool_get(file_mods);
   else
     file_pool = pool;
+
+  /* Subpools are cheap, but memory isn't */
+  file_pool = svn_pool_create(file_pool); 
 
   /* Call the cancellation function. */
   if (ctx->cancel_func)
@@ -1808,6 +1812,7 @@ do_item_commit(void **dir_baton,
       /* Add this file mod to the FILE_MODS hash. */
       mod->item = item;
       mod->file_baton = file_baton;
+      mod->file_pool = file_pool;
       svn_hash_sets(file_mods, item->session_relpath, mod);
     }
   else if (file_baton)
@@ -1815,7 +1820,7 @@ do_item_commit(void **dir_baton,
       /* Close any outstanding file batons that didn't get caught by
          the "has local mods" conditional above. */
       err = editor->close_file(file_baton, NULL, file_pool);
-
+      svn_pool_destroy(file_pool);
       if (err)
         goto fixup_error;
     }
@@ -1930,6 +1935,8 @@ svn_client__do_commit(const char *base_url,
 
       if (sha1_checksums)
         svn_hash_sets(*sha1_checksums, item->path, new_text_base_sha1_checksum);
+
+      svn_pool_destroy(mod->file_pool);
     }
 
   svn_pool_destroy(iterpool);
