@@ -841,14 +841,14 @@ remove_lock(dav_lockdb *lockdb,
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
   if (! resource->info->repos_path)
-    return 0;
+    return NULL;
 
   /* Another easy out: if an svn client sent a 'keep_locks' header
      (typically in a DELETE request, as part of 'svn commit
      --no-unlock'), then ignore dav_method_delete()'s attempt to
      unconditionally remove the lock.  */
   if (info->keep_locks)
-    return 0;
+    return NULL;
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be removed from it. */
@@ -908,8 +908,38 @@ remove_lock(dav_lockdb *lockdb,
                                    resource->info->r->pool));
     }
 
-  return 0;
+  return NULL;
 }
+
+static dav_error *
+remove_lock_svn_output(dav_lockdb *lockdb,
+                       const dav_resource *resource,
+                       const dav_locktoken *locktoken)
+{
+  dav_error *derr = remove_lock(lockdb, resource, locktoken);
+  int status;
+
+  if (!derr 
+      || !resource->info->repos->is_svn_client
+      || (strcmp(lockdb->info->r->method, "UNLOCK") != 0))
+    return derr;
+
+  /* Ok, we have a nice error chain but mod_dav doesn't offer us a way to
+     present it to the client as it will only use the status code for
+     generating a standard error...
+
+     Luckily the unlock processing for the "UNLOCK" method is very simple:
+     call this function and return the result.
+
+     That allows us to just force a response and tell httpd that we are done */
+  status = dav_svn__error_response_tag(lockdb->info->r, derr);
+
+  /* status = DONE */
+
+  /* And push an error that will make mod_dav just report that it is done */
+  return dav_push_error(resource->pool, status, derr->error_id, NULL, derr);
+}
+
 
 
 /*
@@ -1017,7 +1047,7 @@ const dav_hooks_locks dav_svn__hooks_locks = {
   find_lock,
   has_locks,
   append_locks,
-  remove_lock,
+  remove_lock_svn_output,
   refresh_locks,
   NULL,
   NULL                          /* hook structure context */

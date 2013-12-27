@@ -1681,7 +1681,7 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Make sure the unlock operation fails as pre-unlock hook blocks it.
-  expected_unlock_fail_err_re = ".*error text|.*500 Internal Server Error"
+  expected_unlock_fail_err_re = ".*error text"
   svntest.actions.run_and_verify_svn2(None, None, expected_unlock_fail_err_re,
                                       1, 'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1916,6 +1916,48 @@ def copy_with_lock(sbox):
                                         None,
                                         wc_dir)
 
+def lock_hook_messages(sbox):
+  "verify (un)lock message is transferred correctly"
+
+  sbox.build(create_wc = False)
+  repo_dir = sbox.repo_dir
+
+  iota_url = sbox.repo_url + "/iota"
+  mu_url = sbox.repo_url + "/A/mu"
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     iota_url)
+
+  error_msg = "Text with <angle brackets> & ampersand"
+  svntest.actions.create_failing_hook(repo_dir, "pre-lock", error_msg)
+  svntest.actions.create_failing_hook(repo_dir, "pre-unlock", error_msg)
+
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
+                                     None, [], svntest.verify.AnyOutput,
+                                     'lock', mu_url)
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_err = [
+    'svn: E165001: ' + svntest.actions.hook_failure_message('pre-lock'),
+    error_msg + "\n",
+  ]
+  svntest.verify.compare_and_display_lines(None, 'STDERR',
+                                           expected_err, actual_stderr)
+
+
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
+                                     None, [], svntest.verify.AnyOutput,
+                                     'unlock', iota_url)
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_err = [
+    'svn: E165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
+    error_msg + "\n",
+  ]
+  svntest.verify.compare_and_display_lines(None, 'STDERR',
+                                           expected_err, actual_stderr)
+
+
 ########################################################################
 # Run the tests
 
@@ -1970,6 +2012,7 @@ test_list = [ None,
               commit_stolen_lock,
               drop_locks_on_parent_deletion,
               copy_with_lock,
+              lock_hook_messages,
             ]
 
 if __name__ == '__main__':
