@@ -2189,11 +2189,13 @@ svn_ra_serf__error_on_status(serf_status_line sline,
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
       case 405:
-      case 409:
         return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
                                  _("'%s' is out of date"), path);
+      case 409:
+        return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
+                                 _("'%s' is out of date"), path);
       case 412:
-        return svn_error_createf(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
+        return svn_error_createf(SVN_ERR_RA_DAV_PRECONDITION_FAILED, NULL,
                                  _("Precondition on '%s' failed"), path);
       case 423:
         return svn_error_createf(SVN_ERR_FS_NO_LOCK_TOKEN, NULL,

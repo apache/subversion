@@ -418,7 +418,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
           item = apr_pcalloc(server_error->pool, sizeof(*item));
 
-          item->http_status = 500;
+          item->http_status = server_error->sline.code;
 
           /* Do we have a mod_dav specific message? */
           item->message = svn_hash_gets(attrs, "human-readable");
@@ -441,7 +441,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
 
           APR_ARRAY_PUSH(server_error->items, error_item_t *) = item;
-          }
+        }
     }
   return SVN_NO_ERROR;
 }
@@ -459,6 +459,7 @@ multistatus_done(void *baton,
       const error_item_t *item;
       apr_status_t status;
       const char *message;
+      svn_error_t *new_err;
 
       item = APR_ARRAY_IDX(server_error->items, i, error_item_t *);
 
@@ -466,19 +467,18 @@ multistatus_done(void *baton,
         {
           continue; /* Success code */
         }
-      else if (!item->apr_err && item->http_status == 424
-               && strcmp(server_error->method, "PROPPATCH") == 0)
+      else if (!item->apr_err && item->http_status == 424 && item->propname)
         {
           continue; /* Failed because other PROPPATCH operations failed */
         }
 
       if (item->apr_err)
         status = item->apr_err;
-      else if (err)
-        status = err->apr_err;
       else
         switch (item->http_status)
           {
+            case 0:
+              continue; /* Not an error */
             case 301:
             case 302:
             case 303:
@@ -492,6 +492,12 @@ multistatus_done(void *baton,
             case 404:
               status = SVN_ERR_FS_NOT_FOUND;
               break;
+            case 409:
+              status = SVN_ERR_FS_CONFLICT;
+              break;
+            case 412:
+              status = SVN_ERR_RA_DAV_PRECONDITION_FAILED;
+              break;
             case 423:
               status = SVN_ERR_FS_NO_LOCK_TOKEN;
               break;
@@ -501,20 +507,15 @@ multistatus_done(void *baton,
             case 501:
               status = SVN_ERR_UNSUPPORTED_FEATURE;
               break;
-            case 412:
-              /* Handle magic error value for atomic revprops */
-              if (strcmp(server_error->method, "PROPPATCH") == 0)
-                status = SVN_ERR_FS_PROP_BASEVALUE_MISMATCH;
+            default:
+              if (err)
+                status = err->apr_err; /* Just use previous */
               else
                 status = SVN_ERR_RA_DAV_REQUEST_FAILED;
               break;
-
-            default:
-              status = SVN_ERR_RA_DAV_REQUEST_FAILED;
-              break;
         }
 
-      if (item->message)
+      if (item->message && *item->message)
         {
           svn_stringbuf_t *sb = svn_stringbuf_create(item->message,
                                                      scratch_pool);
@@ -522,20 +523,47 @@ multistatus_done(void *baton,
           svn_stringbuf_strip_whitespace(sb);
           message = sb->data;
         }
-      else if (item->propname
-               && strcmp(server_error->method, "PROPPATCH") == 0)
+      else if (item->propname)
         {
           message = apr_psprintf(scratch_pool,
                                  _("Property operation on '%s' failed"),
                                  item->propname);
         }
       else
-        message = NULL;
+        {
+          /* Yuck: Older servers sometimes assume that we get convertable
+                   apr error codes, while mod_dav_svn just produces a blank
+                   text error, because err->message is NULL. */
+          serf_status_line sline;
+          svn_error_t *tmp_err;
+
+          memset(&sline, 0, sizeof(sline));
+          sline.code = item->http_status;
+          sline.reason = item->http_reason;
+
+          tmp_err = svn_ra_serf__error_on_status(sline, item->path, NULL);
+
+          message = (tmp_err && tmp_err->message)
+                       ? apr_pstrdup(scratch_pool, tmp_err->message)
+                       : _("<blank error>");
+          svn_error_clear(tmp_err);
+        }
 
       SVN_ERR_ASSERT(status > 0);
+      new_err = svn_error_create(status, NULL, message);
+
+      if (item->propname)
+        new_err = svn_error_createf(new_err->apr_err, new_err,
+                                    _("While handling the '%s' property on '%s':"),
+                                    item->propname, item->path);
+      else if (item->path)
+        new_err = svn_error_createf(new_err->apr_err, new_err,
+                                    _("While handling the '%s' path:"),
+                                    item->path);
+
       err = svn_error_compose_create(
                     err,
-                    svn_error_create(status, NULL, message));
+                    new_err);
     }
 
   server_error->error = err;
@@ -560,10 +588,10 @@ svn_ra_serf__setup_error_parsing(svn_ra_serf__server_error_t **server_err,
 
   ms_baton = apr_pcalloc(result_pool, sizeof(*ms_baton));
   ms_baton->pool = result_pool;
-  /*ms_baton->error = svn_error_create(APR_SUCCESS, NULL, NULL);*/
+  ms_baton->error = SVN_NO_ERROR; /* No error yet */
 
   ms_baton->items = apr_array_make(result_pool, 4, sizeof(error_item_t *));
-  ms_baton->method = apr_pstrdup(result_pool, handler->method);
+  ms_baton->sline = handler->sline;
 
   ms_baton->xmlctx = svn_ra_serf__xml_context_create(multistatus_ttable,
                                                      multistatus_opened,
