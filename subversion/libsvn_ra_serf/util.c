@@ -1755,15 +1755,12 @@ handle_response(serf_request_t *request,
       serf_bucket_t *hdrs;
       const char *val;
 
-      SVN_DBG(("Found error %d on %s\n", handler->sline.code, handler->path));
-
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
         {
           svn_ra_serf__server_error_t *server_err;
 
-          SVN_DBG(("Got xml response"));
           SVN_ERR(svn_ra_serf__setup_error_parsing(&server_err, handler,
                                                    FALSE,
                                                    handler->handler_pool,
@@ -1773,7 +1770,6 @@ handle_response(serf_request_t *request,
         }
       else
         {
-            SVN_DBG(("Got no xml response"));
           handler->discard_body = TRUE;
         }
     }
