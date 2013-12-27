@@ -1364,7 +1364,6 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
    locks set on the paths included in this commit.  */
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
-                       int *response_code,
                        svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
@@ -1807,11 +1806,22 @@ svn_ra_serf__credentials_callback(char **username, char **password,
  * Convert an HTTP STATUS_CODE resulting from a WebDAV request against
  * PATH to the relevant error code.  Use the response-supplied LOCATION
  * where it necessary.
+ *
+ * Returns SVN_NO_ERROR if sline doesn't specify an error condition
  */
 svn_error_t *
 svn_ra_serf__error_on_status(serf_status_line sline,
                              const char *path,
                              const char *location);
+
+/**
+ * Convert an unexpected HTTP STATUS_CODE from a request to the relevant error
+ * code. Unlike svn_ra_serf__error_on_status() this function creates an error
+ * for any result
+ */
+svn_error_t *
+svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler);
+
 
 /* ###? */
 svn_error_t *

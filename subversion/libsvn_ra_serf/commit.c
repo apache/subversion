@@ -198,30 +198,6 @@ typedef struct file_context_t {
 
 /* Setup routines and handlers for various requests we'll invoke. */
 
-static svn_error_t *
-unexpected_status_error(svn_ra_serf__handler_t *handler)
-{
-  svn_error_t *err;
-
-  err = svn_ra_serf__error_on_status(handler->sline,
-                                     handler->path,
-                                     handler->location);
-
-  if (err)
-    return err;
-
-  if (handler->sline.code == 204)
-    return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                             _("Path '%s' already exists"),
-                             handler->path);
-
-  return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                           _("Unexpected HTTP status %d '%s' on '%s' "
-                             "request to '%s'"),
-                           handler->sline.code, handler->sline.reason,
-                           handler->method, handler->path);
-}
-
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_checkout_body(serf_bucket_t **bkt,
@@ -307,7 +283,7 @@ checkout_node(const char **working_url,
   SVN_ERR(svn_ra_serf__context_run_one(&handler, scratch_pool));
 
   if (handler.sline.code != 201)
-    return svn_error_trace(unexpected_status_error(&handler));
+    return svn_error_trace(svn_ra_serf__unexpected_status(&handler));
 
   if (handler.location == NULL)
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -704,6 +680,8 @@ proppatch_walker(void *baton,
     prop_name = apr_pstrcat(wb->body_pool, "S:", name, SVN_VA_NULL);
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = apr_pstrcat(wb->body_pool, "C:", name, SVN_VA_NULL);
+  else
+    SVN_ERR_MALFUNCTION();
 
   if (cdata_bkt)
     svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
@@ -938,7 +916,7 @@ proppatch_resource(svn_ra_serf__session_t *session,
   err = svn_ra_serf__context_run_one(handler, pool);
 
   if (!err && handler->sline.code != 207)
-    err = svn_error_trace(unexpected_status_error(handler));
+    err = svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   /* Use specific error code for property handling errors.
      Use loop to provide the right result with tracing */
@@ -1360,7 +1338,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 201)
-        return svn_error_trace(unexpected_status_error(handler));
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
       if (! (commit_ctx->txn_root_url && commit_ctx->txn_url))
         {
@@ -1436,7 +1414,7 @@ open_root(void *edit_baton,
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 201)
-        return svn_error_trace(unexpected_status_error(handler));
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
       /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
       SVN_ERR(svn_ra_serf__discover_vcc(&(commit_ctx->vcc_url),
@@ -1565,7 +1543,7 @@ delete_entry(const char *path,
 
   /* 204 No Content: item successfully deleted */
   if (handler->sline.code != 204)
-    return svn_error_trace(unexpected_status_error(handler));
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   svn_hash_sets(dir->commit_ctx->deleted_entries,
                 apr_pstrdup(dir->commit_ctx->pool, path), (void *)1);
@@ -1664,7 +1642,7 @@ add_directory(const char *path,
   SVN_ERR(svn_ra_serf__context_run_one(handler, dir->pool));
 
   if (handler->sline.code != 201)
-    return svn_error_trace(unexpected_status_error(handler));
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   *child_baton = dir;
 
@@ -1898,7 +1876,7 @@ add_file(const char *path,
       SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
       if (handler->sline.code != 201)
-        return svn_error_trace(unexpected_status_error(handler));
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
   else if (! ((dir->added && !dir->copy_path) ||
            (deleted_parent && deleted_parent[0] != '\0')))
@@ -2123,7 +2101,7 @@ close_file(void *file_baton,
         expected_result = 204; /* Updated */
 
       if (handler->sline.code != expected_result)
-        return svn_error_trace(unexpected_status_error(handler));
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   if (ctx->svndiff)
@@ -2160,24 +2138,15 @@ close_edit(void *edit_baton,
   const char *merge_target =
     ctx->activity_url ? ctx->activity_url : ctx->txn_url;
   const svn_commit_info_t *commit_info;
-  int response_code;
 
   /* MERGE our activity */
-  SVN_ERR(svn_ra_serf__run_merge(&commit_info, &response_code,
+  SVN_ERR(svn_ra_serf__run_merge(&commit_info,
                                  ctx->session,
                                  ctx->session->conns[0],
                                  merge_target,
                                  ctx->lock_tokens,
                                  ctx->keep_locks,
                                  pool, pool));
-
-  if (response_code != 200)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                               _("MERGE request failed: returned %d "
-                                 "(during commit)"),
-                               response_code);
-    }
 
   /* Inform the WC that we did a commit.  */
   if (ctx->callback)
@@ -2247,7 +2216,7 @@ abort_edit(void *edit_baton,
       && handler->sline.code != 403
       && handler->sline.code != 404)
     {
-      return svn_error_trace(unexpected_status_error(handler));
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   return SVN_NO_ERROR;

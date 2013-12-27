@@ -1755,12 +1755,15 @@ handle_response(serf_request_t *request,
       serf_bucket_t *hdrs;
       const char *val;
 
+      SVN_DBG(("Found error %d on %s\n", handler->sline.code, handler->path));
+
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
       if (val && strncasecmp(val, "text/xml", sizeof("text/xml") - 1) == 0)
         {
           svn_ra_serf__server_error_t *server_err;
 
+          SVN_DBG(("Got xml response"));
           SVN_ERR(svn_ra_serf__setup_error_parsing(&server_err, handler,
                                                    FALSE,
                                                    handler->handler_pool,
@@ -1770,6 +1773,7 @@ handle_response(serf_request_t *request,
         }
       else
         {
+            SVN_DBG(("Got no xml response"));
           handler->discard_body = TRUE;
         }
     }
@@ -2193,7 +2197,7 @@ svn_ra_serf__error_on_status(serf_status_line sline,
                                  _("'%s' is out of date"), path);
       case 409:
         return svn_error_createf(SVN_ERR_FS_CONFLICT, NULL,
-                                 _("'%s' is out of date"), path);
+                                 _("'%s' conflicts"), path);
       case 412:
         return svn_error_createf(SVN_ERR_RA_DAV_PRECONDITION_FAILED, NULL,
                                  _("Precondition on '%s' failed"), path);
@@ -2223,6 +2227,34 @@ svn_ra_serf__error_on_status(serf_status_line sline,
                              sline.code, sline.reason, path);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler)
+{
+  /* Is it a standard error status? */
+  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
+                                       handler->path,
+                                       handler->location));
+
+  switch (handler->sline.code)
+    {
+      case 201:
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED,
+                                 _("Path '%s' unexpectedly created"),
+                                 handler->path);
+      case 204:
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                 _("Path '%s' already exists"),
+                                 handler->path);
+
+      default:
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                 _("Unexpected HTTP status %d '%s' on '%s' "
+                                   "request to '%s'"),
+                                 handler->sline.code, handler->sline.reason,
+                                 handler->method, handler->path);
+    }
 }
 
 svn_error_t *
