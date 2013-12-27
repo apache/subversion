@@ -291,6 +291,11 @@ run_locks(svn_ra_serf__session_t *sess,
                  pass the rest to svn_ra_serf__error_on_status */
               switch (ctx->handler->sline.code)
                 {
+                  case 200:
+                  case 204:
+                    err = NULL; /* (un)lock succeeded */
+                    break;
+
                   case 400:
                     err = svn_error_createf(SVN_ERR_FS_NO_SUCH_LOCK, NULL,
                                             _("No lock on path '%s' (%d %s)"),
@@ -324,39 +329,34 @@ run_locks(svn_ra_serf__session_t *sess,
                                             ctx->handler->sline.code,
                                             ctx->handler->sline.reason);
                     break;
+
+                  case 409:
                   case 500:
                     if (server_err)
                       {
                         /* Handle out of date, etc by just passing the server
                            error */
                         err = NULL;
+                        break;
                       }
-                    else
-                      {
-                        /* ### The test suite expects us to return instead
-                               of report an error here */
-                        return svn_error_trace(
-                            svn_error_createf(
-                                        SVN_ERR_RA_DAV_REQUEST_FAILED,
-                                        NULL,
-                                        _("%s request on '%s' failed: %d %s"),
-                                        ctx->handler->method,
-                                        ctx->path,
-                                        ctx->handler->sline.code,
-                                        ctx->handler->sline.reason));
-                      }
-                    break;
+
+                    /* Fall through */
                   default:
-                    err = svn_ra_serf__error_on_status(ctx->handler->sline,
-                                                       ctx->path,
-                                                       ctx->handler->location);
+                    err = svn_ra_serf__unexpected_status(ctx->handler);
+                    break;
                 }
 
-              if (server_err && err
-                  && server_err->apr_err == err->apr_err)
+              if (server_err && err && server_err->apr_err == err->apr_err)
                 err = svn_error_compose_create(server_err, err);
               else
                 err = svn_error_compose_create(err, server_err);
+
+              if (err
+                  && !SVN_ERR_IS_UNLOCK_ERROR(err)
+                  && !SVN_ERR_IS_LOCK_ERROR(err))
+                {
+                  return svn_error_trace(err); /* Don't go through callbacks */
+                }
 
               if (lock_func)
                 {
@@ -364,7 +364,6 @@ run_locks(svn_ra_serf__session_t *sess,
 
                   if (locking)
                     report_lock = ctx->lock;
-
 
                   cb_err = lock_func(lock_baton, ctx->path, locking,
                                      report_lock, err, ctx->pool);
