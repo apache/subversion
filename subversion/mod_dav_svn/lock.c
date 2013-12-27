@@ -919,7 +919,8 @@ remove_lock_svn_output(dav_lockdb *lockdb,
   dav_error *derr = remove_lock(lockdb, resource, locktoken);
   int status;
 
-  if (!derr 
+  if (!derr
+      || !resource->info->repos
       || !resource->info->repos->is_svn_client
       || (strcmp(lockdb->info->r->method, "UNLOCK") != 0))
     return derr;
