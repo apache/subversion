@@ -338,12 +338,15 @@ create_open(svn_wc__db_t **db,
             apr_pool_t *pool)
 {
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
-                                  svn_dirent_join("fake-wc", subdir, pool),
+                                  svn_dirent_join(
+                                        svn_test_data_path("db-test", pool),
+                                        subdir, pool),
                                   pool));
-  SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
-  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
 
   svn_test_add_dir_cleanup(*local_abspath);
+
+  SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
+  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA, pool, pool));
 
   return SVN_NO_ERROR;
 }
