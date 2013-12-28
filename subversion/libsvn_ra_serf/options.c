@@ -439,9 +439,9 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
 
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
-                                       opt_ctx->handler->path,
-                                       opt_ctx->handler->location));
+
+  if (opt_ctx->handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(opt_ctx->handler));
 
   *youngest = opt_ctx->youngest_rev;
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*youngest));
@@ -464,9 +464,8 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
   SVN_ERR(create_options_req(&opt_ctx, session, conn, scratch_pool));
   SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
-                                       opt_ctx->handler->path,
-                                       opt_ctx->handler->location));
+  if (opt_ctx->handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(opt_ctx->handler));
 
   *activity_url = apr_pstrdup(result_pool, opt_ctx->activity_collection);
 
@@ -500,9 +499,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_ra_serf__error_on_status(opt_ctx->handler->sline,
-                                       serf_sess->session_url.path,
-                                       opt_ctx->handler->location));
+  if (opt_ctx->handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(opt_ctx->handler));
 
   /* Opportunistically cache any reported activity URL.  (We don't
      want to have to ask for this again later, potentially against an
@@ -569,9 +567,8 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
 
       return SVN_NO_ERROR;
     }
-  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                       handler->path,
-                                       handler->location));
+  if (handler->sline.code != 200)
+    SVN_ERR(svn_ra_serf__unexpected_status(handler));
 
   return SVN_NO_ERROR;
 }
@@ -643,7 +640,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                   cap_result = capability_yes;
                 }
               else
-                return err;
+                return svn_error_trace(err);
             }
           else
             cap_result = capability_yes;
