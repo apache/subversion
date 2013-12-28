@@ -116,7 +116,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                           &arb, resource->pool, iterpool);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }
@@ -128,7 +128,7 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
                                "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }
