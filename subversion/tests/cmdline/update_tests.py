@@ -6561,7 +6561,6 @@ def move_update_props(sbox):
 
 @Issues(3288)
 @SkipUnless(svntest.main.is_os_windows)
-@XFail(svntest.main.is_ra_type_dav)
 def windows_update_backslash(sbox):
   "test filename with backslashes inside"
 
@@ -6569,17 +6568,43 @@ def windows_update_backslash(sbox):
 
   wc_dir = sbox.wc_dir
 
+  mucc_url = sbox.repo_url
+
+  if mucc_url.startswith('http'):
+    # Apache Httpd doesn't allow creating paths with '\\' in them on Windows
+    # AH00026: found %2f (encoded '/') in URI (decoded='/svn-test-work/repositories/authz_tests-30/!svn/ver/2/A/completely\\unusable\\dir'), returning 404
+    #
+    # Let's use file:// to work around.
+    mucc_url = 'file:///' + os.path.abspath(sbox.repo_dir).replace('\\', '/')
+
   svntest.actions.run_and_verify_svnmucc(None, None, [],
-                    '-U', sbox.repo_url,
+                    '-U', mucc_url,
                     '-m', '',
                     'mkdir', 'A/completely\\unusable\\dir')
 
   # No error and a proper skip + recording in the working copy would also
   # be a good result. This just verifies current behavior.
 
-  expected_error = 'svn: E155000: .* is not valid.*'
-  svntest.actions.run_and_verify_svn(wc_dir, None, expected_error, 'up',
-                                     wc_dir)
+  if sbox.repo_url.startswith('http'):
+    # Apache Httpd doesn't allow paths with '\\' in them on Windows, so the
+    # test if a user is allowed to read them returns a failure. This makes
+    # mod_dav_svn report the path as server excluded (aka absent), which
+    # doesn't produce output when updating.
+    expected_output = [
+      "Updating '%s':\n" % wc_dir,
+      "At revision 2.\n"
+    ]
+    expected_err = []
+  else:
+    expected_output = None
+    expected_err = 'svn: E155000: .* is not valid.*'
+
+  svntest.actions.run_and_verify_svn(wc_dir, expected_output, expected_err,
+                                     'up', wc_dir)
+
+  if sbox.repo_url.startswith('http'):
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def update_moved_away(sbox):
   "update subtree of moved away"
