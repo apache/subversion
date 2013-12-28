@@ -914,8 +914,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                    "' element is malformed; there "
                                    "is a problem with the client.",
                                    SVN_VA_NULL);
-  return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
-                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, errstr);
 }
 
 
@@ -999,22 +998,18 @@ dav_svn__update_report(const dav_resource *resource,
 
   if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
       && (resource->info->restype != DAV_SVN_RESTYPE_ME))
-    return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT, 0,
                                   "This report can only be run against "
-                                  "a VCC or root-stub URI.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "a VCC or root-stub URI");
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have an "
                                     "svn:target-revision element. That element "
-                                    "is required.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "is required");
     }
 
   /* SVNAllowBulkUpdates On/Prefer: server configuration permits bulk updates
@@ -1200,12 +1195,10 @@ dav_svn__update_report(const dav_resource *resource,
      sending a style of report that we no longer allow. */
   if (! src_path)
     {
-      return dav_svn__new_error_tag
+      return dav_svn__new_error_svn
         (resource->pool, HTTP_BAD_REQUEST, 0,
          "The request did not contain the '<src-path>' element.\n"
-         "This may indicate that your client is too old.",
-         SVN_DAV_ERROR_NAMESPACE,
-         SVN_DAV_ERROR_TAG);
+         "This may indicate that your client is too old");
     }
 
   uc.svndiff_version = resource->info->svndiff_version;

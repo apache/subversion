@@ -59,26 +59,24 @@ dav_svn__new_error(apr_pool_t *pool,
   return dav_new_error(pool, status, error_id, 0, desc);
 #else
 
-  errno = 0; /* For the same reason as in dav_svn__new_error_tag */
+  errno = 0; /* For the same reason as in dav_svn__new_error_svn */
 
   return dav_new_error(pool, status, error_id, desc);
 #endif
 }
 
 dav_error *
-dav_svn__new_error_tag(apr_pool_t *pool,
+dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
-                       const char *desc,
-                       const char *xmlns,
-                       const char *tagname)
+                       const char *desc)
 {
   if (error_id == 0)
     error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
   return dav_new_error_tag(pool, status, error_id, 0,
-                           desc, xmlns, tagname);
+                           desc, SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 #else
   /* dav_new_error_tag will record errno but Subversion makes no attempt
      to ensure that it is valid.  We reset it to avoid putting incorrect
@@ -86,7 +84,8 @@ dav_svn__new_error_tag(apr_pool_t *pool,
      valid information. */
   errno = 0;
 
-  return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
+  return dav_new_error_tag(pool, status, error_id, desc,
+                           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 #endif
 }
 
@@ -99,10 +98,8 @@ build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
   char buffer[128];
   const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
 
-  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err,
-                                           apr_pstrdup(pool, msg),
-                                           SVN_DAV_ERROR_NAMESPACE,
-                                           SVN_DAV_ERROR_TAG);
+  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err,
+                                           apr_pstrdup(pool, msg));
 
   if (err->child)
     derr->prev = build_error_chain(pool, err->child, status);
@@ -543,12 +540,11 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
     return NULL;
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
-  return dav_svn__new_error_tag
-    (pool, HTTP_BAD_REQUEST, 0,
+  return dav_svn__new_error_svn(
+     pool, HTTP_BAD_REQUEST, 0,
      apr_psprintf(pool,
                   "Path '%s' is not canonicalized; "
-                  "there is a problem with the client.", path),
-     SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+                  "there is a problem with the client.", path));
 }
 
 

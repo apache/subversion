@@ -792,12 +792,10 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
    default value for the error code.
 */
 dav_error *
-dav_svn__new_error_tag(apr_pool_t *pool,
+dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
-                       const char *desc,
-                       const char *xmlns,
-                       const char *tagname);
+                       const char *desc);
 
 
 /* A wrapper around mod_dav's dav_new_error, mod_dav_svn uses this
