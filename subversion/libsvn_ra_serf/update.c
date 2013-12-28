@@ -1958,7 +1958,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       if (strcmp(name.name, "checked-in") == 0)
         {
           info = push_state(parser, ctx, IGNORE_PROP_NAME);
-          info->prop_ns = name.namespace;
+          info->prop_ns = name.xmlns;
           info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
           svn_stringbuf_setempty(info->prop_value);
@@ -2018,7 +2018,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       if (strcmp(name.name, "checked-in") == 0)
         {
           info = push_state(parser, ctx, IGNORE_PROP_NAME);
-          info->prop_ns = name.namespace;
+          info->prop_ns = name.xmlns;
           info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
           svn_stringbuf_setempty(info->prop_value);
@@ -2128,7 +2128,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, PROP);
 
-      info->prop_ns = name.namespace;
+      info->prop_ns = name.xmlns;
       info->prop_name = apr_pstrdup(parser->state->pool, name.name);
       info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
       svn_stringbuf_setempty(info->prop_value);
@@ -2407,7 +2407,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       ns_name_match = NULL;
       for (ns = dir->ns_list; ns; ns = ns->next)
         {
-          if (strcmp(ns->namespace, info->prop_ns) == 0)
+          if (strcmp(ns->xmlns, info->prop_ns) == 0)
             {
               ns_name_match = ns;
               if (strcmp(ns->url, info->prop_name) == 0)
@@ -2423,11 +2423,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           ns = apr_palloc(dir->pool, sizeof(*ns));
           if (!ns_name_match)
             {
-              ns->namespace = apr_pstrdup(dir->pool, info->prop_ns);
+              ns->xmlns = apr_pstrdup(dir->pool, info->prop_ns);
             }
           else
             {
-              ns->namespace = ns_name_match->namespace;
+              ns->xmlns = ns_name_match->xmlns;
             }
           ns->url = apr_pstrdup(dir->pool, info->prop_name);
 
@@ -2474,12 +2474,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         }
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
-                                ns->namespace, ns->url, set_val_str, pool);
+                                ns->xmlns, ns->url, set_val_str, pool);
 
       /* Advance handling:  if we spotted the md5-checksum property on
          the wire, remember it's value. */
       if (strcmp(ns->url, "md5-checksum") == 0
-          && strcmp(ns->namespace, SVN_DAV_PROP_NS_DAV) == 0)
+          && strcmp(ns->xmlns, SVN_DAV_PROP_NS_DAV) == 0)
         info->final_checksum = apr_pstrdup(info->pool, set_val_str->data);
 
       svn_ra_serf__xml_pop_state(parser);

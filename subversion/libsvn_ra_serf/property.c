@@ -193,7 +193,7 @@ propfind_opened(svn_ra_serf__xml_estate_t *xes,
 
   if (entered_state == PROPVAL)
     {
-      svn_ra_serf__xml_note(xes, PROPVAL, "ns", tag->namespace);
+        svn_ra_serf__xml_note(xes, PROPVAL, "ns", tag->xmlns);
       svn_ra_serf__xml_note(xes, PROPVAL, "name", tag->name);
     }
   else if (entered_state == PROPSTAT)
@@ -499,7 +499,7 @@ create_propfind_body(serf_bucket_t **bkt,
   body_bkt = serf_bucket_aggregate_create(alloc);
 
   prop = ctx->find_props;
-  while (prop && prop->namespace)
+  while (prop && prop->xmlns)
     {
       /* special case the allprop case. */
       if (strcmp(prop->name, "allprop") == 0)
@@ -519,7 +519,7 @@ create_propfind_body(serf_bucket_t **bkt,
                                           alloc);
       serf_bucket_aggregate_append(body_bkt, tmp);
 
-      tmp = SERF_BUCKET_SIMPLE_STRING(prop->namespace, alloc);
+      tmp = SERF_BUCKET_SIMPLE_STRING(prop->xmlns, alloc);
       serf_bucket_aggregate_append(body_bkt, tmp);
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"/>", sizeof("\"/>")-1,
