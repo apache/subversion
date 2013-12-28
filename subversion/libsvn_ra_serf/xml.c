@@ -46,9 +46,11 @@ struct svn_ra_serf__xml_context_t {
   /* Current state information.  */
   svn_ra_serf__xml_estate_t *current;
 
-  /* If WAITING.NAMESPACE != NULL, wait for NAMESPACE:NAME element to be
-     closed before looking for transitions from CURRENT->STATE.  */
-  svn_ra_serf__dav_props_t waiting;
+  /* If WAITING >= then we are waiting for an element to close before
+     resuming events. The number stored here is the amount of nested
+     elements open. The Xml parser will make sure the document is well
+     formed. */
+  int waiting;
 
   /* The transition table.  */
   const svn_ra_serf__xml_transition_t *ttable;
@@ -640,8 +642,11 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
 
   /* If we're waiting for an element to close, then just ignore all
      other element-opens.  */
-  if (xmlctx->waiting.xmlns != NULL)
-    return SVN_NO_ERROR;
+  if (xmlctx->waiting > 0)
+    {
+      xmlctx->waiting++;
+      return SVN_NO_ERROR;
+    }
 
   /* Look for xmlns: attributes. Lazily create the state pool if any
      were found.  */
@@ -673,8 +678,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                         elemname.name);
         }
 
-      xmlctx->waiting = elemname;
-      /* ### return?  */
+      xmlctx->waiting++; /* Start waiting for the close tag */
       return SVN_NO_ERROR;
     }
 
@@ -783,29 +787,11 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
 
   svn_ra_serf__expand_ns(&elemname, xes->ns_list, raw_name);
 
-  if (xmlctx->waiting.xmlns != NULL)
+  if (xmlctx->waiting > 0)
     {
-      /* If this element is not the closer, then keep waiting... */
-      if (strcmp(elemname.name, xmlctx->waiting.name) != 0
-          || strcmp(elemname.xmlns, xmlctx->waiting.xmlns) != 0)
-        return SVN_NO_ERROR;
-
-      /* Found it. Stop waiting, and go back for more.  */
-      xmlctx->waiting.xmlns = NULL;
+      xmlctx->waiting--;
       return SVN_NO_ERROR;
     }
-
-  /* We should be looking at the same tag that opened the current state.
-
-     Unknown elements are simply skipped, so we wouldn't reach this check.
-
-     Known elements push a new state for a given tag. Some other elemname
-     would imply closing an ancestor tag (where did ours go?) or a spurious
-     tag closure.  */
-  if (strcmp(elemname.name, xes->tag.name) != 0
-      || strcmp(elemname.xmlns, xes->tag.xmlns) != 0)
-    return svn_error_create(SVN_ERR_XML_MALFORMED, NULL,
-                            _("The response contains invalid XML"));
 
   if (xes->custom_close)
     {
@@ -857,7 +843,7 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
 {
   /* If we are waiting for a closing tag, then we are uninterested in
      the cdata. Just return.  */
-  if (xmlctx->waiting.xmlns != NULL)
+  if (xmlctx->waiting > 0)
     return SVN_NO_ERROR;
 
   /* If the current state is collecting cdata, then copy the cdata.  */
