@@ -796,7 +796,7 @@ dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
                        int error_id,
                        const char *desc,
-                       const char *namespace,
+                       const char *xmlns,
                        const char *tagname);
 
 

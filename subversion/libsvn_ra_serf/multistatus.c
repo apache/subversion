@@ -125,7 +125,10 @@ typedef enum iprops_state_e {
 
   Or on request failures
   <D:error>
-    <S:error>
+    <X:some-error xmlns="QQ" />
+    <D:human-readable code="12345">
+          Some Subversion error
+    </D:human-readable>
   </D:error>
  */
 
@@ -260,7 +263,7 @@ multistatus_opened(svn_ra_serf__xml_estate_t *xes,
   switch (entered_state)
     {
       case MS_PROPSTAT_PROP_NAME:
-        if (strcmp(tag->namespace, SVN_DAV_PROP_NS_SVN) == 0)
+        if (strcmp(tag->xmlns, SVN_DAV_PROP_NS_SVN) == 0)
           propname = apr_pstrcat(scratch_pool, SVN_PROP_PREFIX, tag->name,
                                  SVN_VA_NULL);
         else

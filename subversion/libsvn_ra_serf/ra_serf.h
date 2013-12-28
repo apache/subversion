@@ -266,7 +266,7 @@ struct svn_ra_serf__session_t {
  */
 typedef struct svn_ra_serf__dav_props_t {
   /* Element namespace */
-  const char *namespace;
+  const char *xmlns;
   /* Element name */
   const char *name;
 } svn_ra_serf__dav_props_t;
@@ -276,7 +276,7 @@ typedef struct svn_ra_serf__dav_props_t {
  */
 typedef struct ns_t {
   /* The assigned name. */
-  const char *namespace;
+  const char *xmlns;
   /* The full URL for this namespace. */
   const char *url;
   /* The next namespace in our list. */
