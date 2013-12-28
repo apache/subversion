@@ -206,7 +206,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
                                                dav_svn__authz_read_func(&arb),
                                                &arb, resource->pool)))
     {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
                                   resource->pool);
       goto cleanup;
     }

@@ -324,7 +324,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
          right then, so r->status remains 0, hence HTTP status 200
          would be misleadingly returned. */
       return (dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   serr->message, resource->pool));
+                                   NULL, resource->pool));
     }
 
   if ((serr = maybe_send_header(&frb)))

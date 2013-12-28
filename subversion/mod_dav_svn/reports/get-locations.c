@@ -164,8 +164,8 @@ dav_svn__get_locations_report(const dav_resource *resource,
 
   if (serr)
     {
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  serr->message, resource->pool);
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR, NULL,
+                                  resource->pool);
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
