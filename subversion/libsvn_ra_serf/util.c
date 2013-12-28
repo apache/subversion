@@ -1268,6 +1268,24 @@ write_to_pending(svn_ra_serf__xml_parser_t *ctx,
                                              scratch_pool));
 }
 
+/* svn_error_t * wrapper around XML_Parse */
+static APR_INLINE svn_error_t *
+parse_xml(XML_Parser parser, const char *data, apr_size_t len, svn_boolean_t is_final)
+{
+  int xml_status = XML_Parse(parser, data, (int)len, is_final);
+  const char *msg;
+
+  if (xml_status == XML_STATUS_OK)
+    return SVN_NO_ERROR;
+
+  msg = XML_ErrorString(XML_GetErrorCode(parser));
+
+  return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                          svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+                                            _("Malformed XML: %s"),
+                                            msg),
+                          _("The XML response contains invalid XML"));
+}
 
 static svn_error_t *
 inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
@@ -1275,27 +1293,11 @@ inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
                  apr_size_t len,
                  const serf_status_line *sl)
 {
-  int xml_status;
+  svn_error_t *xml_err;
 
-  xml_status = XML_Parse(ctx->xmlp, data, (int) len, 0);
+  xml_err = parse_xml(ctx->xmlp, data, len, FALSE);
 
-  if (! ctx->ignore_errors)
-    {
-      SVN_ERR(ctx->error);
-
-      if (xml_status != XML_STATUS_OK)
-        {
-          if (sl == NULL)
-            return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                     _("XML parsing failed"));
-
-          return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                   _("XML parsing failed: (%d %s)"),
-                                   sl->code, sl->reason);
-        }
-     }
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_error_compose_create(ctx->error, xml_err));
 }
 
 /* Apr pool cleanup handler to release an XML_Parser in success and error
@@ -1374,25 +1376,18 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
   if (pending_empty &&
       parser->pending->network_eof)
     {
-      int xml_status;
+      svn_error_t *err;
       SVN_ERR_ASSERT(parser->xmlp != NULL);
 
       /* Tell the parser that no more content will be parsed. */
-      xml_status = XML_Parse(parser->xmlp, NULL, 0, 1);
+      err = parse_xml(parser->xmlp, NULL, 0, TRUE);
+
+      err = svn_error_compose_create(parser->error, err);
 
       apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
       parser->xmlp = NULL;
 
-      if (! parser->ignore_errors)
-        {
-          SVN_ERR(parser->error);
-
-          if (xml_status != XML_STATUS_OK)
-            {
-              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                       _("XML parsing failed"));
-            }
-        }
+      SVN_ERR(err);
 
       add_done_item(parser);
     }
@@ -1462,11 +1457,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       else
         {
           err = inject_to_parser(ctx, data, len, &sl);
-          if (err)
-            {
-              /* Should have no errors if IGNORE_ERRORS is set.  */
-              SVN_ERR_ASSERT(!ctx->ignore_errors);
-            }
         }
       if (err)
         {
@@ -1491,24 +1481,16 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
-              int xml_status;
+              svn_error_t *err;
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
-              xml_status = XML_Parse(ctx->xmlp, NULL, 0, 1);
+              err = parse_xml(ctx->xmlp, NULL, 0, TRUE);
+
+              err = svn_error_compose_create(ctx->error, err);
 
               apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
 
-              if (! ctx->ignore_errors)
-                {
-                  SVN_ERR(ctx->error);
-
-                  if (xml_status != XML_STATUS_OK)
-                    {
-                      return svn_error_create(
-                                    SVN_ERR_XML_MALFORMED, NULL,
-                                    _("The XML response contains invalid XML"));
-                    }
-                }
+              SVN_ERR(err);
 
               add_done_item(ctx);
             }

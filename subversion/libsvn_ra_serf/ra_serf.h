@@ -625,13 +625,6 @@ struct svn_ra_serf__xml_parser_t {
    */
   svn_ra_serf__list_t *done_item;
 
-  /* If this flag is TRUE, errors during parsing will be ignored.
-   *
-   * This is mainly used when we are processing an error XML response to
-   * avoid infinite loops.
-   */
-  svn_boolean_t ignore_errors;
-
   /* If an error occurred, this value will be non-NULL. */
   svn_error_t *error;
 
