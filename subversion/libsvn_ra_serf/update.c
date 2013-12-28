@@ -2910,6 +2910,7 @@ finish_report(void *report_baton,
     {
       svn_ra_serf__list_t *done_list;
       int i;
+      svn_error_t *err;
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
@@ -2917,7 +2918,14 @@ finish_report(void *report_baton,
       if (sess->cancel_func)
         SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
-      SVN_ERR(svn_ra_serf__context_run(sess, &waittime_left, iterpool));
+      err = svn_ra_serf__context_run(sess, &waittime_left, iterpool);
+
+      if (handler->server_error && handler->server_error->error)
+        {
+          svn_error_clear(err);
+          err = handler->server_error->error;
+        }
+      SVN_ERR(err);
 
       if (handler->sline.code && handler->sline.code != 200)
         return svn_error_trace(svn_ra_serf__unexpected_status(handler));
