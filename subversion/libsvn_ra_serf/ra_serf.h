@@ -381,6 +381,16 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *scratch_pool);
 
+/* Run the context once. Manage waittime_left to handle timing out when
+   nothing happens over the session->timout.
+ */
+svn_error_t *
+svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
+                         apr_interval_time_t *waittime_left,
+                         apr_pool_t *scratch_pool);
+
+
+
 /* Callback for response handlers */
 typedef svn_error_t *
 (*svn_ra_serf__response_handler_t)(serf_request_t *request,
