@@ -70,12 +70,10 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   for (child = doc->root->first_child; child != NULL; child = child->next)

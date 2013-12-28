@@ -126,12 +126,10 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   /* Gather the parameters. */
@@ -174,26 +172,20 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
 
   /* Check that all parameters are present and valid. */
   if (! abs_path)
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                                  "Not all parameters passed.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+                                  "Not all parameters passed");
   if (SVN_IS_VALID_REVNUM(start_rev)
       && SVN_IS_VALID_REVNUM(end_rev)
       && (end_rev > start_rev))
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "End revision must not be younger than "
-                                  "start revision",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "start revision");
   if (SVN_IS_VALID_REVNUM(peg_revision)
       && SVN_IS_VALID_REVNUM(start_rev)
       && (start_rev > peg_revision))
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "Start revision must not be younger than "
-                                  "peg revision",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "peg revision");
 
   /* Build an authz read baton. */
   arb.r = resource->info->r;

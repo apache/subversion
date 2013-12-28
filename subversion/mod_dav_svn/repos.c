@@ -3808,10 +3808,9 @@ copy_resource(const dav_resource *src,
                                         dst->pool));
 
       if (!serr && (strcmp(src_repos_path, dst_repos_path) != 0))
-          return dav_svn__new_error_tag(
+          return dav_svn__new_error_svn(
                 dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                "Copy source and destination are in different repositories.",
-                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+                "Copy source and destination are in different repositories");
     }
   else
       serr = SVN_NO_ERROR;
