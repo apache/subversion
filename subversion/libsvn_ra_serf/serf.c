@@ -922,9 +922,9 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX)-1) == 0
       && !strchr(name + sizeof(SVN_PROP_PREFIX)-1, ':'))
     {
-      specific_props[0].namespace = SVN_DAV_PROP_NS_SVN;
+      specific_props[0].xmlns = SVN_DAV_PROP_NS_SVN;
       specific_props[0].name = name + sizeof(SVN_PROP_PREFIX)-1;
-      specific_props[1].namespace = NULL;
+      specific_props[1].xmlns = NULL;
       specific_props[1].name = NULL;
 
       fetch_props = specific_props;
@@ -1153,42 +1153,42 @@ get_dirent_props(apr_uint32_t dirent_fields,
       if (dirent_fields & SVN_DIRENT_KIND)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = "resourcetype";
         }
 
       if (dirent_fields & SVN_DIRENT_SIZE)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = "getcontentlength";
         }
 
       if (dirent_fields & SVN_DIRENT_HAS_PROPS)
         {
           prop = apr_array_push(props);
-          prop->namespace = SVN_DAV_PROP_NS_DAV;
+          prop->xmlns = SVN_DAV_PROP_NS_DAV;
           prop->name = "deadprop-count";
         }
 
       if (dirent_fields & SVN_DIRENT_CREATED_REV)
         {
           svn_ra_serf__dav_props_t *p = apr_array_push(props);
-          p->namespace = "DAV:";
+          p->xmlns = "DAV:";
           p->name = SVN_DAV__VERSION_NAME;
         }
 
       if (dirent_fields & SVN_DIRENT_TIME)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = SVN_DAV__CREATIONDATE;
         }
 
       if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = "creator-displayname";
         }
     }
@@ -1199,12 +1199,12 @@ get_dirent_props(apr_uint32_t dirent_fields,
 
          The neon behavior is to retrieve all properties in this case */
       prop = apr_array_push(props);
-      prop->namespace = "DAV:";
+      prop->xmlns = "DAV:";
       prop->name = "allprop";
     }
 
   prop = apr_array_push(props);
-  prop->namespace = NULL;
+  prop->xmlns = NULL;
   prop->name = NULL;
 
   return (svn_ra_serf__dav_props_t *) props->elts;
