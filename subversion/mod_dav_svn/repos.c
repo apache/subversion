@@ -3938,8 +3938,9 @@ remove_resource(dav_resource *resource, dav_response **response)
      incoming lock-tokens into the filesystem's access_t.  Normally
      they come in via 'If:' header, and get_resource()
      automatically notices them and does this work for us.  In the
-     case of a directory deletion, however, svn clients are sending
-     'child' lock-tokens in the DELETE request body. */
+     case of a directory deletion, however, older subversion clients
+     are sending 'child' lock-tokens in the non-standard DELETE
+     request body. */
 
   err = dav_svn__build_lock_hash(&locks, resource->info->r,
                                  resource->info->repos_path, resource->pool);
