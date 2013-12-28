@@ -70,7 +70,7 @@ dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
                        int error_id,
                        const char *desc,
-                       const char *namespace,
+                       const char *xmlns,
                        const char *tagname)
 {
   if (error_id == 0)
@@ -78,7 +78,7 @@ dav_svn__new_error_tag(apr_pool_t *pool,
 
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
   return dav_new_error_tag(pool, status, error_id, 0,
-                           desc, namespace, tagname);
+                           desc, xmlns, tagname);
 #else
   /* dav_new_error_tag will record errno but Subversion makes no attempt
      to ensure that it is valid.  We reset it to avoid putting incorrect
