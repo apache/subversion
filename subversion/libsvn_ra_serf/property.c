@@ -638,10 +638,10 @@ svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
 {
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  return svn_error_trace(
-                svn_ra_serf__error_on_status(handler->sline,
-                                             handler->path,
-                                             handler->location));
+  if (handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
+  return SVN_NO_ERROR;
 }
 
 /*
