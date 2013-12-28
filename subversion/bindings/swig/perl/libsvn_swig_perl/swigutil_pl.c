@@ -148,11 +148,13 @@ static void *convert_pl_revision_range(SV *value, void *ctx, apr_pool_t *pool)
          * only if croak_on_error is FALSE.
          */
         start = svn_swig_pl_set_revision(&temp_start, 
-                                         *av_fetch(array, 0, 0), croak_on_error);
+                                         *av_fetch(array, 0, 0), 
+                                         croak_on_error, pool);
         if (start == NULL)
             return NULL;
         end = svn_swig_pl_set_revision(&temp_end, 
-                                       *av_fetch(array, 1, 0), croak_on_error);
+                                       *av_fetch(array, 1, 0), 
+                                       croak_on_error, pool);
         if (end == NULL)
             return NULL;
 
@@ -430,7 +432,8 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array)
 /* perl -> c svn_opt_revision_t conversion */
 svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
                                              SV *source, 
-                                             svn_boolean_t croak_on_error)
+                                             svn_boolean_t croak_on_error,
+                                             apr_pool_t *pool)
 {
 #define maybe_croak(argv) do { if (croak_on_error) croak argv; \
                                else return NULL; } while (0)
@@ -468,8 +471,8 @@ svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev,
                 maybe_croak(("unknown opt_revision_t string \"%s\": "
                              "missing closing brace for \"{DATE}\"", input));
             *end = '\0';
-            err = svn_parse_date (&matched, &tm, input + 1, apr_time_now(),
-                                  svn_swig_pl_make_pool ((SV *)NULL));
+            err = svn_parse_date (&matched, &tm, 
+                                  input + 1, apr_time_now(), pool);
             if (err) {
                 svn_error_clear (err);
                 maybe_croak(("unknown opt_revision_t string \"{%s}\": "

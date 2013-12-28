@@ -110,7 +110,8 @@ SV *svn_swig_pl_revnums_to_list(const apr_array_header_t *array);
 
 svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev, 
                                              SV *source,
-                                             svn_boolean_t croak_on_error);
+                                             svn_boolean_t croak_on_error,
+                                             apr_pool_t *pool);
 
 /* thunked log_message receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *baton,
