@@ -2927,7 +2927,7 @@ finish_report(void *report_baton,
         }
       SVN_ERR(err);
 
-      if (handler->sline.code && handler->sline.code != 200)
+      if (handler->done && handler->sline.code && handler->sline.code != 200)
         return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
       /* Open extra connections if we have enough requests to send. */
