@@ -884,6 +884,72 @@ setup_serf_req(serf_request_t *request,
 }
 
 svn_error_t *
+svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
+                         apr_interval_time_t *waittime_left,
+                         apr_pool_t *scratch_pool)
+{
+  apr_status_t status;
+  svn_error_t *err;
+  assert(sess->pending_error == SVN_NO_ERROR);
+
+  if (sess->cancel_func)
+    SVN_ERR(sess->cancel_func(sess->cancel_baton));
+
+  status = serf_context_run(sess->context,
+                            SVN_RA_SERF__CONTEXT_RUN_DURATION,
+                            scratch_pool);
+
+  err = sess->pending_error;
+  sess->pending_error = SVN_NO_ERROR;
+
+   /* If the context duration timeout is up, we'll subtract that
+      duration from the total time alloted for such things.  If
+      there's no time left, we fail with a message indicating that
+      the connection timed out.  */
+  if (APR_STATUS_IS_TIMEUP(status))
+    {
+      status = 0;
+
+      if (sess->timeout)
+        {
+          if (*waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
+            {
+              *waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
+            }
+          else
+            {
+              return
+                  svn_error_compose_create(
+                        err,
+                        svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
+                                         _("Connection timed out")));
+            }
+        }
+    }
+  else
+    {
+      *waittime_left = sess->timeout;
+    }
+
+  SVN_ERR(err);
+  if (status)
+    {
+      /* ### This omits SVN_WARNING, and possibly relies on the fact that
+         ### MAX(SERF_ERROR_*) < SVN_ERR_BAD_CATEGORY_START? */
+      if (status >= SVN_ERR_BAD_CATEGORY_START && status < SVN_ERR_LAST)
+        {
+          /* apr can't translate subversion errors to text */
+          SVN_ERR_W(svn_error_create(status, NULL, NULL),
+                    _("Error running context"));
+        }
+
+      return svn_ra_serf__wrap_err(status, _("Error running context"));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *scratch_pool)
@@ -896,65 +962,11 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   iterpool = svn_pool_create(scratch_pool);
   while (!*done)
     {
-      apr_status_t status;
-      svn_error_t *err;
       int i;
 
       svn_pool_clear(iterpool);
 
-      if (sess->cancel_func)
-        SVN_ERR((*sess->cancel_func)(sess->cancel_baton));
-
-      status = serf_context_run(sess->context,
-                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
-                                iterpool);
-
-      err = sess->pending_error;
-      sess->pending_error = SVN_NO_ERROR;
-
-      /* If the context duration timeout is up, we'll subtract that
-         duration from the total time alloted for such things.  If
-         there's no time left, we fail with a message indicating that
-         the connection timed out.  */
-      if (APR_STATUS_IS_TIMEUP(status))
-        {
-          status = 0;
-
-          if (sess->timeout)
-            {
-              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
-                {
-                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-                }
-              else
-                {
-                  return
-                      svn_error_compose_create(
-                            err,
-                            svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                             _("Connection timed out")));
-                }
-            }
-        }
-      else
-        {
-          waittime_left = sess->timeout;
-        }
-
-      SVN_ERR(err);
-      if (status)
-        {
-          /* ### This omits SVN_WARNING, and possibly relies on the fact that
-             ### MAX(SERF_ERROR_*) < SVN_ERR_BAD_CATEGORY_START? */
-          if (status >= SVN_ERR_BAD_CATEGORY_START && status < SVN_ERR_LAST)
-            {
-              /* apr can't translate subversion errors to text */
-              SVN_ERR_W(svn_error_create(status, NULL, NULL),
-                        _("Error running context"));
-            }
-
-          return svn_ra_serf__wrap_err(status, _("Error running context"));
-        }
+      SVN_ERR(svn_ra_serf__context_run(sess, &waittime_left, iterpool));
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)

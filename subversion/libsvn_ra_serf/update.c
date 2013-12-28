@@ -2908,10 +2908,8 @@ finish_report(void *report_baton,
          || report->num_active_fetches
          || report->num_active_propfinds)
     {
-      apr_pool_t *iterpool_inner;
       svn_ra_serf__list_t *done_list;
       int i;
-      apr_status_t status;
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
@@ -2919,61 +2917,10 @@ finish_report(void *report_baton,
       if (sess->cancel_func)
         SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
-      /* We need to be careful between the outer and inner ITERPOOLs,
-         and what items are allocated within.  */
-      iterpool_inner = svn_pool_create(iterpool);
-
-      status = serf_context_run(sess->context,
-                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
-                                iterpool_inner);
-
-      err = sess->pending_error;
-      sess->pending_error = SVN_NO_ERROR;
-
-      if (!err && handler->done && handler->server_error)
-        {
-          err = handler->server_error->error;
-        }
-
-      /* If the context duration timeout is up, we'll subtract that
-         duration from the total time alloted for such things.  If
-         there's no time left, we fail with a message indicating that
-         the connection timed out.  */
-      if (APR_STATUS_IS_TIMEUP(status))
-        {
-          /* If there is a pending error, handle it.
-             Unlikely case, as this should have made serf_context run return
-             an error but we shouldn't ignore true errors */
-          SVN_ERR(err);
-          status = 0;
-
-          if (sess->timeout)
-            {
-              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
-                {
-                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-                }
-              else
-                {
-                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                          _("Connection timed out"));
-                }
-            }
-        }
-      else
-        {
-          waittime_left = sess->timeout;
-        }
-
-      SVN_ERR(err);
+      SVN_ERR(svn_ra_serf__context_run(sess, &waittime_left, iterpool));
 
       if (handler->sline.code && handler->sline.code != 200)
         return svn_error_trace(svn_ra_serf__unexpected_status(handler));
-
-      if (status)
-        {
-          return svn_ra_serf__wrap_err(status, _("Error retrieving REPORT"));
-        }
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < sess->max_connections)
@@ -2986,7 +2933,7 @@ finish_report(void *report_baton,
         {
           svn_ra_serf__list_t *next_done = done_list->next;
 
-          svn_pool_clear(iterpool_inner);
+          svn_pool_clear(iterpool);
 
           report->num_active_propfinds--;
 
@@ -3041,11 +2988,11 @@ finish_report(void *report_baton,
                   */
                   if (info->cached_contents)
                     {
-                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                      SVN_ERR(handle_local_content(info, iterpool));
                     }
                   else
                     {
-                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
+                      SVN_ERR(handle_propchange_only(info, iterpool));
                     }
                 }
             }
@@ -3154,7 +3101,7 @@ finish_report(void *report_baton,
       if (!parser_ctx->paused && parser_ctx->pending != NULL)
         SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
                                              &report->report_received,
-                                             iterpool_inner));
+                                             iterpool));
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
@@ -3162,6 +3109,8 @@ finish_report(void *report_baton,
           serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
+
+  svn_pool_clear(iterpool);
 
   /* If we got a complete report, close the edit.  Otherwise, abort it. */
   if (report->report_completed)
