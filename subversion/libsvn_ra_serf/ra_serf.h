@@ -426,6 +426,8 @@ typedef struct svn_ra_serf__server_error_t svn_ra_serf__server_error_t;
 /*
  * Structure that can be passed to our default handler to guide the
  * execution of the request through its lifecycle.
+ *
+ * Use svn_ra_serf__create_handler() to create instances of this struct.
  */
 typedef struct svn_ra_serf__handler_t {
   /* The HTTP method string of the request */
@@ -783,6 +785,9 @@ typedef struct svn_ra_serf__xml_transition_t {
 
 } svn_ra_serf__xml_transition_t;
 
+/* Constructor for */
+svn_ra_serf__handler_t *
+svn_ra_serf__create_handler(apr_pool_t *result_pool);
 
 /* Construct an XML parsing context, based on the TTABLE transition table.
    As content is parsed, the CLOSED_CB callback will be invoked according
