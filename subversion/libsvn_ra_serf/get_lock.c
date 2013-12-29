@@ -275,7 +275,7 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   lock_ctx->lock->path = apr_pstrdup(pool, path); /* be sure  */
 
   xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                           NULL, locks_closed, NULL, NULL,
+                                           NULL, locks_closed, NULL,
                                            lock_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, locks_expected_status, pool);

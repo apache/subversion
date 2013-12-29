@@ -398,6 +398,12 @@ typedef svn_error_t *
                                    void *handler_baton,
                                    apr_pool_t *scratch_pool);
 
+/* Callback when the request is done */
+typedef svn_error_t *
+(*svn_ra_serf__response_done_delegate_t)(serf_request_t *request,
+                                         void *handler_baton,
+                                         apr_pool_t *scratch_pool);
+
 /* Callback for when a request body is needed. */
 /* ### should pass a scratch_pool  */
 typedef svn_error_t *
@@ -469,6 +475,19 @@ typedef struct svn_ra_serf__handler_t {
      within HANDLER_POOL.  */
   serf_status_line sline;  /* The parsed Status-Line  */
   const char *location;  /* The Location: header, if any  */
+
+  /* This function and baton pair allows handling the completion of request.
+   *
+   * The default handler is responsible for the HTTP failure processing.
+   *
+   * If no_fail_on_http_failure_status is not TRUE, then the callback will
+   * return recorded server errors or if there is none and the http status
+   * specifies an error returns an error for that.
+   *
+   * The default baton is the handler itself.
+   */
+  svn_ra_serf__response_done_delegate_t done_delegate;
+  void *done_delegate_baton;
 
   /* The handler and baton pair to be executed when a non-recoverable error
    * is detected.  If it is NULL in the presence of an error, an abort() may
@@ -734,12 +753,6 @@ typedef svn_error_t *
                             apr_size_t len,
                             apr_pool_t *scratch_pool);
 
-/* Called when releasing the XML parser to signal that the entire document was
-   read successfully */
-typedef svn_error_t *
-(*svn_ra_serf__xml_done_t)(void *baton,
-                           apr_pool_t *scratch_pool);
-
 
 /* Magic state value for the initial state in a svn_ra_serf__xml_transition_t
    table */
@@ -802,10 +815,7 @@ svn_ra_serf__create_handler(apr_pool_t *result_pool);
    COLLECT_CDATA flag). It will be called in every state, so the callback
    must examine the CURRENT_STATE parameter to decide what to do.
 
-   If DONE_CB is not NULL, then it will be called when the parser is closed
-   after successfully parsing an entire document.
-
-   The same BATON value will be passed to all four callbacks.
+   The same BATON value will be passed to all three callbacks.
 
    The context will be created within RESULT_POOL.  */
 svn_ra_serf__xml_context_t *
@@ -814,7 +824,6 @@ svn_ra_serf__xml_context_create(
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
   svn_ra_serf__xml_cdata_t cdata_cb,
-  svn_ra_serf__xml_done_t done_cb,
   void *baton,
   apr_pool_t *result_pool);
 
@@ -902,9 +911,6 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
  * Parses a server-side error message into a local Subversion error.
  */
 struct svn_ra_serf__server_error_t {
-  /* Our local representation of the error. */
-  svn_error_t *error;
-
   apr_pool_t *pool;
 
   /* XML parser and namespace used to parse the remote response */
@@ -915,7 +921,9 @@ struct svn_ra_serf__server_error_t {
 
   /* The partial errors to construct the final error from */
   apr_array_header_t *items;
-  serf_status_line sline;
+
+  /* The hooked handler */
+  svn_ra_serf__handler_t *handler;
 };
 
 /*
@@ -993,6 +1001,15 @@ svn_ra_serf__handle_server_error(svn_ra_serf__server_error_t *server_error,
                                  serf_bucket_t *response,
                                  apr_status_t *serf_status,
                                  apr_pool_t *scratch_pool);
+
+/*
+ * Creates the svn_error_t * instance from the error recorded in
+ * HANDLER->server_error
+ */
+svn_error_t *
+svn_ra_serf__server_error_create(svn_ra_serf__handler_t *handler,
+                                 apr_pool_t *scratch_pool);
+
 
 /*
  * This function will feed the RESPONSE body into XMLP.  When parsing is

@@ -232,7 +232,7 @@ run_locks(svn_ra_serf__session_t *sess,
               svn_error_t *err;
 
               if (ctx->handler->server_error)
-                 server_err = ctx->handler->server_error->error;
+                server_err = svn_ra_serf__server_error_create(ctx->handler, iterpool);
 
               /* Api users expect specific error code to detect failures,
                  pass the rest to svn_ra_serf__error_on_status */
@@ -453,7 +453,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
                                             lock_ctx->path, lock_pool);
 
       xmlctx = svn_ra_serf__xml_context_create(locks_ttable,
-                                               NULL, locks_closed, NULL, NULL,
+                                               NULL, locks_closed, NULL,
                                                lock_ctx,
                                                lock_pool);
       handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, lock_pool);

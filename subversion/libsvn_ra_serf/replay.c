@@ -478,12 +478,19 @@ replay_cdata(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
-/* Conforms to svn_ra_serf__xml_done_t  */
+/* Conforms to svn_ra_serf__response_done_delegate_t  */
 static svn_error_t *
-replay_done(void *baton,
-           apr_pool_t *scratch_pool)
+replay_done(serf_request_t *request,
+            void *baton,
+            apr_pool_t *scratch_pool)
 {
   struct revision_report_t *ctx = baton;
+  svn_ra_serf__handler_t *handler = ctx->report_handler;
+
+  if (handler->server_error)
+    return svn_ra_serf__server_error_create(handler, scratch_pool);
+  else if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   *ctx->done = TRUE; /* Breaks out svn_ra_serf__context_run_wait */
 
@@ -572,7 +579,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   xmlctx = svn_ra_serf__xml_context_create(replay_ttable,
                                            replay_opened, replay_closed,
                                            replay_cdata,
-                                           NULL,
                                            &ctx,
                                            scratch_pool);
 
@@ -586,12 +592,11 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   handler->conn = session->conns[0];
   handler->session = session;
 
+  /* Not setting up done handler as we don't use a global context */
+
   ctx.report_handler = handler; /* unused */
 
-  svn_ra_serf__request_create(handler);
-
-  SVN_ERR(svn_ra_serf__context_run_wait(&handler->done, session,
-                                        scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
   return svn_error_trace(
               svn_ra_serf__error_on_status(handler->sline,
@@ -748,7 +753,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           xmlctx = svn_ra_serf__xml_context_create(replay_ttable,
                                            replay_opened, replay_closed,
-                                           replay_cdata, replay_done,
+                                           replay_cdata,
                                            replay_ctx,
                                            ctx_pool);
 
@@ -760,6 +765,9 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           handler->body_delegate_baton = replay_ctx;
           handler->conn = session->conns[0];
           handler->session = session;
+
+          handler->done_delegate = replay_done;
+          handler->done_delegate_baton = replay_ctx;
 
           replay_ctx->report_handler = handler;
           svn_ra_serf__request_create(handler);

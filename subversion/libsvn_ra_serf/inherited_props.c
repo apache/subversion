@@ -444,7 +444,7 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
 
   xmlctx = svn_ra_serf__xml_context_create(iprops_table,
                                            iprops_opened, iprops_closed,
-                                           NULL, NULL,
+                                           NULL,
                                            iprops_ctx,
                                            scratch_pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);

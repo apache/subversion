@@ -246,7 +246,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_ctx->hash = apr_hash_make(pool);
 
   xmlctx = svn_ra_serf__xml_context_create(getlocks_ttable,
-                                           NULL, getlocks_closed, NULL, NULL,
+                                           NULL, getlocks_closed, NULL,
                                            lock_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);

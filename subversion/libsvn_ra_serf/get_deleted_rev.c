@@ -151,7 +151,7 @@ svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getdrev_ttable,
-                                           NULL, getdrev_closed, NULL, NULL,
+                                           NULL, getdrev_closed, NULL,
                                            drev_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);

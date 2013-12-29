@@ -1009,12 +1009,6 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
                                        svn_ra_serf__wrap_err(status, NULL));
     }
 
-  if (handler->server_error)
-    {
-      err = svn_error_compose_create(err, handler->server_error->error);
-      handler->server_error = NULL;
-    }
-
   return svn_error_trace(err);
 }
 
@@ -1782,25 +1776,6 @@ handle_response(serf_request_t *request,
     {
       *serf_status = drain_bucket(response);
 
-      /* If the handler hasn't set done (which it shouldn't have) and
-         we now have the EOF, go ahead and set it so that we can stop
-         our context loops.
-       */
-      if (!handler->done && APR_STATUS_IS_EOF(*serf_status))
-        {
-          handler->done = TRUE; /* Is also handled in caller */
-
-          if ((handler->sline.code >= 400 || handler->sline.code <= 199)
-              && !handler->session->pending_error
-              && !handler->no_fail_on_http_failure_status)
-            {
-              handler->session->pending_error
-                        = svn_ra_serf__error_on_status(handler->sline,
-                                                       handler->path,
-                                                       handler->location);
-            }
-        }
-
       return SVN_NO_ERROR;
     }
 
@@ -1864,6 +1839,10 @@ handle_response_cb(serf_request_t *request,
     {
       handler->done = TRUE;
       outer_status = APR_EOF;
+
+      save_error(handler->session,
+                 handler->done_delegate(request, handler->done_delegate_baton,
+                                        scratch_pool));
     }
   else if (SERF_BUCKET_READ_ERROR(outer_status)
            && handler->session->pending_error)
@@ -2440,6 +2419,32 @@ expat_response_handler(serf_request_t *request,
   /* NOTREACHED */
 }
 
+/* Shandard done_delegate handler */
+static svn_error_t *
+response_done(serf_request_t *request,
+              void *handler_baton,
+              apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__handler_t *handler = handler_baton;
+
+  assert(handler->done);
+
+  if (handler->no_fail_on_http_failure_status)
+    return SVN_NO_ERROR;
+
+  if (handler->server_error)
+    return svn_ra_serf__server_error_create(handler, scratch_pool);
+
+  if ((handler->sline.code >= 400 || handler->sline.code <= 199)
+      && !handler->session->pending_error
+      && !handler->no_fail_on_http_failure_status)
+    {
+      return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_ra_serf__handler_t *
 svn_ra_serf__create_handler(apr_pool_t *result_pool)
 {
@@ -2447,6 +2452,10 @@ svn_ra_serf__create_handler(apr_pool_t *result_pool)
 
   handler = apr_pcalloc(result_pool, sizeof(*handler));
   handler->handler_pool = result_pool;
+
+  /* Setup the default done handler, to handle server errors */
+  handler->done_delegate_baton = handler;
+  handler->done_delegate = response_done;
 
   return handler;
 }
