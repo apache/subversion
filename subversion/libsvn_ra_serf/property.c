@@ -1002,12 +1002,18 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
       const char *version_name;
 
       version_name = svn_prop_get_value(dav_props, SVN_DAV__VERSION_NAME);
-      if (!version_name)
+      if (version_name)
+        {
+          apr_int64_t rev;
+
+          SVN_ERR(svn_cstring_atoi64(&rev, version_name));
+          *actual_revision = (svn_revnum_t)rev;
+        }
+
+      if (!version_name || !SVN_IS_VALID_REVNUM(*actual_revision))
         return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                                 _("The PROPFIND response did not include "
                                   "the requested version-name value"));
-
-      *actual_revision = SVN_STR_TO_REV(version_name);
     }
 
   return SVN_NO_ERROR;
@@ -1122,10 +1128,6 @@ get_baseline_info(const char **bc_url,
         {
           SVN_ERR(svn_ra_serf__v2_get_youngest_revnum(
                     revnum_used, conn, pool));
-          if (! SVN_IS_VALID_REVNUM(*revnum_used))
-            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                    _("The OPTIONS response did not include "
-                                      "the youngest revision"));
         }
 
       *bc_url = apr_psprintf(pool, "%s/%ld",

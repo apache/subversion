@@ -459,9 +459,8 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                       handler->path,
-                                       handler->location));
+  if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   *iprops = iprops_ctx->iprops;
 
