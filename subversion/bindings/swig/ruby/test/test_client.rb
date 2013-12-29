@@ -1155,7 +1155,8 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.relocate(@wc_path, @repos_uri, @repos_svnserve_uri)
 
       make_context(log) do |ctx|
-        assert_raises(Svn::Error::AuthnNoProvider) do
+        # ### TODO: Verify Svn::Error::AuthnNoProvider in error chain
+        assert_raises(Svn::Error::RaCannotCreateSession) do
           ctx.cat(path)
         end
       end
@@ -2022,7 +2023,8 @@ class SvnClientTest < Test::Unit::TestCase
     end
 
     Svn::Client::Context.new do |ctx|
-      assert_raises(Svn::Error::AuthnNoProvider) do
+      # ### TODO: Verify Svn::Error::AuthnNoProvider in error chain
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.cat(svnserve_uri)
       end
 
@@ -2071,7 +2073,8 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
     ctx.send(method)
-    assert_raises(Svn::Error::RaNotAuthorized) do
+    # ### Verify Svn::Error::RaNotAuthorized in chain
+    assert_raises(Svn::Error::RaCannotCreateSession) do
       ctx.cat(svnserve_uri)
     end
 
