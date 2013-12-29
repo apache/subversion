@@ -965,6 +965,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 12,
              "Can't create tunnel")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_RA_CANNOT_CREATE_SESSION,
+             SVN_ERR_RA_CATEGORY_START + 13,
+             "Can't create session")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,
