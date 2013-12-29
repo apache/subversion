@@ -603,7 +603,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(log_ttable,
-                                           log_opened, log_closed, NULL, NULL,
+                                           log_opened, log_closed, NULL,
                                            log_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);

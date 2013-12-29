@@ -258,6 +258,7 @@ multistatus_opened(svn_ra_serf__xml_estate_t *xes,
                    const svn_ra_serf__dav_props_t *tag,
                    apr_pool_t *scratch_pool)
 {
+  /*struct svn_ra_serf__server_error_t *server_error = baton;*/
   const char *propname;
 
   switch (entered_state)
@@ -269,6 +270,9 @@ multistatus_opened(svn_ra_serf__xml_estate_t *xes,
         else
           propname = tag->name;
         svn_ra_serf__xml_note(xes, MS_PROPSTAT, "propname", propname);
+        break;
+      case S_ERROR:
+        /* This toggles an has error boolean in libsvn_ra_neon in 1.7 */
         break;
     }
 
@@ -421,7 +425,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
           item = apr_pcalloc(server_error->pool, sizeof(*item));
 
-          item->http_status = server_error->sline.code;
+          item->http_status = server_error->handler->sline.code;
 
           /* Do we have a mod_dav specific message? */
           item->message = svn_hash_gets(attrs, "human-readable");
@@ -449,11 +453,11 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-multistatus_done(void *baton,
-                 apr_pool_t *scratch_pool)
+svn_error_t *
+svn_ra_serf__server_error_create(svn_ra_serf__handler_t *handler,
+                                 apr_pool_t *scratch_pool)
 {
-  struct svn_ra_serf__server_error_t *server_error = baton;
+  svn_ra_serf__server_error_t *server_error = handler->server_error;
   svn_error_t *err = NULL;
   int i;
 
@@ -569,8 +573,21 @@ multistatus_done(void *baton,
                     new_err);
     }
 
-  server_error->error = err;
-  return SVN_NO_ERROR;
+  /* Theoretically a 207 status can have a 'global' description without a
+     global STATUS that summarizes the final result of property/href
+     operations.
+
+     We should wrap that around the existing errors if there is one.
+
+     But currently I don't see how mod_dav ever sets that value */
+
+  if (!err)
+    {
+      /* We should fail.... but why... Who installed us? */
+      err = svn_error_trace(svn_ra_serf__unexpected_status(handler));
+    }
+
+  return err;
 }
 
 
@@ -591,15 +608,14 @@ svn_ra_serf__setup_error_parsing(svn_ra_serf__server_error_t **server_err,
 
   ms_baton = apr_pcalloc(result_pool, sizeof(*ms_baton));
   ms_baton->pool = result_pool;
-  ms_baton->error = SVN_NO_ERROR; /* No error yet */
 
   ms_baton->items = apr_array_make(result_pool, 4, sizeof(error_item_t *));
-  ms_baton->sline = handler->sline;
+  ms_baton->handler = handler;
 
   ms_baton->xmlctx = svn_ra_serf__xml_context_create(multistatus_ttable,
                                                      multistatus_opened,
                                                      multistatus_closed,
-                                                     NULL, multistatus_done,
+                                                     NULL,
                                                      ms_baton,
                                                      ms_baton->pool);
 
@@ -701,9 +717,35 @@ svn_ra_serf__handle_server_error(svn_ra_serf__server_error_t *server_error,
       return SVN_NO_ERROR;
     }
 
-  /* Clear the EOF. We don't need it.  */
+  /* Clear the EOF. We don't need it as subversion error.  */
   svn_error_clear(err);
-
   *serf_status = APR_EOF;
+
+  /* On PROPPATCH we always get status 207, which may or may not imply an
+     error status, but let's keep it generic and just do the check for
+     any multistatus */
+  if (handler->sline.code == 207 /* MULTISTATUS */)
+    {
+      svn_boolean_t have_error = FALSE;
+      int i;
+
+      for (i = 0; i < server_error->items->nelts; i++)
+        {
+          const error_item_t *item;
+          item = APR_ARRAY_IDX(server_error->items, i, error_item_t *);
+
+          if (!item->apr_err && item->http_status == 200)
+            {
+              continue; /* Success code */
+            }
+
+          have_error = TRUE;
+          break;
+        }
+
+      if (! have_error)
+        handler->server_error = NULL; /* We didn't have a server error */
+    }
+
   return SVN_NO_ERROR;
 }

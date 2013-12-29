@@ -401,7 +401,7 @@ create_options_req(options_context_t **opt_ctx,
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
   xmlctx = svn_ra_serf__xml_context_create(options_ttable,
-                                           NULL, options_closed, NULL, NULL,
+                                           NULL, options_closed, NULL,
                                            new_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
@@ -412,7 +412,6 @@ create_options_req(options_context_t **opt_ctx,
   handler->body_type = "text/xml";
   handler->conn = conn;
   handler->session = session;
-  handler->no_fail_on_http_failure_status = TRUE;
 
   new_ctx->handler = handler;
 

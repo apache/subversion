@@ -2918,10 +2918,10 @@ finish_report(void *report_baton,
 
       err = svn_ra_serf__context_run(sess, &waittime_left, iterpool);
 
-      if (handler->server_error && handler->server_error->error)
+      if (handler->done && handler->server_error)
         {
           svn_error_clear(err);
-          err = handler->server_error->error;
+          err = svn_ra_serf__server_error_create(handler, iterpool);
         }
       SVN_ERR(err);
 

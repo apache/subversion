@@ -602,7 +602,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
   xmlctx = svn_ra_serf__xml_context_create(propfind_ttable,
                                            propfind_opened,
                                            propfind_closed,
-                                           NULL, NULL,
+                                           NULL,
                                            new_prop_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx,
