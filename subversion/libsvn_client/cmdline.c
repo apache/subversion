@@ -87,7 +87,7 @@ check_root_url_of_target(const char **root_url,
       if ((err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           || (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-          || (err->apr_err == SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED)
+          || (err->apr_err == SVN_ERR_RA_CANNOT_CREATE_SESSION)
           || (err->apr_err == SVN_ERR_CLIENT_BAD_REVISION))
         {
           svn_error_clear(err);
