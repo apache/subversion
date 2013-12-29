@@ -1561,9 +1561,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           fetch_ctx->sess = ctx->sess;
           fetch_ctx->conn = conn;
 
-          handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
+          handler = svn_ra_serf__create_handler(info->dir->pool);
 
-          handler->handler_pool = info->dir->pool;
           handler->method = "GET";
           handler->path = fetch_ctx->info->url;
 
@@ -2860,10 +2859,9 @@ finish_report(void *report_baton,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 #else
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler = svn_ra_serf__create_handler(pool);
 #endif
 
-  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = report->path;
   handler->body_delegate = create_update_report_body;
@@ -3647,9 +3645,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
           stream_ctx->info->name = fetch_url;
 
-          handler = apr_pcalloc(pool, sizeof(*handler));
+          handler = svn_ra_serf__create_handler(pool);
 
-          handler->handler_pool = pool;
           handler->method = "GET";
           handler->path = fetch_url;
           handler->conn = conn;

@@ -456,7 +456,6 @@ svn_ra_serf__get_inherited_props(svn_ra_session_t *ra_session,
   handler->body_delegate = create_iprops_body;
   handler->body_delegate_baton = iprops_ctx;
   handler->body_type = "text/xml";
-  handler->handler_pool = scratch_pool;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 

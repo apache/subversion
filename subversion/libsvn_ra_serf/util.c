@@ -1788,7 +1788,7 @@ handle_response(serf_request_t *request,
        */
       if (!handler->done && APR_STATUS_IS_EOF(*serf_status))
         {
-          handler->done = TRUE;
+          handler->done = TRUE; /* Is also handled in caller */
 
           if ((handler->sline.code >= 400 || handler->sline.code <= 199)
               && !handler->session->pending_error
@@ -2440,6 +2440,17 @@ expat_response_handler(serf_request_t *request,
   /* NOTREACHED */
 }
 
+svn_ra_serf__handler_t *
+svn_ra_serf__create_handler(apr_pool_t *result_pool)
+{
+  svn_ra_serf__handler_t *handler;
+
+  handler = apr_pcalloc(result_pool, sizeof(*handler));
+  handler->handler_pool = result_pool;
+
+  return handler;
+}
+
 
 svn_ra_serf__handler_t *
 svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
@@ -2456,8 +2467,7 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
   ectx->cleanup_pool = result_pool;
 
 
-  handler = apr_pcalloc(result_pool, sizeof(*handler));
-  handler->handler_pool = result_pool;
+  handler = svn_ra_serf__create_handler(result_pool);
   handler->response_handler = expat_response_handler;
   handler->response_baton = ectx;
 

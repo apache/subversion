@@ -260,32 +260,32 @@ checkout_node(const char **working_url,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_ra_serf__handler_t handler = { 0 };
+  svn_ra_serf__handler_t *handler;
   apr_status_t status;
   apr_uri_t uri;
 
   /* HANDLER_POOL is the scratch pool since we don't need to remember
      anything from the handler. We just want the working resource.  */
-  handler.handler_pool = scratch_pool;
-  handler.session = commit_ctx->session;
-  handler.conn = commit_ctx->conn;
+  handler = svn_ra_serf__create_handler(scratch_pool);
+  handler->session = commit_ctx->session;
+  handler->conn = commit_ctx->conn;
 
-  handler.body_delegate = create_checkout_body;
-  handler.body_delegate_baton = (/* const */ void *)commit_ctx->activity_url;
-  handler.body_type = "text/xml";
+  handler->body_delegate = create_checkout_body;
+  handler->body_delegate_baton = (/* const */ void *)commit_ctx->activity_url;
+  handler->body_type = "text/xml";
 
-  handler.response_handler = svn_ra_serf__expect_empty_body;
-  handler.response_baton = &handler;
+  handler->response_handler = svn_ra_serf__expect_empty_body;
+  handler->response_baton = &handler;
 
-  handler.method = "CHECKOUT";
-  handler.path = node_url;
+  handler->method = "CHECKOUT";
+  handler->path = node_url;
 
-  SVN_ERR(svn_ra_serf__context_run_one(&handler, scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  if (handler.sline.code != 201)
-    return svn_error_trace(svn_ra_serf__unexpected_status(&handler));
+  if (handler->sline.code != 201)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
-  if (handler.location == NULL)
+  if (handler->location == NULL)
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                             _("No Location header received"));
 
@@ -294,7 +294,7 @@ checkout_node(const char **working_url,
      'https:' transaction ... we'll work around that by stripping the
      scheme, host, and port here and re-adding the correct ones
      later.  */
-  status = apr_uri_parse(scratch_pool, handler.location, &uri);
+  status = apr_uri_parse(scratch_pool, handler->location, &uri);
   if (status)
     return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                             _("Error parsing Location header value"));
@@ -897,8 +897,8 @@ proppatch_resource(svn_ra_serf__session_t *session,
   svn_ra_serf__handler_t *handler;
   svn_error_t *err;
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->handler_pool = pool;
+  handler = svn_ra_serf__create_handler(pool);
+
   handler->method = "PROPPATCH";
   handler->path = proppatch->path;
   handler->conn = conn;
@@ -1315,8 +1315,8 @@ open_root(void *edit_baton,
                                  "create-txn-with-props"));
 
       /* Create our activity URL now on the server. */
-      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-      handler->handler_pool = scratch_pool;
+      handler = svn_ra_serf__create_handler(scratch_pool);
+
       handler->method = "POST";
       handler->body_type = SVN_SKEL_MIME_TYPE;
       handler->body_delegate = create_txn_post_body;
@@ -1401,8 +1401,8 @@ open_root(void *edit_baton,
                                     commit_ctx->pool);
 
       /* Create our activity URL now on the server. */
-      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-      handler->handler_pool = scratch_pool;
+      handler = svn_ra_serf__create_handler(scratch_pool);
+
       handler->method = "MKACTIVITY";
       handler->path = commit_ctx->activity_url;
       handler->conn = commit_ctx->session->conns[0];
@@ -1525,8 +1525,7 @@ delete_entry(const char *path,
   delete_ctx->revision = revision;
   delete_ctx->commit_ctx = dir->commit_ctx;
 
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->handler_pool = pool;
+  handler = svn_ra_serf__create_handler(pool);
   handler->session = dir->commit_ctx->session;
   handler->conn = dir->commit_ctx->conn;
 
@@ -1597,8 +1596,7 @@ add_directory(const char *path,
                                dir->name, dir->pool);
     }
 
-  handler = apr_pcalloc(dir->pool, sizeof(*handler));
-  handler->handler_pool = dir->pool;
+  handler = svn_ra_serf__create_handler(dir->pool);
   handler->conn = dir->commit_ctx->conn;
   handler->session = dir->commit_ctx->session;
 
@@ -1860,8 +1858,7 @@ add_file(const char *path,
                                           uri.path, copy_revision,
                                           scratch_pool, scratch_pool));
 
-      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-      handler->handler_pool = scratch_pool;
+      handler = svn_ra_serf__create_handler(scratch_pool);
       handler->method = "COPY";
       handler->path = req_url;
       handler->conn = dir->commit_ctx->conn;
@@ -1884,8 +1881,7 @@ add_file(const char *path,
       svn_ra_serf__handler_t *handler;
       svn_error_t *err;
 
-      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-      handler->handler_pool = scratch_pool;
+      handler = svn_ra_serf__create_handler(scratch_pool);
       handler->session = new_file->commit_ctx->session;
       handler->conn = new_file->commit_ctx->conn;
       handler->method = "HEAD";
@@ -2067,8 +2063,8 @@ close_file(void *file_baton,
       svn_ra_serf__handler_t *handler;
       int expected_result;
 
-      handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-      handler->handler_pool = scratch_pool;
+      handler = svn_ra_serf__create_handler(scratch_pool);
+
       handler->method = "PUT";
       handler->path = ctx->url;
       handler->conn = ctx->commit_ctx->conn;
@@ -2157,8 +2153,8 @@ close_edit(void *edit_baton,
     {
       svn_ra_serf__handler_t *handler;
 
-      handler = apr_pcalloc(pool, sizeof(*handler));
-      handler->handler_pool = pool;
+      handler = svn_ra_serf__create_handler(pool);
+
       handler->method = "DELETE";
       handler->path = ctx->activity_url;
       handler->conn = ctx->conn;
@@ -2192,8 +2188,8 @@ abort_edit(void *edit_baton,
   serf_connection_reset(ctx->session->conns[0]->conn);
 
   /* DELETE our aborted activity */
-  handler = apr_pcalloc(pool, sizeof(*handler));
-  handler->handler_pool = pool;
+  handler = svn_ra_serf__create_handler(pool);
+
   handler->method = "DELETE";
   handler->conn = ctx->session->conns[0];
   handler->session = ctx->session;

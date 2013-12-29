@@ -541,8 +541,7 @@ svn_ra_serf__probe_proxy(svn_ra_serf__session_t *serf_sess,
 {
   svn_ra_serf__handler_t *handler;
 
-  handler = apr_pcalloc(scratch_pool, sizeof(*handler));
-  handler->handler_pool = scratch_pool;
+  handler = svn_ra_serf__create_handler(scratch_pool);
   handler->method = "OPTIONS";
   handler->path = serf_sess->session_url.path;
   handler->conn = serf_sess->conns[0];

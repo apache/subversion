@@ -621,9 +621,8 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       req_url = svn_path_url_add_component2(session->session_url.path, lock_ctx->path,
                                             lock_pool);
 
-      handler = apr_pcalloc(lock_pool, sizeof(*handler));
+      handler = svn_ra_serf__create_handler(lock_pool);
 
-      handler->handler_pool = lock_pool;
       handler->method = "UNLOCK";
       handler->path = req_url;
       handler->conn = session->conns[0];
