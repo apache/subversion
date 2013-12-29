@@ -1501,7 +1501,7 @@ def nonexistent_repository(sbox):
     'log', 'file:///nonexistent_path')
 
   for line in errput:
-    if re.match(".*Unable to open an ra_local session to URL.*", line):
+    if re.match(".*Unable to connect to a repository at URL.*", line):
       return
 
   # Else never matched the expected error output, so the test failed.
