@@ -575,12 +575,11 @@ svn_ra_local__open(svn_ra_session_t *session,
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR_W(svn_ra_local__split_URL(&(sess->repos),
-                                    &(sess->repos_url),
-                                    &fs_path,
-                                    repos_URL,
-                                    session->pool),
-            _("Unable to open an ra_local session to URL"));
+  SVN_ERR(svn_ra_local__split_URL(&(sess->repos),
+                                  &(sess->repos_url),
+                                  &fs_path,
+                                  repos_URL,
+                                  session->pool));
   sess->fs_path = svn_stringbuf_create(fs_path, session->pool);
 
   /* Cache the filesystem object from the repos here for

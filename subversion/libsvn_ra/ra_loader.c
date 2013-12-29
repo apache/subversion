@@ -267,6 +267,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   const char *server_group;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
+  svn_error_t *err;
 #ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
@@ -477,10 +478,14 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  SVN_ERR_W(vtable->open_session(session, &corrected_url, repos_URL,
-                                 callbacks, callback_baton, config, sesspool),
-            apr_psprintf(pool, "Unable to connect to a repository at URL '%s'",
-                         repos_URL));
+  err = vtable->open_session(session, &corrected_url, repos_URL,
+                             callbacks, callback_baton, config, sesspool);
+
+  if (err)
+    return svn_error_createf(
+                SVN_ERR_RA_CANNOT_CREATE_SESSION, err,
+                _("Unable to connect to a repository at URL '%s'"),
+                repos_URL);
 
   /* If the session open stuff detected a server-provided URL
      correction (a 301 or 302 redirect response during the initial
