@@ -443,8 +443,12 @@ svn_ra_serf__v2_get_youngest_revnum(svn_revnum_t *youngest,
   if (opt_ctx->handler->sline.code != 200)
     return svn_error_trace(svn_ra_serf__unexpected_status(opt_ctx->handler));
 
+  if (! SVN_IS_VALID_REVNUM(opt_ctx->youngest_rev))
+    return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                            _("The OPTIONS response did not include "
+                              "the youngest revision"));
+
   *youngest = opt_ctx->youngest_rev;
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*youngest));
 
   return SVN_NO_ERROR;
 }

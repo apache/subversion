@@ -2163,9 +2163,12 @@ close_edit(void *edit_baton,
       handler->response_handler = svn_ra_serf__expect_empty_body;
       handler->response_baton = handler;
 
+      ctx->activity_url = NULL; /* Don't try again in abort_edit() on fail */
+
       SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-      SVN_ERR_ASSERT(handler->sline.code == 204);
+      if (handler->sline.code != 204)
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
   return SVN_NO_ERROR;
