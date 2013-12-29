@@ -2034,7 +2034,7 @@ class SvnClientTest < Test::Unit::TestCase
         cred.may_save = false
       end
       # ### TODO: Verify Svn::Error::RaNotAuthorized in error chain
-      assert_raises(Svn::Error::RaNotAuthorized) do
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.cat(svnserve_uri)
       end
 
