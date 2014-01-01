@@ -184,6 +184,29 @@ svn_sort__bsearch_lower_bound(const apr_array_header_t *array,
                               const void *key,
                               int (*compare_func)(const void *, const void *));
 
+/* Find the lowest index at which the element @a *key should be inserted into
+ * the array @a array, according to the ordering defined by @a compare_func.
+ * The array must already be sorted in the ordering defined by @a compare_func.
+ * @a compare_func is defined as for the C stdlib function bsearch(); the
+ * @a key will always passed to it as the second parameter.
+ *
+ * Returns a reference to the array element at the insertion location if
+ * that matches @a key and return NULL otherwise.  If you call this function
+ * multiple times for the same array and expect the results to often be
+ * consecutive array elements, provide @a hint.  It should be initialized
+ * with -1 for the first call and receives the array index if the returned
+ * element.  If the return value is NULL, @a *hint is the location where
+ * the respective key would be inserted.
+ *
+ * @note Private. For use by Subversion's own code only.
+ */
+void *
+svn_sort__array_lookup(const apr_array_header_t *array,
+                       const void *key,
+                       int *hint,
+                       int (*compare_func)(const void *, const void *));
+
+
 /* Insert a shallow copy of @a *new_element into the array @a array at the index
  * @a insert_index, growing the array and shuffling existing elements along to
  * make room.

@@ -2431,29 +2431,24 @@ get_p2l_entry_from_cached_page(const void *data,
   /* resolve all pointer values of in-cache data */
   const apr_array_header_t *page = data;
   apr_array_header_t *entries = apr_pmemdup(pool, page, sizeof(*page));
-  int idx;
+  svn_fs_x__p2l_entry_t *entry;
 
   entries->elts = (char *)svn_temp_deserializer__ptr(page,
                                      (const void *const *)&page->elts);
 
   /* search of the offset we want */
-  idx = svn_sort__bsearch_lower_bound(entries, &offset,
+  entry = svn_sort__array_lookup(entries, &offset, NULL,
       (int (*)(const void *, const void *))compare_p2l_entry_offsets);
 
   /* return it, if it is a perfect match */
-  if (idx < entries->nelts)
+  if (entry)
     {
-      svn_fs_x__p2l_entry_t *entry
-        = &APR_ARRAY_IDX(entries, idx, svn_fs_x__p2l_entry_t);
-      if (entry->offset == offset)
-        {
-          svn_fs_x__p2l_entry_t *result
-            = apr_pmemdup(pool, entry, sizeof(*result));
-          result->items
-            = (svn_fs_x__id_part_t *)svn_temp_deserializer__ptr(entries->elts,
+      svn_fs_x__p2l_entry_t *result
+        = apr_pmemdup(pool, entry, sizeof(*result));
+      result->items
+        = (svn_fs_x__id_part_t *)svn_temp_deserializer__ptr(entries->elts,
                                      (const void *const *)&entry->items);
-          return result;
-        }
+      return result;
     }
 
   return NULL;
@@ -2493,8 +2488,6 @@ p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
   svn_boolean_t is_cached = FALSE;
   p2l_page_info_baton_t page_info;
 
-  *entry_p = NULL;
-
   /* look for this info in our cache */
   SVN_ERR(get_p2l_keys(&page_info, &key, stream, fs, revision, offset, pool));
   SVN_ERR(svn_cache__get_partial((void**)entry_p, &is_cached,
@@ -2502,25 +2495,14 @@ p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
                                  p2l_entry_lookup_func, &offset, pool));
   if (!is_cached)
     {
-      int idx;
-
       /* do a standard index lookup.  This is will automatically prefetch
        * data to speed up future lookups. */
       apr_array_header_t *entries;
       SVN_ERR(p2l_index_lookup(&entries, stream, fs, revision, offset, pool));
 
       /* Find the entry that we want. */
-      idx = svn_sort__bsearch_lower_bound(entries, &offset,
+      *entry_p = svn_sort__array_lookup(entries, &offset, NULL,
           (int (*)(const void *, const void *))compare_p2l_entry_offsets);
-
-      /* return it, if it is a perfect match */
-      if (idx < entries->nelts)
-        {
-          svn_fs_x__p2l_entry_t *entry
-            = &APR_ARRAY_IDX(entries, idx, svn_fs_x__p2l_entry_t);
-          if (entry->offset == offset)
-            *entry_p = entry;
-        }
     }
 
   return SVN_NO_ERROR;
