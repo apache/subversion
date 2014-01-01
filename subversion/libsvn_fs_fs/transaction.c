@@ -3326,7 +3326,7 @@ verify_moves(svn_fs_t *fs,
     {
       const char *deleted_path = APR_ARRAY_IDX(deletions, i, const char*);
       int closest_move_idx
-        = svn_sort__bsearch_lower_bound(deleted_path, moves,
+        = svn_sort__bsearch_lower_bound(moves, deleted_path,
                                         svn_sort_compare_paths);
 
       if (closest_move_idx < moves->nelts)
@@ -3382,7 +3382,7 @@ verify_moves(svn_fs_t *fs,
          (or any of its parents) */
 
       int closest_deletion_idx
-        = svn_sort__bsearch_lower_bound(change->copyfrom_path, deletions,
+        = svn_sort__bsearch_lower_bound(deletions, change->copyfrom_path,
                                         svn_sort_compare_paths);
       if (closest_deletion_idx < deletions->nelts)
         {

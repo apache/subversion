@@ -851,7 +851,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
                 apr_pstrdup(result_pool, parent_path + 1);
               i_props->prop_hash = parent_properties;
               /* Build the output array in depth-first order. */
-              svn_sort__array_insert(&i_props, inherited_props, 0);
+              svn_sort__array_insert(inherited_props, &i_props, 0);
             }
         }
     }

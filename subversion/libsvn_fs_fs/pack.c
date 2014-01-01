@@ -924,7 +924,7 @@ static int
 find_first_reference(pack_context_t *context,
                      svn_fs_fs__p2l_entry_t *item)
 {
-  return svn_sort__bsearch_lower_bound(&item->item, context->references,
+  return svn_sort__bsearch_lower_bound(context->references, &item->item,
                 (int (*)(const void *, const void *))compare_ref_to_item);
 }
 

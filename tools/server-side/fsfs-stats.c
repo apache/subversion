@@ -697,8 +697,8 @@ find_representation(int *idx,
   assert(revision == info->revision);
 
   /* look for the representation */
-  *idx = svn_sort__bsearch_lower_bound(&offset,
-                                       info->representations,
+  *idx = svn_sort__bsearch_lower_bound(info->representations,
+                                       &offset,
                                        compare_representation_offsets);
   if (*idx < info->representations->nelts)
     {
@@ -831,7 +831,7 @@ parse_representation(rep_stats_t **representation,
           result->is_plain = is_plain;
         }
 
-      svn_sort__array_insert(&result, revision_info->representations, idx);
+      svn_sort__array_insert(revision_info->representations, &result, idx);
     }
 
   *representation = result;

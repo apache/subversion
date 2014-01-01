@@ -215,8 +215,8 @@ bsearch_lower_bound(const void *key,
 }
 
 int
-svn_sort__bsearch_lower_bound(const void *key,
-                              const apr_array_header_t *array,
+svn_sort__bsearch_lower_bound(const apr_array_header_t *array,
+                              const void *key,
                               int (*compare_func)(const void *, const void *))
 {
   return bsearch_lower_bound(key,
@@ -225,8 +225,8 @@ svn_sort__bsearch_lower_bound(const void *key,
 }
 
 void
-svn_sort__array_insert(const void *new_element,
-                       apr_array_header_t *array,
+svn_sort__array_insert(apr_array_header_t *array,
+                       const void *new_element,
                        int insert_index)
 {
   int elements_to_move;
