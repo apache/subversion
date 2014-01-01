@@ -180,8 +180,8 @@ svn_sort__hash(apr_hash_t *ht,
  * @note Private. For use by Subversion's own code only.
  */
 int
-svn_sort__bsearch_lower_bound(const void *key,
-                              const apr_array_header_t *array,
+svn_sort__bsearch_lower_bound(const apr_array_header_t *array,
+                              const void *key,
                               int (*compare_func)(const void *, const void *));
 
 /* Insert a shallow copy of @a *new_element into the array @a array at the index
@@ -191,8 +191,8 @@ svn_sort__bsearch_lower_bound(const void *key,
  * @note Private. For use by Subversion's own code only.
  */
 void
-svn_sort__array_insert(const void *new_element,
-                       apr_array_header_t *array,
+svn_sort__array_insert(apr_array_header_t *array,
+                       const void *new_element,
                        int insert_index);
 
 

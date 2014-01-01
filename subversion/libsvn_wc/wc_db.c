@@ -10282,7 +10282,7 @@ db_read_inherited_props(apr_array_header_t **inherited_props,
 
                   iprop_elt->prop_hash = node_props;
                   /* Build the output array in depth-first order. */
-                  svn_sort__array_insert(&iprop_elt, iprops, 0);
+                  svn_sort__array_insert(iprops, &iprop_elt, 0);
                 }
             }
         }
@@ -10318,7 +10318,7 @@ db_read_inherited_props(apr_array_header_t **inherited_props,
 
           /* If we didn't filter everything then keep this iprop. */
           if (apr_hash_count(cached_iprop->prop_hash))
-            svn_sort__array_insert(&cached_iprop, iprops, 0);
+            svn_sort__array_insert(iprops, &cached_iprop, 0);
         }
     }
 

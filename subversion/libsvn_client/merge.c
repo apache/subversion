@@ -5828,7 +5828,7 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               split_range2->start = end_rev;
               APR_ARRAY_IDX(child->remaining_ranges, 0,
                             svn_merge_range_t *) = split_range1;
-              svn_sort__array_insert(&split_range2, child->remaining_ranges, 1);
+              svn_sort__array_insert(child->remaining_ranges, &split_range2, 1);
             }
         }
     }
@@ -5963,11 +5963,11 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
 
   /* Find where to insert the new element */
   insert_index =
-    svn_sort__bsearch_lower_bound(&insert_element, children_with_mergeinfo,
+    svn_sort__bsearch_lower_bound(children_with_mergeinfo, &insert_element,
                                   compare_merge_path_t_as_paths);
 
   new_element = svn_client__merge_path_dup(insert_element, pool);
-  svn_sort__array_insert(&new_element, children_with_mergeinfo, insert_index);
+  svn_sort__array_insert(children_with_mergeinfo, &new_element, insert_index);
 }
 
 /* Helper for get_mergeinfo_paths().
@@ -7065,7 +7065,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                   new_segment->path = original_repos_relpath;
                   new_segment->range_start = original_revision;
                   new_segment->range_end = original_revision;
-                  svn_sort__array_insert(&new_segment, segments, 0);
+                  svn_sort__array_insert(segments, &new_segment, 0);
                 }
             }
         }

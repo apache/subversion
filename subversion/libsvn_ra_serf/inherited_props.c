@@ -364,7 +364,7 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       new_iprop = apr_palloc(result_pool, sizeof(*new_iprop));
       new_iprop->path_or_url = apr_pstrdup(result_pool, rq->relpath);
       new_iprop->prop_hash = svn_prop_hash_dup(node_props, result_pool);
-      svn_sort__array_insert(&new_iprop, *iprops, 0);
+      svn_sort__array_insert(*iprops, &new_iprop, 0);
     }
 
   return SVN_NO_ERROR;

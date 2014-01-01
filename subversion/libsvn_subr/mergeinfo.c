@@ -878,7 +878,7 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
               new_modified_range->inheritable = FALSE;
               modified_range->end = next_range->start;
               (*range_index)+=2;
-              svn_sort__array_insert(&new_modified_range, rangelist,
+              svn_sort__array_insert(rangelist, &new_modified_range,
                                      *range_index);
               /* Recurse with the new range. */
               adjust_remaining_ranges(rangelist, range_index, result_pool);
@@ -1019,7 +1019,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                         svn_merge_range_dup(range, result_pool);
                       range_copy->end = change->start;
                       range->start = change->start;
-                      svn_sort__array_insert(&range_copy, rangelist, i++);
+                      svn_sort__array_insert(rangelist, &range_copy, i++);
                     }
                   else
                     {
@@ -1041,7 +1041,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                  into RANGELIST. */
               svn_merge_range_t *change_copy =
                 svn_merge_range_dup(change, result_pool);
-              svn_sort__array_insert(&change_copy, rangelist, i++);
+              svn_sort__array_insert(rangelist, &change_copy, i++);
               j++;
             }
           else if (change->end == range->start)
@@ -1060,7 +1060,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                      a copy of CHANGE into RANGELIST. */
                   svn_merge_range_t *change_copy =
                     svn_merge_range_dup(change, result_pool);
-                  svn_sort__array_insert(&change_copy, rangelist, i);
+                  svn_sort__array_insert(rangelist, &change_copy, i);
                   j++;
                 }
             }
@@ -1092,7 +1092,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                         svn_merge_range_dup(change, result_pool);
                       change_copy->end = range->start;
                       change->start = range->start;
-                      svn_sort__array_insert(&change_copy, rangelist, i++);
+                      svn_sort__array_insert(rangelist, &change_copy, i++);
                     }
                   else
                     {
@@ -1135,7 +1135,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                           range->start = change->start;
                           range->end = change->end;
                           range->inheritable = TRUE;
-                          svn_sort__array_insert(&range_copy, rangelist, ++i);
+                          svn_sort__array_insert(rangelist, &range_copy, ++i);
                           j++;
                         }
                     }
@@ -1153,7 +1153,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                       range_copy->end = change->end;
                       range_copy->inheritable = TRUE;
                       range->start = change->end;
-                      svn_sort__array_insert(&range_copy, rangelist, i++);
+                      svn_sort__array_insert(rangelist, &range_copy, i++);
                       j++;
                     }
                 }
@@ -1168,7 +1168,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
         APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
       svn_merge_range_t *change_copy = svn_merge_range_dup(change,
                                                            result_pool);
-      svn_sort__array_insert(&change_copy, rangelist, rangelist->nelts);
+      svn_sort__array_insert(rangelist, &change_copy, rangelist->nelts);
     }
 
   return SVN_NO_ERROR;

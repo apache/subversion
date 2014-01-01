@@ -2437,7 +2437,7 @@ get_p2l_entry_from_cached_page(const void *data,
                                      (const void *const *)&page->elts);
 
   /* search of the offset we want */
-  idx = svn_sort__bsearch_lower_bound(&offset, entries,
+  idx = svn_sort__bsearch_lower_bound(entries, &offset,
       (int (*)(const void *, const void *))compare_p2l_entry_offsets);
 
   /* return it, if it is a perfect match */
@@ -2510,7 +2510,7 @@ p2l_entry_lookup(svn_fs_x__p2l_entry_t **entry_p,
       SVN_ERR(p2l_index_lookup(&entries, stream, fs, revision, offset, pool));
 
       /* Find the entry that we want. */
-      idx = svn_sort__bsearch_lower_bound(&offset, entries, 
+      idx = svn_sort__bsearch_lower_bound(entries, &offset,
           (int (*)(const void *, const void *))compare_p2l_entry_offsets);
 
       /* return it, if it is a perfect match */
