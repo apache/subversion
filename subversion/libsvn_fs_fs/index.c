@@ -2320,25 +2320,17 @@ get_p2l_entry_from_cached_page(const void *data,
   /* resolve all pointer values of in-cache data */
   const apr_array_header_t *page = data;
   apr_array_header_t *entries = apr_pmemdup(pool, page, sizeof(*page));
-  int idx;
+  svn_fs_fs__p2l_entry_t *entry;
 
   entries->elts = (char *)svn_temp_deserializer__ptr(page,
                                      (const void *const *)&page->elts);
 
   /* search of the offset we want */
-  idx = svn_sort__bsearch_lower_bound(entries, &offset,
+  entry = svn_sort__array_lookup(entries, &offset, NULL,
       (int (*)(const void *, const void *))compare_p2l_entry_offsets);
 
   /* return it, if it is a perfect match */
-  if (idx < entries->nelts)
-    {
-      svn_fs_fs__p2l_entry_t *entry
-        = &APR_ARRAY_IDX(entries, idx, svn_fs_fs__p2l_entry_t);
-      if (entry->offset == offset)
-        return apr_pmemdup(pool, entry, sizeof(*entry));
-    }
-
-  return NULL;
+  return entry ? apr_pmemdup(pool, entry, sizeof(*entry)) : NULL;
 }
 
 /* Implements svn_cache__partial_getter_func_t for P2L index pages, copying
@@ -2385,25 +2377,14 @@ svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
                                  p2l_entry_lookup_func, &offset, pool));
   if (!is_cached)
     {
-      int idx;
-
       /* do a standard index lookup.  This is will automatically prefetch
        * data to speed up future lookups. */
       apr_array_header_t *entries;
       SVN_ERR(p2l_index_lookup(&entries, rev_file, fs, revision, offset, pool));
 
       /* Find the entry that we want. */
-      idx = svn_sort__bsearch_lower_bound(entries, &offset,
+      *entry_p = svn_sort__array_lookup(entries, &offset, NULL,
           (int (*)(const void *, const void *))compare_p2l_entry_offsets);
-
-      /* return it, if it is a perfect match */
-      if (idx < entries->nelts)
-        {
-          svn_fs_fs__p2l_entry_t *entry
-            = &APR_ARRAY_IDX(entries, idx, svn_fs_fs__p2l_entry_t);
-          if (entry->offset == offset)
-            *entry_p = entry;
-        }
     }
 
   return SVN_NO_ERROR;

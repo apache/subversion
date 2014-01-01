@@ -224,6 +224,40 @@ svn_sort__bsearch_lower_bound(const apr_array_header_t *array,
                              compare_func);
 }
 
+void *
+svn_sort__array_lookup(const apr_array_header_t *array,
+                       const void *key,
+                       int *hint,
+                       int (*compare_func)(const void *, const void *))
+{
+  void *result;
+  int idx;
+
+  /* If provided, try the index following *HINT (i.e. probably the last
+   * hit location) first.  This speeds up linear scans. */
+  if (hint)
+    {
+      idx = *hint;
+      *hint = ++idx;
+      if (idx >= 0 && idx < array->nelts)
+        {
+          result = array->elts + idx * array->elt_size;
+          if (!compare_func(result, key))
+            return result;
+        }
+    }
+
+  idx = bsearch_lower_bound(key, array->elts, array->nelts, array->elt_size,
+                            compare_func);
+  if (hint)
+    *hint = idx;
+  if (idx >= array->nelts)
+    return NULL;
+
+  result = array->elts + idx * array->elt_size;
+  return compare_func(result, key) ? NULL : result;
+}
+
 void
 svn_sort__array_insert(apr_array_header_t *array,
                        const void *new_element,
