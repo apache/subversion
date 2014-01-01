@@ -1487,7 +1487,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
              in the PENDING structures, then we're completely done.  */
           if (!HAS_PENDING_DATA(ctx->pending))
             {
-              svn_error_t *err;
               SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
               err = parse_xml(ctx->xmlp, NULL, 0, TRUE);

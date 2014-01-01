@@ -2908,7 +2908,6 @@ finish_report(void *report_baton,
     {
       svn_ra_serf__list_t *done_list;
       int i;
-      svn_error_t *err;
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
