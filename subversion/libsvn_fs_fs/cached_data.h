@@ -100,13 +100,14 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
    directory entries of node-revision NODEREV in filesystem FS.  The
-   returned table (and its keys and values) is allocated in POOL,
-   which is also used for temporary allocations. */
+   returned table (and its keys and values) is allocated in RESULT_POOL;
+   SCRATCH_POOL used for temporary allocations. */
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             svn_fs_t *fs,
                             node_revision_t *noderev,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
    by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
