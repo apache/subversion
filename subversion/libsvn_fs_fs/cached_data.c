@@ -2022,32 +2022,35 @@ svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             svn_fs_t *fs,
                             node_revision_t *noderev,
-                            apr_pool_t *pool)
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   pair_cache_key_t pair_key = { 0 };
   const void *key;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
   /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev, pool);
+  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
+                                         scratch_pool);
   if (cache)
     {
       svn_boolean_t found;
 
-      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key, pool));
+      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key,
+                             result_pool));
       if (found)
         return SVN_NO_ERROR;
     }
 
   /* Read in the directory hash. */
-  unparsed_entries = apr_hash_make(pool);
-  SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
+  unparsed_entries = apr_hash_make(scratch_pool);
+  SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, scratch_pool));
   SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries,
-                            noderev->id, pool));
+                            noderev->id, result_pool));
 
   /* Update the cache, if we are to use one. */
   if (cache)
-    SVN_ERR(svn_cache__set(cache, key, parsed_entries, pool));
+    SVN_ERR(svn_cache__set(cache, key, parsed_entries, scratch_pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -2090,7 +2093,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
       /* read the dir from the file system. It will probably be put it
          into the cache for faster lookup in future calls. */
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev,
-                                          scratch_pool));
+                                          scratch_pool, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
       entry = svn_hash_gets(entries, name);

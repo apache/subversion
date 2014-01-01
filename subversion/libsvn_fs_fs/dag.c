@@ -427,7 +427,7 @@ svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
                             _("Can't get entries of non-directory"));
 
-  return svn_fs_fs__rep_contents_dir(entries, node->fs, noderev, pool);
+  return svn_fs_fs__rep_contents_dir(entries, node->fs, noderev, pool, pool);
 }
 
 svn_error_t *

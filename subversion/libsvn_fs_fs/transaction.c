@@ -1492,7 +1492,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       /* Before we can modify the directory, we need to dump its old
          contents into a mutable representation file. */
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
-                                          subpool));
+                                          subpool, subpool));
       SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
       SVN_ERR(svn_io_file_open(&file, filename,
                                APR_WRITE | APR_CREATE | APR_BUFFERED,
@@ -2833,7 +2833,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       /* This is a directory.  Write out all the children first. */
       subpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool));
+      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool,
+                                          subpool));
       /* For the sake of the repository administrator sort the entries
          so that the final file is deterministic and repeatable,
          however the rest of the FSFS code doesn't require any
