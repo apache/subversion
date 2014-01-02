@@ -1028,6 +1028,38 @@ base_node_id(const svn_fs_id_t **id_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+base_node_relation(svn_fs_node_relation_t *relation,
+                   svn_fs_root_t *root_a, const char *path_a,
+                   svn_fs_root_t *root_b, const char *path_b,
+                   apr_pool_t *pool)
+{
+  const svn_fs_id_t *id_a, *id_b;
+
+  /* Paths from different repository are never related. */
+  if (root_a->fs != root_b->fs)
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* Naive implementation. */
+  SVN_ERR(base_node_id(&id_a, root_a, path_a, pool));
+  SVN_ERR(base_node_id(&id_b, root_b, path_b, pool));
+
+  switch (svn_fs_base__id_compare(id_a, id_b))
+    {
+      case 0:  *relation = svn_fs_node_same;
+               break;
+      case 1:  *relation = svn_fs_node_common_anchestor;
+               break;
+      default: *relation = svn_fs_node_unrelated;
+               break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 struct node_created_rev_args {
   svn_revnum_t revision;
@@ -5400,6 +5432,7 @@ static root_vtable_t root_vtable = {
   base_check_path,
   base_node_history,
   base_node_id,
+  base_node_relation,
   base_node_created_rev,
   base_node_origin_rev,
   base_node_created_path,

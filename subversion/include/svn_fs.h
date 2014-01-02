@@ -791,6 +791,28 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * @{
  */
 
+/** Defines the possible ways two arbitrary nodes may be related.
+ * 
+ * @since New in 1.9.
+ */
+typedef enum svn_fs_node_relation_t
+{
+  /** The nodes are not related.
+   * Nodes from different repositories are always unrelated. */
+  svn_fs_node_unrelated = 0,
+
+  /** They are the same physical node, i.e. there is no intermittent change.
+   * However, due to lazy copying, they may be intermittent parent copies.
+   */
+  svn_fs_node_same,
+
+  /** The nodes have a common ancestor (which may be one of these nodes)
+   * but are not the same.
+   */
+  svn_fs_node_common_anchestor
+  
+} svn_fs_node_relation_t;
+
 /** An object representing a node-revision id.  */
 typedef struct svn_fs_id_t svn_fs_id_t;
 
@@ -1540,6 +1562,25 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
                svn_fs_root_t *root,
                const char *path,
                apr_pool_t *pool);
+
+/** Determine how @a path_a under @a root_a and @a path_b under @a root_b
+ * are related and return the result in @a relation.  There is no restriction
+ * concerning the roots: They may refer to different repositories, be in
+ * arbitrary revision order and any of them may pertain to a transaction.
+ * @a pool is used for temporary allocations.
+ *
+ * @note The current implementation considers paths from different svn_fs_t
+ * as unrelated even if the underlying physical repository is the same.
+ * 
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_node_relation(svn_fs_node_relation_t *relation,
+                     svn_fs_root_t *root_a,
+                     const char *path_a,
+                     svn_fs_root_t *root_b,
+                     const char *path_b,
+                     apr_pool_t *pool);
 
 /** Set @a *revision to the revision in which @a path under @a root was
  * created.  Use @a pool for any temporary allocations.  @a *revision will
