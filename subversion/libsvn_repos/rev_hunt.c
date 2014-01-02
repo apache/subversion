@@ -309,11 +309,11 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  svn_fs_root_t *root, *copy_root;
+  svn_fs_root_t *start_root, *root, *copy_root;
   const char *copy_path;
   svn_revnum_t mid_rev;
-  const svn_fs_id_t *start_node_id, *curr_node_id;
-  svn_error_t *err;
+  svn_node_kind_t kind;
+  svn_fs_node_relation_t node_relation;
 
   /* Validate the revision range. */
   if (! SVN_IS_VALID_REVNUM(start))
@@ -334,32 +334,19 @@ svn_repos_deleted_rev(svn_fs_t *fs,
     }
 
   /* Ensure path exists in fs at start revision. */
-  SVN_ERR(svn_fs_revision_root(&root, fs, start, pool));
-  err = svn_fs_node_id(&start_node_id, root, path, pool);
-  if (err)
+  SVN_ERR(svn_fs_revision_root(&start_root, fs, start, pool));
+  SVN_ERR(svn_fs_check_path(&kind, start_root, path, pool));
+  if (kind == svn_node_none)
     {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-        {
-          /* Path must exist in fs at start rev. */
-          *deleted = SVN_INVALID_REVNUM;
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
-        }
-      return svn_error_trace(err);
+      /* Path must exist in fs at start rev. */
+      *deleted = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
     }
 
   /* Ensure path was deleted at or before end revision. */
   SVN_ERR(svn_fs_revision_root(&root, fs, end, pool));
-  err = svn_fs_node_id(&curr_node_id, root, path, pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
-    {
-      svn_error_clear(err);
-    }
-  else if (err)
-    {
-      return svn_error_trace(err);
-    }
-  else
+  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  if (kind != svn_node_none)
     {
       /* path exists in the end node and the end node is equivalent
          or otherwise equivalent to the start node.  This can mean
@@ -386,8 +373,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
            5) The start node was deleted and replaced by a node which
               it does not share any history with.
       */
-      SVN_ERR(svn_fs_node_id(&curr_node_id, root, path, pool));
-      if (svn_fs_compare_ids(start_node_id, curr_node_id) != -1)
+      SVN_ERR(svn_fs_node_relation(&node_relation, start_root, path,
+                                   root, path, pool));
+      if (node_relation != svn_fs_node_unrelated)
         {
           SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
                                       path, pool));
@@ -450,28 +438,23 @@ svn_repos_deleted_rev(svn_fs_t *fs,
 
       /* Get revision root and node id for mid_rev at that revision. */
       SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, subpool));
-      err = svn_fs_node_id(&curr_node_id, root, path, subpool);
-
-      if (err)
+      SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+      if (kind == svn_node_none)
         {
-          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-            {
-              /* Case D: Look lower in the range. */
-              svn_error_clear(err);
-              end = mid_rev;
-              mid_rev = (start + mid_rev) / 2;
-            }
-          else
-            return svn_error_trace(err);
+          /* Case D: Look lower in the range. */
+          end = mid_rev;
+          mid_rev = (start + mid_rev) / 2;
         }
       else
         {
           /* Determine the relationship between the start node
              and the current node. */
-          int cmp = svn_fs_compare_ids(start_node_id, curr_node_id);
+          SVN_ERR(svn_fs_node_relation(&node_relation, start_root, path,
+                                       root, path, pool));
+          if (node_relation != svn_fs_node_unrelated)
           SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
                                       path, subpool));
-          if (cmp == -1 ||
+          if (node_relation == svn_fs_node_unrelated ||
               (copy_root &&
                (svn_fs_revision_root_revision(copy_root) > start)))
             {
@@ -654,7 +637,6 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   svn_revnum_t revision;
   svn_boolean_t is_ancestor;
   apr_pool_t *lastpool, *currpool;
-  const svn_fs_id_t *id;
 
   SVN_ERR_ASSERT(location_revisions_orig->elt_size == sizeof(svn_revnum_t));
 
@@ -774,20 +756,22 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
      the node existing at the same path.  We will look up path@lrev
      for each remaining location-revision and make sure it is related
      to path@revision. */
-  SVN_ERR(svn_fs_revision_root(&root, fs, revision, currpool));
-  SVN_ERR(svn_fs_node_id(&id, root, path, pool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, revision, lastpool));
   while (revision_ptr < revision_ptr_end)
     {
       svn_node_kind_t kind;
-      const svn_fs_id_t *lrev_id;
+      svn_fs_node_relation_t node_relation;
+      svn_fs_root_t *cur_rev_root;
 
       svn_pool_clear(currpool);
-      SVN_ERR(svn_fs_revision_root(&root, fs, *revision_ptr, currpool));
-      SVN_ERR(svn_fs_check_path(&kind, root, path, currpool));
+      SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs, *revision_ptr,
+                                   currpool));
+      SVN_ERR(svn_fs_check_path(&kind, cur_rev_root, path, currpool));
       if (kind == svn_node_none)
         break;
-      SVN_ERR(svn_fs_node_id(&lrev_id, root, path, currpool));
-      if (! svn_fs_check_related(id, lrev_id))
+      SVN_ERR(svn_fs_node_relation(&node_relation, root, path,
+                                   cur_rev_root, path, currpool));
+      if (node_relation == svn_fs_node_unrelated)
         break;
 
       /* The node exists at the same path; record that and advance. */
