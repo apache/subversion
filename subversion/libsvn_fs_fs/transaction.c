@@ -1839,6 +1839,37 @@ rep_write_contents(void *baton,
     return svn_stream_write(b->rep_stream, data, len);
 }
 
+/* Set *SPANNED to the number of shards touched when walking WALK steps on
+ * NODEREV's predecessor chain in FS.  Use POOL for temporary allocations.
+ */
+static svn_error_t *
+shards_spanned(int *spanned,
+               svn_fs_t *fs,
+               node_revision_t *noderev,
+               int walk,
+               apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  int shard_size = ffd->max_files_per_dir ? ffd->max_files_per_dir : 1;
+
+  int count = 0;
+  int shard, last_shard = ffd->youngest_rev_cache / shard_size;
+  while (walk-- && noderev->predecessor_count)
+    {
+      SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs,
+                                           noderev->predecessor_id, pool));
+      shard = svn_fs_fs__id_rev(noderev->id) / shard_size;
+      if (shard != last_shard)
+        {
+          ++count;
+          last_shard = shard;
+        }
+    }
+
+  *spanned = count;
+  return SVN_NO_ERROR;
+}
+
 /* Given a node-revision NODEREV in filesystem FS, return the
    representation in *REP to use as the base for a text representation
    delta if PROPS is FALSE.  If PROPS has been set, a suitable props
@@ -1860,10 +1891,9 @@ choose_delta_base(representation_t **rep,
   int walk;
   node_revision_t *base;
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_boolean_t maybe_shared_rep = FALSE;
 
-  /* If we have no predecessors, then use the empty stream as a
-     base. */
+  /* If we have no predecessors, or that one is empty, then use the empty
+   * stream as a base. */
   if (! noderev->predecessor_count)
     {
       *rep = NULL;
@@ -1877,21 +1907,29 @@ choose_delta_base(representation_t **rep,
   count = noderev->predecessor_count;
   count = count & (count - 1);
 
-  /* We use skip delta for limiting the number of delta operations
-     along very long node histories.  Close to HEAD however, we create
-     a linear history to minimize delta size.  */
-  walk = noderev->predecessor_count - count;
-  if (walk < (int)ffd->max_linear_deltification)
-    count = noderev->predecessor_count - 1;
-
   /* Finding the delta base over a very long distance can become extremely
      expensive for very deep histories, possibly causing client timeouts etc.
      OTOH, this is a rare operation and its gains are minimal. Lets simply
      start deltification anew close every other 1000 changes or so.  */
+  walk = noderev->predecessor_count - count;
   if (walk > (int)ffd->max_deltification_walk)
     {
       *rep = NULL;
       return SVN_NO_ERROR;
+    }
+
+  /* We use skip delta for limiting the number of delta operations
+     along very long node histories.  Close to HEAD however, we create
+     a linear history to minimize delta size.  */
+  if (walk < (int)ffd->max_linear_deltification)
+    {
+      int shards;
+      SVN_ERR(shards_spanned(&shards, fs, noderev, walk, pool));
+
+      /* We also don't want the linear deltification to span more shards
+         than deltas would be used in the simple skip-delta schme. */
+      if ((1 << (--shards)) <= walk)
+        count = noderev->predecessor_count - 1;
     }
 
   /* Walk back a number of predecessors equal to the difference
@@ -1900,50 +1938,49 @@ choose_delta_base(representation_t **rep,
      walk back two predecessors.) */
   base = noderev;
   while ((count++) < noderev->predecessor_count)
-    {
-      svn_revnum_t base_revision;
-      SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
-                                           base->predecessor_id, pool));
-
-      /* If there is a shared rep along the way, we need to limit the
-       * length of the deltification chain.
-       *
-       * Please note that copied nodes - such as branch directories - will
-       * look the same (false positive) while reps shared within the same
-       * revision will not be caught (false negative).
-       *
-       * Message-ID: <CA+t0gk1wzitkih3GRCLDvK-bTEm=hgppGb_7xXMtvuXDYPfL+Q@mail.gmail.com>
-       */
-      base_revision = svn_fs_fs__id_rev(base->id);
-      if (props)
-        {
-          if (base->prop_rep && base_revision > base->prop_rep->revision)
-            maybe_shared_rep = TRUE;
-        }
-      else
-        {
-          if (base->data_rep && base_revision > base->data_rep->revision)
-            maybe_shared_rep = TRUE;
-        }
-    }
+    SVN_ERR(svn_fs_fs__get_node_revision(&base, fs,
+                                         base->predecessor_id, pool));
 
   /* return a suitable base representation */
   *rep = props ? base->prop_rep : base->data_rep;
 
   /* if we encountered a shared rep, its parent chain may be different
    * from the node-rev parent chain. */
-  if (*rep && maybe_shared_rep)
+  if (*rep)
     {
+      int chain_length = 0;
+      int shard_count = 0;
+
+      /* Very short rep bases are simply not worth it as we are unlikely
+       * to re-coup the deltification space overhead of 20+ bytes. */
+      svn_filesize_t rep_size = (*rep)->expanded_size
+                              ? (*rep)->expanded_size
+                              : (*rep)->size;
+      if (rep_size < 64)
+        {
+          *rep = NULL;
+          return SVN_NO_ERROR;
+        }
+
       /* Check whether the length of the deltification chain is acceptable.
        * Otherwise, shared reps may form a non-skipping delta chain in
        * extreme cases. */
-      int chain_length = 0;
-      SVN_ERR(svn_fs_fs__rep_chain_length(&chain_length, *rep, fs, pool));
+      SVN_ERR(svn_fs_fs__rep_chain_length(&chain_length, &shard_count,
+                                          *rep, fs, pool));
 
       /* Some reasonable limit, depending on how acceptable longer linear
        * chains are in this repo.  Also, allow for some minimal chain. */
       if (chain_length >= 2 * (int)ffd->max_linear_deltification + 2)
         *rep = NULL;
+      else
+        /* To make it worth opening additional shards / pack files, we
+         * require that the reps have a certain minimal size.  To deltify
+         * against a rep in different shard, the lower limit is 512 bytes
+         * and doubles with every extra shard to visit along the delta
+         * chain. */
+        if (   shard_count > 1
+            && ((svn_filesize_t)128 << shard_count) >= rep_size)
+          *rep = NULL;
     }
 
   return SVN_NO_ERROR;
