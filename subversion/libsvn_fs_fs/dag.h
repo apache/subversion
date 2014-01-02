@@ -264,11 +264,10 @@ svn_fs_fs__dag_open(dag_node_t **child_p,
                     apr_pool_t *scratch_pool);
 
 
-/* Set *ENTRIES_P to a hash table of NODE's entries.  The keys of the
-   table are entry names, and the values are svn_fs_dirent_t's.  The
-   returned table (and its keys and values) is allocated in POOL,
-   which is also used for temporary allocations. */
-svn_error_t *svn_fs_fs__dag_dir_entries(apr_hash_t **entries_p,
+/* Set *ENTRIES_P to an array of NODE's entries, sorted by entry names,
+   and the values are svn_fs_dirent_t's.  The returned table (and elements)
+   is allocated in POOL, which is also used for temporary allocations. */
+svn_error_t *svn_fs_fs__dag_dir_entries(apr_array_header_t **entries_p,
                                         dag_node_t *node,
                                         apr_pool_t *pool);
 
