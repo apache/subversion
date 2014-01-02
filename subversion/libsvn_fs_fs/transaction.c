@@ -563,49 +563,45 @@ store_sha1_rep_mapping(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-static const char *
-unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
+static svn_error_t *
+unparse_dir_entry(svn_fs_dirent_t *dirent,
+                  svn_stream_t *stream,
                   apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "%s %s",
-                      (kind == svn_node_file) ? SVN_FS_FS__KIND_FILE
-                                              : SVN_FS_FS__KIND_DIR,
-                      svn_fs_fs__id_unparse(id, pool)->data);
+  const char *val
+    = apr_psprintf(pool, "%s %s",
+                   (dirent->kind == svn_node_file) ? SVN_FS_FS__KIND_FILE
+                                                   : SVN_FS_FS__KIND_DIR,
+                   svn_fs_fs__id_unparse(dirent->id, pool)->data);
+
+  SVN_ERR(svn_stream_printf(stream, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
+                            "V %" APR_SIZE_T_FMT "\n%s\n",
+                            strlen(dirent->name), dirent->name,
+                            strlen(val), val));
+  return SVN_NO_ERROR;
 }
 
-/* Given a hash ENTRIES of dirent structions, return a hash in
-   *STR_ENTRIES_P, that has svn_string_t as the values in the format
-   specified by the fs_fs directory contents file.  Perform
-   allocations in POOL. */
+/* Write the directory given as array of dirent structs in ENTRIES to STREAM.
+   Perform temporary allocations in POOL. */
 static svn_error_t *
-unparse_dir_entries(apr_hash_t **str_entries_p,
-                    apr_hash_t *entries,
+unparse_dir_entries(apr_array_header_t *entries,
+                    svn_stream_t *stream,
                     apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-
-  /* For now, we use a our own hash function to ensure that we get a
-   * (largely) stable order when serializing the data.  It also gives
-   * us some performance improvement.
-   *
-   * ### TODO ###
-   * Use some sorted or other fixed order data container.
-   */
-  *str_entries_p = svn_hash__make(pool);
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+  for (i = 0; i < entries->nelts; ++i)
     {
-      const void *key;
-      apr_ssize_t klen;
-      svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
-      const char *new_val;
+      svn_fs_dirent_t *dirent;
 
-      apr_hash_this(hi, &key, &klen, NULL);
-      new_val = unparse_dir_entry(dirent->kind, dirent->id, pool);
-      apr_hash_set(*str_entries_p, key, klen,
-                   svn_string_create(new_val, pool));
+      svn_pool_clear(iterpool);
+      dirent = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
+      SVN_ERR(unparse_dir_entry(dirent, stream, iterpool));
     }
 
+  SVN_ERR(svn_stream_printf(stream, pool, "%s\n", SVN_HASH_TERMINATOR));
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -1487,18 +1483,17 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
   if (!rep || !is_txn_rep(rep))
     {
-      apr_hash_t *entries;
+      apr_array_header_t *entries;
 
       /* Before we can modify the directory, we need to dump its old
          contents into a mutable representation file. */
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, parent_noderev,
                                           subpool, subpool));
-      SVN_ERR(unparse_dir_entries(&entries, entries, subpool));
       SVN_ERR(svn_io_file_open(&file, filename,
                                APR_WRITE | APR_CREATE | APR_BUFFERED,
                                APR_OS_DEFAULT, pool));
       out = svn_stream_from_aprfile2(file, TRUE, pool);
-      SVN_ERR(svn_hash_write2(entries, out, SVN_HASH_TERMINATOR, subpool));
+      SVN_ERR(unparse_dir_entries(entries, out, subpool));
 
       svn_pool_clear(subpool);
 
@@ -1548,12 +1543,12 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   /* Append an incremental hash entry for the entry change. */
   if (id)
     {
-      const char *val = unparse_dir_entry(kind, id, subpool);
+      svn_fs_dirent_t entry;
+      entry.name = name;
+      entry.id = id;
+      entry.kind = kind;
 
-      SVN_ERR(svn_stream_printf(out, subpool, "K %" APR_SIZE_T_FMT "\n%s\n"
-                                "V %" APR_SIZE_T_FMT "\n%s\n",
-                                strlen(name), name,
-                                strlen(val), val));
+      SVN_ERR(unparse_dir_entry(&entry, out, subpool));
     }
   else
     {
@@ -2423,8 +2418,8 @@ get_next_revision_ids(apr_uint64_t *node_id,
   return SVN_NO_ERROR;
 }
 
-/* This baton is used by the stream created for write_hash_rep. */
-struct write_hash_baton
+/* This baton is used by the stream created for write_container_rep. */
+struct write_container_baton
 {
   svn_stream_t *stream;
 
@@ -2434,15 +2429,15 @@ struct write_hash_baton
   svn_checksum_ctx_t *sha1_ctx;
 };
 
-/* The handler for the write_hash_rep stream.  BATON is a
-   write_hash_baton, DATA has the data to write and *LEN is the number
+/* The handler for the write_container_rep stream.  BATON is a
+   write_container_baton, DATA has the data to write and *LEN is the number
    of bytes to write. */
 static svn_error_t *
-write_hash_handler(void *baton,
-                   const char *data,
-                   apr_size_t *len)
+write_container_handler(void *baton,
+                        const char *data,
+                        apr_size_t *len)
 {
-  struct write_hash_baton *whb = baton;
+  struct write_container_baton *whb = baton;
 
   SVN_ERR(svn_checksum_update(whb->md5_ctx, data, *len));
   SVN_ERR(svn_checksum_update(whb->sha1_ctx, data, *len));
@@ -2453,9 +2448,39 @@ write_hash_handler(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Write out the hash HASH as a text representation to file FILE.  In
-   the process, record position, the total size of the dump and MD5 as
-   well as SHA1 in REP.   Add the representation of type ITEM_TYPE to
+/* Callback function type.  Write the data provided by BATON into STREAM. */
+typedef svn_error_t *
+(* collection_writer_t)(svn_stream_t *stream, void *baton, apr_pool_t *pool);
+
+/* Implement collection_writer_t writing the C string->svn_string_t hash
+   given as BATON. */
+static svn_error_t *
+write_hash_to_stream(svn_stream_t *stream,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *hash = baton;
+  SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implement collection_writer_t writing the svn_fs_dirent_t* array given
+   as BATON. */
+static svn_error_t *
+write_directory_to_stream(svn_stream_t *stream,
+                          void *baton,
+                          apr_pool_t *pool)
+{
+  apr_array_header_t *dir = baton;
+  SVN_ERR(unparse_dir_entries(dir, stream, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Write out the COLLECTION as a text representation to file FILE using
+   WRITER.  In the process, record position, the total size of the dump and
+   MD5 as well as SHA1 in REP.   Add the representation of type ITEM_TYPE to
    the indexes if necessary.  If rep sharing has been enabled and REPS_HASH
    is not NULL, it will be used in addition to the on-disk cache to find
    earlier reps with the same content.  When such existing reps can be
@@ -2464,17 +2489,18 @@ write_hash_handler(void *baton,
    to determine whether to write to the proto-index files.
    Perform temporary allocations in POOL. */
 static svn_error_t *
-write_hash_rep(representation_t *rep,
-               apr_file_t *file,
-               apr_hash_t *hash,
-               svn_fs_t *fs,
-               apr_hash_t *reps_hash,
-               int item_type,
-               svn_revnum_t final_revision,
-               apr_pool_t *pool)
+write_container_rep(representation_t *rep,
+                    apr_file_t *file,
+                    void *collection,
+                    collection_writer_t writer,
+                    svn_fs_t *fs,
+                    apr_hash_t *reps_hash,
+                    int item_type,
+                    svn_revnum_t final_revision,
+                    apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  struct write_hash_baton *whb;
+  struct write_container_baton *whb;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
   representation_t *old_rep;
   apr_off_t offset = 0;
@@ -2491,11 +2517,11 @@ write_hash_rep(representation_t *rep,
   whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
 
   stream = svn_stream_create(whb, pool);
-  svn_stream_set_write(stream, write_hash_handler);
+  svn_stream_set_write(stream, write_container_handler);
 
   SVN_ERR(svn_stream_puts(whb->stream, "PLAIN\n"));
 
-  SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(writer(stream, collection, pool));
 
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, pool));
@@ -2543,28 +2569,31 @@ write_hash_rep(representation_t *rep,
   return SVN_NO_ERROR;
 }
 
-/* Write out the hash HASH pertaining to the NODEREV in FS as a deltified
-   text representation to file FILE.  In the process, record the total size
-   and the md5 digest in REP and add the representation of type ITEM_TYPE
-   to the indexes if necessary.  If rep sharing has been enabled and REPS_HASH
-   is not NULL, it will be used in addition to the on-disk cache to find
-   earlier reps with the same content.  When such existing reps can be found,
-   we will truncate the one just written from the file and return the existing
-   rep.  If ITEM_TYPE is IS_PROPS equals SVN_FS_FS__ITEM_TYPE_*_PROPS, assume
+/* Write out the COLLECTION pertaining to the NODEREV in FS as a deltified
+   text representation to file FILE using WRITER.  In the process, record the
+   total size and the md5 digest in REP and add the representation of type
+   ITEM_TYPE to the indexes if necessary.  If rep sharing has been enabled and
+   REPS_HASH is not NULL, it will be used in addition to the on-disk cache to
+   find earlier reps with the same content.  When such existing reps can be
+   found, we will truncate the one just written from the file and return the
+   existing rep.
+
+   If ITEM_TYPE is IS_PROPS equals SVN_FS_FS__ITEM_TYPE_*_PROPS, assume
    that we want to a props representation as the base for our delta.
    If FINAL_REVISION is not SVN_INVALID_REVNUM, use it to determine whether
    to write to the proto-index files.  Perform temporary allocations in POOL.
  */
 static svn_error_t *
-write_hash_delta_rep(representation_t *rep,
-                     apr_file_t *file,
-                     apr_hash_t *hash,
-                     svn_fs_t *fs,
-                     node_revision_t *noderev,
-                     apr_hash_t *reps_hash,
-                     int item_type,
-                     svn_revnum_t final_revision,
-                     apr_pool_t *pool)
+write_container_delta_rep(representation_t *rep,
+                          apr_file_t *file,
+                          void *collection,
+                          collection_writer_t writer,
+                          svn_fs_t *fs,
+                          node_revision_t *noderev,
+                          apr_hash_t *reps_hash,
+                          int item_type,
+                          svn_revnum_t final_revision,
+                          apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t diff_wh;
   void *diff_whb;
@@ -2581,7 +2610,7 @@ write_hash_delta_rep(representation_t *rep,
   apr_off_t delta_start = 0;
   apr_off_t offset = 0;
 
-  struct write_hash_baton *whb;
+  struct write_container_baton *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
   int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
   svn_boolean_t is_props = (item_type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
@@ -2628,9 +2657,9 @@ write_hash_delta_rep(representation_t *rep,
 
   /* serialize the hash */
   stream = svn_stream_create(whb, pool);
-  svn_stream_set_write(stream, write_hash_handler);
+  svn_stream_set_write(stream, write_container_handler);
 
-  SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(writer(stream, collection, pool));
   SVN_ERR(svn_stream_close(whb->stream));
 
   /* Store the results. */
@@ -2826,8 +2855,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->kind == svn_node_dir)
     {
       apr_pool_t *subpool;
-      apr_hash_t *entries, *str_entries;
-      apr_array_header_t *sorted_entries;
+      apr_array_header_t *entries;
       int i;
 
       /* This is a directory.  Write out all the children first. */
@@ -2835,16 +2863,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, pool,
                                           subpool));
-      /* For the sake of the repository administrator sort the entries
-         so that the final file is deterministic and repeatable,
-         however the rest of the FSFS code doesn't require any
-         particular order here. */
-      sorted_entries = svn_sort__hash(entries, svn_sort_compare_items_lexically,
-                                      pool);
-      for (i = 0; i < sorted_entries->nelts; ++i)
+      for (i = 0; i < entries->nelts; ++i)
         {
-          svn_fs_dirent_t *dirent = APR_ARRAY_IDX(sorted_entries, i,
-                                                  svn_sort__item_t).value;
+          svn_fs_dirent_t *dirent
+            = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
 
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
@@ -2859,19 +2881,19 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       if (noderev->data_rep && is_txn_rep(noderev->data_rep))
         {
           /* Write out the contents of this directory as a text rep. */
-          SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
-
           noderev->data_rep->revision = rev;
-
           if (ffd->deltify_directories)
-            SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
-                                         str_entries, fs, noderev, NULL,
-                                         SVN_FS_FS__ITEM_TYPE_DIR_REP,
-                                         rev, pool));
+            SVN_ERR(write_container_delta_rep(noderev->data_rep, file,
+                                              entries,
+                                              write_directory_to_stream,
+                                              fs, noderev, NULL,
+                                              SVN_FS_FS__ITEM_TYPE_DIR_REP,
+                                              rev, pool));
           else
-            SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
-                                   fs, NULL, SVN_FS_FS__ITEM_TYPE_DIR_REP,
-                                   rev, pool));
+            SVN_ERR(write_container_rep(noderev->data_rep, file, entries,
+                                        write_directory_to_stream, fs, NULL,
+                                        SVN_FS_FS__ITEM_TYPE_DIR_REP, rev,
+                                        pool));
 
           reset_txn_in_rep(noderev->data_rep);
         }
@@ -2912,12 +2934,13 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       noderev->prop_rep->revision = rev;
 
       if (ffd->deltify_properties)
-        SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
-                                     proplist, fs, noderev, reps_hash,
-                                     item_type, rev, pool));
+        SVN_ERR(write_container_delta_rep(noderev->prop_rep, file, proplist,
+                                          write_hash_to_stream, fs, noderev,
+                                          reps_hash, item_type, rev, pool));
       else
-        SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
-                               fs, reps_hash, item_type, rev, pool));
+        SVN_ERR(write_container_rep(noderev->prop_rep, file, proplist,
+                                    write_hash_to_stream, fs, reps_hash,
+                                    item_type, rev, pool));
 
       reset_txn_in_rep(noderev->prop_rep);
     }

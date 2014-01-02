@@ -415,7 +415,7 @@ make_entry(dag_node_t **child_p,
 
 
 svn_error_t *
-svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
+svn_fs_fs__dag_dir_entries(apr_array_header_t **entries,
                            dag_node_t *node,
                            apr_pool_t *pool)
 {
@@ -857,23 +857,16 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
   /* Else it's mutable.  Recurse on directories... */
   if (node->kind == svn_node_dir)
     {
-      apr_hash_t *entries;
-      apr_hash_index_t *hi;
+      apr_array_header_t *entries;
+      int i;
 
-      /* Loop over hash entries */
+      /* Loop over directory entries */
       SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, node, pool));
       if (entries)
-        {
-          for (hi = apr_hash_first(pool, entries);
-               hi;
-               hi = apr_hash_next(hi))
-            {
-              svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
-
-              SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs, dirent->id,
-                                                       pool));
-            }
-        }
+        for (i = 0; i < entries->nelts; ++i)
+          SVN_ERR(svn_fs_fs__dag_delete_if_mutable(fs,
+                        APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *)->id,
+                        pool));
     }
 
   /* ... then delete the node itself, after deleting any mutable

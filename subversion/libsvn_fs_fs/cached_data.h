@@ -98,16 +98,25 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                  node_revision_t *target,
                                  apr_pool_t *pool);
 
-/* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
-   directory entries of node-revision NODEREV in filesystem FS.  The
-   returned table (and its keys and values) is allocated in RESULT_POOL;
-   SCRATCH_POOL used for temporary allocations. */
+/* Set *ENTRIES to an apr_array_header_t of dirent structs that contain
+   the directory entries of node-revision NODEREV in filesystem FS.  The
+   returned table is allocated in RESULT_POOL and entries are sorted
+   lexicographically.  SCRATCH_POOL is used for temporary allocations. */
 svn_error_t *
-svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
+svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
                             svn_fs_t *fs,
                             node_revision_t *noderev,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
+
+/* Return the directory entry from ENTRIES that matches NAME.  If no such
+   entry exists, return NULL.  If HINT is not NULL, set *HINT to the array
+   index of the entry returned.  Successive calls in a linear scan scenario
+   will be faster called with the same HINT variable. */
+svn_fs_dirent_t *
+svn_fs_fs__find_dir_entry(apr_array_header_t *entries,
+                          const char *name,
+                          int *hint);
 
 /* Set *DIRENT to the entry identified by NAME in the directory given
    by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
