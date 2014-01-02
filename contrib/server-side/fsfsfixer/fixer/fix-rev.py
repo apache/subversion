@@ -125,6 +125,11 @@ def handle_one_error(repo_dir, rev, error_lines):
   """If ERROR_LINES describes an error we know how to fix, then fix it.
      Return True if fixed, False if not fixed."""
 
+  match = re.match(r"svn.*: Filesystem is corrupt", error_lines[0])
+  if match:
+    # This is an additional line in v1.7+ error messages: skip it.
+    error_lines = error_lines[1:]
+
   line1 = error_lines[0]
 
   match = re.match(r"svn.*: Corrupt node-revision '(.*)'", line1)
