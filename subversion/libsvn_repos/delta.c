@@ -216,10 +216,9 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   void *root_baton = NULL;
   struct context c;
   const char *src_fullpath;
-  const svn_fs_id_t *src_id, *tgt_id;
   svn_node_kind_t src_kind, tgt_kind;
   svn_revnum_t rootrev;
-  int distance;
+  svn_fs_node_relation_t relation;
   const char *authz_root_path;
 
   /* SRC_PARENT_DIR must be valid. */
@@ -319,11 +318,10 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
     }
 
   /* Get and compare the node IDs for the source and target. */
-  SVN_ERR(svn_fs_node_id(&tgt_id, tgt_root, tgt_fullpath, pool));
-  SVN_ERR(svn_fs_node_id(&src_id, src_root, src_fullpath, pool));
-  distance = svn_fs_compare_ids(src_id, tgt_id);
+  SVN_ERR(svn_fs_node_relation(&relation, tgt_root, tgt_fullpath,
+                               src_root, src_fullpath, pool));
 
-  if (distance == 0)
+  if (relation == svn_fs_node_same)
     {
       /* They are the same node!  No-op (you gotta love those). */
       goto cleanup;
@@ -334,7 +332,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
          add the other.  Also, if they are completely unrelated and
          our caller is interested in relatedness, we do the same thing. */
       if ((src_kind != tgt_kind)
-          || ((distance == -1) && (! ignore_ancestry)))
+          || ((relation == svn_fs_node_unrelated) && (! ignore_ancestry)))
         {
           SVN_ERR(authz_root_check(tgt_root, authz_root_path,
                                    authz_read_func, authz_read_baton, pool));

@@ -731,23 +731,12 @@ dav_svn__checkout(dav_resource *resource,
                  revision than the one in the transaction.  We'll
                  check to see if they are still the same node, and if
                  not, return an error. */
-              const svn_fs_id_t *url_noderev_id, *txn_noderev_id;
-
-              if ((serr = svn_fs_node_id(&txn_noderev_id, txn_root,
-                                         resource->info->repos_path,
-                                         resource->pool)))
-                {
-                  err = dav_svn__new_error_svn
-                    (resource->pool, HTTP_CONFLICT, serr->apr_err,
-                     "Unable to fetch the node revision id of the version "
-                     "resource within the transaction");
-                  svn_error_clear(serr);
-                  return err;
-                }
-              if ((serr = svn_fs_node_id(&url_noderev_id,
-                                         resource->info->root.root,
-                                         resource->info->repos_path,
-                                         resource->pool)))
+              svn_fs_node_relation_t node_relation;
+              if ((serr = svn_fs_node_relation(&node_relation, txn_root,
+                                               resource->info->repos_path,
+                                               resource->info->root.root,
+                                               resource->info->repos_path,
+                                               resource->pool)))
                 {
                   err = dav_svn__new_error_svn
                     (resource->pool, HTTP_CONFLICT, serr->apr_err,
@@ -756,7 +745,7 @@ dav_svn__checkout(dav_resource *resource,
                   svn_error_clear(serr);
                   return err;
                 }
-              if (svn_fs_compare_ids(url_noderev_id, txn_noderev_id) != 0)
+              if (node_relation != svn_fs_node_same)
                 {
                   return dav_svn__new_error_svn
                     (resource->pool, HTTP_CONFLICT, SVN_ERR_FS_CONFLICT,

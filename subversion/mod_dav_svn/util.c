@@ -192,14 +192,8 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
   svn_revnum_t history_rev;
   svn_fs_root_t *other_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
-  const svn_fs_id_t *id, *other_id;
+  svn_fs_node_relation_t node_relation;
   svn_error_t *err;
-
-  if ((err = svn_fs_node_id(&id, root, path, pool)))
-    {
-      svn_error_clear(err);
-      return revision;   /* couldn't get id of root/path */
-    }
 
   if ((err = get_last_history_rev(&history_rev, root, path, pool)))
     {
@@ -213,13 +207,14 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
       return revision;   /* couldn't open the history rev */
     }
 
-  if ((err = svn_fs_node_id(&other_id, other_root, path, pool)))
+  if ((err = svn_fs_node_relation(&node_relation, root, path,
+                                  other_root, path, pool)))
     {
       svn_error_clear(err);
-      return revision;   /* couldn't get id of other_root/path */
+      return revision;
     }
 
-  if (svn_fs_compare_ids(id, other_id) == 0)
+  if (node_relation == svn_fs_node_same)
     return history_rev;  /* the history rev is safe!  the same node
                             exists at the same path in both revisions. */
 

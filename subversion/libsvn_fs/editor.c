@@ -240,23 +240,18 @@ can_modify(svn_fs_root_t *txn_root,
          of those new revisions.
          In either case, the node may not have changed in those new
          revisions; use the node's ID to determine this case.  */
-      const svn_fs_id_t *txn_noderev_id;
       svn_fs_root_t *rev_root;
-      const svn_fs_id_t *new_noderev_id;
-
-      /* The ID of the node that we would be modifying in the txn  */
-      SVN_ERR(svn_fs_node_id(&txn_noderev_id, txn_root, fspath,
-                             scratch_pool));
+      svn_fs_node_relation_t relation;
 
       /* Get the ID from the future/new revision.  */
       SVN_ERR(svn_fs_revision_root(&rev_root, svn_fs_root_fs(txn_root),
                                    revision, scratch_pool));
-      SVN_ERR(svn_fs_node_id(&new_noderev_id, rev_root, fspath,
-                             scratch_pool));
+      SVN_ERR(svn_fs_node_relation(&relation, txn_root, fspath, rev_root,
+                                   fspath, scratch_pool));
       svn_fs_close_root(rev_root);
 
       /* Has the target node changed in the future?  */
-      if (svn_fs_compare_ids(txn_noderev_id, new_noderev_id) != 0)
+      if (relation != svn_fs_node_same)
         {
           /* Restarting the commit will base the txn on the future/new
              revision, allowing the modification at REVISION.  */
