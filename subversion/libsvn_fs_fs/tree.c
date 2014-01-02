@@ -1332,6 +1332,69 @@ svn_fs_fs__node_id(const svn_fs_id_t **id_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fs_node_relation(svn_fs_node_relation_t *relation,
+                 svn_fs_root_t *root_a, const char *path_a,
+                 svn_fs_root_t *root_b, const char *path_b,
+                 apr_pool_t *pool)
+{
+  dag_node_t *node;
+  const svn_fs_id_t *id;
+  svn_fs_fs__id_part_t rev_item_a, rev_item_b, node_id_a, node_id_b;
+
+  /* Root paths are a common special case. */
+  svn_boolean_t a_is_root_dir
+    = (path_a[0] == '\0') || ((path_a[0] == '/') && (path_a[1] == '\0'));
+  svn_boolean_t b_is_root_dir
+    = (path_b[0] == '\0') || ((path_b[0] == '/') && (path_b[1] == '\0'));
+
+  /* Root paths are never related to non-root paths and path from different
+   * repository are always unrelated. */
+  if (a_is_root_dir ^ b_is_root_dir || root_a->fs != root_b->fs)
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* Nodes from different transactions are never related. */
+  if (root_a->is_txn_root && root_b->is_txn_root
+      && strcmp(root_a->txn, root_b->txn))
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* Are both (!) root paths? Then, they are related and we only test how
+   * direct the relation is. */
+  if (a_is_root_dir)
+    {
+      *relation = root_a->rev == root_b->rev
+                ? svn_fs_node_same
+                : svn_fs_node_common_anchestor;
+      return SVN_NO_ERROR;
+    }
+
+  /* We checked for all separations between ID spaces (repos, txn).
+   * Now, we can simply test for the ID values themselves. */
+  SVN_ERR(get_dag(&node, root_a, path_a, FALSE, pool));
+  id = svn_fs_fs__dag_get_id(node);
+  rev_item_a = *svn_fs_fs__id_rev_item(id);
+  node_id_a = *svn_fs_fs__id_node_id(id);
+
+  SVN_ERR(get_dag(&node, root_b, path_b, FALSE, pool));
+  id = svn_fs_fs__dag_get_id(node);
+  rev_item_b = *svn_fs_fs__id_rev_item(id);
+  node_id_b = *svn_fs_fs__id_node_id(id);
+
+  if (svn_fs_fs__id_part_eq(&rev_item_a, &rev_item_b))
+    *relation = svn_fs_node_same;
+  else if (svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
+    *relation = svn_fs_node_common_anchestor;
+  else
+    *relation = svn_fs_node_unrelated;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__node_created_rev(svn_revnum_t *revision,
@@ -4275,6 +4338,7 @@ static root_vtable_t root_vtable = {
   svn_fs_fs__check_path,
   fs_node_history,
   svn_fs_fs__node_id,
+  fs_node_relation,
   svn_fs_fs__node_created_rev,
   fs_node_origin_rev,
   fs_node_created_path,

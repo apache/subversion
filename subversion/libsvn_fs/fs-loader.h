@@ -299,6 +299,10 @@ typedef struct root_vtable_t
                                apr_pool_t *pool);
   svn_error_t *(*node_id)(const svn_fs_id_t **id_p, svn_fs_root_t *root,
                           const char *path, apr_pool_t *pool);
+  svn_error_t *(*node_relation)(svn_fs_node_relation_t *relation,
+                                svn_fs_root_t *root_a, const char *path_a,
+                                svn_fs_root_t *root_b, const char *path_b,
+                                apr_pool_t *pool);
   svn_error_t *(*node_created_rev)(svn_revnum_t *revision,
                                    svn_fs_root_t *root, const char *path,
                                    apr_pool_t *pool);
