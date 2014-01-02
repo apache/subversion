@@ -22,10 +22,11 @@ class FixError(Exception):
 
 def parse_id(id):
   """Return the (NODEREV, REV, OFFSET) of ID, where ID is of the form
-     "NODEREV/OFFSET", and NODEREV is of the form "SOMETHING.rREV".
+     "NODE_ID.COPY_ID.rREV/OFFSET" and NODEREV is "NODE_ID.COPY_ID.rREV".
   """
-  noderev, offset = id.split('/')
-  _, rev = noderev.split('.r')
+  node_id, copy_id, txn_id = id.split('.')
+  rev, offset = txn_id[1:].split('/')
+  noderev = node_id + '.' + copy_id + '.r' + rev
   return noderev, rev, offset
 
 def rev_file_path(repo_dir, rev):
