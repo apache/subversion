@@ -58,9 +58,11 @@ svn_fs_fs__check_rep(representation_t *rep,
 
 /* Follow the representation delta chain in FS starting with REP.  The
    number of reps (including REP) in the chain will be returned in
-   *CHAIN_LENGTH.  Do any allocations in POOL. */
+   *CHAIN_LENGTH.  *SHARD_COUNT will be set to the number of shards
+   accessed.  Do any allocations in POOL. */
 svn_error_t *
 svn_fs_fs__rep_chain_length(int *chain_length,
+                            int *shard_count,
                             representation_t *rep,
                             svn_fs_t *fs,
                             apr_pool_t *pool);

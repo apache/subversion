@@ -911,13 +911,20 @@ svn_fs_fs__check_rep(representation_t *rep,
 
 svn_error_t *
 svn_fs_fs__rep_chain_length(int *chain_length,
+                            int *shard_count,
                             representation_t *rep,
                             svn_fs_t *fs,
                             apr_pool_t *pool)
 {
-  int count = 0;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_revnum_t shard_size = ffd->max_files_per_dir
+                          ? ffd->max_files_per_dir
+                          : 1;
   apr_pool_t *sub_pool = svn_pool_create(pool);
   svn_boolean_t is_delta = FALSE;
+  int count = 0;
+  int shards = 1;
+  svn_revnum_t last_shard = rep->revision / shard_size;
   
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
@@ -934,6 +941,12 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   do
     {
       rep_state_t *rep_state;
+      if (base_rep.revision / shard_size != last_shard)
+        {
+          last_shard = base_rep.revision / shard_size;
+          ++shards;
+        }
+
       SVN_ERR(create_rep_state_body(&rep_state,
                                     &header,
                                     &file_hint,
@@ -957,6 +970,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   while (is_delta && base_rep.revision);
 
   *chain_length = count;
+  *shard_count = shards;
   svn_pool_destroy(sub_pool);
 
   return SVN_NO_ERROR;
