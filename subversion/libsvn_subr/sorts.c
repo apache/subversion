@@ -34,6 +34,7 @@
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_error.h"
+#include "private/svn_sorts_private.h"
 
 
 

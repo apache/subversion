@@ -43,6 +43,7 @@
 #include "rep-cache.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
 #include "../libsvn_fs/fs-loader.h"

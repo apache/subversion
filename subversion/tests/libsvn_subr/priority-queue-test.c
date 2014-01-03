@@ -35,7 +35,7 @@
 #include "../svn_test.h"
 
 #include "svn_error.h"
-#include "svn_sorts.h"
+#include "private/svn_sorts_private.h"
 
 /* priority queue test:
  * items in the queue are simple integers, in ascending order */

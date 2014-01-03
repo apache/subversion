@@ -37,6 +37,7 @@
 #include "svn_pools.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_sorts_private.h"
 
 #include "cl.h"
 #include "cl-log.h"

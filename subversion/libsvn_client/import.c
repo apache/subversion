@@ -48,8 +48,9 @@
 #include "svn_props.h"
 
 #include "client.h"
-#include "private/svn_subr_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_magic.h"
 
 /* Import context baton.

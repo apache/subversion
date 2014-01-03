@@ -2354,7 +2354,7 @@ expat_response_handler(serf_request_t *request,
       apr_status_t status;
       const char *data;
       apr_size_t len;
-      int expat_status;
+      svn_error_t *err;
       svn_boolean_t at_eof = FALSE;
 
       status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
@@ -2373,12 +2373,11 @@ expat_response_handler(serf_request_t *request,
 
       /* ### should we have an IGNORE_ERRORS flag like the v1 parser?  */
 
-      expat_status = XML_Parse(ectx->parser, data, (int)len,
-                               at_eof /* isFinal */);
+      err = parse_xml(ectx->parser, data, len, at_eof /* isFinal */);
 
-      if (at_eof 
-          || ectx->inner_error
-          || expat_status != XML_STATUS_OK)
+      err = svn_error_compose_create(ectx->inner_error, err);
+
+      if (at_eof || err)
         {
           /* Release xml parser state/tables. */
           apr_pool_cleanup_run(ectx->cleanup_pool, &ectx->parser,
@@ -2392,14 +2391,7 @@ expat_response_handler(serf_request_t *request,
 
          If an error is not present, THEN we go ahead and look for parsing
          errors.  */
-      SVN_ERR(ectx->inner_error);
-      if (expat_status != XML_STATUS_OK)
-        return svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
-                                 _("The %s response contains invalid XML"
-                                   " (%d %s)"),
-                                 ectx->handler->method,
-                                 ectx->handler->sline.code,
-                                 ectx->handler->sline.reason);
+      SVN_ERR(err);
 
       /* The parsing went fine. What has the bucket told us?  */
 

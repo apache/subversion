@@ -57,6 +57,7 @@
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_sorts_private.h"
 
 #include "dav_svn.h"
 

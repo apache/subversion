@@ -35,6 +35,7 @@
 #include "svn_mergeinfo.h"
 #include "private/svn_fspath.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "svn_hash.h"

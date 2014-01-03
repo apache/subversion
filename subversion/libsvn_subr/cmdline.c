@@ -64,6 +64,7 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_utf_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 
 #include "win32_crashrpt.h"

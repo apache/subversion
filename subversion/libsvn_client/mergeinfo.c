@@ -39,12 +39,13 @@
 #include "svn_client.h"
 #include "svn_hash.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
-#include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_wc_private.h"
 #include "private/svn_fspath.h"
-#include "private/svn_client_private.h"
 #include "client.h"
 #include "mergeinfo.h"
 

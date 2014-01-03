@@ -47,6 +47,7 @@
 #include "svn_subst.h"
 #include "client.h"
 
+#include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"
 
 

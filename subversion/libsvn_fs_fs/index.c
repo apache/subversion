@@ -28,6 +28,7 @@
 
 #include "svn_private_config.h"
 
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_temp_serializer.h"
 

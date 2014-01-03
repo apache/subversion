@@ -34,6 +34,7 @@
 #include "svn_wc.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"
 
 
