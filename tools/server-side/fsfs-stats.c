@@ -39,6 +39,7 @@
 #include "svn_hash.h"
 #include "svn_cache_config.h"
 
+#include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
