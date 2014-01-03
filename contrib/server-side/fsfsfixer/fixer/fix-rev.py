@@ -115,12 +115,15 @@ def fix_checksum(repo_dir, rev, old_checksum, new_checksum):
   print "Fixed checksum: " + old_checksum + " -> " + new_checksum
   fixed_checksums[old_checksum] = new_checksum
 
-def fix_delta_ref(repo_dir, rev, bad_rev, bad_offset, bad_size):
-  """Fix a "DELTA <REV> <OFFSET> <SIZE>" line in the revision file for REV
-     in REPO_DIR, where <OFFSET> is wrong."""
-  good_offset = find_good_rep_header(repo_dir, bad_rev, bad_size)
-  old_line = ' '.join(['DELTA', bad_rev, bad_offset, bad_size])
-  new_line = ' '.join(['DELTA', bad_rev, good_offset, bad_size])
+def fix_rep_ref(repo_dir, rev, prefix, rep_rev, bad_offset, rep_size):
+  """Fix a "DELTA <REP_REV> <BAD_OFFSET> <REP_SIZE>"
+        or "text: <REP_REV> <BAD_OFFSET> <REP_SIZE> ..."
+     line in the revision file for REV in REPO_DIR, where <BAD_OFFSET> is
+     wrong.  PREFIX is 'DELTA' or 'text:'.
+  """
+  good_offset = find_good_rep_header(repo_dir, rep_rev, rep_size)
+  old_line = ' '.join([prefix, rep_rev, bad_offset, rep_size])
+  new_line = ' '.join([prefix, rep_rev, good_offset, rep_size])
   if good_offset == bad_offset:
     raise FixError("Attempting to fix a rep ref that appears to be correct: " + old_line)
   replace_in_rev_file(repo_dir, rev, old_line, new_line)
@@ -171,12 +174,32 @@ def handle_one_error(repo_dir, rev, error_lines):
 
   match = re.match(r"svn.*: Corrupt representation '([0-9]*) ([0-9]*) ([0-9]*) .*'", line1)
   if match:
-    # Extract the bad reference. We expect only 'offset' is actually bad, in
-    # the known kind of corruption that we're targetting.
-    bad_rev = match.group(1)
-    bad_offset = match.group(2)
-    bad_size = match.group(3)
-    fix_delta_ref(repo_dir, rev, bad_rev, bad_offset, bad_size)
+    # Here we are targetting one particular form of corruption that we have
+    # seen several times.  In this form, there are some references in which
+    # the 'offset' is wrong by a few hundred bytes.  Usually the bad offset
+    # and the correct offset have the same number of digits; if they don't,
+    # then fixing it is beyond the scope of this script.
+    #
+    # Although this form of corruption usually produces the 'Corrupt
+    # representation' error message, it could produce other error messages.
+    # A more systematic way to find and fix this form of corruption would be
+    # to extract all of the rep. ids in the repository, and all of the
+    # references to them, and match them up.
+
+    # Extract the bad reference from the error message.
+    bad_rev, bad_offset, bad_size = match.group(1, 2, 3)
+
+    # In several cases that we have seen, every bad reference has been in a
+    # 'DELTA' line, so we first try to fix such references.  Fixing this has
+    # a knock-on effect, invalidating the checksum of the rep so that all
+    # references to this rep will then need their checksums correcting.
+    try:
+      fix_rep_ref(repo_dir, rev, 'DELTA', bad_rev, bad_offset, bad_size)
+    except FixError:
+      # In at least one case of corruption, every bad reference has been in a
+      # 'text:' line.  Fixing this has no knock-on effect.
+      fix_rep_ref(repo_dir, rev, 'text:', bad_rev, bad_offset, bad_size)
+
     return True
 
   return False
