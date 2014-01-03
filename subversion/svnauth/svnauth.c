@@ -47,6 +47,7 @@
 #include "svn_sorts.h"
 
 #include "private/svn_cmdline_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
 
 /* Baton for passing option/argument state to a subcommand function. */
