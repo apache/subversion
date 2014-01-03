@@ -1844,11 +1844,13 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
                                target->data_rep, fs, pool));
-      /* If that matches source, then use this delta as is. */
-      if (rep_header->type == svn_fs_fs__rep_self_delta
-          || (rep_header->type == svn_fs_fs__rep_delta
-              && rep_header->base_revision == source->data_rep->revision
-              && rep_header->base_item_index == source->data_rep->item_index))
+
+      /* If that matches source, then use this delta as is.
+         Note that we want an actual delta here.  E.g. a self-delta would
+         not be good enogh. */
+      if (rep_header->type == svn_fs_fs__rep_delta
+          && rep_header->base_revision == source->data_rep->revision
+          && rep_header->base_item_index == source->data_rep->item_index)
         {
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
