@@ -27,6 +27,7 @@
 #include "svn_hash.h"
 #include "svn_ctype.h"
 #include "svn_sorts.h"
+#include "private/svn_delta_private.h"
 #include "private/svn_io_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
@@ -2402,12 +2403,29 @@ cache_windows(svn_filesize_t *fulltext_len,
       svn_txdelta_window_t *window;
       apr_off_t start_offset = rs->start + rs->current;
       apr_off_t end_offset;
+      svn_boolean_t found = FALSE;
 
-      /* navigate to & read the current window */
+      /* We don't need to read the data again, if it is already in cache.
+       */
+      if (rs->window_cache)
+        {
+          window_cache_key_t key = {0};
+          SVN_ERR(svn_cache__has_key(&found, rs->window_cache,
+                                     get_window_key(&key, rs), pool));
+        }
+
+      /* navigate to the current window */
       SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, pool));
-      SVN_ERR(svn_txdelta_read_svndiff_window(&window,
-                                              rs->sfile->rfile->stream,
-                                              rs->ver, pool));
+
+      /* Skip or actually read the window - depending on cache status. */
+      if (found)
+        SVN_ERR(svn_txdelta__read_svndiff_window_sizes(&window,
+                                                rs->sfile->rfile->stream,
+                                                rs->ver, pool));
+      else
+        SVN_ERR(svn_txdelta_read_svndiff_window(&window,
+                                                rs->sfile->rfile->stream,
+                                                rs->ver, pool));
 
       /* aggregate expanded window size */
       *fulltext_len += window->tview_len;
@@ -2421,7 +2439,8 @@ cache_windows(svn_filesize_t *fulltext_len,
                                   "the end of the representation"));
 
       /* cache the window now */
-      SVN_ERR(set_cached_window(window, rs, pool));
+      if (!found)
+        SVN_ERR(set_cached_window(window, rs, pool));
 
       rs->chunk_index++;
     }
