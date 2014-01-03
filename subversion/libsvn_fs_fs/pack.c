@@ -825,15 +825,6 @@ compare_references_from(const reference_t * const * lhs_p,
   return diff ? diff : svn_fs_fs__id_part_compare(&lhs->to, &rhs->to);
 }
 
-/* implements compare_fn_t.  Assume ascending order by TO.
- */
-static int
-compare_ref_to_item_to(const reference_t * const * lhs_p,
-                       const svn_fs_fs__id_part_t * rhs_p)
-{
-  return svn_fs_fs__id_part_compare(&(*lhs_p)->to, rhs_p);
-}
-
 /* implements compare_fn_t.  Assume ascending order by FROM.
  */
 static int
