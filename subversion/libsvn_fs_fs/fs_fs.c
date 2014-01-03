@@ -484,11 +484,11 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
-                                  FALSE));
+                                  TRUE));
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_properties,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION,
-                                  FALSE));
+                                  TRUE));
       SVN_ERR(svn_config_get_int64(ffd->config, &ffd->max_deltification_walk,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_DELTIFICATION_WALK,
@@ -512,7 +512,7 @@ read_config(fs_fs_data_t *ffd,
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->compress_packed_revprops,
                                   CONFIG_SECTION_PACKED_REVPROPS,
                                   CONFIG_OPTION_COMPRESS_PACKED_REVPROPS,
-                                  FALSE));
+                                  TRUE));
       SVN_ERR(svn_config_get_int64(ffd->config, &ffd->revprop_pack_size,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
@@ -623,7 +623,7 @@ write_config(svn_fs_t *fs,
 "### In rarely read repositories, the I/O overhead may be significant as"    NL
 "### cache hit rates will most likely be low"                                NL
 "### directory deltification is disabled by default."                        NL
-"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = false"                       NL
+"# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
 "###"                                                                        NL
 "### The following parameter enables deltification for properties on files"  NL
 "### and directories.  Overall, this is a minor tuning option but can save"  NL
@@ -631,7 +631,7 @@ write_config(svn_fs_t *fs,
 "### properties.  You should not activate this if rep-sharing has been"      NL
 "### disabled because this may result in a net increase in repository size." NL
 "### property deltification is disabled by default."                         NL
-"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = false"                     NL
+"# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
 "###"                                                                        NL
 "### During commit, the server may need to walk the whole change history of" NL
 "### of a given node to find a suitable deltification base.  This linear"    NL
@@ -679,7 +679,7 @@ write_config(svn_fs_t *fs,
 "### ineffective."                                                           NL
 "### revprop-pack-size is 64 kBytes by default for non-compressed revprop"   NL
 "### pack files and 256 kBytes when compression has been enabled."           NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 64"                                 NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 256"                                NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
@@ -687,7 +687,7 @@ write_config(svn_fs_t *fs,
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
 "### Compressing packed revprops is disabled by default."                    NL
-"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = false"                       NL
+"# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
 ""                                                                           NL
 "[" CONFIG_SECTION_IO "]"                                                    NL
 "### Parameters in this section control the data access granularity in"      NL
