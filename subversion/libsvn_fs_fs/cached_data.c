@@ -86,10 +86,13 @@ dbg_log_access(svn_fs_t *fs,
   const char *type = types[item_type];
   const char *pack = "";
   apr_off_t offset;
+  svn_fs_fs__revision_file_t rev_file;
+
+  svn_fs_fs__init_revision_file(&rev_file, fs, revision, scratch_pool);
 
   /* determine rev / pack file offset */
-  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, revision, NULL, item_index,
-                                 scratch_pool));
+  SVN_ERR(svn_fs_fs__item_offset(&offset, fs, &rev_file, revision, NULL,
+                                 item_index, scratch_pool));
 
   /* constructing the pack file description */
   if (revision < ffd->min_unpacked_rev)
@@ -151,8 +154,8 @@ dbg_log_access(svn_fs_t *fs,
   if (svn_fs_fs__use_log_addressing(fs, revision))
     {
       /* reverse index lookup: get item description in ENTRY */
-      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, revision, offset,
-                                          scratch_pool));
+      SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, &rev_file, revision,
+                                          offset, scratch_pool));
       if (entry)
         {
           /* more details */
@@ -2283,7 +2286,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
-  apr_off_t changes_offset = -1;
+  apr_off_t changes_offset = SVN_FS_FS__ITEM_INDEX_CHANGES;
   svn_fs_fs__revision_file_t *revision_file;
   svn_boolean_t found;
   fs_fs_data_t *ffd = fs->fsap_data;
