@@ -1143,33 +1143,6 @@ store_items(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Return the index of the first entry in CONTEXT->REFERENCES that
- * references ITEM if such entries exist.  All matching items will be
- * consecutive.
- */
-static int
-find_first_reference(pack_context_t *context,
-                     svn_fs_fs__p2l_entry_t *item)
-{
-  return svn_sort__bsearch_lower_bound(context->node_references, &item->item,
-                (int (*)(const void *, const void *))compare_ref_to_item_to);
-}
-
-/* Check whether entry number IDX in CONTEXT->REFERENCES references ITEM.
- */
-static svn_boolean_t
-is_reference_match(pack_context_t *context,
-                   int idx,
-                   svn_fs_fs__p2l_entry_t *item)
-{
-  reference_t *reference;
-  if (context->node_references->nelts <= idx)
-    return FALSE;
-
-  reference = APR_ARRAY_IDX(context->node_references, idx, reference_t *);
-  return svn_fs_fs__id_part_eq(&reference->to, &item->item);
-}
-
 /* Copy (append) the items identified by svn_fs_fs__p2l_entry_t * elements
  * in ENTRIES strictly in order from TEMP_FILE into CONTEXT->PACK_FILE.
  * Use POOL for temporary allocations.
