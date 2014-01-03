@@ -38,6 +38,7 @@
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_cache.h"
 

@@ -54,8 +54,9 @@
 #include "conflicts.h"
 #include "workqueue.h"
 
-#include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 
 
 struct svn_wc_committed_queue_t

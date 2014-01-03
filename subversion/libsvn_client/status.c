@@ -41,8 +41,9 @@
 #include "svn_error.h"
 #include "svn_hash.h"
 
-#include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Getting update information ***/

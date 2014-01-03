@@ -37,6 +37,7 @@
 #include "repos.h"
 
 #include "private/svn_repos_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_fspath.h"
 

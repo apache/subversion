@@ -38,6 +38,7 @@
 #include "svn_sorts.h"
 #include "svn_time.h"
 #include "svn_private_config.h"
+#include "private/svn_sorts_private.h"
 
 #include "ra_serf.h"
 

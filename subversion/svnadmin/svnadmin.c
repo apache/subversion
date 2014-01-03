@@ -45,9 +45,10 @@
 #include "svn_user.h"
 #include "svn_xml.h"
 
-#include "private/svn_opt_private.h"
-#include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_opt_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 
 
 /*** Code. ***/

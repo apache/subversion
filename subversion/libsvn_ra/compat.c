@@ -36,6 +36,7 @@
 #include "svn_props.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
 #include "ra_loader.h"
 
 

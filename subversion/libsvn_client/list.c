@@ -35,6 +35,7 @@
 
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"
 
 /* Prototypes for referencing before declaration */

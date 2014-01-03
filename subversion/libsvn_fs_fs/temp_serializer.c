@@ -29,6 +29,7 @@
 #include "svn_fs.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_temp_serializer.h"
 #include "private/svn_subr_private.h"
 

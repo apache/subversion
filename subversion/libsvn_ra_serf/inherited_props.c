@@ -36,6 +36,7 @@
 #include "svn_base64.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_sorts_private.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "ra_serf.h"
 
