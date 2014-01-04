@@ -207,15 +207,10 @@ typedef struct pack_context_t
    * after each revision range.  Sorted by PATH, NODE_ID. */
   apr_array_header_t *path_order;
 
-  /* array of reference_t* linking noderevs to representations.  Will be
-   * filled in phase 2 and be cleared after each revision range.  It will
-   * be sorted by the TO members (i.e. the allow rep->noderev lookup). */
-  apr_array_header_t *node_references;
-
   /* array of reference_t* linking representations to their delta bases.
    * Will be filled in phase 2 and be cleared after each revision range.
    * It will be sorted by the FROM members (for rep->base rep lookup). */
-  apr_array_header_t *rep_references;
+  apr_array_header_t *references;
 
   /* array of svn_fs_fs__p2l_entry_t*.  Will be filled in phase 2 and be
    * cleared after each revision range.  During phase 3, we will set items
@@ -315,9 +310,7 @@ initialize_pack_context(pack_context_t *context,
   context->rev_offsets = apr_array_make(pool, max_revs, sizeof(int));
   context->path_order = apr_array_make(pool, max_items,
                                        sizeof(path_order_t *));
-  context->node_references = apr_array_make(pool, max_items,
-                                            sizeof(reference_t *));
-  context->rep_references = apr_array_make(pool, max_items,
+  context->references = apr_array_make(pool, max_items,
                                            sizeof(reference_t *));
   context->reps = apr_array_make(pool, max_items,
                                  sizeof(svn_fs_fs__p2l_entry_t *));
@@ -347,8 +340,7 @@ reset_pack_context(pack_context_t *context,
 
   apr_array_clear(context->rev_offsets);
   apr_array_clear(context->path_order);
-  apr_array_clear(context->node_references);
-  apr_array_clear(context->rep_references);
+  apr_array_clear(context->references);
   apr_array_clear(context->reps);
   SVN_ERR(svn_io_file_trunc(context->reps_file, 0, pool));
 
@@ -594,7 +586,7 @@ copy_rep_to_temp(pack_context_t *context,
       reference->from = entry->item;
       reference->to.revision = rep_header->base_revision;
       reference->to.number = rep_header->base_item_index;
-      APR_ARRAY_PUSH(context->rep_references, reference_t *) = reference;
+      APR_ARRAY_PUSH(context->references, reference_t *) = reference;
     }
 
   /* copy the whole rep (including header!) to our temp file */
@@ -747,14 +739,8 @@ copy_node_to_temp(pack_context_t *context,
 
   if (noderev->data_rep && noderev->data_rep->revision >= context->start_rev)
     {
-      reference_t *reference = apr_pcalloc(context->info_pool,
-                                           sizeof(*reference));
-      reference->from = entry->item;
-      reference->to.revision = noderev->data_rep->revision;
-      reference->to.number = noderev->data_rep->item_index;
-      APR_ARRAY_PUSH(context->node_references, reference_t *) = reference;
-
-      path_order->rep_id = reference->to;
+      path_order->rep_id.revision = noderev->data_rep->revision;
+      path_order->rep_id.number = noderev->data_rep->item_index;
       path_order->expanded_size = noderev->data_rep->expanded_size
                                 ? noderev->data_rep->expanded_size
                                 : noderev->data_rep->size;
@@ -799,24 +785,11 @@ compare_path_order(const path_order_t * const * lhs_p,
   return 0;
 }
 
-/* implements compare_fn_t.  Sort ascendingly by TO, FROM.
- */
-static int
-compare_references_to(const reference_t * const * lhs_p,
-                      const reference_t * const * rhs_p)
-{
-  const reference_t * lhs = *lhs_p;
-  const reference_t * rhs = *rhs_p;
-
-  int diff = svn_fs_fs__id_part_compare(&lhs->to, &rhs->to);
-  return diff ? diff : svn_fs_fs__id_part_compare(&lhs->from, &rhs->from);
-}
-
 /* implements compare_fn_t.  Sort ascendingly by FROM, TO.
  */
 static int
-compare_references_from(const reference_t * const * lhs_p,
-                        const reference_t * const * rhs_p)
+compare_references(const reference_t * const * lhs_p,
+                   const reference_t * const * rhs_p)
 {
   const reference_t * lhs = *lhs_p;
   const reference_t * rhs = *rhs_p;
@@ -828,8 +801,8 @@ compare_references_from(const reference_t * const * lhs_p,
 /* implements compare_fn_t.  Assume ascending order by FROM.
  */
 static int
-compare_ref_to_item_from(const reference_t * const * lhs_p,
-                         const svn_fs_fs__id_part_t * rhs_p)
+compare_ref_to_item(const reference_t * const * lhs_p,
+                    const svn_fs_fs__id_part_t * rhs_p)
 {
   return svn_fs_fs__id_part_compare(&(*lhs_p)->from, rhs_p);
 }
@@ -860,8 +833,7 @@ sort_reps(pack_context_t *context)
    */
   if (context->path_order->nelts == 0)
     {
-      assert(context->node_references->nelts == 0);
-      assert(context->rep_references->nelts == 0);
+      assert(context->references->nelts == 0);
       return;
     }
 
@@ -870,12 +842,9 @@ sort_reps(pack_context_t *context)
   qsort(context->path_order->elts, context->path_order->nelts,
         context->path_order->elt_size,
         (int (*)(const void *, const void *))compare_path_order);
-  qsort(context->rep_references->elts, context->rep_references->nelts,
-        context->rep_references->elt_size,
-        (int (*)(const void *, const void *))compare_references_from);
-  qsort(context->node_references->elts, context->node_references->nelts,
-        context->node_references->elt_size,
-        (int (*)(const void *, const void *))compare_references_to);
+  qsort(context->references->elts, context->references->nelts,
+        context->references->elt_size,
+        (int (*)(const void *, const void *))compare_references);
 
   /* Re-order noderevs like this:
    *
@@ -964,9 +933,9 @@ sort_reps(pack_context_t *context)
             temp[dest++] = path_order[i];
             path_order[i] = 0;
 
-            reference = svn_sort__array_lookup(context->rep_references,
+            reference = svn_sort__array_lookup(context->references,
                                                &rep_id, NULL,
-              (int (*)(const void *, const void *))compare_ref_to_item_from);
+              (int (*)(const void *, const void *))compare_ref_to_item);
             if (reference)
               rep_id = (*reference)->to;
           }
