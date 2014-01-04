@@ -89,6 +89,9 @@ public interface ISVNEditor
      * <b>Note:</b> It is not allowed to call a "delete" followed by
      * an "add" on the same path. Instead, an "add" with
      * <code>replacesRevision</code> set accordingly <em>must</em> be used.
+     * <p>
+     * <b>Note:</b> The <code>contents</code> stream's lifetime must not
+     *      extend beyond the scope of this function.
      *
      * @throws ClientException
      */
@@ -185,6 +188,9 @@ public interface ISVNEditor
      * This function allows <code>properties</code> to be
      * <code>null</code>, but the parameter is otherwise described by
      * #addFile().
+     * <p>
+     * <b>Note:</b> The <code>contents</code> stream's lifetime must not
+     *      extend beyond the scope of this function.
      *
      * @throws ClientException
      */
