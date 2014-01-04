@@ -1958,39 +1958,6 @@ svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 {
   svn_stream_t *source_stream, *target_stream;
 
-  /* Try a shortcut: if the target is stored as a delta against the source,
-     then just use that delta. */
-  if (source && source->data_rep && target->data_rep)
-    {
-      rep_state_t *rep_state;
-      svn_fs_x__rep_header_t *rep_header;
-
-      /* Read target's base rep if any. */
-      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
-                               target->data_rep, fs, pool));
-
-      /* If that matches source, then use this delta as is.
-         Note that we want an actual delta here.  E.g. a self-delta would
-         not be good enogh. */
-      if (rep_header->type == svn_fs_x__rep_delta
-          && rep_header->base_revision == source->data_rep->revision
-          && rep_header->base_item_index == source->data_rep->item_index)
-        {
-          /* Create the delta read baton. */
-          struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
-
-          drb->rs = rep_state;
-          memcpy(drb->md5_digest, target->data_rep->md5_digest,
-                 sizeof(drb->md5_digest));
-          *stream_p = svn_txdelta_stream_create(drb, delta_read_next_window,
-                                                delta_read_md5_digest, pool);
-          return SVN_NO_ERROR;
-        }
-      else
-        if (rep_state->file->file)
-          SVN_ERR(svn_io_file_close(rep_state->file->file, pool));
-    }
-
   /* Read both fulltexts and construct a delta. */
   if (source)
     SVN_ERR(svn_fs_x__get_contents(&source_stream, fs, source->data_rep, pool));
