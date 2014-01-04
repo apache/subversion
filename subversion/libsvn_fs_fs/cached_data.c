@@ -1858,41 +1858,45 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   rep_state_t *rep_state;
   svn_fs_fs__rep_header_t *rep_header;
 
-  /* Read target's base rep if any. */
-  SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
-                            target->data_rep, fs, pool));
+  /* Try a shortcut: if the target is stored as a delta against the
+     source, then just use that delta. */
+  if (target->data_rep)
+    {
+      /* Read target's base rep if any. */
+      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
+                                target->data_rep, fs, pool));
 
-  /* Try a shortcut: if the target is stored as a delta against the source,
-     then just use that delta. */
-  if (source && source->data_rep && target->data_rep)
-    {
-      /* If that matches source, then use this delta as is.
-         Note that we want an actual delta here.  E.g. a self-delta would
-         not be good enough. */
-      if (rep_header->type == svn_fs_fs__rep_delta
-          && rep_header->base_revision == source->data_rep->revision
-          && rep_header->base_item_index == source->data_rep->item_index)
+      if (source && source->data_rep && target->data_rep)
         {
-          *stream_p = get_storaged_delta_stream(rep_state, target, pool);
-          return SVN_NO_ERROR;
+          /* If that matches source, then use this delta as is.
+             Note that we want an actual delta here.  E.g. a self-delta would
+             not be good enough. */
+          if (rep_header->type == svn_fs_fs__rep_delta
+              && rep_header->base_revision == source->data_rep->revision
+              && rep_header->base_item_index == source->data_rep->item_index)
+            {
+              *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+              return SVN_NO_ERROR;
+            }
         }
-    }
-  else if (!source)
-    {
-      /* We want a self-delta. There is a fair chance that TARGET got added
-         in this revision and is already stored in the requested format. */
-      if (rep_header->type == svn_fs_fs__rep_self_delta)
+      else if (!source)
         {
-          *stream_p = get_storaged_delta_stream(rep_state, target, pool);
-          return SVN_NO_ERROR;
+          /* We want a self-delta. There is a fair chance that TARGET got
+             added in this revision and is already stored in the requested
+             format. */
+          if (rep_header->type == svn_fs_fs__rep_self_delta)
+            {
+              *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+              return SVN_NO_ERROR;
+            }
         }
-    }
 
-  /* Don't keep file handles open for longer than necessary. */
-  if (rep_state->sfile->rfile)
-    {
-      SVN_ERR(svn_fs_fs__close_revision_file(rep_state->sfile->rfile));
-      rep_state->sfile->rfile = NULL;
+      /* Don't keep file handles open for longer than necessary. */
+      if (rep_state->sfile->rfile)
+        {
+          SVN_ERR(svn_fs_fs__close_revision_file(rep_state->sfile->rfile));
+          rep_state->sfile->rfile = NULL;
+        }
     }
 
   /* Read both fulltexts and construct a delta. */
