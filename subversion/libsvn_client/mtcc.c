@@ -1337,12 +1337,15 @@ svn_client_mtcc_commit(apr_hash_t *revprop_table,
                                "is not a directory"),
                              session_url);
 
+  /* Beware that the editor object must not live longer than the MTCC.
+     Otherwise, txn objects etc. in EDITOR may live longer than their
+     respective FS objects.  So, we can't use SCRATCH_POOL here. */
   SVN_ERR(svn_ra_get_commit_editor3(mtcc->ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback, commit_baton,
                                     NULL /* lock_tokens */,
                                     FALSE /* keep_locks */,
-                                    scratch_pool));
+                                    mtcc->pool));
 
   err = editor->open_root(edit_baton, mtcc->base_revision, scratch_pool, &root_baton);
 
