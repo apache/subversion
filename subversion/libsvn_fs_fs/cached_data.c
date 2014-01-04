@@ -1830,6 +1830,23 @@ delta_read_md5_digest(void *baton)
   return drb->md5_digest;
 }
 
+/* Return a txdelta stream for on-disk representation REP_STATE
+ * of TARGET.  Allocate the result in POOL.
+ */
+static svn_txdelta_stream_t *
+get_storaged_delta_stream(rep_state_t *rep_state,
+                          node_revision_t *target,
+                          apr_pool_t *pool)
+{
+  /* Create the delta read baton. */
+  struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
+  drb->rs = rep_state;
+  memcpy(drb->md5_digest, target->data_rep->md5_digest,
+         sizeof(drb->md5_digest));
+  return svn_txdelta_stream_create(drb, delta_read_next_window,
+                                   delta_read_md5_digest, pool);
+}
+
 svn_error_t *
 svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                  svn_fs_t *fs,
@@ -1838,39 +1855,44 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                  apr_pool_t *pool)
 {
   svn_stream_t *source_stream, *target_stream;
+  rep_state_t *rep_state;
+  svn_fs_fs__rep_header_t *rep_header;
+
+  /* Read target's base rep if any. */
+  SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
+                            target->data_rep, fs, pool));
 
   /* Try a shortcut: if the target is stored as a delta against the source,
      then just use that delta. */
   if (source && source->data_rep && target->data_rep)
     {
-      rep_state_t *rep_state;
-      svn_fs_fs__rep_header_t *rep_header;
-
-      /* Read target's base rep if any. */
-      SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
-                               target->data_rep, fs, pool));
-
       /* If that matches source, then use this delta as is.
          Note that we want an actual delta here.  E.g. a self-delta would
-         not be good enogh. */
+         not be good enough. */
       if (rep_header->type == svn_fs_fs__rep_delta
           && rep_header->base_revision == source->data_rep->revision
           && rep_header->base_item_index == source->data_rep->item_index)
         {
-          /* Create the delta read baton. */
-          struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
-          drb->rs = rep_state;
-          memcpy(drb->md5_digest, target->data_rep->md5_digest,
-                 sizeof(drb->md5_digest));
-          *stream_p = svn_txdelta_stream_create(drb, delta_read_next_window,
-                                                delta_read_md5_digest, pool);
+          *stream_p = get_storaged_delta_stream(rep_state, target, pool);
           return SVN_NO_ERROR;
         }
-      else if (rep_state->sfile->rfile)
+    }
+  else if (!source)
+    {
+      /* We want a self-delta. There is a fair chance that TARGET got added
+         in this revision and is already stored in the requested format. */
+      if (rep_header->type == svn_fs_fs__rep_self_delta)
         {
-          SVN_ERR(svn_fs_fs__close_revision_file(rep_state->sfile->rfile));
-          rep_state->sfile->rfile = NULL;
+          *stream_p = get_storaged_delta_stream(rep_state, target, pool);
+          return SVN_NO_ERROR;
         }
+    }
+
+  /* Don't keep file handles open for longer than necessary. */
+  if (rep_state->sfile->rfile)
+    {
+      SVN_ERR(svn_fs_fs__close_revision_file(rep_state->sfile->rfile));
+      rep_state->sfile->rfile = NULL;
     }
 
   /* Read both fulltexts and construct a delta. */
