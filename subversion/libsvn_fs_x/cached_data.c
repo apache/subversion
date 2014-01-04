@@ -1924,31 +1924,6 @@ struct delta_read_baton
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 };
 
-/* This implements the svn_txdelta_next_window_fn_t interface. */
-static svn_error_t *
-delta_read_next_window(svn_txdelta_window_t **window, void *baton,
-                       apr_pool_t *pool)
-{
-  struct delta_read_baton *drb = baton;
-
-  *window = NULL;
-  if (drb->rs->current < drb->rs->size)
-    {
-      SVN_ERR(read_delta_window(window, drb->rs->chunk_index, drb->rs, pool));
-      drb->rs->chunk_index++;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* This implements the svn_txdelta_md5_digest_fn_t interface. */
-static const unsigned char *
-delta_read_md5_digest(void *baton)
-{
-  struct delta_read_baton *drb = baton;
-  return drb->md5_digest;
-}
-
 svn_error_t *
 svn_fs_x__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
                                 svn_fs_t *fs,
