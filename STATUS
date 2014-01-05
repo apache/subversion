@@ -264,6 +264,37 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1555491
+   Fix svn_fs_close_root for FSFS transaction roots.
+   Justification:
+     Without this patch, cache-related pool cleanups may be run after the
+     svn_fs_t object has been destroyed.  I.e. even with explicit calls to
+     svn_fs_close_root, the user may see a segfault.
+   Branch:
+     ^/subversion/branches/1.8.x-r1555491
+   Votes:
+     +1: stefan2
+
+ * r1554978
+   In FSFS, svn_fs_get_file_delta_stream shall return strictly the delta requested.
+   Justification:
+     The delta stream returned here has been valid (a self-delta is a valid
+     txdelta against *any* source) but it may not strictly be what the user
+     requested.  As a side effect, this will produce smaller deltified dumps.
+   Branch:
+     ^/subversion/branches/1.8.x-r1554978
+   Votes:
+     +1: stefan2
+
+ * r1555499
+   Release internal FS objects when closing a commit editor.
+   Justification:
+     close_edit() and abort_edit() are supposed to do a complete internal
+     cleanup - albeit the API docs are slightly fuzzy about that.
+   Votes:
+     +1: stefan2
+
+
 Veto-blocked changes:
 =====================
 
