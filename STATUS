@@ -113,6 +113,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1536854
+   Make 'svnadmin verify' detect inconsistencies that will prevent loading
+   dump files.
+   Justification:
+     Some users rely on dump files as a means of repository backup.  Without
+     this patch, there is no way except of 'svnadmin load' to know that these
+     dump files will load at all.  With this patch, a successful verify run
+     should guarantee loadable dump files.
+   Branch: ^/subversion/branches/1.8.x-r1536854
+   Votes:
+     +1: stefan2
+
  * r1537018
    Fix issue #4440, "Subversion sets permissions on files, when it shouldn't"
    Justification:
@@ -307,20 +319,6 @@ Veto-blocked changes:
    Votes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
-
- * r1536854
-   Make 'svnadmin verify' detect inconsistencies that will prevent loading
-   dump files.
-   Justification:
-     Some users rely on dump files as a means of repository backup.  Without
-     this patch, there is no way except of 'svnadmin load' to know that these
-     dump files will load at all.  With this patch, a successful verify run
-     should guarantee loadable dump files.
-   Branch: ^/subversion/branches/1.8.x-r1536854
-   Votes:
-     +1: stefan2
-     -1: breser (includes a --keep-going test which fails on 1.8.x since no
-                 such option in 1.8.x)
 
 Approved changes:
 =================
