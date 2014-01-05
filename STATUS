@@ -75,13 +75,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1535115
-   Make JavaHL tests run without installing on OS X.
-   Justification:
-     Shouldn't need to install code to test it.
-   Votes:
-     +1: breser, brane
-
  * r1535532
    Make the certificate verification handling in ra_serf properly ask multiple
    providers for acceptance of certificate failures.
@@ -91,7 +84,7 @@ Candidate changes:
      Probably only interesting for bindings and code that explicitly tests
      our certificate handling behavior.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488
    Fix working copy database inconsistency on certain move scenarios,
@@ -151,29 +144,6 @@ Candidate changes:
      +1: rhuijben, stsp
      -0: brane (horrible grammar; suggest translation to English)
 
- * r1542765, r1542767, r1542774
-   Add or update an 'sqlite_stat1' table when creating or upgrading a database
-   to make the Sqlite 3.8 'NG' query planner work with us instead of against
-   us.
-   Notes:
-     r1542765 is the actual fix and a testcase which makes sure we don't
-     accidentally add bad information whenever we update the schema.
-     r1542767 and r1542774 are test suite tweaks to improve test coverage and
-     to make sure we don't have false positive test failures on Sqlite 3.8.X.
-   Votes:
-     +1: rhuijben, brane
-
- * r1543961
-   Fix SWIG bindings building on OS X out of the tarball.
-   Justification:
-     Regression since 1.8
-   Notes:
-     Test by running ./autogen.sh --release and then building bindings
-     on OS X.  Even if you run ./autogen.sh on a Mac the issue will
-     still replicate.
-   Votes:
-     +1: breser, brane
-
  * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
    Fix a specific case where the api behind status would report a different
    move status for A depending on whether the user called 'svn status A' or
@@ -189,15 +159,6 @@ Candidate changes:
       of sqlite transactions used)
    Votes:
      +1: rhuijben
-
- * r1544878, r1544895
-   Fix output of svn --version -v to not cut info off on linux.
-   Justification:
-     Obviously wrong.
-   Notes:
-     The relevant code is #ifdeffed out on anything but linux.
-   Votes:
-     +1: breser (without r1544895), rhuijben, danielsh
 
  * r1548105
    mod_dav_svn: Fix SVNAllowBulkUpdates directive merging.
@@ -215,7 +176,7 @@ Candidate changes:
      The checkout of symlink replacements shouldn't require more network
      capabilities than ordinary checkouts.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1548486
    When (during merge) we compare three files to each other stop reading
@@ -223,7 +184,7 @@ Candidate changes:
    Justification:
      Trivial fix that can have a huge performance impact for some users.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1549858, r1549874
    Make svn_client_proplist4() behave as documented when reporting inherited
@@ -244,20 +205,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1550803
-   Fix pool lifetime of variables in svn_client_commit_item3_t when duplicated.
-   Justification:
-     Pool lifetime issues are bad, and debugging them hard.
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1551524, 1551579
    Fix an 'No Write Lock' error when moving files between externals and
    parent working copies or vice versa.
    Justification:
      svn move should just work in these cases.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1553101, r1553105, r1553113
    Resolve performance regression in certain 'svn log' scenarios, especially
@@ -267,14 +221,14 @@ Candidate changes:
      old versions might be needed for other scenarios, but those scenarios
      were never supported on those old versions itself.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1553376, r1553377
    Fix pool lifetime issue in serf commit processing for copied files and dirs
    Justification:
      Pool lifetime issues are bad. Reported by several git-svn users.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
@@ -322,3 +276,50 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1535115
+   Make JavaHL tests run without installing on OS X.
+   Justification:
+     Shouldn't need to install code to test it.
+   Votes:
+     +1: breser, brane, stefan2
+
+ * r1542765, r1542767, r1542774
+   Add or update an 'sqlite_stat1' table when creating or upgrading a database
+   to make the Sqlite 3.8 'NG' query planner work with us instead of against
+   us.
+   Notes:
+     r1542765 is the actual fix and a testcase which makes sure we don't
+     accidentally add bad information whenever we update the schema.
+     r1542767 and r1542774 are test suite tweaks to improve test coverage and
+     to make sure we don't have false positive test failures on Sqlite 3.8.X.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1543961
+   Fix SWIG bindings building on OS X out of the tarball.
+   Justification:
+     Regression since 1.8
+   Notes:
+     Test by running ./autogen.sh --release and then building bindings
+     on OS X.  Even if you run ./autogen.sh on a Mac the issue will
+     still replicate.
+   Votes:
+     +1: breser, brane, stefan2
+
+ * r1544878, r1544895
+   Fix output of svn --version -v to not cut info off on linux.
+   Justification:
+     Obviously wrong.
+   Notes:
+     The relevant code is #ifdeffed out on anything but linux.
+   Votes:
+     +1: breser (without r1544895), rhuijben, danielsh, stefan2
+
+ * r1550803
+   Fix pool lifetime of variables in svn_client_commit_item3_t when duplicated.
+   Justification:
+     Pool lifetime issues are bad, and debugging them hard.
+   Votes:
+     +1: rhuijben, danielsh, stefan2
+
