@@ -4439,7 +4439,7 @@ make_txn_root(svn_fs_root_t **root_p,
 
      Note that we cannot put those caches in frd because that content
      fs root object is not available where we would need it. */
-  SVN_ERR(svn_fs_fs__initialize_txn_caches(fs, root->txn, pool));
+  SVN_ERR(svn_fs_fs__initialize_txn_caches(fs, root->txn, root->pool));
 
   root->fsap_data = frd;
 
