@@ -1022,8 +1022,8 @@ auto_pad_block(pack_context_t *context,
       null_entry.offset = context->pack_offset;
       null_entry.size = padding;
       null_entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
-      null_entry.item.number = SVN_INVALID_REVNUM;
-      null_entry.type = SVN_FS_FS__ITEM_INDEX_UNUSED;
+      null_entry.item.revision = SVN_INVALID_REVNUM;
+      null_entry.item.number = SVN_FS_FS__ITEM_INDEX_UNUSED;
       null_entry.fnv1_checksum = 0;
 
       SVN_ERR(write_null_bytes(context->pack_file, padding, pool));
