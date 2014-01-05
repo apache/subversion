@@ -92,6 +92,17 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1555491
+   Fix svn_fs_close_root for FSFS transaction roots.
+   Justification:
+     Without this patch, cache-related pool cleanups may be run after the
+     svn_fs_t object has been destroyed.  I.e. even with explicit calls to
+     svn_fs_close_root, the user may see a segfault.
+   Branch:
+     ^/subversion/branches/1.7.x-r1555491
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
