@@ -52,15 +52,6 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1539309 
-   Fix test failure in checkout_tests.py after backporting of r1518184
-   to 1.7.x in r1538135.
-   Justification:
-     The extended regression test relied on test suite behavior in 1.8+,
-     by not passing a disk tree. The easy fix is to just pass a disk tree.
-   Votes:
-     +1: rhuijben, jcorvel
-
  * r1542610
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
@@ -120,3 +111,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1539309 
+   Fix test failure in checkout_tests.py after backporting of r1518184
+   to 1.7.x in r1538135.
+   Justification:
+     The extended regression test relied on test suite behavior in 1.8+,
+     by not passing a disk tree. The easy fix is to just pass a disk tree.
+   Votes:
+     +1: rhuijben, jcorvel, stefan2
+
