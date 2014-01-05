@@ -1447,9 +1447,6 @@ read_log_rev_or_packfile(fs_t *fs,
         {
           svn_fs_fs__p2l_entry_t *entry
             = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
-          revision_info_t *info = APR_ARRAY_IDX(fs->revisions,
-                                                entry->item.revision,
-                                                revision_info_t*);
 
           /* skip bits we previously processed */
           if (i == 0 && entry->offset < offset)
@@ -1463,15 +1460,22 @@ read_log_rev_or_packfile(fs_t *fs,
           if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
             {
               svn_stringbuf_t *item;
+              revision_info_t *info = APR_ARRAY_IDX(fs->revisions,
+                                                    entry->item.revision,
+                                                    revision_info_t*);
               SVN_ERR(read_item(&item, fs, rev_file, entry, iterpool));
               SVN_ERR(read_noderev(fs, item, 0, info, pool, iterpool));
             }
           else if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
             {
               svn_stringbuf_t *item;
+              revision_info_t *info = APR_ARRAY_IDX(fs->revisions,
+                                                    entry->item.revision,
+                                                    revision_info_t*);
               SVN_ERR(read_item(&item, fs, rev_file, entry, iterpool));
               info->change_count
                 = get_change_count(item->data + 0, item->len);
+              info->changes_len += entry->size;
             }
 
           /* advance offset */
