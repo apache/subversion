@@ -1296,8 +1296,7 @@ parse_xml(XML_Parser parser, const char *data, apr_size_t len, svn_boolean_t is_
 static svn_error_t *
 inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
                  const char *data,
-                 apr_size_t len,
-                 const serf_status_line *sl)
+                 apr_size_t len)
 {
   svn_error_t *xml_err;
 
@@ -1361,7 +1360,7 @@ svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
       if (data)
         {
           /* Inject the content into the XML parser.  */
-          SVN_ERR(inject_to_parser(parser, data, len, NULL));
+          SVN_ERR(inject_to_parser(parser, data, len));
 
           /* If the XML parsing callbacks paused us, then we're done for now.  */
           if (parser->paused)
@@ -1411,17 +1410,9 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
                                void *baton,
                                apr_pool_t *pool)
 {
-  serf_status_line sl;
   apr_status_t status;
   svn_ra_serf__xml_parser_t *ctx = baton;
   svn_error_t *err;
-
-  /* ### get the HANDLER rather than fetching this.  */
-  status = serf_bucket_response_status(response, &sl);
-  if (SERF_BUCKET_READ_ERROR(status))
-    {
-      return svn_ra_serf__wrap_err(status, NULL);
-    }
 
   if (!ctx->xmlp)
     {
@@ -1462,7 +1453,7 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
         }
       else
         {
-          err = inject_to_parser(ctx, data, len, &sl);
+          err = inject_to_parser(ctx, data, len);
         }
       if (err)
         {

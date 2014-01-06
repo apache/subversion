@@ -1863,6 +1863,14 @@ svn_ra_serf__wrap_err(apr_status_t status,
                       const char *fmt,
                       ...);
 
+/* Create a bucket that just returns DATA (with length LEN) and then returns
+   the APR_EAGAIN status */
+serf_bucket_t *
+svn_ra_serf__create_bucket_with_eagain(const char *data,
+                                       apr_size_t len,
+                                       serf_bucket_alloc_t *allocator);
+
+
 
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */
