@@ -277,13 +277,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1535115
-   Make JavaHL tests run without installing on OS X.
-   Justification:
-     Shouldn't need to install code to test it.
-   Votes:
-     +1: breser, brane, stefan2
-
  * r1542765, r1542767, r1542774
    Add or update an 'sqlite_stat1' table when creating or upgrading a database
    to make the Sqlite 3.8 'NG' query planner work with us instead of against
