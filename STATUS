@@ -277,15 +277,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1544878, r1544895
-   Fix output of svn --version -v to not cut info off on linux.
-   Justification:
-     Obviously wrong.
-   Notes:
-     The relevant code is #ifdeffed out on anything but linux.
-   Votes:
-     +1: breser (without r1544895), rhuijben, danielsh, stefan2
-
  * r1550803
    Fix pool lifetime of variables in svn_client_commit_item3_t when duplicated.
    Justification:
