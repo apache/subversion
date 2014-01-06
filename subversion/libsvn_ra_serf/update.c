@@ -2840,7 +2840,7 @@ typedef struct update_delay_baton_t
   svn_ra_serf__response_handler_t inner_handler;
   void *inner_handler_baton;
 
-  serf_bucket_t *retry_bucket;
+  svn_boolean_t network_eof;
 } update_delay_baton_t;
 
 /* Delaying wrapping reponse handler, to avoid creating too many
@@ -2882,7 +2882,7 @@ update_delay_handler(serf_request_t *request,
          if (SERF_BUCKET_READ_ERROR(status))
            return svn_ra_serf__wrap_err(status, NULL);
          else if (APR_STATUS_IS_EOF(status))
-           at_eof = TRUE;
+           udb->network_eof = at_eof = TRUE;
 
          if (!iterpool)
            iterpool = svn_pool_create(scratch_pool);
@@ -2942,6 +2942,9 @@ update_delay_handler(serf_request_t *request,
     }
   while (status == APR_SUCCESS);
 
+  if (APR_STATUS_IS_EOF(status))
+    udb->network_eof = TRUE;
+
   /* We handle feeding the data from the main context loop, which will be right
      after processing the pending data */
 
@@ -2979,6 +2982,9 @@ process_pending(update_delay_baton_t *udb,
 
       if (data == NULL)
         {
+          if (!udb->network_eof)
+            break;
+
           data = "";
           at_eof = TRUE;
         }
