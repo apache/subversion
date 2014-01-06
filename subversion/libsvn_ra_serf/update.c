@@ -53,6 +53,11 @@
 #define USE_TRANSITION_PARSER
 */
 
+#define SPILLBUF_BLOCKSIZE 4096
+#define SPILLBUF_MAXBUFFSIZE 131072
+
+#define PARSE_CHUNK_SIZE 8000 /* Copied from utils.c ### Needs tuning */
+
 
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
@@ -1599,10 +1604,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
 
-  if (ctx->num_active_fetches + ctx->num_active_propfinds
-      > REQUEST_COUNT_TO_PAUSE)
-    ctx->parser_ctx->paused = TRUE;
-
   return SVN_NO_ERROR;
 }
 
@@ -2209,10 +2210,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           list_item->data = info->dir;
           list_item->next = ctx->active_dir_propfinds;
           ctx->active_dir_propfinds = list_item;
-
-          if (ctx->num_active_fetches + ctx->num_active_propfinds
-              > REQUEST_COUNT_TO_PAUSE)
-            ctx->parser_ctx->paused = TRUE;
         }
       else
         {
@@ -2835,6 +2832,189 @@ setup_update_report_headers(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
+/* Baton for update_delay_handler */
+typedef struct update_delay_baton_t
+{
+  report_context_t *report;
+  svn_spillbuf_t *spillbuf;
+  svn_ra_serf__response_handler_t inner_handler;
+  void *inner_handler_baton;
+
+  serf_bucket_t *retry_bucket;
+} update_delay_baton_t;
+
+/* Delaying wrapping reponse handler, to avoid creating too many
+   requests to deliver efficiently */
+static svn_error_t *
+update_delay_handler(serf_request_t *request,
+                     serf_bucket_t *response,
+                     void *handler_baton,
+                     apr_pool_t *scratch_pool)
+{
+  update_delay_baton_t *udb = handler_baton;
+  apr_status_t status;
+  apr_pool_t *iterpool = NULL;
+
+  if (! udb->spillbuf)
+    {
+      if (udb->report->send_all_mode)
+        {
+          /* Easy out... We only have one request, so avoid everything and just
+             call the inner handler.
+
+             We will always get in the loop (below) on the first chunk, as only
+             the server can get us in true send-all mode */
+
+          return svn_error_trace(udb->inner_handler(request, response,
+                                                    udb->inner_handler_baton,
+                                                    scratch_pool));
+        }
+
+      while ((udb->report->num_active_fetches + udb->report->num_active_propfinds)
+                 < REQUEST_COUNT_TO_RESUME)
+       {
+         const char *data;
+         apr_size_t len;
+         svn_boolean_t at_eof = FALSE;
+         svn_error_t *err;
+
+         status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
+         if (SERF_BUCKET_READ_ERROR(status))
+           return svn_ra_serf__wrap_err(status, NULL);
+         else if (APR_STATUS_IS_EOF(status))
+           at_eof = TRUE;
+
+         if (!iterpool)
+           iterpool = svn_pool_create(scratch_pool);
+         else
+           svn_pool_clear(iterpool);
+
+         if (len == 0 && !at_eof)
+           return svn_ra_serf__wrap_err(status, NULL);
+
+         /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
+            use a standard bucket with default EOF handling */
+         err = udb->inner_handler(request,
+                                  at_eof
+                                   ? serf_bucket_simple_create(
+                                            data, len, NULL, NULL,
+                                            serf_request_get_alloc(request))
+                                   : svn_ra_serf__create_bucket_with_eagain(
+                                            data, len,
+                                            serf_request_get_alloc(request)),
+                                  udb->inner_handler_baton, iterpool);
+
+         if (err && SERF_BUCKET_READ_ERROR(err->apr_err))
+           return svn_error_trace(err);
+         else if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
+           {
+             svn_error_clear(err); /* Throttling is working ok */
+           }
+         else if (err && (APR_STATUS_IS_EOF(err->apr_err)))
+           {
+             svn_pool_destroy(iterpool);
+             return svn_error_trace(err); /* No buffering was necessary */
+           }
+         else
+           {
+             /* SERF_ERROR_WAIT_CONN should be impossible? */
+             SVN_ERR_MALFUNCTION();
+           }
+       }
+
+      /* Let's start using the spill infrastructure */
+      udb->spillbuf = svn_spillbuf__create(SPILLBUF_BLOCKSIZE,
+                                           SPILLBUF_MAXBUFFSIZE,
+                                           udb->report->pool);
+    }
+
+  /* Read everything we can to a spillbuffer */
+  do
+    {
+      const char *data;
+      apr_size_t len;
+
+      /* ### What blocksize should we pass? */
+      status = serf_bucket_read(response, 8*PARSE_CHUNK_SIZE, &data, &len);
+
+      if (!SERF_BUCKET_READ_ERROR(status))
+        SVN_ERR(svn_spillbuf__write(udb->spillbuf, data, len, scratch_pool));
+    }
+  while (status == APR_SUCCESS);
+
+  /* We handle feeding the data from the main context loop, which will be right
+     after processing the pending data */
+
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+  else
+    return SVN_NO_ERROR;
+}
+
+/* Process pending data from the update report, if any */
+static svn_error_t *
+process_pending(update_delay_baton_t *udb,
+                apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = NULL;
+  serf_bucket_alloc_t *alloc = NULL;
+
+  while ((udb->report->num_active_fetches + udb->report->num_active_propfinds)
+            < REQUEST_COUNT_TO_RESUME)
+    {
+      const char *data;
+      apr_size_t len;
+      svn_boolean_t at_eof = FALSE;
+      svn_error_t *err;
+
+      if (!iterpool)
+        {
+          iterpool = svn_pool_create(scratch_pool);
+          alloc = serf_bucket_allocator_create(iterpool, NULL, NULL);
+        }
+      else
+        svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_spillbuf__read(&data, &len, udb->spillbuf, iterpool));
+
+      if (data == NULL)
+        {
+          data = "";
+          at_eof = TRUE;
+        }
+
+      /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
+         use a standard bucket with default EOF handling */
+      err = udb->inner_handler(NULL /* allowed? */,
+                               at_eof
+                                ? serf_bucket_simple_create(
+                                         data, len, NULL, NULL, alloc)
+                                : svn_ra_serf__create_bucket_with_eagain(
+                                         data, len, alloc),
+                                  udb->inner_handler_baton, iterpool);
+
+      if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
+        {
+          svn_error_clear(err); /* Throttling is working */
+        }
+      else if (err && APR_STATUS_IS_EOF(err->apr_err))
+        {
+          svn_error_clear(err);
+
+          svn_pool_destroy(iterpool);
+          udb->spillbuf = NULL;
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return svn_error_trace(err);
+    }
+
+  if (iterpool)
+    svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
@@ -2851,6 +3031,7 @@ finish_report(void *report_baton,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
   apr_interval_time_t waittime_left = sess->timeout;
+  update_delay_baton_t *ud;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
   SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, iterpool));
@@ -2898,6 +3079,16 @@ finish_report(void *report_baton,
 
   report->parser_ctx = parser_ctx;
 #endif
+
+  /* Now wrap the response handler with delay support to avoid sending
+     out too many requests at once */
+  ud = apr_pcalloc(pool, sizeof(*ud));
+  ud->report = report;
+  ud->inner_handler = handler->response_handler;
+  ud->inner_handler_baton = handler->response_baton;
+
+  handler->response_handler = update_delay_handler;
+  handler->response_baton = ud;
 
   svn_ra_serf__request_create(handler);
 
@@ -3102,20 +3293,9 @@ finish_report(void *report_baton,
         }
       report->done_dir_propfinds = NULL;
 
-      /* If the parser is paused, and the number of active requests has
-         dropped far enough, then resume parsing.  */
-      if (parser_ctx->paused
-          && (report->num_active_fetches + report->num_active_propfinds
-              < REQUEST_COUNT_TO_RESUME))
-        parser_ctx->paused = FALSE;
-
-      /* If we have not paused the parser and it looks like data MAY be
-         present (we can't know for sure because of the private structure),
-         then go process the pending content.  */
-      if (!parser_ctx->paused && parser_ctx->pending != NULL)
-        SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
-                                             &report->report_received,
-                                             iterpool));
+      /* If there is pending REPORT data, process it now. */
+      if (ud->spillbuf)
+        SVN_ERR(process_pending(ud, iterpool));
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
