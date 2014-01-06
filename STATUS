@@ -239,7 +239,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1555491
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1554978
    In FSFS, svn_fs_get_file_delta_stream shall return strictly the delta requested.
@@ -250,7 +250,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1554978
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1555499
    Release internal FS objects when closing a commit editor.
@@ -258,7 +258,7 @@ Candidate changes:
      close_edit() and abort_edit() are supposed to do a complete internal
      cleanup - albeit the API docs are slightly fuzzy about that.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
 
 Veto-blocked changes:
