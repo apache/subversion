@@ -277,17 +277,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1543961
-   Fix SWIG bindings building on OS X out of the tarball.
-   Justification:
-     Regression since 1.8
-   Notes:
-     Test by running ./autogen.sh --release and then building bindings
-     on OS X.  Even if you run ./autogen.sh on a Mac the issue will
-     still replicate.
-   Votes:
-     +1: breser, brane, stefan2
-
  * r1544878, r1544895
    Fix output of svn --version -v to not cut info off on linux.
    Justification:
