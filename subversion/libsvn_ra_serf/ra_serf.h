@@ -658,34 +658,6 @@ struct svn_ra_serf__xml_parser_t {
 
   /* If an error occurred, this value will be non-NULL. */
   svn_error_t *error;
-
-  /* Deciding whether to pause, or not, is performed within the parsing
-     callbacks. If a callback decides to set this flag, then the loop
-     driving the parse (generally, a series of calls to serf_context_run())
-     is going to need to coordinate the un-pausing of the parser by
-     processing pending content. Thus, deciding to pause the parser is a
-     coordinate effort rather than merely setting this flag.
-
-     When an XML parsing callback sets this flag, note that additional
-     elements may be parsed (as the current buffer is consumed). At some
-     point, the flag will be recognized and arriving network content will
-     be stashed away in the PENDING structure (see below).
-
-     At some point, the controlling loop should clear this value. The
-     underlying network processing will note the change and begin passing
-     content into the XML callbacks.
-
-     Note that the controlling loop should also process pending content
-     since the arriving network content will typically finish first.  */
-  svn_boolean_t paused;
-
-  /* While the XML parser is paused, content arriving from the server
-     must be saved locally. We cannot stop reading, or the server may
-     decide to drop the connection. The content will be stored in memory
-     up to a certain limit, and will then be spilled over to disk.
-
-     See libsvn_ra_serf/util.c  */
-  struct svn_ra_serf__pending_t *pending;
 };
 
 
@@ -1053,12 +1025,6 @@ svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
  */
 void
 svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
-
-
-svn_error_t *
-svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
-                             svn_boolean_t *network_eof,
-                             apr_pool_t *scratch_pool);
 
 
 /*

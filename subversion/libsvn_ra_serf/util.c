@@ -76,25 +76,6 @@
 /* Read/write chunks of this size into the spillbuf.  */
 #define PARSE_CHUNK_SIZE 8000
 
-/* We will store one megabyte in memory, before switching to store content
-   into a temporary file.  */
-#define SPILL_SIZE 1000000
-
-
-/* This structure records pending data for the parser in memory blocks,
-   and possibly into a temporary file if "too much" content arrives.  */
-struct svn_ra_serf__pending_t {
-  /* The spillbuf where we record the pending data.  */
-  svn_spillbuf_t *buf;
-
-  /* This flag is set when the network has reached EOF. The PENDING
-     processing can then properly detect when parsing has completed.  */
-  svn_boolean_t network_eof;
-};
-
-#define HAS_PENDING_DATA(p) ((p) != NULL && (p)->buf != NULL \
-                             && svn_spillbuf__get_size((p)->buf) != 0)
-
 
 struct expat_ctx_t {
   svn_ra_serf__xml_context_t *xmlctx;
@@ -1254,26 +1235,6 @@ add_done_item(svn_ra_serf__xml_parser_t *ctx)
 }
 
 
-static svn_error_t *
-write_to_pending(svn_ra_serf__xml_parser_t *ctx,
-                 const char *data,
-                 apr_size_t len,
-                 apr_pool_t *scratch_pool)
-{
-  if (ctx->pending == NULL)
-    {
-      ctx->pending = apr_pcalloc(ctx->pool, sizeof(*ctx->pending));
-      ctx->pending->buf = svn_spillbuf__create(PARSE_CHUNK_SIZE,
-                                               SPILL_SIZE,
-                                               ctx->pool);
-    }
-
-  /* Copy the data into one or more chunks in the spill buffer.  */
-  return svn_error_trace(svn_spillbuf__write(ctx->pending->buf,
-                                             data, len,
-                                             scratch_pool));
-}
-
 /* svn_error_t * wrapper around XML_Parse */
 static APR_INLINE svn_error_t *
 parse_xml(XML_Parser parser, const char *data, apr_size_t len, svn_boolean_t is_final)
@@ -1293,18 +1254,6 @@ parse_xml(XML_Parser parser, const char *data, apr_size_t len, svn_boolean_t is_
                           _("The XML response contains invalid XML"));
 }
 
-static svn_error_t *
-inject_to_parser(svn_ra_serf__xml_parser_t *ctx,
-                 const char *data,
-                 apr_size_t len)
-{
-  svn_error_t *xml_err;
-
-  xml_err = parse_xml(ctx->xmlp, data, len, FALSE);
-
-  return svn_error_trace(svn_error_compose_create(ctx->error, xml_err));
-}
-
 /* Apr pool cleanup handler to release an XML_Parser in success and error
    conditions */
 static apr_status_t
@@ -1320,88 +1269,6 @@ xml_parser_cleanup(void *baton)
 
   return APR_SUCCESS;
 }
-
-/* Limit the amount of pending content to parse at once to < 100KB per
-   iteration. This number is chosen somewhat arbitrarely. Making it lower
-   will have a drastical negative impact on performance, whereas increasing it
-   increases the risk for connection timeouts.
- */
-#define PENDING_TO_PARSE PARSE_CHUNK_SIZE * 5
-
-svn_error_t *
-svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
-                             svn_boolean_t *network_eof,
-                             apr_pool_t *scratch_pool)
-{
-  svn_boolean_t pending_empty = FALSE;
-  apr_size_t cur_read = 0;
-
-  /* Fast path exit: already paused, nothing to do, or already done.  */
-  if (parser->paused || parser->pending == NULL || *parser->done)
-    {
-      *network_eof = parser->pending ? parser->pending->network_eof : FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Parsing the pending conten in the spillbuf will result in many disc i/o
-     operations. This can be so slow that we don't run the network event
-     processing loop often enough, resulting in timed out connections.
-
-     So we limit the amounts of bytes parsed per iteration.
-   */
-  while (cur_read < PENDING_TO_PARSE)
-    {
-      const char *data;
-      apr_size_t len;
-
-      /* Get a block of content, stopping the loop when we run out.  */
-      SVN_ERR(svn_spillbuf__read(&data, &len, parser->pending->buf,
-                             scratch_pool));
-      if (data)
-        {
-          /* Inject the content into the XML parser.  */
-          SVN_ERR(inject_to_parser(parser, data, len));
-
-          /* If the XML parsing callbacks paused us, then we're done for now.  */
-          if (parser->paused)
-            break;
-
-          cur_read += len;
-        }
-      else
-        {
-          /* The buffer is empty. */
-          pending_empty = TRUE;
-          break;
-        }
-    }
-
-  /* If the PENDING structures are empty *and* we consumed all content from
-     the network, then we're completely done with the parsing.  */
-  if (pending_empty &&
-      parser->pending->network_eof)
-    {
-      svn_error_t *err;
-      SVN_ERR_ASSERT(parser->xmlp != NULL);
-
-      /* Tell the parser that no more content will be parsed. */
-      err = parse_xml(parser->xmlp, NULL, 0, TRUE);
-
-      err = svn_error_compose_create(parser->error, err);
-
-      apr_pool_cleanup_run(parser->pool, &parser->xmlp, xml_parser_cleanup);
-      parser->xmlp = NULL;
-
-      SVN_ERR(err);
-
-      add_done_item(parser);
-    }
-
-  *network_eof = parser->pending ? parser->pending->network_eof : FALSE;
-
-  return SVN_NO_ERROR;
-}
-#undef PENDING_TO_PARSE
 
 /* Implements svn_ra_serf__response_handler_t */
 svn_error_t *
@@ -1438,23 +1305,10 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           return svn_ra_serf__wrap_err(status, NULL);
         }
 
-      /* Note: once the callbacks invoked by inject_to_parser() sets the
-         PAUSED flag, then it will not be cleared. write_to_pending() will
-         only save the content. Logic outside of serf_context_run() will
-         clear that flag, as appropriate, along with processing the
-         content that we have placed into the PENDING buffer.
+      err = parse_xml(ctx->xmlp, data, len, FALSE);
 
-         We want to save arriving content into the PENDING structures if
-         the parser has been paused, or we already have data in there (so
-         the arriving data is appended, rather than injected out of order)  */
-      if (ctx->paused || HAS_PENDING_DATA(ctx->pending))
-        {
-          err = write_to_pending(ctx, data, len, pool);
-        }
-      else
-        {
-          err = inject_to_parser(ctx, data, len);
-        }
+      err = svn_error_compose_create(ctx->error, err);
+
       if (err)
         {
           SVN_ERR_ASSERT(ctx->xmlp != NULL);
@@ -1471,25 +1325,17 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
 
       if (APR_STATUS_IS_EOF(status))
         {
-          if (ctx->pending != NULL)
-            ctx->pending->network_eof = TRUE;
+          SVN_ERR_ASSERT(ctx->xmlp != NULL);
 
-          /* We just hit the end of the network content. If we have nothing
-             in the PENDING structures, then we're completely done.  */
-          if (!HAS_PENDING_DATA(ctx->pending))
-            {
-              SVN_ERR_ASSERT(ctx->xmlp != NULL);
+          err = parse_xml(ctx->xmlp, NULL, 0, TRUE);
 
-              err = parse_xml(ctx->xmlp, NULL, 0, TRUE);
+          err = svn_error_compose_create(ctx->error, err);
 
-              err = svn_error_compose_create(ctx->error, err);
+          apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
 
-              apr_pool_cleanup_run(ctx->pool, &ctx->xmlp, xml_parser_cleanup);
+          SVN_ERR(err);
 
-              SVN_ERR(err);
-
-              add_done_item(ctx);
-            }
+          add_done_item(ctx);
 
           return svn_ra_serf__wrap_err(status, NULL);
         }
