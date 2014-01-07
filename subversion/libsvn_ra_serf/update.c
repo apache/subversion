@@ -2770,42 +2770,9 @@ create_update_report_body(serf_bucket_t **body_bkt,
                           apr_pool_t *pool)
 {
   report_context_t *report = baton;
-  apr_file_t *body_file = svn_spillbuf__get_file(report->body_sb);
 
-  if (body_file != NULL)
-    {
-      /* The spillbuffer was spooled to disk. Use the most optimized way
-       * to send it to serf, like when we didn't spool to memory first */
-      apr_off_t offset;
-
-      /* We need to flush the file, make it unbuffered (so that it can be
-       * zero-copied via mmap), and reset the position before attempting to
-       * deliver the file.
-       *
-       * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
-       * and zero-copy the PUT body.  However, on older APR versions, we can't
-       * check the buffer status; but serf will fall through and create a file
-       * bucket for us on the buffered svndiff handle.
-       *
-       * ### Is this really a useful optimization for an update report?
-       */
-      SVN_ERR(svn_io_file_flush(body_file, pool));
-#if APR_VERSION_AT_LEAST(1, 3, 0)
-      apr_file_buffer_set(body_file, NULL, 0);
-#endif
-
-      offset = 0;
-      SVN_ERR(svn_io_file_seek(body_file, APR_SET, &offset, pool));
-
-      *body_bkt = serf_bucket_file_create(body_file, alloc);
-    }
-  else
-    {
-      /* Everything is already in memory. Just wrap as bucket.
-       * Note that this would just work for the file case if needed */
-      *body_bkt = svn_ra_serf__create_sb_bucket(report->body_sb, alloc,
-                                                report->pool, pool);
-    }
+  *body_bkt = svn_ra_serf__create_sb_bucket(report->body_sb, alloc,
+                                            report->pool, pool);
 
   return SVN_NO_ERROR;
 }
