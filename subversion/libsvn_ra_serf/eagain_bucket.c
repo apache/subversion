@@ -1,7 +1,7 @@
 /*
- * delay_bucket.c :  a serf bucket that handles slowing down data
+ * eagain_bucket.c :  a serf bucket that handles slowing down data
  *                   for specific readers that would have unwanted
- *                   behavior if they read everything to fast
+ *                   behavior if they read everything too fast
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
