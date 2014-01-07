@@ -220,6 +220,9 @@ class GeneratorBase(gen_base.GeneratorBase):
       if os.path.exists(os.path.join(path, lib + ".lib")):
         self.bdb_lib = lib
         break
+      elif os.path.exists(os.path.join(path, lib + "d.lib")):
+        self.bdb_lib = lib
+        break
     else:
       self.bdb_lib = None
 
@@ -238,7 +241,8 @@ class WinGeneratorBase(GeneratorBase):
     GeneratorBase.__init__(self, fname, verfname, options)
 
     if self.bdb_lib is not None:
-      print("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
+      print("Found %s.lib or %sd.lib in %s\n" % (self.bdb_lib, self.bdb_lib,
+                                                 self.bdb_path))
     else:
       print("BDB not found, BDB fs will not be built\n")
 
@@ -943,6 +947,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if self.serf_lib:
       fakeincludes.append(self.apath(self.serf_path))
+      
+      if self.openssl_path and self.openssl_inc_dir:
+        fakeincludes.append(self.apath(self.openssl_inc_dir))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -1002,6 +1009,9 @@ class WinGeneratorBase(GeneratorBase):
     if self.serf_lib:
       if (self.serf_ver_maj, self.serf_ver_min) >= (1, 3):
         fakelibdirs.append(self.apath(self.serf_path))
+        
+        if self.openssl_path and self.openssl_lib_dir:
+          fakelibdirs.append(self.apath(self.openssl_lib_dir))
       else:
         fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
 
@@ -1465,6 +1475,24 @@ class WinGeneratorBase(GeneratorBase):
     "Check if serf and its dependencies are available"
 
     minimal_serf_version = (1, 2, 1)
+    
+    if self.openssl_path and os.path.exists(self.openssl_path):
+      version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
+      if os.path.isfile(version_path):
+        # We have an OpenSSL Source location (legacy handling)
+        self.openssl_inc_dir = os.path.join(self.openssl_path, 'inc32')
+        if self.static_openssl:
+          self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32')
+        else:
+          self.openssl_lib_dir = os.path.join(self.openssl_path, 'out32dll')
+      elif os.path.isfile(os.path.join(self.openssl_path,
+                          'include/openssl/opensslv.h')):
+        self.openssl_inc_dir = os.path.join(self.openssl_path, 'include')
+        self.openssl_lib_dir = os.path.join(self.openssl_path, 'lib')
+      else:
+        print('WARNING: \'opensslv.h\' not found')
+        self.openssl_path = None
+    
     self.serf_lib = None
     if self.serf_path and os.path.exists(self.serf_path):
       if self.openssl_path and os.path.exists(self.openssl_path):

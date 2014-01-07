@@ -1969,26 +1969,12 @@ get_resource(request_rec *r,
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
-  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+  if (dav_svn__is_parentpath_list(r))
     {
-      char *uri = apr_pstrdup(r->pool, r->uri);
-      char *parentpath = apr_pstrdup(r->pool, root_path);
-      apr_size_t uri_len = strlen(uri);
-      apr_size_t parentpath_len = strlen(parentpath);
-
-      if (uri[uri_len-1] == '/')
-        uri[uri_len-1] = '\0';
-
-      if (parentpath[parentpath_len-1] == '/')
-        parentpath[parentpath_len-1] = '\0';
-
-      if (strcmp(parentpath, uri) == 0)
-        {
-          err = get_parentpath_resource(r, resource);
-          if (err)
-            return err;
-          return NULL;
-        }
+      err = get_parentpath_resource(r, resource);
+      if (err)
+        return err;
+      return NULL;
     }
 
   /* This does all the work of interpreting/splitting the request uri. */
@@ -2455,9 +2441,12 @@ get_parent_resource(const dav_resource *resource,
       parent->info = parentinfo;
 
       parentinfo->uri_path =
-        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
-                                             TRUE, resource->pool),
-                             resource->pool);
+        svn_stringbuf_create(
+               get_parent_path(
+                   svn_urlpath__canonicalize(resource->info->uri_path->data,
+                                            resource->pool),
+                   TRUE, resource->pool),
+               resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;
