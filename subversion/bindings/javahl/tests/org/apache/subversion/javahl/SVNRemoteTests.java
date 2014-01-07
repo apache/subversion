@@ -38,7 +38,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -668,14 +670,17 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote session = getSession();
 
         byte[] ignoreval = "*.pyc\n.gitignore\n".getBytes(UTF8);
+        byte[] binaryval = new byte[]{(byte)0, (byte)13, (byte)255, (byte)8,
+                                      (byte)127, (byte)128, (byte)129};
         HashMap<String, byte[]> props = new HashMap<String, byte[]>();
         props.put("svn:ignore", ignoreval);
+        props.put("binaryprop", binaryval);
 
         CommitContext cc =
             (cb != null
-             ? new CommitContext(session, "Add svn:ignore",
+             ? new CommitContext(session, "Add svn:ignore and binaryprop",
                                  cb.getBase, cb.getProps, cb.getKind)
-             : new CommitContext(session, "Add svn:ignore"));
+             : new CommitContext(session, "Add svn:ignore and binaryprop"));
         try {
             cc.editor.alterDirectory("", 1, null, props);
             cc.editor.complete();
@@ -688,6 +693,11 @@ public class SVNRemoteTests extends SVNTests
         assertTrue(Arrays.equals(ignoreval,
                                  client.propertyGet(session.getSessionUrl(),
                                                     "svn:ignore",
+                                                    Revision.HEAD,
+                                                    Revision.HEAD)));
+        assertTrue(Arrays.equals(binaryval,
+                                 client.propertyGet(session.getSessionUrl(),
+                                                    "binaryprop",
                                                     Revision.HEAD,
                                                     Revision.HEAD)));
     }
@@ -1131,6 +1141,46 @@ public class SVNRemoteTests extends SVNTests
         assertEquals(21, receiver.status.size());
     }
 
+    public void testTextchangeStatus() throws Exception
+    {
+        ISVNRemote session = getSession();
+
+        CommitMessageCallback cmcb = new CommitMessageCallback() {
+                public String getLogMessage(Set<CommitItem> x) {
+                    return "Content change on A/B/E/alpha";
+                }
+            };
+
+        File alpha = new File(thisTest.getWorkingCopy(), "A/B/E/alpha");
+        FileOutputStream writer = new FileOutputStream(alpha);
+        writer.write("changed alpha text".getBytes());
+        writer.close();
+        client.commit(thisTest.getWCPathSet(), Depth.infinity, false, false,
+                      null, null, cmcb, null);
+
+        RemoteStatusReceiver receiver = new RemoteStatusReceiver();
+        ISVNReporter rp = session.status(null, Revision.SVN_INVALID_REVNUM,
+                                         Depth.infinity, receiver);
+        try {
+            rp.setPath("", 1, Depth.infinity, false, null);
+            assertEquals(2, rp.finishReport());
+        } finally {
+            rp.dispose();
+        }
+
+        assertEquals(5, receiver.status.size());
+
+        // ra_serf returns the entries in inverted order compared to ra_local.
+        Collections.sort(receiver.status);
+        RemoteStatusReceiver.StatInfo mod = receiver.status.get(4);
+        assertEquals("A/B/E/alpha", mod.relpath);
+        assertEquals('F', mod.kind);
+        assertEquals("Text Changed", true, mod.textChanged);
+        assertEquals("Props Changed", false, mod.propsChanged);
+        assertEquals("Node Deleted", false, mod.deleted);
+        assertEquals(2, mod.info.getCommittedRevision());
+    }
+
     public void testPropchangeStatus() throws Exception
     {
         ISVNRemote session = getSession();
@@ -1161,9 +1211,9 @@ public class SVNRemoteTests extends SVNTests
         RemoteStatusReceiver.StatInfo mod = receiver.status.get(3);
         assertEquals("A/D/gamma", mod.relpath);
         assertEquals('F', mod.kind);
-        assertEquals(false, mod.textChanged);
-        assertEquals(true, mod.propsChanged);
-        assertEquals(false, mod.deleted);
+        assertEquals("TextChanged", false, mod.textChanged);
+        assertEquals("Props Changed", true, mod.propsChanged);
+        assertEquals("Node Deleted", false, mod.deleted);
         assertEquals(2, mod.info.getCommittedRevision());
     }
 

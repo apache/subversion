@@ -34,6 +34,11 @@
 #include "svn_error.h"
 #include "svn_private_config.h"
 
+// Newstyle: stream wrapper
+#include <memory>
+#include "NativeStream.hpp"
+#include "jniwrapper/jni_stack.hpp"
+
 
 EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
                          const char* repos_root_url, const char* base_relpath,
@@ -125,6 +130,17 @@ get_editor_method(jmethodID& mid, const char* name, const char* sig)
                  SVN_ERR_RA_SVN_EDIT_ABORTED);
   return SVN_NO_ERROR;
 }
+
+jobject wrap_input_stream(svn_stream_t* stream)
+{
+  std::auto_ptr<JavaHL::NativeInputStream>
+    wrapped(new JavaHL::NativeInputStream());
+  apr_pool_t* const wrapped_pool = wrapped->get_pool().getPool();
+  wrapped->set_stream(svn_stream_disown(stream, wrapped_pool));
+  const jobject jstream = wrapped->create_java_wrapper();
+  wrapped.release();
+  return jstream;
+}
 } // anonymous namespace
 
 svn_error_t*
@@ -188,10 +204,14 @@ EditorProxy::cb_add_file(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jchecksum = CreateJ::Checksum(checksum);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jcontents = NULL;     // FIXME: input stream proxy
+  jobject jcontents = NULL;
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+
+  if (contents != NULL)
+    SVN_JAVAHL_CATCH(Java::Env(), SVN_ERR_RA_SVN_EDIT_ABORTED,
+                     jcontents = wrap_input_stream(contents));
 
   SVN_JNI_CATCH(
       JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
@@ -331,10 +351,14 @@ EditorProxy::cb_alter_file(void *baton,
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jchecksum = CreateJ::Checksum(checksum);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
-  jobject jcontents = NULL;     // FIXME: input stream proxy
+  jobject jcontents = NULL;
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
   jobject jprops = CreateJ::PropertyMap(props, scratch_pool);
   SVN_JNI_CATCH(,SVN_ERR_RA_SVN_EDIT_ABORTED);
+
+  if (contents != NULL)
+    SVN_JAVAHL_CATCH(Java::Env(), SVN_ERR_RA_SVN_EDIT_ABORTED,
+                     jcontents = wrap_input_stream(contents));
 
   SVN_JNI_CATCH(
       JNIUtil::getEnv()->CallVoidMethod(ep->m_jeditor, mid,
