@@ -101,7 +101,7 @@ warning_func(void *baton,
 {
   if (! err)
     return;
-  svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
+  svn_handle_warning2(stderr, err, "svnadmin: ");
 }
 
 
