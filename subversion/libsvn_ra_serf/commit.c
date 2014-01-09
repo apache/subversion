@@ -275,7 +275,7 @@ checkout_node(const char **working_url,
   handler->body_type = "text/xml";
 
   handler->response_handler = svn_ra_serf__expect_empty_body;
-  handler->response_baton = &handler;
+  handler->response_baton = handler;
 
   handler->method = "CHECKOUT";
   handler->path = node_url;
