@@ -501,6 +501,7 @@ replay_done(serf_request_t *request,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_replay_body(serf_bucket_t **bkt,
                    void *baton,

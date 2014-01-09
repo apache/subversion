@@ -484,6 +484,7 @@ setup_propfind_headers(serf_bucket_t *headers,
 #define PROPFIND_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\">"
 #define PROPFIND_TRAILER "</propfind>"
 
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_propfind_body(serf_bucket_t **bkt,
                      void *setup_baton,

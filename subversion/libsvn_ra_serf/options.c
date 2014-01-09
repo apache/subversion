@@ -111,7 +111,7 @@ options_closed(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
-
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_options_body(serf_bucket_t **body_bkt,
                     void *baton,
@@ -517,7 +517,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   return SVN_NO_ERROR;
 }
 
-
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_simple_options_body(serf_bucket_t **body_bkt,
                            void *baton,

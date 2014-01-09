@@ -327,6 +327,7 @@ merge_lock_token_list(apr_hash_t *lock_tokens,
   svn_ra_serf__add_close_tag_buckets(body, alloc, "S:lock-token-list");
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t*
 create_merge_body(serf_bucket_t **bkt,
                   void *baton,
