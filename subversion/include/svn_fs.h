@@ -791,6 +791,28 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
  * @{
  */
 
+/** Defines the possible ways two arbitrary nodes may be related.
+ * 
+ * @since New in 1.9.
+ */
+typedef enum svn_fs_node_relation_t
+{
+  /** The nodes are not related.
+   * Nodes from different repositories are always unrelated. */
+  svn_fs_node_unrelated = 0,
+
+  /** They are the same physical node, i.e. there is no intermittent change.
+   * However, due to lazy copying, they may be intermittent parent copies.
+   */
+  svn_fs_node_same,
+
+  /** The nodes have a common ancestor (which may be one of these nodes)
+   * but are not the same.
+   */
+  svn_fs_node_common_anchestor
+  
+} svn_fs_node_relation_t;
+
 /** An object representing a node-revision id.  */
 typedef struct svn_fs_id_t svn_fs_id_t;
 
@@ -910,7 +932,7 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
  * exception: the svn:date property will be automatically set on new
  * transactions to the date that the transaction was created, and can
  * be overwritten when the transaction is committed by the current
- * time; see svn_fs_commit_txn2.)
+ * time; see svn_fs_commit_txn.)
  *
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
@@ -951,6 +973,12 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * if a caller tries to edit a locked item without having rights to the lock.
  */
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
+
+/** Allow the client to specify the final svn:date of the revision by
+ * setting or deleting the corresponding transaction property rather
+ * than have it set automatically when the transaction is committed.
+ */
+#define SVN_FS_TXN_CLIENT_DATE                   0x00004
 
 /** @} */
 
@@ -1005,15 +1033,16 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * a new filesystem revision containing the changes made in @a txn,
  * storing that new revision number in @a *new_rev, and return zero.
  *
- * If @a set_timestamp is FALSE any svn:date on the transaction will
- * be become the unversioned property svn:date on the revision.
- * svn:date can have any value, it does not have to be a timestamp.
- * If the transaction has no svn:date the revision will have no
- * svn:date.
+ * If #SVN_FS_TXN_CLIENT_DATE was passed to #svn_fs_begin_txn2 any
+ * svn:date on the transaction will be become the unversioned property
+ * svn:date on the revision.  svn:date can have any value, it does not
+ * have to be a timestamp.  If the transaction has no svn:date the
+ * revision will have no svn:date.
  *
- * If @a set_timestamp is TRUE the new revision will have svn:date set
- * to the current time at some point during the commit and any
- * svn:date on the transaction will be lost.
+ * If #SVN_FS_TXN_CLIENT_DATE was not passed to #svn_fs_begin_txn2 the
+ * new revision will have svn:date set to the current time at some
+ * point during the commit and any svn:date on the transaction will be
+ * lost.
  * 
  * If @a conflict_p is non-zero, use it to provide details on any
  * conflicts encountered merging @a txn with the most recent committed
@@ -1053,22 +1082,7 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  * ###   *new_rev will always be initialized to SVN_INVALID_REVNUM, or
  * ###     to a valid, committed revision number
  *
- * @since New in 1.9.
  */
-svn_error_t *
-svn_fs_commit_txn2(const char **conflict_p,
-                   svn_revnum_t *new_rev,
-                   svn_fs_txn_t *txn,
-                   svn_boolean_t set_timestamp,
-                   apr_pool_t *pool);
-
-/*
- * Same as svn_fs_commit_txn2(), but with @a set_timestamp
- * always set to @c TRUE.
- *
- * @deprecated Provided for backward compatibility with the 1.8 API.
- */
-SVN_DEPRECATED
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
                   svn_revnum_t *new_rev,
@@ -1548,6 +1562,25 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
                svn_fs_root_t *root,
                const char *path,
                apr_pool_t *pool);
+
+/** Determine how @a path_a under @a root_a and @a path_b under @a root_b
+ * are related and return the result in @a relation.  There is no restriction
+ * concerning the roots: They may refer to different repositories, be in
+ * arbitrary revision order and any of them may pertain to a transaction.
+ * @a pool is used for temporary allocations.
+ *
+ * @note The current implementation considers paths from different svn_fs_t
+ * as unrelated even if the underlying physical repository is the same.
+ * 
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_node_relation(svn_fs_node_relation_t *relation,
+                     svn_fs_root_t *root_a,
+                     const char *path_a,
+                     svn_fs_root_t *root_b,
+                     const char *path_b,
+                     apr_pool_t *pool);
 
 /** Set @a *revision to the revision in which @a path under @a root was
  * created.  Use @a pool for any temporary allocations.  @a *revision will

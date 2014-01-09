@@ -1178,8 +1178,12 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   useful convertors for svn_opt_revision_t
 */
 #ifdef SWIGPERL
-%typemap(in) svn_opt_revision_t * (svn_opt_revision_t rev) {
-  $1 = svn_swig_pl_set_revision(&rev, $input, TRUE);
+%typemap(in) svn_opt_revision_t * 
+  (svn_opt_revision_t rev, apr_pool_t *_global_pool = NULL)
+{
+  if (_global_pool == NULL)
+    _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+  $1 = svn_swig_pl_set_revision(&rev, $input, TRUE, _global_pool);
 }
 #endif
 

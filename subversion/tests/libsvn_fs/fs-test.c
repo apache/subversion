@@ -44,6 +44,7 @@
 #include "../svn_test_fs.h"
 
 #include "../../libsvn_delta/delta.h"
+#include "../../libsvn_fs/fs-loader.h"
 
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
 
@@ -5091,11 +5092,11 @@ commit_timestamp(const svn_test_opts_t *opts,
                               opts, pool));
 
   /* Commit with a specified svn:date. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, rev, SVN_FS_TXN_CLIENT_DATE, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/foo", pool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
-  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, FALSE, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
 
   SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
   svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
@@ -5104,10 +5105,33 @@ commit_timestamp(const svn_test_opts_t *opts,
 
   /* Commit that overwrites the specified svn:date. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  {
+    /* Setting the internal property doesn't enable svn:date behaviour. */
+    apr_array_header_t *props = apr_array_make(pool, 3, sizeof(svn_prop_t));
+    svn_prop_t prop, other_prop1, other_prop2;
+    svn_string_t *val;
+
+    prop.name = SVN_FS__PROP_TXN_CLIENT_DATE;
+    prop.value = svn_string_create("1", pool);
+    other_prop1.name = "foo";
+    other_prop1.value = svn_string_create("fooval", pool);
+    other_prop2.name = "bar";
+    other_prop2.value = svn_string_create("barval", pool);
+    APR_ARRAY_PUSH(props, svn_prop_t) = other_prop1;
+    APR_ARRAY_PUSH(props, svn_prop_t) = prop;
+    APR_ARRAY_PUSH(props, svn_prop_t) = other_prop2;
+    SVN_ERR(svn_fs_change_txn_props(txn, props, pool));
+    SVN_ERR(svn_fs_txn_prop(&val, txn, other_prop1.name, pool));
+    SVN_TEST_ASSERT(val && !strcmp(val->data, other_prop1.value->data));
+    SVN_ERR(svn_fs_txn_prop(&val, txn, other_prop2.name, pool));
+    SVN_TEST_ASSERT(val && !strcmp(val->data, other_prop2.value->data));
+
+    SVN_ERR(svn_fs_change_txn_prop(txn, prop.name, prop.value, pool));
+  }
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, date, pool));
-  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
 
   SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
   svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
@@ -5115,13 +5139,13 @@ commit_timestamp(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(svn_date && strcmp(svn_date->data, date->data));
 
   /* Commit with a missing svn:date. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, rev, SVN_FS_TXN_CLIENT_DATE, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/zag", pool));
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, NULL, pool));
   SVN_ERR(svn_fs_txn_prop(&svn_date, txn, SVN_PROP_REVISION_DATE, pool));
   SVN_TEST_ASSERT(!svn_date);
-  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, FALSE, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
 
   SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
   svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,
@@ -5135,7 +5159,7 @@ commit_timestamp(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_change_txn_prop(txn, SVN_PROP_REVISION_DATE, NULL, pool));
   SVN_ERR(svn_fs_txn_prop(&svn_date, txn, SVN_PROP_REVISION_DATE, pool));
   SVN_TEST_ASSERT(!svn_date);
-  SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
 
   SVN_ERR(svn_fs_revision_proplist(&proplist, fs, rev, pool));
   svn_date = apr_hash_get(proplist, SVN_PROP_REVISION_DATE,

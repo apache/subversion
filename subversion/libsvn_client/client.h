@@ -93,12 +93,17 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 /* Set *ORIGINAL_REPOS_RELPATH and *ORIGINAL_REVISION to the original location
    that served as the source of the copy from which PATH_OR_URL at REVISION was
    created, or NULL and SVN_INVALID_REVNUM (respectively) if PATH_OR_URL at
-   REVISION was not the result of a copy operation. */
+   REVISION was not the result of a copy operation.
+
+   If RA_SESSION is not NULL it is an existing session to the repository that
+   might be reparented temporarily to obtain the information.
+   */
 svn_error_t *
 svn_client__get_copy_source(const char **original_repos_relpath,
                             svn_revnum_t *original_revision,
                             const char *path_or_url,
                             const svn_opt_revision_t *revision,
+                            svn_ra_session_t *ra_session,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
@@ -937,18 +942,6 @@ svn_error_t *
 svn_client__condense_commit_items(const char **base_url,
                                   apr_array_header_t *commit_items,
                                   apr_pool_t *pool);
-
-
-/* Like svn_ra_stat() on the ra session root, but with a compatibility
-   hack for pre-1.2 svnserve that don't support this api. */
-svn_error_t *
-svn_client__ra_stat_compatible(svn_ra_session_t *ra_session,
-                               svn_revnum_t rev,
-                               svn_dirent_t **dirent_p,
-                               apr_uint32_t dirent_fields,
-                               svn_client_ctx_t *ctx,
-                               apr_pool_t *result_pool);
-
 
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,

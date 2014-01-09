@@ -1553,6 +1553,29 @@ def copy_move_commit(sbox):
   sbox.simple_move('A/D/GG', 'A/D/GG-moved')
   sbox.simple_commit('A/D/GG-moved')
 
+def move_to_from_external(sbox):
+  "move to and from an external"
+
+  sbox.build()
+  sbox.simple_propset('svn:externals', '^/A/D/G GG', '')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'move',
+                                     sbox.ospath('GG/tau'),
+                                     sbox.ospath('tau'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'move',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('GG/tau'))
+                                     
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Commit both',
+                                     sbox.ospath(''),
+                                     sbox.ospath('GG'))
+  
+
 #######################################################################
 # Run the tests
 
@@ -1569,6 +1592,7 @@ test_list = [ None,
               move_many_update_add,
               move_del_moved,
               copy_move_commit,
+              move_to_from_external,
             ]
 
 if __name__ == '__main__':

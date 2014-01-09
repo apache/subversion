@@ -46,9 +46,11 @@ struct svn_ra_serf__xml_context_t {
   /* Current state information.  */
   svn_ra_serf__xml_estate_t *current;
 
-  /* If WAITING.NAMESPACE != NULL, wait for NAMESPACE:NAME element to be
-     closed before looking for transitions from CURRENT->STATE.  */
-  svn_ra_serf__dav_props_t waiting;
+  /* If WAITING >= then we are waiting for an element to close before
+     resuming events. The number stored here is the amount of nested
+     elements open. The Xml parser will make sure the document is well
+     formed. */
+  int waiting;
 
   /* The transition table.  */
   const svn_ra_serf__xml_transition_t *ttable;
@@ -57,7 +59,6 @@ struct svn_ra_serf__xml_context_t {
   svn_ra_serf__xml_opened_t opened_cb;
   svn_ra_serf__xml_closed_t closed_cb;
   svn_ra_serf__xml_cdata_t cdata_cb;
-  svn_ra_serf__xml_done_t done_cb;
   void *baton;
 
   /* Linked list of free states.  */
@@ -141,7 +142,7 @@ define_namespaces(svn_ra_serf__ns_t **ns_list,
           /* Have we already defined this ns previously? */
           for (cur_ns = *ns_list; cur_ns; cur_ns = cur_ns->next)
             {
-              if (strcmp(cur_ns->namespace, prefix) == 0)
+              if (strcmp(cur_ns->xmlns, prefix) == 0)
                 {
                   found = TRUE;
                   break;
@@ -158,7 +159,7 @@ define_namespaces(svn_ra_serf__ns_t **ns_list,
               else
                 pool = baton;
               new_ns = apr_palloc(pool, sizeof(*new_ns));
-              new_ns->namespace = apr_pstrdup(pool, prefix);
+              new_ns->xmlns = apr_pstrdup(pool, prefix);
               new_ns->url = apr_pstrdup(pool, tmp_attrs[1]);
 
               /* Push into the front of NS_LIST. Parent states will point
@@ -199,9 +200,9 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
 
       for (ns = ns_list; ns; ns = ns->next)
         {
-          if (strncmp(ns->namespace, name, colon - name) == 0)
+          if (strncmp(ns->xmlns, name, colon - name) == 0)
             {
-              returned_prop_name->namespace = ns->url;
+              returned_prop_name->xmlns = ns->url;
               returned_prop_name->name = colon + 1;
               return;
             }
@@ -213,9 +214,9 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
 
       for (ns = ns_list; ns; ns = ns->next)
         {
-          if (! ns->namespace[0])
+          if (! ns->xmlns[0])
             {
-              returned_prop_name->namespace = ns->url;
+              returned_prop_name->xmlns = ns->url;
               returned_prop_name->name = name;
               return;
             }
@@ -224,7 +225,7 @@ svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
 
   /* If the prefix is not found, then the name is NOT within a
      namespace.  */
-  returned_prop_name->namespace = "";
+  returned_prop_name->xmlns = "";
   returned_prop_name->name = name;
 }
 
@@ -501,14 +502,6 @@ svn_ra_serf__xml_context_done(svn_ra_serf__xml_context_t *xmlctx)
                                msg);
     }
 
-  if (xmlctx->done_cb != NULL)
-    {
-      START_CALLBACK(xmlctx);
-      SVN_ERR(xmlctx->done_cb(xmlctx->baton,
-                              xmlctx->scratch_pool));
-      END_CALLBACK(xmlctx);
-    }
-
   svn_pool_destroy(xmlctx->scratch_pool);
   return SVN_NO_ERROR;
 }
@@ -519,7 +512,6 @@ svn_ra_serf__xml_context_create(
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
   svn_ra_serf__xml_cdata_t cdata_cb,
-  svn_ra_serf__xml_done_t done_cb,
   void *baton,
   apr_pool_t *result_pool)
 {
@@ -531,7 +523,6 @@ svn_ra_serf__xml_context_create(
   xmlctx->opened_cb = opened_cb;
   xmlctx->closed_cb = closed_cb;
   xmlctx->cdata_cb = cdata_cb;
-  xmlctx->done_cb = done_cb;
   xmlctx->baton = baton;
   xmlctx->scratch_pool = svn_pool_create(result_pool);
 
@@ -640,8 +631,11 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
 
   /* If we're waiting for an element to close, then just ignore all
      other element-opens.  */
-  if (xmlctx->waiting.namespace != NULL)
-    return SVN_NO_ERROR;
+  if (xmlctx->waiting > 0)
+    {
+      xmlctx->waiting++;
+      return SVN_NO_ERROR;
+    }
 
   /* Look for xmlns: attributes. Lazily create the state pool if any
      were found.  */
@@ -660,7 +654,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
 
       /* Found a specific transition.  */
       if (strcmp(elemname.name, scan->name) == 0
-          && strcmp(elemname.namespace, scan->ns) == 0)
+          && strcmp(elemname.xmlns, scan->ns) == 0)
         break;
     }
   if (scan->ns == NULL)
@@ -673,8 +667,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
                         elemname.name);
         }
 
-      xmlctx->waiting = elemname;
-      /* ### return?  */
+      xmlctx->waiting++; /* Start waiting for the close tag */
       return SVN_NO_ERROR;
     }
 
@@ -750,7 +743,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
   /* Some basic copies to set up the new estate.  */
   new_xes->state = scan->to_state;
   new_xes->tag.name = apr_pstrdup(new_pool, elemname.name);
-  new_xes->tag.namespace = apr_pstrdup(new_pool, elemname.namespace);
+  new_xes->tag.xmlns = apr_pstrdup(new_pool, elemname.xmlns);
   new_xes->custom_close = scan->custom_close;
 
   /* Start with the parent's namespace set.  */
@@ -783,29 +776,11 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
 
   svn_ra_serf__expand_ns(&elemname, xes->ns_list, raw_name);
 
-  if (xmlctx->waiting.namespace != NULL)
+  if (xmlctx->waiting > 0)
     {
-      /* If this element is not the closer, then keep waiting... */
-      if (strcmp(elemname.name, xmlctx->waiting.name) != 0
-          || strcmp(elemname.namespace, xmlctx->waiting.namespace) != 0)
-        return SVN_NO_ERROR;
-
-      /* Found it. Stop waiting, and go back for more.  */
-      xmlctx->waiting.namespace = NULL;
+      xmlctx->waiting--;
       return SVN_NO_ERROR;
     }
-
-  /* We should be looking at the same tag that opened the current state.
-
-     Unknown elements are simply skipped, so we wouldn't reach this check.
-
-     Known elements push a new state for a given tag. Some other elemname
-     would imply closing an ancestor tag (where did ours go?) or a spurious
-     tag closure.  */
-  if (strcmp(elemname.name, xes->tag.name) != 0
-      || strcmp(elemname.namespace, xes->tag.namespace) != 0)
-    return svn_error_create(SVN_ERR_XML_MALFORMED, NULL,
-                            _("The response contains invalid XML"));
 
   if (xes->custom_close)
     {
@@ -857,7 +832,7 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
 {
   /* If we are waiting for a closing tag, then we are uninterested in
      the cdata. Just return.  */
-  if (xmlctx->waiting.namespace != NULL)
+  if (xmlctx->waiting > 0)
     return SVN_NO_ERROR;
 
   /* If the current state is collecting cdata, then copy the cdata.  */

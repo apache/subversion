@@ -27,6 +27,7 @@
 
 #include "svn_types.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 #include "private/svn_mutex.h"
 
 #ifdef __cplusplus
@@ -260,8 +261,7 @@ typedef struct fs_vtable_t
 typedef struct txn_vtable_t
 {
   svn_error_t *(*commit)(const char **conflict_p, svn_revnum_t *new_rev,
-                         svn_fs_txn_t *txn, svn_boolean_t set_timestamp,
-                         apr_pool_t *pool);
+                         svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*abort)(svn_fs_txn_t *txn, apr_pool_t *pool);
   svn_error_t *(*get_prop)(svn_string_t **value_p, svn_fs_txn_t *txn,
                            const char *propname, apr_pool_t *pool);
@@ -299,6 +299,10 @@ typedef struct root_vtable_t
                                apr_pool_t *pool);
   svn_error_t *(*node_id)(const svn_fs_id_t **id_p, svn_fs_root_t *root,
                           const char *path, apr_pool_t *pool);
+  svn_error_t *(*node_relation)(svn_fs_node_relation_t *relation,
+                                svn_fs_root_t *root_a, const char *path_a,
+                                svn_fs_root_t *root_b, const char *path_b,
+                                apr_pool_t *pool);
   svn_error_t *(*node_created_rev)(svn_revnum_t *revision,
                                    svn_fs_root_t *root, const char *path,
                                    apr_pool_t *pool);
@@ -432,6 +436,8 @@ typedef struct id_vtable_t
    in the 'flags' argument to svn_fs_lock().  */
 #define SVN_FS__PROP_TXN_CHECK_LOCKS           SVN_PROP_PREFIX "check-locks"
 #define SVN_FS__PROP_TXN_CHECK_OOD             SVN_PROP_PREFIX "check-ood"
+/* Set to "0" at the start of the txn, to "1" when svn:date changes. */
+#define SVN_FS__PROP_TXN_CLIENT_DATE           SVN_PROP_PREFIX "client-date"
 
 struct svn_fs_t
 {

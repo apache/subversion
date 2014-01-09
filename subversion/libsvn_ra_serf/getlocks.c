@@ -246,7 +246,7 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
   lock_ctx->hash = apr_hash_make(pool);
 
   xmlctx = svn_ra_serf__xml_context_create(getlocks_ttable,
-                                           NULL, getlocks_closed, NULL, NULL,
+                                           NULL, getlocks_closed, NULL,
                                            lock_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
@@ -259,16 +259,22 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
 
   handler->body_delegate = create_getlocks_body;
   handler->body_delegate_baton = lock_ctx;
+  handler->no_fail_on_http_failure_status = TRUE;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
   /* We get a 404 when a path doesn't exist in HEAD, but it might
      have existed earlier (E.g. 'svn ls http://s/svn/trunk/file@1' */
-  if (handler->sline.code != 404)
+  if (handler->sline.code != 200
+      && handler->sline.code != 404)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                           handler->path,
-                                           handler->location));
+      svn_error_t *err = svn_ra_serf__unexpected_status(handler);
+
+      if (handler->sline.code == 500 || handler->sline.code == 501)
+        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                                _("Server does not support locking features"));
+
+      return svn_error_trace(err);
     }
 
   *locks = lock_ctx->hash;

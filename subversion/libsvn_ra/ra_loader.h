@@ -63,6 +63,12 @@ typedef struct svn_ra__vtable_t {
                                void *callback_baton,
                                apr_hash_t *config,
                                apr_pool_t *pool);
+  /* Backs svn_ra_dup_session */
+  svn_error_t * (*dup_session)(svn_ra_session_t *new_session,
+                               svn_ra_session_t *old_session,
+                               const char *new_session_url,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
   /* See svn_ra_reparent(). */
   /* URL is guaranteed to have what get_repos_root() returns as a prefix. */
   svn_error_t *(*reparent)(svn_ra_session_t *session,

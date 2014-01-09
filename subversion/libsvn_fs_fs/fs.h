@@ -81,6 +81,8 @@ extern "C" {
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
+#define PATH_TXN_PROPS_FINAL "props-final" /* Final transaction properties
+                                              before moving to revprops */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
@@ -284,23 +286,6 @@ typedef struct window_cache_key_t
   /* Item index of the representation */
   apr_uint64_t item_index;
 } window_cache_key_t;
-
-/* Structure used to propagate paths throught the FSFS implementation. */
-typedef struct fs_fs_path_t
-{
-  /* The original path, as found on disk or received by the API. */
-  const char *path;
-
-  /* The representation of PATH used for cache keys and
-     lookups. Depending on whether normalized lookups are enabled,
-     this will either be exactly the same pointer as PATH (i.e.,
-     normalization is disabled), or it will be a normalized
-     representation of PATH. The invariant is:
-
-         (path == keypath) ==> (normalized_lookup == false)
-  */
-  const char *keypath;
-}; fs_fs_path_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */

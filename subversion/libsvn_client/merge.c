@@ -56,13 +56,12 @@
 #include "client.h"
 #include "mergeinfo.h"
 
-#include "private/svn_opt_private.h"
-#include "private/svn_wc_private.h"
-#include "private/svn_mergeinfo_private.h"
 #include "private/svn_fspath.h"
-#include "private/svn_ra_private.h"
+#include "private/svn_mergeinfo_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_wc_private.h"
 
 
 /*-----------------------------------------------------------------------*/
@@ -3753,110 +3752,95 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                                             younger_rev, older_rev, ctx,
                                             scratch_pool);
 
-  /* If PRIMARY_URL@peg_rev doesn't exist then
-      svn_client__repos_location_segments() typically returns an
-      SVN_ERR_FS_NOT_FOUND error, but if it doesn't exist for a
-      forward merge over ra_neon then we get SVN_ERR_RA_DAV_REQUEST_FAILED.
-      http://subversion.tigris.org/issues/show_bug.cgi?id=3137 fixed some of
-      the cases where different RA layers returned different error codes to
-      signal the "path not found"...but it looks like there is more to do.
-
-      ### Do we still need to special case for ra_neon (since it no longer
-          exists)? */
   if (err)
     {
-      if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-          || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+      const char *rel_source_path;  /* PRIMARY_URL relative to RA_SESSION */
+      svn_node_kind_t kind;
+
+      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+        return svn_error_trace(err);
+
+      svn_error_clear(err);
+
+      /* PRIMARY_URL@peg_rev doesn't exist.  Check if PRIMARY_URL@older_rev
+         exists, if neither exist then the editor can simply ignore this
+         subtree. */
+
+      SVN_ERR(svn_ra_get_path_relative_to_session(
+                ra_session, &rel_source_path, primary_url, scratch_pool));
+
+      SVN_ERR(svn_ra_check_path(ra_session, rel_source_path,
+                                older_rev, &kind, scratch_pool));
+      if (kind == svn_node_none)
         {
-          /* PRIMARY_URL@peg_rev doesn't exist.  Check if PRIMARY_URL@older_rev
-             exists, if neither exist then the editor can simply ignore this
-             subtree. */
-          const char *rel_source_path;  /* PRIMARY_URL relative to RA_SESSION */
-          svn_node_kind_t kind;
-
-          svn_error_clear(err);
-          err = NULL;
-
-          SVN_ERR(svn_ra_get_path_relative_to_session(
-                    ra_session, &rel_source_path, primary_url, scratch_pool));
-
-          SVN_ERR(svn_ra_check_path(ra_session, rel_source_path,
-                                    older_rev, &kind, scratch_pool));
-          if (kind == svn_node_none)
-            {
-              /* Neither PRIMARY_URL@peg_rev nor PRIMARY_URL@older_rev exist,
-                 so there is nothing to merge.  Set CHILD->REMAINING_RANGES
-                 identical to PARENT's. */
-              child->remaining_ranges =
-                svn_rangelist_dup(parent->remaining_ranges, scratch_pool);
-            }
-          else
-            {
-              svn_rangelist_t *deleted_rangelist;
-              svn_revnum_t rev_primary_url_deleted;
-
-              /* PRIMARY_URL@older_rev exists, so it was deleted at some
-                 revision prior to peg_rev, find that revision. */
-              SVN_ERR(svn_ra_get_deleted_rev(ra_session, rel_source_path,
-                                             older_rev, younger_rev,
-                                             &rev_primary_url_deleted,
-                                             scratch_pool));
-
-              /* PRIMARY_URL@older_rev exists and PRIMARY_URL@peg_rev doesn't,
-                 so svn_ra_get_deleted_rev() should always find the revision
-                 PRIMARY_URL@older_rev was deleted. */
-              SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev_primary_url_deleted));
-
-              /* If this is a reverse merge reorder CHILD->REMAINING_RANGES and
-                 PARENT->REMAINING_RANGES so both will work with the
-                 svn_rangelist_* APIs below. */
-              if (is_rollback)
-                {
-                  /* svn_rangelist_reverse operates in place so it's safe
-                     to use our scratch_pool. */
-                  SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
-                                                scratch_pool));
-                  SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
-                                                scratch_pool));
-                }
-
-              /* Find the intersection of CHILD->REMAINING_RANGES with the
-                 range over which PRIMARY_URL@older_rev exists (ending at
-                 the youngest revision at which it still exists). */
-              SVN_ERR(rangelist_intersect_range(&child->remaining_ranges,
-                                                child->remaining_ranges,
-                                                older_rev,
-                                                rev_primary_url_deleted - 1,
-                                                FALSE,
-                                                scratch_pool, scratch_pool));
-
-              /* Merge into CHILD->REMAINING_RANGES the intersection of
-                 PARENT->REMAINING_RANGES with the range beginning when
-                 PRIMARY_URL@older_rev was deleted until younger_rev. */
-              SVN_ERR(rangelist_intersect_range(&deleted_rangelist,
-                                                parent->remaining_ranges,
-                                                rev_primary_url_deleted - 1,
-                                                peg_rev,
-                                                FALSE,
-                                                scratch_pool, scratch_pool));
-              SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
-                                           deleted_rangelist, scratch_pool,
-                                           scratch_pool));
-
-              /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
-                 to reverse order if necessary. */
-              if (is_rollback)
-                {
-                  SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
-                                                scratch_pool));
-                  SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
-                                                scratch_pool));
-                }
-            }
+          /* Neither PRIMARY_URL@peg_rev nor PRIMARY_URL@older_rev exist,
+             so there is nothing to merge.  Set CHILD->REMAINING_RANGES
+             identical to PARENT's. */
+          child->remaining_ranges =
+            svn_rangelist_dup(parent->remaining_ranges, scratch_pool);
         }
       else
         {
-          return svn_error_trace(err);
+          svn_rangelist_t *deleted_rangelist;
+          svn_revnum_t rev_primary_url_deleted;
+
+          /* PRIMARY_URL@older_rev exists, so it was deleted at some
+             revision prior to peg_rev, find that revision. */
+          SVN_ERR(svn_ra_get_deleted_rev(ra_session, rel_source_path,
+                                         older_rev, younger_rev,
+                                         &rev_primary_url_deleted,
+                                         scratch_pool));
+
+          /* PRIMARY_URL@older_rev exists and PRIMARY_URL@peg_rev doesn't,
+             so svn_ra_get_deleted_rev() should always find the revision
+             PRIMARY_URL@older_rev was deleted. */
+          SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev_primary_url_deleted));
+
+          /* If this is a reverse merge reorder CHILD->REMAINING_RANGES and
+             PARENT->REMAINING_RANGES so both will work with the
+             svn_rangelist_* APIs below. */
+          if (is_rollback)
+            {
+              /* svn_rangelist_reverse operates in place so it's safe
+                 to use our scratch_pool. */
+              SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
+                                            scratch_pool));
+              SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
+                                            scratch_pool));
+            }
+
+          /* Find the intersection of CHILD->REMAINING_RANGES with the
+             range over which PRIMARY_URL@older_rev exists (ending at
+             the youngest revision at which it still exists). */
+          SVN_ERR(rangelist_intersect_range(&child->remaining_ranges,
+                                            child->remaining_ranges,
+                                            older_rev,
+                                            rev_primary_url_deleted - 1,
+                                            FALSE,
+                                            scratch_pool, scratch_pool));
+
+          /* Merge into CHILD->REMAINING_RANGES the intersection of
+             PARENT->REMAINING_RANGES with the range beginning when
+             PRIMARY_URL@older_rev was deleted until younger_rev. */
+          SVN_ERR(rangelist_intersect_range(&deleted_rangelist,
+                                            parent->remaining_ranges,
+                                            rev_primary_url_deleted - 1,
+                                            peg_rev,
+                                            FALSE,
+                                            scratch_pool, scratch_pool));
+          SVN_ERR(svn_rangelist_merge2(child->remaining_ranges,
+                                       deleted_rangelist, scratch_pool,
+                                       scratch_pool));
+
+          /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
+             to reverse order if necessary. */
+          if (is_rollback)
+            {
+              SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
+                                            scratch_pool));
+              SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
+                                            scratch_pool));
+            }
         }
     }
   else /* PRIMARY_URL@peg_rev exists. */
@@ -5843,7 +5827,7 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               split_range2->start = end_rev;
               APR_ARRAY_IDX(child->remaining_ranges, 0,
                             svn_merge_range_t *) = split_range1;
-              svn_sort__array_insert(&split_range2, child->remaining_ranges, 1);
+              svn_sort__array_insert(child->remaining_ranges, &split_range2, 1);
             }
         }
     }
@@ -5978,11 +5962,11 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
 
   /* Find where to insert the new element */
   insert_index =
-    svn_sort__bsearch_lower_bound(&insert_element, children_with_mergeinfo,
+    svn_sort__bsearch_lower_bound(children_with_mergeinfo, &insert_element,
                                   compare_merge_path_t_as_paths);
 
   new_element = svn_client__merge_path_dup(insert_element, pool);
-  svn_sort__array_insert(&new_element, children_with_mergeinfo, insert_index);
+  svn_sort__array_insert(children_with_mergeinfo, &new_element, insert_index);
 }
 
 /* Helper for get_mergeinfo_paths().
@@ -7066,7 +7050,8 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
               SVN_ERR(svn_client__get_copy_source(&original_repos_relpath,
                                                   &original_revision,
                                                   segment_url,
-                                                  &range_start_rev, ctx,
+                                                  &range_start_rev,
+                                                  ra_session, ctx,
                                                   result_pool, scratch_pool));
               /* Got copyfrom data?  Fix up the first segment to cover
                  back to COPYFROM_REV + 1, and then prepend a new
@@ -7079,7 +7064,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                   new_segment->path = original_repos_relpath;
                   new_segment->range_start = original_revision;
                   new_segment->range_end = original_revision;
-                  svn_sort__array_insert(&new_segment, segments, 0);
+                  svn_sort__array_insert(segments, &new_segment, 0);
                 }
             }
         }

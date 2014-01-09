@@ -315,6 +315,8 @@ do_wc_to_wc_moves(svn_boolean_t *timestamp_sleep,
     {
       const char *src_parent_abspath;
       svn_boolean_t lock_src, lock_dst;
+      const char *src_wcroot_abspath;
+      const char *dst_wcroot_abspath;
 
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -327,6 +329,13 @@ do_wc_to_wc_moves(svn_boolean_t *timestamp_sleep,
       src_parent_abspath = svn_dirent_dirname(pair->src_abspath_or_url,
                                               iterpool);
 
+      SVN_ERR(svn_wc__get_wcroot(&src_wcroot_abspath,
+                                 ctx->wc_ctx, src_parent_abspath,
+                                 iterpool, iterpool));
+      SVN_ERR(svn_wc__get_wcroot(&dst_wcroot_abspath,
+                                 ctx->wc_ctx, pair->dst_parent_abspath,
+                                 iterpool, iterpool));
+
       /* We now need to lock the right combination of batons.
          Four cases:
            1) src_parent == dst_parent
@@ -335,15 +344,18 @@ do_wc_to_wc_moves(svn_boolean_t *timestamp_sleep,
            4) src_parent and dst_parent are disjoint
          We can handle 1) as either 2) or 3) */
       if (strcmp(src_parent_abspath, pair->dst_parent_abspath) == 0
-          || svn_dirent_is_child(src_parent_abspath, pair->dst_parent_abspath,
-                                 iterpool))
+          || (svn_dirent_is_child(src_parent_abspath, pair->dst_parent_abspath,
+                                  NULL)
+              && !svn_dirent_is_child(src_parent_abspath, dst_wcroot_abspath,
+                                      NULL)))
         {
           lock_src = TRUE;
           lock_dst = FALSE;
         }
       else if (svn_dirent_is_child(pair->dst_parent_abspath,
-                                   src_parent_abspath,
-                                   iterpool))
+                                   src_parent_abspath, NULL)
+               && !svn_dirent_is_child(pair->dst_parent_abspath,
+                                       src_wcroot_abspath, NULL))
         {
           lock_src = FALSE;
           lock_dst = TRUE;
@@ -1230,7 +1242,9 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
+#ifdef ENABLE_EV2_SHIMS
   apr_hash_t *relpath_map = NULL;
+#endif
   void *edit_baton;
   svn_client__committables_t *committables;
   apr_array_header_t *commit_items;
@@ -1480,22 +1494,17 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
     }
 #endif
 
-  /* Close the initial session, to reopen a new session with commit handling */
-  svn_pool_clear(session_pool);
-
-  /* Open a new RA session to DST_URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
-                                               NULL, commit_items,
-                                               FALSE, FALSE, ctx,
-                                               session_pool, session_pool));
+  SVN_ERR(svn_ra_reparent(ra_session, top_dst_url, session_pool));
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, session_pool));
 
   /* Fetch RA commit editor. */
+#ifdef ENABLE_EV2_SHIMS
   SVN_ERR(svn_ra__register_editor_shim_callbacks(ra_session,
                         svn_client__get_shim_callbacks(ctx->wc_ctx, relpath_map,
                                                        session_pool)));
+#endif
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
                                     commit_callback,

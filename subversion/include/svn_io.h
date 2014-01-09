@@ -780,6 +780,12 @@ svn_io_unlock_open_file(apr_file_t *lockfile_handle,
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  * memory allocations.
  *
+ * @note This function uses advanced file control operations to flush buffers
+ * to disk that aren't always accessible and can be very expensive on systems
+ * that implement flushing on all IO layers, like Windows. Please avoid using
+ * this function in cases where the file should just work on any network
+ * filesystem. In many cases a normal svn_io_file_flush() will work just fine.
+ *
  * @since New in 1.1.
  */
 svn_error_t *
@@ -2155,6 +2161,11 @@ svn_io_file_write_full(apr_file_t *file,
  *
  * If @a copy_perms_path is not NULL, copy the permissions applied on @a
  * @a copy_perms_path on the temporary file before renaming.
+ *
+ * @note This function uses advanced file control operations to flush buffers
+ * to disk that aren't always accessible and can be very expensive. Avoid
+ * using this function in cases where the file should just work on any
+ * network filesystem.
  *
  * @since New in 1.9.
  */

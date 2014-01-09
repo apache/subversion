@@ -45,9 +45,10 @@
 #include "svn_user.h"
 #include "svn_xml.h"
 
-#include "private/svn_opt_private.h"
-#include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_opt_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 
 
 /*** Code. ***/
@@ -100,7 +101,7 @@ warning_func(void *baton,
 {
   if (! err)
     return;
-  svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
+  svn_handle_warning2(stderr, err, "svnadmin: ");
 }
 
 
@@ -304,10 +305,8 @@ static const apr_getopt_option_t options_table[] =
     {"file", 'F', 1, N_("read repository paths from file ARG")},
 
     {"check-normalization", svnadmin__check_normalization, 0,
-     N_("report paths in the filesystem and mergeinfo\n"
-        "                             that are not normalized to Unicode Normalization\n"
-        "                             Form C, and any names within the same directory\n"
-        "                             or svn:mergeinfo property value that differ only\n"
+     N_("report any names within the same directory or\n"
+        "                             svn:mergeinfo property value that differ only\n"
         "                             in character representation, but are otherwise\n"
         "                             identical")},
 
@@ -1842,6 +1841,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   int fs_format;
+  const char *uuid;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1852,6 +1852,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              svn_dirent_local_style(svn_repos_path(repos, pool),
                                                     pool)));
 
+  SVN_ERR(svn_fs_get_uuid(fs, &uuid, pool));
+  SVN_ERR(svn_cmdline_printf(pool, _("UUID: %s\n"), uuid));
   {
     int repos_format, minor;
     svn_version_t *repos_version, *fs_version;

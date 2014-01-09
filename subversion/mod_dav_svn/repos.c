@@ -57,6 +57,7 @@
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_sorts_private.h"
 
 #include "dav_svn.h"
 
@@ -3808,10 +3809,9 @@ copy_resource(const dav_resource *src,
                                         dst->pool));
 
       if (!serr && (strcmp(src_repos_path, dst_repos_path) != 0))
-          return dav_svn__new_error_tag(
+          return dav_svn__new_error_svn(
                 dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                "Copy source and destination are in different repositories.",
-                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+                "Copy source and destination are in different repositories");
     }
   else
       serr = SVN_NO_ERROR;
@@ -3939,8 +3939,9 @@ remove_resource(dav_resource *resource, dav_response **response)
      incoming lock-tokens into the filesystem's access_t.  Normally
      they come in via 'If:' header, and get_resource()
      automatically notices them and does this work for us.  In the
-     case of a directory deletion, however, svn clients are sending
-     'child' lock-tokens in the DELETE request body. */
+     case of a directory deletion, however, older subversion clients
+     are sending 'child' lock-tokens in the non-standard DELETE
+     request body. */
 
   err = dav_svn__build_lock_hash(&locks, resource->info->r,
                                  resource->info->repos_path, resource->pool);

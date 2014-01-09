@@ -965,6 +965,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 12,
              "Can't create tunnel")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_RA_CANNOT_CREATE_SESSION,
+             SVN_ERR_RA_CATEGORY_START + 13,
+             "Can't create session")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,
@@ -1033,6 +1038,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_DAV_FORBIDDEN,
              SVN_ERR_RA_DAV_CATEGORY_START + 13,
              "URL access forbidden for unknown reason")
+
+  /** @since New in 1.9 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_PRECONDITION_FAILED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 14,
+             "The server state conflicts with the requested preconditions")
 
   /* ra_local errors */
 
@@ -1399,6 +1409,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CORRUPT_PACKED_DATA,
              SVN_ERR_MISC_CATEGORY_START + 41,
              "Packed data stream is corrupt")
+
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_COMPOSED_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 42,
+             "Additional errors:")
 
   /* command-line client errors */
 

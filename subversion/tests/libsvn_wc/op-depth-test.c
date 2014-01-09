@@ -41,9 +41,10 @@
 
 #include "utils.h"
 
-#include "private/svn_wc_private.h"
-#include "private/svn_sqlite.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_sqlite.h"
+#include "private/svn_wc_private.h"
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
 #include "../../libsvn_wc/workqueue.h"

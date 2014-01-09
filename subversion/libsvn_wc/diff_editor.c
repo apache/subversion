@@ -65,10 +65,11 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 
-#include "private/svn_subr_private.h"
-#include "private/svn_wc_private.h"
 #include "private/svn_diff_tree.h"
 #include "private/svn_editor.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
+#include "private/svn_wc_private.h"
 
 #include "wc.h"
 #include "props.h"

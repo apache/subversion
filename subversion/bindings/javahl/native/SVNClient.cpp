@@ -1234,15 +1234,17 @@ void SVNClient::removeFromChangelists(Targets &srcPaths, svn_depth_t depth,
 }
 
 void SVNClient::getChangelists(const char *rootPath,
-                               StringArray &changelists,
+                               StringArray *changelists,
                                svn_depth_t depth,
                                ChangelistCallback *callback)
 {
     SVN::Pool subPool(pool);
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
 
-    SVN_JNI_ERR(svn_client_get_changelists(rootPath,
-                                           changelists.array(subPool),
+    const apr_array_header_t *cl_array = (!changelists ? NULL
+                                          : changelists->array(subPool));
+
+    SVN_JNI_ERR(svn_client_get_changelists(rootPath, cl_array,
                                            depth, ChangelistCallback::callback,
                                            callback, ctx, subPool.getPool()),
                 );

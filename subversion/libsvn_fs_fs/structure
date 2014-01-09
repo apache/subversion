@@ -602,6 +602,7 @@ Transaction layout
 A transaction directory has the following layout:
 
   props                      Transaction props
+  props-final                Final transaction props (optional)
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
   node.<nid>.<cid>           New node-rev data for node
@@ -629,9 +630,11 @@ they are received from the client.  To ensure that only one client is
 writing to the file at a given time, the "rev-lock" file is locked for
 the duration of each write.
 
-The two kinds of props files are all in hash dump format.  The "props"
+The three kinds of props files are all in hash dump format.  The "props"
 file will always be present.  The "node.<nid>.<cid>.props" file will
-only be present if the node-rev properties have been changed.
+only be present if the node-rev properties have been changed.  The
+"props-final" only exists while converting the transaction into a revision.
+
 
 The <sha1> files have been introduced in FS format 6. Their content
 is that of text rep references: "<rev> <item_offset> <length> <size> <digest>"

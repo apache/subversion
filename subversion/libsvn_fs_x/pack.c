@@ -24,9 +24,10 @@
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_sorts.h"
-#include "private/svn_temp_serializer.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_temp_serializer.h"
 
 #include "fs_x.h"
 #include "pack.h"

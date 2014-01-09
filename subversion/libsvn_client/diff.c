@@ -1773,8 +1773,8 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
-  SVN_ERR(svn_client_open_ra_session2(&extra_ra_session, anchor1, wri_abspath,
-                                      ctx, pool, pool));
+  SVN_ERR(svn_ra_dup_session(&extra_ra_session, ra_session, anchor1,
+                             pool, pool));
 
   SVN_ERR(svn_client__get_diff_editor2(
                 &diff_editor, &diff_edit_baton,
@@ -2329,8 +2329,8 @@ diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used to get deleted path information.  */
-  SVN_ERR(svn_client_open_ra_session2(&extra_ra_session, anchor1, NULL,
-                                      ctx, pool, pool));
+  SVN_ERR(svn_ra_dup_session(&extra_ra_session, ra_session, anchor1,
+                             pool, pool));
 
   SVN_ERR(svn_client__get_diff_editor2(&diff_editor, &diff_edit_baton,
                                        extra_ra_session,

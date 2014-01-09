@@ -1786,8 +1786,9 @@ Java_org_apache_subversion_javahl_SVNClient_getChangelists
     return;
 
   ChangelistCallback callback(jchangelistCallback);
-  cl->getChangelists(root_path, changelists, EnumMapper::toDepth(jdepth),
-                     &callback);
+  cl->getChangelists(root_path,
+                     (jchangelists ? &changelists : NULL),
+                     EnumMapper::toDepth(jdepth), &callback);
 }
 
 JNIEXPORT void JNICALL

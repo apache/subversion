@@ -49,6 +49,7 @@
 #include "workqueue.h"
 #include "token-map.h"
 
+#include "private/svn_sorts_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_skel.h"
 #include "private/svn_wc_private.h"
@@ -10282,7 +10283,7 @@ db_read_inherited_props(apr_array_header_t **inherited_props,
 
                   iprop_elt->prop_hash = node_props;
                   /* Build the output array in depth-first order. */
-                  svn_sort__array_insert(&iprop_elt, iprops, 0);
+                  svn_sort__array_insert(iprops, &iprop_elt, 0);
                 }
             }
         }
@@ -10318,7 +10319,7 @@ db_read_inherited_props(apr_array_header_t **inherited_props,
 
           /* If we didn't filter everything then keep this iprop. */
           if (apr_hash_count(cached_iprop->prop_hash))
-            svn_sort__array_insert(&cached_iprop, iprops, 0);
+            svn_sort__array_insert(iprops, &cached_iprop, 0);
         }
     }
 
@@ -11844,39 +11845,6 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_wc__db_scan_base_repos(const char **repos_relpath,
-                           const char **repos_root_url,
-                           const char **repos_uuid,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  apr_int64_t repos_id;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
-                                            repos_relpath, &repos_id,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            NULL, NULL, NULL, NULL, NULL,
-                                            wcroot, local_relpath,
-                                            result_pool, scratch_pool));
-  SVN_ERR(svn_wc__db_fetch_repos_info(repos_root_url, repos_uuid, wcroot->sdb,
-                                      repos_id, result_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* A helper for scan_addition().
  * Compute moved-from information for the node at LOCAL_RELPATH which

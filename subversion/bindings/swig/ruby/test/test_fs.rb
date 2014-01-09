@@ -110,7 +110,8 @@ class SvnFsTest < Test::Unit::TestCase
     FileUtils.mkdir_p(fs_path)
 
     make_context(log) do |ctx|
-      assert_raises(Svn::Error::RaLocalReposOpenFailed) do
+      # ### Verify Svn::Error::RaLocalReposOpenFailed in chain 
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.log_message(path, rev)
       end
 

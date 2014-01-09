@@ -575,12 +575,11 @@ svn_ra_local__open(svn_ra_session_t *session,
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR_W(svn_ra_local__split_URL(&(sess->repos),
-                                    &(sess->repos_url),
-                                    &fs_path,
-                                    repos_URL,
-                                    session->pool),
-            _("Unable to open an ra_local session to URL"));
+  SVN_ERR(svn_ra_local__split_URL(&(sess->repos),
+                                  &(sess->repos_url),
+                                  &fs_path,
+                                  repos_URL,
+                                  session->pool));
   sess->fs_path = svn_stringbuf_create(fs_path, session->pool);
 
   /* Cache the filesystem object from the repos here for
@@ -609,6 +608,53 @@ svn_ra_local__open(svn_ra_session_t *session,
     sess->useragent = USER_AGENT;
 
   session->priv = sess;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__dup_session(svn_ra_session_t *new_session,
+                          svn_ra_session_t *session,
+                          const char *new_session_url,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_ra_local__session_baton_t *old_sess = session->priv;
+  svn_ra_local__session_baton_t *new_sess;
+  const char *fs_path;
+
+  /* Allocate and stash the session_sess args we have already. */
+  new_sess = apr_pcalloc(result_pool, sizeof(*new_sess));
+  new_sess->callbacks = old_sess->callbacks;
+  new_sess->callback_baton = old_sess->callback_baton;
+
+  /* ### Re-use existing FS handle? */
+
+  /* Reuse existing code */
+  SVN_ERR(svn_ra_local__split_URL(&(new_sess->repos),
+                                  &(new_sess->repos_url),
+                                  &fs_path,
+                                  new_session_url,
+                                  result_pool));
+
+  new_sess->fs_path = svn_stringbuf_create(fs_path, result_pool);
+
+  /* Cache the filesystem object from the repos here for
+     convenience. */
+  new_sess->fs = svn_repos_fs(new_sess->repos);
+
+  /* Ignore FS warnings. */
+  svn_fs_set_warning_func(new_sess->fs, ignore_warnings, NULL);
+
+  /* Cache the repository UUID as well */
+  new_sess->uuid = apr_pstrdup(result_pool, old_sess->uuid);
+
+  new_sess->username = old_sess->username
+                            ? apr_pstrdup(result_pool, old_sess->username)
+                            : NULL;
+
+  new_sess->useragent = apr_pstrdup(result_pool, old_sess->useragent);
+  new_session->priv = new_sess;
+
   return SVN_NO_ERROR;
 }
 
@@ -1074,12 +1120,12 @@ svn_ra_local__stat(svn_ra_session_t *session,
 
 
 
+/* Obtain the properties for a node, including its 'entry props */
 static svn_error_t *
 get_node_props(apr_hash_t **props,
-               apr_array_header_t **inherited_props,
-               svn_ra_local__session_baton_t *sess,
                svn_fs_root_t *root,
                const char *path,
+               const char *uuid,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
@@ -1087,39 +1133,25 @@ get_node_props(apr_hash_t **props,
   const char *cmt_date, *cmt_author;
 
   /* Create a hash with props attached to the fs node. */
-  if (props)
-    {
-      SVN_ERR(svn_fs_node_proplist(props, root, path, result_pool));
-    }
-
-  /* Get inherited properties if requested. */
-  if (inherited_props)
-    {
-      SVN_ERR(svn_repos_fs_get_inherited_props(inherited_props, root, path,
-                                               NULL, NULL, NULL,
-                                               result_pool, scratch_pool));
-    }
+  SVN_ERR(svn_fs_node_proplist(props, root, path, result_pool));
 
   /* Now add some non-tweakable metadata to the hash as well... */
 
-  if (props)
-    {
-      /* The so-called 'entryprops' with info about CR & friends. */
-      SVN_ERR(svn_repos_get_committed_info(&cmt_rev, &cmt_date,
-                                           &cmt_author, root, path,
-                                           scratch_pool));
+  /* The so-called 'entryprops' with info about CR & friends. */
+  SVN_ERR(svn_repos_get_committed_info(&cmt_rev, &cmt_date,
+                                       &cmt_author, root, path,
+                                       scratch_pool));
 
-      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV,
-                    svn_string_createf(result_pool, "%ld", cmt_rev));
-      svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, cmt_date ?
-                    svn_string_create(cmt_date, result_pool) :NULL);
-      svn_hash_sets(*props, SVN_PROP_ENTRY_LAST_AUTHOR, cmt_author ?
-                    svn_string_create(cmt_author, result_pool) :NULL);
-      svn_hash_sets(*props, SVN_PROP_ENTRY_UUID,
-                    svn_string_create(sess->uuid, result_pool));
+  svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV,
+                svn_string_createf(result_pool, "%ld", cmt_rev));
+  svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_DATE, cmt_date ?
+                svn_string_create(cmt_date, result_pool) : NULL);
+  svn_hash_sets(*props, SVN_PROP_ENTRY_LAST_AUTHOR, cmt_author ?
+                svn_string_create(cmt_author, result_pool) : NULL);
+  svn_hash_sets(*props, SVN_PROP_ENTRY_UUID,
+                svn_string_create(uuid, result_pool));
 
-      /* We have no 'wcprops' in ra_local, but might someday. */
-    }
+  /* We have no 'wcprops' in ra_local, but might someday. */
 
   return SVN_NO_ERROR;
 }
@@ -1191,7 +1223,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, NULL, sess, root, abs_path, pool, pool));
+    SVN_ERR(get_node_props(props, root, abs_path, sess->uuid, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1302,7 +1334,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, NULL, sess, root, abs_path, pool, pool));
+    SVN_ERR(get_node_props(props, root, abs_path, sess->uuid, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1617,8 +1649,11 @@ svn_ra_local__get_inherited_props(svn_ra_session_t *session,
                                _("'%s' path not found"), abs_path);
     }
 
-  return svn_error_trace(get_node_props(NULL, iprops, sess, root, abs_path,
-                                        result_pool, scratch_pool));
+  return svn_error_trace(
+                svn_repos_fs_get_inherited_props(iprops, root, abs_path,
+                                                 NULL /* propname */,
+                                                 NULL, NULL /* auth */,
+                                                 result_pool, scratch_pool));
 }
 
 static svn_error_t *
@@ -1702,6 +1737,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_description,
   svn_ra_local__get_schemes,
   svn_ra_local__open,
+  svn_ra_local__dup_session,
   svn_ra_local__reparent,
   svn_ra_local__get_session_url,
   svn_ra_local__get_latest_revnum,

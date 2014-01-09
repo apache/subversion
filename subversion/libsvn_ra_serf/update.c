@@ -53,6 +53,11 @@
 #define USE_TRANSITION_PARSER
 */
 
+#define SPILLBUF_BLOCKSIZE 4096
+#define SPILLBUF_MAXBUFFSIZE 131072
+
+#define PARSE_CHUNK_SIZE 8000 /* Copied from utils.c ### Needs tuning */
+
 
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
@@ -358,12 +363,9 @@ struct report_context_t {
   const svn_delta_editor_t *update_editor;
   void *update_baton;
 
-  /* The file holding request body for the REPORT.
-   *
-   * ### todo: It will be better for performance to store small
-   * request bodies (like 4k) in memory and bigger bodies on disk.
-   */
-  apr_file_t *body_file;
+  /* The potentially tempfile backed spillbuf holding request body for the
+   * REPORT */
+  svn_spillbuf_t *body_sb;
 
   /* root directory object */
   report_dir_t *root_dir;
@@ -1128,10 +1130,7 @@ handle_fetch(serf_request_t *request,
      data as its probably an error message. Just bail out instead. */
   if (fetch_ctx->handler->sline.code != 200)
     {
-      err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              _("GET request failed: %d %s"),
-                              fetch_ctx->handler->sline.code,
-                              fetch_ctx->handler->sline.reason);
+      err = svn_error_trace(svn_ra_serf__unexpected_status(fetch_ctx->handler));
       return error_fetch(request, fetch_ctx, err);
     }
 
@@ -1564,9 +1563,8 @@ fetch_file(report_context_t *ctx, report_info_t *info)
           fetch_ctx->sess = ctx->sess;
           fetch_ctx->conn = conn;
 
-          handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
+          handler = svn_ra_serf__create_handler(info->dir->pool);
 
-          handler->handler_pool = info->dir->pool;
           handler->method = "GET";
           handler->path = fetch_ctx->info->url;
 
@@ -1605,10 +1603,6 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       /* No propfind or GET request.  Just handle the prop changes now. */
       SVN_ERR(handle_propchange_only(info, info->pool));
     }
-
-  if (ctx->num_active_fetches + ctx->num_active_propfinds
-      > REQUEST_COUNT_TO_PAUSE)
-    ctx->parser_ctx->paused = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -1961,7 +1955,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       if (strcmp(name.name, "checked-in") == 0)
         {
           info = push_state(parser, ctx, IGNORE_PROP_NAME);
-          info->prop_ns = name.namespace;
+          info->prop_ns = name.xmlns;
           info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
           svn_stringbuf_setempty(info->prop_value);
@@ -2021,7 +2015,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
       if (strcmp(name.name, "checked-in") == 0)
         {
           info = push_state(parser, ctx, IGNORE_PROP_NAME);
-          info->prop_ns = name.namespace;
+          info->prop_ns = name.xmlns;
           info->prop_name = apr_pstrdup(parser->state->pool, name.name);
           info->prop_encoding = NULL;
           svn_stringbuf_setempty(info->prop_value);
@@ -2131,7 +2125,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, PROP);
 
-      info->prop_ns = name.namespace;
+      info->prop_ns = name.xmlns;
       info->prop_name = apr_pstrdup(parser->state->pool, name.name);
       info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
       svn_stringbuf_setempty(info->prop_value);
@@ -2216,10 +2210,6 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           list_item->data = info->dir;
           list_item->next = ctx->active_dir_propfinds;
           ctx->active_dir_propfinds = list_item;
-
-          if (ctx->num_active_fetches + ctx->num_active_propfinds
-              > REQUEST_COUNT_TO_PAUSE)
-            ctx->parser_ctx->paused = TRUE;
         }
       else
         {
@@ -2410,7 +2400,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       ns_name_match = NULL;
       for (ns = dir->ns_list; ns; ns = ns->next)
         {
-          if (strcmp(ns->namespace, info->prop_ns) == 0)
+          if (strcmp(ns->xmlns, info->prop_ns) == 0)
             {
               ns_name_match = ns;
               if (strcmp(ns->url, info->prop_name) == 0)
@@ -2426,11 +2416,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           ns = apr_palloc(dir->pool, sizeof(*ns));
           if (!ns_name_match)
             {
-              ns->namespace = apr_pstrdup(dir->pool, info->prop_ns);
+              ns->xmlns = apr_pstrdup(dir->pool, info->prop_ns);
             }
           else
             {
-              ns->namespace = ns_name_match->namespace;
+              ns->xmlns = ns_name_match->xmlns;
             }
           ns->url = apr_pstrdup(dir->pool, info->prop_name);
 
@@ -2477,12 +2467,12 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         }
 
       svn_ra_serf__set_ver_prop(props, info->base_name, info->base_rev,
-                                ns->namespace, ns->url, set_val_str, pool);
+                                ns->xmlns, ns->url, set_val_str, pool);
 
       /* Advance handling:  if we spotted the md5-checksum property on
          the wire, remember it's value. */
       if (strcmp(ns->url, "md5-checksum") == 0
-          && strcmp(ns->namespace, SVN_DAV_PROP_NS_DAV) == 0)
+          && strcmp(ns->xmlns, SVN_DAV_PROP_NS_DAV) == 0)
         info->final_checksum = apr_pstrdup(info->pool, set_val_str->data);
 
       svn_ra_serf__xml_pop_state(parser);
@@ -2640,8 +2630,7 @@ set_path(void *report_baton,
   svn_xml_escape_cdata_cstring(&buf, path, pool);
   svn_xml_make_close_tag(&buf, pool, "S:entry");
 
-  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, pool));
+  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, pool));
 
   if (lock_token)
     {
@@ -2663,8 +2652,7 @@ delete_path(void *report_baton,
 
   make_simple_xml_tag(&buf, "S:missing", path, pool);
 
-  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, pool));
+  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2713,8 +2701,7 @@ link_path(void *report_baton,
   svn_xml_escape_cdata_cstring(&buf, path, pool);
   svn_xml_make_close_tag(&buf, pool, "S:entry");
 
-  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, pool));
+  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, pool));
 
   /* Store the switch roots to allow generating repos_relpaths from just
      the working copy paths. (Needed for HTTPv2) */
@@ -2783,12 +2770,9 @@ create_update_report_body(serf_bucket_t **body_bkt,
                           apr_pool_t *pool)
 {
   report_context_t *report = baton;
-  apr_off_t offset;
 
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(report->body_file, APR_SET, &offset, pool));
-
-  *body_bkt = serf_bucket_file_create(report->body_file, alloc);
+  *body_bkt = svn_ra_serf__create_sb_bucket(report->body_sb, alloc,
+                                            report->pool, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2815,6 +2799,195 @@ setup_update_report_headers(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
+/* Baton for update_delay_handler */
+typedef struct update_delay_baton_t
+{
+  report_context_t *report;
+  svn_spillbuf_t *spillbuf;
+  svn_ra_serf__response_handler_t inner_handler;
+  void *inner_handler_baton;
+
+  svn_boolean_t network_eof;
+} update_delay_baton_t;
+
+/* Delaying wrapping reponse handler, to avoid creating too many
+   requests to deliver efficiently */
+static svn_error_t *
+update_delay_handler(serf_request_t *request,
+                     serf_bucket_t *response,
+                     void *handler_baton,
+                     apr_pool_t *scratch_pool)
+{
+  update_delay_baton_t *udb = handler_baton;
+  apr_status_t status;
+  apr_pool_t *iterpool = NULL;
+
+  if (! udb->spillbuf)
+    {
+      if (udb->report->send_all_mode)
+        {
+          /* Easy out... We only have one request, so avoid everything and just
+             call the inner handler.
+
+             We will always get in the loop (below) on the first chunk, as only
+             the server can get us in true send-all mode */
+
+          return svn_error_trace(udb->inner_handler(request, response,
+                                                    udb->inner_handler_baton,
+                                                    scratch_pool));
+        }
+
+      while ((udb->report->num_active_fetches + udb->report->num_active_propfinds)
+                 < REQUEST_COUNT_TO_RESUME)
+       {
+         const char *data;
+         apr_size_t len;
+         svn_boolean_t at_eof = FALSE;
+         svn_error_t *err;
+
+         status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
+         if (SERF_BUCKET_READ_ERROR(status))
+           return svn_ra_serf__wrap_err(status, NULL);
+         else if (APR_STATUS_IS_EOF(status))
+           udb->network_eof = at_eof = TRUE;
+
+         if (!iterpool)
+           iterpool = svn_pool_create(scratch_pool);
+         else
+           svn_pool_clear(iterpool);
+
+         if (len == 0 && !at_eof)
+           return svn_ra_serf__wrap_err(status, NULL);
+
+         /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
+            use a standard bucket with default EOF handling */
+         err = udb->inner_handler(request,
+                                  at_eof
+                                   ? serf_bucket_simple_create(
+                                            data, len, NULL, NULL,
+                                            serf_request_get_alloc(request))
+                                   : svn_ra_serf__create_bucket_with_eagain(
+                                            data, len,
+                                            serf_request_get_alloc(request)),
+                                  udb->inner_handler_baton, iterpool);
+
+         if (err && SERF_BUCKET_READ_ERROR(err->apr_err))
+           return svn_error_trace(err);
+         else if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
+           {
+             svn_error_clear(err); /* Throttling is working ok */
+           }
+         else if (err && (APR_STATUS_IS_EOF(err->apr_err)))
+           {
+             svn_pool_destroy(iterpool);
+             return svn_error_trace(err); /* No buffering was necessary */
+           }
+         else
+           {
+             /* SERF_ERROR_WAIT_CONN should be impossible? */
+             SVN_ERR_MALFUNCTION();
+           }
+       }
+
+      /* Let's start using the spill infrastructure */
+      udb->spillbuf = svn_spillbuf__create(SPILLBUF_BLOCKSIZE,
+                                           SPILLBUF_MAXBUFFSIZE,
+                                           udb->report->pool);
+    }
+
+  /* Read everything we can to a spillbuffer */
+  do
+    {
+      const char *data;
+      apr_size_t len;
+
+      /* ### What blocksize should we pass? */
+      status = serf_bucket_read(response, 8*PARSE_CHUNK_SIZE, &data, &len);
+
+      if (!SERF_BUCKET_READ_ERROR(status))
+        SVN_ERR(svn_spillbuf__write(udb->spillbuf, data, len, scratch_pool));
+    }
+  while (status == APR_SUCCESS);
+
+  if (APR_STATUS_IS_EOF(status))
+    udb->network_eof = TRUE;
+
+  /* We handle feeding the data from the main context loop, which will be right
+     after processing the pending data */
+
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+  else
+    return SVN_NO_ERROR;
+}
+
+/* Process pending data from the update report, if any */
+static svn_error_t *
+process_pending(update_delay_baton_t *udb,
+                apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = NULL;
+  serf_bucket_alloc_t *alloc = NULL;
+
+  while ((udb->report->num_active_fetches + udb->report->num_active_propfinds)
+            < REQUEST_COUNT_TO_RESUME)
+    {
+      const char *data;
+      apr_size_t len;
+      svn_boolean_t at_eof = FALSE;
+      svn_error_t *err;
+
+      if (!iterpool)
+        {
+          iterpool = svn_pool_create(scratch_pool);
+          alloc = serf_bucket_allocator_create(iterpool, NULL, NULL);
+        }
+      else
+        svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_spillbuf__read(&data, &len, udb->spillbuf, iterpool));
+
+      if (data == NULL)
+        {
+          if (!udb->network_eof)
+            break;
+
+          data = "";
+          at_eof = TRUE;
+        }
+
+      /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
+         use a standard bucket with default EOF handling */
+      err = udb->inner_handler(NULL /* allowed? */,
+                               at_eof
+                                ? serf_bucket_simple_create(
+                                         data, len, NULL, NULL, alloc)
+                                : svn_ra_serf__create_bucket_with_eagain(
+                                         data, len, alloc),
+                                  udb->inner_handler_baton, iterpool);
+
+      if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
+        {
+          svn_error_clear(err); /* Throttling is working */
+        }
+      else if (err && APR_STATUS_IS_EOF(err->apr_err))
+        {
+          svn_error_clear(err);
+
+          svn_pool_destroy(iterpool);
+          udb->spillbuf = NULL;
+          return SVN_NO_ERROR;
+        }
+      else if (err)
+        return svn_error_trace(err);
+    }
+
+  if (iterpool)
+    svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
@@ -2831,24 +3004,10 @@ finish_report(void *report_baton,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_error_t *err;
   apr_interval_time_t waittime_left = sess->timeout;
+  update_delay_baton_t *ud;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
-  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, iterpool));
-
-  /* We need to flush the file, make it unbuffered (so that it can be
-   * zero-copied via mmap), and reset the position before attempting to
-   * deliver the file.
-   *
-   * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
-   * and zero-copy the PUT body.  However, on older APR versions, we can't
-   * check the buffer status; but serf will fall through and create a file
-   * bucket for us on the buffered svndiff handle.
-   */
-  SVN_ERR(svn_io_file_flush(report->body_file, iterpool));
-#if APR_VERSION_AT_LEAST(1, 3, 0)
-  apr_file_buffer_set(report->body_file, NULL, 0);
-#endif
+  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, iterpool));
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
 
@@ -2863,10 +3022,9 @@ finish_report(void *report_baton,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
 #else
-  handler = apr_pcalloc(pool, sizeof(*handler));
+  handler = svn_ra_serf__create_handler(pool);
 #endif
 
-  handler->handler_pool = pool;
   handler->method = "REPORT";
   handler->path = report->path;
   handler->body_delegate = create_update_report_body;
@@ -2895,6 +3053,16 @@ finish_report(void *report_baton,
   report->parser_ctx = parser_ctx;
 #endif
 
+  /* Now wrap the response handler with delay support to avoid sending
+     out too many requests at once */
+  ud = apr_pcalloc(pool, sizeof(*ud));
+  ud->report = report;
+  ud->inner_handler = handler->response_handler;
+  ud->inner_handler_baton = handler->response_baton;
+
+  handler->response_handler = update_delay_handler;
+  handler->response_baton = ud;
+
   svn_ra_serf__request_create(handler);
 
   /* Open the first extra connection. */
@@ -2911,10 +3079,8 @@ finish_report(void *report_baton,
          || report->num_active_fetches
          || report->num_active_propfinds)
     {
-      apr_pool_t *iterpool_inner;
       svn_ra_serf__list_t *done_list;
       int i;
-      apr_status_t status;
 
       /* Note: this throws out the old ITERPOOL_INNER.  */
       svn_pool_clear(iterpool);
@@ -2922,66 +3088,17 @@ finish_report(void *report_baton,
       if (sess->cancel_func)
         SVN_ERR(sess->cancel_func(sess->cancel_baton));
 
-      /* We need to be careful between the outer and inner ITERPOOLs,
-         and what items are allocated within.  */
-      iterpool_inner = svn_pool_create(iterpool);
+      err = svn_ra_serf__context_run(sess, &waittime_left, iterpool);
 
-      status = serf_context_run(sess->context,
-                                SVN_RA_SERF__CONTEXT_RUN_DURATION,
-                                iterpool_inner);
-
-      err = sess->pending_error;
-      sess->pending_error = SVN_NO_ERROR;
-
-      if (!err && handler->done && handler->server_error)
+      if (handler->done && handler->server_error)
         {
-          err = handler->server_error->error;
-        }
-
-      /* If the context duration timeout is up, we'll subtract that
-         duration from the total time alloted for such things.  If
-         there's no time left, we fail with a message indicating that
-         the connection timed out.  */
-      if (APR_STATUS_IS_TIMEUP(status))
-        {
-          /* If there is a pending error, handle it.
-             Unlikely case, as this should have made serf_context run return
-             an error but we shouldn't ignore true errors */
-          SVN_ERR(err);
-          status = 0;
-
-          if (sess->timeout)
-            {
-              if (waittime_left > SVN_RA_SERF__CONTEXT_RUN_DURATION)
-                {
-                  waittime_left -= SVN_RA_SERF__CONTEXT_RUN_DURATION;
-                }
-              else
-                {
-                  return svn_error_create(SVN_ERR_RA_DAV_CONN_TIMEOUT, NULL,
-                                          _("Connection timed out"));
-                }
-            }
-        }
-      else
-        {
-          waittime_left = sess->timeout;
-        }
-
-      if (status && handler->sline.code != 200)
-        {
-          return svn_error_trace(
-                    svn_error_compose_create(
-                        svn_ra_serf__error_on_status(handler->sline,
-                                                     handler->path,
-                                                     handler->location),
-                        err));
+          svn_error_clear(err);
+          err = svn_ra_serf__server_error_create(handler, iterpool);
         }
       SVN_ERR(err);
-      if (status)
-        {
-          return svn_ra_serf__wrap_err(status, _("Error retrieving REPORT"));
-        }
+
+      if (handler->done && handler->sline.code && handler->sline.code != 200)
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < sess->max_connections)
@@ -2994,7 +3111,7 @@ finish_report(void *report_baton,
         {
           svn_ra_serf__list_t *next_done = done_list->next;
 
-          svn_pool_clear(iterpool_inner);
+          svn_pool_clear(iterpool);
 
           report->num_active_propfinds--;
 
@@ -3049,11 +3166,11 @@ finish_report(void *report_baton,
                   */
                   if (info->cached_contents)
                     {
-                      SVN_ERR(handle_local_content(info, iterpool_inner));
+                      SVN_ERR(handle_local_content(info, iterpool));
                     }
                   else
                     {
-                      SVN_ERR(handle_propchange_only(info, iterpool_inner));
+                      SVN_ERR(handle_propchange_only(info, iterpool));
                     }
                 }
             }
@@ -3149,20 +3266,9 @@ finish_report(void *report_baton,
         }
       report->done_dir_propfinds = NULL;
 
-      /* If the parser is paused, and the number of active requests has
-         dropped far enough, then resume parsing.  */
-      if (parser_ctx->paused
-          && (report->num_active_fetches + report->num_active_propfinds
-              < REQUEST_COUNT_TO_RESUME))
-        parser_ctx->paused = FALSE;
-
-      /* If we have not paused the parser and it looks like data MAY be
-         present (we can't know for sure because of the private structure),
-         then go process the pending content.  */
-      if (!parser_ctx->paused && parser_ctx->pending != NULL)
-        SVN_ERR(svn_ra_serf__process_pending(parser_ctx,
-                                             &report->report_received,
-                                             iterpool_inner));
+      /* If there is pending REPORT data, process it now. */
+      if (ud->spillbuf)
+        SVN_ERR(process_pending(ud, iterpool));
 
       /* Debugging purposes only! */
       for (i = 0; i < sess->num_conns; i++)
@@ -3170,6 +3276,8 @@ finish_report(void *report_baton,
           serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
+
+  svn_pool_clear(iterpool);
 
   /* If we got a complete report, close the edit.  Otherwise, abort it. */
   if (report->report_completed)
@@ -3288,9 +3396,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   *reporter = &ra_serf_reporter;
   *report_baton = report;
 
-  SVN_ERR(svn_io_open_unique_file3(&report->body_file, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   report->pool, scratch_pool));
+  report->body_sb = svn_spillbuf__create(1024, 131072, report->pool);
 
   if (sess->bulk_updates == svn_tristate_true)
     {
@@ -3423,8 +3529,8 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 
-  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
-                                 NULL, scratch_pool));
+  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3698,9 +3804,8 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
           stream_ctx->info->name = fetch_url;
 
-          handler = apr_pcalloc(pool, sizeof(*handler));
+          handler = svn_ra_serf__create_handler(pool);
 
-          handler->handler_pool = pool;
           handler->method = "GET";
           handler->path = fetch_url;
           handler->conn = conn;

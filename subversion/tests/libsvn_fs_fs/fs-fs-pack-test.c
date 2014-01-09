@@ -1024,7 +1024,7 @@ upgrade_txns_to_log_addressing(const svn_test_opts_t *opts,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, iterpool));
-      SVN_ERR(svn_fs_commit_txn2(NULL, &rev, txn, TRUE, iterpool));
+      SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, iterpool));
     }
 
   /* Further changes to fill the shard */

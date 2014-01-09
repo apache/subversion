@@ -1309,7 +1309,7 @@ def unlock_wrong_token(sbox):
   ### The error message returned is actually this, but let's worry about that
   ### another day...
   svntest.actions.run_and_verify_svn2(
-    None, None, ".*((No lock on path)|(400 Bad Request))", 0,
+    None, None, ".*(No lock on path)", 0,
     'unlock', file_path)
 
 #----------------------------------------------------------------------
@@ -1365,7 +1365,7 @@ def unlocked_lock_of_other_user(sbox):
 
   # now try to unlock with user jconstant, should fail but exit 0.
   if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
+    expected_err = "svn: warning: W160039: .*[Uu]nlock of .*403 Forbidden.*"
   else:
     expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
                    "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
@@ -1460,8 +1460,7 @@ def lock_path_not_in_head(sbox):
                                      '-m', 'Some deletions', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
   expected_lock_fail_err_re = "svn: warning: W160042: " \
-  "((Path .* doesn't exist in HEAD revision)" \
-  "|(L(ock|OCK) request (on '.*' )?failed: 405 Method Not Allowed))"
+  "(Path .* doesn't exist in HEAD revision)"
   # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
@@ -1521,7 +1520,6 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
@@ -1554,11 +1552,9 @@ def replace_and_propset_locked_path(sbox):
   # Replace A/D/G and A/D/G/rho, propset on A/D/G/rho.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_path)
-  # Recreate path for single-db
-  if not os.path.exists(G_path):
-    os.mkdir(G_path)
+
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'add', G_path)
+                                     'mkdir', G_path)
   svntest.main.file_append(rho_path, "This is the new file 'rho'.\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', rho_path)
@@ -1685,7 +1681,7 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Make sure the unlock operation fails as pre-unlock hook blocks it.
-  expected_unlock_fail_err_re = ".*error text|.*500 Internal Server Error"
+  expected_unlock_fail_err_re = ".*error text"
   svntest.actions.run_and_verify_svn2(None, None, expected_unlock_fail_err_re,
                                       1, 'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1876,11 +1872,11 @@ def drop_locks_on_parent_deletion(sbox):
     
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B',
-						'A/B/E',
-						'A/B/E/alpha',
-						'A/B/F',
-						'A/B/lambda',
-						wc_rev='3')
+                        'A/B/E',
+                        'A/B/E/alpha',
+                        'A/B/F',
+                        'A/B/lambda',
+                        wc_rev='3')
   expected_status.remove('A/B/E/beta')
    
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1888,7 +1884,7 @@ def drop_locks_on_parent_deletion(sbox):
                                         expected_status,
                                         None,
                                         wc_dir)
-	
+
 
 def copy_with_lock(sbox):
   """copy with lock on source"""
@@ -1911,15 +1907,57 @@ def copy_with_lock(sbox):
     'A/B/E2/beta'  : Item(status='  ', wc_rev=2),
     })
 
-  # This is really a regression test for httpd: 2.2.25 and 2.4.6 have
-  # a bug that causes mod_dav to check for locks on the copy source
-  # and so the commit fails.
+  # This is really a regression test for httpd: 2.2.25 and 2.4.6, and
+  # earlier, have a bug that causes mod_dav to check for locks on the
+  # copy source and so the commit fails.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
                                         None,
                                         wc_dir)
-										
+
+def lock_hook_messages(sbox):
+  "verify (un)lock message is transferred correctly"
+
+  sbox.build(create_wc = False)
+  repo_dir = sbox.repo_dir
+
+  iota_url = sbox.repo_url + "/iota"
+  mu_url = sbox.repo_url + "/A/mu"
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
+                                     iota_url)
+
+  error_msg = "Text with <angle brackets> & ampersand"
+  svntest.actions.create_failing_hook(repo_dir, "pre-lock", error_msg)
+  svntest.actions.create_failing_hook(repo_dir, "pre-unlock", error_msg)
+
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
+                                     None, [], svntest.verify.AnyOutput,
+                                     'lock', mu_url)
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_err = [
+    'svn: E165001: ' + svntest.actions.hook_failure_message('pre-lock'),
+    error_msg + "\n",
+  ]
+  svntest.verify.compare_and_display_lines(None, 'STDERR',
+                                           expected_err, actual_stderr)
+
+
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
+                                     None, [], svntest.verify.AnyOutput,
+                                     'unlock', iota_url)
+  if len(actual_stderr) > 2:
+    actual_stderr = actual_stderr[-2:]
+  expected_err = [
+    'svn: E165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
+    error_msg + "\n",
+  ]
+  svntest.verify.compare_and_display_lines(None, 'STDERR',
+                                           expected_err, actual_stderr)
+
+
 ########################################################################
 # Run the tests
 
@@ -1974,6 +2012,7 @@ test_list = [ None,
               commit_stolen_lock,
               drop_locks_on_parent_deletion,
               copy_with_lock,
+              lock_hook_messages,
             ]
 
 if __name__ == '__main__':

@@ -211,7 +211,7 @@ struct edit_baton
 
   /* If this is a 'switch' operation, the new relpath of target_abspath,
      else NULL. */
-  const char *switch_relpath;
+  const char *switch_repos_relpath;
 
   /* The URL to the root of the repository. */
   const char *repos_root;
@@ -298,7 +298,7 @@ struct dir_baton
   const char *local_abspath;
 
   /* The repository relative path this directory will correspond to. */
-  const char *new_relpath;
+  const char *new_repos_relpath;
 
   /* The revision of the directory before updating */
   svn_revnum_t old_revision;
@@ -489,6 +489,76 @@ cleanup_edit_baton(void *edit_baton)
   return APR_SUCCESS;
 }
 
+/* Calculate the new repos_relpath for a directory or file */
+static svn_error_t *
+calculate_repos_relpath(const char **new_repos_relpath,
+                        const char *local_abspath,
+                        const char *old_repos_relpath,
+                        struct edit_baton *eb,
+                        struct dir_baton *pb,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *name = svn_dirent_basename(local_abspath, NULL);
+
+  /* Figure out the new_repos_relpath for this directory. */
+  if (eb->switch_repos_relpath)
+    {
+      /* Handle switches... */
+
+      if (pb == NULL)
+        {
+          if (*eb->target_basename == '\0')
+            {
+              /* No parent baton and target_basename=="" means that we are
+                 the target of the switch. Thus, our new_repos_relpath will be
+                 the switch_repos_relpath.  */
+              *new_repos_relpath = eb->switch_repos_relpath;
+            }
+          else
+            {
+              /* This node is NOT the target of the switch (one of our
+                 children is the target); therefore, it must already exist.
+                 Get its old REPOS_RELPATH, as it won't be changing.  */
+              *new_repos_relpath = apr_pstrdup(result_pool, old_repos_relpath);
+            }
+        }
+      else
+        {
+          /* This directory is *not* the root (has a parent). If there is
+             no grandparent, then we may have anchored at the parent,
+             and self is the target. If we match the target, then set
+             new_repos_relpath to the switch_repos_relpath.
+
+             Otherwise, we simply extend new_repos_relpath from the parent.  */
+
+          if (pb->parent_baton == NULL
+              && strcmp(eb->target_basename, name) == 0)
+            *new_repos_relpath = eb->switch_repos_relpath;
+          else
+            *new_repos_relpath = svn_relpath_join(pb->new_repos_relpath, name,
+                                                  result_pool);
+        }
+    }
+  else  /* must be an update */
+    {
+      /* If we are adding the node, then simply extend the parent's
+         relpath for our own.  */
+      if (old_repos_relpath == NULL)
+        {
+          SVN_ERR_ASSERT(pb != NULL);
+          *new_repos_relpath = svn_relpath_join(pb->new_repos_relpath, name,
+                                                result_pool);
+        }
+      else
+        {
+          *new_repos_relpath = apr_pstrdup(result_pool, old_repos_relpath);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Make a new dir baton in a subpool of PB->pool. PB is the parent baton.
    If PATH and PB are NULL, this is the root directory of the edit; in this
    case, make the new dir baton in a subpool of EB->pool.
@@ -528,65 +598,6 @@ make_dir_baton(struct dir_baton **d_p,
       d->local_abspath = eb->anchor_abspath;
     }
 
-  /* Figure out the new_relpath for this directory. */
-  if (eb->switch_relpath)
-    {
-      /* Handle switches... */
-
-      if (pb == NULL)
-        {
-          if (*eb->target_basename == '\0')
-            {
-              /* No parent baton and target_basename=="" means that we are
-                 the target of the switch. Thus, our NEW_RELPATH will be
-                 the SWITCH_RELPATH.  */
-              d->new_relpath = eb->switch_relpath;
-            }
-          else
-            {
-              /* This node is NOT the target of the switch (one of our
-                 children is the target); therefore, it must already exist.
-                 Get its old REPOS_RELPATH, as it won't be changing.  */
-              SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
-                                                 eb->db, d->local_abspath,
-                                                 dir_pool, scratch_pool));
-            }
-        }
-      else
-        {
-          /* This directory is *not* the root (has a parent). If there is
-             no grandparent, then we may have anchored at the parent,
-             and self is the target. If we match the target, then set
-             NEW_RELPATH to the SWITCH_RELPATH.
-
-             Otherwise, we simply extend NEW_RELPATH from the parent.  */
-          if (pb->parent_baton == NULL
-              && strcmp(eb->target_basename, d->name) == 0)
-            d->new_relpath = eb->switch_relpath;
-          else
-            d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
-                                              dir_pool);
-        }
-    }
-  else  /* must be an update */
-    {
-      /* If we are adding the node, then simply extend the parent's
-         relpath for our own.  */
-      if (adding)
-        {
-          SVN_ERR_ASSERT(pb != NULL);
-          d->new_relpath = svn_relpath_join(pb->new_relpath, d->name,
-                                            dir_pool);
-        }
-      else
-        {
-          SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
-                                             eb->db, d->local_abspath,
-                                             dir_pool, scratch_pool));
-          SVN_ERR_ASSERT(d->new_relpath);
-        }
-    }
-
   d->edit_baton   = eb;
   d->parent_baton = pb;
   d->pool         = dir_pool;
@@ -616,7 +627,6 @@ make_dir_baton(struct dir_baton **d_p,
   *d_p = d;
   return SVN_NO_ERROR;
 }
-
 
 /* Forward declarations. */
 static svn_error_t *
@@ -683,7 +693,7 @@ struct file_baton
   const char *local_abspath;
 
   /* The repository relative path this file will correspond to. */
-  const char *new_relpath;
+  const char *new_repos_relpath;
 
   /* The revision of the file before updating */
   svn_revnum_t old_revision;
@@ -767,7 +777,6 @@ make_file_baton(struct file_baton **f_p,
                 svn_boolean_t adding,
                 apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = pb->edit_baton;
   apr_pool_t *file_pool = svn_pool_create(pb->pool);
   struct file_baton *f = apr_pcalloc(file_pool, sizeof(*f));
 
@@ -778,37 +787,6 @@ make_file_baton(struct file_baton **f_p,
   f->old_revision = SVN_INVALID_REVNUM;
   SVN_ERR(path_join_under_root(&f->local_abspath,
                                pb->local_abspath, f->name, file_pool));
-
-  /* Figure out the new URL for this file. */
-  if (eb->switch_relpath)
-    {
-      /* Handle switches... */
-
-      /* This file has a parent directory. If there is
-         no grandparent, then we may have anchored at the parent,
-         and self is the target. If we match the target, then set
-         NEW_RELPATH to the SWITCH_RELPATH.
-
-         Otherwise, we simply extend NEW_RELPATH from the parent.  */
-      if (pb->parent_baton == NULL
-          && strcmp(eb->target_basename, f->name) == 0)
-        f->new_relpath = eb->switch_relpath;
-      else
-        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name,
-                                          file_pool);
-    }
-  else  /* must be an update */
-    {
-      if (adding)
-        f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
-      else
-        {
-          SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
-                                             eb->db, f->local_abspath,
-                                             file_pool, scratch_pool));
-          SVN_ERR_ASSERT(f->new_relpath);
-        }
-    }
 
   f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
@@ -881,7 +859,7 @@ complete_conflict(svn_skel_t *conflict,
   else
     target_version = NULL;
 
-  if (eb->switch_relpath)
+  if (eb->switch_repos_relpath)
     SVN_ERR(svn_wc__conflict_skel_set_op_switch(conflict,
                                                 original_version,
                                                 target_version,
@@ -916,7 +894,7 @@ mark_directory_edited(struct dir_baton *db, apr_pool_t *scratch_pool)
       SVN_ERR(complete_conflict(db->edit_conflict, db->edit_baton,
                                 db->local_abspath,
                                 db->old_repos_relpath, db->old_revision,
-                                db->new_relpath,
+                                db->new_repos_relpath,
                                 svn_node_dir, svn_node_dir,
                                 db->pool, scratch_pool));
       SVN_ERR(svn_wc__db_op_mark_conflict(db->edit_baton->db,
@@ -950,7 +928,7 @@ mark_file_edited(struct file_baton *fb, apr_pool_t *scratch_pool)
 
       SVN_ERR(complete_conflict(fb->edit_conflict, fb->edit_baton,
                                 fb->local_abspath, fb->old_repos_relpath,
-                                fb->old_revision, fb->new_relpath,
+                                fb->old_revision, fb->new_repos_relpath,
                                 svn_node_file, svn_node_file,
                                 fb->pool, scratch_pool));
 
@@ -1230,10 +1208,27 @@ open_root(void *edit_baton,
                                eb->db, db->local_abspath,
                                db->pool, pool));
 
-  if (conflict_ignored)
+  if (have_work)
     {
-      db->shadowed = TRUE;
+      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
+                                       &db->old_revision,
+                                       &db->old_repos_relpath, NULL, NULL,
+                                       &db->changed_rev, &db->changed_date,
+                                       &db->changed_author,
+                                       &db->ambient_depth,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       eb->db, db->local_abspath,
+                                       db->pool, pool));
     }
+  else
+    base_status = status;
+
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  db->old_repos_relpath, eb, NULL,
+                                  db->pool, pool));
+
+  if (conflict_ignored)
+    db->shadowed = TRUE;
   else if (have_work)
     {
       const char *move_src_root_abspath;
@@ -1241,16 +1236,6 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc__db_base_moved_to(NULL, NULL, &move_src_root_abspath,
                                        NULL, eb->db, db->local_abspath,
                                        pool, pool));
-      if (move_src_root_abspath || *eb->target_basename == '\0')
-        SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL,
-                                         &db->old_revision,
-                                         &db->old_repos_relpath, NULL, NULL,
-                                         &db->changed_rev, &db->changed_date,
-                                         &db->changed_author,
-                                         &db->ambient_depth,
-                                         NULL, NULL, NULL, NULL, NULL, NULL,
-                                         eb->db, db->local_abspath,
-                                         db->pool, pool));
 
       if (move_src_root_abspath)
         {
@@ -1273,7 +1258,8 @@ open_root(void *edit_baton,
               SVN_ERR(complete_conflict(tree_conflict, eb,
                                         move_src_root_abspath,
                                         db->old_repos_relpath,
-                                        db->old_revision, db->new_relpath,
+                                        db->old_revision,
+                                        db->new_repos_relpath,
                                         svn_node_dir, svn_node_dir,
                                         pool, pool));
               SVN_ERR(svn_wc__db_op_mark_conflict(eb->db,
@@ -1290,8 +1276,6 @@ open_root(void *edit_baton,
       db->shadowed = TRUE; /* Needed for the close_directory() on the root, to
                               make sure it doesn't use the ACTUAL tree */
     }
-  else
-    base_status = status;
 
   if (*eb->target_basename == '\0')
     {
@@ -1310,7 +1294,7 @@ open_root(void *edit_baton,
 
       SVN_ERR(svn_wc__db_temp_op_start_directory_update(eb->db,
                                                         db->local_abspath,
-                                                        db->new_relpath,
+                                                        db->new_repos_relpath,
                                                         *eb->target_revision,
                                                         pool));
     }
@@ -2003,6 +1987,8 @@ add_directory(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  NULL, eb, pb, db->pool, pool));
   *child_baton = db;
 
   if (db->skip_this)
@@ -2070,7 +2056,7 @@ add_directory(const char *path,
          explicitly adds the node into the parent's node database. */
 
       SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
-                                                   db->new_relpath,
+                                                   db->new_repos_relpath,
                                                    eb->repos_root,
                                                    eb->repos_uuid,
                                                    *eb->target_revision,
@@ -2179,7 +2165,7 @@ add_directory(const char *path,
          because then we would not have received an add_directory.
        */
       SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
-                                                   db->new_relpath,
+                                                   db->new_repos_relpath,
                                                    eb->repos_root,
                                                    eb->repos_uuid,
                                                    *eb->target_revision,
@@ -2281,14 +2267,14 @@ add_directory(const char *path,
   if (tree_conflict)
     SVN_ERR(complete_conflict(tree_conflict, eb, db->local_abspath,
                               db->old_repos_relpath, db->old_revision,
-                              db->new_relpath,
+                              db->new_repos_relpath,
                               wc_kind,
                               svn_node_dir,
                               db->pool, pool));
 
   SVN_ERR(svn_wc__db_base_add_incomplete_directory(
                                      eb->db, db->local_abspath,
-                                     db->new_relpath,
+                                     db->new_repos_relpath,
                                      eb->repos_root,
                                      eb->repos_uuid,
                                      *eb->target_revision,
@@ -2417,6 +2403,10 @@ open_directory(const char *path,
 
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  db->old_repos_relpath, eb, pb,
+                                  db->pool, pool));
+
   /* Is this path a conflict victim? */
   if (db->shadowed)
     conflicted = FALSE; /* Conflict applies to WORKING */
@@ -2476,7 +2466,7 @@ open_directory(const char *path,
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
   SVN_ERR(svn_wc__db_temp_op_start_directory_update(eb->db, db->local_abspath,
-                                                    db->new_relpath,
+                                                    db->new_repos_relpath,
                                                     *eb->target_revision,
                                                     pool));
 
@@ -2703,7 +2693,8 @@ close_directory(void *dir_baton,
   /* Check if we should add some not-present markers before marking the
      directory complete (Issue #3569) */
   {
-    apr_hash_t *new_children = svn_hash_gets(eb->dir_dirents, db->new_relpath);
+    apr_hash_t *new_children = svn_hash_gets(eb->dir_dirents,
+                                             db->new_repos_relpath);
 
     if (new_children != NULL)
       {
@@ -2759,7 +2750,7 @@ close_directory(void *dir_baton,
 
             svn_error_clear(err);
 
-            child_relpath = svn_relpath_join(db->new_relpath, child_name,
+            child_relpath = svn_relpath_join(db->new_repos_relpath, child_name,
                                              iterpool);
 
             SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db,
@@ -2797,7 +2788,7 @@ close_directory(void *dir_baton,
           svn_pool_clear(iterpool);
 
           child_abspath = svn_dirent_join(db->local_abspath, child, iterpool);
-          child_relpath = svn_dirent_join(db->new_relpath, child, iterpool);
+          child_relpath = svn_dirent_join(db->new_repos_relpath, child, iterpool);
 
           SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db,
                                                        child_abspath,
@@ -2873,7 +2864,7 @@ close_directory(void *dir_baton,
                                     db->local_abspath,
                                     db->old_repos_relpath,
                                     db->old_revision,
-                                    db->new_relpath,
+                                    db->new_repos_relpath,
                                     svn_node_dir, svn_node_dir,
                                     db->pool, scratch_pool));
 
@@ -2905,7 +2896,7 @@ close_directory(void *dir_baton,
       SVN_ERR(svn_wc__db_base_add_directory(
                 eb->db, db->local_abspath,
                 eb->wcroot_abspath,
-                db->new_relpath,
+                db->new_repos_relpath,
                 eb->repos_root, eb->repos_uuid,
                 *eb->target_revision,
                 props,
@@ -3094,7 +3085,7 @@ absent_node(const char *path,
 
   {
     const char *repos_relpath;
-    repos_relpath = svn_relpath_join(pb->new_relpath, name, scratch_pool);
+    repos_relpath = svn_relpath_join(pb->new_repos_relpath, name, scratch_pool);
 
     /* Insert an excluded node below the parent node to note that this child
        is absent. (This puts it in the parent db if the child is obstructed) */
@@ -3159,6 +3150,8 @@ add_file(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
+  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
+                                  NULL, eb, pb, fb->pool, pool));
   *file_baton = fb;
 
   if (fb->skip_this)
@@ -3437,7 +3430,7 @@ add_file(const char *path,
                                 fb->local_abspath,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
-                                fb->new_relpath,
+                                fb->new_repos_relpath,
                                 wc_kind,
                                 svn_node_file,
                                 fb->pool, scratch_pool));
@@ -3519,7 +3512,6 @@ open_file(const char *path,
 
   /* Sanity check. */
 
-  /* If replacing, make sure the .svn entry already exists. */
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision,
                                &fb->old_repos_relpath, NULL, NULL,
                                &fb->changed_rev, &fb->changed_date,
@@ -3540,6 +3532,10 @@ open_file(const char *path,
                                      NULL, NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
+
+  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
+                                  fb->old_repos_relpath, eb, pb,
+                                  fb->pool, scratch_pool));
 
   /* Is this path a conflict victim? */
   if (fb->shadowed)
@@ -3856,7 +3852,7 @@ change_file_prop(void *file_baton,
 
           SVN_ERR(complete_conflict(fb->edit_conflict, fb->edit_baton,
                                     fb->local_abspath, fb->old_repos_relpath,
-                                    fb->old_revision, fb->new_relpath,
+                                    fb->old_revision, fb->new_repos_relpath,
                                     svn_node_file, svn_node_file,
                                     fb->pool, scratch_pool));
 
@@ -4326,8 +4322,8 @@ close_file(void *file_baton,
           {
             /* If we lose the lock, but not because we are switching to
                another url, remove the state lock from the wc */
-            if (! eb->switch_relpath
-                || strcmp(fb->new_relpath, fb->old_repos_relpath) == 0)
+            if (! eb->switch_repos_relpath
+                || strcmp(fb->new_repos_relpath, fb->old_repos_relpath) == 0)
               {
                 SVN_ERR_ASSERT(prop->value == NULL);
                 SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath,
@@ -4569,7 +4565,7 @@ close_file(void *file_baton,
                                 fb->local_abspath,
                                 fb->old_repos_relpath,
                                 fb->old_revision,
-                                fb->new_relpath,
+                                fb->new_repos_relpath,
                                 svn_node_file, svn_node_file,
                                 fb->pool, scratch_pool));
 
@@ -4598,7 +4594,7 @@ close_file(void *file_baton,
 
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
-                                   fb->new_relpath,
+                                   fb->new_repos_relpath,
                                    eb->repos_root, eb->repos_uuid,
                                    *eb->target_revision,
                                    new_base_props,
@@ -4733,7 +4729,7 @@ close_edit(void *edit_baton,
       SVN_ERR(svn_wc__db_op_bump_revisions_post_update(eb->db,
                                                        eb->target_abspath,
                                                        eb->requested_depth,
-                                                       eb->switch_relpath,
+                                                       eb->switch_repos_relpath,
                                                        eb->repos_root,
                                                        eb->repos_uuid,
                                                        *(eb->target_revision),
@@ -4860,9 +4856,11 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Get the anchor's repository root and uuid. The anchor must already exist
      in BASE. */
-  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root, &repos_uuid,
-                                     db, anchor_abspath,
-                                     result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, &repos_root,
+                                   &repos_uuid, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, anchor_abspath,
+                                   result_pool, scratch_pool));
 
   /* With WC-NG we need a valid repository root */
   SVN_ERR_ASSERT(repos_root != NULL && repos_uuid != NULL);
@@ -4890,10 +4888,10 @@ make_editor(svn_revnum_t *target_revision,
                                 edit_pool, scratch_pool));
 
   if (switch_url)
-    eb->switch_relpath =
+    eb->switch_repos_relpath =
       svn_uri_skip_ancestor(repos_root, switch_url, scratch_pool);
   else
-    eb->switch_relpath = NULL;
+    eb->switch_repos_relpath = NULL;
 
   if (svn_path_is_empty(target_basename))
     eb->target_abspath = eb->anchor_abspath;
@@ -4974,8 +4972,8 @@ make_editor(svn_revnum_t *target_revision,
               apr_hash_t *dirents;
 
               /* If we switch, we should look at the new relpath */
-              if (eb->switch_relpath)
-                dir_repos_relpath = eb->switch_relpath;
+              if (eb->switch_repos_relpath)
+                dir_repos_relpath = eb->switch_repos_relpath;
 
               SVN_ERR(fetch_dirents_func(fetch_dirents_baton, &dirents,
                                          repos_root, dir_repos_relpath,
@@ -5028,9 +5026,9 @@ make_editor(svn_revnum_t *target_revision,
                       apr_hash_t *dirents;
 
                       /* If we switch, we should look at the new relpath */
-                      if (eb->switch_relpath)
+                      if (eb->switch_repos_relpath)
                         dir_repos_relpath = svn_relpath_join(
-                                                eb->switch_relpath,
+                                                eb->switch_repos_relpath,
                                                 child_name, iterpool);
 
                       SVN_ERR(fetch_dirents_func(fetch_dirents_baton, &dirents,

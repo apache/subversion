@@ -1940,6 +1940,7 @@ def mergeinfo_race(sbox):
 
 
 @Issue(4213)
+@Skip(svntest.main.is_fs_type_fsx)
 def recover_old(sbox):
   "recover --pre-1.4-compatible"
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
@@ -2183,24 +2184,15 @@ def verify_denormalized_names(sbox):
 
   expected_output_regex_list = [
     ".*Verified revision 0.",
-                                                # A/{Eacute}
-    "WARNING 0x0003: Denormalized directory name 'A/.*'",
-                                           # A/{icircumflex}{odiaeresis}ta
-    "WARNING 0x0003: Denormalized file name 'A/.*ta'",
     ".*Verified revision 1.",
     ".*Verified revision 2.",
     ".*Verified revision 3.",
                                            # A/{Eacute}/{aring}lpha
-    "WARNING 0x0003: Denormalized file name 'A/.*/.*lpha'",
-    "WARNING 0x0004: Duplicate representation of path 'A/.*/.*lpha'",
+    "WARNING 0x0003: Duplicate representation of path 'A/.*/.*lpha'",
     ".*Verified revision 4.",
     ".*Verified revision 5.",
-                                       # Q/{aring}lpha
-    "WARNING 0x0005: Denormalized path '/Q/.*lpha'"
-                                  # A/{Eacute}
-    " in svn:mergeinfo property of 'A/.*'",
                                                       # Q/{aring}lpha
-    "WARNING 0x0006: Duplicate representation of path '/Q/.*lpha'"
+    "WARNING 0x0004: Duplicate representation of path '/Q/.*lpha'"
                                   # A/{Eacute}
     " in svn:mergeinfo property of 'A/.*'",
     ".*Verified revision 6.",

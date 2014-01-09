@@ -808,7 +808,6 @@ def copy_inherits_special_props(sbox):
 # non-Posix platforms, we won't have to skip here:
 @Skip(is_non_posix_and_non_windows_os)
 @Issue(3086)
-@XFail(svntest.main.is_ra_type_dav)
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
 
@@ -1634,7 +1633,6 @@ def props_over_time(sbox):
 
 # XFail the same reason revprop_change() is.
 @SkipUnless(svntest.main.server_enforces_date_syntax)
-@XFail(svntest.main.is_ra_type_dav)
 @Issue(3086)
 def invalid_propvalues(sbox):
   "test handling invalid svn:* property values"
@@ -1740,9 +1738,9 @@ def post_revprop_change_hook(sbox):
   svntest.actions.create_failing_hook(repo_dir, 'post-revprop-change',
                                       error_msg)
 
-  # serf/neon/mod_dav_svn give SVN_ERR_RA_DAV_REQUEST_FAILED
+  # serf/mod_dav_svn give SVN_ERR_RA_DAV_PROPPATCH_FAILED
   # file/svn give SVN_ERR_REPOS_HOOK_FAILURE
-  expected_error = 'svn: (E175002|E165001).*post-revprop-change hook failed'
+  expected_error = 'svn: (E175008|E165001).*post-revprop-change hook failed'
 
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'ps', '--revprop', '-r0', 'p', 'v',
@@ -2639,9 +2637,22 @@ def xml_unsafe_author(sbox):
   svntest.actions.run_and_verify_info(expected_info, wc_dir)
 
   # mod_dav_svn sends svn:author (via PROPFIND for DAV)
+  # Since r1553367 this works correctly on ra_serf, since we now request
+  # a single property value which somehow triggers different behavior
   svntest.actions.run_and_verify_svn(None, ['foo\bbar'], [],
                                      'propget', '--revprop', '-r', '1',
                                      'svn:author', '--strict', wc_dir)
+
+  # But a proplist of this property value still fails via DAV.
+  expected_output = [
+    'Unversioned properties on revision 1:\n',
+    '  svn:author\n',
+    '  svn:date\n',
+    '  svn:log\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '--revprop', '-r', '1',
+                                     wc_dir)
 
 
 ########################################################################

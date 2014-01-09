@@ -55,10 +55,11 @@
 #include "svn_version.h"
 #include "svn_xml.h"
 
-#include "private/svn_diff_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_diff_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_io_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /*** Some convenience macros and types. ***/

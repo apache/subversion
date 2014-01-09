@@ -660,7 +660,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
      "  determines in which revision the target is first looked up.\n"),
-    {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml, opt_changelist}
+    {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
+     opt_changelist, opt_include_externals}
   },
 
   { "list", svn_cl__list, {"ls"}, N_

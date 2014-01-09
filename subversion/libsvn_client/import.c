@@ -48,8 +48,9 @@
 #include "svn_props.h"
 
 #include "client.h"
-#include "private/svn_subr_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 #include "private/svn_magic.h"
 
 /* Import context baton.
@@ -278,7 +279,7 @@ import_file(const svn_delta_editor_t *editor,
   text_checksum =
     svn_checksum_to_cstring(svn_checksum__from_digest_md5(digest, pool), pool);
 
-  return editor->close_file(file_baton, text_checksum, pool);
+  return svn_error_trace(editor->close_file(file_baton, text_checksum, pool));
 }
 
 
@@ -772,9 +773,9 @@ import(const char *local_abspath,
     }
 
   if (import_ctx->repos_changed)
-    return editor->close_edit(edit_baton, pool);
+    return svn_error_trace(editor->close_edit(edit_baton, pool));
   else
-    return editor->abort_edit(edit_baton, pool);
+    return svn_error_trace(editor->abort_edit(edit_baton, pool));
 }
 
 

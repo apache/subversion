@@ -493,13 +493,13 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       /* Grab inherited repository information, if necessary. */
       if (repos_relpath == NULL)
         {
-          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                             &entry->repos,
-                                             &entry->uuid,
-                                             db,
-                                             entry_abspath,
-                                             result_pool,
-                                             scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                           &entry->repos,
+                                           &entry->uuid, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL,
+                                           db, entry_abspath,
+                                           result_pool, scratch_pool));
         }
 
       entry->incomplete = (status == svn_wc__db_status_incomplete);

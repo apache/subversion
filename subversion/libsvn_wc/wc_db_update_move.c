@@ -89,6 +89,7 @@
 #include "svn_sorts.h"
 
 #include "private/svn_skel.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_wc_private.h"
 

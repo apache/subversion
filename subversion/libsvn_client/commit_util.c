@@ -62,10 +62,12 @@ fixup_commit_error(const char *local_abspath,
                    apr_pool_t *scratch_pool)
 {
   if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+      || err->apr_err == SVN_ERR_FS_CONFLICT
       || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS
       || err->apr_err == SVN_ERR_FS_TXN_OUT_OF_DATE
       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
       || err->apr_err == SVN_ERR_RA_DAV_ALREADY_EXISTS
+      || err->apr_err == SVN_ERR_RA_DAV_PRECONDITION_FAILED
       || svn_error_find_cause(err, SVN_ERR_RA_OUT_OF_DATE))
     {
       if (ctx->notify_func2)
@@ -102,6 +104,7 @@ fixup_commit_error(const char *local_abspath,
     }
   else if (svn_error_find_cause(err, SVN_ERR_FS_NO_LOCK_TOKEN)
            || err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH
+           || err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN
            || err->apr_err == SVN_ERR_RA_NOT_LOCKED)
     {
       if (ctx->notify_func2)
@@ -768,9 +771,11 @@ harvest_status_callback(void *status_baton,
            && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
+      const char *dir_repos_relpath = NULL;
 
-      if (!copy_mode_root && !status->switched && !is_added)
-        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, NULL, NULL, NULL, NULL,
+      if (!copy_mode_root && !is_added)
+        SVN_ERR(svn_wc__node_get_base(NULL, &dir_rev, &dir_repos_relpath, NULL,
+                                      NULL, NULL,
                                       wc_ctx, svn_dirent_dirname(local_abspath,
                                                                  scratch_pool),
                                       FALSE /* ignore_enoent */,
@@ -793,6 +798,25 @@ harvest_status_callback(void *status_baton,
               /* Copy BASE location, to represent a mixed-rev or switch copy */
               cf_rev = status->revision;
               cf_relpath = status->repos_relpath;
+            }
+
+          if (!copy_mode_root && !is_added && baton->check_url_func
+              && dir_repos_relpath)
+            {
+              svn_node_kind_t me_kind;
+              /* Maybe we need to issue an delete (mixed rev/switched) */
+
+              SVN_ERR(baton->check_url_func(
+                            baton->check_url_baton, &me_kind,
+                            svn_path_url_add_component2(repos_root_url,
+                                        svn_relpath_join(dir_repos_relpath,
+                                            svn_dirent_basename(local_abspath,
+                                                                NULL),
+                                            scratch_pool),
+                                        scratch_pool),
+                                        dir_rev, scratch_pool));
+              if (me_kind != svn_node_none)
+                state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
             }
         }
     }
@@ -1470,6 +1494,7 @@ struct file_mod_t
 {
   const svn_client_commit_item3_t *item;
   void *file_baton;
+  apr_pool_t *file_pool;
 };
 
 
@@ -1534,6 +1559,9 @@ do_item_commit(void **dir_baton,
     file_pool = apr_hash_pool_get(file_mods);
   else
     file_pool = pool;
+
+  /* Subpools are cheap, but memory isn't */
+  file_pool = svn_pool_create(file_pool); 
 
   /* Call the cancellation function. */
   if (ctx->cancel_func)
@@ -1617,6 +1645,7 @@ do_item_commit(void **dir_baton,
         }
       else
         notify = NULL;
+
 
       if (notify)
         {
@@ -1783,6 +1812,7 @@ do_item_commit(void **dir_baton,
       /* Add this file mod to the FILE_MODS hash. */
       mod->item = item;
       mod->file_baton = file_baton;
+      mod->file_pool = file_pool;
       svn_hash_sets(file_mods, item->session_relpath, mod);
     }
   else if (file_baton)
@@ -1790,7 +1820,7 @@ do_item_commit(void **dir_baton,
       /* Close any outstanding file batons that didn't get caught by
          the "has local mods" conditional above. */
       err = editor->close_file(file_baton, NULL, file_pool);
-
+      svn_pool_destroy(file_pool);
       if (err)
         goto fixup_error;
     }
@@ -1905,6 +1935,8 @@ svn_client__do_commit(const char *base_url,
 
       if (sha1_checksums)
         svn_hash_sets(*sha1_checksums, item->path, new_text_base_sha1_checksum);
+
+      svn_pool_destroy(mod->file_pool);
     }
 
   svn_pool_destroy(iterpool);

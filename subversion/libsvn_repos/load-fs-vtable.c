@@ -501,7 +501,8 @@ new_revision_record(void **revision_baton,
   if ((rb->rev > 0) && (! rb->skipped))
     {
       /* Create a new fs txn. */
-      SVN_ERR(svn_fs_begin_txn2(&(rb->txn), pb->fs, head_rev, 0, pool));
+      SVN_ERR(svn_fs_begin_txn2(&(rb->txn), pb->fs, head_rev,
+                                SVN_FS_TXN_CLIENT_DATE, pool));
       SVN_ERR(svn_fs_txn_root(&(rb->txn_root), rb->txn, pool));
 
       if (pb->notify_func)
@@ -968,8 +969,7 @@ close_revision(void *baton)
     }
 
   /* Commit. */
-  err = svn_fs_commit_txn2(&conflict_msg, &committed_rev, rb->txn, FALSE,
-                           rb->pool);
+  err = svn_fs_commit_txn(&conflict_msg, &committed_rev, rb->txn, rb->pool);
   if (SVN_IS_VALID_REVNUM(committed_rev))
     {
       if (err)

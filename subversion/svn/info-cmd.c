@@ -643,9 +643,12 @@ svn_cl__info(apr_getopt_t *os,
           SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
         }
 
-      err = svn_client_info3(truepath,
+      err = svn_client_info4(truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             opt_state->depth, TRUE, TRUE,
+                             opt_state->depth,
+                             TRUE /* fetch_excluded */,
+                             TRUE /* fetch_actual_only */,
+                             opt_state->include_externals,
                              opt_state->changelists,
                              receiver, (void *) path_prefix,
                              ctx, subpool);

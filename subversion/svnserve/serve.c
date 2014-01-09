@@ -3886,7 +3886,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
                                   connection->params->compression_level,
                                   connection->params->zero_copy_limit,
                                   connection->params->error_check_interval,
-                                  pool);
+                                  connection->pool);
 
       /* Construct server baton and open the repository for the first time. */
       SVN_ERR(construct_server_baton(&connection->baton, connection->conn,

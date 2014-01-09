@@ -965,14 +965,18 @@ open_target_session(svn_ra_session_t **target_session_p,
 typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
-  /* Extra 'backdoor' session for fetching data *from* the target repo. */
-  svn_ra_session_t *extra_to_session;
   svn_revnum_t current_revision;
   subcommand_baton_t *sb;
   svn_boolean_t has_commit_revprops_capability;
+  svn_boolean_t has_atomic_revprops_capability;
   int normalized_rev_props_count;
   int normalized_node_props_count;
   const char *to_root;
+
+#ifdef ENABLE_EV2_SHIMS
+  /* Extra 'backdoor' session for fetching data *from* the target repo. */
+  svn_ra_session_t *extra_to_session;
+#endif
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
@@ -1049,7 +1053,7 @@ filter_include_log(const char *key)
   return ! filter_exclude_log(key);
 }
 
-
+#ifdef ENABLE_EV2_SHIMS
 static svn_error_t *
 fetch_base_func(const char **filename,
                 void *baton,
@@ -1177,6 +1181,7 @@ get_shim_callbacks(replay_baton_t *rb,
 
   return callbacks;
 }
+#endif
 
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
@@ -1245,8 +1250,10 @@ replay_rev_started(svn_revnum_t revision,
                                      rb->sb->source_prop_encoding, pool));
   rb->normalized_rev_props_count += normalized_count;
 
+#ifdef ENABLE_EV2_SHIMS
   SVN_ERR(svn_ra__register_editor_shim_callbacks(rb->to_session,
                                 get_shim_callbacks(rb, pool)));
+#endif
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
                                     &commit_baton,
                                     filtered,
@@ -1289,6 +1296,7 @@ replay_rev_finished(svn_revnum_t revision,
   apr_hash_t *filtered, *existing_props;
   int filtered_count;
   int normalized_count;
+  const svn_string_t *rev_str;
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
@@ -1328,21 +1336,24 @@ replay_rev_finished(svn_revnum_t revision,
 
   svn_pool_clear(subpool);
 
+  rev_str = svn_string_create(apr_psprintf(pool, "%ld", revision), subpool);
+
   /* Ok, we're done, bring the last-merged-rev property up to date. */
   SVN_ERR(svn_ra_change_rev_prop2(
            rb->to_session,
            0,
            SVNSYNC_PROP_LAST_MERGED_REV,
            NULL,
-           svn_string_create(apr_psprintf(pool, "%ld", revision),
-                             subpool),
+           rev_str,
            subpool));
 
   /* And finally drop the currently copying prop, since we're done
      with this revision. */
   SVN_ERR(svn_ra_change_rev_prop2(rb->to_session, 0,
                                   SVNSYNC_PROP_CURRENTLY_COPYING,
-                                  NULL, NULL, subpool));
+                                  rb->has_atomic_revprops_capability
+                                    ? &rev_str : NULL,
+                                  NULL, subpool));
 
   /* Notify the user that we copied revision properties. */
   if (! rb->sb->quiet)
@@ -1470,6 +1481,11 @@ do_synchronize(svn_ra_session_t *to_session,
   SVN_ERR(svn_ra_has_capability(rb->to_session,
                                 &rb->has_commit_revprops_capability,
                                 SVN_RA_CAPABILITY_COMMIT_REVPROPS,
+                                pool));
+
+  SVN_ERR(svn_ra_has_capability(rb->to_session,
+                                &rb->has_atomic_revprops_capability,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
 
   start_revision = last_merged + 1;

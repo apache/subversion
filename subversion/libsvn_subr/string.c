@@ -78,14 +78,10 @@ membuf_ensure(void **data, apr_size_t *size,
       apr_size_t new_size = *size;
 
       if (new_size == 0)
-        /* APR will increase odd allocation sizes to the next
-         * multiple for 8, for instance. Take advantage of that
-         * knowledge and allow for the extra size to be used. */
         new_size = minimum_size;
       else
         while (new_size < minimum_size)
           {
-            /* new_size is aligned; doubling it should keep it aligned */
             const apr_size_t prev_size = new_size;
             new_size *= 2;
 

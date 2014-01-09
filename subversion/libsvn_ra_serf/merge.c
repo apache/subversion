@@ -65,7 +65,7 @@ typedef enum merge_state_e {
   AUTHOR,
   POST_COMMIT_ERR,
 
-  PROP_VAL
+  STATUS
 } merge_state_e;
 
 
@@ -279,12 +279,12 @@ setup_merge_headers(serf_bucket_t *headers,
   return SVN_NO_ERROR;
 }
 
-void
-svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
-                                   const char *parent,
-                                   serf_bucket_t *body,
-                                   serf_bucket_alloc_t *alloc,
-                                   apr_pool_t *pool)
+static void
+merge_lock_token_list(apr_hash_t *lock_tokens,
+                      const char *parent,
+                      serf_bucket_t *body,
+                      serf_bucket_alloc_t *alloc,
+                      apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -363,8 +363,7 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_tag_buckets(body_bkt, "D:creator-displayname", NULL, alloc);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
 
-  svn_ra_serf__merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt, alloc,
-                                     pool);
+  merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt, alloc, pool);
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:merge");
 
@@ -376,7 +375,6 @@ create_merge_body(serf_bucket_t **bkt,
 
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
-                       int *response_code,
                        svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
@@ -404,7 +402,7 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
   merge_ctx->merge_url = session->session_url.path;
 
   xmlctx = svn_ra_serf__xml_context_create(merge_ttable,
-                                           NULL, merge_closed, NULL, NULL,
+                                           NULL, merge_closed, NULL,
                                            merge_ctx,
                                            scratch_pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
@@ -423,8 +421,10 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
+  if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
   *commit_info = merge_ctx->commit_info;
-  *response_code = handler->sline.code;
 
   return SVN_NO_ERROR;
 }

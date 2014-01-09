@@ -28,6 +28,7 @@
 
 #include "svn_private_config.h"
 
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_temp_serializer.h"
 
@@ -533,6 +534,22 @@ svn_fs_fs__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                                     pool));
 }
 
+static svn_error_t *
+index_create(apr_file_t **index_file, const char *file_name, apr_pool_t *pool)
+{
+  /* remove any old index file
+   * (it would probably be r/o and simply re-writing it would fail) */
+  SVN_ERR(svn_io_remove_file2(file_name, TRUE, pool));
+
+  /* We most likely own the write lock to the repo, so this should
+   * either just work or fail indicating a serious problem. */
+  SVN_ERR(svn_io_file_open(index_file, file_name,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__l2p_index_create(svn_fs_t *fs,
                             const char *file_name,
@@ -632,9 +649,7 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* create the target file */
-  SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
-                           | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, local_pool));
+  SVN_ERR(index_create(&index_file, file_name, local_pool));
 
   /* write header info */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
@@ -700,6 +715,8 @@ retry_open_l2p_index(svn_fs_fs__revision_file_t *rev_file,
   /* reopen rep file if necessary */
   if (rev_file->file)
     SVN_ERR(svn_fs_fs__reopen_revision_file(rev_file, fs, revision));
+  else
+    rev_file->is_packed = svn_fs_fs__is_packed_rev(fs, revision);
 
   /* re-try opening this index (keep the p2l closed) */
   SVN_ERR(packed_stream_open(&rev_file->l2p_stream,
@@ -1482,13 +1499,22 @@ svn_fs_fs__item_offset(apr_off_t *absolute_position,
       err = l2p_index_lookup(absolute_position, fs, rev_file, revision,
                              item_index, pool);
 
-      /* retry upon intermittent pack */
-      if (err && svn_fs_fs__is_packed_rev(fs, revision) != rev_file->is_packed)
+      if (err && !rev_file->is_packed)
         {
-          svn_error_clear(err);
-          SVN_ERR(retry_open_l2p_index(rev_file, fs, revision));
-          err = l2p_index_lookup(absolute_position, fs, rev_file, revision,
-                                 item_index, pool);
+          /* REVISION might have been packed in the meantime.
+             Refresh cache & retry. */
+          err = svn_error_compose_create(err,
+                                         svn_fs_fs__update_min_unpacked_rev
+                                            (fs, pool));
+
+          /* retry upon intermittent pack */
+          if (svn_fs_fs__is_packed_rev(fs, revision) != rev_file->is_packed)
+            {
+              svn_error_clear(err);
+              SVN_ERR(retry_open_l2p_index(rev_file, fs, revision));
+              err = l2p_index_lookup(absolute_position, fs, rev_file,
+                                     revision, item_index, pool);
+            }
         }
     }
   else if (rev_file->is_packed)
@@ -1672,9 +1698,7 @@ svn_fs_fs__p2l_index_create(svn_fs_t *fs,
       = svn_spillbuf__get_size(buffer) - last_buffer_size;
 
   /* create the target file */
-  SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
-                           | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, local_pool));
+  SVN_ERR(index_create(&index_file, file_name, local_pool));
 
   /* write the start revision, file size and page size */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
@@ -2297,25 +2321,17 @@ get_p2l_entry_from_cached_page(const void *data,
   /* resolve all pointer values of in-cache data */
   const apr_array_header_t *page = data;
   apr_array_header_t *entries = apr_pmemdup(pool, page, sizeof(*page));
-  int idx;
+  svn_fs_fs__p2l_entry_t *entry;
 
   entries->elts = (char *)svn_temp_deserializer__ptr(page,
                                      (const void *const *)&page->elts);
 
   /* search of the offset we want */
-  idx = svn_sort__bsearch_lower_bound(&offset, entries,
+  entry = svn_sort__array_lookup(entries, &offset, NULL,
       (int (*)(const void *, const void *))compare_p2l_entry_offsets);
 
   /* return it, if it is a perfect match */
-  if (idx < entries->nelts)
-    {
-      svn_fs_fs__p2l_entry_t *entry
-        = &APR_ARRAY_IDX(entries, idx, svn_fs_fs__p2l_entry_t);
-      if (entry->offset == offset)
-        return apr_pmemdup(pool, entry, sizeof(*entry));
-    }
-
-  return NULL;
+  return entry ? apr_pmemdup(pool, entry, sizeof(*entry)) : NULL;
 }
 
 /* Implements svn_cache__partial_getter_func_t for P2L index pages, copying
@@ -2362,25 +2378,14 @@ svn_fs_fs__p2l_entry_lookup(svn_fs_fs__p2l_entry_t **entry_p,
                                  p2l_entry_lookup_func, &offset, pool));
   if (!is_cached)
     {
-      int idx;
-
       /* do a standard index lookup.  This is will automatically prefetch
        * data to speed up future lookups. */
       apr_array_header_t *entries;
       SVN_ERR(p2l_index_lookup(&entries, rev_file, fs, revision, offset, pool));
 
       /* Find the entry that we want. */
-      idx = svn_sort__bsearch_lower_bound(&offset, entries, 
+      *entry_p = svn_sort__array_lookup(entries, &offset, NULL,
           (int (*)(const void *, const void *))compare_p2l_entry_offsets);
-
-      /* return it, if it is a perfect match */
-      if (idx < entries->nelts)
-        {
-          svn_fs_fs__p2l_entry_t *entry
-            = &APR_ARRAY_IDX(entries, idx, svn_fs_fs__p2l_entry_t);
-          if (entry->offset == offset)
-            *entry_p = entry;
-        }
     }
 
   return SVN_NO_ERROR;

@@ -524,6 +524,24 @@
 }
 #endif
 
+#ifdef SWIGPERL
+%typemap(in) const void *value 
+  (apr_pool_t *_global_pool = NULL)
+{
+    if (!SvOK($input) || $input == &PL_sv_undef) {
+        $1 = NULL;
+    }
+    else if (SvPOK($input)) {
+        if (_global_pool == NULL)
+            _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+        $1 = apr_pstrdup(_global_pool, SvPV_nolen($input));
+    }
+    else {
+        croak("Value is not a string (or undef)");
+    }
+}
+#endif
+
 /*
   - all values are converted to char*
   - assume the first argument is Ruby object for svn_auth_baton_t*

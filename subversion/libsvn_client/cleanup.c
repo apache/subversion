@@ -82,6 +82,7 @@ do_cleanup(const char *local_abspath,
                           clear_dav_cache,
                           vacuum_pristines,
                           ctx->cancel_func, ctx->cancel_baton,
+                          ctx->notify_func2, ctx->notify_baton2,
                           scratch_pool));
 
   if (fix_timestamps)

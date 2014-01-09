@@ -287,14 +287,6 @@ typedef enum svn_repos_notify_warning_t
   svn_repos_notify_warning_invalid_fspath,
 
   /**
-   * Found a denormalized name. Reported when the name of a directoy
-   * entry is not normalized to Unicode Normalization Form C.
-   *
-   * @since New in 1.9.
-   */
-  svn_repos_notify_warning_denormalized_name,
-
-  /**
    * Detected a name collision. Reported when the names of two or more
    * entries in the same directory differ only in character
    * representation (normalization), but are otherwise identical.
@@ -302,15 +294,6 @@ typedef enum svn_repos_notify_warning_t
    * @since New in 1.9.
    */
   svn_repos_notify_warning_name_collision,
-
-  /**
-   * Found a denormalized mergeinfo entry. Reported when the path in
-   * an entry in the svn:mergeinfo property is not normalized to
-   * Unicode Normalization Form C.
-   *
-   * @since New in 1.9.
-   */
-  svn_repos_notify_warning_denormalized_mergeinfo,
 
   /**
    * Detected a mergeinfo path collision. Reported when the paths in
@@ -2694,11 +2677,10 @@ svn_repos_info_format(int *repos_format,
  * not notified. Finally, return an error if there were any failures during
  * verification, or SVN_NO_ERROR if there were no failures.
  *
- * If @a check_normalization is @c TRUE, verify that all path names in
- * the repository and in @c svn:mergeinfo entries are normaized to
- * Unicode Normalization Form C, and report any name collisions within
- * the same directory or svn:mergeinfo property where the names differ
- * only in character representation, but are otherwise identical.
+ * If @a check_normalization is @c TRUE, report any name collisions
+ * within the same directory or svn:mergeinfo property where the names
+ * differ only in character representation, but are otherwise
+ * identical.
  *
  * @since New in 1.9.
  */

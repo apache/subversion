@@ -99,10 +99,13 @@ typedef struct svn_ra_serf__connection_t {
  * The master serf RA session.
  *
  * This is stored in the ra session ->priv field.
+ *
+ * ### Check ra_serf_dup_session when adding fields.
  */
 struct svn_ra_serf__session_t {
   /* Pool for allocations during this session */
   apr_pool_t *pool;
+  apr_hash_t *config; /* For duplicating */
 
   /* The current context */
   serf_context_t *context;
@@ -263,7 +266,7 @@ struct svn_ra_serf__session_t {
  */
 typedef struct svn_ra_serf__dav_props_t {
   /* Element namespace */
-  const char *namespace;
+  const char *xmlns;
   /* Element name */
   const char *name;
 } svn_ra_serf__dav_props_t;
@@ -273,7 +276,7 @@ typedef struct svn_ra_serf__dav_props_t {
  */
 typedef struct ns_t {
   /* The assigned name. */
-  const char *namespace;
+  const char *xmlns;
   /* The full URL for this namespace. */
   const char *url;
   /* The next namespace in our list. */
@@ -378,12 +381,28 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               svn_ra_serf__session_t *sess,
                               apr_pool_t *scratch_pool);
 
+/* Run the context once. Manage waittime_left to handle timing out when
+   nothing happens over the session->timout.
+ */
+svn_error_t *
+svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
+                         apr_interval_time_t *waittime_left,
+                         apr_pool_t *scratch_pool);
+
+
+
 /* Callback for response handlers */
 typedef svn_error_t *
 (*svn_ra_serf__response_handler_t)(serf_request_t *request,
                                    serf_bucket_t *response,
                                    void *handler_baton,
                                    apr_pool_t *scratch_pool);
+
+/* Callback when the request is done */
+typedef svn_error_t *
+(*svn_ra_serf__response_done_delegate_t)(serf_request_t *request,
+                                         void *handler_baton,
+                                         apr_pool_t *scratch_pool);
 
 /* Callback for when a request body is needed. */
 /* ### should pass a scratch_pool  */
@@ -413,6 +432,8 @@ typedef struct svn_ra_serf__server_error_t svn_ra_serf__server_error_t;
 /*
  * Structure that can be passed to our default handler to guide the
  * execution of the request through its lifecycle.
+ *
+ * Use svn_ra_serf__create_handler() to create instances of this struct.
  */
 typedef struct svn_ra_serf__handler_t {
   /* The HTTP method string of the request */
@@ -433,6 +454,10 @@ typedef struct svn_ra_serf__handler_t {
      for request. */
   svn_boolean_t no_dav_headers;
 
+  /* If TRUE doesn't end the context directly on certain HTTP errors like 405,
+     408, 500 (see util.c handle_response()) */
+  svn_boolean_t no_fail_on_http_failure_status;
+
   /* Has the request/response been completed?  */
   svn_boolean_t done;
 
@@ -450,6 +475,19 @@ typedef struct svn_ra_serf__handler_t {
      within HANDLER_POOL.  */
   serf_status_line sline;  /* The parsed Status-Line  */
   const char *location;  /* The Location: header, if any  */
+
+  /* This function and baton pair allows handling the completion of request.
+   *
+   * The default handler is responsible for the HTTP failure processing.
+   *
+   * If no_fail_on_http_failure_status is not TRUE, then the callback will
+   * return recorded server errors or if there is none and the http status
+   * specifies an error returns an error for that.
+   *
+   * The default baton is the handler itself.
+   */
+  svn_ra_serf__response_done_delegate_t done_delegate;
+  void *done_delegate_baton;
 
   /* The handler and baton pair to be executed when a non-recoverable error
    * is detected.  If it is NULL in the presence of an error, an abort() may
@@ -618,43 +656,8 @@ struct svn_ra_serf__xml_parser_t {
    */
   svn_ra_serf__list_t *done_item;
 
-  /* If this flag is TRUE, errors during parsing will be ignored.
-   *
-   * This is mainly used when we are processing an error XML response to
-   * avoid infinite loops.
-   */
-  svn_boolean_t ignore_errors;
-
   /* If an error occurred, this value will be non-NULL. */
   svn_error_t *error;
-
-  /* Deciding whether to pause, or not, is performed within the parsing
-     callbacks. If a callback decides to set this flag, then the loop
-     driving the parse (generally, a series of calls to serf_context_run())
-     is going to need to coordinate the un-pausing of the parser by
-     processing pending content. Thus, deciding to pause the parser is a
-     coordinate effort rather than merely setting this flag.
-
-     When an XML parsing callback sets this flag, note that additional
-     elements may be parsed (as the current buffer is consumed). At some
-     point, the flag will be recognized and arriving network content will
-     be stashed away in the PENDING structure (see below).
-
-     At some point, the controlling loop should clear this value. The
-     underlying network processing will note the change and begin passing
-     content into the XML callbacks.
-
-     Note that the controlling loop should also process pending content
-     since the arriving network content will typically finish first.  */
-  svn_boolean_t paused;
-
-  /* While the XML parser is paused, content arriving from the server
-     must be saved locally. We cannot stop reading, or the server may
-     decide to drop the connection. The content will be stored in memory
-     up to a certain limit, and will then be spilled over to disk.
-
-     See libsvn_ra_serf/util.c  */
-  struct svn_ra_serf__pending_t *pending;
 };
 
 
@@ -722,12 +725,6 @@ typedef svn_error_t *
                             apr_size_t len,
                             apr_pool_t *scratch_pool);
 
-/* Called when releasing the XML parser to signal that the entire document was
-   read successfully */
-typedef svn_error_t *
-(*svn_ra_serf__xml_done_t)(void *baton,
-                           apr_pool_t *scratch_pool);
-
 
 /* Magic state value for the initial state in a svn_ra_serf__xml_transition_t
    table */
@@ -773,6 +770,9 @@ typedef struct svn_ra_serf__xml_transition_t {
 
 } svn_ra_serf__xml_transition_t;
 
+/* Constructor for */
+svn_ra_serf__handler_t *
+svn_ra_serf__create_handler(apr_pool_t *result_pool);
 
 /* Construct an XML parsing context, based on the TTABLE transition table.
    As content is parsed, the CLOSED_CB callback will be invoked according
@@ -787,10 +787,7 @@ typedef struct svn_ra_serf__xml_transition_t {
    COLLECT_CDATA flag). It will be called in every state, so the callback
    must examine the CURRENT_STATE parameter to decide what to do.
 
-   If DONE_CB is not NULL, then it will be called when the parser is closed
-   after successfully parsing an entire document.
-
-   The same BATON value will be passed to all four callbacks.
+   The same BATON value will be passed to all three callbacks.
 
    The context will be created within RESULT_POOL.  */
 svn_ra_serf__xml_context_t *
@@ -799,7 +796,6 @@ svn_ra_serf__xml_context_create(
   svn_ra_serf__xml_opened_t opened_cb,
   svn_ra_serf__xml_closed_t closed_cb,
   svn_ra_serf__xml_cdata_t cdata_cb,
-  svn_ra_serf__xml_done_t done_cb,
   void *baton,
   apr_pool_t *result_pool);
 
@@ -883,33 +879,24 @@ svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
                           const char *data,
                           apr_size_t len);
 
-
 /*
  * Parses a server-side error message into a local Subversion error.
  */
 struct svn_ra_serf__server_error_t {
-  /* Our local representation of the error. */
-  svn_error_t *error;
-
-  /* Are we done with the response? */
-  svn_boolean_t done;
-
-  /* Have we seen an error tag? */
-  svn_boolean_t in_error;
-
-  /* Have we seen a HTTP "412 Precondition Failed" error? */
-  svn_boolean_t contains_precondition_error;
-
-  /* Should we be collecting the XML cdata? */
-  svn_boolean_t collect_cdata;
-
-  /* Collected cdata. NULL if cdata not needed. */
-  svn_stringbuf_t *cdata;
+  apr_pool_t *pool;
 
   /* XML parser and namespace used to parse the remote response */
-  svn_ra_serf__xml_parser_t parser;
-};
+  svn_ra_serf__xml_context_t *xmlctx;
 
+  svn_ra_serf__response_handler_t response_handler;
+  void *response_baton;
+
+  /* The partial errors to construct the final error from */
+  apr_array_header_t *items;
+
+  /* The hooked handler */
+  svn_ra_serf__handler_t *handler;
+};
 
 /*
  * Handler that discards the entire @a response body associated with a
@@ -967,6 +954,36 @@ svn_ra_serf__expect_empty_body(serf_request_t *request,
 
 
 /*
+ * This function sets up error parsing for an existing request
+ */
+svn_error_t *
+svn_ra_serf__setup_error_parsing(svn_ra_serf__server_error_t **server_err,
+                                 svn_ra_serf__handler_t *handler,
+                                 svn_boolean_t expect_207_only,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/*
+ * Forwards response data to the server error parser
+ */
+svn_error_t *
+svn_ra_serf__handle_server_error(svn_ra_serf__server_error_t *server_error,
+                                 svn_ra_serf__handler_t *handler,
+                                 serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 apr_status_t *serf_status,
+                                 apr_pool_t *scratch_pool);
+
+/*
+ * Creates the svn_error_t * instance from the error recorded in
+ * HANDLER->server_error
+ */
+svn_error_t *
+svn_ra_serf__server_error_create(svn_ra_serf__handler_t *handler,
+                                 apr_pool_t *scratch_pool);
+
+
+/*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
  * Implements svn_ra_serf__response_handler_t.
@@ -1008,12 +1025,6 @@ svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
  */
 void
 svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
-
-
-svn_error_t *
-svn_ra_serf__process_pending(svn_ra_serf__xml_parser_t *parser,
-                             svn_boolean_t *network_eof,
-                             apr_pool_t *scratch_pool);
 
 
 /*
@@ -1330,13 +1341,6 @@ svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
 
 /** MERGE-related functions **/
 
-void
-svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
-                                   const char *parent,
-                                   serf_bucket_t *body,
-                                   serf_bucket_alloc_t *alloc,
-                                   apr_pool_t *pool);
-
 /* Create an MERGE request aimed at the SESSION url, requesting the
    merge of the resource identified by MERGE_RESOURCE_URL.
    LOCK_TOKENS is a hash mapping paths to lock tokens owned by the
@@ -1344,7 +1348,6 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
    locks set on the paths included in this commit.  */
 svn_error_t *
 svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
-                       int *response_code,
                        svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *merge_resource_url,
@@ -1487,6 +1490,20 @@ svn_ra_serf__get_stable_url(const char **stable_url,
 
 
 /** RA functions **/
+
+/* Implements svn_ra__vtable_t.reparent(). */
+svn_error_t *
+svn_ra_serf__reparent(svn_ra_session_t *ra_session,
+                      const char *url,
+                      apr_pool_t *pool);
+
+/* Implements svn_ra__vtable_t.rev_prop(). */
+svn_error_t *
+svn_ra_serf__rev_prop(svn_ra_session_t *session,
+                      svn_revnum_t rev,
+                      const char *name,
+                      svn_string_t **value,
+                      apr_pool_t *pool);
 
 /* Implements svn_ra__vtable_t.get_log(). */
 svn_error_t *
@@ -1773,11 +1790,22 @@ svn_ra_serf__credentials_callback(char **username, char **password,
  * Convert an HTTP STATUS_CODE resulting from a WebDAV request against
  * PATH to the relevant error code.  Use the response-supplied LOCATION
  * where it necessary.
+ *
+ * Returns SVN_NO_ERROR if sline doesn't specify an error condition
  */
 svn_error_t *
 svn_ra_serf__error_on_status(serf_status_line sline,
                              const char *path,
                              const char *location);
+
+/**
+ * Convert an unexpected HTTP STATUS_CODE from a request to the relevant error
+ * code. Unlike svn_ra_serf__error_on_status() this function creates an error
+ * for any result
+ */
+svn_error_t *
+svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler);
+
 
 /* ###? */
 svn_error_t *
@@ -1800,6 +1828,14 @@ svn_error_t *
 svn_ra_serf__wrap_err(apr_status_t status,
                       const char *fmt,
                       ...);
+
+/* Create a bucket that just returns DATA (with length LEN) and then returns
+   the APR_EAGAIN status */
+serf_bucket_t *
+svn_ra_serf__create_bucket_with_eagain(const char *data,
+                                       apr_size_t len,
+                                       serf_bucket_alloc_t *allocator);
+
 
 
 #if defined(SVN_DEBUG)

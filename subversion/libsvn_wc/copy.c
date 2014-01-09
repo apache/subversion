@@ -644,10 +644,13 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                            scratch_pool, scratch_pool));
         else
           /* If not added, the node must have a base or we can't copy */
-          SVN_ERR(svn_wc__db_scan_base_repos(NULL, &src_repos_root_url,
-                                             &src_repos_uuid,
-                                             db, src_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                           &src_repos_root_url,
+                                           &src_repos_uuid, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL,
+                                           db, src_abspath,
+                                           scratch_pool, scratch_pool));
       }
 
     if (!dst_repos_root_url)
@@ -661,10 +664,13 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                            scratch_pool, scratch_pool));
         else
           /* If not added, the node must have a base or we can't copy */
-          SVN_ERR(svn_wc__db_scan_base_repos(NULL, &dst_repos_root_url,
-                                             &dst_repos_uuid,
-                                             db, dstdir_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                           &dst_repos_root_url,
+                                           &dst_repos_uuid, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL,
+                                           db, dstdir_abspath,
+                                           scratch_pool, scratch_pool));
       }
 
     if (strcmp(src_repos_root_url, dst_repos_root_url) != 0

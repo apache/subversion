@@ -36,6 +36,7 @@
 #include "svn_props.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
 #include "ra_loader.h"
 
 
@@ -944,7 +945,7 @@ svn_ra__get_inherited_props_walk(svn_ra_session_t *session,
                                                          parent_url,
                                                          result_pool);
           new_iprop->prop_hash = final_hash;
-          svn_sort__array_insert(&new_iprop, *inherited_props, 0);
+          svn_sort__array_insert(*inherited_props, &new_iprop, 0);
         }
     }
 

@@ -37,6 +37,7 @@
 #include "repos.h"
 
 #include "private/svn_repos_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_fspath.h"
 
@@ -88,7 +89,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   svn_pool_destroy(iterpool);
 
   /* Commit. */
-  err = svn_fs_commit_txn2(conflict_p, new_rev, txn, TRUE, pool);
+  err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
   if (! SVN_IS_VALID_REVNUM(*new_rev))
     {
       /* The commit failed, try to restore the ephemeral properties. */
@@ -851,7 +852,7 @@ svn_repos_fs_get_inherited_props(apr_array_header_t **inherited_props_p,
                 apr_pstrdup(result_pool, parent_path + 1);
               i_props->prop_hash = parent_properties;
               /* Build the output array in depth-first order. */
-              svn_sort__array_insert(&i_props, inherited_props, 0);
+              svn_sort__array_insert(inherited_props, &i_props, 0);
             }
         }
     }

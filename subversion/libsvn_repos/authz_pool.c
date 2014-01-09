@@ -38,7 +38,6 @@
 #include "../libsvn_subr/config_impl.h"
 
 #include "repos.h"
-#include <apr_poll.h>
 
 /* Currently this structure is just a wrapper around a svn_config_t.
  */

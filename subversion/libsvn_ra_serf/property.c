@@ -193,7 +193,7 @@ propfind_opened(svn_ra_serf__xml_estate_t *xes,
 
   if (entered_state == PROPVAL)
     {
-      svn_ra_serf__xml_note(xes, PROPVAL, "ns", tag->namespace);
+        svn_ra_serf__xml_note(xes, PROPVAL, "ns", tag->xmlns);
       svn_ra_serf__xml_note(xes, PROPVAL, "name", tag->name);
     }
   else if (entered_state == PROPSTAT)
@@ -499,7 +499,7 @@ create_propfind_body(serf_bucket_t **bkt,
   body_bkt = serf_bucket_aggregate_create(alloc);
 
   prop = ctx->find_props;
-  while (prop && prop->namespace)
+  while (prop && prop->xmlns)
     {
       /* special case the allprop case. */
       if (strcmp(prop->name, "allprop") == 0)
@@ -519,7 +519,7 @@ create_propfind_body(serf_bucket_t **bkt,
                                           alloc);
       serf_bucket_aggregate_append(body_bkt, tmp);
 
-      tmp = SERF_BUCKET_SIMPLE_STRING(prop->namespace, alloc);
+      tmp = SERF_BUCKET_SIMPLE_STRING(prop->xmlns, alloc);
       serf_bucket_aggregate_append(body_bkt, tmp);
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"/>", sizeof("\"/>")-1,
@@ -602,7 +602,7 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
   xmlctx = svn_ra_serf__xml_context_create(propfind_ttable,
                                            propfind_opened,
                                            propfind_closed,
-                                           NULL, NULL,
+                                           NULL,
                                            new_prop_ctx,
                                            pool);
   handler = svn_ra_serf__create_expat_handler(xmlctx,
@@ -636,16 +636,12 @@ svn_error_t *
 svn_ra_serf__wait_for_props(svn_ra_serf__handler_t *handler,
                             apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-  svn_error_t *err2;
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  err = svn_ra_serf__context_run_one(handler, scratch_pool);
+  if (handler->sline.code != 207)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
-  err2 = svn_ra_serf__error_on_status(handler->sline,
-                                      handler->path,
-                                      handler->location);
-
-  return svn_error_compose_create(err2, err);
+  return SVN_NO_ERROR;
 }
 
 /*
@@ -1006,12 +1002,18 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
       const char *version_name;
 
       version_name = svn_prop_get_value(dav_props, SVN_DAV__VERSION_NAME);
-      if (!version_name)
+      if (version_name)
+        {
+          apr_int64_t rev;
+
+          SVN_ERR(svn_cstring_atoi64(&rev, version_name));
+          *actual_revision = (svn_revnum_t)rev;
+        }
+
+      if (!version_name || !SVN_IS_VALID_REVNUM(*actual_revision))
         return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                                 _("The PROPFIND response did not include "
                                   "the requested version-name value"));
-
-      *actual_revision = SVN_STR_TO_REV(version_name);
     }
 
   return SVN_NO_ERROR;
@@ -1126,10 +1128,6 @@ get_baseline_info(const char **bc_url,
         {
           SVN_ERR(svn_ra_serf__v2_get_youngest_revnum(
                     revnum_used, conn, pool));
-          if (! SVN_IS_VALID_REVNUM(*revnum_used))
-            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                    _("The OPTIONS response did not include "
-                                      "the youngest revision"));
         }
 
       *bc_url = apr_psprintf(pool, "%s/%ld",

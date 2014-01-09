@@ -40,6 +40,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "svn_time.h"
 #include "svn_version.h"
 
@@ -494,6 +495,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
   serf_sess->pool = svn_pool_create(pool);
+  if (config)
+    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, pool));
+  else
+    serf_sess->config = NULL;
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
   serf_sess->progress_func = callbacks->progress_func;
@@ -598,8 +603,179 @@ svn_ra_serf__open(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_ra__vtable_t.reparent(). */
+/* Implements svn_ra__vtable_t.dup_session */
 static svn_error_t *
+ra_serf_dup_session(svn_ra_session_t *new_session,
+                    svn_ra_session_t *old_session,
+                    const char *new_session_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__session_t *old_sess = old_session->priv;
+  svn_ra_serf__session_t *new_sess;
+  apr_status_t status;
+
+  new_sess = apr_pmemdup(result_pool, old_sess, sizeof(*new_sess));
+
+  new_sess->pool = result_pool;
+
+  if (new_sess->config)
+    SVN_ERR(svn_config_copy_config(&new_sess->config, new_sess->config,
+                                   result_pool));
+
+  /* max_connections */
+  /* using_ssl */
+  /* using_compression */
+  /* http10 */
+  /* using_chunked_requests */
+  /* detect_chunking */
+
+  if (new_sess->useragent)
+    new_sess->useragent = apr_pstrdup(result_pool, new_sess->useragent);
+
+  if (new_sess->vcc_url)
+    new_sess->vcc_url = apr_pstrdup(result_pool, new_sess->vcc_url);
+
+  new_sess->auth_state = NULL;
+  new_sess->auth_attempts = 0;
+
+  /* Callback functions to get info from WC */
+  /* wc_callbacks */
+  /* wc_callback_baton */
+
+  /* progress_func */
+  /* progress_baton */
+
+  /* cancel_func */
+  /* cancel_baton */
+
+  /* shim_callbacks */
+
+  new_sess->pending_error = NULL;
+
+  /* authn_types */
+
+  /* Keys and values are static */
+  if (new_sess->capabilities)
+    new_sess->capabilities = apr_hash_copy(result_pool, new_sess->capabilities);
+
+  if (new_sess->activity_collection_url)
+    {
+      new_sess->activity_collection_url
+                = apr_pstrdup(result_pool, new_sess->activity_collection_url);
+    }
+
+   /* using_proxy */
+
+  if (new_sess->proxy_username)
+    {
+      new_sess->proxy_username
+                = apr_pstrdup(result_pool, new_sess->proxy_username);
+    }
+
+  if (new_sess->proxy_password)
+    {
+      new_sess->proxy_username
+                = apr_pstrdup(result_pool, new_sess->proxy_password);
+    }
+
+  new_sess->proxy_auth_attempts = 0;
+
+  /* trust_default_ca */
+
+  if (new_sess->ssl_authorities)
+    {
+      new_sess->ssl_authorities = apr_pstrdup(result_pool,
+                                              new_sess->ssl_authorities);
+    }
+
+  if (new_sess->uuid)
+    new_sess->uuid = apr_pstrdup(result_pool, new_sess->uuid);
+
+  /* timeout */
+  /* supports_deadprop_count */
+
+  if (new_sess->me_resource)
+    new_sess->me_resource = apr_pstrdup(result_pool, new_sess->me_resource);
+  if (new_sess->rev_stub)
+    new_sess->rev_stub = apr_pstrdup(result_pool, new_sess->rev_stub);
+  if (new_sess->txn_stub)
+    new_sess->txn_stub = apr_pstrdup(result_pool, new_sess->txn_stub);
+  if (new_sess->txn_root_stub)
+    new_sess->txn_root_stub = apr_pstrdup(result_pool,
+                                          new_sess->txn_root_stub);
+  if (new_sess->vtxn_stub)
+    new_sess->vtxn_stub = apr_pstrdup(result_pool, new_sess->vtxn_stub);
+  if (new_sess->vtxn_root_stub)
+    new_sess->vtxn_root_stub = apr_pstrdup(result_pool,
+                                           new_sess->vtxn_root_stub);
+
+  /* Keys and values are static */
+  if (new_sess->supported_posts)
+    new_sess->supported_posts = apr_hash_copy(result_pool,
+                                              new_sess->supported_posts);
+
+  /* ### Can we copy this? */
+  SVN_ERR(svn_ra_serf__blncache_create(&new_sess->blncache,
+                                       new_sess->pool));
+
+  if (new_sess->server_allows_bulk)
+    new_sess->server_allows_bulk = apr_pstrdup(result_pool,
+                                               new_sess->server_allows_bulk);
+
+  new_sess->repos_root_str = apr_pstrdup(result_pool,
+                                         new_sess->repos_root_str);
+  status = apr_uri_parse(result_pool, new_sess->repos_root_str,
+                         &new_sess->repos_root);
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+
+  new_sess->session_url_str = apr_pstrdup(result_pool, new_session_url);
+
+  status = apr_uri_parse(result_pool, new_sess->session_url_str,
+                         &new_sess->session_url);
+
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+
+  /* svn_boolean_t supports_inline_props */
+  /* supports_rev_rsrc_replay */
+
+  new_sess->context = serf_context_create(result_pool);
+
+  SVN_ERR(load_config(new_sess, old_sess->config, result_pool));
+
+  new_sess->conns[0] = apr_pcalloc(result_pool,
+                                   sizeof(*new_sess->conns[0]));
+  new_sess->conns[0]->bkt_alloc =
+          serf_bucket_allocator_create(result_pool, NULL, NULL);
+  new_sess->conns[0]->session = new_sess;
+  new_sess->conns[0]->last_status_code = -1;
+
+  /* go ahead and tell serf about the connection. */
+  status =
+    serf_connection_create2(&new_sess->conns[0]->conn,
+                            new_sess->context,
+                            new_sess->session_url,
+                            svn_ra_serf__conn_setup, new_sess->conns[0],
+                            svn_ra_serf__conn_closed, new_sess->conns[0],
+                            result_pool);
+  if (status)
+    return svn_ra_serf__wrap_err(status, NULL);
+
+  /* Set the progress callback. */
+  serf_context_set_progress_cb(new_sess->context, svn_ra_serf__progress,
+                               new_sess);
+
+  new_sess->num_conns = 1;
+
+  new_session->priv = new_sess;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_ra__vtable_t.reparent(). */
+svn_error_t *
 svn_ra_serf__reparent(svn_ra_session_t *ra_session,
                       const char *url,
                       apr_pool_t *pool)
@@ -675,12 +851,13 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                            latest_revnum, session, pool));
 }
 
-/* Implements svn_ra__vtable_t.rev_proplist(). */
+/* Implementation of svn_ra_serf__rev_proplist(). */
 static svn_error_t *
-svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
-                          svn_revnum_t rev,
-                          apr_hash_t **ret_props,
-                          apr_pool_t *pool)
+serf__rev_proplist(svn_ra_session_t *ra_session,
+                   svn_revnum_t rev,
+                   const svn_ra_serf__dav_props_t *fetch_props,
+                   apr_hash_t **ret_props,
+                   apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
@@ -704,7 +881,7 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
 
   /* ### fix: fetch hash of *just* the PATH@REV props. no nested hash.  */
   SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
-                                      propfind_path, rev, "0", all_props,
+                                      propfind_path, rev, "0", fetch_props,
                                       pool, pool));
 
   SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
@@ -713,8 +890,21 @@ svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_ra__vtable_t.rev_prop(). */
+/* Implements svn_ra__vtable_t.rev_proplist(). */
 static svn_error_t *
+svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
+                          svn_revnum_t rev,
+                          apr_hash_t **ret_props,
+                          apr_pool_t *pool)
+{
+  return svn_error_trace(
+            serf__rev_proplist(ra_session, rev, all_props,
+                               ret_props, pool));
+}
+
+
+/* Implements svn_ra__vtable_t.rev_prop(). */
+svn_error_t *
 svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       svn_revnum_t rev,
                       const char *name,
@@ -722,8 +912,25 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       apr_pool_t *pool)
 {
   apr_hash_t *props;
+  svn_ra_serf__dav_props_t specific_props[2];
+  const svn_ra_serf__dav_props_t *fetch_props = all_props;
 
-  SVN_ERR(svn_ra_serf__rev_proplist(session, rev, &props, pool));
+  /* The DAV propfind doesn't allow property fetches for any property name
+     as there is no defined way to quote values. If we are just fetching a
+     "svn:property" we can safely do this. In other cases we just fetch all
+     revision properties and filter the right one out */
+  if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX)-1) == 0
+      && !strchr(name + sizeof(SVN_PROP_PREFIX)-1, ':'))
+    {
+      specific_props[0].xmlns = SVN_DAV_PROP_NS_SVN;
+      specific_props[0].name = name + sizeof(SVN_PROP_PREFIX)-1;
+      specific_props[1].xmlns = NULL;
+      specific_props[1].name = NULL;
+
+      fetch_props = specific_props;
+    }
+
+  SVN_ERR(serf__rev_proplist(session, rev, fetch_props, &props, pool));
 
   *value = svn_hash_gets(props, name);
 
@@ -946,42 +1153,42 @@ get_dirent_props(apr_uint32_t dirent_fields,
       if (dirent_fields & SVN_DIRENT_KIND)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = "resourcetype";
         }
 
       if (dirent_fields & SVN_DIRENT_SIZE)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = "getcontentlength";
         }
 
       if (dirent_fields & SVN_DIRENT_HAS_PROPS)
         {
           prop = apr_array_push(props);
-          prop->namespace = SVN_DAV_PROP_NS_DAV;
+          prop->xmlns = SVN_DAV_PROP_NS_DAV;
           prop->name = "deadprop-count";
         }
 
       if (dirent_fields & SVN_DIRENT_CREATED_REV)
         {
           svn_ra_serf__dav_props_t *p = apr_array_push(props);
-          p->namespace = "DAV:";
+          p->xmlns = "DAV:";
           p->name = SVN_DAV__VERSION_NAME;
         }
 
       if (dirent_fields & SVN_DIRENT_TIME)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = SVN_DAV__CREATIONDATE;
         }
 
       if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
         {
           prop = apr_array_push(props);
-          prop->namespace = "DAV:";
+          prop->xmlns = "DAV:";
           prop->name = "creator-displayname";
         }
     }
@@ -992,12 +1199,12 @@ get_dirent_props(apr_uint32_t dirent_fields,
 
          The neon behavior is to retrieve all properties in this case */
       prop = apr_array_push(props);
-      prop->namespace = "DAV:";
+      prop->xmlns = "DAV:";
       prop->name = "allprop";
     }
 
   prop = apr_array_push(props);
-  prop->namespace = NULL;
+  prop->xmlns = NULL;
   prop->name = NULL;
 
   return (svn_ra_serf__dav_props_t *) props->elts;
@@ -1270,6 +1477,7 @@ static const svn_ra__vtable_t serf_vtable = {
   ra_serf_get_description,
   ra_serf_get_schemes,
   svn_ra_serf__open,
+  ra_serf_dup_session,
   svn_ra_serf__reparent,
   svn_ra_serf__get_session_url,
   svn_ra_serf__get_latest_revnum,
