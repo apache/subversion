@@ -363,9 +363,12 @@ struct report_context_t {
   const svn_delta_editor_t *update_editor;
   void *update_baton;
 
-  /* The potentially tempfile backed spillbuf holding request body for the
-   * REPORT */
-  svn_spillbuf_t *body_sb;
+  /* The file holding request body for the REPORT.
+   *
+   * ### todo: It will be better for performance to store small
+   * request bodies (like 4k) in memory and bigger bodies on disk.
+   */
+  apr_file_t *body_file;
 
   /* root directory object */
   report_dir_t *root_dir;
@@ -2630,7 +2633,8 @@ set_path(void *report_baton,
   svn_xml_escape_cdata_cstring(&buf, path, pool);
   svn_xml_make_close_tag(&buf, pool, "S:entry");
 
-  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, pool));
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
 
   if (lock_token)
     {
@@ -2652,7 +2656,8 @@ delete_path(void *report_baton,
 
   make_simple_xml_tag(&buf, "S:missing", path, pool);
 
-  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, pool));
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2701,7 +2706,8 @@ link_path(void *report_baton,
   svn_xml_escape_cdata_cstring(&buf, path, pool);
   svn_xml_make_close_tag(&buf, pool, "S:entry");
 
-  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, pool));
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, pool));
 
   /* Store the switch roots to allow generating repos_relpaths from just
      the working copy paths. (Needed for HTTPv2) */
@@ -2770,9 +2776,12 @@ create_update_report_body(serf_bucket_t **body_bkt,
                           apr_pool_t *pool)
 {
   report_context_t *report = baton;
+  apr_off_t offset;
 
-  *body_bkt = svn_ra_serf__create_sb_bucket(report->body_sb, alloc,
-                                            report->pool, pool);
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(report->body_file, APR_SET, &offset, pool));
+
+  *body_bkt = serf_bucket_file_create(report->body_file, alloc);
 
   return SVN_NO_ERROR;
 }
@@ -3007,7 +3016,22 @@ finish_report(void *report_baton,
   update_delay_baton_t *ud;
 
   svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
-  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len, iterpool));
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, iterpool));
+
+  /* We need to flush the file, make it unbuffered (so that it can be
+   * zero-copied via mmap), and reset the position before attempting to
+   * deliver the file.
+   *
+   * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
+   * and zero-copy the PUT body.  However, on older APR versions, we can't
+   * check the buffer status; but serf will fall through and create a file
+   * bucket for us on the buffered svndiff handle.
+   */
+  SVN_ERR(svn_io_file_flush(report->body_file, iterpool));
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+  apr_file_buffer_set(report->body_file, NULL, 0);
+#endif
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
 
@@ -3396,7 +3420,9 @@ make_update_reporter(svn_ra_session_t *ra_session,
   *reporter = &ra_serf_reporter;
   *report_baton = report;
 
-  report->body_sb = svn_spillbuf__create(1024, 131072, report->pool);
+  SVN_ERR(svn_io_open_unique_file3(&report->body_file, NULL, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   report->pool, scratch_pool));
 
   if (sess->bulk_updates == svn_tristate_true)
     {
@@ -3529,8 +3555,8 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   make_simple_xml_tag(&buf, "S:depth", svn_depth_to_word(depth), scratch_pool);
 
-  SVN_ERR(svn_spillbuf__write(report->body_sb, buf->data, buf->len,
-                              scratch_pool));
+  SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
+                                 NULL, scratch_pool));
 
   return SVN_NO_ERROR;
 }
