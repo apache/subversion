@@ -412,7 +412,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
-
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_log_body(serf_bucket_t **body_bkt,
                 void *baton,
