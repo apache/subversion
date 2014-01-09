@@ -772,9 +772,6 @@ svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
                         const char *raw_name)
 {
   svn_ra_serf__xml_estate_t *xes = xmlctx->current;
-  svn_ra_serf__dav_props_t elemname;
-
-  svn_ra_serf__expand_ns(&elemname, xes->ns_list, raw_name);
 
   if (xmlctx->waiting > 0)
     {
