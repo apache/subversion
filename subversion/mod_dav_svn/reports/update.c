@@ -127,10 +127,6 @@ typedef struct item_baton_t {
   /* File/dir copied? */
   svn_boolean_t copyfrom;
 
-  /* Does the client need to fetch additional properties for this
-     item? */
-  svn_boolean_t fetch_props;
-
   /* Array of const char * names of removed properties.  (Used only
      for copied files/dirs in skelta mode.)  */
   apr_array_header_t *removed_props;
@@ -465,12 +461,6 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton, apr_pool_t *pool)
                                           DEBUG_CR, qname));
         }
     }
-
-  /* If our client need to fetch properties, let it know. */
-  if (baton->fetch_props)
-    SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                    "<S:fetch-props/>" DEBUG_CR));
-
 
   /* Let's tie it off, nurse. */
   if (baton->added)
