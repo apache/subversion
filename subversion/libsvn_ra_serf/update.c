@@ -1013,7 +1013,6 @@ handle_fetch(serf_request_t *request,
     {
       serf_bucket_t *hdrs;
       const char *val;
-      file_baton_t *file;
 
       /* If the error code wasn't 200, something went wrong. Don't use the
        * returned data as its probably an error message. Just bail out instead.
@@ -1026,7 +1025,6 @@ handle_fetch(serf_request_t *request,
 
       hdrs = serf_bucket_response_get_headers(response);
       val = serf_bucket_headers_get(hdrs, "Content-Type");
-      file = fetch_ctx->file;
 
       if (val && svn_cstring_casecmp(val, SVN_SVNDIFF_MIME_TYPE) == 0)
         {
