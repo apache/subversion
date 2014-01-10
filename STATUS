@@ -95,6 +95,20 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1557094
+   Resolve possible segfault while handling OPTIONS request in unusual server
+   configuration.
+   Justification:
+     User triggerable segfaults are bad.
+   Notes:
+     The segfault requires a probably static "" string to be right at a page/
+     segfault range check boundary, which may or may not be likely based on
+     compiler, OS, etc.
+   Branch:
+     ^/subversion/branches/1.7.x-r1557094
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
