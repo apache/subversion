@@ -728,29 +728,6 @@ svn_ra_serf__xml_note(svn_ra_serf__xml_estate_t *xes,
 apr_pool_t *
 svn_ra_serf__xml_state_pool(svn_ra_serf__xml_estate_t *xes);
 
-
-/* Any XML parser may be used. When an opening tag is seen, call this
-   function to feed the information into XMLCTX.  */
-svn_error_t *
-svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
-                          const char *raw_name,
-                          const char *const *attrs);
-
-
-/* When a close tag is seen, call this function to feed the information
-   into XMLCTX.  */
-svn_error_t *
-svn_ra_serf__xml_cb_end(svn_ra_serf__xml_context_t *xmlctx,
-                        const char *raw_name);
-
-
-/* When cdata is parsed by the wrapping XML parser, call this function to
-   feed the cdata into the XMLCTX.  */
-svn_error_t *
-svn_ra_serf__xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
-                          const char *data,
-                          apr_size_t len);
-
 /*
  * Parses a server-side error message into a local Subversion error.
  */
