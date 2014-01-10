@@ -1365,6 +1365,7 @@ svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
   eb->ra_session = ra_session;
 
   eb->revision = revision;
+  eb->target_revision = SVN_INVALID_REVNUM;
   eb->empty_file = NULL;
   eb->empty_hash = apr_hash_make(eb->pool);
   eb->text_deltas = text_deltas;
