@@ -1137,6 +1137,11 @@ dav_svn__update_report(const dav_resource *resource,
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
+          /* This flag is not used since Subversion 1.1.x
+             There are some remains in libsvn_ra_neon, where it can
+             be enabled via a static function flag.
+             Disabled since  r852220 (aka r12146)
+             "Prefer correctness over efficiency." */
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
