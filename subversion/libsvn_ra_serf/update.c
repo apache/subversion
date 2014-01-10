@@ -237,7 +237,7 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
 #define SPILLBUF_BLOCKSIZE 4096
 #define SPILLBUF_MAXBUFFSIZE 131072
 
-#define PARSE_CHUNK_SIZE 8000 /* Copied from utils.c ### Needs tuning */
+#define PARSE_CHUNK_SIZE 8000 /* Copied from xml.c ### Needs tuning */
 
 /* Forward-declare our report context. */
 typedef struct report_context_t report_context_t;
