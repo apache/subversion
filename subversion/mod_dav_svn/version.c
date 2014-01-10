@@ -177,9 +177,6 @@ get_option(const dav_resource *resource,
            apr_text_header *option)
 {
   request_rec *r = resource->info->r;
-  const char *repos_root_uri =
-    dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_PUBLIC,
-                       SVN_IGNORED_REVNUM, "", 0, resource->pool);
 
   /* ### DAV:version-history-collection-set */
   if (elem->ns == APR_XML_NS_DAV_ID)
@@ -265,11 +262,15 @@ get_option(const dav_resource *resource,
 
   /* Welcome to the 2nd generation of the svn HTTP protocol, now
      DeltaV-free!  If we're configured to advise this support, do so.  */
-  if (resource->info->repos->v2_protocol)
+  if (resource->info->repos->v2_protocol
+      && resource->info->repos->repos)
     {
       int i;
       svn_version_t *master_version = dav_svn__get_master_version(r);
       dav_svn__bulk_upd_conf bulk_upd_conf = dav_svn__get_bulk_updates_flag(r);
+      const char *repos_root_uri =
+            dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_PUBLIC,
+                               SVN_IGNORED_REVNUM, "", 0, resource->pool);
 
       /* The list of Subversion's custom POSTs and which versions of
          Subversion support them.  We need this latter information
