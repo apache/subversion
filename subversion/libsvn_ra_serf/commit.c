@@ -1820,7 +1820,7 @@ add_file(const char *path,
   else
     {
       /* Ensure our parent directory has been checked out */
-      SVN_ERR(checkout_dir(dir, new_file->pool /* scratch_pool */));
+      SVN_ERR(checkout_dir(dir, scratch_pool));
 
       new_file->url =
         svn_path_url_add_component2(dir->working_url,
@@ -1841,7 +1841,6 @@ add_file(const char *path,
       svn_ra_serf__handler_t *handler;
       apr_uri_t uri;
       const char *req_url;
-      
       apr_status_t status;
 
       /* Create the copy directly as cheap 'does exist/out of date'
