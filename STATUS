@@ -82,6 +82,7 @@ Candidate changes:
      "Moves should just work" or "be nice to api users, like Markus"
    Votes:
      +1: rhuijben
+     +1 (non-binding): schabi (Fixes our use case, all our other tests pass.)
 
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
