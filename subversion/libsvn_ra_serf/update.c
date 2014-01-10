@@ -1354,7 +1354,7 @@ fetch_for_file(file_baton_t *file,
                                          file->propfind_props,
                                          ctx->sess, conn, file->url,
                                          ctx->target_rev, "0", all_props,
-                                         NULL, file->pool));
+                                         file->pool));
       SVN_ERR_ASSERT(file->propfind_handler);
 
       file->propfind_handler->done_delegate = file_props_done;
@@ -1427,7 +1427,6 @@ fetch_for_dir(dir_baton_t *dir,
                                          dir->propfind_props,
                                          ctx->sess, conn, dir->url,
                                          ctx->target_rev, "0", all_props,
-                                         NULL,
                                          dir->pool));
       SVN_ERR_ASSERT(dir->propfind_handler);
 

@@ -271,26 +271,6 @@ typedef struct svn_ra_serf__dav_props_t {
   const char *name;
 } svn_ra_serf__dav_props_t;
 
-/*
- * Structure which represents an XML namespace.
- */
-typedef struct ns_t {
-  /* The assigned name. */
-  const char *xmlns;
-  /* The full URL for this namespace. */
-  const char *url;
-  /* The next namespace in our list. */
-  struct ns_t *next;
-} svn_ra_serf__ns_t;
-
-/*
- * An incredibly simple list.
- */
-typedef struct ra_serf_list_t {
-  void *data;
-  struct ra_serf_list_t *next;
-} svn_ra_serf__list_t;
-
 /** DAV property sets **/
 
 static const svn_ra_serf__dav_props_t base_props[] =
@@ -552,114 +532,6 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
  * Helper function to queue a request in the @a handler's connection.
  */
 void svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
-
-/* XML helper callbacks. */
-
-typedef struct svn_ra_serf__xml_state_t {
-  /* A numeric value that represents the current state in parsing.
-   *
-   * Value 0 is reserved for use as the default state.
-   */
-  int current_state;
-
-  /* Private pointer set by the parsing code. */
-  void *private;
-
-  /* Allocations should be made in this pool to match the lifetime of the
-   * state.
-   */
-  apr_pool_t *pool;
-
-  /* The currently-declared namespace for this state. */
-  svn_ra_serf__ns_t *ns_list;
-
-  /* Our previous states. */
-  struct svn_ra_serf__xml_state_t *prev;
-} svn_ra_serf__xml_state_t;
-
-/* Forward declaration of the XML parser structure. */
-typedef struct svn_ra_serf__xml_parser_t svn_ra_serf__xml_parser_t;
-
-/* Callback invoked with @a baton by our XML @a parser when an element with
- * the @a name containing @a attrs is opened.
- */
-typedef svn_error_t *
-(*svn_ra_serf__xml_start_element_t)(svn_ra_serf__xml_parser_t *parser,
-                                    svn_ra_serf__dav_props_t name,
-                                    const char **attrs,
-                                    apr_pool_t *scratch_pool);
-
-/* Callback invoked with @a baton by our XML @a parser when an element with
- * the @a name is closed.
- */
-typedef svn_error_t *
-(*svn_ra_serf__xml_end_element_t)(svn_ra_serf__xml_parser_t *parser,
-                                  svn_ra_serf__dav_props_t name,
-                                  apr_pool_t *scratch_pool);
-
-/* Callback invoked with @a baton by our XML @a parser when a CDATA portion
- * of @a data with size @a len is encountered.
- *
- * This may be invoked multiple times for the same tag.
- */
-typedef svn_error_t *
-(*svn_ra_serf__xml_cdata_chunk_handler_t)(svn_ra_serf__xml_parser_t *parser,
-                                          const char *data,
-                                          apr_size_t len,
-                                          apr_pool_t *scratch_pool);
-
-/*
- * Helper structure associated with handle_xml_parser handler that will
- * specify how an XML response will be processed.
- */
-struct svn_ra_serf__xml_parser_t {
-  /* Temporary allocations should be made in this pool. */
-  apr_pool_t *pool;
-
-  /* What kind of response are we parsing? If set, this should typically
-     define the report name.  */
-  const char *response_type;
-
-  /* Caller-specific data passed to the start, end, cdata callbacks.  */
-  void *user_data;
-
-  /* Callback invoked when a tag is opened. */
-  svn_ra_serf__xml_start_element_t start;
-
-  /* Callback invoked when a tag is closed. */
-  svn_ra_serf__xml_end_element_t end;
-
-  /* Callback invoked when a cdata chunk is received. */
-  svn_ra_serf__xml_cdata_chunk_handler_t cdata;
-
-  /* Our associated expat-based XML parser. */
-  XML_Parser xmlp;
-
-  /* Our current state. */
-  svn_ra_serf__xml_state_t *state;
-
-  /* Our previously used states (will be reused). */
-  svn_ra_serf__xml_state_t *free_state;
-
-  /* If non-NULL, this value will be set to TRUE when the response is
-   * completed.
-   */
-  svn_boolean_t *done;
-
-  /* If non-NULL, when this parser completes, it will add done_item to
-   * the list.
-   */
-  svn_ra_serf__list_t **done_list;
-
-  /* A pointer to the item that will be inserted into the list upon
-   * completeion.
-   */
-  svn_ra_serf__list_t *done_item;
-
-  /* If an error occurred, this value will be non-NULL. */
-  svn_error_t *error;
-};
-
 
 /* v2 of the XML parsing functions  */
 
@@ -982,23 +854,6 @@ svn_error_t *
 svn_ra_serf__server_error_create(svn_ra_serf__handler_t *handler,
                                  apr_pool_t *scratch_pool);
 
-
-/*
- * This function will feed the RESPONSE body into XMLP.  When parsing is
- * completed (i.e. an EOF is received), *DONE is set to TRUE.
- * Implements svn_ra_serf__response_handler_t.
- *
- * If an error occurs during processing RESP_ERR is invoked with the
- * RESP_ERR_BATON.
- *
- * Temporary allocations are made in POOL.
- */
-svn_error_t *
-svn_ra_serf__handle_xml_parser(serf_request_t *request,
-                               serf_bucket_t *response,
-                               void *handler_baton,
-                               apr_pool_t *pool);
-
 /* serf_response_handler_t implementation that completely discards
  * the response.
  *
@@ -1009,22 +864,6 @@ svn_ra_serf__response_discard_handler(serf_request_t *request,
                                       serf_bucket_t *response,
                                       void *baton,
                                       apr_pool_t *pool);
-
-
-/** XML helper functions. **/
-
-/*
- * Advance the internal XML @a parser to the @a state.
- */
-void
-svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
-                            int state);
-
-/*
- * Return to the previous internal XML @a parser state.
- */
-void
-svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser);
 
 
 /*
@@ -1089,28 +928,6 @@ void
 svn_ra_serf__add_cdata_len_buckets(serf_bucket_t *agg_bucket,
                                    serf_bucket_alloc_t *bkt_alloc,
                                    const char *data, apr_size_t len);
-/*
- * Look up the @a attrs array for namespace definitions and add each one
- * to the @a ns_list of namespaces.
- *
- * New namespaces will be allocated in RESULT_POOL.
- */
-void
-svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
-                       const char *const *attrs,
-                       apr_pool_t *result_pool);
-
-/*
- * Look up @a name in the @a ns_list list for previously declared namespace
- * definitions.
- *
- * Return (in @a *returned_prop_name) a #svn_ra_serf__dav_props_t tuple
- * representing the expanded name.
- */
-void
-svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
-                       const svn_ra_serf__ns_t *ns_list,
-                       const char *name);
 
 
 /** PROPFIND-related functions **/
@@ -1132,7 +949,6 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
                            svn_revnum_t rev,
                            const char *depth,
                            const svn_ra_serf__dav_props_t *lookup_props,
-                           svn_ra_serf__list_t **done_list,
                            apr_pool_t *pool);
 
 /*

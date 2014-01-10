@@ -94,12 +94,6 @@ typedef struct propfind_context_t {
    * "good"; otherwise, they'll get discarded.
    */
   apr_hash_t *ps_props;
-
-  /* If not-NULL, add us to this list when we're done. */
-  svn_ra_serf__list_t **done_list;
-
-  svn_ra_serf__list_t done_item;
-
 } propfind_context_t;
 
 
@@ -222,12 +216,6 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
          onto the "done list". External callers will then know this
          request has been completed (tho stray response bytes may still
          arrive).  */
-      if (ctx->done_list)
-        {
-          ctx->done_item.data = ctx->handler;
-          ctx->done_item.next = *ctx->done_list;
-          *ctx->done_list = &ctx->done_item;
-        }
     }
   else if (leaving_state == HREF)
     {
@@ -572,7 +560,6 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
                            svn_revnum_t rev,
                            const char *depth,
                            const svn_ra_serf__dav_props_t *find_props,
-                           svn_ra_serf__list_t **done_list,
                            apr_pool_t *pool)
 {
   propfind_context_t *new_prop_ctx;
@@ -589,7 +576,6 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
   new_prop_ctx->sess = sess;
   new_prop_ctx->conn = conn;
   new_prop_ctx->rev = rev;
-  new_prop_ctx->done_list = done_list;
 
   if (SVN_IS_VALID_REVNUM(rev))
     {
@@ -664,7 +650,7 @@ svn_ra_serf__retrieve_props(apr_hash_t **results,
   *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_ra_serf__deliver_props(&handler, *results, sess, conn, url,
-                                     rev, depth, props, NULL, result_pool));
+                                     rev, depth, props, result_pool));
   SVN_ERR(svn_ra_serf__wait_for_props(handler, scratch_pool));
 
   return SVN_NO_ERROR;

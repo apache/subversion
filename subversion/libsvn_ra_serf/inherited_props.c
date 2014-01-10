@@ -297,7 +297,7 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__deliver_props(&rq->handler, rq->props, session,
                                          session->conns[0], rq->urlpath,
                                          rev_marker, "0", all_props,
-                                         NULL, scratch_pool));
+                                         scratch_pool));
 
       /* Allow ignoring authz problems */
       rq->handler->no_fail_on_http_failure_status = TRUE;
