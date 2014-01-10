@@ -2150,55 +2150,70 @@ update_delay_handler(serf_request_t *request,
 
       while ((udb->report->num_active_fetches + udb->report->num_active_propfinds)
                  < REQUEST_COUNT_TO_RESUME)
-       {
-         const char *data;
-         apr_size_t len;
-         svn_boolean_t at_eof = FALSE;
-         svn_error_t *err;
+        {
+          const char *data;
+          apr_size_t len;
+          svn_boolean_t at_eof = FALSE;
+          svn_error_t *err;
+          serf_bucket_alloc_t *alloc;
+          serf_bucket_t *tmp_bucket;
 
-         status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
-         if (SERF_BUCKET_READ_ERROR(status))
-           return svn_ra_serf__wrap_err(status, NULL);
-         else if (APR_STATUS_IS_EOF(status))
-           udb->report->report_received = at_eof = TRUE;
+          status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
+          if (SERF_BUCKET_READ_ERROR(status))
+            return svn_ra_serf__wrap_err(status, NULL);
+          else if (APR_STATUS_IS_EOF(status))
+            udb->report->report_received = at_eof = TRUE;
 
-         if (!iterpool)
-           iterpool = svn_pool_create(scratch_pool);
-         else
-           svn_pool_clear(iterpool);
+          if (!iterpool)
+            iterpool = svn_pool_create(scratch_pool);
+          else
+            svn_pool_clear(iterpool);
 
-         if (len == 0 && !at_eof)
-           return svn_ra_serf__wrap_err(status, NULL);
+          if (len == 0 && !at_eof)
+            return svn_ra_serf__wrap_err(status, NULL);
 
-         /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
-            use a standard bucket with default EOF handling */
-         err = udb->inner_handler(request,
-                                  at_eof
-                                   ? serf_bucket_simple_create(
-                                            data, len, NULL, NULL,
-                                            serf_request_get_alloc(request))
-                                   : svn_ra_serf__create_bucket_with_eagain(
-                                            data, len,
-                                            serf_request_get_alloc(request)),
-                                  udb->inner_handler_baton, iterpool);
+          alloc = serf_request_get_alloc(request);
 
-         if (err && SERF_BUCKET_READ_ERROR(err->apr_err))
-           return svn_error_trace(err);
-         else if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
-           {
-             svn_error_clear(err); /* Throttling is working ok */
-           }
-         else if (err && (APR_STATUS_IS_EOF(err->apr_err)))
-           {
-             svn_pool_destroy(iterpool);
-             return svn_error_trace(err); /* No buffering was necessary */
-           }
-         else
-           {
-             /* SERF_ERROR_WAIT_CONN should be impossible? */
-             return svn_error_trace(err);
-           }
-       }
+          /* ### This code (and the eagain bucket code) can probably be
+             ### simplified by using a bit of aggregate bucket magic.
+             ### See mail from Ivan to dev@s.a.o. */
+          if (at_eof)
+            {
+              tmp_bucket = serf_bucket_simple_create(data, len, NULL, NULL,
+                                                     alloc);
+            }
+          else
+            {
+              tmp_bucket = svn_ra_serf__create_bucket_with_eagain(data, len,
+                                                                  alloc);
+            }
+
+          /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
+             use a standard bucket with default EOF handling */
+          err = udb->inner_handler(request, tmp_bucket,
+                                   udb->inner_handler_baton, iterpool);
+
+          /* And free the bucket explicitly to avoid growing request allocator
+             storage (in a loop) */
+          serf_bucket_destroy(tmp_bucket);
+          
+          if (err && SERF_BUCKET_READ_ERROR(err->apr_err))
+            return svn_error_trace(err);
+          else if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
+            {
+              svn_error_clear(err); /* Throttling is working ok */
+            }
+          else if (err && (APR_STATUS_IS_EOF(err->apr_err)))
+            {
+              svn_pool_destroy(iterpool);
+              return svn_error_trace(err); /* No buffering was necessary */
+            }
+          else
+            {
+              /* SERF_ERROR_WAIT_CONN should be impossible? */
+              return svn_error_trace(err);
+            }
+        }
 
       /* Let's start using the spill infrastructure */
       udb->spillbuf = svn_spillbuf__create(SPILLBUF_BLOCKSIZE,
