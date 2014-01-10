@@ -85,6 +85,16 @@ struct svn_ra_serf__xml_context_t {
 
 };
 
+/* Structure which represents an XML namespace. */
+typedef struct svn_ra_serf__ns_t {
+  /* The assigned name. */
+  const char *xmlns;
+  /* The full URL for this namespace. */
+  const char *url;
+  /* The next namespace in our list. */
+  struct svn_ra_serf__ns_t *next;
+} svn_ra_serf__ns_t;
+
 struct svn_ra_serf__xml_estate_t {
   /* The current state value.  */
   int state;
@@ -172,22 +182,15 @@ define_namespaces(svn_ra_serf__ns_t **ns_list,
     }
 }
 
-
-void
-svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
-                       const char *const *attrs,
-                       apr_pool_t *result_pool)
-{
-  define_namespaces(ns_list, attrs, NULL /* get_pool */, result_pool);
-}
-
-
 /*
- * Look up NAME in the NS_LIST list for previously declared namespace
- * definitions and return a DAV_PROPS_T-tuple that has values.
+ * Look up @a name in the @a ns_list list for previously declared namespace
+ * definitions.
+ *
+ * Return (in @a *returned_prop_name) a #svn_ra_serf__dav_props_t tuple
+ * representing the expanded name.
  */
-void
-svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
+static void
+expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
                        const svn_ra_serf__ns_t *ns_list,
                        const char *name)
 {
@@ -380,54 +383,6 @@ void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
 
   svn_ra_serf__add_close_tag_buckets(agg_bucket, bkt_alloc, tag);
 }
-
-void
-svn_ra_serf__xml_push_state(svn_ra_serf__xml_parser_t *parser,
-                            int state)
-{
-  svn_ra_serf__xml_state_t *new_state;
-
-  if (!parser->free_state)
-    {
-      new_state = apr_palloc(parser->pool, sizeof(*new_state));
-      new_state->pool = svn_pool_create(parser->pool);
-    }
-  else
-    {
-      new_state = parser->free_state;
-      parser->free_state = parser->free_state->prev;
-
-      svn_pool_clear(new_state->pool);
-    }
-
-  if (parser->state)
-    {
-      new_state->private = parser->state->private;
-      new_state->ns_list = parser->state->ns_list;
-    }
-  else
-    {
-      new_state->private = NULL;
-      new_state->ns_list = NULL;
-    }
-
-  new_state->current_state = state;
-
-  /* Add it to the state chain. */
-  new_state->prev = parser->state;
-  parser->state = new_state;
-}
-
-void svn_ra_serf__xml_pop_state(svn_ra_serf__xml_parser_t *parser)
-{
-  svn_ra_serf__xml_state_t *cur_state;
-
-  cur_state = parser->state;
-  parser->state = cur_state->prev;
-  cur_state->prev = parser->free_state;
-  parser->free_state = cur_state;
-}
-
 
 /* Return a pool for XES to use for self-alloc (and other specifics).  */
 static apr_pool_t *
@@ -641,7 +596,7 @@ svn_ra_serf__xml_cb_start(svn_ra_serf__xml_context_t *xmlctx,
      were found.  */
   define_namespaces(&current->ns_list, attrs, lazy_create_pool, current);
 
-  svn_ra_serf__expand_ns(&elemname, current->ns_list, raw_name);
+  expand_ns(&elemname, current->ns_list, raw_name);
 
   for (scan = xmlctx->ttable; scan->ns != NULL; ++scan)
     {
