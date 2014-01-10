@@ -1489,9 +1489,10 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
       case ADD_DIR:
         {
           dir_baton_t *dir;
+          const char *name;
           attrs = svn_ra_serf__xml_gather_since(xes, entered_state);
 
-          const char *name = svn_hash_gets(attrs, "name");
+          name = svn_hash_gets(attrs, "name");
           if (!name)
             name = "";
 
