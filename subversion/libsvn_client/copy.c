@@ -388,10 +388,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       src_parent_abspath = svn_dirent_dirname(pair->src_abspath_or_url,
                                               iterpool);
 
-      SVN_ERR(svn_wc__get_wcroot(&src_wcroot_abspath,
+      SVN_ERR(svn_wc__get_wc_root(&src_wcroot_abspath,
                                  ctx->wc_ctx, src_parent_abspath,
                                  iterpool, iterpool));
-      SVN_ERR(svn_wc__get_wcroot(&dst_wcroot_abspath,
+      SVN_ERR(svn_wc__get_wc_root(&dst_wcroot_abspath,
                                  ctx->wc_ctx, pair->dst_parent_abspath,
                                  iterpool, iterpool));
 
