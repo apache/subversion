@@ -179,22 +179,28 @@ get_option(const dav_resource *resource,
   request_rec *r = resource->info->r;
 
   /* ### DAV:version-history-collection-set */
-  if (elem->ns == APR_XML_NS_DAV_ID)
+  if (elem->ns != APR_XML_NS_DAV_ID
+      || strcmp(elem->name, "activity-collection-set") != 0)
     {
-      if (strcmp(elem->name, "activity-collection-set") == 0)
-        {
-          apr_text_append(resource->pool, option,
-                          "<D:activity-collection-set>");
-          apr_text_append(resource->pool, option,
-                          dav_svn__build_uri(resource->info->repos,
-                                             DAV_SVN__BUILD_URI_ACT_COLLECTION,
-                                             SVN_INVALID_REVNUM, NULL,
-                                             1 /* add_href */,
-                                             resource->pool));
-          apr_text_append(resource->pool, option,
-                          "</D:activity-collection-set>");
-        }
+       /* We don't know about other options (yet).
+
+          If we ever add multiple option request keys we should
+          just write the requested option value and make sure
+          we set the headers *once*. */
+      return NULL;
     }
+
+  apr_text_append(resource->pool, option,
+                  "<D:activity-collection-set>");
+
+  apr_text_append(resource->pool, option,
+                  dav_svn__build_uri(resource->info->repos,
+                                     DAV_SVN__BUILD_URI_ACT_COLLECTION,
+                                     SVN_INVALID_REVNUM, NULL,
+                                     1 /* add_href */,
+                                     resource->pool));
+  apr_text_append(resource->pool, option,
+                  "</D:activity-collection-set>");
 
   /* If we're allowed (by configuration) to do so, advertise support
      for ephemeral transaction properties. */
