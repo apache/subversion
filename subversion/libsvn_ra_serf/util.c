@@ -1673,10 +1673,13 @@ handle_response_cb(serf_request_t *request,
   /* Make sure the DONE flag is set properly and requests are cleaned up. */
   if (APR_STATUS_IS_EOF(outer_status) || APR_STATUS_IS_EOF(inner_status))
     {
+      svn_ra_serf__session_t *sess = handler->session;
       handler->done = TRUE;
       outer_status = APR_EOF;
 
-      save_error(handler->session,
+      /* We use a cached handler->session here to allow handler to free the
+         memory containing the handler */
+      save_error(sess,
                  handler->done_delegate(request, handler->done_delegate_baton,
                                         scratch_pool));
     }
