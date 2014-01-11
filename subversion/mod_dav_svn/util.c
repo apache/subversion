@@ -237,11 +237,10 @@ dav_svn__build_uri(const dav_svn_repos *repos,
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
-  /* The first character of root_path is guaranteed to be "/" for
-     every location except the server root.  If there's no component
-     beyond that, then just use "", so that appending another "/"
-     later does not result in "//". */
-  if (root_path[0] == '/' && root_path[1] == '\0')
+  /* The first character of root_path is guaranteed to be "/".  If
+     there's no component beyond that, then just use "", so that
+     appending another "/" later does not result in "//". */
+  if (root_path[1] == '\0')
     root_path = "";
 
   switch (what)
