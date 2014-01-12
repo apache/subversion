@@ -266,7 +266,16 @@ Candidate changes:
    Justification:
      User triggerable segfaults are bad.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
+     
+ * r1557522
+   Make mod_dav_svn report all property changes in 'include-properties' mode,
+   even in uncommon configurations.
+   Justification:
+     This needs a fix in either client or server if we ever want to restart
+     using the report copyfrom mode.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
@@ -280,19 +289,6 @@ Veto-blocked changes:
    Votes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
-
- * r1557094
-   Resolve possible segfault while handling OPTIONS request in unusual server
-   configuration.
-   Justification:
-     User triggerable segfaults are bad.
-   Notes:
-     The segfault requires a probably static "" string to be right at a page/
-     segfault range check boundary, which may or may not be likely based on
-     compiler, OS, etc.
-   Votes:
-     +1: rhuijben
-     -1: breser (doesn't solve the segfault)
 
 Approved changes:
 =================
