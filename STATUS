@@ -267,7 +267,7 @@ Candidate changes:
      User triggerable segfaults are bad.
    Votes:
      +1: breser, rhuijben
-     
+
  * r1557522
    Make mod_dav_svn report all property changes in 'include-properties' mode,
    even in uncommon configurations.
