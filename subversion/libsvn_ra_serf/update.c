@@ -344,11 +344,7 @@ typedef struct fetch_ctx_t {
   /* The handler representing this particular fetch.  */
   svn_ra_serf__handler_t *handler;
 
-  /* The session we should use to fetch the file. */
-  svn_ra_serf__session_t *sess;
-
-  /* The connection we should use to fetch file. */
-  svn_ra_serf__connection_t *conn;
+  svn_boolean_t using_compression;
 
   /* Stores the information for the file we want to fetch. */
   file_baton_t *file;
@@ -380,7 +376,6 @@ struct report_context_t {
   apr_pool_t *pool;
 
   svn_ra_serf__session_t *sess;
-  svn_ra_serf__connection_t *conn;
 
   /* Source path and destination path */
   const char *source;
@@ -766,7 +761,7 @@ headers_fetch(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Accept-Encoding",
                                "svndiff1;q=0.9,svndiff;q=0.8");
     }
-  else if (fetch_ctx->sess->using_compression)
+  else if (fetch_ctx->using_compression)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -1236,8 +1231,7 @@ fetch_for_file(file_baton_t *file,
 
           fetch_ctx = apr_pcalloc(file->pool, sizeof(*fetch_ctx));
           fetch_ctx->file = file;
-          fetch_ctx->sess = ctx->sess;
-          fetch_ctx->conn = conn;
+          fetch_ctx->using_compression = ctx->sess->using_compression;
 
           /* Can we somehow get away with just obtaining a DIFF? */
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
@@ -2506,7 +2500,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report = apr_pcalloc(result_pool, sizeof(*report));
   report->pool = result_pool;
   report->sess = sess;
-  report->conn = report->sess->conns[0];
   report->target_rev = revision;
   report->ignore_ancestry = ignore_ancestry;
   report->send_copyfrom_args = send_copyfrom_args;
