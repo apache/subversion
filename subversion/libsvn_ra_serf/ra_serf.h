@@ -1068,9 +1068,9 @@ svn_ra_serf__walk_node_props(apr_hash_t *props,
 
 typedef svn_error_t *
 (*svn_ra_serf__path_rev_walker_t)(void *baton,
-                                  const char *path, apr_ssize_t path_len,
-                                  const char *ns, apr_ssize_t ns_len,
-                                  const char *name, apr_ssize_t name_len,
+                                  const char *path,
+                                  const char *ns,
+                                  const char *name,
                                   const svn_string_t *val,
                                   apr_pool_t *pool);
 svn_error_t *
