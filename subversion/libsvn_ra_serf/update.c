@@ -442,7 +442,7 @@ struct report_context_t {
 /* Baton for collecting REPORT body. Depending on the size this
    work is backed by a memory buffer (via serf buckets) or by
    a file */
-typedef struct body_create_baton_t
+struct body_create_baton_t
 {
   apr_pool_t *result_pool;
   apr_size_t total_bytes;
@@ -454,7 +454,7 @@ typedef struct body_create_baton_t
 
   const void *all_data;
   apr_file_t *file;
-} body_create_baton_t;
+};
 
 
 #define MAX_BODY_IN_RAM (256*1024)
