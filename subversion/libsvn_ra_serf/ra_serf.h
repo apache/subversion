@@ -1343,6 +1343,22 @@ svn_ra_serf__get_log(svn_ra_session_t *session,
                      void *receiver_baton,
                      apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.check_path(). */
+svn_error_t *
+svn_ra_serf__check_path(svn_ra_session_t *ra_session,
+                        const char *rel_path,
+                        svn_revnum_t revision,
+                        svn_node_kind_t *kind,
+                        apr_pool_t *pool);
+
+/* Implements svn_ra__vtable_t.stat(). */
+svn_error_t *
+svn_ra_serf__stat(svn_ra_session_t *ra_session,
+                  const char *rel_path,
+                  svn_revnum_t revision,
+                  svn_dirent_t **dirent,
+                  apr_pool_t *pool);
+
 /* Implements svn_ra__vtable_t.get_locations(). */
 svn_error_t *
 svn_ra_serf__get_locations(svn_ra_session_t *session,
@@ -1460,6 +1476,17 @@ svn_ra_serf__get_file(svn_ra_session_t *session,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
                       apr_pool_t *pool);
+
+/* Implements svn_ra__vtable_t.get_dir(). */
+svn_error_t *
+svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
+                     apr_hash_t **dirents,
+                     svn_revnum_t *fetched_rev,
+                     apr_hash_t **ret_props,
+                     const char *rel_path,
+                     svn_revnum_t revision,
+                     apr_uint32_t dirent_fields,
+                     apr_pool_t *result_pool);
 
 /* Implements svn_ra__vtable_t.change_rev_prop(). */
 svn_error_t *
