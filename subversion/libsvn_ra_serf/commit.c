@@ -1712,7 +1712,6 @@ change_dir_prop(void *dir_baton,
       proppatch_target = dir->working_url;
     }
 
-  name = apr_pstrdup(dir->pool, name);
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
     {
       ns = SVN_DAV_PROP_NS_SVN;
@@ -1725,13 +1724,12 @@ change_dir_prop(void *dir_baton,
 
   if (value)
     {
-      value = svn_string_dup(value, dir->pool);
       svn_ra_serf__set_prop(dir->changed_props, proppatch_target,
                             ns, name, value, dir->pool);
     }
   else
     {
-      value = svn_string_create_empty(dir->pool);
+      value = svn_string_create_empty(pool);
       svn_ra_serf__set_prop(dir->removed_props, proppatch_target,
                             ns, name, value, dir->pool);
     }
@@ -2011,8 +2009,6 @@ change_file_prop(void *file_baton,
   file_context_t *file = file_baton;
   const char *ns;
 
-  name = apr_pstrdup(file->pool, name);
-
   if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
     {
       ns = SVN_DAV_PROP_NS_SVN;
@@ -2025,13 +2021,12 @@ change_file_prop(void *file_baton,
 
   if (value)
     {
-      value = svn_string_dup(value, file->pool);
       svn_ra_serf__set_prop(file->changed_props, file->url,
                             ns, name, value, file->pool);
     }
   else
     {
-      value = svn_string_create_empty(file->pool);
+      value = svn_string_create_empty(pool);
 
       svn_ra_serf__set_prop(file->removed_props, file->url,
                             ns, name, value, file->pool);
