@@ -909,6 +909,15 @@ svn_ra_serf__add_cdata_len_buckets(serf_bucket_t *agg_bucket,
 
 /** PROPFIND-related functions **/
 
+/* Callback used via svn_ra_serf__deliver_props2 */
+typedef svn_error_t *
+(*svn_ra_serf__prop_func)(void *baton,
+                          const char *path,
+                          const char *ns,
+                          const char *name,
+                          const svn_string_t *value,
+                          apr_pool_t *scratch_pool);
+
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
@@ -928,6 +937,26 @@ svn_ra_serf__deliver_props(svn_ra_serf__handler_t **propfind_handler,
                            const svn_ra_serf__dav_props_t *lookup_props,
                            apr_pool_t *pool);
 
+
+/*
+ * This function will deliver a PROP_CTX PROPFIND request in the SESS
+ * serf context for the properties listed in LOOKUP_PROPS at URL for
+ * DEPTH ("0","1","infinity").
+ *
+ * This function will not block waiting for the response. Callers are
+ * expected to call svn_ra_serf__wait_for_props().
+ */
+svn_error_t *
+svn_ra_serf__deliver_props2(svn_ra_serf__handler_t **propfind_handler,
+                            svn_ra_serf__session_t *sess,
+                            svn_ra_serf__connection_t *conn,
+                            const char *path,
+                            svn_revnum_t rev,
+                            const char *depth,
+                            const svn_ra_serf__dav_props_t *find_props,
+                            svn_ra_serf__prop_func prop_func,
+                            void *prop_func_baton,
+                            apr_pool_t *pool);
 /*
  * This helper function will block until PROPFIND_HANDLER indicates that is
  * done or another error is returned.

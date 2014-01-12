@@ -278,7 +278,6 @@ typedef struct dir_baton_t
 
   svn_boolean_t fetch_props;                 /* Use PROPFIND request? */
   svn_ra_serf__handler_t *propfind_handler;
-  apr_hash_t *propfind_props;
   apr_hash_t *remove_props;
 
 } dir_baton_t;
@@ -318,7 +317,7 @@ typedef struct file_baton_t
 
   svn_boolean_t fetch_props;            /* Use PROPFIND request? */
   svn_ra_serf__handler_t *propfind_handler;
-  apr_hash_t *propfind_props;
+  svn_boolean_t found_lock_prop;
   apr_hash_t *remove_props;
 
   /* Has the server told us to go fetch - only valid if we had it already */
@@ -526,7 +525,7 @@ create_file_baton(file_baton_t **new_file,
   file->base_rev = SVN_INVALID_REVNUM;
   file->copyfrom_rev = SVN_INVALID_REVNUM;
 
-  file->lock_token = svn_hash_gets(parent->ctx->lock_path_tokens,
+  file->lock_token = svn_hash_gets(ctx->lock_path_tokens,
                                    file->relpath);
 
   *new_file = file;
@@ -619,51 +618,6 @@ get_best_connection(report_context_t *ctx)
     }
   return conn;
 }
-
-
-
-/** Wrappers around our various property walkers **/
-
-static svn_error_t *
-set_file_props(void *baton,
-               const char *ns,
-               const char *name,
-               const svn_string_t *val,
-               apr_pool_t *scratch_pool)
-{
-  file_baton_t *file = baton;
-  const svn_delta_editor_t *editor = file->parent_dir->ctx->editor;
-  const char *prop_name;
-
-  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
-  if (prop_name != NULL)
-    return svn_error_trace(editor->change_file_prop(file->file_baton,
-                                                    prop_name,
-                                                    val,
-                                                    scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-set_dir_props(void *baton,
-              const char *ns,
-              const char *name,
-              const svn_string_t *val,
-              apr_pool_t *scratch_pool)
-{
-  dir_baton_t *dir = baton;
-  const svn_delta_editor_t *editor = dir->ctx->editor;
-  const char *prop_name;
-
-  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
-  if (prop_name != NULL)
-    return svn_error_trace(editor->change_dir_prop(dir->dir_baton,
-                                                   prop_name,
-                                                   val,
-                                                   scratch_pool));
-  return SVN_NO_ERROR;
-}
 
 /** Helpers to open and close directories */
 
@@ -733,25 +687,19 @@ maybe_close_dir(dir_baton_t *dir)
 
   SVN_ERR(ensure_dir_opened(dir, dir->pool));
 
-  if (dir->propfind_props)
+  if (dir->remove_props)
     {
       apr_hash_index_t *hi;
-      SVN_ERR(svn_ra_serf__walk_all_props(dir->propfind_props,
-                                          dir->url,
-                                          ctx->target_rev,
-                                          set_dir_props, dir,
-                                          scratch_pool));
 
-      if (dir->remove_props)
-        for (hi = apr_hash_first(scratch_pool, dir->remove_props);
-             hi;
-             hi = apr_hash_next(hi))
-          {
-            SVN_ERR(ctx->editor->change_file_prop(dir->dir_baton,
-                                                  svn__apr_hash_index_key(hi),
-                                                  NULL /* value */,
-                                                  scratch_pool));
-          }
+      for (hi = apr_hash_first(scratch_pool, dir->remove_props);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          SVN_ERR(ctx->editor->change_file_prop(dir->dir_baton,
+                                                svn__apr_hash_index_key(hi),
+                                                NULL /* value */,
+                                                scratch_pool));
+        }
     }
 
   SVN_ERR(dir->ctx->editor->close_directory(dir->dir_baton, scratch_pool));
@@ -802,49 +750,6 @@ ensure_file_opened(file_baton_t *file,
 
 
 /** Routines called when we are fetching a file */
-
-/* This function works around a bug in some older versions of
- * mod_dav_svn in that it will not send remove-prop in the update
- * report when a lock property disappears when send-all is false.
- *
- * Therefore, we'll try to look at our properties and see if there's
- * an active lock.  If not, then we'll assume there isn't a lock
- * anymore.
- */
-static svn_error_t *
-check_lock(file_baton_t *file,
-           apr_pool_t *scratch_pool)
-{
-  const char *lock_val;
-
-  if (!file->propfind_handler || !file->lock_token)
-    return SVN_NO_ERROR;
-
-  lock_val = svn_ra_serf__get_ver_prop(file->propfind_props, file->url,
-                                       file->parent_dir->ctx->target_rev,
-                                       "DAV:", "lockdiscovery");
-
-  if (lock_val)
-    {
-      char *new_lock;
-      new_lock = apr_pstrdup(scratch_pool, lock_val);
-      apr_collapse_spaces(new_lock, new_lock);
-      lock_val = new_lock;
-    }
-
-  if (!lock_val || lock_val[0] == '\0')
-    {
-      SVN_ERR(ensure_file_opened(file, scratch_pool));
-
-      SVN_ERR(file->parent_dir->ctx->editor->change_file_prop(
-                                                file->file_baton,
-                                                SVN_PROP_ENTRY_LOCK_TOKEN,
-                                                NULL,
-                                                scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 headers_fetch(serf_bucket_t *headers,
@@ -946,37 +851,47 @@ close_file(file_baton_t *file,
   SVN_ERR(ensure_file_opened(file, scratch_pool));
 
   /* Set all of the properties we received */
-  if (file->propfind_props)
+  if (file->remove_props)
     {
       apr_hash_index_t *hi;
-      SVN_ERR(svn_ra_serf__walk_all_props(file->propfind_props,
-                                          file->url,
-                                          ctx->target_rev,
-                                          set_file_props, file,
-                                          scratch_pool));
 
-      if (file->remove_props)
-        for (hi = apr_hash_first(scratch_pool, file->remove_props);
-             hi;
-             hi = apr_hash_next(hi))
-          {
-            SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
-                                                  svn__apr_hash_index_key(hi),
-                                                  NULL /* value */,
-                                                  scratch_pool));
-          }
+      for (hi = apr_hash_first(scratch_pool, file->remove_props);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
+                                                svn__apr_hash_index_key(hi),
+                                                NULL /* value */,
+                                                scratch_pool));
+        }
     }
 
   /* Check for lock information. */
-  SVN_ERR(check_lock(file, scratch_pool));
+
+  /* This works around a bug in some older versions of mod_dav_svn in that it
+   * will not send remove-prop in the update report when a lock property
+   * disappears when send-all is false.
+
+   ### Given that we only fetch props on additions, is this really necessary?
+       Or is it covering up old local copy bugs where we copied locks to other
+       paths? */
+  if (!ctx->add_props_included 
+      && file->lock_token && !file->found_lock_prop
+      && SVN_IS_VALID_REVNUM(file->base_rev) /* file_is_added */)
+    {
+      SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
+                                            SVN_PROP_ENTRY_LOCK_TOKEN,
+                                            NULL,
+                                            scratch_pool));
+    }
 
   if (file->url)
-  {
-    SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
-                                          SVN_RA_SERF__WC_CHECKED_IN_URL,
-                                          svn_string_create(file->url,
-                                                            scratch_pool),
-                                          scratch_pool));
+    {
+      SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
+                                            SVN_RA_SERF__WC_CHECKED_IN_URL,
+                                            svn_string_create(file->url,
+                                                              scratch_pool),
+                                            scratch_pool));
     }
 
   /* Close the file via the editor. */
@@ -1131,6 +1046,59 @@ handle_fetch(serf_request_t *request,
 
 /* --------------------------------------------------------- */
 
+/** Wrappers around our various property walkers **/
+
+/* Implements svn_ra_serf__prop_func */
+static svn_error_t *
+set_file_props(void *baton,
+               const char *path,
+               const char *ns,
+               const char *name,
+               const svn_string_t *val,
+               apr_pool_t *scratch_pool)
+{
+  file_baton_t *file = baton;
+  report_context_t *ctx = file->parent_dir->ctx;
+  const char *prop_name;
+
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
+
+  if (!prop_name)
+    {
+      /* This works around a bug in some older versions of
+       * mod_dav_svn in that it will not send remove-prop in the update
+       * report when a lock property disappears when send-all is false.
+       *
+       * Therefore, we'll try to look at our properties and see if there's
+       * an active lock.  If not, then we'll assume there isn't a lock
+       * anymore.
+       */
+      /* assert(!ctx->add_props_included); // Or we wouldn't be here */
+      if (file->lock_token
+          && !file->found_lock_prop
+          && val
+          && strcmp(ns, "DAV:") == 0
+          && strcmp(name, "lockdiscovery") == 0)
+        {
+          char *new_lock;
+          new_lock = apr_pstrdup(scratch_pool, val->data);
+          apr_collapse_spaces(new_lock, new_lock);
+
+          if (new_lock[0] != '\0')
+            file->found_lock_prop = TRUE;
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(ensure_file_opened(file, scratch_pool));
+
+  SVN_ERR(ctx->editor->change_file_prop(file->file_baton,
+                                        prop_name, val,
+                                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Implements svn_ra_serf__response_done_delegate_t */
 static svn_error_t *
@@ -1349,12 +1317,11 @@ fetch_for_file(file_baton_t *file,
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (file->fetch_props)
     {
-      file->propfind_props = apr_hash_make(file->pool);
-      SVN_ERR(svn_ra_serf__deliver_props(&file->propfind_handler,
-                                         file->propfind_props,
-                                         ctx->sess, conn, file->url,
-                                         ctx->target_rev, "0", all_props,
-                                         file->pool));
+      SVN_ERR(svn_ra_serf__deliver_props2(&file->propfind_handler,
+                                          ctx->sess, conn, file->url,
+                                          ctx->target_rev, "0", all_props,
+                                          set_file_props, file,
+                                          file->pool));
       SVN_ERR_ASSERT(file->propfind_handler);
 
       file->propfind_handler->done_delegate = file_props_done;
@@ -1374,6 +1341,31 @@ fetch_for_file(file_baton_t *file,
      Close the file and release memory, etc. */
 
   return svn_error_trace(close_file(file, scratch_pool));
+}
+
+/* Implements svn_ra_serf__prop_func */
+static svn_error_t *
+set_dir_prop(void *baton,
+             const char *path,
+             const char *ns,
+             const char *name,
+             const svn_string_t *val,
+             apr_pool_t *scratch_pool)
+{
+  dir_baton_t *dir = baton;
+  report_context_t *ctx = dir->ctx;
+  const char *prop_name;
+
+  prop_name = svn_ra_serf__svnname_from_wirename(ns, name, scratch_pool);
+  if (prop_name == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(ensure_dir_opened(dir, scratch_pool));
+
+  SVN_ERR(ctx->editor->change_dir_prop(dir->dir_baton,
+                                       prop_name, val,
+                                       scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 /* Implements svn_ra_serf__response_done_delegate_t */
@@ -1422,12 +1414,11 @@ fetch_for_dir(dir_baton_t *dir,
   /* If needed, create the PROPFIND to retrieve the file's properties. */
   if (dir->fetch_props)
     {
-      dir->propfind_props = apr_hash_make(dir->pool);
-      SVN_ERR(svn_ra_serf__deliver_props(&dir->propfind_handler,
-                                         dir->propfind_props,
-                                         ctx->sess, conn, dir->url,
-                                         ctx->target_rev, "0", all_props,
-                                         dir->pool));
+      SVN_ERR(svn_ra_serf__deliver_props2(&dir->propfind_handler,
+                                          ctx->sess, conn, dir->url,
+                                          ctx->target_rev, "0", all_props,
+                                          set_dir_prop, dir,
+                                          dir->pool));
       SVN_ERR_ASSERT(dir->propfind_handler);
 
       dir->propfind_handler->done_delegate = dir_props_done;
