@@ -2398,7 +2398,6 @@ process_pending(update_delay_baton_t *udb,
     {
       const char *data;
       apr_size_t len;
-      svn_boolean_t at_eof = FALSE;
       serf_bucket_t *tmp_bucket;
       svn_error_t *err;
 
@@ -2417,7 +2416,6 @@ process_pending(update_delay_baton_t *udb,
           if (!udb->report->report_received)
             break;
 
-          at_eof = TRUE;
           tmp_bucket = serf_bucket_simple_create("", 0, NULL, NULL, alloc);
         }
       else
