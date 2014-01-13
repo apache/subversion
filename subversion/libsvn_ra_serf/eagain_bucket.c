@@ -91,7 +91,7 @@ eagain_bucket_peek(serf_bucket_t *bucket,
   *data = eab->data;
   *len = eab->remaining;
 
-  return *data == NULL ? APR_EAGAIN : APR_SUCCESS;
+  return *data == NULL ? APR_EOF : APR_SUCCESS;
 }
 
 
