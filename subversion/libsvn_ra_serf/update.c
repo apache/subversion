@@ -2399,12 +2399,13 @@ process_pending(update_delay_baton_t *udb,
       const char *data;
       apr_size_t len;
       svn_boolean_t at_eof = FALSE;
+      serf_bucket_t *tmp_bucket;
       svn_error_t *err;
 
       if (!iterpool)
         {
           iterpool = svn_pool_create(scratch_pool);
-          alloc = serf_bucket_allocator_create(iterpool, NULL, NULL);
+          alloc = serf_bucket_allocator_create(scratch_pool, NULL, NULL);
         }
       else
         svn_pool_clear(iterpool);
@@ -2416,19 +2417,18 @@ process_pending(update_delay_baton_t *udb,
           if (!udb->report->report_received)
             break;
 
-          data = "";
           at_eof = TRUE;
+          tmp_bucket = serf_bucket_simple_create("", 0, NULL, NULL, alloc);
         }
+      else
+        tmp_bucket = svn_ra_serf__create_bucket_with_eagain(data, len, alloc);
 
       /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
          use a standard bucket with default EOF handling */
-      err = udb->inner_handler(NULL /* allowed? */,
-                               at_eof
-                                ? serf_bucket_simple_create(
-                                         data, len, NULL, NULL, alloc)
-                                : svn_ra_serf__create_bucket_with_eagain(
-                                         data, len, alloc),
-                                  udb->inner_handler_baton, iterpool);
+      err = udb->inner_handler(NULL /* allowed? */, tmp_bucket,
+                               udb->inner_handler_baton, iterpool);
+
+      serf_bucket_destroy(tmp_bucket);
 
       if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
         {
