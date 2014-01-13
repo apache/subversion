@@ -857,7 +857,8 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
                    svn_revnum_t rev,
                    const svn_ra_serf__dav_props_t *fetch_props,
                    apr_hash_t **ret_props,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
@@ -865,7 +866,8 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
-      propfind_path = apr_psprintf(pool, "%s/%ld", session->rev_stub, rev);
+      propfind_path = apr_psprintf(scratch_pool, "%s/%ld", session->rev_stub,
+                                   rev);
 
       /* svn_ra_serf__retrieve_props() wants to added the revision as
          a Label to the PROPFIND, which isn't really necessary when
@@ -876,16 +878,17 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   else
     {
       /* Use the VCC as the propfind target path. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL,
+                                        scratch_pool));
     }
 
   /* ### fix: fetch hash of *just* the PATH@REV props. no nested hash.  */
   SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
                                       propfind_path, rev, "0", fetch_props,
-                                      pool, pool));
+                                      result_pool, scratch_pool));
 
   SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
-                                       pool, pool));
+                                       result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -895,11 +898,16 @@ static svn_error_t *
 svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                           svn_revnum_t rev,
                           apr_hash_t **ret_props,
-                          apr_pool_t *pool)
+                          apr_pool_t *result_pool)
 {
-  return svn_error_trace(
-            serf__rev_proplist(ra_session, rev, all_props,
-                               ret_props, pool));
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
+  svn_error_t *err;
+
+  err = serf__rev_proplist(ra_session, rev, all_props, ret_props,
+                           result_pool, scratch_pool);
+
+  svn_pool_destroy(scratch_pool);
+  return svn_error_trace(err);
 }
 
 
@@ -909,8 +917,9 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
                       svn_revnum_t rev,
                       const char *name,
                       svn_string_t **value,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool)
 {
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
   apr_hash_t *props;
   svn_ra_serf__dav_props_t specific_props[2];
   const svn_ra_serf__dav_props_t *fetch_props = all_props;
@@ -930,9 +939,12 @@ svn_ra_serf__rev_prop(svn_ra_session_t *session,
       fetch_props = specific_props;
     }
 
-  SVN_ERR(serf__rev_proplist(session, rev, fetch_props, &props, pool));
+  SVN_ERR(serf__rev_proplist(session, rev, fetch_props, &props,
+                             result_pool, scratch_pool));
 
   *value = svn_hash_gets(props, name);
+
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
