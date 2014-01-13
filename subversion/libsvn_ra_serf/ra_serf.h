@@ -440,6 +440,7 @@ typedef struct svn_ra_serf__handler_t {
 
   /* Has the request/response been completed?  */
   svn_boolean_t done;
+  svn_boolean_t scheduled; /* Is the request scheduled in a context */
 
   /* If we captured an error from the server, then this will be non-NULL.
      It will be allocated from HANDLER_POOL.  */
@@ -512,7 +513,6 @@ typedef struct svn_ra_serf__handler_t {
   /* Pool for allocating SLINE.REASON and LOCATION. If this pool is NULL,
      then the requestor does not care about SLINE and LOCATION.  */
   apr_pool_t *handler_pool;
-
 } svn_ra_serf__handler_t;
 
 
