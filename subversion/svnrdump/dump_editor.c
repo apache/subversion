@@ -121,13 +121,6 @@ struct file_baton
   svn_boolean_t dump_props;
 };
 
-/* A handler baton to be used in window_handler().  */
-struct handler_baton
-{
-  svn_txdelta_window_handler_t apply_handler;
-  void *apply_baton;
-};
-
 /* The baton used by the dump editor. */
 struct dump_edit_baton {
   /* The output stream we write the dumpfile to */
@@ -940,22 +933,6 @@ change_file_prop(void *file_baton,
 }
 
 static svn_error_t *
-window_handler(svn_txdelta_window_t *window, void *baton)
-{
-  struct handler_baton *hb = baton;
-  static svn_error_t *err;
-
-  err = hb->apply_handler(window, hb->apply_baton);
-  if (window != NULL && !err)
-    return SVN_NO_ERROR;
-
-  if (err)
-    SVN_ERR(err);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 apply_textdelta(void *file_baton, const char *base_checksum,
                 apr_pool_t *pool,
                 svn_txdelta_window_handler_t *handler,
@@ -963,31 +940,21 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 {
   struct file_baton *fb = file_baton;
   struct dump_edit_baton *eb = fb->eb;
-  struct handler_baton *hb;
   svn_stream_t *delta_filestream;
 
   LDR_DBG(("apply_textdelta %p\n", file_baton));
-
-  /* This is custom handler_baton, allocated from a separate pool.  */
-  hb = apr_pcalloc(eb->pool, sizeof(*hb));
 
   /* Use a temporary file to measure the Text-content-length */
   delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
 
   /* Prepare to write the delta to the delta_filestream */
-  svn_txdelta_to_svndiff3(&(hb->apply_handler), &(hb->apply_baton),
+  svn_txdelta_to_svndiff3(handler, handler_baton,
                           delta_filestream, 0,
                           SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, pool);
 
   /* Record that there's text to be dumped, and its base checksum. */
   fb->dump_text = TRUE;
   fb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
-
-  /* The actual writing takes place when this function has
-     finished. Set handler and handler_baton now so for
-     window_handler() */
-  *handler = window_handler;
-  *handler_baton = hb;
 
   return SVN_NO_ERROR;
 }
