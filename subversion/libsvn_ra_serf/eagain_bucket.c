@@ -88,10 +88,10 @@ eagain_bucket_peek(serf_bucket_t *bucket,
 {
   const eagain_baton_t *eab = bucket->data;
 
-  *data = eab->data;
+  *data = eab->data ? eab->data : "";
   *len = eab->remaining;
 
-  return *data == NULL ? APR_EOF : APR_SUCCESS;
+  return APR_SUCCESS;
 }
 
 
