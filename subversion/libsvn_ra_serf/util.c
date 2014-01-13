@@ -1856,7 +1856,6 @@ handler_cleanup(void *baton)
   svn_ra_serf__handler_t *handler = baton;
   if (handler->scheduled && handler->conn)
     {
-      SVN_DBG(("Resetting connection!"));
       serf_connection_reset(handler->conn->conn);
     }
 
