@@ -165,7 +165,10 @@ dirent_walker(void *baton,
     {
       if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
         {
-          dwb->entry->created_rev = SVN_STR_TO_REV(val->data);
+          apr_int64_t rev;
+          SVN_ERR(svn_cstring_atoi64(&rev, val->data));
+
+          dwb->entry->created_rev = (svn_revnum_t)rev;
         }
       else if (strcmp(name, "creator-displayname") == 0)
         {

@@ -218,12 +218,14 @@ collect_path(apr_hash_t *paths,
   copyfrom_rev = svn_hash_gets(attrs, "copyfrom-rev");
   if (copyfrom_path && copyfrom_rev)
     {
-      svn_revnum_t rev = SVN_STR_TO_REV(copyfrom_rev);
+      apr_int64_t rev;
 
-      if (SVN_IS_VALID_REVNUM(rev))
+      SVN_ERR(svn_cstring_atoi64(&rev, copyfrom_rev));
+
+      if (SVN_IS_VALID_REVNUM((svn_revnum_t)rev))
         {
           lcp->copyfrom_path = apr_pstrdup(result_pool, copyfrom_path);
-          lcp->copyfrom_rev = rev;
+          lcp->copyfrom_rev = (svn_revnum_t)rev;
         }
     }
 
@@ -307,7 +309,12 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
 
       rev_str = svn_hash_gets(attrs, "revision");
       if (rev_str)
-        log_entry->revision = SVN_STR_TO_REV(rev_str);
+        {
+          apr_int64_t rev;
+
+          SVN_ERR(svn_cstring_atoi64(&rev, rev_str));
+          log_entry->revision = (svn_revnum_t)rev;
+        }
       else
         log_entry->revision = SVN_INVALID_REVNUM;
 
