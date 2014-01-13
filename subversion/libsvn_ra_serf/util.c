@@ -930,23 +930,6 @@ svn_ra_serf__context_run_one(svn_ra_serf__handler_t *handler,
   /* Wait until the response logic marks its DONE status.  */
   err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
                                       scratch_pool);
-
-  /* A callback invocation has been canceled. In this simple case of
-     context_run_one, we can keep the ra-session operational by resetting
-     the connection.
-
-     If we don't do this, the next context run will notice that the connection
-     is still in the error state and will just return SVN_ERR_CEASE_INVOCATION
-     (=the last error for the connection) again  */
-  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
-    {
-      apr_status_t status = serf_connection_reset(handler->conn->conn);
-
-      if (status)
-        err = svn_error_compose_create(err,
-                                       svn_ra_serf__wrap_err(status, NULL));
-    }
-
   return svn_error_trace(err);
 }
 
@@ -1200,6 +1183,8 @@ handle_response(serf_request_t *request,
   if (!response)
     {
       /* Uh-oh. Our connection died.  */
+      handler->scheduled = FALSE;
+
       if (handler->response_error)
         {
           /* Give a handler chance to prevent request requeue. */
@@ -1423,6 +1408,7 @@ handle_response_cb(serf_request_t *request,
     {
       svn_ra_serf__session_t *sess = handler->session;
       handler->done = TRUE;
+      handler->scheduled = FALSE;
       outer_status = APR_EOF;
 
       /* We use a cached handler->session here to allow handler to free the
@@ -1436,7 +1422,8 @@ handle_response_cb(serf_request_t *request,
     {
       handler->discard_body = TRUE; /* Discard further data */
       handler->done = TRUE; /* Mark as done */
-      return APR_EAGAIN; /* Exit context loop */
+      handler->scheduled = FALSE;
+      outer_status = APR_EAGAIN; /* Exit context loop */
     }
 
   return outer_status;
@@ -1538,24 +1525,29 @@ setup_request_cb(serf_request_t *request,
 void
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
-  SVN_ERR_ASSERT_NO_RETURN(handler->handler_pool != NULL);
+  SVN_ERR_ASSERT_NO_RETURN(handler->handler_pool != NULL
+                           && !handler->scheduled);
 
-  /* In case HANDLER is re-queued, reset the various transient fields.
-
-     ### prior to recent changes, HANDLER was constant. maybe we should
-     ### break out these processing fields, apart from the request
-     ### definition.  */
+  /* In case HANDLER is re-queued, reset the various transient fields. */
   handler->done = FALSE;
   handler->server_error = NULL;
   handler->sline.version = 0;
   handler->location = NULL;
   handler->reading_body = FALSE;
   handler->discard_body = FALSE;
+  handler->scheduled = TRUE;
 
-  /* ### do we ever alter the >response_handler?  */
+  /* Keeping track of the returned request object would be nice, but doesn't
+     work the way we would expect in ra_serf..
 
-  /* ### do we need to hold onto the returned request object, or just
-     ### not worry about it (the serf ctx will manage it).  */
+     Serf sometimes creates a new request for us (and destroys the old one)
+     without telling, like when authentication failed (401/407 response.
+
+     We 'just' trust serf to do the right thing and expect it to tell us
+     when the state of the request changes.
+
+     ### I fixed a request leak in serf in r2258 on auth failures.
+   */
   (void) serf_connection_request_create(handler->conn->conn,
                                         setup_request_cb, handler);
 }
@@ -1849,6 +1841,28 @@ response_done(serf_request_t *request,
   return SVN_NO_ERROR;
 }
 
+/* Pool cleanup handler for request handlers.
+
+   If a serf context run stops for some outside error, like when the user
+   cancels a request via ^C in the context loop, the handler is still
+   registered in the serf context. With the pool cleanup there would be
+   handlers registered in no freed memory.
+
+   This fallback kills the connection for this case, which will make serf
+   unregister any*/
+static apr_status_t
+handler_cleanup(void *baton)
+{
+  svn_ra_serf__handler_t *handler = baton;
+  if (handler->scheduled && handler->conn)
+    {
+      SVN_DBG(("Resetting connection!"));
+      serf_connection_reset(handler->conn->conn);
+    }
+
+  return APR_SUCCESS;
+}
+
 svn_ra_serf__handler_t *
 svn_ra_serf__create_handler(apr_pool_t *result_pool)
 {
@@ -1856,6 +1870,9 @@ svn_ra_serf__create_handler(apr_pool_t *result_pool)
 
   handler = apr_pcalloc(result_pool, sizeof(*handler));
   handler->handler_pool = result_pool;
+
+  apr_pool_cleanup_register(result_pool, handler, handler_cleanup,
+                            apr_pool_cleanup_null);
 
   /* Setup the default done handler, to handle server errors */
   handler->done_delegate_baton = handler;
