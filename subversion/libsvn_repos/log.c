@@ -242,8 +242,7 @@ turn_unique_copies_into_moves(apr_hash_t *changes,
     if (   (i == 0 || strcmp(sources[i-1], sources[i]))
         && (i == copy_sources->nelts-1 || strcmp(sources[i+1], sources[i])))
       {
-        apr_hash_set(unique_copy_sources, sources[i],
-                     APR_HASH_KEY_STRING, sources[i]);
+        svn_hash_sets(unique_copy_sources, sources[i], sources[i]);
       }
 
   /* no unique copy-from paths -> no moves */
@@ -264,12 +263,10 @@ turn_unique_copies_into_moves(apr_hash_t *changes,
       apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
       if (   change->copyfrom_rev != revision-1
           || !change->copyfrom_path
-          || !apr_hash_get(unique_copy_sources, change->copyfrom_path,
-                           APR_HASH_KEY_STRING))
+          || !svn_hash_gets(unique_copy_sources, change->copyfrom_path))
         continue;
 
-      copy_from_change = apr_hash_get(changes, change->copyfrom_path,
-                                      APR_HASH_KEY_STRING);
+      copy_from_change = svn_hash_gets(changes, change->copyfrom_path);
       if (!copy_from_change || !is_deletion(copy_from_change))
         continue;
 
