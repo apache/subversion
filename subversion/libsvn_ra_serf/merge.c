@@ -171,7 +171,12 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 
           rev_str = svn_hash_gets(attrs, "revision");
           if (rev_str)
-            merge_ctx->commit_info->revision = SVN_STR_TO_REV(rev_str);
+            {
+              apr_int64_t rev;
+
+              SVN_ERR(svn_cstring_atoi64(&rev, rev_str));
+              merge_ctx->commit_info->revision = (svn_revnum_t)rev;
+            }
           else
             merge_ctx->commit_info->revision = SVN_INVALID_REVNUM;
 

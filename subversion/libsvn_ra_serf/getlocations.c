@@ -94,7 +94,12 @@ getloc_closed(svn_ra_serf__xml_estate_t *xes,
   path = svn_hash_gets(attrs, "path");
   if (revstr != NULL && path != NULL)
     {
-      svn_revnum_t rev = SVN_STR_TO_REV(revstr);
+      apr_int64_t rev_val;
+      svn_revnum_t rev;
+
+      SVN_ERR(svn_cstring_atoi64(&rev_val, revstr));
+      rev = (svn_revnum_t)rev_val;
+
       apr_hash_set(loc_ctx->paths,
                    apr_pmemdup(loc_ctx->pool, &rev, sizeof(rev)), sizeof(rev),
                    apr_pstrdup(loc_ctx->pool, path));
