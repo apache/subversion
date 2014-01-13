@@ -413,7 +413,7 @@ struct report_context_t {
 
   /* Our master update editor and baton. */
   const svn_delta_editor_t *editor;
-  void *update_baton;
+  void *editor_baton;
 
   /* The file holding request body for the REPORT.
    *
@@ -781,7 +781,7 @@ ensure_dir_opened(dir_baton_t *dir,
                       SVN_RA_SERF__WC_CHECKED_IN_URL, scratch_pool));
         }
 
-      SVN_ERR(ctx->editor->open_root(ctx->update_baton, dir->base_rev,
+      SVN_ERR(ctx->editor->open_root(ctx->editor_baton, dir->base_rev,
                                      dir->pool,
                                      &dir->dir_baton));
     }
@@ -1797,7 +1797,7 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
         
           SVN_ERR(svn_cstring_atoi64(&rev, revstr));
         
-          SVN_ERR(ctx->editor->set_target_revision(ctx->update_baton,
+          SVN_ERR(ctx->editor->set_target_revision(ctx->editor_baton,
                                                    (svn_revnum_t)rev,
                                                    scratch_pool));
         }
@@ -2450,56 +2450,27 @@ process_pending(update_delay_baton_t *udb,
   return SVN_NO_ERROR;
 }
 
+/* Process the 'update' editor report */
 static svn_error_t *
-finish_report(void *report_baton,
-              apr_pool_t *pool)
+process_editor_report(report_context_t *ctx,
+                      svn_ra_serf__handler_t *handler,
+                      apr_pool_t *scratch_pool)
 {
-  report_context_t *report = report_baton;
-  svn_ra_serf__session_t *sess = report->sess;
-  svn_ra_serf__handler_t *handler;
-  svn_ra_serf__xml_context_t *xmlctx;
-  const char *report_target;
-  svn_stringbuf_t *buf = NULL;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_error_t *err;
+  svn_ra_serf__session_t *sess = ctx->sess;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_interval_time_t waittime_left = sess->timeout;
   update_delay_baton_t *ud;
 
-  svn_xml_make_close_tag(&buf, iterpool, "S:update-report");
-  SVN_ERR(svn_stream_write(report->body_template, buf->data, &buf->len));
-  SVN_ERR(svn_stream_close(report->body_template));
-
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL, pool));
-
-  xmlctx = svn_ra_serf__xml_context_create(update_ttable,
-                                           update_opened, update_closed,
-                                           update_cdata,
-                                           report,
-                                           pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
-
-  handler->method = "REPORT";
-  handler->path = report_target;
-  handler->body_delegate = create_update_report_body;
-  handler->body_delegate_baton = report;
-  handler->body_type = "text/xml";
-  handler->custom_accept_encoding = TRUE;
-  handler->header_delegate = setup_update_report_headers;
-  handler->header_delegate_baton = report;
-  handler->conn = sess->conns[0];
-  handler->session = sess;
-
   /* Now wrap the response handler with delay support to avoid sending
      out too many requests at once */
-  ud = apr_pcalloc(pool, sizeof(*ud));
-  ud->report = report;
+  ud = apr_pcalloc(scratch_pool, sizeof(*ud));
+  ud->report = ctx;
+
   ud->inner_handler = handler->response_handler;
   ud->inner_handler_baton = handler->response_baton;
 
   handler->response_handler = update_delay_handler;
   handler->response_baton = ud;
-
-  svn_ra_serf__request_create(handler);
 
   /* Open the first extra connection. */
   SVN_ERR(open_connection_if_needed(sess, 0));
@@ -2512,10 +2483,11 @@ finish_report(void *report_baton,
      content of the XML parser. The DONE flag will get set when all the
      XML content has been received *and* parsed.  */
   while (!handler->done
-         || report->num_active_fetches
-         || report->num_active_propfinds
-         || !report->done)
+         || ctx->num_active_fetches
+         || ctx->num_active_propfinds
+         || !ctx->done)
     {
+      svn_error_t *err;
       int i;
 
       svn_pool_clear(iterpool);
@@ -2546,21 +2518,70 @@ finish_report(void *report_baton,
   svn_pool_clear(iterpool);
 
   /* If we got a complete report, close the edit.  Otherwise, abort it. */
-  if (report->done)
-    {
-      err = svn_error_trace(report->editor->close_edit(report->update_baton,
-                                                       iterpool));
-    }
+  if (ctx->done)
+    SVN_ERR(ctx->editor->close_edit(ctx->editor_baton, iterpool));
   else
-    {
-      /* Tell the editor that something failed */
-      err = report->editor->abort_edit(report->update_baton, iterpool);
-
-      err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
-                             _("Missing update-report close tag"));
-    }
+    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                            _("Missing update-report close tag"));
 
   svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+finish_report(void *report_baton,
+              apr_pool_t *pool)
+{
+  report_context_t *report = report_baton;
+  svn_ra_serf__session_t *sess = report->sess;
+  svn_ra_serf__handler_t *handler;
+  svn_ra_serf__xml_context_t *xmlctx;
+  const char *report_target;
+  svn_stringbuf_t *buf = NULL;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_error_t *err;
+
+  svn_xml_make_close_tag(&buf, scratch_pool, "S:update-report");
+  SVN_ERR(svn_stream_write(report->body_template, buf->data, &buf->len));
+  SVN_ERR(svn_stream_close(report->body_template));
+
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, sess, NULL,
+                                       scratch_pool));
+
+  xmlctx = svn_ra_serf__xml_context_create(update_ttable,
+                                           update_opened, update_closed,
+                                           update_cdata,
+                                           report,
+                                           scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+
+  handler->method = "REPORT";
+  handler->path = report_target;
+  handler->body_delegate = create_update_report_body;
+  handler->body_delegate_baton = report;
+  handler->body_type = "text/xml";
+  handler->custom_accept_encoding = TRUE;
+  handler->header_delegate = setup_update_report_headers;
+  handler->header_delegate_baton = report;
+  handler->conn = sess->conns[0];
+  handler->session = sess;
+
+  svn_ra_serf__request_create(handler);
+
+  err = process_editor_report(report, handler, scratch_pool);
+
+  if (err)
+    {
+      err = svn_error_trace(err);
+      err = svn_error_compose_create(
+                err,
+                svn_error_trace(
+                    report->editor->abort_edit(report->editor_baton,
+                                               scratch_pool)));
+    }
+
+  svn_pool_destroy(scratch_pool);
+
   return svn_error_trace(err);
 }
 
@@ -2649,7 +2670,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->update_target = update_target;
 
   report->editor = update_editor;
-  report->update_baton = update_baton;
+  report->editor_baton = update_baton;
   report->done = FALSE;
 
   *reporter = &ra_serf_reporter;
