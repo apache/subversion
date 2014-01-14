@@ -73,8 +73,6 @@ JNIMutex *JNIUtil::g_finalizedObjectsMutex = NULL;
 JNIMutex *JNIUtil::g_logMutex = NULL;
 JNIMutex *JNIUtil::g_configMutex = NULL;
 bool JNIUtil::g_initException;
-bool JNIUtil::g_inInit;
-JNIEnv *JNIUtil::g_initEnv;
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
 
@@ -113,109 +111,19 @@ bool JNIUtil::JNIInit(JNIEnv *env)
   return true;
 }
 
-namespace
+/* Forwarder for calling JNIGlobalInit from JNI_OnLoad(). */
+bool initialize_jni_util(JNIEnv *env)
 {
-struct GlobalInitGuard
-{
-  enum InitState
-    {
-      state_null,
-      state_init,
-      state_done,
-      state_error
-    };
-
-  GlobalInitGuard()
-    : m_finished(false),
-      m_state(InitState(svn_atomic_cas(&m_global_state,
-                                       state_init, state_null)))
-    {
-      switch (m_state)
-        {
-        case state_null:
-          // This thread won the initialization contest.
-          break;
-
-        case state_done:
-          // The library is already initialized.
-          break;
-
-        case state_init:
-          // Another thread is currently initializing the
-          // library. Spin and wait for it to finish, with exponential
-          // backoff, but no longer than half a second.
-          for (unsigned shift = 0;
-               m_state == state_init && shift < 8;
-               ++shift)
-            {
-              apr_sleep((APR_USEC_PER_SEC / 1000) << shift);
-              m_state = InitState(svn_atomic_cas(&m_global_state,
-                                                 state_null, state_null));
-            }
-          if (m_state == state_init)
-            // The initialization didn't complete in half a second,
-            // which probably implies a thread crash or a deadlock.
-            m_state = state_error;
-          break;
-
-        default:
-          // Error state, or unknown state. In any case, do not continue.
-          m_state = state_error;
-        }
-    }
-
-  ~GlobalInitGuard()
-    {
-      // Signal the end of the library intialization if we're the
-      // initializing thread.
-      if (m_finished && m_state == state_null)
-        {
-          SVN_ERR_ASSERT_NO_RETURN(
-              state_init == svn_atomic_cas(&m_global_state,
-                                           state_done, state_init));
-        }
-    }
-
-  bool done() const
-    {
-      return (m_state == state_done);
-    }
-
-  bool error() const
-    {
-      return (m_state == state_error);
-    }
-
-  void finish()
-    {
-      m_finished = true;
-    }
-
-private:
-  bool m_finished;
-  InitState m_state;
-  static volatile svn_atomic_t m_global_state;
-};
-volatile svn_atomic_t
-GlobalInitGuard::m_global_state = GlobalInitGuard::state_null;
-} // anonymous namespace
+  return JNIUtil::JNIGlobalInit(env);
+}
 
 /**
  * Initialize the environment for all requests.
+ * This method must be called in a single-threaded context.
  * @param env   the JNI environment for this request
  */
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
-  // This method has to be run only once during the run a program.
-  GlobalInitGuard guard;
-  if (guard.done())
-    return true;
-  else if (guard.error())
-    return false;
-
-  g_inInit = true;
-  g_initEnv = env;
-
   svn_error_t *err;
 
   /* This has to happen before any pools are created. */
@@ -325,10 +233,6 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   if (isExceptionThrown())
     return false;
 
-  g_initEnv = NULL;
-  g_inInit = false;
-
-  guard.finish();
   return true;
 }
 
