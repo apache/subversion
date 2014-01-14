@@ -147,7 +147,6 @@ class JNIUtil
     }
 
   static apr_pool_t *getPool();
-  static bool JNIGlobalInit(JNIEnv *env);
   static bool JNIInit(JNIEnv *env);
   static bool initializeJNIRuntime();
   enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
@@ -158,6 +157,9 @@ class JNIUtil
   static JNIMutex *g_configMutex;
 
  private:
+  friend bool initialize_jni_util(JNIEnv *env);
+  static bool JNIGlobalInit(JNIEnv *env);
+
   static void wrappedHandleSVNError(svn_error_t *err, jthrowable jcause);
   static void putErrorsInTrace(svn_error_t *err,
                                std::vector<jobject> &stackTrace);
@@ -192,17 +194,6 @@ class JNIUtil
    * Flag, that an exception occurred during our initialization.
    */
   static bool g_initException;
-
-  /**
-   * Flag, that one thread is in the init code.  Cannot use mutex
-   * here since apr is not initialized yet.
-   */
-  static bool g_inInit;
-
-  /**
-   * The JNI environment used during initialization.
-   */
-  static JNIEnv *g_initEnv;
 
   /**
    * The stream to write log messages to.

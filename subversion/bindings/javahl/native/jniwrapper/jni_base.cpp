@@ -33,6 +33,7 @@
 #include "jni_stack.hpp"
 
 #include "../JNIUtil.h"
+bool initialize_jni_util(JNIEnv *env);
 
 // Global library initializaiton
 
@@ -45,6 +46,7 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM* jvm, void*)
 {
   ::Java::Env::static_init(jvm);
+  const ::Java::Env env;
 
   const apr_status_t status = apr_initialize();
   if (!status)
@@ -55,9 +57,16 @@ JNI_OnLoad(JavaVM* jvm, void*)
       std::strcpy(buf, "Could not initialize APR: ");
       const std::size_t offset = std::strlen(buf);
       apr_strerror(status, buf + offset, sizeof(buf) - offset - 1);
-      const ::Java::Env env;
       env.ThrowNew(env.FindClass("java/lang/Error"), buf);
     }
+
+  // Initialize the old-style JavaHL infrastructure.
+  if (!initialize_jni_util(env.get()) && !env.ExceptionCheck())
+    {
+      env.ThrowNew(env.FindClass("java/lang/LinkageError"),
+                   "Native library initialization failed");
+    }
+
   return JNI_VERSION_1_2;
 }
 
