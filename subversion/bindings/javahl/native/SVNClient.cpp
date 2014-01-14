@@ -1513,7 +1513,7 @@ SVNClient::openRemoteSession(const char* path, int retryAttempts)
 
     /* Decouple the RemoteSession's context from SVNClient's context
        by creating a copy of the prompter here. */
-    Prompter* prompter = new Prompter(context.getPrompter());
+    Prompter* prompter = Prompter::makeCPrompter(context.getPrompter());
     if (!prompter)
       return NULL;
 
