@@ -101,7 +101,7 @@ Candidate changes:
    Justification:
      User triggerable segfaults are bad.
    Votes:
-    +1: breser
+    +1: breser, stefan2
 
 Veto-blocked changes:
 =====================
