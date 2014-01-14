@@ -1630,6 +1630,56 @@ conflict_err(svn_stringbuf_t *conflict_path,
                            _("Conflict at '%s'"), path);
 }
 
+/* Compare the directory representations at nodes LHS and RHS and set
+ * *CHANGED to TRUE, if at least one entry has been added or removed them.
+ * Use POOL for temporary allocations.
+ */
+static svn_error_t *
+compare_dir_structure(svn_boolean_t *changed,
+                      dag_node_t *lhs,
+                      dag_node_t *rhs,
+                      apr_pool_t *pool)
+{
+  apr_hash_t *lhs_entries;
+  apr_hash_t *rhs_entries;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_x__dag_dir_entries(&lhs_entries, lhs, pool));
+  SVN_ERR(svn_fs_x__dag_dir_entries(&rhs_entries, rhs, pool));
+
+  /* different number of entries -> some addition / removal */
+  if (apr_hash_count(lhs_entries) != apr_hash_count(rhs_entries))
+    {
+      *changed = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Since the number of dirents is the same, we simply need to do a 
+     one-sided comparison. */
+  for (hi = apr_hash_first(pool, lhs_entries); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_dirent_t *lhs_entry;
+      svn_fs_dirent_t *rhs_entry;
+      const char *name;
+      apr_ssize_t klen;
+
+      apr_hash_this(hi, (const void **)&name, &klen, (void **)&lhs_entry);
+      rhs_entry = apr_hash_get(rhs_entries, name, klen);
+
+      if (!rhs_entry
+          || !svn_fs_x__id_part_eq(svn_fs_x__id_node_id(lhs_entry->id),
+                                   svn_fs_x__id_node_id(rhs_entry->id))
+          || !svn_fs_x__id_part_eq(svn_fs_x__id_copy_id(lhs_entry->id),
+                                   svn_fs_x__id_copy_id(rhs_entry->id)))
+        {
+          *changed = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *changed = FALSE;
+  return SVN_NO_ERROR;
+}
 
 /* Merge changes between ANCESTOR and SOURCE into TARGET.  ANCESTOR
  * and TARGET must be distinct node revisions.  TARGET_PATH should
@@ -1803,10 +1853,23 @@ merge(svn_stringbuf_t *conflict_p,
        it doesn't do a brute-force comparison on textual contents, so
        it won't do that here either.  Checking to see if the propkey
        atoms are `equal' is enough. */
-    if (! svn_fs_x__noderev_same_rep_key(tgt_nr->prop_rep, anc_nr->prop_rep))
-      return conflict_err(conflict_p, target_path);
     if (! svn_fs_x__noderev_same_rep_key(src_nr->prop_rep, anc_nr->prop_rep))
       return conflict_err(conflict_p, target_path);
+
+    /* The directory entries got changed in the repository but the directory
+       properties did not. */
+    if (! svn_fs_x__noderev_same_rep_key(tgt_nr->prop_rep, anc_nr->prop_rep))
+      {
+        /* There is an incoming prop change for this directory.
+           We will accept it only if the directory changes were mere updates
+           to its entries, i.e. there were no additions or removals.
+           Those could cause update problems to the working copy. */
+        svn_boolean_t changed;
+        SVN_ERR(compare_dir_structure(&changed, source, ancestor, pool));
+
+        if (changed)
+          return conflict_err(conflict_p, target_path);
+      }
   }
 
   /* ### todo: it would be more efficient to simply check for a NULL

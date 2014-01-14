@@ -4582,6 +4582,7 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *txn_root2;
   svn_string_t pval;
   svn_revnum_t new_rev, not_rev;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
 
   /* This is a regression test for issue #2751. */
 
@@ -4638,10 +4639,21 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   /* Commit the first one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
 
-  /* Then commit the second -- but expect an conflict because the
-     directory wasn't up-to-date, which is required for propchanges. */
-  SVN_ERR(test_commit_txn(&not_rev, txn2, "/A/B", pool));
-  SVN_ERR(svn_fs_abort_txn(txn2, pool));
+  /* Some backends are clever then others. */
+  if (is_bdb)
+    {
+      /* Then commit the second -- but expect an conflict because the
+         directory wasn't up-to-date, which is required for propchanges. */
+      SVN_ERR(test_commit_txn(&not_rev, txn2, "/A/B", pool));
+      SVN_ERR(svn_fs_abort_txn(txn2, pool));
+    }
+  else
+    {
+      /* Then commit the second -- there will be no conflict despite the
+         directory being out-of-data because the properties as well as the
+         directory structure (list of nodes) was up-to-date. */
+      SVN_ERR(test_commit_txn(&not_rev, txn2, NULL, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5222,6 +5234,80 @@ test_compat_version(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+dir_prop_merge(const svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_revnum_t head_rev;
+  svn_fs_root_t *root;
+  svn_fs_txn_t *txn, *mid_txn, *top_txn, *sub_txn, *c_txn;
+  svn_boolean_t is_bdb = strcmp(opts->fs_type, "bdb") == 0;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-dir_prop-merge", opts, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+
+  /* Create and verify the greek tree. */
+  SVN_ERR(svn_test__create_greek_tree(root, pool));
+  SVN_ERR(test_commit_txn(&head_rev, txn, NULL, pool));
+
+  /* Start concurrent transactions */
+
+  /* 1st: modify a mid-level directory */
+  SVN_ERR(svn_fs_begin_txn2(&mid_txn, fs, head_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, mid_txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "A/D", "test-prop",
+                                  svn_string_create("val1", pool), pool));
+  svn_fs_close_root(root);
+
+  /* 2st: modify a top-level directory */
+  SVN_ERR(svn_fs_begin_txn2(&top_txn, fs, head_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, top_txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "A", "test-prop",
+                                  svn_string_create("val2", pool), pool));
+  svn_fs_close_root(root);
+
+  SVN_ERR(svn_fs_begin_txn2(&sub_txn, fs, head_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, sub_txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "A/D/G", "test-prop",
+                                  svn_string_create("val3", pool), pool));
+  svn_fs_close_root(root);
+
+  /* 3rd: modify a conflicting change to the mid-level directory */
+  SVN_ERR(svn_fs_begin_txn2(&c_txn, fs, head_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, c_txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "A/D", "test-prop",
+                                  svn_string_create("valX", pool), pool));
+  svn_fs_close_root(root);
+
+  /* Prop changes to the same node should conflict */
+  SVN_ERR(test_commit_txn(&head_rev, mid_txn, NULL, pool));
+  SVN_ERR(test_commit_txn(&head_rev, c_txn, "/A/D", pool));
+  SVN_ERR(svn_fs_abort_txn(c_txn, pool));
+
+  /* Changes in a sub-tree should not conflict with prop changes to some
+     parent directory but some backends are clever then others. */
+  if (is_bdb)
+    {
+      SVN_ERR(test_commit_txn(&head_rev, top_txn, "/A", pool));
+      SVN_ERR(svn_fs_abort_txn(top_txn, pool));
+    }
+  else
+    {
+      SVN_ERR(test_commit_txn(&head_rev, top_txn, NULL, pool));
+    }
+
+  /* The inverted case is not that trivial to handle.  Hence, conflict.
+     Depending on the checking order, the reported conflict path differs. */
+  SVN_ERR(test_commit_txn(&head_rev, sub_txn, is_bdb ? "/A/D" : "/A", pool));
+  SVN_ERR(svn_fs_abort_txn(sub_txn, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -5315,5 +5401,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "commit timestamp"),
     SVN_TEST_OPTS_PASS(test_compat_version,
                        "test svn_fs__compatible_version"),
+    SVN_TEST_OPTS_PASS(dir_prop_merge,
+                       "test merge directory properties"),
     SVN_TEST_NULL
   };
