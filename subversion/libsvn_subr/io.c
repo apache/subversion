@@ -3599,6 +3599,7 @@ svn_io_file_aligned_seek(apr_file_t *file,
       aligned_offset = offset - (offset % block_size);
       fill_buffer = TRUE;
     }
+  else
 #endif
     {
       aligned_offset = offset - (offset % file_buffer_size);

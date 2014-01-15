@@ -534,12 +534,14 @@ read_length_line_shouldnt_loop(apr_pool_t *pool)
 }
 
 /* Move the read pointer in FILE to absolute position OFFSET and align
- * the read buffer to multiples of BLOCK_SIZE.  Use POOL for allocations.
+ * the read buffer to multiples of BLOCK_SIZE.  BUFFERED is set only if
+ * FILE actually uses a read buffer.  Use POOL for allocations.
  */
 static svn_error_t *
 aligned_seek(apr_file_t *file,
              apr_size_t block_size,
              apr_size_t offset,
+             svn_boolean_t buffered,
              apr_pool_t *pool)
 {
   apr_off_t block_start;
@@ -551,13 +553,16 @@ aligned_seek(apr_file_t *file,
   /* block start shall be aligned to multiples of block_size.
      If it isn't, it must be aligned to APR's default block size(pre-1.3 APR)
    */
+  if (buffered)
+    {
 #if APR_VERSION_AT_LEAST(1,3,0)
-  SVN_TEST_ASSERT(block_start % block_size == 0);
-  SVN_TEST_ASSERT(offset - block_start < block_size);
+      SVN_TEST_ASSERT(block_start % block_size == 0);
+      SVN_TEST_ASSERT(offset - block_start < block_size);
 #else
-  SVN_TEST_ASSERT(block_start % 0x1000 == 0);
-  SVN_TEST_ASSERT(offset - block_start < 0x1000);
+      SVN_TEST_ASSERT(block_start % 0x1000 == 0);
+      SVN_TEST_ASSERT(offset - block_start < 0x1000);
 #endif
+    }
 
   /* we must be at the desired offset */
   current = 0;
@@ -570,6 +575,7 @@ aligned_seek(apr_file_t *file,
 /* Move the read pointer in FILE to absolute position OFFSET, align the
  * read buffer to multiples of BLOCK_SIZE and read one byte from that
  * position.  Verify that it matches the CONTENTS for that offset.
+ * BUFFERED is set only if FILE actually uses a read buffer.
  * Use POOL for allocations.
  */
 static svn_error_t *
@@ -577,10 +583,11 @@ aligned_read_at(apr_file_t *file,
                 svn_stringbuf_t *contents,
                 apr_size_t block_size,
                 apr_size_t offset,
+                svn_boolean_t buffered,
                 apr_pool_t *pool)
 {
   char c;
-  SVN_ERR(aligned_seek(file, block_size, offset,pool));
+  SVN_ERR(aligned_seek(file, block_size, offset, buffered, pool));
 
   /* the data we read must match whatever we wrote there */
   SVN_ERR(svn_io_file_getc(&c, file, pool));
@@ -590,12 +597,14 @@ aligned_read_at(apr_file_t *file,
 }
 
 /* Verify that aligned seek with the given BLOCK_SIZE works for FILE.
- * CONTENTS is the data expected from FILE.  Use POOL for allocations.
+ * CONTENTS is the data expected from FILE.  BUFFERED is set only if FILE
+ * actually uses a read buffer.  Use POOL for allocations.
  */
 static svn_error_t *
 aligned_read(apr_file_t *file,
              svn_stringbuf_t *contents,
              apr_size_t block_size,
+             svn_boolean_t buffered,
              apr_pool_t *pool)
 {
   apr_size_t i;
@@ -605,18 +614,19 @@ aligned_read(apr_file_t *file,
   /* "random" access to different offsets */
   for (i = 0, offset = prime; i < 10; ++i, offset += prime)
     SVN_ERR(aligned_read_at(file, contents, block_size,
-                            offset % contents->len, pool));
+                            offset % contents->len, buffered, pool));
 
   /* we can seek to EOF */
-  SVN_ERR(aligned_seek(file, contents->len, block_size, pool));
+  SVN_ERR(aligned_seek(file, contents->len, block_size, buffered, pool));
 
   /* reversed order access to all bytes */
   for (i = contents->len; i > 0; --i)
-    SVN_ERR(aligned_read_at(file, contents, block_size, i - 1, pool));
+    SVN_ERR(aligned_read_at(file, contents, block_size, i - 1, buffered,
+                            pool));
 
   /* forward order access to all bytes */
   for (i = 0; i < contents->len; ++i)
-    SVN_ERR(aligned_read_at(file, contents, block_size, i, pool));
+    SVN_ERR(aligned_read_at(file, contents, block_size, i, buffered, pool));
 
   return SVN_NO_ERROR;
 }
@@ -651,14 +661,26 @@ aligned_seek_test(apr_pool_t *pool)
   /* now, access read data with varying alignment sizes */
   SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
-  SVN_ERR(aligned_read(f, contents,   0x1000, pool)); /* APR default */
-  SVN_ERR(aligned_read(f, contents,   0x8000, pool)); /* "unusual" 32K */
-  SVN_ERR(aligned_read(f, contents,  0x10000, pool)); /* FSX default */
-  SVN_ERR(aligned_read(f, contents, 0x100000, pool)); /* larger than file */
-  SVN_ERR(aligned_read(f, contents,    10001, pool)); /* odd, larger than
-                                                         APR default */
-  SVN_ERR(aligned_read(f, contents,     1003, pool)); /* odd, smaller than
-                                                         APR default */
+  SVN_ERR(aligned_read(f, contents,   0x1000, TRUE, pool)); /* APR default */
+  SVN_ERR(aligned_read(f, contents,   0x8000, TRUE, pool)); /* "unusual" 32K */
+  SVN_ERR(aligned_read(f, contents,  0x10000, TRUE, pool)); /* FSX default */
+  SVN_ERR(aligned_read(f, contents, 0x100000, TRUE, pool)); /* larger than file */
+  SVN_ERR(aligned_read(f, contents,    10001, TRUE, pool)); /* odd, larger than
+                                                               APR default */
+  SVN_ERR(aligned_read(f, contents,     1003, TRUE, pool)); /* odd, smaller than
+                                                               APR default */
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* now, try read data with buffering disabled.
+     That are a special case because APR reports a buffer size of 0. */
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
+  SVN_ERR(aligned_read(f, contents,   0x1000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,   0x8000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,  0x10000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents, 0x100000, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,    10001, FALSE, pool));
+  SVN_ERR(aligned_read(f, contents,     1003, FALSE, pool));
+  SVN_ERR(svn_io_file_close(f, pool));
 
   return SVN_NO_ERROR;
 }
