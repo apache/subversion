@@ -1141,6 +1141,7 @@ public class SVNRemoteTests extends SVNTests
             rp.dispose();
         }
         assertEquals(21, receiver.status.size());
+        session.checkPath("", Revision.SVN_INVALID_REVNUM);
     }
 
     public void testTextchangeStatus() throws Exception
