@@ -150,8 +150,19 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 
   svn_utf_initialize2(FALSE, g_pool); /* Optimize character conversions */
-  svn_fs_initialize(g_pool); /* Avoid some theoretical issues */
-  svn_ra_initialize(g_pool);
+
+  // Initialize the libraries we use
+  err = svn_fs_initialize(g_pool);
+  if (!err)
+    err = svn_ra_initialize(g_pool);
+  if (err)
+    {
+      if (stderr && err->message)
+        fprintf(stderr, "%s", err->message);
+
+      svn_error_clear(err);
+      return FALSE;
+    }
 
   /* We shouldn't fill the JVMs memory with FS cache data unless
      explictly requested. And we don't either, because the caches get
