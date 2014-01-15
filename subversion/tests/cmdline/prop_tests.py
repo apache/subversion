@@ -2654,6 +2654,55 @@ def xml_unsafe_author(sbox):
                                      'proplist', '--revprop', '-r', '1',
                                      wc_dir)
 
+def dir_prop_conflict_details(sbox):
+  "verify dir property conflict details"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Apply some changes
+  sbox.simple_propset('svn:mergeinfo', '/B:1', 'A')
+  sbox.simple_propset('my-prop', 'my-val', 'A')
+  sbox.simple_commit()
+
+  # Revert to r1
+  sbox.simple_update('', revision=1)
+
+  # Apply some incompatible changes
+  sbox.simple_propset('svn:mergeinfo', '/C:1', 'A')
+  sbox.simple_propset('my-prop', 'other-val', 'A')
+
+  # This should report out of date because there are incompatible property
+  # changes that can't be merged on the server
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        '.*[Oo]ut of date.*',
+                                        wc_dir)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'                 : Item(status=' C'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A', status=' C')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None, None, None, 1,
+                                        wc_dir)
+
+  # The conflict properties file line was shown for previous versions, but the
+  # conflict source urls are new since 1.8.
+  expected_info = {
+    'Conflict Properties File' : re.escape(os.path.abspath(
+                                           sbox.ospath('A/dir_conflicts.prej'))
+                                           + ' Source  left: (dir) ^/A@1'
+                                           + ' Source right: (dir) ^/A@2')
+  }
+  svntest.actions.run_and_verify_info([expected_info], sbox.path('A'))
+
 
 ########################################################################
 # Run the tests
@@ -2701,6 +2750,7 @@ test_list = [ None,
               almost_known_prop_names,
               peg_rev_base_working,
               xml_unsafe_author,
+              dir_prop_conflict_details,
              ]
 
 if __name__ == '__main__':
