@@ -118,7 +118,7 @@ sqlite_error_log(void* baton, int err, const char* msg)
 #endif
 
 void
-svn_sqlite__dbg_enable_errorlog()
+svn_sqlite__dbg_enable_errorlog(void)
 {
 #if defined(SVN_DEBUG) && defined(SQLITE_CONFIG_LOG)
   sqlite3_config(SQLITE_CONFIG_LOG, sqlite_error_log, (void*)NULL /* baton */);
