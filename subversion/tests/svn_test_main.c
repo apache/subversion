@@ -49,6 +49,7 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
+#include "private/svn_sqlite.h"
 
 #include "svn_private_config.h"
 
@@ -714,6 +715,11 @@ main(int argc, const char *argv[])
     }
 #endif /* _MSC_VER >= 1400 */
 #endif
+
+  /* Temporary code: Enable Sqlite error log to diagnose buildbot issue.
+     ### Perhaps we should later attach this to an environment variable? */
+  svn_sqlite__dbg_enable_errorlog();
+  /* /Temporary code */
 
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, prog_name);
