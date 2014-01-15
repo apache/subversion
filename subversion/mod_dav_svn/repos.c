@@ -1971,6 +1971,25 @@ get_resource(request_rec *r,
      of private resource, iff the SVNListParentPath directive is 'on'. */
   if (dav_svn__is_parentpath_list(r))
     {
+      /* Only allow GET and HEAD on the parentpath resource
+       * httpd uses the same method_number for HEAD as GET */
+      if (r->method_number != M_GET)
+        {
+          int status;
+
+          /* Marshall the error back to the client by generating by
+           * way of the dav_svn__error_response_tag trick. */
+          err = dav_svn__new_error(r->pool, HTTP_METHOD_NOT_ALLOWED,
+                                   SVN_ERR_APMOD_MALFORMED_URI,
+                                   "The URI does not contain the name "
+                                   "of a repository.");
+          /* can't use r->allowed since the default handler isn't called */
+          apr_table_setn(r->headers_out, "Allow", "GET,HEAD");
+          status = dav_svn__error_response_tag(r, err);
+
+          return dav_push_error(r->pool, status, err->error_id, NULL, err);
+        }
+
       err = get_parentpath_resource(r, resource);
       if (err)
         return err;

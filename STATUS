@@ -285,11 +285,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1557320
-   Resolve segfault while handling OPTIONS request in unusual server
-   configuration.
-   Justification:
-     User triggerable segfaults are bad.
-   Votes:
-     +1: breser, rhuijben, stefan2
-
