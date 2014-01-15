@@ -128,16 +128,6 @@ RemoteSession::open(jint jretryAttempts,
                     const char*  usernameStr, const char*  passwordStr,
                     Prompter*& prompter, jobject jprogress, jobject jcfgcb)
 {
-  /*
-   * Initialize ra layer if we have not done so yet
-   */
-  static bool initialized = false;
-  if (!initialized)
-    {
-      SVN_JNI_ERR(svn_ra_initialize(JNIUtil::getPool()), NULL);
-      initialized = true;
-    }
-
   RemoteSession* session = new RemoteSession(
       jretryAttempts, url, uuid, configDirectory,
       usernameStr, passwordStr, prompter, jcfgcb);
