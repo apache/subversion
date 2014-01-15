@@ -174,7 +174,6 @@ sbox_add_and_commit_greek_tree(svn_test__sandbox_t *b);
 svn_error_t *
 svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
 

@@ -107,7 +107,6 @@ WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
 svn_error_t *
 svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
-                         apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
   const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
@@ -118,22 +117,25 @@ svn_test__create_fake_wc(const char *wc_abspath,
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
    * refer to it over its lifetime. */
-  my_statements = apr_palloc(result_pool, 6 * sizeof(const char *));
+  my_statements = apr_palloc(scratch_pool, 7 * sizeof(const char *));
   my_statements[0] = statements[STMT_CREATE_SCHEMA];
   my_statements[1] = statements[STMT_CREATE_NODES];
   my_statements[2] = statements[STMT_CREATE_NODES_TRIGGERS];
   my_statements[3] = statements[STMT_CREATE_EXTERNALS];
-  my_statements[4] = extra_statements;
-  my_statements[5] = NULL;
+  my_statements[4] = statements[STMT_INSTALL_SCHEMA_STATISTICS];
+  my_statements[5] = extra_statements;
+  my_statements[6] = NULL;
 
   /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
   SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));
   SVN_ERR(svn_wc__db_util_open_db(&sdb, wc_abspath, "wc.db",
                                   svn_sqlite__mode_rwcreate,
                                   FALSE /* exclusive */, my_statements,
-                                  result_pool, scratch_pool));
+                                  scratch_pool, scratch_pool));
   for (i = 0; my_statements[i] != NULL; i++)
     SVN_ERR(svn_sqlite__exec_statements(sdb, /* my_statements[] */ i));
+
+  SVN_ERR(svn_sqlite__close(sdb));
 
   return SVN_NO_ERROR;
 }
