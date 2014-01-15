@@ -52,28 +52,16 @@ struct logger_t
   apr_pool_t *pool;
 };
 
-/* Pool cleanup handler.  Make sure we destroy our private pool as well. */
-static apr_status_t cleanup_logger(void *data)
-{
-  logger_t *logger = data;
-  svn_pool_destroy(logger->pool);
-
-  return APR_SUCCESS;
-}
-
 svn_error_t *
 logger__create_for_stderr(logger_t **logger,
                           apr_pool_t *pool)
 {
   logger_t *result = apr_pcalloc(pool, sizeof(*result));
-  result->pool = svn_pool_create(NULL);
+  result->pool = svn_pool_create(pool);
   
   SVN_ERR(svn_stream_for_stderr(&result->stream, pool));
   SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
 
-  apr_pool_cleanup_register(pool, result, cleanup_logger,
-                            apr_pool_cleanup_null);
-  
   *logger = result;
 
   return SVN_NO_ERROR;
@@ -93,11 +81,8 @@ logger__create(logger_t **logger,
   SVN_ERR(svn_mutex__init(&result->mutex, TRUE, pool));
 
   result->stream = svn_stream_from_aprfile2(file, FALSE,  pool);
-  result->pool = svn_pool_create(NULL);
-  
-  apr_pool_cleanup_register(pool, result, cleanup_logger,
-                            apr_pool_cleanup_null);
-  
+  result->pool = svn_pool_create(pool);
+
   *logger = result;
 
   return SVN_NO_ERROR;
