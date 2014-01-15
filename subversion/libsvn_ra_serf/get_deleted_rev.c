@@ -75,11 +75,13 @@ getdrev_closed(svn_ra_serf__xml_estate_t *xes,
                apr_pool_t *scratch_pool)
 {
   drev_context_t *drev_ctx = baton;
+  apr_int64_t rev;
 
   SVN_ERR_ASSERT(leaving_state == VERSION_NAME);
   SVN_ERR_ASSERT(cdata != NULL);
 
-  *drev_ctx->revision_deleted = SVN_STR_TO_REV(cdata->data);
+  SVN_ERR(svn_cstring_atoi64(&rev, cdata->data));
+  *drev_ctx->revision_deleted = (svn_revnum_t)rev;
 
   return SVN_NO_ERROR;
 }

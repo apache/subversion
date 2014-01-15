@@ -171,7 +171,12 @@ merge_closed(svn_ra_serf__xml_estate_t *xes,
 
           rev_str = svn_hash_gets(attrs, "revision");
           if (rev_str)
-            merge_ctx->commit_info->revision = SVN_STR_TO_REV(rev_str);
+            {
+              apr_int64_t rev;
+
+              SVN_ERR(svn_cstring_atoi64(&rev, rev_str));
+              merge_ctx->commit_info->revision = (svn_revnum_t)rev;
+            }
           else
             merge_ctx->commit_info->revision = SVN_INVALID_REVNUM;
 
@@ -327,6 +332,7 @@ merge_lock_token_list(apr_hash_t *lock_tokens,
   svn_ra_serf__add_close_tag_buckets(body, alloc, "S:lock-token-list");
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t*
 create_merge_body(serf_bucket_t **bkt,
                   void *baton,

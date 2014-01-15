@@ -55,6 +55,8 @@ class Prompter
   bool m_maySave;
 
   Prompter(jobject jprompter);
+  Prompter(const Prompter&) {}
+
   bool prompt(const char *realm, const char *pi_username, bool maySave);
   bool askYesNo(const char *realm, const char *question, bool yesIsDefault);
   const char *askQuestion(const char *realm, const char *question,
@@ -95,6 +97,7 @@ class Prompter
      apr_pool_t *pool);
  public:
   static Prompter *makeCPrompter(jobject jprompter);
+  static Prompter *makeCPrompter(const Prompter& prompter);
   ~Prompter();
   svn_auth_provider_object_t *getProviderUsername(SVN::Pool &in_pool);
   svn_auth_provider_object_t *getProviderSimple(SVN::Pool &in_pool);

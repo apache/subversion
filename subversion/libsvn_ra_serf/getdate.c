@@ -82,11 +82,14 @@ date_closed(svn_ra_serf__xml_estate_t *xes,
             apr_pool_t *scratch_pool)
 {
   date_context_t *date_ctx = baton;
+  apr_int64_t rev;
 
   SVN_ERR_ASSERT(leaving_state == VERSION_NAME);
   SVN_ERR_ASSERT(cdata != NULL);
 
-  *date_ctx->revision = SVN_STR_TO_REV(cdata->data);
+  SVN_ERR(svn_cstring_atoi64(&rev, cdata->data));
+
+  *date_ctx->revision = (svn_revnum_t)rev;
 
   return SVN_NO_ERROR;
 }
@@ -157,11 +160,13 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_ra_serf__error_on_status(handler->sline,
-                                       report_target,
-                                       handler->location));
+  if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*revision));
+  if (!SVN_IS_VALID_REVNUM(*revision))
+    return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                            _("The REPORT response did not include "
+                              "the requested properties"));
 
   return SVN_NO_ERROR;
 }

@@ -1253,6 +1253,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   apr_hash_t *commit_revprops;
   svn_client__copy_pair_t *first_pair;
   apr_pool_t *session_pool = svn_pool_create(scratch_pool);
+  apr_array_header_t *commit_items_for_dav;
   int i;
 
   /* Find the common root of all the source paths */
@@ -1287,9 +1288,13 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 
   SVN_ERR(svn_dirent_get_absolute(&top_src_abspath, top_src_path, scratch_pool));
 
+  commit_items_for_dav = apr_array_make(session_pool, 0,
+                                        sizeof(svn_client_commit_item3_t*));
+
   /* Open a session to help while determining the exact targets */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, top_dst_url,
-                                               top_src_abspath, NULL,
+                                               top_src_abspath,
+                                               commit_items_for_dav,
                                                FALSE /* write_dav_props */,
                                                TRUE /* read_dav_props */,
                                                ctx,
@@ -1471,6 +1476,10 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__condense_commit_items(&top_dst_url,
                                             commit_items, scratch_pool));
 
+  /* Add the commit items to the DAV commit item list to provide access
+     to dav properties (for pre http-v2 DAV) */
+  apr_array_cat(commit_items_for_dav, commit_items);
+
 #ifdef ENABLE_EV2_SHIMS
   if (commit_items)
     {
@@ -1515,7 +1524,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   /* Perform the commit. */
   SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
                                   editor, edit_baton,
-                                  0, /* ### any notify_path_offset needed? */
+                                  NULL /* notify_path_prefix */,
                                   NULL, ctx, session_pool, session_pool),
             _("Commit failed (details follow):"));
 

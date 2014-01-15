@@ -138,17 +138,20 @@ blame_opened(svn_ra_serf__xml_estate_t *xes,
       apr_pool_t *state_pool = svn_ra_serf__xml_state_pool(xes);
       apr_hash_t *gathered = svn_ra_serf__xml_gather_since(xes, FILE_REV);
       const char *path;
-      const char *rev;
+      const char *rev_str;
       const char *merged_revision;
       svn_txdelta_window_handler_t txdelta;
       void *txdelta_baton;
+      apr_int64_t rev;
 
       path = svn_hash_gets(gathered, "path");
-      rev = svn_hash_gets(gathered, "rev");
+      rev_str = svn_hash_gets(gathered, "rev");
+
+      SVN_ERR(svn_cstring_atoi64(&rev, rev_str));
       merged_revision = svn_hash_gets(gathered, "merged-revision");
 
       SVN_ERR(blame_ctx->file_rev(blame_ctx->file_rev_baton,
-                                  path, SVN_STR_TO_REV(rev),
+                                  path, (svn_revnum_t)rev,
                                   blame_ctx->rev_props,
                                   merged_revision != NULL,
                                   &txdelta, &txdelta_baton,
@@ -370,8 +373,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  return svn_error_trace(
-            svn_ra_serf__error_on_status(handler->sline,
-                                         handler->path,
-                                         handler->location));
+  if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
+  return SVN_NO_ERROR;
 }

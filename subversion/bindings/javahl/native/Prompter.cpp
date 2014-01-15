@@ -94,6 +94,11 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
   return new Prompter(myPrompt);
 }
 
+Prompter *Prompter::makeCPrompter(const Prompter& prompter)
+{
+  return makeCPrompter(prompter.m_prompter);
+}
+
 /**
  * Retrieve the username from the Java object
  * @return Java string for the username or NULL

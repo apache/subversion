@@ -160,6 +160,7 @@ StateReporter::finishReport()
   SVN_JNI_ERR(m_raw_reporter->finish_report(m_report_baton,
                                             subPool.getPool()),
               SVN_INVALID_REVNUM);
+  m_valid = false;
   return jlong(m_target_revision);
 }
 
@@ -173,6 +174,7 @@ StateReporter::abortReport()
   SVN::Pool subPool(pool);
   SVN_JNI_ERR(m_raw_reporter->abort_report(m_report_baton,
                                            subPool.getPool()),);
+  m_valid = false;
 }
 
 void

@@ -1141,6 +1141,7 @@ public class SVNRemoteTests extends SVNTests
             rp.dispose();
         }
         assertEquals(21, receiver.status.size());
+        session.checkPath("", Revision.SVN_INVALID_REVNUM);
     }
 
     public void testTextchangeStatus() throws Exception
@@ -1355,5 +1356,44 @@ public class SVNRemoteTests extends SVNTests
         ISVNRemote.FileRevision rev = result.get(0);
         assertEquals("/iota", rev.getPath());
         assertFalse(rev.isResultOfMerge());
+    }
+
+    // This test is a result of a threading bug that was identified in
+    // serf-1.3.2 and earlier. The net result was that opening two RA
+    // sessions to an https:// URL in two parallel threads would cause
+    // a crash in serf, due to the OpenSSL library not being
+    // initialized in a single-threaded context.
+    //
+    // The problem does not appear to exist with other RA methods, but
+    // the test is here just in case someone is actually pedantic
+    // enough to test JavaHL with an HTTPS setup.
+    public void testParallelOpen() throws Exception
+    {
+        final Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    ISVNRemote session = null;
+                    try {
+                        session = getSession();
+                        assertEquals(1, session.getLatestRevision());
+                    }
+                    catch (ClientException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    finally {
+                        if (session != null)
+                            session.dispose();
+                    }
+                }
+            };
+
+        Thread thread1 = new Thread(runnable);
+        Thread thread2 = new Thread(runnable);
+
+        thread1.start();
+        thread2.start();
+
+        thread1.join();
+        thread2.join();
     }
 }

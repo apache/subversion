@@ -112,6 +112,14 @@ static const svn_ra_serf__xml_transition_t replay_ttable[] = {
   { 0 }
 };
 
+/*
+ * An incredibly simple list.
+ */
+typedef struct ra_serf_list_t {
+  void *data;
+  struct ra_serf_list_t *next;
+} svn_ra_serf__list_t;
+
 /* Per directory/file state */
 typedef struct replay_node_t {
   apr_pool_t *pool; /* pool allocating this node's data */
@@ -501,6 +509,7 @@ replay_done(serf_request_t *request,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_replay_body(serf_bucket_t **bkt,
                    void *baton,
@@ -734,7 +743,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                                              replay_ctx->revprop_target,
                                              replay_ctx->revprop_rev,
                                              "0", all_props,
-                                             NULL,
                                              replay_ctx->pool));
 
           /* Spin up the serf request for the PROPFIND.  */

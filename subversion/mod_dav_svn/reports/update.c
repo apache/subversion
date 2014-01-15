@@ -127,10 +127,6 @@ typedef struct item_baton_t {
   /* File/dir copied? */
   svn_boolean_t copyfrom;
 
-  /* Does the client need to fetch additional properties for this
-     item? */
-  svn_boolean_t fetch_props;
-
   /* Array of const char * names of removed properties.  (Used only
      for copied files/dirs in skelta mode.)  */
   apr_array_header_t *removed_props;
@@ -466,12 +462,6 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton, apr_pool_t *pool)
         }
     }
 
-  /* If our client need to fetch properties, let it know. */
-  if (baton->fetch_props)
-    SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                    "<S:fetch-props/>" DEBUG_CR));
-
-
   /* Let's tie it off, nurse. */
   if (baton->added)
     SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
@@ -694,8 +684,8 @@ upd_change_xxx_prop(void *baton,
 
           /* That said, beginning in Subversion 1.8, clients might
              request even in skelta mode that we transmit properties
-             on newly added files explicitly. */
-          if ((! b->copyfrom) && value && b->uc->include_props)
+             on added files and directories explicitly. */
+          if (value && b->uc->include_props)
             {
               SVN_ERR(send_propchange(b, name, value, pool));
             }
@@ -1147,6 +1137,11 @@ dav_svn__update_report(const dav_resource *resource,
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
+          /* This flag is not used since Subversion 1.1.x
+             There are some remains in libsvn_ra_neon, where it can
+             be enabled via a static function flag.
+             Disabled since  r852220 (aka r12146)
+             "Prefer correctness over efficiency." */
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);

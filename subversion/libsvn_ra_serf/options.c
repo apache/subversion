@@ -64,7 +64,6 @@ typedef struct options_context_t {
   svn_boolean_t headers_processed;
 
   svn_ra_serf__session_t *session;
-  svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
 
   svn_ra_serf__response_handler_t inner_handler;
@@ -111,7 +110,7 @@ options_closed(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
-
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_options_body(serf_bucket_t **body_bkt,
                     void *baton,
@@ -396,7 +395,6 @@ create_options_req(options_context_t **opt_ctx,
   new_ctx = apr_pcalloc(pool, sizeof(*new_ctx));
   new_ctx->pool = pool;
   new_ctx->session = session;
-  new_ctx->conn = conn;
 
   new_ctx->youngest_rev = SVN_INVALID_REVNUM;
 
@@ -517,7 +515,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   return SVN_NO_ERROR;
 }
 
-
+/* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_simple_options_body(serf_bucket_t **body_bkt,
                            void *baton,

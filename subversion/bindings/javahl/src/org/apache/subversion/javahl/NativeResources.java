@@ -141,9 +141,6 @@ public class NativeResources
      */
     private static final void init()
     {
-        if (!initNativeLibrary())
-            throw new LinkageError("Native library initialization failed");
-
         version = new Version();
         if (!version.isAtLeast(1, 9, 0))
         {
@@ -161,9 +158,4 @@ public class NativeResources
                 " but the run-time version is " + runtimeVersion);
         }
     }
-
-    /**
-     * Initialize the native library layer.
-     */
-    private static native boolean initNativeLibrary();
 }
