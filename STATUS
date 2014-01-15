@@ -95,14 +95,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1557320
-   Resolve segfault while handling OPTIONS request in unusual server
-   configuration.
-   Justification:
-     User triggerable segfaults are bad.
-   Votes:
-    +1: breser, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -118,21 +110,13 @@ Veto-blocked changes:
                    this is about err->message which is valid in all builds)
      -1: stsp (not a bug fix, changes output in a patch release)
 
- * r1557094
-   Resolve possible segfault while handling OPTIONS request in unusual server
-   configuration.
-   Justification:
-     User triggerable segfaults are bad.
-   Notes:
-     The segfault requires a probably static "" string to be right at a page/
-     segfault range check boundary, which may or may not be likely based on
-     compiler, OS, etc.
-   Branch:
-     ^/subversion/branches/1.7.x-r1557094
-   Votes:
-     +1: rhuijben
-     -1: breser (doesn't actually fix segfault)
-
 Approved changes:
 =================
 
+ * r1557320
+   Resolve segfault while handling OPTIONS request in unusual server
+   configuration.
+   Justification:
+     User triggerable segfaults are bad.
+   Votes:
+    +1: breser, stefan2, rhuijben
