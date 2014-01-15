@@ -109,6 +109,23 @@ sqlite_profiler(void *data, const char *sql, sqlite3_uint64 duration)
 }
 #endif
 
+#if defined(SVN_DEBUG) && defined(SQLITE_CONFIG_LOG)
+static void
+sqlite_error_log(void* baton, int err, const char* msg)
+{
+  fprintf(stderr, "DBG: sqlite[S%d]: %s\n", err, msg);
+}
+#endif
+
+void
+svn_sqlite__dbg_enable_errorlog()
+{
+#if defined(SVN_DEBUG) && defined(SQLITE_CONFIG_LOG)
+  sqlite3_config(SQLITE_CONFIG_LOG, sqlite_error_log, (void*)NULL /* baton */);
+#endif
+}
+
+
 struct svn_sqlite__db_t
 {
   sqlite3 *db3;
