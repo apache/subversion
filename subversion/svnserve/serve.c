@@ -97,7 +97,6 @@ typedef struct file_revs_baton_t {
 typedef struct fs_warning_baton_t {
   server_baton_t *server;
   svn_ra_svn_conn_t *conn;
-  apr_pool_t *pool;
 } fs_warning_baton_t;
 
 typedef struct authz_baton_t {
@@ -3438,8 +3437,6 @@ fs_warning_func(void *baton, svn_error_t *err)
 {
   fs_warning_baton_t *b = baton;
   log_error(err, b->server);
-  /* TODO: Keep log_pool in the server baton, cleared after every log? */
-  svn_pool_clear(b->pool);
 }
 
 /* Return the normalized repository-relative path for the given PATH
@@ -3779,7 +3776,6 @@ construct_server_baton(server_baton_t **baton,
   warn_baton = apr_pcalloc(scratch_pool, sizeof(*warn_baton));
   warn_baton->server = b;
   warn_baton->conn = conn;
-  warn_baton->pool = svn_pool_create(scratch_pool);
   svn_fs_set_warning_func(b->repository->fs, fs_warning_func, warn_baton);
 
   /* Set up editor shims. */
@@ -3833,7 +3829,6 @@ reopen_repos(connection_t *connection,
   
   warn_baton->server = connection->baton;
   warn_baton->conn = connection->conn;
-  warn_baton->pool = svn_pool_create(pool);
   svn_fs_set_warning_func(connection->baton->repository->fs,
                           fs_warning_func, &warn_baton);
 
