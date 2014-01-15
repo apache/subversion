@@ -1795,7 +1795,11 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
   if (comb->priv.version_name < created_rev)
     {
       serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
-                               "Item '%s' is out of date",
+                               comb->res.collection
+                                ? "Directory '%s' is out of date"
+                                : (comb->res.exists
+                                    ? "File '%s' is out of date"
+                                    : "'%s' is out of date"),
                                comb->priv.repos_path);
       return dav_svn__convert_err(serr, HTTP_CONFLICT,
                                   "Attempting to modify out-of-date resource.",
@@ -3946,7 +3950,11 @@ remove_resource(dav_resource *resource, dav_response **response)
       if (resource->info->version_name < created_rev)
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
-                                   "Item '%s' is out of date",
+                                   resource->collection
+                                    ? "Directory '%s' is out of date"
+                                    : (resource->exists
+                                        ? "File '%s' is out of date"
+                                        : "'%s' is out of date"),
                                    resource->info->repos_path);
           return dav_svn__convert_err(serr, HTTP_CONFLICT,
                                       "Can't DELETE out-of-date resource",
