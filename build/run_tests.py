@@ -46,7 +46,7 @@ separated list of test numbers; the default is to run all the tests in it.
 # A few useful constants
 SVN_VER_MINOR = 9
 
-import os, re, subprocess, sys, imp, threading
+import os, re, subprocess, sys, imp, threading, traceback
 from datetime import datetime
 
 import getopt
@@ -355,15 +355,15 @@ class TestHarness:
     if self.list_tests and self.milestone_filter:
       print 'WARNING: --milestone-filter option does not currently work with C tests'
 
-    if os.access(progbase, os.X_OK):
-      progname = './' + progbase
-      cmdline = [progname,
-                 '--srcdir=' + os.path.join(self.srcdir, progdir)]
-      if self.config_file is not None:
-        cmdline.append('--config-file=' + self.config_file)
-    else:
-      print("Don't know what to do about " + progbase)
+    if not os.access(progbase, os.X_OK):
+      print("\nNot an executable file: " + progbase)
       sys.exit(1)
+
+    progname = './' + progbase
+    cmdline = [progname,
+               '--srcdir=' + os.path.join(self.srcdir, progdir)]
+    if self.config_file is not None:
+      cmdline.append('--config-file=' + self.config_file)
 
     if self.verbose is not None:
       cmdline.append('--verbose')
@@ -443,7 +443,8 @@ class TestHarness:
       prog_mod = imp.load_module(progbase[:-3], open(prog, 'r'), prog,
                                  ('.py', 'U', imp.PY_SOURCE))
     except:
-      print("Don't know what to do about " + progbase)
+      print("\nError loading test (details in following traceback): " + progbase)
+      traceback.print_exc()
       sys.exit(1)
 
     import svntest.main
