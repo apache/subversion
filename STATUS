@@ -65,6 +65,8 @@ Candidate changes:
      on what the structure is used for. The type in the structure
      has changed between various sasl versions, but the
      implementation still uses the real prototype when calling.
+   Justification:
+     (Without this patch the Windows buildbot is broken for 1.7)
    Votes:
      +1: rhuijben, stefan2
 
@@ -73,6 +75,9 @@ Candidate changes:
    Notes:
      Backport of the 1.8 fixes, plus a few more fixes in order not to
      break the neon compilation which also hooks into zlib.
+   Justification:
+     (Without this patch the Windows buildbot remains broken for serf with 1.7,
+      as recent Subversion versions require serf 1.3.x)
    Votes:
      +1: rhuijben, jcorvel
 
