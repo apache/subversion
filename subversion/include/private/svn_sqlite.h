@@ -346,7 +346,7 @@ int
 svn_sqlite__column_bytes(svn_sqlite__stmt_t *stmt, int column);
 
 /* When Subversion is compiled in maintainer mode: enables the sqlite error
-   logging to stderr. */
+   logging to SVN_DBG_OUTPUT. */
 void
 svn_sqlite__dbg_enable_errorlog(void);
 
