@@ -2259,6 +2259,47 @@ typedef struct update_delay_baton_t
   void *inner_handler_baton;
 } update_delay_baton_t;
 
+/* Helper for update_delay_handler() and process_pending() to
+   call UDB->INNER_HANDLER with buffer pointed by DATA. */
+static svn_error_t *
+process_buffer(update_delay_baton_t *udb,
+               serf_request_t *request,
+               const void *data,
+               apr_size_t len,
+               svn_boolean_t at_eof,
+               serf_bucket_alloc_t *alloc,
+               apr_pool_t *pool)
+{
+  serf_bucket_t *tmp_bucket;
+  svn_error_t *err;
+
+  /* ### This code (and the eagain bucket code) can probably be
+      ### simplified by using a bit of aggregate bucket magic.
+      ### See mail from Ivan to dev@s.a.o. */
+  if (at_eof)
+  {
+      tmp_bucket = serf_bucket_simple_create(data, len, NULL, NULL,
+                                             alloc);
+  }
+  else
+  {
+      tmp_bucket = svn_ra_serf__create_bucket_with_eagain(data, len,
+                                                          alloc);
+  }
+
+  /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
+      use a standard bucket with default EOF handling */
+  err = udb->inner_handler(request, tmp_bucket,
+                           udb->inner_handler_baton, pool);
+
+  /* And free the bucket explicitly to avoid growing request allocator
+     storage (in a loop) */
+  serf_bucket_destroy(tmp_bucket);
+
+  return svn_error_trace(err);
+}
+
+
 /* Delaying wrapping reponse handler, to avoid creating too many
    requests to deliver efficiently */
 static svn_error_t *
@@ -2293,8 +2334,6 @@ update_delay_handler(serf_request_t *request,
           apr_size_t len;
           svn_boolean_t at_eof = FALSE;
           svn_error_t *err;
-          serf_bucket_alloc_t *alloc;
-          serf_bucket_t *tmp_bucket;
 
           status = serf_bucket_read(response, PARSE_CHUNK_SIZE, &data, &len);
           if (SERF_BUCKET_READ_ERROR(status))
@@ -2310,31 +2349,10 @@ update_delay_handler(serf_request_t *request,
           if (len == 0 && !at_eof)
             return svn_ra_serf__wrap_err(status, NULL);
 
-          alloc = serf_request_get_alloc(request);
+          err = process_buffer(udb, request, data, len, at_eof,
+                               serf_request_get_alloc(request),
+                               iterpool);
 
-          /* ### This code (and the eagain bucket code) can probably be
-             ### simplified by using a bit of aggregate bucket magic.
-             ### See mail from Ivan to dev@s.a.o. */
-          if (at_eof)
-            {
-              tmp_bucket = serf_bucket_simple_create(data, len, NULL, NULL,
-                                                     alloc);
-            }
-          else
-            {
-              tmp_bucket = svn_ra_serf__create_bucket_with_eagain(data, len,
-                                                                  alloc);
-            }
-
-          /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
-             use a standard bucket with default EOF handling */
-          err = udb->inner_handler(request, tmp_bucket,
-                                   udb->inner_handler_baton, iterpool);
-
-          /* And free the bucket explicitly to avoid growing request allocator
-             storage (in a loop) */
-          serf_bucket_destroy(tmp_bucket);
-          
           if (err && SERF_BUCKET_READ_ERROR(err->apr_err))
             return svn_error_trace(err);
           else if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
@@ -2398,7 +2416,7 @@ process_pending(update_delay_baton_t *udb,
     {
       const char *data;
       apr_size_t len;
-      serf_bucket_t *tmp_bucket;
+      svn_boolean_t at_eof;
       svn_error_t *err;
 
       if (!iterpool)
@@ -2411,22 +2429,15 @@ process_pending(update_delay_baton_t *udb,
 
       SVN_ERR(svn_spillbuf__read(&data, &len, udb->spillbuf, iterpool));
 
-      if (data == NULL)
-        {
-          if (!udb->report->report_received)
-            break;
-
-          tmp_bucket = serf_bucket_simple_create("", 0, NULL, NULL, alloc);
-        }
+      if (data == NULL && !udb->report->report_received)
+        break;
+      else if (data == NULL)
+        at_eof = TRUE;
       else
-        tmp_bucket = svn_ra_serf__create_bucket_with_eagain(data, len, alloc);
+        at_eof = FALSE;
 
-      /* If not at EOF create a bucket that finishes with EAGAIN, otherwise
-         use a standard bucket with default EOF handling */
-      err = udb->inner_handler(NULL /* allowed? */, tmp_bucket,
-                               udb->inner_handler_baton, iterpool);
-
-      serf_bucket_destroy(tmp_bucket);
+      err = process_buffer(udb, NULL /* allowed? */, data, len,
+                           at_eof, alloc, iterpool);
 
       if (err && APR_STATUS_IS_EAGAIN(err->apr_err))
         {
