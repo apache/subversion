@@ -804,6 +804,7 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
   /* And now test the same thing with a minimal working copy */
   wc_dir = svn_test_data_path("mergesources-wc", pool);
   svn_test_add_dir_cleanup(wc_dir);
+  SVN_ERR(svn_io_remove_dir2(wc_dir, TRUE, NULL, NULL, pool));
 
   head_rev.kind = svn_opt_revision_head;
   SVN_ERR(svn_client_checkout3(NULL,
