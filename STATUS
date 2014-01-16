@@ -166,7 +166,7 @@ Candidate changes:
      'SVNAllowBulkUpdates on' does not override other values
      configured for other <Location>
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1547774
    Fix 'svn checkout ^/subversion/trunk NAS' of working copy with symlinks
@@ -274,7 +274,7 @@ Candidate changes:
    Justification:
      Can prevent rep-cache from being used unless admin takes action.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
