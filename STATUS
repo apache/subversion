@@ -269,6 +269,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
+ * r1547866, r1547873, r1548097, r1548170
+   Fix issue 3437, rep-cache.db created without group write bit
+   Justification:
+     Can prevent rep-cache from being used unless admin takes action.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
