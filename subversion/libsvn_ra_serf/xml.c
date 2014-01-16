@@ -59,10 +59,6 @@
      (patch) <= XML_MICRO_VERSION))
 #endif /* APR_VERSION_AT_LEAST */
 
-#if XML_VERSION_AT_LEAST(1, 95, 8)
-#define EXPAT_HAS_STOPPARSER
-#endif
-
 /* Read/write chunks of this size into the spillbuf.  */
 #define PARSE_CHUNK_SIZE 8000
 
@@ -849,23 +845,34 @@ xml_cb_cdata(svn_ra_serf__xml_context_t *xmlctx,
 
 /* svn_error_t * wrapper around XML_Parse */
 static APR_INLINE svn_error_t *
-parse_xml(XML_Parser parser, const char *data, apr_size_t len, svn_boolean_t is_final)
+parse_xml(struct expat_ctx_t *ectx, const char *data, apr_size_t len, svn_boolean_t is_final)
 {
-  int xml_status = XML_Parse(parser, data, (int)len, is_final);
+  int xml_status = XML_Parse(ectx->parser, data, (int)len, is_final);
   const char *msg;
+  int xml_code;
 
-  /* ### Perhaps we should filter some specific error codes on systems
-         that use STOPPARSER to hide addtional errors */
   if (xml_status == XML_STATUS_OK)
-    return SVN_NO_ERROR;
+    return ectx->inner_error;
 
-  msg = XML_ErrorString(XML_GetErrorCode(parser));
+  xml_code = XML_GetErrorCode(ectx->parser);
 
-  return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA,
-                          svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
-                                            _("Malformed XML: %s"),
-                                            msg),
-                          _("The XML response contains invalid XML"));
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* If we called XML_StopParser() expat will return an abort error. If we
+     have a better error stored we should ignore it as it will not help
+     the end-user to store it in the error chain. */
+  if (xml_code == XML_ERROR_ABORTED && ectx->inner_error)
+    return ectx->inner_error;
+#endif
+
+  msg = XML_ErrorString(xml_code);
+
+  return svn_error_compose_create(
+            ectx->inner_error,
+            svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                             svn_error_createf(SVN_ERR_XML_MALFORMED, NULL,
+                                               _("Malformed XML: %s"),
+                                               msg),
+                             _("The XML response contains invalid XML")));
 }
 
 /* Apr pool cleanup handler to release an XML_Parser in success and error
@@ -896,7 +903,7 @@ expat_start(void *userData, const char *raw_name, const char **attrs)
   ectx->inner_error = svn_error_trace(xml_cb_start(ectx->xmlctx,
                                                    raw_name, attrs));
 
-#ifdef EXPAT_HAS_STOPPARSER
+#if XML_VERSION_AT_LEAST(1, 95, 8)
   if (ectx->inner_error)
     (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
@@ -914,7 +921,7 @@ expat_end(void *userData, const char *raw_name)
 
   ectx->inner_error = svn_error_trace(xml_cb_end(ectx->xmlctx, raw_name));
 
-#ifdef EXPAT_HAS_STOPPARSER
+#if XML_VERSION_AT_LEAST(1, 95, 8)
   if (ectx->inner_error)
     (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
@@ -932,7 +939,7 @@ expat_cdata(void *userData, const char *data, int len)
 
   ectx->inner_error = svn_error_trace(xml_cb_cdata(ectx->xmlctx, data, len));
 
-#ifdef EXPAT_HAS_STOPPARSER
+#if XML_VERSION_AT_LEAST(1, 95, 8)
   if (ectx->inner_error)
     (void) XML_StopParser(ectx->parser, 0 /* resumable */);
 #endif
@@ -1008,9 +1015,7 @@ expat_response_handler(serf_request_t *request,
       else if (APR_STATUS_IS_EOF(status))
         at_eof = TRUE;
 
-      err = parse_xml(ectx->parser, data, len, at_eof /* isFinal */);
-
-      err = svn_error_compose_create(ectx->inner_error, err);
+      err = parse_xml(ectx, data, len, at_eof /* isFinal */);
 
       if (at_eof || err)
         {
