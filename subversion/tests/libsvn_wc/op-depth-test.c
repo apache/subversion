@@ -268,7 +268,8 @@ check_db_rows(svn_test__sandbox_t *b,
     "       properties"
     " FROM nodes "
     " LEFT OUTER JOIN externals"
-    "             ON nodes.local_relpath = externals.local_relpath"
+    "             ON nodes.wc_id = externals.wc_id "
+    "                AND nodes.local_relpath = externals.local_relpath"
     " WHERE nodes.local_relpath = ?1 OR nodes.local_relpath LIKE ?2",
     NULL };
 #define STMT_SELECT_NODES_INFO 0
