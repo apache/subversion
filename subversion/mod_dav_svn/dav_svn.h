@@ -54,7 +54,7 @@ extern "C" {
 
 /* Option values for SVNAllowBulkUpdates.  Note that
    it's important that CONF_BULKUPD_DEFAULT is 0 to make
-   dav_svn_merge_dir_config do the right thing. */
+   merge_dir_config in mod_dav_svn do the right thing. */
 typedef enum dav_svn__bulk_upd_conf {
     CONF_BULKUPD_DEFAULT,
     CONF_BULKUPD_ON,
