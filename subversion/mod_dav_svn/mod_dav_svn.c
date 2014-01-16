@@ -72,7 +72,7 @@ typedef struct server_conf_t {
 
 /* A tri-state enum used for per directory on/off flags.  Note that
    it's important that CONF_FLAG_DEFAULT is 0 to make
-   dav_svn_merge_dir_config do the right thing. */
+   merge_dir_config in mod_dav_svn do the right thing. */
 enum conf_flag {
   CONF_FLAG_DEFAULT,
   CONF_FLAG_ON,
