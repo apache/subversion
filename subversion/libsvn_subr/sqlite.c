@@ -113,7 +113,7 @@ sqlite_profiler(void *data, const char *sql, sqlite3_uint64 duration)
 static void
 sqlite_error_log(void* baton, int err, const char* msg)
 {
-  fprintf(stderr, "DBG: sqlite[S%d]: %s\n", err, msg);
+  fprintf(SVN_DBG_OUTPUT, "DBG: sqlite[S%d]: %s\n", err, msg);
 }
 #endif
 
