@@ -1473,11 +1473,11 @@ init_db(/* output values */
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES_TRIGGERS));
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
 
+  SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
+
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid,
                           db, scratch_pool));
-
-  SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
 
   /* Insert the wcroot. */
   /* ### Right now, this just assumes wc metadata is being stored locally. */
