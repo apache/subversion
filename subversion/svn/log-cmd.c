@@ -548,8 +548,16 @@ svn_cl__log_entry_receiver_xml(void *baton,
 
   revstr = apr_psprintf(pool, "%ld", log_entry->revision);
   /* <logentry revision="xxx"> */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
-                        "revision", revstr, SVN_VA_NULL);
+  if (lb->merge_stack && lb->merge_stack->nelts > 0) {
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
+                            "revision", revstr, "reverse-merge",
+                            log_entry->subtractive_merge ? "true" : "false",
+                            SVN_VA_NULL);
+
+  } else {
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
+                            "revision", revstr, SVN_VA_NULL);
+  }
 
   /* <author>xxx</author> */
   svn_cl__xml_tagged_cdata(&sb, pool, "author", author);
