@@ -1039,7 +1039,10 @@ setup_if_header_recursive(svn_boolean_t *added,
   apr_pool_t *iterpool = NULL;
 
   if (!commit_ctx->lock_tokens)
-    return SVN_NO_ERROR;
+    {
+      *added = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   /* We try to create a directory, so within the Subversion world that
      would imply that there is nothing here, but mod_dav_svn still sees
