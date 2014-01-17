@@ -45,9 +45,16 @@ my @ldpaths = (abs_path($swig_builddir) . "/perl/libsvn_swig_perl/.libs",
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
-my $cppflags = '@CPPFLAGS@';
-my $cflags = '@CFLAGS@';
+my $cppflags = <<'EOT';
+@CPPFLAGS@
+EOT
+my $cflags = <<'EOT';
+@CFLAGS@
+EOT
 my $includes = '@SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@';
+
+chomp($cppflags);
+chomp($cflags);
 
 # Avoid this bug in SWIG:
 # https://sourceforge.net/tracker/?func=detail&aid=3571361&group_id=1645&atid=101645
