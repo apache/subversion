@@ -561,8 +561,13 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
 # run_and_verify_log_xml
 
 class LogEntry:
-  def __init__(self, revision, changed_paths=None, revprops=None):
+  def __init__(self, revision, attributes=None,
+               changed_paths=None, revprops=None):
     self.revision = revision
+    if attributes == None:
+      self.attributes = {}
+    else:
+      self.attributes = attributes
     if changed_paths == None:
       self.changed_paths = {}
     else:
@@ -571,6 +576,15 @@ class LogEntry:
       self.revprops = {}
     else:
       self.revprops = revprops
+
+  def assert_log_attrs(self, attributes):
+    """Assert that attributes is the same as this entry's attributes
+    Raises svntest.Failure if not.
+    """
+    if self.attributes != attributes:
+      raise Failure('\n' + '\n'.join(difflib.ndiff(
+            pprint.pformat(attributes).splitlines(),
+            pprint.pformat(self.attributes).splitlines())))
 
   def assert_changed_paths(self, changed_paths):
     """Assert that changed_paths is the same as this entry's changed_paths
@@ -649,7 +663,7 @@ class LogParser:
 
   # element handlers
   def logentry_start(self, attrs):
-    self.entries.append(LogEntry(int(attrs['revision'])))
+    self.entries.append(LogEntry(int(attrs['revision']), attrs))
   def author_end(self):
     self.svn_prop('author')
   def msg_end(self):
@@ -669,15 +683,20 @@ class LogParser:
     self.entries[-1].changed_paths[self.use_cdata()] = [{'kind': self.kind,
                                                          'action': self.action}]
 
-def run_and_verify_log_xml(message=None, expected_paths=None,
-                           expected_revprops=None, expected_stdout=None,
-                           expected_stderr=None, args=[]):
+def run_and_verify_log_xml(message=None, expected_log_attrs=None,
+                           expected_paths=None, expected_revprops=None,
+                           expected_stdout=None, expected_stderr=None,
+                           args=[]):
   """Call run_and_verify_svn with log --xml and args (optional) as command
   arguments, and pass along message, expected_stdout, and expected_stderr.
 
   If message is None, pass the svn log command as message.
 
   expected_paths checking is not yet implemented.
+
+  expected_log_attrs is an optional list of dicts, compared to each revisions's
+  logentry attributes.  The list must be in the same order the log entries
+  come in.
 
   expected_revprops is an optional list of dicts, compared to each
   revision's revprops.  The list must be in the same order the log entries
@@ -717,6 +736,8 @@ def run_and_verify_log_xml(message=None, expected_paths=None,
       entry.assert_revprops(expected_revprops[index])
     if expected_paths != None:
       entry.assert_changed_paths(expected_paths[index])
+    if expected_log_attrs != None:
+      entry.assert_log_attrs(expected_log_attrs[index])
 
 
 def verify_update(actual_output,

@@ -2598,6 +2598,77 @@ def mergeinfo_log(sbox):
   # TODO: Validate the output, the check_log_chain() function assumes it
   # gets the output of the message
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(4463)
+def merge_sensitive_log_xml_reverse_merges(sbox):
+  "log -g --xml differentiates forward/reverse merges"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_path      = os.path.join(wc_dir, 'A')
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+  D_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D')
+
+  # Merge -c3,5 from A to A_COPY, commit as r7
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-c3,5', A_path, A_COPY_path)
+  sbox.simple_commit(message='Merge -c3,5 from A to A_COPY')
+
+  # Merge -c-3,-5,4,6 from A to A_COPY, commit as r8
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-c-3,4,-5,6', A_path, A_COPY_path)
+  sbox.simple_commit(message='Merge -c-3,-5,4,6 from A to A_COPY')
+
+  # Update so
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Run log -g --xml on path with explicit mergeinfo (A_COPY).
+  log_attrs = [
+          {
+              u'revision': u'8',
+          },
+          {
+              u'revision': u'6',
+              u'reverse-merge': u'false',
+          },
+          {
+              u'revision': u'5',
+              u'reverse-merge': u'true',
+          },
+          {
+              u'revision': u'4',
+              u'reverse-merge': u'false',
+          },
+          {
+              u'revision': u'3',
+              u'reverse-merge': u'true',
+          }]
+  svntest.actions.run_and_verify_log_xml(expected_log_attrs=log_attrs,
+                                         args=['-g', '-r8', A_COPY_path])
+
+  # Run log -g --xml on path with inherited mergeinfo (A_COPY/D).
+  # r5 only affects A_COPY/B/E/beta so not listed
+  log_attrs = [
+          {
+              u'revision': u'8',
+          },
+          {
+              u'revision': u'6',
+              u'reverse-merge': u'false',
+          },
+          {
+              u'revision': u'4',
+              u'reverse-merge': u'false',
+          },
+          {
+              u'revision': u'3',
+              u'reverse-merge': u'true',
+          }]
+  svntest.actions.run_and_verify_log_xml(expected_log_attrs=log_attrs,
+                                         args=['-g', '-r8', D_COPY_path])
+
 
 ########################################################################
 # Run the tests
@@ -2647,6 +2718,7 @@ test_list = [ None,
               log_multiple_revs_spanning_rename,
               log_auto_move,
               mergeinfo_log,
+              merge_sensitive_log_xml_reverse_merges,
              ]
 
 if __name__ == '__main__':
