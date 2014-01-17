@@ -555,7 +555,9 @@ svn_cl__log_entry_receiver_xml(void *baton,
                             log_entry->subtractive_merge ? "true" : "false",
                             SVN_VA_NULL);
 
-    } else {
+    }
+  else
+    {
         svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
                               "revision", revstr, SVN_VA_NULL);
     }
