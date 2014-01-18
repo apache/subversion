@@ -147,7 +147,7 @@ Candidate changes:
  * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
    Fix a specific case where the api behind status would report a different
    move status for A depending on whether the user called 'svn status A' or
-   'svn status wc/A'.
+   'svn status wc' and then looked at 'wc/A'.
    Justification:
      Api users such as AnkhSVN rely on the result of svn status to match and
      this breaks their assumptions.
