@@ -145,6 +145,7 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
     SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_PRAGMA_LOCKING_MODE));
 
   SVN_ERR(svn_sqlite__create_scalar_function(*sdb, "relpath_depth", 1,
+                                             TRUE /* deterministic */,
                                              relpath_depth_sqlite, NULL));
 
   return SVN_NO_ERROR;

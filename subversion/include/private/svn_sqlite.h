@@ -130,11 +130,16 @@ svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db);
 
 /* Add a custom function to be used with this database connection.  The data
-   in BATON should live at least as long as the connection in DB. */
+   in BATON should live at least as long as the connection in DB.
+
+   Pass TRUE if the result of the function is constant within a statement with
+   a specific set of argument values and FALSE if not (or when in doubt). When
+   TRUE newer Sqlite versions use this knowledge for query optimizations. */
 svn_error_t *
 svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
                                    const char *func_name,
                                    int argc,
+                                   svn_boolean_t deterministic,
                                    svn_sqlite__func_t func,
                                    void *baton);
 
