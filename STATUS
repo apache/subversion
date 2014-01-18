@@ -291,11 +291,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1559009
-   Fix swig-pl when built with --enable-sqlite-compatibility-version
-   Justification:
-     Build system should work.
-   Votes:
-     +1: breser
-     +0: rhuijben
