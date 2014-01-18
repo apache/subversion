@@ -83,7 +83,8 @@ test_sqlite_reset(apr_pool_t *pool)
   };
 
   SVN_ERR(open_db(&sdb, "reset", statements, pool));
-  SVN_ERR(svn_sqlite__create_scalar_function(sdb, "error_second", 1,
+  SVN_ERR(svn_sqlite__create_scalar_function(sdb, "error_second",
+                                             1, FALSE /* deterministic */,
                                              error_second, NULL));
   SVN_ERR(svn_sqlite__exec_statements(sdb, 0));
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));

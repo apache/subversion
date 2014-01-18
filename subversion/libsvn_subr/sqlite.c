@@ -65,6 +65,10 @@ extern int (*const svn_sqlite3__api_config)(int, ...);
 #error SQLite is too old -- version 3.7.12 is the minimum required version
 #endif
 
+#ifndef SQLITE_DETERMINISTIC
+#define SQLITE_DETERMINISTIC 0
+#endif
+
 #ifdef SVN_UNICODE_NORMALIZATION_FIXES
 /* Limit the length of a GLOB or LIKE pattern. */
 #ifndef SQLITE_MAX_LIKE_PATTERN_LENGTH
@@ -1056,16 +1060,20 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   /* Register collation and LIKE and GLOB operator replacements. */
   SQLITE_ERR(sqlite3_create_collation((*db)->db3,
-                                      "svn-ucs-nfd", SQLITE_UTF8,
+                                      "svn-ucs-nfd",
+                                      SQLITE_UTF8 | SQLITE_DETERMINISTIC,
                                       *db, collate_ucs_nfd),
              *db);
-  SQLITE_ERR(sqlite3_create_function((*db)->db3, "glob", 2, SQLITE_UTF8,
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "glob", 2,
+                                     SQLITE_UTF8 | SQLITE_DETERMINISTIC,
                                      *db, glob_ucs_nfd, NULL, NULL),
              *db);
-  SQLITE_ERR(sqlite3_create_function((*db)->db3, "like", 2, SQLITE_UTF8,
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "like", 2,
+                                     SQLITE_UTF8 | SQLITE_DETERMINISTIC,
                                      *db, like_ucs_nfd, NULL, NULL),
              *db);
-  SQLITE_ERR(sqlite3_create_function((*db)->db3, "like", 3, SQLITE_UTF8,
+  SQLITE_ERR(sqlite3_create_function((*db)->db3, "like", 3,
+                                     SQLITE_UTF8 | SQLITE_DETERMINISTIC,
                                      *db, like_ucs_nfd, NULL, NULL),
              *db);
 #endif /* SVN_UNICODE_NORMALIZATION_FIXES */
@@ -1437,9 +1445,11 @@ svn_error_t *
 svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
                                    const char *func_name,
                                    int argc,
+                                   svn_boolean_t deterministic,
                                    svn_sqlite__func_t func,
                                    void *baton)
 {
+  int eTextRep;
   struct function_wrapper_baton_t *fwb = apr_pcalloc(db->state_pool,
                                                      sizeof(*fwb));
 
@@ -1447,7 +1457,11 @@ svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
   fwb->func = func;
   fwb->baton = baton;
 
-  SQLITE_ERR(sqlite3_create_function(db->db3, func_name, argc, SQLITE_ANY,
+  eTextRep = SQLITE_ANY;
+  if (deterministic)
+    eTextRep |= SQLITE_DETERMINISTIC;
+
+  SQLITE_ERR(sqlite3_create_function(db->db3, func_name, argc, eTextRep,
                                      fwb, wrapped_func, NULL, NULL),
              db);
 
