@@ -1060,10 +1060,16 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   /* Register collation and LIKE and GLOB operator replacements. */
   SQLITE_ERR(sqlite3_create_collation((*db)->db3,
-                                      "svn-ucs-nfd",
-                                      SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+                                      "svn-ucs-nfd", SQLITE_UTF8,
                                       *db, collate_ucs_nfd),
              *db);
+  /* ### Is it really necessary to override these functions?
+         I would assume the default implementation to be collation agnostic?
+         And otherwise our implementation should be...
+
+         The default implementation is in some cases index backed, while our
+         implementation can't be. With an index based on the collation it could
+         be. */
   SQLITE_ERR(sqlite3_create_function((*db)->db3, "glob", 2,
                                      SQLITE_UTF8 | SQLITE_DETERMINISTIC,
                                      *db, glob_ucs_nfd, NULL, NULL),
