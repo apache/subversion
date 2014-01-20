@@ -1860,3 +1860,78 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
 
   return stream;
 }
+
+/* Baton for install streams */
+struct install_baton_t
+{
+  struct baton_apr baton_apr;
+  const char *tmp_path;
+};
+
+svn_error_t *
+svn_stream__create_for_install(svn_stream_t **install_stream,
+                               const char *tmp_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+  struct install_baton_t *ib;
+  const char *tmp_path;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(tmp_abspath));
+
+  SVN_ERR(svn_io_open_unique_file3(&file, &tmp_path, tmp_abspath,
+                                   svn_io_file_del_none,
+                                   result_pool, scratch_pool));
+  *install_stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
+
+  ib = apr_pcalloc(result_pool, sizeof(*ib));
+  ib->baton_apr = *(struct baton_apr*)(*install_stream)->baton;
+
+  assert((void*)&ib->baton_apr == (void*)ib);
+
+  (*install_stream)->baton = ib;
+
+  ib->tmp_path = tmp_path;
+
+  /* ### Install pool cleanup handler for tempfile? */
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_stream__install_stream(svn_stream_t *install_stream,
+                           const char *final_abspath,
+                           svn_boolean_t make_parents,
+                           apr_pool_t *scratch_pool)
+{
+  struct install_baton_t *ib = install_stream->baton;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(final_abspath));
+
+  err = svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool);
+
+  /* A missing directory is too common to not cover here. */
+  if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_t *err2;
+
+      err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
+                                                            scratch_pool),
+                                         scratch_pool);
+
+      if (err2)
+        /* Creating directory didn't work: Return all errors */
+        return svn_error_trace(svn_error_compose_create(err, err2));
+      else
+        /* We could create a directory: retry install */
+        svn_error_clear(err);
+
+      SVN_ERR(svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool));
+    }
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}

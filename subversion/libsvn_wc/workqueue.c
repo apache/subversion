@@ -38,6 +38,7 @@
 #include "conflicts.h"
 #include "translate.h"
 
+#include "private/svn_io_private.h"
 #include "private/svn_skel.h"
 
 
@@ -469,7 +470,6 @@ run_file_install(work_item_baton_t *wqb,
   apr_hash_t *keywords;
   const char *temp_dir_abspath;
   svn_stream_t *dst_stream;
-  const char *dst_abspath;
   apr_int64_t val;
   const char *wcroot_abspath;
   const char *source_abspath;
@@ -572,10 +572,8 @@ run_file_install(work_item_baton_t *wqb,
   /* Translate to a temporary file. We don't want the user seeing a partial
      file, nor let them muck with it while we translate. We may also need to
      get its TRANSLATED_SIZE before the user can monkey it.  */
-  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_abspath,
-                                 temp_dir_abspath,
-                                 svn_io_file_del_none,
-                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream__create_for_install(&dst_stream, temp_dir_abspath,
+                                         scratch_pool, scratch_pool));
 
   /* Copy from the source to the dest, translating as we go. This will also
      close both streams.  */
@@ -584,35 +582,11 @@ run_file_install(work_item_baton_t *wqb,
                            scratch_pool));
 
   /* All done. Move the file into place.  */
-
-  {
-    svn_error_t *err;
-
-    err = svn_io_file_rename(dst_abspath, local_abspath, scratch_pool);
-
-    /* With a single db we might want to install files in a missing directory.
-       Simply trying this scenario on error won't do any harm and at least
-       one user reported this problem on IRC. */
-    if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-      {
-        svn_error_t *err2;
-
-        err2 = svn_io_make_dir_recursively(svn_dirent_dirname(local_abspath,
-                                                              scratch_pool),
-                                           scratch_pool);
-
-        if (err2)
-          /* Creating directory didn't work: Return all errors */
-          return svn_error_trace(svn_error_compose_create(err, err2));
-        else
-          /* We could create a directory: retry install */
-          svn_error_clear(err);
-
-        SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
-      }
-    else
-      SVN_ERR(err);
-  }
+  /* With a single db we might want to install files in a missing directory.
+     Simply trying this scenario on error won't do any harm and at least
+     one user reported this problem on IRC. */
+  SVN_ERR(svn_stream__install_stream(dst_stream, local_abspath,
+                                     TRUE /* make_parents*/, scratch_pool));
 
   /* Tweak the on-disk file according to its properties.  */
 #ifndef WIN32
