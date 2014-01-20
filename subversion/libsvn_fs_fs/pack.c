@@ -1426,6 +1426,8 @@ append_revision(pack_context_t *context,
   svn_pool_destroy(iterpool);
   context->pack_offset += finfo.size;
 
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
+
   return SVN_NO_ERROR;
 }
 
