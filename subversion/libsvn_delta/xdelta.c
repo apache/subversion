@@ -45,6 +45,15 @@
  */
 #define MATCH_BLOCKSIZE 64
 
+/* Size of the checksum presense FLAGS array in BLOCKS_T.  With standard
+   MATCH_BLOCKSIZE and SVN_DELTA_WINDOW_SIZE, 32k entries is about 20x
+   the number of checksums that actually occur, i.e. we expect a >95%
+   probability that non-matching checksums get already detected by checking
+   against the FLAGS array.
+   Must be a power of 2.
+ */
+#define FLAGS_COUNT (32 * 1024)
+
 /* "no" / "invalid" / "unused" value for positions within the delta windows
  */
 #define NO_POSITION ((apr_uint32_t)-1)
@@ -119,8 +128,19 @@ struct blocks
      hte same width as the block position index, (struct
      block).pos. */
   apr_uint32_t max;
+
   /* Source buffer that the positions in SLOTS refer to. */
   const char* data;
+
+  /* Bit array indicating whether there may be a matching slot for a given
+     adler32 checksum.  Since FLAGS has much more entries than SLOTS, this
+     will indicate most cases of non-matching checksums with a "0" bit, i.e.
+     as "known not to have a match".
+     The mapping of adler32 checksum bits is [0..2][16..27] (LSB -> MSB),
+     i.e. address the byte by the multiplicative part of adler32 and address
+     the bits in that byte by the additive part of adler32. */
+  char flags[FLAGS_COUNT / 8];
+
   /* The vector of blocks.  A pos value of NO_POSITION represents an unused
      slot. */
   struct block *slots;
@@ -135,6 +155,15 @@ static apr_uint32_t hash_func(apr_uint32_t sum)
      bits when used for our small block size, we add some bits from the
      other half of the checksum. */
   return sum ^ (sum >> 12);
+}
+
+/* Return the offset in BLOCKS.FLAGS for the adler32 SUM. */
+static apr_uint32_t hash_flags(apr_uint32_t sum)
+{
+  /* The upper half of SUM has a wider value range than the lower 16 bit.
+     Also, we want to a different folding than HASH_FUNC to minimize
+     correlation between different hash levels. */
+  return (sum >> 16) & ((FLAGS_COUNT / 8) - 1);
 }
 
 /* Insert a block with the checksum ADLERSUM at position POS in the source
@@ -154,6 +183,7 @@ add_block(struct blocks *blocks, apr_uint32_t adlersum, apr_uint32_t pos)
 
   blocks->slots[h].adlersum = adlersum;
   blocks->slots[h].pos = pos;
+  blocks->flags[hash_flags(adlersum)] |= 1 << (adlersum & 7);
 }
 
 /* Find a block in BLOCKS with the checksum ADLERSUM and matching the content
@@ -217,6 +247,9 @@ init_blocks_table(const char *data,
       blocks->slots[i].adlersum = 0;
       blocks->slots[i].pos = NO_POSITION;
     }
+
+  /* No checksum entries in SLOTS, yet => reset all checksum flags. */
+  memset(blocks->flags, 0, sizeof(blocks->flags));
 
   /* If there is an odd block at the end of the buffer, we will
      not use that shorter block for deltification (only indirectly
@@ -345,7 +378,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
 {
   struct blocks blocks;
   apr_uint32_t rolling;
-  apr_size_t lo = 0, pending_insert_start = 0;
+  apr_size_t lo = 0, pending_insert_start = 0, upper;
 
   /* Optimization: directly compare window starts. If more than 4
    * bytes match, we can immediately create a matching windows.
@@ -368,6 +401,8 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
       return;
     }
 
+  upper = bsize - MATCH_BLOCKSIZE; /* this is now known to be >= LO */
+
   /* Initialize the matches table.  */
   init_blocks_table(a, asize, &blocks, pool);
 
@@ -375,12 +410,23 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   rolling = init_adler32(b + lo);
   while (lo < bsize)
     {
-      apr_size_t matchlen = 0;
+      apr_size_t matchlen;
       apr_size_t apos;
 
-      if (lo + MATCH_BLOCKSIZE <= bsize)
-        matchlen = find_match(&blocks, rolling, a, asize, b, bsize,
-                              &lo, &apos, pending_insert_start);
+      /* Quickly skip positions whose respective ROLLING checksums
+         definitely do not match any SLOT in BLOCKS. */
+      while (!(blocks.flags[hash_flags(rolling)] & (1 << (rolling & 7)))
+             && lo < upper)
+        {
+          rolling = adler32_replace(rolling, b[lo], b[lo+MATCH_BLOCKSIZE]);
+          lo++;
+        }
+
+      /* LO is still <= UPPER, i.e. the following lookup is legal:
+         Closely check whether we've got a match for the current location.
+         Due to the above pre-filter, chances are that we find one. */
+      matchlen = find_match(&blocks, rolling, a, asize, b, bsize,
+                            &lo, &apos, pending_insert_start);
 
       /* If we didn't find a real match, insert the byte at the target
          position into the pending insert.  */
