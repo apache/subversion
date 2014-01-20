@@ -30,6 +30,7 @@
 #include "svn_props.h"
 #include "svn_time.h"
 #include "svn_dirent_uri.h"
+#include "svn_sorts.h"
 #include "svn_version.h"
 
 #include "cached_data.h"
@@ -481,6 +482,8 @@ read_config(fs_fs_data_t *ffd,
   /* Initialize deltification settings in ffd. */
   if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
     {
+      apr_int64_t compression_level;
+
       SVN_ERR(svn_config_get_bool(ffd->config, &ffd->deltify_directories,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
@@ -497,6 +500,14 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
                                    SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
+
+      SVN_ERR(svn_config_get_int64(ffd->config, &compression_level,
+                                   CONFIG_SECTION_DELTIFICATION,
+                                   CONFIG_OPTION_COMPRESSION_LEVEL,
+                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
+      ffd->delta_compression_level
+        = (int)MIN(MAX(SVN_DELTA_COMPRESSION_LEVEL_NONE, compression_level),
+                   SVN_DELTA_COMPRESSION_LEVEL_MAX);
     }
   else
     {
@@ -504,6 +515,7 @@ read_config(fs_fs_data_t *ffd,
       ffd->deltify_properties = FALSE;
       ffd->max_deltification_walk = SVN_FS_FS_MAX_DELTIFICATION_WALK;
       ffd->max_linear_deltification = SVN_FS_FS_MAX_LINEAR_DELTIFICATION;
+      ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
     }
 
   /* Initialize revprop packing settings in ffd. */
@@ -663,6 +675,24 @@ write_config(svn_fs_t *fs,
 "### exclusive use of skip-deltas (as in pre-1.8)."                          NL
 "### For 1.8, the default value is 16; earlier versions use 1."              NL
 "# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
+"###"                                                                        NL
+"### After deltification, we compress the data through zlib to minimize on-" NL
+"### disk size.  That can be an expensive and ineffective process.  This"    NL
+"### setting controls the usage of zlib in future revisions."                NL
+"### Revisions with highly compressible data in them may shrink in size"     NL
+"### if the setting is increased but may take much longer to commit.  The"   NL
+"### time taken to uncompress that data again is widely independent of the"  NL
+"### compression level."                                                     NL
+"### Compression will be ineffective if the incoming content is already"     NL
+"### highly compressed.  In that case, disabling the compression entirely"   NL
+"### will speed up commits as well as reading the data.  Repositories with"  NL
+"### many small compressible files (source code) but also a high percentage" NL
+"### of large incompressible ones (artwork) may benefit from compression"    NL
+"### levels lowered to e.g. 1."                                              NL
+"### Valid values are 0 to 9 with 9 providing the highest compression ratio" NL
+"### and 0 disabling it altogether"                                          NL
+"### The default value is 5."                                                NL
+"# " CONFIG_OPTION_COMPRESSION_LEVEL " = 5"                                  NL
 ""                                                                           NL
 "[" CONFIG_SECTION_PACKED_REVPROPS "]"                                       NL
 "### This parameter controls the size (in kBytes) of packed revprop files."  NL

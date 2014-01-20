@@ -2093,7 +2093,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                           &whb,
                           b->rep_stream,
                           diff_version,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          ffd->delta_compression_level,
                           pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
@@ -2684,7 +2684,7 @@ write_container_delta_rep(representation_t *rep,
                           &diff_whb,
                           file_stream,
                           diff_version,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          ffd->delta_compression_level,
                           pool);
 
   whb = apr_pcalloc(pool, sizeof(*whb));
