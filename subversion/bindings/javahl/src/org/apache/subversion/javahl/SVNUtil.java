@@ -517,7 +517,7 @@ public class SVNUtil
      * Return a stream which performs end-of-line translation and
      * keyword expansion when read from.
      *<p>
-     * <b>Important:</b> Make sure you close the reurned stream to
+     * <b>Important:</b> Make sure you close the returned stream to
      * ensure all data are flushed and cleaned up (this will also
      * close the provided stream and dispose the related netive
      * object).
