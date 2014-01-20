@@ -105,6 +105,29 @@ svn_stream__is_buffered(svn_stream_t *stream);
 apr_file_t *
 svn_stream__aprfile(svn_stream_t *stream);
 
+/* Creates as *INSTALL_STREAM a stream that once completed can be installed
+   using Windows checkouts much slower then Unix.
+
+   While writing the stream is temporarily stored in TMP_ABSPATH.
+ */
+svn_error_t *
+svn_stream__create_for_install(svn_stream_t **install_stream,
+                               const char *tmp_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/* Installs a stream created with svn_stream__create_for_install in its final
+   location FINAL_ABSPATH, potentially using platform specific optimizations.
+
+   If MAKE_PARENTS is TRUE, this function will create missing parent
+   directories if needed.
+ */
+svn_error_t *
+svn_stream__install_stream(svn_stream_t *install_stream,
+                           const char *final_abspath,
+                           svn_boolean_t make_parents,
+                           apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
