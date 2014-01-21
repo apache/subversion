@@ -180,6 +180,7 @@ Mergeinfo metadata:
 Revision changed paths list:
   Format 1-3: Does not contain the node's kind.
   Format 4+:  Contains the node's kind.
+  Format 7+:  Contains the mergeinfo-mod flag.
 
 Shard packing:
   Format 4:   Applied to revision data only.
@@ -574,19 +575,22 @@ its location is not yet known.
 
 The changed-path data is represented as a series of changed-path
 items, each consisting of two lines.  The first line has the format
-"<id> <action> <text-mod> <prop-mod> <path>\n", where <id> is the
-node-rev ID of the new node-rev, <action> is "add", "delete",
-"replace", or "modify", <text-mod> and <prop-mod> are "true" or
-"false" indicating whether the text and/or properties changed, and
-<path> is the changed pathname.  For deletes, <id> is the node-rev ID
-of the deleted node-rev, and <text-mod> and <prop-mod> are always
-"false".  The second line has the format "<rev> <path>\n" containing
-the node-rev's copyfrom information if it has any; if it does not, the
-second line is blank.
+"<id> <action> <text-mod> <prop-mod> <mergeinfo-mod> <path>\n",
+where <id> is the node-rev ID of the new node-rev, <action> is "add",
+"delete", "replace", or "modify", <text-mod>, <prop-mod>, and
+<mergeinfo-mod>  are "true" or "false" indicating whether the text,
+properties and/or mergeinfo changed, and <path> is the changed pathname.
+For deletes, <id> is the node-rev ID of the deleted node-rev, and
+<text-mod> and <prop-mod> are always "false".  The second line has the
+format "<rev> <path>\n" containing the node-rev's copyfrom information
+if it has any; if it does not, the second line is blank.
 
 Starting with FS format 4, <action> may contain the kind ("file" or
 "dir") of the node, after a hyphen; for example, an added directory
 may be represented as "add-dir".
+
+Before with FS format 7, <mergeinfo-mod> flag is not available.  It may
+also be missing in revisions upgraded from pre-f7 formats.
 
 In physical addressing mode, at the very end of a rev file is a pair of
 lines containing "\n<root-offset> <cp-offset>\n", where <root-offset> is
