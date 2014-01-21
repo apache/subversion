@@ -107,6 +107,9 @@ typedef struct path_order_t
   /* noderev predecessor count */
   int predecessor_count;
 
+  /* this is a directory node */
+  svn_boolean_t is_dir;
+
   /* length of the expanded representation content */
   apr_int64_t expanded_size;
 
@@ -753,13 +756,15 @@ copy_node_to_temp(pack_context_t *context,
   path_order->node_id = *svn_fs_fs__id_node_id(noderev->id);
   path_order->revision = svn_fs_fs__id_rev(noderev->id);
   path_order->predecessor_count = noderev->predecessor_count;
+  path_order->is_dir = noderev->kind == svn_node_dir;
   path_order->noderev_id = *svn_fs_fs__id_rev_item(noderev->id);
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
   return SVN_NO_ERROR;
 }
 
-/* implements compare_fn_t.  Sort descending by PATH, NODE_ID and REVISION.
+/* implements compare_fn_t.  Bring all directories in front of the files
+   and sort descendingly by PATH, NODE_ID and REVISION.
  */
 static int
 compare_path_order(const path_order_t * const * lhs_p,
@@ -768,8 +773,13 @@ compare_path_order(const path_order_t * const * lhs_p,
   const path_order_t * lhs = *lhs_p;
   const path_order_t * rhs = *rhs_p;
 
+  /* cluster all directories */
+  int diff = rhs->is_dir - lhs->is_dir;
+  if (diff)
+    return diff;
+
   /* lexicographic order on path and node (i.e. latest first) */
-  int diff = svn_prefix_string__compare(lhs->path, rhs->path);
+  diff = svn_prefix_string__compare(lhs->path, rhs->path);
   if (diff)
     return diff;
 
@@ -807,6 +817,15 @@ compare_ref_to_item(const reference_t * const * lhs_p,
   return svn_fs_fs__id_part_compare(&(*lhs_p)->from, rhs_p);
 }
 
+/* implements compare_fn_t.  Finds the DIR / FILE boundary.
+ */
+static int
+compare_is_dir(const path_order_t * const * lhs_p,
+               const void *unused)
+{
+  return (*lhs_p)->is_dir ? -1 : 0;
+}
+
 /* Look for the least significant bit set in VALUE and return the smallest
  * number with the same property, i.e. the largest power of 2 that is a
  * factor in VALUE. */
@@ -816,35 +835,25 @@ roundness(int value)
   return value ? value - (value & (value - 1)) : INT_MAX;
 }
 
-/* Order the data collected in CONTEXT such that we can place them in the
- * desired order.
+/* Order a range of data collected in CONTEXT such that we can place them
+ * in the desired order.  The input is taken from *PATH_ORDER, offsets FIRST
+ * to LAST and then written in the final order to the same range in *TEMP.
  */
 static void
-sort_reps(pack_context_t *context)
+sort_reps_range(pack_context_t *context,
+                const path_order_t **path_order,
+                const path_order_t **temp,
+                int first,
+                int last)
 {
-  apr_pool_t *temp_pool;
-  const path_order_t **temp, **path_order;
   const svn_prefix_string__t *path;
-  int i, dest, count, best;
+  int i, dest, best;
   svn_fs_fs__id_part_t rep_id;
   fs_fs_data_t *ffd = context->fs->fsap_data;
 
-  /* We will later assume that there is at least one node / path.
-   */
-  if (context->path_order->nelts == 0)
-    {
-      assert(context->references->nelts == 0);
-      return;
-    }
-
-  /* Sort containers by path and IDs, respectively.
-   */
-  qsort(context->path_order->elts, context->path_order->nelts,
-        context->path_order->elt_size,
-        (int (*)(const void *, const void *))compare_path_order);
-  qsort(context->references->elts, context->references->nelts,
-        context->references->elt_size,
-        (int (*)(const void *, const void *))compare_references);
+  /* The logic below would fail for empty ranges. */
+  if (first == last)
+    return;
 
   /* Re-order noderevs like this:
    *
@@ -854,15 +863,9 @@ sort_reps(pack_context_t *context)
    *
    * We simply pick & chose from the existing path, rev order.
    */
-
-  temp_pool = svn_pool_create(context->info_pool);
-  count = context->path_order->nelts;
-  temp = apr_pcalloc(temp_pool, count * sizeof(*temp));
-  path_order = (void *)context->path_order->elts;
-
-  dest = 0;
-  path = path_order[0]->path;
-  best = 0;
+  dest = first;
+  path = path_order[first]->path;
+  best = first;
 
   /* (1) For each path, pick the "roundest" representation and put it in
    * front of all other nodes in the pack file.  The "roundest" rep is
@@ -874,7 +877,7 @@ sort_reps(pack_context_t *context)
    * sections because references *into* linear deltification ranges are
    * much less likely.
    */
-  for (i = 0; i < count; ++i)
+  for (i = first; i < last; ++i)
     {
       /* Investigated all nodes for the current path? */
       if (svn_prefix_string__compare(path, path_order[i]->path))
@@ -915,7 +918,7 @@ sort_reps(pack_context_t *context)
    * access HEAD of the respective path.  Keeping all its dependency chain
    * in one place turns reconstruction into a linear scan of minimal length.
    */
-  for (i = 0; i < count; ++i)
+  for (i = first; i < last; ++i)
     if (path_order[i])
       {
         /* New path? */
@@ -931,7 +934,7 @@ sort_reps(pack_context_t *context)
             reference_t **reference;
 
             temp[dest++] = path_order[i];
-            path_order[i] = 0;
+            path_order[i] = NULL;
 
             reference = svn_sort__array_lookup(context->references,
                                                &rep_id, NULL,
@@ -946,12 +949,65 @@ sort_reps(pack_context_t *context)
    * in a given pack file.  So, this is just a few remnants that we put
    * at the end of the pack file.
    */
-  for (i = 0; i < count; ++i)
+  for (i = first; i < last; ++i)
     if (path_order[i])
       temp[dest++] = path_order[i];
 
   /* We now know the final ordering. */
-  assert(dest == count);
+  assert(dest == last);
+}
+
+/* Order the data collected in CONTEXT such that we can place them in the
+ * desired order.
+ */
+static void
+sort_reps(pack_context_t *context)
+{
+  apr_pool_t *temp_pool;
+  const path_order_t **temp, **path_order;
+  int i, count, dir_count;
+
+  /* We will later assume that there is at least one node / path.
+   */
+  if (context->path_order->nelts == 0)
+    {
+      assert(context->references->nelts == 0);
+      return;
+    }
+
+  /* Sort containers by path and IDs, respectively.
+   */
+  qsort(context->path_order->elts, context->path_order->nelts,
+        context->path_order->elt_size,
+        (int (*)(const void *, const void *))compare_path_order);
+  qsort(context->references->elts, context->references->nelts,
+        context->references->elt_size,
+        (int (*)(const void *, const void *))compare_references);
+
+  /* Re-order noderevs like this:
+   * (1) Directories are already in front; sort directories section and
+   *     files section separately according to (2)-(4).
+   * (2) Most likely to be referenced by future pack files, in path order.
+   * (3) highest revision rep per path + dependency chain
+   * (4) Remaining reps in path, rev order
+   *
+   * We simply pick & chose from the existing path, rev order.
+   */
+
+  temp_pool = svn_pool_create(context->info_pool);
+  count = context->path_order->nelts;
+  temp = apr_pcalloc(temp_pool, count * sizeof(*temp));
+  path_order = (void *)context->path_order->elts;
+
+  /* Find the boundary between DIR and FILE section. */
+  dir_count = svn_sort__bsearch_lower_bound(context->path_order, NULL,
+                     (int (*)(const void *, const void *))compare_is_dir);
+
+  /* Sort those sub-sections separately. */
+  sort_reps_range(context, path_order, temp, 0, dir_count);
+  sort_reps_range(context, path_order, temp, dir_count, count);
+
+  /* We now know the final ordering. */
   for (i = 0; i < count; ++i)
     path_order[i] = temp[i];
   
