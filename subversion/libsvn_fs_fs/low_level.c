@@ -297,6 +297,30 @@ read_change(change_t **change_p,
                               _("Invalid prop-mod flag in rev-file"));
     }
 
+  /* Get the mergeinfo-mod flag if given.  Otherwise, the next thing
+     is the path starting with a slash. */
+  if (*last_str != '/')
+    {
+      str = svn_cstring_tokenize(" ", &last_str);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Invalid changes line in rev-file"));
+
+      if (strcmp(str, FLAG_TRUE) == 0)
+        {
+          info->mergeinfo_mod = svn_tristate_true;
+        }
+      else if (strcmp(str, FLAG_FALSE) == 0)
+        {
+          info->mergeinfo_mod = svn_tristate_false;
+        }
+      else
+        {
+          return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                              _("Invalid mergeinfo-mod flag in rev-file"));
+        }
+    }
+  
   /* Get the changed path. */
   change->path.len = strlen(last_str);
   change->path.data = apr_pstrmemdup(pool, last_str, change->path.len);
@@ -353,18 +377,21 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
    string COPYFROM, into the file specified by FILE.  Only include the
-   node kind field if INCLUDE_NODE_KIND is true.  All temporary
+   node kind field if INCLUDE_NODE_KIND is true.  Only include the
+   mergeinfo-mod field if INCLUDE_MERGEINFO_MODS is true.  All temporary
    allocations are in POOL. */
 static svn_error_t *
 write_change_entry(svn_stream_t *stream,
                    const char *path,
                    svn_fs_path_change2_t *change,
                    svn_boolean_t include_node_kind,
+                   svn_boolean_t include_mergeinfo_mods,
                    apr_pool_t *pool)
 {
   const char *idstr;
   const char *change_string = NULL;
   const char *kind_string = "";
+  const char *mergeinfo_string = "";
   svn_stringbuf_t *buf;
   apr_size_t len;
 
@@ -411,10 +438,18 @@ write_change_entry(svn_stream_t *stream,
                                  ? SVN_FS_FS__KIND_DIR
                                   : SVN_FS_FS__KIND_FILE);
     }
-  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s %s\n",
+
+  if (include_mergeinfo_mods && change->mergeinfo_mod != svn_tristate_unknown)
+	  mergeinfo_string = apr_psprintf(pool, " %s",
+                             change->mergeinfo_mod == svn_tristate_true
+                               ? FLAG_TRUE
+                               : FLAG_FALSE);
+
+  buf = svn_stringbuf_createf(pool, "%s %s%s %s %s%s %s\n",
                               idstr, change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
+                              mergeinfo_string,
                               path);
 
   if (SVN_IS_VALID_REVNUM(change->copyfrom_rev))
@@ -442,6 +477,8 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t include_node_kinds =
       ffd->format >= SVN_FS_FS__MIN_KIND_IN_CHANGED_FORMAT;
+  svn_boolean_t include_mergeinfo_mods =
+      ffd->format >= SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT;
   apr_array_header_t *sorted_changed_paths;
   int i;
 
@@ -464,7 +501,7 @@ svn_fs_fs__write_changes(svn_stream_t *stream,
 
       /* Write out the new entry into the final rev-file. */
       SVN_ERR(write_change_entry(stream, path, change, include_node_kinds,
-                                 iterpool));
+                                 include_mergeinfo_mods, iterpool));
     }
 
   if (terminate_list)
