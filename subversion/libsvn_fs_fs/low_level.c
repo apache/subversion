@@ -440,10 +440,10 @@ write_change_entry(svn_stream_t *stream,
     }
 
   if (include_mergeinfo_mods && change->mergeinfo_mod != svn_tristate_unknown)
-	  mergeinfo_string = apr_psprintf(pool, " %s",
-                             change->mergeinfo_mod == svn_tristate_true
-                               ? FLAG_TRUE
-                               : FLAG_FALSE);
+    mergeinfo_string = apr_psprintf(pool, " %s",
+                                    change->mergeinfo_mod == svn_tristate_true
+                                      ? FLAG_TRUE
+                                      : FLAG_FALSE);
 
   buf = svn_stringbuf_createf(pool, "%s %s%s %s %s%s %s\n",
                               idstr, change_string, kind_string,
