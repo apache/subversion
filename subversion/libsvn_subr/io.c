@@ -1688,10 +1688,10 @@ io_set_file_perms(const char *path,
 #ifdef WIN32
 /* This is semantically the same as the APR utf8_to_unicode_path
    function, but reimplemented here because APR does not export it. */
-static svn_error_t*
-io_utf8_to_unicode_path(const WCHAR **result,
-                        const char *source,
-                        apr_pool_t *result_pool)
+svn_error_t*
+svn_io__utf8_to_unicode_longpath(const WCHAR **result,
+                                 const char *source,
+                                 apr_pool_t *result_pool)
 {
     /* This is correct, we don't twist the filename if it will
      * definitely be shorter than 248 characters.  It merits some
@@ -1803,7 +1803,7 @@ io_win_file_attrs_set(const char *fname,
     DWORD flags;
     const WCHAR *wfname;
 
-    SVN_ERR(io_utf8_to_unicode_path(&wfname, fname, pool));
+    SVN_ERR(svn_io__utf8_to_unicode_longpath(&wfname, fname, pool));
 
     flags = GetFileAttributesW(wfname);
     if (flags == 0xFFFFFFFF)
