@@ -1043,7 +1043,8 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   while (1)
     {
       svn_fs_path_change2_t *changed_path = svn_hash_gets(changed_paths, path);
-      if (changed_path && changed_path->prop_mod)
+      if (changed_path && changed_path->prop_mod
+          && changed_path->mergeinfo_mod != svn_tristate_false)
         break;
       if (svn_fspath__is_root(path, strlen(path)))
         {
