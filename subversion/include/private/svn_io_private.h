@@ -128,6 +128,25 @@ svn_stream__install_stream(svn_stream_t *install_stream,
                            svn_boolean_t make_parents,
                            apr_pool_t *scratch_pool);
 
+#if defined(WIN32)
+
+/* ### Move to something like io.h or subr.h, to avoid making it
+       part of the DLL api */
+
+/* This is semantically the same as the APR utf8_to_unicode_path
+   function, but reimplemented here because APR does not export it.
+
+   Note that this function creates "\\?\" paths so the resulting path
+   can only be used for WINAPI functions that explicitly document support
+   for this kind of paths. Newer Windows functions (Vista+) that support
+   long paths directly DON'T want this kind of escaping.
+ */
+svn_error_t*
+svn_io__utf8_to_unicode_longpath(const WCHAR **result,
+                                 const char *source,
+                                 apr_pool_t *result_pool);
+#endif /* WIN32 */
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

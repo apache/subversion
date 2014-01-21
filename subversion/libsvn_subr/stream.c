@@ -30,6 +30,7 @@
 #include <apr_file_io.h>
 #include <apr_errno.h>
 #include <apr_md5.h>
+#include <apr_portable.h>
 
 #include <zlib.h>
 
@@ -41,10 +42,12 @@
 #include "svn_checksum.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "private/svn_atomic.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
 #include "private/svn_io_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_utf_private.h"
 
 
 struct svn_stream_t {
@@ -1868,6 +1871,127 @@ struct install_baton_t
   const char *tmp_path;
 };
 
+#ifdef WIN32
+
+#if _WIN32_WINNT < 0x600 /* Does the SDK assume Windows Vista+? */
+typedef struct _FILE_RENAME_INFO {
+  BOOL   ReplaceIfExists;
+  HANDLE RootDirectory;
+  DWORD  FileNameLength;
+  WCHAR  FileName[1];
+} FILE_RENAME_INFO, *PFILE_RENAME_INFO;
+
+#define FileRenameInfo 3
+
+typedef BOOL (WINAPI *SetFileInformationByHandle_t)(HANDLE hFile,
+                                                    int FileInformationClass,
+                                                    LPVOID lpFileInformation,
+                                                    DWORD dwBufferSize);
+
+static volatile SetFileInformationByHandle_t SetFileInformationByHandle_p = 0;
+#define SetFileInformationByHandle (*SetFileInformationByHandle_p)
+
+static volatile svn_atomic_t SetFileInformationByHandle_a = 0;
+
+
+static svn_error_t *
+find_SetFileInformationByHandle(void *baton, apr_pool_t *scratch_pool)
+{
+  HMODULE kernel32 = GetModuleHandle("Kernel32.dll");
+
+  if (kernel32)
+    {
+      SetFileInformationByHandle_p =
+                    (SetFileInformationByHandle_t)
+                      GetProcAddress(kernel32, "SetFileInformationByHandle");
+    }
+
+  return SVN_NO_ERROR;
+}
+#endif /* WIN32 < Vista */
+
+/* Create and open a tempfile in DIRECTORY. Return its handle and path */
+static svn_error_t *
+create_tempfile(HANDLE *hFile,
+                const char **file_path,
+                const char *directory,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  const char *unique_name;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  static svn_atomic_t tempname_counter;
+  int baseNr = (GetTickCount() << 11) + 13 * svn_atomic_inc(&tempname_counter)
+               + GetCurrentProcessId();
+  int i = 0;
+  HANDLE h;
+
+  /* Shares common idea with io.c's temp_file_create */
+
+  do
+    {
+      apr_uint32_t unique_nr;
+      WCHAR *w_name;
+
+      /* Generate a number that should be unique for this application and
+         usually for the entire computer to reduce the number of cycles
+         through this loop. (A bit of calculation is much cheaper than
+         disk io) */
+      unique_nr = baseNr + 7 * i++;
+
+
+      svn_pool_clear(iterpool);
+      unique_name = svn_dirent_join(directory,
+                                    apr_psprintf(iterpool, "svn-%X",
+                                                 unique_nr),
+                                    iterpool);
+
+      SVN_ERR(svn_io__utf8_to_unicode_longpath(&w_name, unique_name,
+                                               iterpool));
+
+      /* Create a completely not-sharable file to avoid indexers, and other
+         filesystem watchers locking the file while we are still writing.
+
+         We need DELETE privileges to move the file. */
+      h = CreateFileW(w_name, GENERIC_WRITE | DELETE, 0 /* share */,
+                      NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+
+      if (h == INVALID_HANDLE_VALUE)
+        {
+          apr_status_t status = apr_get_os_error();;
+          if (i > 1000)
+            return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                           svn_error_wrap_apr(status, NULL),
+                           _("Unable to make name in '%s'"),
+                           svn_dirent_local_style(directory, scratch_pool));
+
+          if (!APR_STATUS_IS_EEXIST(status) && !APR_STATUS_IS_EACCES(status))
+            return svn_error_wrap_apr(status, NULL);
+        }
+    }
+  while (h == INVALID_HANDLE_VALUE);
+
+  *hFile = h;
+  *file_path = apr_pstrdup(result_pool, unique_name);
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_close_fn_t */
+static svn_error_t *
+install_close(void *baton)
+{
+  struct install_baton_t *ib = baton;
+
+  /* Flush the data cached in APR, but don't close the file yet */
+  SVN_ERR(svn_io_file_flush(ib->baton_apr.file, ib->baton_apr.pool));
+
+  return SVN_NO_ERROR;
+}
+
+#endif /* WIN32 */
+
 svn_error_t *
 svn_stream__create_for_install(svn_stream_t **install_stream,
                                const char *tmp_abspath,
@@ -1878,23 +2002,56 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
   struct install_baton_t *ib;
   const char *tmp_path;
 
+#ifdef WIN32
+  HANDLE hInstall;
+  apr_status_t status;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(tmp_abspath));
+
+  SVN_ERR(create_tempfile(&hInstall, &tmp_path, tmp_abspath,
+                          scratch_pool, scratch_pool));
+
+  /* Wrap as a standard APR file to allow sharing implementation.
+
+     But do note that some file functions (such as retrieving the name)
+     don't work on this wrapper. */
+  /* ### Buffered, or not? */
+  status = apr_os_file_put(&file, &hInstall,
+                           APR_WRITE | APR_BINARY | APR_BUFFERED,
+                           result_pool);
+
+  if (status)
+    {
+      CloseHandle(hInstall);
+      return svn_error_wrap_apr(status, NULL);
+    }
+
+  tmp_path = svn_dirent_internal_style(tmp_path, result_pool);
+#else
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(tmp_abspath));
 
   SVN_ERR(svn_io_open_unique_file3(&file, &tmp_path, tmp_abspath,
                                    svn_io_file_del_none,
                                    result_pool, scratch_pool));
+#endif
   *install_stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
 
   ib = apr_pcalloc(result_pool, sizeof(*ib));
   ib->baton_apr = *(struct baton_apr*)(*install_stream)->baton;
 
-  assert((void*)&ib->baton_apr == (void*)ib);
+  assert((void*)&ib->baton_apr == (void*)ib); /* baton pointer is the same */
 
   (*install_stream)->baton = ib;
 
   ib->tmp_path = tmp_path;
 
+#ifdef WIN32
+  /* Don't close the file on stream close; flush instead */
+  svn_stream_set_close(*install_stream, install_close);
+#else
   /* ### Install pool cleanup handler for tempfile? */
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1909,6 +2066,98 @@ svn_stream__install_stream(svn_stream_t *install_stream,
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(final_abspath));
+#ifdef WIN32
+
+#if _WIN32_WINNT < 0x600
+  SVN_ERR(svn_atomic__init_once(&SetFileInformationByHandle_a,
+                                find_SetFileInformationByHandle,
+                                NULL, scratch_pool));
+
+  if (!SetFileInformationByHandle_p)
+    SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+  else
+#endif /* WIN32 < Windows Vista */
+    {
+      WCHAR *w_final_abspath;
+      size_t path_len;
+      size_t rename_size;
+      FILE_RENAME_INFO *rename_info;
+      HANDLE hFile;
+
+      apr_os_file_get(&hFile, ib->baton_apr.file);
+
+      SVN_ERR(svn_utf__win32_utf8_to_utf16(&w_final_abspath,
+                                           svn_dirent_local_style(
+                                                          final_abspath,
+                                                          scratch_pool),
+                                           NULL, scratch_pool));
+      path_len = wcslen(w_final_abspath);
+      rename_size = sizeof(*rename_info) + sizeof(WCHAR) * path_len;
+
+      /* The rename info struct doesn't need hacks for long paths,
+         so no ugly escaping calls here */
+      rename_info = apr_pcalloc(scratch_pool, rename_size);
+      rename_info->ReplaceIfExists = TRUE;
+      rename_info->FileNameLength = path_len;
+      memcpy(rename_info->FileName, w_final_abspath, path_len * sizeof(WCHAR));
+
+      if (!SetFileInformationByHandle(hFile, FileRenameInfo, rename_info,
+                                      rename_size))
+        {
+          svn_boolean_t retry = FALSE;
+          err = svn_error_wrap_apr(apr_get_os_error(), NULL);
+
+          /* ### rhuijben: I wouldn't be surprised if we later find out that we
+                           have to fall back to close+rename on some specific
+                           error values here, to support some non standard NAS
+                           and filesystem scenarios. */
+
+          if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              svn_error_t *err2;
+
+              err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
+                                                            scratch_pool),
+                                                 scratch_pool);
+
+              if (err2)
+                return svn_error_trace(svn_error_compose_create(err, err2));
+              else
+                svn_error_clear(err);
+
+              retry = TRUE;
+              err = NULL;
+            }
+          else if (err && (APR_STATUS_IS_EACCES(err->apr_err)
+                           || APR_STATUS_IS_EEXIST(err->apr_err)))
+            {
+              svn_error_clear(err);
+              retry = TRUE;
+              err = NULL;
+
+              /* Set the destination file writable because Windows will not allow
+                 us to rename when final_abspath is read-only. */
+              SVN_ERR(svn_io_set_file_read_write(final_abspath, TRUE,
+                                                 scratch_pool));
+            }
+
+          if (retry)
+            {
+              if (!SetFileInformationByHandle(hFile, FileRenameInfo,
+                                              rename_info, rename_size))
+                {
+                  err = svn_error_wrap_apr(apr_get_os_error(), NULL);
+                }
+            }
+        }
+      else
+        err = NULL;
+
+      return svn_error_compose_create(err,
+                                      svn_io_file_close(ib->baton_apr.file,
+                                                        scratch_pool));
+    }
+#endif
 
   err = svn_io_file_rename(ib->tmp_path, final_abspath, scratch_pool);
 
