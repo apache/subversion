@@ -45,6 +45,7 @@
 #include "svn_path.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_atomic.h"
@@ -794,7 +795,7 @@ main(int argc, const char *argv[])
                 exit(1);
               }
             if ((opts.server_minor_version < 3)
-                || (opts.server_minor_version > 9))
+                || (opts.server_minor_version > SVN_VER_MINOR))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
