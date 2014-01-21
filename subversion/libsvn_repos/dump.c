@@ -2209,23 +2209,22 @@ svn_repos_verify_fs3(svn_repos_t *repos,
                       verify_notify, verify_notify_baton,
                       cancel_func, cancel_baton, pool);
 
-  if (err && !keep_going)
+  if (err)
     {
+      if (err->apr_err == SVN_ERR_CANCELLED)
+        return svn_error_trace(err);
+
       found_corruption = TRUE;
       notify_verification_error(SVN_INVALID_REVNUM, err, notify_func,
                                 notify_baton, iterpool);
       svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
-                               _("Repository '%s' failed to verify"),
-                               svn_dirent_local_style(svn_repos_path(repos,
-                                                                     pool),
-                                                      pool));
-    }
-  else
-    {
-      if (err)
-        found_corruption = TRUE;
-      svn_error_clear(err);
+
+      if (!keep_going)
+        return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+                                _("Repository '%s' failed to verify"),
+                                svn_dirent_local_style(svn_repos_path(repos,
+                                                                      pool),
+                                                        pool));
     }
 
   for (rev = start_rev; rev <= end_rev; rev++)
@@ -2240,6 +2239,9 @@ svn_repos_verify_fs3(svn_repos_t *repos,
 
       if (err)
         {
+          if (err->apr_err == SVN_ERR_CANCELLED)
+            return svn_error_trace(err);
+
           found_corruption = TRUE;
           notify_verification_error(rev, err, notify_func, notify_baton,
                                     iterpool);
