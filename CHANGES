@@ -30,7 +30,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnadmin info: print info about a repository.
     * print summary of conflicts before/after interactive conflict resolution.
     * import: reduce number of connections to the server needed. (r1482962)
-    * variety of low level performance improvments.
+    * variety of low level performance improvements.
     * membuffer: improved cache usage statistics (r1489883)
     * mergeinfo: New '--log' option (r1492168)
     * svnadmin upgrade: progress and cancellation support (r1495545, r1495566)
@@ -83,7 +83,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       pipelining requests, speeds up 'svn ls --include externals' and
       some cases of multi-url diff, including merge (r1557548)
     * ra_serf: spool small update reports in memory to avoid making temp files
-      for small requets (r1557599)
+      for small requests (r1557599)
     * ra_serf: allow the reuse of serf connections after an error (r1553341)
     * ra_serf: improve many error messages (r1551910 et al)
     * ra_serf: pipeline lock/unlock requests (r1551918, r1551993, r1552008)
@@ -95,7 +95,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnrdump dump: reduce memory footprint (r1557736)
     * mod_dav_svn: make out of date error message consistent with generic repos
       logic (r1558247)
-    * wc: allow SQLite to optimize functions that are determistic (r1559352)
+    * wc: allow SQLite to optimize functions that are deterministic (r1559352)
     * speed up delta calculations on non-deltifyable sections (r1559767)
     * ra_serf: improve memory usage in commit processing (r1520028)
     * report progress as cumulative across all sessions (issue #3260)
@@ -116,7 +116,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * log: optimize string handling in repos layer (r1483570, r1483572)
     * ask hardware to sync instead of only syncing to hardware buffers when
       OS supports it (r1484439, r1484445)
-    * optimize diff code to avoid unneeded comparisions (r1485488)
+    * optimize diff code to avoid unneeded comparisons (r1485488)
     * optimize check if relpaths are canonical (r1485496, r1489828)
     * ra_svn: reduce protocol implementation overhead (r1485499, r1485504 et al)
     * optimize file translation without keyword substitution (r1486058)
@@ -152,9 +152,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * windows: avoid delay when no homedir is available (r1546814)
     * windows: stop flushing buffers on temp files for symlinks (r1547774)
     * merge: reduce disk I/O when needing to compare 3 files contents (r1548486)
-    * status: report externals in a determinstic way (r1550200)
+    * status: report externals in a deterministic way (r1550200)
     * verify requested cached credentials match realm requested (r1550691 et al)
-    * copy: avoid an uneeded extra ra session for wc to repo case (r1551564)
+    * copy: avoid an unneeded extra ra session for wc to repo case (r1551564)
     * commit: fix committing a move from external to ancestor directory or
       vice-versa (r1551579)
     * ra_serf: show pre-revprop-change failure on revprop delete (issue #3086)
@@ -164,7 +164,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * ra_serf: prevent overwriting directory during copy (issue #3314)
     * commit: limit number of temporary files open at same time (issue #4172)
     * ra_serf: verify incoming integers are really integers (r1557709 et al)
-    * wc: reorder two queries to avoid a statement reprepare (r1558758)
+    * wc: reorder two queries to avoid a statement re-prepare (r1558758)
     * log: -g --xml doesn't differentiate between forward and reverse merges
       (issue #4463)
     * windows: improve update and checkout speed (issue #4450)
@@ -233,7 +233,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * include symbolic names for warning codes in maintainer mode (r1469855)
     * support YouCompleteMe vim plugin (r1476374 et al)
     * reduce getenv() call overhead in maintainer mode (r1476554)
-    * fix ocassional failure of checkout_test.py 12 (r1496127)
+    * fix occasional failure of checkout_test.py 12 (r1496127)
     * allow tests to be run with exclusive wc locks (r1496475)
     * fix check for Microsoft C/C++ compiler (r1503148)
     * improve windows build to use pre-built dependencies
@@ -243,11 +243,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * support Visual Studio 2013 with --vsnet-version=2013 (r1533907)
     * avoid needing APR source when building on Windows (r1534037, et al)
     * don't compile SQLite amalgamation twice (r1536364)
-    * move C tests use same temp path as Python tests (r1536700)
+    * make C tests use same temp path as Python tests (r1536700)
     * davautocheck: access log logs the r->filename now (r1538048)
     * added test to detect duplicate SQL queries (r1538962)
     * in the windows test runner copy additional apr dlls (r1539300)
-    * support for debug logging that should be availabe in serf 1.4.0 (r1541561)
+    * support for debug logging that should be available in serf 1.4.0 (r1541561)
     * fix build on OS X when Gnome is installed (r1541698)
     * properly detect if expat is libexpat.lib or xml.lib on windows (r1541981)
     * doc-clean target works properly with separate build dir (r1542303)
@@ -278,13 +278,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_client_commit6: notify which path prevents a mv commit (r1503662)
     * New apis svn_io_file_create_empty() and svn_io_file_create_binary()
       (r1505006)
-    * New api svn_ver_check_list2() (rr1502267)
+    * New api svn_ver_check_list2() (r1502267)
     * New experimental api svn_fs_move() to support moves in backend (r1525442)
     * svn_fs_paths_changed() gains support for moves (r1525448)
     * New api svn_repos_get_logs5() adds support for moves (r1525453)
     * New api svn_ra_get_log3() adds support for moves (r1525460)
     * New api svn_client_log6() adds support for moves (r1525463)
-    * New api svn_stringbuff_from_stream() (r1532193)
+    * New api svn_stringbuf_from_stream() (r1532193)
     * svn_auth_get_platform_specific_client_providers() now includes ssl
       providers (r1534153)
     * dav_svn_split_uri() repos_path is a fspath with a leading slash (r1537812)
@@ -310,14 +310,14 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_fs_lock: control characters are not allowed in lock tokens (r1547445)
     * New api svn_wc_cleanup4() makes some functionality optional and adds
       notifications (r1548075 et al)
-    * svn_client_proplist4: report iprops with the target instead of reprorting
+    * svn_client_proplist4: report iprops with the target instead of reporting
       the same target twice (r1549858)
     * New api svn_client_info4() supports walking externals (r1550206 et al)
     * New flag for svn_fs_begin_txn2() SVN_FS_TXN_CLIENT_DATE to allow client
       to set the final svn:date (r1550228)
     * New apis for easier RA commits svn_client_mtcc_* (r1550758 et al)
     * New api svn_ra_session_dup() (r1552324 et al)
-    * svn_ra_stat() now handles compatability with 1.0-1.1 svnserve (r1552441)
+    * svn_ra_stat() now handles compatibility with 1.0-1.1 svnserve (r1552441)
     * New error code SVN_ERR_COMPOSED_ERROR added to allow detection of
       composed errors by API consumers (r1553266)
     * New error code SVN_ERR_RA_DAV_PRECONDITION_FAILED (r1553668)
