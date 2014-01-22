@@ -1,33 +1,375 @@
 Version 1.9.0
-(?? ??? 20??, from /branches/1.9.x)
+(?? ??? 2014, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
  User-visible changes:
   - General:
+    * make all commands provide brief description in help output (r1522518)
+    * flush stdout before exiting to avoid information being lost (r1543868)
 
   - Major new features:
+    * membuffer: virtually perfect short-term cache efficiency (r1476664 et at)
+    * membuffer: quadruple the maximum cacheable directory size (r1545948 et al)
+    * resolve: improve interactive conflict resolution menus
+    * blame: allow -r M:N with M<N
+    * svnauth: new tool to manage cached credentials and certs
+    * svn youngest: new remote version of svnlook youngest (issue #4299)
+    * new experimental filesystem fsx (faster, smaller)
+    * svnserve: cache config, authz and repos to lower resource usage and
+      be able to serve large numbers of connections with a limited number
+      of threads.
+    * fsfs: new format 7 with more efficient logical addressing (r1547045 et al)
+    * fsfs: support background pack handling (r1553051)
+    * fsfs: limit delta chains from crossing too many shards (r1554942)
+    * fsfs: option to configure compression level in deltas (r1559748)
 
   - Minor new features and improvements:
     * new 'diff-ignore-content-type' runtime configuration option.
-    * new option for 'svnadmin verify': --check-ucs-normalization.
+    * new option for 'svnadmin verify': --check-normalization.
     * new option for 'svnadmin verify': --keep-going.
+    * svnadmin info: print info about a repository.
+    * print summary of conflicts before/after interactive conflict resolution.
+    * import: reduce number of connections to the server needed. (r1482962)
+    * variety of low level performance improvments.
+    * membuffer: improved cache usage statistics (r1489883)
+    * mergeinfo: New '--log' option (r1492168)
+    * svnadmin upgrade: progress and cancellation support (r1495545, r1495566)
+    * cleanup: add '--remove-unversioned' and '--remove-ignore' (issue #3549)
+    * cleanup: add '--include-externals' option (issue #2325)
+    * cleanup: add '--quiet' option (r1498661)
+    * ra_serf: use better transition based XML processing (r1498000 et al)
+    * svnadmin load: speedup by setting revprops in one call (r1504079)
+    * svnadmin load: set svn:date revprop in the initial commit (r1504951)
+    * reimplement UTF-8 fuzzy conversion using utf8proc (r1511676)
+    * svnadmin verify: speed up for repos with large directories (r1520419)
+    * merge: interactive conflict merge option tries external tools (r1524145)
+    * log: support for displaying moves (r1525464 et al)
+    * minor speed up in string to time conversion (r1533387)
+    * list: remove some unnecessary work from implementation (r1533392)
+    * fsfs: minor tuning of get_dag hot path (r1533396)
+    * windows: speed up console output (r1533994)
+    * windows: accept intermediate certs with CRYPTOAPI based ssl
+      validation (r1534149)
+    * update: optimize wc db usage (r1537065 et al)
+    * decreased overhead for case-sensitive configuration access (r1538068)
+    * avoid re-opening repo for in-repo authz if already open (r1538120)
+    * only use revprop caching if supported efficiently (r1543593)
+    * svnserve: output errors in a more standard way (r1544250)
+    * faster parsing of config file comments (r1544716)
+    * fsfs: reduce overhead of parsing revnode structures (r1544717)
+    * fsfs: don't try to read revprops for a new transaction (r1544719)
+    * fsfs: avoid trying to open digest files that don't exist (r1544721)
+    * avoid trying to open the hooks-env file when it doesn't exist (r1544721)
+    * svnserve: provide the same logging detail in "run once" mode as provided
+      in the log file (r1544731)
+    * svnserve: reduce connection latency (r1544732)
+    * wc: optimize SQLite queries against wc db (r154511)
+    * wc: reduce the number of locks and transactions required (r1545127 et al)
+    * cat: add '--ignore-keywords' option (r1547517)
+    * fsfs: temporary transaction properties are preserved when commit is
+      interrupted (r1549907 et al)
+    * merge and mergeinfo: use fewer ra sessions (r1552265)
+    * fsfs: speed up noderev validity check (r1553053)
+    * fsfs: Use sorted array instead of hash for directory representation
+      internally, this minimizes some overhead (r1554711)
+    * fsfs: speed up node relation comparison (r1554807)
+    * fsfs: skip decoding txdelta windows that are already cached (r1555284)
+    * fsfs: enable dir and prop deltas and compressed revprops by default for
+      fsfs formats that support it (r1555286)
+    * fsfs: avoid constructing fulltext when delta we need is stored (r1555297)
+    * svnadmin: don't display warnings as errors (r1556297)
+    * ra_serf: avoid caching properties in the update editor (r1557538)
+    * ra_serf: decrease latency of requests to get directory contents by
+      pipelining requests, speeds up 'svn ls --include externals' and
+      some cases of multi-url diff, including merge (r1557548)
+    * ra_serf: spool small update reports in memory to avoid making temp files
+      for small requets (r1557599)
+    * ra_serf: allow the reuse of serf connections after an error (r1553341)
+    * ra_serf: improve many error messages (r1551910 et al)
+    * ra_serf: pipeline lock/unlock requests (r1551918, r1551993, r1552008)
+    * ra_serf: pipeline requests for inherited properties against old servers
+      that don't support the faster REPORT (r1552455, r1552475)
+    * log: speed up against old servers with a single rev range (r1553101 et al)
+    * ra_serf: allow reuse of sessions after a timeout (r1557686)
+    * ra_serf: reduce memory usage when retrieving revision props (r1557689)
+    * svnrdump dump: reduce memory footprint (r1557736)
+    * mod_dav_svn: make out of date error message consistent with generic repos
+      logic (r1558247)
+    * wc: allow SQLite to optimize functions that are determistic (r1559352)
+    * speed up delta calculations on non-deltifyable sections (r1559767)
+    * ra_serf: improve memory usage in commit processing (r1520028)
+    * report progress as cumulative across all sessions (issue #3260)
+    * ra_serf: don't send DAV headers with GET requests (r1517472)
+    * fsfs: speed up critical open_path() call (r1483301)
+    * mod_dav_svn: SVNCacheTextDeltas defaults to on (r1517479)
+    * fsfs: improvements to format 6 reading/writing (r1517479)
+    * fsfs: speed up node verification (r1520421)
+    * fs: improve scability of fs_open and similar functions (r1523450 et al)
+    * svnserve: improve performance and scability (r1523465 et al)
+    * svnadmin verify: output progress messages to stdout (r1471095)
+    * svnadmin crashtest: make output less misleading (r1486046) 
+    * mod_dav_svn: discover copy to src earlier in some cases (r1537440)
+    * fsfs: avoid out of date errors from files in a directory changing when
+      you change a property on the directory (r1558224)
+    * speed up mergeinfo parsing (r1483292, r1483309 et al)
+    * optimize hash lookups used throughout subversion (r1483434 et al)
+    * log: optimize string handling in repos layer (r1483570, r1483572)
+    * ask hardware to sync instead of only syncing to hardware buffers when
+      OS supports it (r1484439, r1484445)
+    * optimize diff code to avoid unneeded comparisions (r1485488)
+    * optimize check if relpaths are canonical (r1485496, r1489828)
+    * ra_svn: reduce protocol implementation overhead (r1485499, r1485504 et al)
+    * optimize file translation without keyword substitution (r1486058)
+    * optimize config file parsing by using unbuffered I/O (r1486897)
+    * patch: apply ignore settings when deciding to delete dirs (r1490378)
+    * use a cheaper ra operation for common client calculation (r1496468 et al)
+    * ra_svn: avoid unnecessary work when doing a blame (r1503046)
+    * fsfs: speed up serialization into cache buffer format (r1505056)
+    * optimize reading files into memory if size is known (r1505068)
 
   - Client-side bugfixes:
+    * export: fix problem exporting symlinks on windows (r1476093)
+    * fix no-ascii character handling of command line options (r1476461)
+    * convert log to UTF-8 before stripping data after EOF marker (r1476608)
+    * ra_serf: avoid dropping errors when making a lock request (r1489526)
+    * ra_serf: fix an error leak in update logic (r1499686)
+    * windows: fix issues with wcs in symlinked folders (r1501251)
+    * fix regression that broke parallel nested checkouts (issue #4390)
+    * svnmucc: ignore leading r in -r arguments (r1502636)
+    * mkdir: use absolute paths to avoid Windows path length limits (r1516816)
+    * avoid encoding support code when C runtime doesn't support it (r1530582)
+    * ra_svn: add check against dirents with path separators (r1533812)
+    * fix wc database inconsistency on certain move scenarios (issue #4437)
+    * fix commit of of mixed revision copy with non copy descendants that
+      shadow not present nodes (r1518942, 1536914, 1536931)
+    * fix permission changes on files that shouldn't be changed (issue #4440)
+    * properly delete temporary files when atomic write fails (r1537466)
+    * fix corner cases in move-update tree conflicts (r1538639 et al)
+    * fix crash report indentation for x64 reports (r1543589)
+    * status: fix output of multiple moves from same location (r1544690)
+    * update: fix automate relocate for wcs not at repo root (r1545302)
+    * mergeinfo: allow to work on a moved target (issue #4301)
+    * windows: avoid delay when no homedir is available (r1546814)
+    * windows: stop flushing buffers on temp files for symlinks (r1547774)
+    * merge: reduce disk I/O when needing to compare 3 files contents (r1548486)
+    * status: report externals in a determinstic way (r1550200)
+    * verify requested cached credentials match realm requested (r1550691 et al)
+    * copy: avoid an uneeded extra ra session for wc to repo case (r1551564)
+    * commit: fix committing a move from external to ancestor directory or
+      vice-versa (r1551579)
+    * ra_serf: show pre-revprop-change failure on revprop delete (issue #3086)
+    * svnsync: avoid extra request at end of every revision sync (r1553370)
+    * ra_serf: fix canonicalization assertion due to pool lifetime (r1553376)
+    * ra_serf: fix replace + propset of locked file failures (issue #3674)
+    * ra_serf: prevent overwriting directory during copy (issue #3314)
+    * commit: limit number of temporary files open at same time (issue #4172)
+    * ra_serf: verify incoming integers are really integers (r1557709 et al)
+    * wc: reorder two queries to avoid a statement reprepare (r1558758)
+    * log: -g --xml doesn't differentiate between forward and reverse merges
+      (issue #4463)
+    * windows: improve update and checkout speed (issue #4450)
+    * log: reduce performance penalties of using -g (r1559912)
+    * blame: reduce performance penalties of using -g (r1560112)
+    * ra_local: set svn:txn-user-agent for consistency (r1498608)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
     * svnserve: don't hide fatal errors in inetd and tunnel modes (r1544256)
+    * fsfs: log repo path in local style for cache init failure (r1494314)
+    * fsfs: fix potential transaction corruption (r1519624)
+    * svnserve: fix logging in multi-threaded servers (r1523502)
+    * fsfs: don't report out of date errors due to FS corruption (r1527084)
+    * svnadmin verify: detect inconsistencies that prevent loading (r1536854)
+    * mod_dav_svn: use 404 status for errors caused by invalid URIs (r1542063)
+    * mod_dav_svn: use 404 when the repository doesn't exist (r1544259)
+    * mod_dav_svn: use 'dav_svn:' prefix for filename instead of 'svn:'
+     (r1544711)
+    * mod_dav_svn: blacklist building with broken versions of httpd; 2.2.25,
+      2.4.5 and 2.4.6 (r1545835)
+    * mod_dav_svn: XML escape lock tokens (r1547427)
+    * hotcopy: don't create config files when copying pre-1.5 repos (r1547454)
+    * fsfs: create rep-cache.db with the proper permissions (issue #3437)
+    * hotcopy: preserve the rep-cache.db permissions when hotcopying (r1547877)
+    * mod_dav_svn: fix SVNAllowBulkUpdates directive merging. (r1548105)
+    * mod_dav_svn: fix SVNCacheTextDeltas and SVNAdvertisV2Protocol directive
+      merging (r1548124)
+    * mod_dav_svn: always produce an error text even when text specifies
+      the default message to make diagnosing issues easier (r1553441)
+    * mod_dav_svn: fix some pool lifetime issues with err messages (r1553868)
+    * mod_dav_svn: avoid setting option headers multiple times (r1557103)
+    * mod_dav_svn: fix copyfrom mode failing to include props as requested
+      by the client (r1557522)
+
+  - Client-side and server-side bugfixes:
+    * use less memory when retrieving extension from filename (r1548480)
+    * release all internal objects in commit editor (r1555499)
+    * use more optimal code path with old txdelta v1 data (r1485480)
 
   - Other tool improvements and bugfixes:
+    * windows: add build-svn-deps-win.pl tool to build dependencies (r1467715)
+    * svnpubsub: add support for revprop changes (r1486463)
+    * svnpubsub: do not pass svn commands through shell (r148466, r1486467)
+    * svnpubsub: hooks exit with an error if they fail (r1486500, r1486597)
+    * svnpubsub: hooks use "--" to signal end of arguments (r1486513)
+    * mailer: Properly encode mail headers per RFC2047 (r1487532)
+    * svnwcsub: add a pre-update hook, which can deny update (r1494542 et al)
+    * fsfs-stats: count file nodes that are added without history (r1519283)
+    * fsfs-access-map: count empty reads and unnecessary seeks (r1523441)
+    * fsfs-access-map: generate scaled/rectangular heatmaps (r1505065)
+    * fsfs-access-map: deal with strace format issues (r1505065)
+    * fsfs-access-map: update to know about index files (r1505065)
+    * svn-bench: add null-info command (r1532196)
+    * svn-bench: add --auto-moves to null-log (r1532200)
+    * svnlook.py: made usable as a library by adding getter methods (r1541558)
+    * svn-bench, svnraisetreeconflict, svnauthz, svn-rep-sharing-stats: More
+      consistent error reporting, following pattern of core command-line
+      programs (r1544194)
+    * bash_completion: support for youngest command (r1546975)
+    * which-error.py: allow which-error.py to be run from symlink (r1547977)
 
  Developer-visible changes:
   - General:
+    * include symbolic names for error codes in maintainer mode (r1467643)
+    * include symbolic names for warning codes in maintainer mode (r1469855)
+    * support YouCompleteMe vim plugin (r1476374 et al)
+    * reduce getenv() call overhead in maintainer mode (r1476554)
+    * fix ocassional failure of checkout_test.py 12 (r1496127)
+    * allow tests to be run with exclusive wc locks (r1496475)
+    * fix check for Microsoft C/C++ compiler (r1503148)
+    * improve windows build to use pre-built dependencies
+    * optimize ramdrive usage in the windows test runner (r1504511)
+    * SVN_CMDLINE_DISABLE_CRASH_HANDLER env var added for Windows (r1506507)
+    * stop including some headers in win32 resource compile (r1532287)
+    * support Visual Studio 2013 with --vsnet-version=2013 (r1533907)
+    * avoid needing APR source when building on Windows (r1534037, et al)
+    * don't compile SQLite amalgamation twice (r1536364)
+    * move C tests use same temp path as Python tests (r1536700)
+    * davautocheck: access log logs the r->filename now (r1538048)
+    * added test to detect duplicate SQL queries (r1538962)
+    * in the windows test runner copy additional apr dlls (r1539300)
+    * support for debug logging that should be availabe in serf 1.4.0 (r1541561)
+    * fix build on OS X when Gnome is installed (r1541698)
+    * properly detect if expat is libexpat.lib or xml.lib on windows (r1541981)
+    * doc-clean target works properly with separate build dir (r1542303)
+    * don't break entire test run if cleaning temp directory failed but return
+      an error anyway (r1542817)
+    * windows tests: find java.exe via the sdk if not found via PATH (r1543876)
+    * fix davautocheck with httpd 2.3.x+ and worker/prefork MPMs (r1544302-3)
+    * add parallel mode for C tests (r1545334 et al)
+    * use --bin path for svnrdump when running Python tests (r1548706)
+    * remove unused --with-openssl option from configure (r1548714)
+    * tests: stop rewriting shared authz file for every sandbox (r1552064 et al)
+    * get-deps.sh: Use a stable URL for zlib download (r1552957 et al)
+    * fix unnecessary aborts in maintainer mode on sqlite errors (r1536325)
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
       svn_ra_callbacks2_t::open_tunnel and svn_ra_callbacks2_t::close_tunnel.
+    * New api for retrieving info about a file system: svn_fs_info()
+    * New api svn_io_file_flush() that wraps apr_file_flush().
+    * New api svn_io_write_atomic(), that writes, sync and renames a file.
+    * New api svn_compat_log_revprops_out_string().
+    * Deprecate unused datatype svn_ra_get_latest_revnum_func_t.
+    * New struct svn_wc_conflict_description3_t (r1494990)
+    * New api svn_client_cleanup2() (r1496954 et al)
+    * New api svn_stringbuf_create_wrap() (r1502248)
+    * New api svn_io_file_aligned_seek() (r1502539)
+    * ra_svn: fix svn_ra_get_log*() to apply limit when server can't (r1503043)
+    * svn_client_commit6: notify which path prevents a mv commit (r1503662)
+    * New apis svn_io_file_create_empty() and svn_io_file_create_binary()
+      (r1505006)
+    * New api svn_ver_check_list2() (rr1502267)
+    * New experimental api svn_fs_move() to support moves in backend (r1525442)
+    * svn_fs_paths_changed() gains support for moves (r1525448)
+    * New api svn_repos_get_logs5() adds support for moves (r1525453)
+    * New api svn_ra_get_log3() adds support for moves (r1525460)
+    * New api svn_client_log6() adds support for moves (r1525463)
+    * New api svn_stringbuff_from_stream() (r1532193)
+    * svn_auth_get_platform_specific_client_providers() now includes ssl
+      providers (r1534153)
+    * dav_svn_split_uri() repos_path is a fspath with a leading slash (r1537812)
+    * New api svn_repos_fs_type() returns filesystem type (r1538585)
+    * svn_client__get_inheritable_props() clears wcroot_iprops when revision is
+      not valid (r1538602)
+    * SVN_VA_NULL: New macro which is null-pointer constant (r1536307)
+    * SVN_NEEDS_SENTINEL_NULL: New macro to mark functions that require final
+      NULL sentinel value, so compilers can warn when missing. (r1543394)
+    * platform specific svn_auth_get_* functions are deprecated, use the
+      svn_auth_get_platform_specific_provider() function instead (r1543992)
+    * SVN_INT_ERR macro is deprecated use svn_handle_error2() or
+      svn_cmdline_handle_exit_error() instead (r1544142)
+    * New api svn_client_cat3() allow disabling keyword expansion and retrieving
+      props. (r1544182)
+    * svn_auth_first_credentials(): provides an error rather than crashing if
+      auth_baton is NULL (r1544320)
+    * svn_auth_set_parameter(): Do nothing if auth_baton is NULL (r1544320)
+    * New api svn_relpath_limit which returns a relpath with a maximum number
+      of path components (r1545123)
+    * svn_fs_initialize() is now threadsafe (r1546409)
+    * svn_checksum_kind_t has two new FNV-1a checksums (r1546699)
+    * svn_fs_lock: control characters are not allowed in lock tokens (r1547445)
+    * New api svn_wc_cleanup4() makes some functionality optional and adds
+      notifications (r1548075 et al)
+    * svn_client_proplist4: report iprops with the target instead of reprorting
+      the same target twice (r1549858)
+    * New api svn_client_info4() supports walking externals (r1550206 et al)
+    * New flag for svn_fs_begin_txn2() SVN_FS_TXN_CLIENT_DATE to allow client
+      to set the final svn:date (r1550228)
+    * New apis for easier RA commits svn_client_mtcc_* (r1550758 et al)
+    * New api svn_ra_session_dup() (r1552324 et al)
+    * svn_ra_stat() now handles compatability with 1.0-1.1 svnserve (r1552441)
+    * New error code SVN_ERR_COMPOSED_ERROR added to allow detection of
+      composed errors by API consumers (r1553266)
+    * New error code SVN_ERR_RA_DAV_PRECONDITION_FAILED (r1553668)
+    * New error code SVN_ERR_RA_CANNOT_CREATE_SESSION (r1554027)
+    * New api svn_fs_node_relation() (r1554800)
+    * SVN_EXPERIMENTAL to mark functions that might change in future (r1526012)
+    * fix bug in svn_client_get_merging_summary() with some params (r1532396)
+    * New error code SVN_ERR_XML_UNEXPECTED_ELEMENT (r1498938)
 
   - Bindings:
+    * javahl: add support for the RA layer (r1494650 et al)
+    * javahl: add ignore-keywords knob to ISVNCLient.doExport (r1494936)
+    * javahl: improve performance of rev_range_vector_to_apr_array (r1496243)
+    * javahl: provide whole stack of errors from native exceptions (r1496353)
+    * javahl: new framework for manipulating in-memory config data (r1497746)
+    * javahl: add methods to set config change handler callback (r1497753)
+    * javahl: add inheritance info to JavaHL's RevisionRange type (r1499308)
+    * swig-rb: fixes to building on Windows (1505406 et al)
+    * libsvn_swig_*libraries now work as proper shared librares (r1506520 et al)
+    * swig-py: import libsvn_subr pub symbols from svn.core * (r1507860) 
+    * javahl: expose the svn_rangelist operations (r1509025)
+    * javahl: new utility class SVNUtil (r1512354)
+    * javahl: serialize init of native library (r1519803)
+    * javahl: fix value truncation checks (r1519913)
+    * javahl: Add ISVNClient.info2 which exposes svn_client_info3 (r1527844)
+    * javahl: include name of exception class in error messages (r1532117)
+    * javahl: simplify JNI environment handling (r1533804)
+    * javahl: Revsion.UNSPECIFIED added as alias to Revision.START (r1533928)
+    * javahl: do not require JUnit to build javahl; only to test (r1535603)
+    * swig: fix bindings build problems on OS X (r1535610)
+    * javahl: update Action enum with new entries add in 1.9 (r1536319)
+    * javahl: expose node property validation utility (r1538133)
+    * javahl: new style JNI wrapper (r1539114 et al)
+    * javahl: new utility API to parse/unparse svn:externals (r1539130 et al)
+    * javahl: allow tests to be run from a RAM disk (r1539215 et al)
+    * javahl: expose and use the url member of svn_wc_notify_t (r1539601)
+    * javahl: expose a utility api to resolve relative externals (r1540921)
+    * javahl: new utility API for file content translation (r1542401)
+    * swig: fix bindings with out of tree builds in release mode (r1543187)
+    * javahl: throw NullPointerException when sources is empty (r1543328)
+    * swig-pl: fix compilation against perl 5.18 on Windows (r1543980)
+    * javahl: implement streamed file contents translation (r1543985)
+    * javahl: enable warnings with javac (r1544163, r1544169)
+    * javahl: cleanup warnings (r1544578 et al)
+    * javahl: add common utilities for new-style map iterations (r1545925)
+    * javahl: add an api to get runtime version of native libs (r1545945)
+    * javahl: use default cache size instead of no cache (r1547248)
+    * swig-py: add typemap for hunks field of svn_patch_t (r1548379)
+    * javahl: don't ignore difference between NULL and empty changelist in
+      ISVNClient.getChangelists (r1553254)
+    * swig-pl: fix pool issues with setting dates as revisions (r1553822)
+    * swig-pl: make svn_auth_set_parameter() usable (r1553823)
 
 
 Version 1.8.5
