@@ -1153,7 +1153,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     try:
       line = fp.readline()
       if line:
-        msg = 'Found ML, ZLib build will use ASM sources'
+        msg = 'Found ML, ZLib build will use ASM sources\n' + \
+              'WARNING: ASM sources have known bugs and are not recommended!'
         self.have_ml = 1
       else:
         msg = 'Could not find ML, ZLib build will not use ASM sources'
