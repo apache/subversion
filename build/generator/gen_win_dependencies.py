@@ -393,7 +393,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
         
     bin_files = os.listdir(dll_dir)
-    if os.path.isdir(debug_dll_dir):
+    if debug_dll_dir and os.path.isdir(debug_dll_dir):
       debug_bin_files = os.listdir(debug_dll_dir)
     else:
       debug_bin_files = bin_files 
@@ -498,7 +498,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
 
     bin_files = os.listdir(dll_dir)
-    if os.path.isdir(debug_dll_dir):
+    if debug_dll_dir and os.path.isdir(debug_dll_dir):
       debug_bin_files = os.listdir(debug_dll_dir)
     else:
       debug_bin_files = bin_files 
