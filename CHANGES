@@ -30,7 +30,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svnadmin info: print info about a repository.
     * print summary of conflicts before/after interactive conflict resolution.
     * import: reduce number of connections to the server needed. (r1482962)
-    * variety of low level performance improvements.
     * membuffer: improved cache usage statistics (r1489883)
     * mergeinfo: New '--log' option (r1492168)
     * svnadmin upgrade: progress and cancellation support (r1495545, r1495566)
@@ -350,7 +349,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: Revsion.UNSPECIFIED added as alias to Revision.START (r1533928)
     * javahl: do not require JUnit to build javahl; only to test (r1535603)
     * swig: fix bindings build problems on OS X (r1535610)
-    * javahl: update Action enum with new entries add in 1.9 (r1536319)
+    * javahl: update Action enum with new entries added in 1.9 (r1536319)
     * javahl: expose node property validation utility (r1538133)
     * javahl: new style JNI wrapper (r1539114 et al)
     * javahl: new utility API to parse/unparse svn:externals (r1539130 et al)
