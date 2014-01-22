@@ -264,7 +264,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
-      svn_ra_callbacks2_t::open_tunnel and svn_ra_callbacks2_t::close_tunnel.
+      svn_ra_callbacks2_t::check_tunnel_func,
+      svn_ra_callbacks2_t::open_tunnel_func and
+      svn_ra_callbacks2_t::close_tunnel_func.
     * New api for retrieving info about a file system: svn_fs_info()
     * New api svn_io_file_flush() that wraps apr_file_flush().
     * New api svn_io_write_atomic(), that writes, sync and renames a file.
