@@ -50,20 +50,6 @@ path_rep_cache_db(const char *fs_path,
   return svn_dirent_join(fs_path, REP_CACHE_DB_NAME, result_pool);
 }
 
-/* Check that REP refers to a revision that exists in FS. */
-static svn_error_t *
-rep_has_been_born(representation_t *rep,
-                  svn_fs_t *fs,
-                  apr_pool_t *pool)
-{
-  SVN_ERR_ASSERT(rep);
-
-  SVN_ERR(svn_fs_fs__ensure_revision_exists(rep->revision, fs, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /** Library-private API's. **/
 
@@ -294,7 +280,16 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (*rep)
-    SVN_ERR(rep_has_been_born(*rep, fs, pool));
+    {
+      /* Check that REP refers to a revision that exists in FS. */
+      svn_error_t *err = svn_fs_fs__ensure_revision_exists((*rep)->revision,
+                                                           fs, pool);
+      if (err)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                                 "Checksum '%s' in rep-cache is beyond HEAD",
+                                 svn_checksum_to_cstring_display(checksum,
+                                                                 pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -302,7 +297,6 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 svn_error_t *
 svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              representation_t *rep,
-                             svn_boolean_t reject_dup,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -341,34 +335,11 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
       svn_error_clear(err);
 
       /* Constraint failed so the mapping for SHA1_CHECKSUM->REP
-         should exist.  If so, and the value is the same one we were
-         about to write, that's cool -- just do nothing.  If, however,
-         the value is *different*, that's a red flag!  */
+         should exist.  If so that's cool -- just do nothing.  If not,
+         that's a red flag!  */
       SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, &checksum, pool));
 
-      if (old_rep)
-        {
-          if (reject_dup && ((old_rep->revision != rep->revision)
-                             || (old_rep->item_index != rep->item_index)
-                             || (old_rep->size != rep->size)
-                             || (old_rep->expanded_size != rep->expanded_size)))
-            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                     apr_psprintf(pool,
-                              _("Representation key for checksum '%%s' exists "
-                                "in filesystem '%%s' with a different value "
-                                "(%%ld,%%%s,%%%s,%%%s) than what we were about "
-                                "to store (%%ld,%%%s,%%%s,%%%s)"),
-                              APR_OFF_T_FMT, SVN_FILESIZE_T_FMT,
-                              SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
-                              SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
-                 svn_checksum_to_cstring_display(&checksum, pool),
-                 fs->path, old_rep->revision, old_rep->item_index,
-                 old_rep->size, old_rep->expanded_size, rep->revision,
-                 rep->item_index, rep->size, rep->expanded_size);
-          else
-            return SVN_NO_ERROR;
-        }
-      else
+      if (!old_rep)
         {
           /* Something really odd at this point, we failed to insert the
              checksum AND failed to read an existing checksum.  Do we need
