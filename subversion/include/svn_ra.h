@@ -287,8 +287,8 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * Callback function for opening a tunnel in ra_svn.
  *
  * Given the @a tunnel_name, tunnel @a user and server @a hostname and
- * @a port, open a tunnel to the serverand return its file handles
- * in @a request and @a response, which are owned by @a pool.
+ * @a port, open a tunnel to the server and return its file handles,
+ * which are owned by @a pool, in @a request and @a response.
  *
  * @a request and @a response are the standard input and output,
  * respectively, of the process on the other end of the tunnel.
