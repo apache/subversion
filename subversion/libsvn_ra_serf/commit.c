@@ -1985,10 +1985,6 @@ apply_textdelta(void *file_baton,
    * writing to a temporary file (ugh). A special svn stream serf bucket
    * that returns EAGAIN until we receive the done call?  But, when
    * would we run through the serf context?  Grr.
-   *
-   * ctx->pool is the same for all files in the commit that send a
-   * textdelta so this file is explicitly closed in close_file to
-   * avoid too many simultaneously open files.
    */
 
   ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,
