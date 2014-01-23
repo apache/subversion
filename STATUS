@@ -276,6 +276,17 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
+ * r1560690, r1560701
+   Fix repository-WC copies into relocated working copies and some wc-wc
+   copy problems.
+   Justifiation:
+     It should be impossible to break a working copy by just copying something
+     into it.
+   Notes:
+     r1560690 is the fix and r1560701 a regression test for this problem.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
