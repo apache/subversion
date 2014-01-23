@@ -1941,8 +1941,8 @@ def mergeinfo_race(sbox):
 
 @Issue(4213)
 @Skip(svntest.main.is_fs_type_fsx)
-def recover_old(sbox):
-  "recover --pre-1.4-compatible"
+def recover_old_empty(sbox):
+  "recover empty --compatible-version=1.3"
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir, minor_version=3)
   svntest.actions.run_and_verify_svnadmin(None, None, [],
@@ -2213,6 +2213,37 @@ def verify_denormalized_names(sbox):
     output, errput, exp_out, exp_err)
 
 
+@XFail()
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_non_empty(sbox):
+  "fsfs recover non-empty --compatible-version=1.3"
+
+  # Around trunk@1560210, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 Greek tree repository:
+  # svnadmin: E200002: Serialized hash missing terminator
+
+  sbox.build(create_wc=False, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "recover",
+                                          sbox.repo_dir)
+
+
+@XFail()
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_old_non_empty(sbox):
+  "fsfs hotcopy non-empty --compatible-version=1.3"
+
+  # Around trunk@1560210, 'svnadmin hotcopy' wrongly errored out
+  # for the --compatible-version=1.3 Greek tree repository:
+  # svnadmin: E160006: No such revision 1
+
+  sbox.build(create_wc=False, minor_version=3)
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -2248,10 +2279,12 @@ test_list = [ None,
               hotcopy_incremental_packed,
               locking,
               mergeinfo_race,
-              recover_old,
+              recover_old_empty,
               verify_keep_going,
               verify_invalid_path_changes,
               verify_denormalized_names,
+              fsfs_recover_old_non_empty,
+              fsfs_hotcopy_old_non_empty,
              ]
 
 if __name__ == '__main__':
