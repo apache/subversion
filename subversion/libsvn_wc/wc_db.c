@@ -4648,6 +4648,21 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
     }
   else
     {
+      if (copyfrom_relpath)
+        {
+          const char *repos_root_url;
+          const char *repos_uuid;
+
+          /* Pass the right repos-id for the destination db! */
+
+          SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
+                                              src_wcroot->sdb, copyfrom_id,
+                                              scratch_pool));
+
+          SVN_ERR(create_repos_id(&copyfrom_id, repos_root_url, repos_uuid,
+                                  dst_wcroot->sdb, scratch_pool));
+        }
+
       SVN_ERR(cross_db_copy(src_wcroot, src_relpath, dst_wcroot,
                             dst_relpath, dst_presence, dst_op_depth,
                             dst_np_op_depth, kind,
