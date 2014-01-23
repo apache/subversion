@@ -285,7 +285,7 @@ Candidate changes:
    Notes:
      r1560690 is the fix and r1560701 a regression test for this problem.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
 Veto-blocked changes:
 =====================
