@@ -374,16 +374,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_lib_dir = os.path.join(self.apr_path, 'LibD')
     else:
       lib_name = 'libapr%s.lib' % suffix
-      lib_dir = os.path.join(self.apr_path, 'Release')
-      
-      if not os.path.isdir(lib_dir) and \
-         os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
+
+      if os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
         # Installed APR instead of APR-Source
         lib_dir = os.path.join(self.apr_path, 'lib')
-        debug_lib_dir = lib_dir
+        debug_lib_dir = None
       else:
-        debug_lib_dir = os.path.join(self.apr_path, 'Debug')
-        
+        lib_dir = os.path.join(self.apr_path, 'Release')
+        if os.path.isfile(os.path.join(self.apr_path, 'Debug', lib_name)):
+          debug_lib_dir = os.path.join(self.apr_path, 'Debug')
+        else:
+          debug_lib_dir = None
+
       dll_name = 'libapr%s.dll' % suffix
       if os.path.isfile(os.path.join(lib_dir, dll_name)):
         dll_dir = lib_dir
