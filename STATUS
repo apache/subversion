@@ -110,7 +110,7 @@ Candidate changes:
      r1560701 is a regression test for this problem, but can't be backported
      without resolving a minor text conflict.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, brane
 
 Veto-blocked changes:
 =====================
