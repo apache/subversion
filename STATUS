@@ -73,7 +73,7 @@ Candidate changes:
       Not sure about our strict ABI guarantees here, but this affects
       usability of users migrating to cloud platforms, etc.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r1535532
    Make the certificate verification handling in ra_serf properly ask multiple
@@ -84,7 +84,7 @@ Candidate changes:
      Probably only interesting for bindings and code that explicitly tests
      our certificate handling behavior.
    Votes:
-     +1: rhuijben, stefan2
+     +1: rhuijben, stefan2, steveking
 
  * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488
    Fix working copy database inconsistency on certain move scenarios,
@@ -176,7 +176,7 @@ Candidate changes:
      The checkout of symlink replacements shouldn't require more network
      capabilities than ordinary checkouts.
    Votes:
-     +1: rhuijben, stefan2
+     +1: rhuijben, stefan2, steveking
 
  * r1548486
    When (during merge) we compare three files to each other stop reading
