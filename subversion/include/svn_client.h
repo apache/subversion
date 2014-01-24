@@ -439,7 +439,11 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_TEXT_MODS   0x04
 #define SVN_CLIENT_COMMIT_ITEM_PROP_MODS   0x08
 #define SVN_CLIENT_COMMIT_ITEM_IS_COPY     0x10
-/** @since New in 1.2. */
+/** One of the flags for a commit item.  The node has a lock token that
+ * should be released after a successful commit and, if the node is also
+ * modified, transferred to the server as part of the commit process.
+ *
+ * @since New in 1.2. */
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @since New in 1.8. */
 #define SVN_CLIENT_COMMIT_ITEM_MOVED_HERE  0x40
