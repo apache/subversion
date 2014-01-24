@@ -117,8 +117,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # Generate the build_zlib.bat file
     if self._libraries['zlib'].is_src:
       data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
-              'zlib_version': self.zlib_version,
-              'use_ml': self.have_ml and 1 or None}
+              'zlib_version': self.zlib_version}
       bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
       self.write_with_template(bat, 'templates/build_zlib.ezt', data)
 
@@ -981,7 +980,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                          ('zlib_headers', zlib_headers),
                          ('zlib_version', self.zlib_version),
                          ('project_guid', self.makeguid('zlib')),
-                         ('use_ml', self.have_ml and 1 or None),
                         ))
 
   def write_serf_project_file(self, name):
