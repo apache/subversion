@@ -196,9 +196,6 @@ def _usage_exit(err=None):
   print("  --enable-bdb-in-apr-util")
   print("           configure APR-Util to use Berkeley DB")
   print("")
-  print("  --enable-ml")
-  print("           enable use of ML assembler with zlib")
-  print("")
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
@@ -262,7 +259,6 @@ if __name__ == '__main__':
                             'enable-quantify',
                             'enable-nls',
                             'enable-bdb-in-apr-util',
-                            'enable-ml',
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
