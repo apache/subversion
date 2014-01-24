@@ -2109,9 +2109,8 @@ typedef struct svn_wc_conflict_result_t
  * Allocate an #svn_wc_conflict_result_t structure in @a pool,
  * initialize and return it.
  *
- * Set the @c choice field of the structure to @a choice, and @c
- * merged_file to @a merged_file.  Set all other fields to their @c
- * _unknown, @c NULL or invalid value, respectively. Make only a shallow
+ * Set the @c choice field of the structure to @a choice, @c merged_file
+ * to @a merged_file, and @c save_merged to false.  Make only a shallow
  * copy of the pointer argument @a merged_file.
  *
  * @since New in 1.5.
