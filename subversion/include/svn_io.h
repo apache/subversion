@@ -182,9 +182,10 @@ svn_io_check_resolved_path(const char *path,
  * may be @c NULL.  If @a file is @c NULL, the file will be created but not
  * open.
  *
- * If @a delete_when is #svn_io_file_del_on_close, then the @c APR_DELONCLOSE
- * flag will be used when opening the file.  The @c APR_BUFFERED flag will
- * always be used.
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.
+ *
+ * The @c APR_BUFFERED flag will always be used when opening the file.
  *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
@@ -248,8 +249,9 @@ svn_io_open_uniquely_named(apr_file_t **file,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.  If @a delete_when
- * is @c svn_io_file_del_on_close and @a file is @c NULL, the file will be
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.  If it
+ * is #svn_io_file_del_on_close and @a file is @c NULL, the file will be
  * deleted before this function returns.
  *
  * When passing @c svn_io_file_del_none please don't forget to eventually
@@ -972,7 +974,8 @@ svn_stream_open_writable(svn_stream_t **stream,
  * be possible to atomically rename the resulting file due to cross-device
  * issues.)
  *
- * The file will be deleted according to @a delete_when.
+ * The file will be deleted according to @a delete_when.  If that is
+ * #svn_io_file_del_on_pool_cleanup, it refers to @a result_pool.
  *
  * Temporary allocations will be performed in @a scratch_pool.
  *
