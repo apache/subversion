@@ -660,6 +660,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock;
+  apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
   svn_error_t *err;
   apr_getopt_t *os;
@@ -667,9 +668,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   serve_params_t params;
   const char *arg;
   apr_status_t status;
-#ifndef WIN32
   apr_proc_t proc;
-#endif
 #if APR_HAS_THREADS && !HAVE_THREADPOOLS
   apr_threadattr_t *tattr;
   apr_thread_t *tid;
@@ -1010,21 +1009,27 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       apr_pool_t *connection_pool;
       svn_ra_svn_conn_t *conn;
-      svn_stream_t *stdin_stream;
-      svn_stream_t *stdout_stream;
 
       params.tunnel = (run_mode == run_mode_tunnel);
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,
                                 redirect_stdout);
+      status = apr_file_open_stdin(&in_file, pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status, _("Can't open stdin"));
+        }
 
-      SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
-      SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+      status = apr_file_open_stdout(&out_file, pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status, _("Can't open stdout"));
+        }
 
       /* Use a subpool for the connection to ensure that if SASL is used
        * the pool cleanup handlers that call sasl_dispose() (connection_pool)
        * and sasl_done() (pool) are run in the right order. See issue #3664. */
       connection_pool = svn_pool_create(pool);
-      conn = svn_ra_svn_create_conn4(NULL, stdin_stream, stdout_stream,
+      conn = svn_ra_svn_create_conn3(NULL, in_file, out_file,
                                      params.compression_level,
                                      params.zero_copy_limit,
                                      params.error_check_interval,

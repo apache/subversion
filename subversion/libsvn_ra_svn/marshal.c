@@ -80,20 +80,19 @@ get_timeout(svn_ra_svn_conn_t *conn)
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
-                                           svn_stream_t *in_stream,
-                                           svn_stream_t *out_stream,
+svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
+                                           apr_file_t *in_file,
+                                           apr_file_t *out_file,
                                            int compression_level,
                                            apr_size_t zero_copy_limit,
                                            apr_size_t error_check_interval,
-                                           apr_pool_t *result_pool)
+                                           apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn;
-  void *mem = apr_palloc(result_pool, sizeof(*conn) + SVN_RA_SVN__PAGE_SIZE);
+  void *mem = apr_palloc(pool, sizeof(*conn) + SVN_RA_SVN__PAGE_SIZE);
   conn = (void*)APR_ALIGN((apr_uintptr_t)mem, SVN_RA_SVN__PAGE_SIZE);
 
-  assert((sock && !in_stream && !out_stream)
-         || (!sock && in_stream && out_stream));
+  assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
 #ifdef SVN_HAVE_SASL
   conn->sock = sock;
   conn->encrypted = FALSE;
@@ -107,15 +106,15 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
   conn->may_check_for_error = error_check_interval == 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
-  conn->capabilities = apr_hash_make(result_pool);
+  conn->capabilities = apr_hash_make(pool);
   conn->compression_level = compression_level;
   conn->zero_copy_limit = zero_copy_limit;
-  conn->pool = result_pool;
+  conn->pool = pool;
 
   if (sock != NULL)
     {
       apr_sockaddr_t *sa;
-      conn->stream = svn_ra_svn__stream_from_sock(sock, result_pool);
+      conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
       if (!(apr_socket_addr_get(&sa, APR_REMOTE, sock) == APR_SUCCESS
             && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
         conn->remote_ip = NULL;
@@ -123,8 +122,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
     }
   else
     {
-      conn->stream = svn_ra_svn__stream_from_streams(in_stream, out_stream,
-                                                     result_pool);
+      conn->stream = svn_ra_svn__stream_from_files(in_file, out_file, pool);
       conn->remote_ip = NULL;
     }
 
