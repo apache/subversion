@@ -149,18 +149,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1548105
-   mod_dav_svn: Fix SVNAllowBulkUpdates directive merging.
-   Justification:
-     'SVNAllowBulkUpdates on' does not override other values
-     configured for other <Location>
-   Votes:
-     +1: ivan, rhuijben
-     -0: stefan2
-         While I see no harm in it, I simply don't get under which
-         condition the return value of dav_svn__get_bulk_updates_flag
-         is now different from before (still returns CONF_BULKUPD_ON).
-
  * r1548486
    When (during merge) we compare three files to each other stop reading
    specific files when we find enough differences.
@@ -304,4 +292,12 @@ Approved changes:
      Can prevent rep-cache from being used unless admin takes action.
    Votes:
      +1: philip, rhuijben, stefan2
+
+ * r1548105
+   mod_dav_svn: Fix SVNAllowBulkUpdates directive merging.
+   Justification:
+     'SVNAllowBulkUpdates on' does not override other values
+     configured for other <Location>
+   Votes:
+     +1: ivan, rhuijben, stefan2
 
