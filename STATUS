@@ -100,18 +100,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1560690
-   Fix repository-WC copies into relocated working copies and some wc-wc
-   copy problems.
-   Justifiation:
-     It should be impossible to break a working copy by just copying something
-     into it.
-   Notes:
-     r1560701 is a regression test for this problem, but can't be backported
-     without resolving a minor text conflict.
-   Votes:
-     +1: rhuijben, brane
-
 Veto-blocked changes:
 =====================
 
@@ -129,3 +117,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1560690
+   Fix repository-WC copies into relocated working copies and some wc-wc
+   copy problems.
+   Justifiation:
+     It should be impossible to break a working copy by just copying something
+     into it.
+   Notes:
+     r1560701 is a regression test for this problem, but can't be backported
+     without resolving a minor text conflict.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
