@@ -156,6 +156,10 @@ Candidate changes:
      configured for other <Location>
    Votes:
      +1: ivan, rhuijben
+     -0: stefan2
+         While I see no harm in it, I simply don't get under which
+         condition the return value of dav_svn__get_bulk_updates_flag
+         is now different from before (still returns CONF_BULKUPD_ON).
 
  * r1548486
    When (during merge) we compare three files to each other stop reading
@@ -248,24 +252,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1547866, r1547873, r1548097, r1548170
-   Fix issue 3437, rep-cache.db created without group write bit
-   Justification:
-     Can prevent rep-cache from being used unless admin takes action.
-   Votes:
-     +1: philip, rhuijben
-
- * r1560690, r1560701
-   Fix repository-WC copies into relocated working copies and some wc-wc
-   copy problems.
-   Justifiation:
-     It should be impossible to break a working copy by just copying something
-     into it.
-   Notes:
-     r1560690 is the fix and r1560701 a regression test for this problem.
-   Votes:
-     +1: rhuijben, brane
-
 Veto-blocked changes:
 =====================
 
@@ -292,3 +278,22 @@ Approved changes:
      our certificate handling behavior.
    Votes:
      +1: rhuijben, stefan2, steveking
+
+ * r1560690, r1560701
+   Fix repository-WC copies into relocated working copies and some wc-wc
+   copy problems.
+   Justifiation:
+     It should be impossible to break a working copy by just copying something
+     into it.
+   Notes:
+     r1560690 is the fix and r1560701 a regression test for this problem.
+   Votes:
+     +1: rhuijben, brane, stefan2
+
+ * r1547866, r1547873, r1548097, r1548170
+   Fix issue 3437, rep-cache.db created without group write bit
+   Justification:
+     Can prevent rep-cache from being used unless admin takes action.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
