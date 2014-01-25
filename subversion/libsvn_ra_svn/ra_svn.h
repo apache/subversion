@@ -176,6 +176,12 @@ svn_ra_svn__stream_t *svn_ra_svn__stream_from_files(apr_file_t *in_file,
                                                     apr_file_t *out_file,
                                                     apr_pool_t *pool);
 
+/* Returns a stream that reads from IN_STREAM and writes to OUT_STREAM. */
+svn_ra_svn__stream_t *svn_ra_svn__stream_from_streams(svn_stream_t *in_stream,
+                                                      svn_stream_t *out_stream,
+                                                      apr_pool_t *result_pool);
+
+
 /* Create an svn_ra_svn__stream_t using READ_CB, WRITE_CB, TIMEOUT_CB,
  * PENDING_CB, and BATON.
  */
