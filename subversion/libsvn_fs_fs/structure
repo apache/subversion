@@ -545,8 +545,8 @@ defined:
   props     "<rev> <item_index> <length> <size> <digest>" for props rep
             <rev> and <item_index> give location of rep
             <length> gives length of rep, sans header and trailer
-            <size> gives size of expanded rep; may be 0 if equal
-             to the length
+            <size> gives size of expanded rep; for props only, it may be 0
+             if equal to the length
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
