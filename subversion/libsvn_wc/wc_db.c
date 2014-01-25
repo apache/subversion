@@ -355,13 +355,6 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
                           svn_wc__db_status_t status);
 
 static svn_error_t *
-wclock_owns_lock(svn_boolean_t *own_lock,
-                 svn_wc__db_wcroot_t *wcroot,
-                 const char *local_relpath,
-                 svn_boolean_t exact,
-                 apr_pool_t *scratch_pool);
-
-static svn_error_t *
 db_is_switched(svn_boolean_t *is_switched,
                svn_node_kind_t *kind,
                svn_wc__db_wcroot_t *wcroot,
@@ -13900,8 +13893,9 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
 
       /* Check if we are the lock owner, because we should be able to
          extend our lock. */
-      err = wclock_owns_lock(&own_lock, wcroot, lock_relpath,
-                             TRUE, scratch_pool);
+      err = svn_wc__db_wclock_owns_lock_internal(&own_lock, wcroot,
+                                                 lock_relpath,
+                                                 TRUE, scratch_pool);
 
       if (err)
         SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
@@ -14239,12 +14233,12 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
 
 /* Like svn_wc__db_wclock_owns_lock() but taking WCROOT+LOCAL_RELPATH instead
    of DB+LOCAL_ABSPATH.  */
-static svn_error_t *
-wclock_owns_lock(svn_boolean_t *own_lock,
-                 svn_wc__db_wcroot_t *wcroot,
-                 const char *local_relpath,
-                 svn_boolean_t exact,
-                 apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_wclock_owns_lock_internal(svn_boolean_t *own_lock,
+                                     svn_wc__db_wcroot_t *wcroot,
+                                     const char *local_relpath,
+                                     svn_boolean_t exact,
+                                     apr_pool_t *scratch_pool)
 {
   apr_array_header_t *owned_locks;
   int lock_level;
@@ -14311,8 +14305,8 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(wclock_owns_lock(own_lock, wcroot, local_relpath, exact,
-                           scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_owns_lock_internal(own_lock, wcroot, local_relpath,
+                                               exact, scratch_pool));
 
   return SVN_NO_ERROR;
 }
