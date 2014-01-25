@@ -101,6 +101,31 @@
 #include "workqueue.h"
 #include "token-map.h"
 
+/* Helper functions */
+static svn_error_t *
+verify_write_lock(svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  apr_pool_t *scratch_pool)
+{
+  svn_boolean_t locked;
+
+  SVN_ERR(svn_wc__db_wclock_owns_lock_internal(&locked, wcroot, local_relpath,
+                                               FALSE, scratch_pool));
+  if (!locked)
+    {
+      return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
+                               _("No write-lock in '%s'"),
+                               svn_dirent_local_style(
+                                            svn_dirent_join(wcroot->abspath,
+                                                            local_relpath,
+                                                            scratch_pool),
+                                            scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /*
  * Receiver code.
  *
@@ -2021,6 +2046,9 @@ bump_mark_tree_conflict(svn_wc__db_wcroot_t *wcroot,
   svn_wc_conflict_version_t *old_version;
   svn_wc_conflict_version_t *new_version;
 
+  SVN_ERR(verify_write_lock(wcroot, move_src_op_root_relpath, scratch_pool));
+  SVN_ERR(verify_write_lock(wcroot, move_dst_op_root_relpath, scratch_pool));
+
   /* Read new (post-update) information from the new move source BASE node. */
   SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_kind, &new_rev,
                                             &new_repos_relpath, &repos_id,
@@ -2137,7 +2165,10 @@ bump_moved_layer(svn_boolean_t *recurse,
   svn_boolean_t have_row;
   svn_skel_t *conflict;
   svn_boolean_t can_bump;
+
   const char *src_root_relpath = src_relpath;
+
+  SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
 
   *recurse = FALSE;
 

@@ -495,6 +495,15 @@ svn_wc__db_read_props_internal(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_wclock_owns_lock() but taking WCROOT+LOCAL_RELPATH instead
+   of DB+LOCAL_ABSPATH.  */
+svn_error_t *
+svn_wc__db_wclock_owns_lock_internal(svn_boolean_t *own_lock,
+                                     svn_wc__db_wcroot_t *wcroot,
+                                     const char *local_relpath,
+                                     svn_boolean_t exact,
+                                     apr_pool_t *scratch_pool);
+
 /* Do a post-drive revision bump for the moved-away destination for
    any move sources under LOCAL_RELPATH.  This is called from within
    the revision bump transaction after the tree at LOCAL_RELPATH has
