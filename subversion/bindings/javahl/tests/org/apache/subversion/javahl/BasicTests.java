@@ -2739,6 +2739,74 @@ public class BasicTests extends SVNTests
 
     }
 
+
+    /**
+     * Test reintegrating a branch with trunk, using automatic reintegrate.
+     */
+    public void testMergeAutoReintegrate() throws Throwable
+    {
+        OneTest thisTest = setupAndPerformMerge();
+
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
+
+        // Merge and commit some changes to main (r4).
+        appendText(thisTest, "A/mu", "xxx", 4);
+        checkCommitRevision(thisTest,
+                            "wrong revision number from main commit", 4,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+        // Merge and commit some changes to branch (r5).
+        appendText(thisTest, "branches/A/D/G/rho", "yyy", -1);
+        checkCommitRevision(thisTest,
+                            "wrong revision number from branch commit", 5,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // update the branch WC (to r5) before merge
+        update(thisTest, "/branches");
+
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        Revision unspec = new Revision(Revision.Kind.unspecified);
+        List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
+        ranges.add(new RevisionRange(unspec, unspec));
+        client.merge(modUrl, Revision.HEAD, ranges,
+                     branchPath, true, Depth.infinity, false, false, false);
+
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
+                              "branches/A/mu", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 6,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+        // now we reintegrate the branch with main
+        String branchUrl = thisTest.getUrl() + "/branches/A";
+        client.merge(branchUrl, Revision.HEAD, null,
+                     thisTest.getWCPath() + "/A", false,
+                     Depth.unknown, false, false, false, false);
+
+        // make the working copy up-to-date, so that mergeinfo can be committed
+        update(thisTest);
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(),
+                             thisTest.getUrl().toString(), "A", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        addExpectedCommitItem(thisTest.getWCPath(),
+                             thisTest.getUrl().toString(), "A/D/G/rho",
+                             NodeKind.file, CommitItemStateFlags.TextMods);
+        checkCommitRevision(thisTest, "wrong revision number from commit", 7,
+                            thisTest.getWCPathSet(), "log msg", Depth.infinity,
+                            false, false, null, null);
+
+    }
+
     /**
      * Test automatic merge conflict resolution.
      * @throws Throwable
