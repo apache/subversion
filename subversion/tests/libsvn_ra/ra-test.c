@@ -109,7 +109,7 @@ check_tunnel(void *tunnel_baton, const char *tunnel_name)
 }
 
 static svn_error_t *
-open_tunnel(svn_stream_t **request, svn_stream_t **response,
+open_tunnel(apr_file_t **request, apr_file_t **response,
             void **tunnel_context, void *tunnel_baton,
             const char *tunnel_name, const char *user,
             const char *hostname, int port,
@@ -158,8 +158,8 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   apr_file_inherit_unset(proc->in);
   apr_file_inherit_unset(proc->out);
 
-  *request = svn_stream_from_aprfile2(proc->in, FALSE, pool);
-  *response = svn_stream_from_aprfile2(proc->out, FALSE, pool);
+  *request = proc->in;
+  *response = proc->out;
   open_tunnel_context = *tunnel_context = &kind;
   ++tunnel_open_count;
   return SVN_NO_ERROR;

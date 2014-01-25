@@ -165,9 +165,9 @@ typedef struct svn_ra_svn_item_t
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
 /** Initialize a connection structure for the given socket or
- * input/output streams.
+ * input/output files.
  *
- * Either @a sock or @a in_stream/@a out_stream must be set, not both.
+ * Either @a sock or @a in_file/@a out_file must be set, not both.
  * @a compression_level specifies the desired network data compression
  * level (zlib) from 0 (no compression) to 9 (best but slowest).
  *
@@ -184,30 +184,10 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  * It defines the number of bytes that must have been sent since the last
  * check before the next check will be made.
  *
- * @note If @a in_stream and @a out_stream specify wrapped apr_files via
- * svn_stream_from_apr_file2() the backing apr file will be used directly
- * instead of the stream api, to allow polling and other optimized behavior.
- *
  * Allocate the result in @a pool.
  *
- * @since New in 1.9
- */
-svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
-                                           svn_stream_t *in_stream,
-                                           svn_stream_t *out_stream,
-                                           int compression_level,
-                                           apr_size_t zero_copy_limit,
-                                           apr_size_t error_check_interval,
-                                           apr_pool_t *result_pool);
-
-
-/** Similar to svn_ra_svn_create_conn4() but only supports apr_file_t handles
- * instead of the more generic streams.
- *
  * @since New in 1.8
- * @deprecated Provided for backward compatibility with the 1.8 API.
  */
-SVN_DEPRECATED
 svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
                                            apr_file_t *in_file,
                                            apr_file_t *out_file,
