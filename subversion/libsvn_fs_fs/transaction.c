@@ -2609,7 +2609,7 @@ write_container_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = 0;
+      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
