@@ -572,7 +572,7 @@ OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
 }
 
 svn_error_t *
-OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
+OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
                              void **tunnel_context, void *tunnel_baton,
                              const char *tunnel_name, const char *user,
                              const char *hostname, int port,
@@ -587,8 +587,8 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
     }
 
   *tunnel_context = tc;
-  *request = tc->request_out;
-  *response = tc->response_in;
+  *request = svn_stream_from_aprfile2(tc->request_out, FALSE, pool);
+  *response = svn_stream_from_aprfile2(tc->response_in, FALSE, pool);
 
   JNIEnv *env = JNIUtil::getEnv();
 

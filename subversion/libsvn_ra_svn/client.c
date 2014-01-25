@@ -451,13 +451,17 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
 {
   svn_ra_svn_conn_t *conn;
   apr_file_t *in_file, *out_file;
+  svn_stream_t *in_stream, *out_stream;
   svn_error_t *err;
 
   if (apr_file_open_stdin(&in_file, pool)
       || apr_file_open_stdout(&out_file, pool))
     return;
 
-  conn = svn_ra_svn_create_conn3(NULL, in_file, out_file,
+  in_stream = svn_stream_from_aprfile2(in_file, FALSE, pool);
+  out_stream = svn_stream_from_aprfile2(out_file, FALSE, pool);
+
+  conn = svn_ra_svn_create_conn4(NULL, in_stream, out_stream,
                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0,
                                  0, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
@@ -528,7 +532,11 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_file_inherit_unset(proc->out);
 
   /* Guard against dotfile output to stdout on the server. */
-  *conn = svn_ra_svn_create_conn3(NULL, proc->out, proc->in,
+  *conn = svn_ra_svn_create_conn4(NULL,
+                                  svn_stream_from_aprfile2(proc->out, FALSE,
+                                                           pool),
+                                  svn_stream_from_aprfile2(proc->in, FALSE,
+                                                           pool),
                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                                   0, 0, pool);
   err = svn_ra_svn__skip_leading_garbage(*conn, pool);
@@ -636,8 +644,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
       else
         {
           void *tunnel_context;
-          apr_file_t *request;
-          apr_file_t *response;
+          svn_stream_t *request;
+          svn_stream_t *response;
           SVN_ERR(callbacks->open_tunnel_func(
                       &request, &response, &tunnel_context,
                       callbacks->tunnel_baton, tunnel_name,
@@ -657,7 +665,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                         apr_pool_cleanup_null);
             }
 
-          conn = svn_ra_svn_create_conn3(NULL, response, request,
+          conn = svn_ra_svn_create_conn4(NULL, response, request,
                                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                                          0, 0, pool);
           SVN_ERR(svn_ra_svn__skip_leading_garbage(conn, pool));
@@ -666,7 +674,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   else
     {
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
-      conn = svn_ra_svn_create_conn3(sock, NULL, NULL,
+      conn = svn_ra_svn_create_conn4(sock, NULL, NULL,
                                      SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                                      0, 0, pool);
     }

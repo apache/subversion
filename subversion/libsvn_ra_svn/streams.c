@@ -31,6 +31,9 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_io.h"
+
+#include "private/svn_io_private.h"
+
 #include "svn_private_config.h"
 
 #include "ra_svn.h"
@@ -204,6 +207,75 @@ svn_ra_svn__stream_from_sock(apr_socket_t *sock,
   return svn_ra_svn__stream_create(b, sock_read_cb, sock_write_cb,
                                    sock_timeout_cb, sock_pending_cb,
                                    pool);
+}
+
+/* Functions to implement a svn_stream_t backed svn_ra_svn__stream_t. */
+typedef struct stream_baton_t
+{
+  svn_stream_t *in_stream;
+  svn_stream_t *out_stream;
+} stream_baton_t;
+
+/* Implements svn_read_fn_t */
+static svn_error_t *
+stream_read_cb(void *baton,
+               char *buffer,
+               apr_size_t *len)
+{
+  stream_baton_t *sb = baton;
+
+  return svn_error_trace(svn_stream_read(sb->in_stream, buffer, len));
+}
+
+/* Implements svn_write_fn_t*/
+static svn_error_t *
+stream_write_cb(void *baton,
+                const char *buffer,
+                apr_size_t *len)
+{
+  stream_baton_t *sb = baton;
+
+  return svn_error_trace(svn_stream_write(sb->out_stream, buffer, len));
+}
+
+/* Implements ra_svn_timeout_fn_t */
+static void
+stream_timeout_cb(void *baton,
+                  apr_interval_time_t interval)
+{
+}
+
+/* Implements ra_svn_pending_fn_t */
+static svn_boolean_t
+stream_pending_cb(void *baton)
+{
+  return FALSE; /* ### Currently unused?
+                       Should we read and cache one byte? Other ideas? */
+}
+
+svn_ra_svn__stream_t *
+svn_ra_svn__stream_from_streams(svn_stream_t *in_stream,
+                                svn_stream_t *out_stream,
+                                apr_pool_t *result_pool)
+{
+  svn_ra_svn__stream_t *r;
+  stream_baton_t *sb;
+  apr_file_t *in_file = svn_stream__aprfile(in_stream);
+  apr_file_t *out_file = svn_stream__aprfile(out_stream);
+
+  /* Use optimized behavior for the very common dual file handle scenario */
+  if (in_file && out_file)
+    return svn_ra_svn__stream_from_files(in_file, out_file, result_pool);
+
+  sb = apr_pcalloc(result_pool, sizeof(*sb));
+  r = svn_ra_svn__stream_create(sb, stream_read_cb, stream_write_cb,
+                                stream_timeout_cb, stream_pending_cb,
+                                result_pool);
+
+  if (in_stream == out_stream)
+    r->stream = in_stream; /* No need to have another layer of indirection */
+
+  return r;
 }
 
 svn_ra_svn__stream_t *
