@@ -281,6 +281,7 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
  * r1535532
    Make the certificate verification handling in ra_serf properly ask multiple
    providers for acceptance of certificate failures.
@@ -291,4 +292,3 @@ Approved changes:
      our certificate handling behavior.
    Votes:
      +1: rhuijben, stefan2, steveking
-
