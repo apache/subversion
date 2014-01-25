@@ -292,13 +292,3 @@ Approved changes:
    Votes:
      +1: rhuijben, stefan2, steveking
 
- * r1547774
-   Fix 'svn checkout ^/subversion/trunk NAS' of working copy with symlinks
-   on Windows where the NAS doesn't implement FlushFileBuffers().
-   Regression since 1.7.
-   Justification:
-     The checkout of symlink replacements shouldn't require more network
-     capabilities than ordinary checkouts.
-   Votes:
-     +1: rhuijben, stefan2, steveking
-
