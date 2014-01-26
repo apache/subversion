@@ -885,8 +885,8 @@ hotcopy_body(void *baton, apr_pool_t *pool)
        * the latest IDs.  Because that's too expensive, we don't checkpoint
        * pre-1.4 repositories.
        */
-      if (!max_files_per_dir || rev % max_files_per_dir == 0 &&
-          dst_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
+      if (   (!max_files_per_dir || rev % max_files_per_dir == 0)
+          && dst_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);
