@@ -381,9 +381,21 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
 
   /* If necessary, get new current next_node and next_copy IDs. */
   if (dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
-    SVN_ERR(svn_fs_fs__find_max_ids(dst_fs, new_youngest,
-                                    &next_node_id, &next_copy_id,
-                                    scratch_pool));
+    {
+      /* Make sure NEW_YOUNGEST is a valid revision in DST_FS.
+         Because a crash in hotcopy requires at least a full recovery run,
+         it is safe to temporarily reset the max IDs to 0. */
+      SVN_ERR(svn_fs_fs__write_current(dst_fs, new_youngest, next_node_id,
+                                      next_copy_id, scratch_pool));
+
+      SVN_ERR(svn_fs_fs__find_max_ids(dst_fs, new_youngest,
+                                      &next_node_id, &next_copy_id,
+                                      scratch_pool));
+
+      /* We store the _next_ ids. */
+      ++next_copy_id;
+      ++next_node_id;
+    }
 
   /* Update 'current'. */
   SVN_ERR(svn_fs_fs__write_current(dst_fs, new_youngest, next_node_id,
@@ -861,15 +873,20 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                       rev, max_files_per_dir, FALSE,
                                       iterpool));
 
-      /* After completing a full shard, update 'current'.  For non-shared
+      /* After completing a full shard, update 'current'.  For non-sharded
        * repositories, update after every revision.
        * 
        * This "checkpoints" the progress we made so far and prevents us from
        * starting all over again if the hotcopy process got canceled.  It is
        * not _necessary_ to update "current" until the very end (see further
        * below); it's a performance trade-off between different scenarios.
+       *
+       * Repositories with global IDs must do a full repo scan here to find
+       * the latest IDs.  Because that's too expensive, we don't checkpoint
+       * pre-1.4 repositories.
        */
-      if (!max_files_per_dir || rev % max_files_per_dir == 0)
+      if (!max_files_per_dir || rev % max_files_per_dir == 0 &&
+          dst_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);

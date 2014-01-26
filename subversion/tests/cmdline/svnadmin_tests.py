@@ -2226,7 +2226,6 @@ def fsfs_recover_old_non_empty(sbox):
                                           sbox.repo_dir)
 
 
-@XFail()
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def fsfs_hotcopy_old_non_empty(sbox):
   "fsfs hotcopy non-empty --compatible-version=1.3"
