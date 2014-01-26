@@ -1378,6 +1378,10 @@ typedef struct svn_fs_path_change2_t
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
 
+  /** were there mergeinfo mods?
+   * (Note: Pre-1.9 repositories will report #svn_tristate_unknown.)
+   * @since New in 1.9. */
+  svn_tristate_t mergeinfo_mod;
   /* NOTE! Please update svn_fs_path_change2_create() when adding new
      fields here. */
 } svn_fs_path_change2_t;

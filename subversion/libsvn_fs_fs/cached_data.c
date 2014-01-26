@@ -354,7 +354,6 @@ get_node_revision_body(node_revision_t **noderev_p,
                              revision_file,
                              pool,
                              pool));
-          SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
         }
       else
         {
@@ -373,6 +372,8 @@ get_node_revision_body(node_revision_t **noderev_p,
                                    *noderev_p,
                                    pool));
         }
+
+      SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
     }
 
   return SVN_NO_ERROR;
@@ -884,6 +885,7 @@ svn_fs_fs__check_rep(representation_t *rep,
       if (is_packed != rev_file.is_packed)
         {
           svn_error_clear(err);
+          SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
           return svn_error_trace(svn_fs_fs__check_rep(rep, fs, hint, pool));
         }
       else
@@ -900,6 +902,8 @@ svn_fs_fs__check_rep(representation_t *rep,
                                    " in revision %ld"),
                                  apr_off_t_toa(pool, entry->offset),
                                  rep->item_index, rep->revision);
+
+      SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
     }
   else
     {

@@ -1039,7 +1039,10 @@ setup_if_header_recursive(svn_boolean_t *added,
   apr_pool_t *iterpool = NULL;
 
   if (!commit_ctx->lock_tokens)
-    return SVN_NO_ERROR;
+    {
+      *added = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   /* We try to create a directory, so within the Subversion world that
      would imply that there is nothing here, but mod_dav_svn still sees
@@ -1982,10 +1985,6 @@ apply_textdelta(void *file_baton,
    * writing to a temporary file (ugh). A special svn stream serf bucket
    * that returns EAGAIN until we receive the done call?  But, when
    * would we run through the serf context?  Grr.
-   *
-   * ctx->pool is the same for all files in the commit that send a
-   * textdelta so this file is explicitly closed in close_file to
-   * avoid too many simultaneously open files.
    */
 
   ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,

@@ -108,6 +108,7 @@ extern "C" {
 #define CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION "enable-props-deltification"
 #define CONFIG_OPTION_MAX_DELTIFICATION_WALK     "max-deltification-walk"
 #define CONFIG_OPTION_MAX_LINEAR_DELTIFICATION   "max-linear-deltification"
+#define CONFIG_OPTION_COMPRESSION_LEVEL  "compression-level"
 #define CONFIG_SECTION_PACKED_REVPROPS   "packed-revprops"
 #define CONFIG_OPTION_REVPROP_PACK_SIZE  "revprop-pack-size"
 #define CONFIG_OPTION_COMPRESS_PACKED_REVPROPS  "compress-packed-revprops"
@@ -170,6 +171,9 @@ extern "C" {
 
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
+
+/* Minimum format number that stores mergeinfo-mode flag in changed paths */
+#define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
 
 /* Minimum format number that will record moves */
 #define SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT 7
@@ -457,6 +461,9 @@ typedef struct fs_fs_data_t
   /* Maximum number of length of the linear part at the top of the
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
+
+  /* Compression level to use with txdelta storage format in new revs. */
+  int delta_compression_level;
 
   /* Whether normalization-insensitive path lookup is enabled. */
   svn_boolean_t normalized_lookup;

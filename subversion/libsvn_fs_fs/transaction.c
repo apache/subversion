@@ -621,6 +621,7 @@ replace_change(svn_fs_path_change2_t *old_change,
                                                pool);
   old_change->text_mod = new_change->text_mod;
   old_change->prop_mod = new_change->prop_mod;
+  old_change->mergeinfo_mod = new_change->mergeinfo_mod;
   if (new_change->copyfrom_rev == SVN_INVALID_REVNUM)
     {
       old_change->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -716,6 +717,7 @@ fold_change(apr_hash_t *changes,
               old_change->change_kind = svn_fs_path_change_delete;
               old_change->text_mod = info->text_mod;
               old_change->prop_mod = info->prop_mod;
+              old_change->mergeinfo_mod = info->mergeinfo_mod;
               old_change->copyfrom_rev = SVN_INVALID_REVNUM;
               old_change->copyfrom_path = NULL;
             }
@@ -743,6 +745,8 @@ fold_change(apr_hash_t *changes,
             old_change->text_mod = TRUE;
           if (info->prop_mod)
             old_change->prop_mod = TRUE;
+          if (info->mergeinfo_mod == svn_tristate_true)
+            old_change->mergeinfo_mod = svn_tristate_true;
           break;
         }
 
@@ -1441,10 +1445,14 @@ set_uniquifier(svn_fs_t *fs,
                apr_pool_t *pool)
 {
   svn_fs_fs__id_part_t temp;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(get_new_txn_node_id(&temp, fs, &rep->txn_id, pool));
-  rep->uniquifier.noderev_txn_id = rep->txn_id;
-  rep->uniquifier.number = temp.number;
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    {
+      SVN_ERR(get_new_txn_node_id(&temp, fs, &rep->txn_id, pool));
+      rep->uniquifier.noderev_txn_id = rep->txn_id;
+      rep->uniquifier.number = temp.number;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1570,6 +1578,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                       svn_fs_path_change_kind_t change_kind,
                       svn_boolean_t text_mod,
                       svn_boolean_t prop_mod,
+                      svn_boolean_t mergeinfo_mod,
                       svn_node_kind_t node_kind,
                       svn_revnum_t copyfrom_rev,
                       const char *copyfrom_path,
@@ -1587,6 +1596,9 @@ svn_fs_fs__add_change(svn_fs_t *fs,
   change = svn_fs__path_change_create_internal(id, change_kind, pool);
   change->text_mod = text_mod;
   change->prop_mod = prop_mod;
+  change->mergeinfo_mod = mergeinfo_mod
+                        ? svn_tristate_true
+                        : svn_tristate_false;
   change->node_kind = node_kind;
   change->copyfrom_rev = copyfrom_rev;
   change->copyfrom_path = apr_pstrdup(pool, copyfrom_path);
@@ -2093,7 +2105,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                           &whb,
                           b->rep_stream,
                           diff_version,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          ffd->delta_compression_level,
                           pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
@@ -2601,7 +2613,7 @@ write_container_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = 0;
+      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -2684,7 +2696,7 @@ write_container_delta_rep(representation_t *rep,
                           &diff_whb,
                           file_stream,
                           diff_version,
-                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
+                          ffd->delta_compression_level,
                           pool);
 
   whb = apr_pcalloc(pool, sizeof(*whb));
@@ -3979,9 +3991,7 @@ write_reps_to_cache(svn_fs_t *fs,
     {
       representation_t *rep = APR_ARRAY_IDX(reps_to_cache, i, representation_t *);
 
-      /* FALSE because we don't care if another parallel commit happened to
-       * collide with us.  (Non-parallel collisions will not be detected.) */
-      SVN_ERR(svn_fs_fs__set_rep_reference(fs, rep, FALSE, scratch_pool));
+      SVN_ERR(svn_fs_fs__set_rep_reference(fs, rep, scratch_pool));
     }
 
   return SVN_NO_ERROR;

@@ -49,6 +49,13 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Generate expected output
 
+def is_absolute_url(target):
+  return (target.startswith('file://')
+          or target.startswith('http://')
+          or target.startswith('https://')
+          or target.startswith('svn://')
+          or target.startswith('svn+ssh://'))
+
 def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
   """Generate the expected diff header for file PATH, with its old and new
   versions described in parentheses by OLD_TAG and NEW_TAG. SRC_LABEL and
@@ -57,12 +64,16 @@ def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
   Return the header as an array of newline-terminated strings."""
   if src_label:
     src_label = src_label.replace('\\', '/')
-    src_label = '\t(.../' + src_label + ')'
+    if not is_absolute_url(src_label):
+      src_label = '.../' + src_label
+    src_label = '\t(' + src_label + ')'
   else:
     src_label = ''
   if dst_label:
     dst_label = dst_label.replace('\\', '/')
-    dst_label = '\t(.../' + dst_label + ')'
+    if not is_absolute_url(dst_label):
+      dst_label = '.../' + dst_label
+    dst_label = '\t(' + dst_label + ')'
   else:
     dst_label = ''
   path_as_shown = path.replace('\\', '/')
@@ -4667,6 +4678,25 @@ def diff_move_inside_copy(sbox):
   # Bug: Diffing the copied-along parent directory asserts
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'diff', sbox.ospath(h_path))
+@XFail()
+@Issue(4464)
+def diff_repo_wc_copies(sbox):
+  "diff repo to wc of a copy"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_copy = sbox.ospath('iota_copy')
+  iota_url = sbox.repo_url + '/iota'
+
+  sbox.simple_copy('iota', 'iota_copy')
+  expected_output = make_diff_header(iota_copy, "revision 0", "working copy",
+                                     iota_url, iota_copy) + [
+                                       "@@ -0,0 +1 @@\n",
+                                       "+This is the file 'iota'.\n" ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     '--show-copies-as-adds',
+                                     iota_url, iota_copy)
+
+
 
 ########################################################################
 #Run the tests
@@ -4750,6 +4780,7 @@ test_list = [ None,
               diff_missing_tree_conflict_victim,
               diff_local_missing_obstruction,
               diff_move_inside_copy,
+              diff_repo_wc_copies,
               ]
 
 if __name__ == '__main__':

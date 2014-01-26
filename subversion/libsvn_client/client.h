@@ -567,8 +567,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    unversioned children of LOCAL_ABSPATH that obstruct items added from
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
-
-   If INNERCHECKOUT is true, no anchor check is performed on the target.
    */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,

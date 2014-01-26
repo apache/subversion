@@ -1540,15 +1540,15 @@ def verify_non_utf8_paths(sbox):
     if line == "A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write("\xE6\n")
-    elif line == "text: 1 279 32 0 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
       # phys, PLAIN directories: fix up the representation checksum
-      fp_new.write("text: 1 279 32 0 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
     elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, deltified directories: fix up the representation checksum
       fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
-    elif line == "text: 1 6 31 0 90f306aa9bfd72f456072076a2bd94f7\n":
+    elif line == "text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
       # log addressing: fix up the representation checksum
-      fp_new.write("text: 1 6 31 0 db2d4a0bad5dff0aea9a288dec02f1fb\n")
+      fp_new.write("text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
     elif line == "cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write("cpath: /\xE6\n")
@@ -1941,8 +1941,8 @@ def mergeinfo_race(sbox):
 
 @Issue(4213)
 @Skip(svntest.main.is_fs_type_fsx)
-def recover_old(sbox):
-  "recover --pre-1.4-compatible"
+def recover_old_empty(sbox):
+  "recover empty --compatible-version=1.3"
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir, minor_version=3)
   svntest.actions.run_and_verify_svnadmin(None, None, [],
@@ -2213,6 +2213,35 @@ def verify_denormalized_names(sbox):
     output, errput, exp_out, exp_err)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_non_empty(sbox):
+  "fsfs recover non-empty --compatible-version=1.3"
+
+  # Around trunk@1560210, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 Greek tree repository:
+  # svnadmin: E200002: Serialized hash missing terminator
+
+  sbox.build(create_wc=False, minor_version=3)
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "recover",
+                                          sbox.repo_dir)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_old_non_empty(sbox):
+  "fsfs hotcopy non-empty --compatible-version=1.3"
+
+  # Around trunk@1560210, 'svnadmin hotcopy' wrongly errored out
+  # for the --compatible-version=1.3 Greek tree repository:
+  # svnadmin: E160006: No such revision 1
+
+  sbox.build(create_wc=False, minor_version=3)
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -2248,10 +2277,12 @@ test_list = [ None,
               hotcopy_incremental_packed,
               locking,
               mergeinfo_race,
-              recover_old,
+              recover_old_empty,
               verify_keep_going,
               verify_invalid_path_changes,
               verify_denormalized_names,
+              fsfs_recover_old_non_empty,
+              fsfs_hotcopy_old_non_empty,
              ]
 
 if __name__ == '__main__':

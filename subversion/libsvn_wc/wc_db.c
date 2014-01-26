@@ -355,13 +355,6 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
                           svn_wc__db_status_t status);
 
 static svn_error_t *
-wclock_owns_lock(svn_boolean_t *own_lock,
-                 svn_wc__db_wcroot_t *wcroot,
-                 const char *local_relpath,
-                 svn_boolean_t exact,
-                 apr_pool_t *scratch_pool);
-
-static svn_error_t *
 db_is_switched(svn_boolean_t *is_switched,
                svn_node_kind_t *kind,
                svn_wc__db_wcroot_t *wcroot,
@@ -1473,11 +1466,11 @@ init_db(/* output values */
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES_TRIGGERS));
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
 
+  SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
+
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid,
                           db, scratch_pool));
-
-  SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
 
   /* Insert the wcroot. */
   /* ### Right now, this just assumes wc metadata is being stored locally. */
@@ -4648,6 +4641,21 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
     }
   else
     {
+      if (copyfrom_relpath)
+        {
+          const char *repos_root_url;
+          const char *repos_uuid;
+
+          /* Pass the right repos-id for the destination db! */
+
+          SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
+                                              src_wcroot->sdb, copyfrom_id,
+                                              scratch_pool));
+
+          SVN_ERR(create_repos_id(&copyfrom_id, repos_root_url, repos_uuid,
+                                  dst_wcroot->sdb, scratch_pool));
+        }
+
       SVN_ERR(cross_db_copy(src_wcroot, src_relpath, dst_wcroot,
                             dst_relpath, dst_presence, dst_op_depth,
                             dst_np_op_depth, kind,
@@ -13885,8 +13893,9 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
 
       /* Check if we are the lock owner, because we should be able to
          extend our lock. */
-      err = wclock_owns_lock(&own_lock, wcroot, lock_relpath,
-                             TRUE, scratch_pool);
+      err = svn_wc__db_wclock_owns_lock_internal(&own_lock, wcroot,
+                                                 lock_relpath,
+                                                 TRUE, scratch_pool);
 
       if (err)
         SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
@@ -14224,12 +14233,12 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
 
 /* Like svn_wc__db_wclock_owns_lock() but taking WCROOT+LOCAL_RELPATH instead
    of DB+LOCAL_ABSPATH.  */
-static svn_error_t *
-wclock_owns_lock(svn_boolean_t *own_lock,
-                 svn_wc__db_wcroot_t *wcroot,
-                 const char *local_relpath,
-                 svn_boolean_t exact,
-                 apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_wclock_owns_lock_internal(svn_boolean_t *own_lock,
+                                     svn_wc__db_wcroot_t *wcroot,
+                                     const char *local_relpath,
+                                     svn_boolean_t exact,
+                                     apr_pool_t *scratch_pool)
 {
   apr_array_header_t *owned_locks;
   int lock_level;
@@ -14296,8 +14305,8 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
 
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(wclock_owns_lock(own_lock, wcroot, local_relpath, exact,
-                           scratch_pool));
+  SVN_ERR(svn_wc__db_wclock_owns_lock_internal(own_lock, wcroot, local_relpath,
+                                               exact, scratch_pool));
 
   return SVN_NO_ERROR;
 }

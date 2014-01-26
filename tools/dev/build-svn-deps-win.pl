@@ -172,7 +172,7 @@ sub set_defaults {
   set_default(\$APR_URL, "http://archive.apache.org/dist/apr/apr-$APR_VER.tar.bz2");
   set_default(\$APU_URL, "http://archive.apache.org/dist/apr/apr-util-$APU_VER.tar.bz2");
   set_default(\$API_URL, "http://archive.apache.org/dist/apr/apr-iconv-$API_VER.tar.bz2");
-  set_default(\$ZLIB_URL, 'http://zlib.net/zlib' . remove_dots($ZLIB_VER) . '.zip');
+  set_default(\$ZLIB_URL, "http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VER/zlib" . remove_dots($ZLIB_VER) . '.zip');
   set_default(\$OPENSSL_URL, "http://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz");
   set_default(\$PCRE_URL, "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VER.zip");
   set_default(\$BDB_URL, "http://download.oracle.com/berkeley-db/db-5.3.21.zip");

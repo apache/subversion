@@ -45,6 +45,7 @@
 #include "svn_path.h"
 #include "svn_ctype.h"
 #include "svn_utf.h"
+#include "svn_version.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_atomic.h"
@@ -87,7 +88,7 @@ enum svn_test_mode_t mode_filter = svn_test_all;
 static svn_boolean_t parallel = FALSE;
 
 /* Option parsing enums and structures */
-enum {
+enum test_options_e {
   help_opt = SVN_OPT_FIRST_LONGOPT_ID,
   cleanup_opt,
   fstype_opt,
@@ -99,6 +100,7 @@ enum {
   allow_segfault_opt,
   srcdir_opt,
   mode_filter_opt,
+  sqlite_log_opt,
   parallel_opt
 };
 
@@ -128,6 +130,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("don't trap seg faults (useful for debugging)")},
   {"srcdir",        srcdir_opt, 1,
                     N_("source directory")},
+  {"sqlite-logging", sqlite_log_opt, 0,
+                    N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
                     N_("allow concurrent execution of tests")},
   {0,               0, 0, 0}
@@ -716,11 +720,6 @@ main(int argc, const char *argv[])
 #endif /* _MSC_VER >= 1400 */
 #endif
 
-  /* Temporary code: Enable Sqlite error log to diagnose buildbot issue.
-     ### Perhaps we should later attach this to an environment variable? */
-  svn_sqlite__dbg_enable_errorlog();
-  /* /Temporary code */
-
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, prog_name);
   while (1)
@@ -794,13 +793,16 @@ main(int argc, const char *argv[])
                 exit(1);
               }
             if ((opts.server_minor_version < 3)
-                || (opts.server_minor_version > 9))
+                || (opts.server_minor_version > SVN_VER_MINOR))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
               }
             break;
           }
+        case sqlite_log_opt:
+          svn_sqlite__dbg_enable_errorlog();
+          break;
 #if APR_HAS_THREADS
         case parallel_opt:
           parallel = TRUE;

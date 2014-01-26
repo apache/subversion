@@ -788,6 +788,13 @@ get_l2p_header_body(l2p_header_t **header,
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   page_count = (apr_size_t)value;
 
+  if (result->first_revision > revision
+      || result->first_revision + result->revision_count <= revision)
+    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_CORRUPTION, NULL,
+                      _("Corrupt L2P index for r%ld only covers r%ld:%ld"),
+                      revision, result->first_revision,
+                      result->first_revision + result->revision_count);
+
   /* allocate the page tables */
   result->page_table
     = apr_pcalloc(pool, page_count * sizeof(*result->page_table));

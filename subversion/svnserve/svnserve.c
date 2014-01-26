@@ -660,7 +660,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock;
-  apr_file_t *in_file, *out_file;
   apr_sockaddr_t *sa;
   svn_error_t *err;
   apr_getopt_t *os;
@@ -668,7 +667,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   serve_params_t params;
   const char *arg;
   apr_status_t status;
+#ifndef WIN32
   apr_proc_t proc;
+#endif
 #if APR_HAS_THREADS && !HAVE_THREADPOOLS
   apr_threadattr_t *tattr;
   apr_thread_t *tid;
@@ -1009,6 +1010,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       apr_pool_t *connection_pool;
       svn_ra_svn_conn_t *conn;
+      apr_file_t *in_file, *out_file;
 
       params.tunnel = (run_mode == run_mode_tunnel);
       apr_pool_cleanup_register(pool, pool, apr_pool_cleanup_null,

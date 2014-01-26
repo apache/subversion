@@ -788,6 +788,10 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
       changed_path = key;
       change = val;
 
+      /* If there was no mergeinfo change on this item, ignore it. */
+      if (change->mergeinfo_mod == svn_tristate_false)
+        continue;
+
       /* If there was no property change on this item, ignore it. */
       if (! change->prop_mod)
         continue;

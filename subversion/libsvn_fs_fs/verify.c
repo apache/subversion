@@ -233,6 +233,8 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
 
   svn_pool_destroy(iterpool);
 
+  SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
+
   return SVN_NO_ERROR;
 }
 
@@ -320,6 +322,8 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
     }
 
   svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_fs_fs__close_revision_file(&rev_file));
 
   return SVN_NO_ERROR;
 }
@@ -575,6 +579,8 @@ compare_p2l_to_rev(svn_fs_t *fs,
     }
 
   svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
   return SVN_NO_ERROR;
 }

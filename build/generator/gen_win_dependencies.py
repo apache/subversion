@@ -168,9 +168,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # NLS options
     self.enable_nls = None
 
-    # ML (assembler) is disabled by default; use --enable-ml to detect
-    self.enable_ml = None
-
     for opt, val in options:
       if opt == '--with-berkeley-db':
         self.bdb_path = val
@@ -215,8 +212,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.enable_nls = 1
       elif opt == '--enable-bdb-in-apr-util':
         self.configure_apr_util = 1
-      elif opt == '--enable-ml':
-        self.enable_ml = 1
       elif opt == '--disable-shared':
         self.disable_shared = 1
       elif opt == '--with-static-apr':
@@ -374,16 +369,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_lib_dir = os.path.join(self.apr_path, 'LibD')
     else:
       lib_name = 'libapr%s.lib' % suffix
-      lib_dir = os.path.join(self.apr_path, 'Release')
-      
-      if not os.path.isdir(lib_dir) and \
-         os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
+
+      if os.path.isfile(os.path.join(self.apr_path, 'lib', lib_name)):
         # Installed APR instead of APR-Source
         lib_dir = os.path.join(self.apr_path, 'lib')
-        debug_lib_dir = lib_dir
+        debug_lib_dir = None
       else:
-        debug_lib_dir = os.path.join(self.apr_path, 'Debug')
-        
+        lib_dir = os.path.join(self.apr_path, 'Release')
+        if os.path.isfile(os.path.join(self.apr_path, 'Debug', lib_name)):
+          debug_lib_dir = os.path.join(self.apr_path, 'Debug')
+        else:
+          debug_lib_dir = None
+
       dll_name = 'libapr%s.dll' % suffix
       if os.path.isfile(os.path.join(lib_dir, dll_name)):
         dll_dir = lib_dir
@@ -393,7 +390,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
         
     bin_files = os.listdir(dll_dir)
-    if debug_dll_dir:
+    if debug_dll_dir and os.path.isdir(debug_dll_dir):
       debug_bin_files = os.listdir(debug_dll_dir)
     else:
       debug_bin_files = bin_files 
@@ -498,7 +495,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
 
     bin_files = os.listdir(dll_dir)
-    if debug_dll_dir:
+    if debug_dll_dir and os.path.isdir(debug_dll_dir):
       debug_bin_files = os.listdir(debug_dll_dir)
     else:
       debug_bin_files = bin_files 
@@ -731,8 +728,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                 self.zlib_version,
                                                 debug_lib_name=debug_lib_name,
                                                 is_src=is_src)
-    if is_src:
-      self._find_ml()
 
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
@@ -1143,24 +1138,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._libraries['swig'] = SVNCommonLibrary('swig', inc_dirs, lib_dir, None,
                                                swig_ver)
     return True
-
-  def _find_ml(self):
-    "Check if the ML assembler is in the path"
-    if not self.enable_ml:
-      self.have_ml = 0
-      return
-    fp = os.popen('ml /help', 'r')
-    try:
-      line = fp.readline()
-      if line:
-        msg = 'Found ML, ZLib build will use ASM sources'
-        self.have_ml = 1
-      else:
-        msg = 'Could not find ML, ZLib build will not use ASM sources'
-        self.have_ml = 0
-      print('%s\n' % (msg,))
-    finally:
-      fp.close()
 
   def _get_serf_version(self, inc_dir):
     "Retrieves the serf version from serf.h"

@@ -138,12 +138,12 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
 
 /* Add a change to the changes record for filesystem FS in transaction
    TXN_ID.  Mark path PATH, having node-id ID, as changed according to
-   the type in CHANGE_KIND.  If the text representation was changed
-   set TEXT_MOD to TRUE, and likewise for PROP_MOD.  If this change
-   was the result of a copy, set COPYFROM_REV and COPYFROM_PATH to the
-   revision and path of the copy source, otherwise they should be set
-   to SVN_INVALID_REVNUM and NULL.  Perform any temporary allocations
-   from POOL. */
+   the type in CHANGE_KIND.  If the text representation was changed set
+   TEXT_MOD to TRUE, and likewise for PROP_MOD as well as MERGEINFO_MOD.
+   If this change was the result of a copy, set COPYFROM_REV and
+   COPYFROM_PATH to the revision and path of the copy source, otherwise
+   they should be set to SVN_INVALID_REVNUM and NULL.  Perform any
+   temporary allocations from POOL. */
 svn_error_t *
 svn_fs_fs__add_change(svn_fs_t *fs,
                       const svn_fs_fs__id_part_t *txn_id,
@@ -152,6 +152,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
                       svn_fs_path_change_kind_t change_kind,
                       svn_boolean_t text_mod,
                       svn_boolean_t prop_mod,
+                      svn_boolean_t mergeinfo_mod,
                       svn_node_kind_t node_kind,
                       svn_revnum_t copyfrom_rev,
                       const char *copyfrom_path,
