@@ -6606,6 +6606,7 @@ def windows_update_backslash(sbox):
     expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
     svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail() # Tries to modify unlocked part of working copy; found via r1561425
 def update_moved_away(sbox):
   "update subtree of moved away"
 
