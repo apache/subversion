@@ -19,9 +19,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       be able to serve large numbers of connections with a limited number
       of threads.
     * fsfs: new format 7 with more efficient logical addressing (r1547045 et al)
-    * fsfs: support background pack handling (r1553051)
-    * fsfs: limit delta chains from crossing too many shards (r1554942)
-    * fsfs: option to configure compression level in deltas (r1559748)
 
   - Minor new features and improvements:
     * new 'diff-ignore-content-type' runtime configuration option.
@@ -45,7 +42,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * log: support for displaying moves (r1525464 et al)
     * minor speed up in string to time conversion (r1533387)
     * list: remove some unnecessary work from implementation (r1533392)
-    * fsfs: minor tuning of get_dag hot path (r1533396)
     * windows: speed up console output (r1533994)
     * windows: accept intermediate certs with CRYPTOAPI based ssl
       validation (r1534149)
@@ -55,9 +51,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * only use revprop caching if supported efficiently (r1543593)
     * svnserve: output errors in a more standard way (r1544250)
     * faster parsing of config file comments (r1544716)
-    * fsfs: reduce overhead of parsing revnode structures (r1544717)
-    * fsfs: don't try to read revprops for a new transaction (r1544719)
-    * fsfs: avoid trying to open digest files that don't exist (r1544721)
     * avoid trying to open the hooks-env file when it doesn't exist (r1544721)
     * svnserve: provide the same logging detail in "run once" mode as provided
       in the log file (r1544731)
@@ -65,17 +58,27 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * wc: optimize SQLite queries against wc db (r154511)
     * wc: reduce the number of locks and transactions required (r1545127 et al)
     * cat: add '--ignore-keywords' option (r1547517)
-    * fsfs: temporary transaction properties are preserved when commit is
-      interrupted (r1549907 et al)
     * merge and mergeinfo: use fewer ra sessions (r1552265)
-    * fsfs: speed up noderev validity check (r1553053)
-    * fsfs: Use sorted array instead of hash for directory representation
-      internally, this minimizes some overhead (r1554711)
-    * fsfs: speed up node relation comparison (r1554807)
-    * fsfs: skip decoding txdelta windows that are already cached (r1555284)
+    * fsfs: limit delta chains from crossing too many shards (r1554942)
+    * fsfs: option to configure compression level in deltas (r1559748)
     * fsfs: enable dir and prop deltas and compressed revprops by default for
       fsfs formats that support it (r1555286)
+    * fsfs: avoid out of date errors from files in a directory changing when
+      you change a property on the directory (r1558224)
+    * fsfs: temporary transaction properties are preserved when commit is
+      interrupted (r1549907 et al)
+    * fsfs: don't try to read revprops for a new transaction (r1544719)
+    * fsfs: avoid trying to open digest files that don't exist (r1544721)
+    * fsfs: Use sorted array instead of hash for directory representation
+      internally, this minimizes some overhead (r1554711)
+    * fsfs: skip decoding txdelta windows that are already cached (r1555284)
     * fsfs: avoid constructing fulltext when delta we need is stored (r1555297)
+    * fsfs: improvements to format 6 reading/writing (r1517479)
+    * fsfs: reduce overhead of parsing noderev structures (r1544717)
+    * fsfs: speed up node relation comparison (r1554807)
+    * fsfs: speed up critical open_path() call (r1483301 et al)
+    * fsfs: speed up node verification (r1520421 et al)
+    * fsfs: speed up serialization into cache buffer format (r1505056)
     * svnadmin: don't display warnings as errors (r1556297)
     * ra_serf: avoid caching properties in the update editor (r1557538)
     * ra_serf: decrease latency of requests to get directory contents by
@@ -99,17 +102,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * ra_serf: improve memory usage in commit processing (r1520028)
     * report progress as cumulative across all sessions (issue #3260)
     * ra_serf: don't send DAV headers with GET requests (r1517472)
-    * fsfs: speed up critical open_path() call (r1483301)
     * mod_dav_svn: SVNCacheTextDeltas defaults to on (r1517479)
-    * fsfs: improvements to format 6 reading/writing (r1517479)
-    * fsfs: speed up node verification (r1520421)
     * fs: improve scability of fs_open and similar functions (r1523450 et al)
     * svnserve: improve performance and scability (r1523465 et al)
     * svnadmin verify: output progress messages to stdout (r1471095)
     * svnadmin crashtest: make output less misleading (r1486046) 
     * mod_dav_svn: discover copy to src earlier in some cases (r1537440)
-    * fsfs: avoid out of date errors from files in a directory changing when
-      you change a property on the directory (r1558224)
     * speed up mergeinfo parsing (r1483292, r1483309 et al)
     * optimize hash lookups used throughout subversion (r1483434 et al)
     * log: optimize string handling in repos layer (r1483570, r1483572)
@@ -123,7 +121,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * patch: apply ignore settings when deciding to delete dirs (r1490378)
     * use a cheaper ra operation for common client calculation (r1496468 et al)
     * ra_svn: avoid unnecessary work when doing a blame (r1503046)
-    * fsfs: speed up serialization into cache buffer format (r1505056)
     * optimize reading files into memory if size is known (r1505068)
 
   - Client-side bugfixes:
