@@ -264,11 +264,3 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1548105
-   mod_dav_svn: Fix SVNAllowBulkUpdates directive merging.
-   Justification:
-     'SVNAllowBulkUpdates on' does not override other values
-     configured for other <Location>
-   Votes:
-     +1: ivan, rhuijben, stefan2
-
