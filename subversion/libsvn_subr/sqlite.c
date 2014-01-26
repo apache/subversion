@@ -789,7 +789,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
            We simply want umask permissions. */
         SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
         if (kind == svn_node_none)
-          SVN_ERR(svn_io_file_create_empty(path, scratch_pool));
+          SVN_ERR(svn_io_file_create(path, "", scratch_pool));
       }
 #endif
 
