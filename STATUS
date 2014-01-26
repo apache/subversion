@@ -249,6 +249,34 @@ Candidate changes:
      +1: breser
      +0: rhuijben (looks good, untested)
 
+ * r1547454
+   In FSFS, omit config file when creating pre-1.5 format repositories.
+   Justification:
+     Old SVN versions won't preserve this file in hotcopy.  Later versions
+     might also behave inconsistently in the presence of this file if their
+     feature availability check is incomplete.
+   Votes:
+     +1: stefan2
+
+ * r1561426
+   In FSFS, skip the generation of uniquifiers if rep-shared is no supported.
+   Branch: ^/subversion/branches/1.8.x-r1561426
+   Justification:
+     Although we won't write uniquifiers to disk in pre-1.5 repo formats,
+     having them around in run-time data structures is still not a good idea.
+   Votes:
+     +1: stefan2
+
+ * r1560723, r1561419, r1561427, r1561428
+   Fix the handling of pre-1.4 FSFS repositories.
+   Branch: ^/subversion/branches/1.8.x-r1560723-and-friends
+   Justification:
+     Without this, old SVN versions won't be able to e.g. hotcopy those
+     repos once 1.8.x made a commit in them.  Also, fix our hotcopy code
+     and make it cope with repositories broken by previous 1.8.x releases.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
