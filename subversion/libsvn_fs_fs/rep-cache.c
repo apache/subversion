@@ -94,7 +94,7 @@ open_rep_cache(void *baton,
     if (!exists)
       {
         const char *current = svn_fs_fs__path_current(fs, pool);
-        svn_error_t *err = svn_io_file_create_empty(db_path, pool);
+        svn_error_t *err = svn_io_file_create(db_path, "", pool);
 
         if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
           /* A real error. */
