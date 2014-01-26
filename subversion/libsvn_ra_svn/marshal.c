@@ -40,6 +40,7 @@
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
 #include "svn_ctype.h"
+#include "svn_sorts.h"
 #include "svn_time.h"
 
 #include "ra_svn.h"
@@ -2607,7 +2608,7 @@ svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
   *prop_mods = SVN_RA_SVN_UNSPECIFIED_NUMBER;
 
   /* top-level elements (mandatory) */
-  SVN_ERR(svn_ra_svn__read_check_array_size(items, 3, 4));
+  SVN_ERR(svn_ra_svn__read_check_array_size(items, 3, INT_MAX));
   SVN_ERR(svn_ra_svn__read_string(items, 0, cpath));
   SVN_ERR(svn_ra_svn__read_word(items, 1, action));
 
@@ -2621,12 +2622,10 @@ svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
     }
 
   /* second sub-structure (optional) */
-  if (items->nelts == 4)
+  if (items->nelts >= 4)
     {
       SVN_ERR(svn_ra_svn__read_list(items, 3, &sub_items));
-      SVN_ERR(svn_ra_svn__read_check_array_size(sub_items, 0, 3));
-
-      switch (sub_items->nelts)
+      switch (MIN(3, sub_items->nelts))
         {
           case 3 : SVN_ERR(svn_ra_svn__read_boolean(sub_items, 2, prop_mods));
           case 2 : SVN_ERR(svn_ra_svn__read_boolean(sub_items, 1, text_mods));
