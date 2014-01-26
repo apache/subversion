@@ -247,6 +247,7 @@ Candidate changes:
      versions that incorrectly include this in their --cppflags output.
    Votes:
      +1: breser
+     +0: rhuijben (looks good, untested)
 
 Veto-blocked changes:
 =====================
