@@ -1445,10 +1445,14 @@ set_uniquifier(svn_fs_t *fs,
                apr_pool_t *pool)
 {
   svn_fs_fs__id_part_t temp;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(get_new_txn_node_id(&temp, fs, &rep->txn_id, pool));
-  rep->uniquifier.noderev_txn_id = rep->txn_id;
-  rep->uniquifier.number = temp.number;
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    {
+      SVN_ERR(get_new_txn_node_id(&temp, fs, &rep->txn_id, pool));
+      rep->uniquifier.noderev_txn_id = rep->txn_id;
+      rep->uniquifier.number = temp.number;
+    }
 
   return SVN_NO_ERROR;
 }
