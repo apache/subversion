@@ -264,17 +264,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1535532
-   Make the certificate verification handling in ra_serf properly ask multiple
-   providers for acceptance of certificate failures.
-   Justification:
-     Without this patch it is not possible to have one hook accept invalid
-     ca roots, while another provider accepts an invalid date on a certificate.
-     Probably only interesting for bindings and code that explicitly tests
-     our certificate handling behavior.
-   Votes:
-     +1: rhuijben, stefan2, steveking
-
  * r1560690, r1560701
    Fix repository-WC copies into relocated working copies and some wc-wc
    copy problems.
