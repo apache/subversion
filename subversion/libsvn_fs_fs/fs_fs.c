@@ -7840,7 +7840,7 @@ write_hash_rep(representation_t *rep,
 
       /* update the representation */
       rep->size = whb->size;
-      rep->expanded_size = 0;
+      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -9063,7 +9063,9 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
      stored in the representation. */
   baton.file = rev_file;
   baton.pool = pool;
-  baton.remaining = data_rep->expanded_size;
+  baton.remaining = data_rep->expanded_size
+                  ? data_rep->expanded_size
+                  : data_rep->size;
   stream = svn_stream_create(&baton, pool);
   svn_stream_set_read(stream, read_handler_recover);
 
@@ -10905,18 +10907,30 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
     {
       apr_off_t root_offset;
       apr_file_t *rev_file;
+      apr_size_t len;
+      char next_node_id_buf[MAX_KEY_SIZE] = "0";
+      char next_copy_id_buf[MAX_KEY_SIZE] = "0";
 
-      if (dst_ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
-        SVN_ERR(update_min_unpacked_rev(dst_fs, scratch_pool));
+      /* Make sure NEW_YOUNGEST is a valid revision in DST_FS.
+         Because a crash in hotcopy requires at least a full recovery run,
+         it is safe to temporarily reset the max IDs to 0. */
+      SVN_ERR(write_current(dst_fs, new_youngest, next_node_id,
+                            next_copy_id, scratch_pool));
 
       SVN_ERR(open_pack_or_rev_file(&rev_file, dst_fs, new_youngest,
                                     scratch_pool));
       SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
                                       dst_fs, new_youngest, scratch_pool));
       SVN_ERR(recover_find_max_ids(dst_fs, new_youngest, rev_file,
-                                   root_offset, next_node_id, next_copy_id,
-                                   scratch_pool));
+                                   root_offset, next_node_id_buf,
+                                   next_copy_id_buf, scratch_pool));
       SVN_ERR(svn_io_file_close(rev_file, scratch_pool));
+
+      /* We store the _next_ ids. */
+      len = strlen(next_node_id_buf);
+      svn_fs_fs__next_key(next_node_id_buf, &len, next_node_id);
+      len = strlen(next_copy_id_buf);
+      svn_fs_fs__next_key(next_copy_id_buf, &len, next_copy_id);
     }
 
   /* Update 'current'. */
@@ -11384,8 +11398,20 @@ hotcopy_body(void *baton, apr_pool_t *pool)
                                       rev, max_files_per_dir,
                                       iterpool));
 
-      /* After completing a full shard, update 'current'. */
-      if (max_files_per_dir && rev % max_files_per_dir == 0)
+      /* After completing a full shard, update 'current'.  For non-sharded
+       * repositories, update after every revision.
+       * 
+       * This "checkpoints" the progress we made so far and prevents us from
+       * starting all over again if the hotcopy process got canceled.  It is
+       * not _necessary_ to update "current" until the very end (see further
+       * below); it's a performance trade-off between different scenarios.
+       *
+       * Repositories with global IDs must do a full repo scan here to find
+       * the latest IDs.  Because that's too expensive, we don't checkpoint
+       * pre-1.4 repositories.
+       */
+      if (   (!max_files_per_dir || rev % max_files_per_dir == 0)
+          && dst_ffd->format >= SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
         SVN_ERR(hotcopy_update_current(&dst_youngest, dst_fs, rev, iterpool));
     }
   svn_pool_destroy(iterpool);
