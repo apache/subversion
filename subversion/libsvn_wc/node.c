@@ -220,12 +220,9 @@ svn_wc__internal_get_repos_info(svn_revnum_t *revision,
     }
   else /* added, or WORKING incomplete */
     {
-      const char *op_root_abspath = NULL;
-
       /* We have an addition. scan_addition() will find the intended
          repository location by scanning up the tree.  */
-      SVN_ERR(svn_wc__db_scan_addition(NULL, repos_relpath
-                                                    ? &op_root_abspath : NULL,
+      SVN_ERR(svn_wc__db_scan_addition(NULL,  NULL,
                                        repos_relpath, repos_root_url,
                                        repos_uuid, NULL, NULL, NULL, NULL,
                                        db, local_abspath,
