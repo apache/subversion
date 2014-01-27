@@ -105,17 +105,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1404912, r1413402
-   Allow compiling against Cyrus sasl 2.1.25 by 'fixing' a pointer cast.
-   Notes:
-     The structure contains a pointer to function that differs based
-     on what the structure is used for. The type in the structure
-     has changed between various sasl versions, but the
-     implementation still uses the real prototype when calling.
-   Justification:
-     (Without this patch the Windows buildbot is broken for 1.7)
-   Votes:
-     +1: rhuijben, stefan2
-     +1: brane (could not test the build on OSX because svnserve crashes
-                during 'make check ENABLE_SASL=1')
