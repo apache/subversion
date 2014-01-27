@@ -706,7 +706,7 @@ read_stream_uint(svn_stream_t *stream, apr_uint64_t *result)
   do
     {
       apr_size_t len = 1;
-      SVN_ERR(svn_stream_read(stream, (char *)&c, &len));
+      SVN_ERR(svn_stream_read_full(stream, (char *)&c, &len));
       if (len != 1)
         return svn_error_create(SVN_ERR_CORRUPT_PACKED_DATA, NULL,
                                 _("Unexpected end of stream"));
@@ -949,7 +949,7 @@ read_stream_data(svn_stream_t *stream,
 
   svn_stringbuf_ensure(compressed, compressed_len);
   compressed->len = compressed_len;
-  SVN_ERR(svn_stream_read(stream, compressed->data, &compressed->len));
+  SVN_ERR(svn_stream_read_full(stream, compressed->data, &compressed->len));
   compressed->data[compressed_len] = '\0';
 
   SVN_ERR(svn__decompress(compressed, uncompressed, uncompressed_len));
@@ -1033,7 +1033,7 @@ svn_packed__data_read(svn_packed__data_root_t **root_p,
     = svn_stringbuf_create_ensure((apr_size_t)tree_struct_size, scratch_pool);
   tree_struct->len = (apr_size_t)tree_struct_size;
   
-  SVN_ERR(svn_stream_read(stream, tree_struct->data, &tree_struct->len));
+  SVN_ERR(svn_stream_read_full(stream, tree_struct->data, &tree_struct->len));
   tree_struct->data[tree_struct->len] = '\0';
 
   /* reconstruct tree structure */

@@ -1587,7 +1587,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       while (1)
         {
           len = sizeof(buf);
-          err = svn_stream_read(contents, buf, &len);
+          err = svn_stream_read_full(contents, buf, &len);
           if (err)
             break;
           if (len > 0)

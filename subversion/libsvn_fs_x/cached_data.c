@@ -1986,7 +1986,7 @@ get_dir_contents(apr_hash_t *entries,
 
       /* The representation is immutable.  Read it normally. */
       SVN_ERR(svn_fs_x__get_contents(&contents, fs, noderev->data_rep, text_pool));
-      SVN_ERR(svn_stream_read(contents, text->data, &text->len));
+      SVN_ERR(svn_stream_read_full(contents, text->data, &text->len));
       SVN_ERR(svn_stream_close(contents));
 
       /* de-serialize hash */

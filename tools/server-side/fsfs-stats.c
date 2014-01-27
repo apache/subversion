@@ -910,7 +910,7 @@ read_windows(apr_array_header_t **windows,
   content->data += 3;
   content->len -= 3;
   stream = svn_stream_from_stringbuf(content, pool);
-  SVN_ERR(svn_stream_read(stream, &version, &len));
+  SVN_ERR(svn_stream_read_full(stream, &version, &len));
 
   /* read the windows from that stream */
   while (TRUE)
@@ -921,7 +921,7 @@ read_windows(apr_array_header_t **windows,
 
       len = sizeof(dummy);
       SVN_ERR(svn_stream_mark(stream, &mark, pool));
-      SVN_ERR(svn_stream_read(stream, &dummy, &len));
+      SVN_ERR(svn_stream_read_full(stream, &dummy, &len));
       if (len == 0)
         break;
 
