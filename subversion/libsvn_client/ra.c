@@ -829,7 +829,7 @@ svn_client__repos_locations(const char **start_url,
           svn_boolean_t is_copy;
 
           SVN_ERR(svn_wc__node_get_origin(&is_copy, &peg_revnum, &repos_relpath,
-                                          &repos_root_url, NULL, NULL,
+                                          &repos_root_url, NULL, NULL, NULL,
                                           ctx->wc_ctx, local_abspath_or_url,
                                           FALSE, subpool, subpool));
 
@@ -1091,6 +1091,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
       /* The pristine contents refer to the BASE, or to the pristine of
          a copy/move to this location. Fetch the correct revision.  */
       SVN_ERR(svn_wc__node_get_origin(NULL, revision, NULL, NULL, NULL, NULL,
+                                      NULL,
                                       reb->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
     }
@@ -1135,6 +1136,7 @@ svn_client__ra_provide_props(apr_hash_t **props,
       /* The pristine props refer to the BASE, or to the pristine props of
          a copy/move to this location. Fetch the correct revision.  */
       SVN_ERR(svn_wc__node_get_origin(NULL, revision, NULL, NULL, NULL, NULL,
+                                      NULL,
                                       reb->wc_ctx, local_abspath, FALSE,
                                       scratch_pool, scratch_pool));
     }

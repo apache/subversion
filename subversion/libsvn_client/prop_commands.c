@@ -878,25 +878,19 @@ svn_client_propget5(apr_hash_t **props,
       if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind)
           || SVN_CLIENT__REVKIND_NEEDS_WC(revision->kind))
         {
-          svn_revnum_t origin_rev;
           const char *repos_relpath;
           const char *repos_root_url;
-          const char *repos_uuid;
           const char *local_abspath;
-          const char *copy_root_abspath;
-          svn_boolean_t is_copy;
 
           SVN_ERR(svn_dirent_get_absolute(&local_abspath, target,
                                           scratch_pool));
 
           if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
             {
-              SVN_ERR(svn_wc__node_get_origin(&is_copy,
-                                              &origin_rev,
+              SVN_ERR(svn_wc__node_get_origin(NULL, NULL,
                                               &repos_relpath,
                                               &repos_root_url,
-                                              &repos_uuid,
-                                              &copy_root_abspath,
+                                              NULL, NULL, NULL,
                                               ctx->wc_ctx,
                                               local_abspath,
                                               FALSE, /* scan_deleted */
@@ -1281,12 +1275,9 @@ get_remote_props(const char *path_or_url,
   if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind)
       || SVN_CLIENT__REVKIND_NEEDS_WC(revision->kind))
     {
-      svn_revnum_t origin_rev;
       const char *repos_relpath;
       const char *repos_root_url;
-      const char *repos_uuid;
       const char *local_abspath;
-      const char *copy_root_abspath;
       svn_boolean_t is_copy;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
@@ -1295,11 +1286,10 @@ get_remote_props(const char *path_or_url,
       if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_revision->kind))
         {
           SVN_ERR(svn_wc__node_get_origin(&is_copy,
-                                          &origin_rev,
+                                          NULL,
                                           &repos_relpath,
                                           &repos_root_url,
-                                          &repos_uuid,
-                                          &copy_root_abspath,
+                                          NULL, NULL, NULL,
                                           ctx->wc_ctx,
                                           local_abspath,
                                           FALSE, /* scan_deleted */

@@ -505,7 +505,7 @@ harvest_not_present_for_copy(svn_wc_context_t *wc_ctx,
           /* Determine from what parent we would be the deleted child */
           SVN_ERR(svn_wc__node_get_origin(
                               NULL, &parent_rev, &parent_repos_relpath,
-                              &parent_repos_root_url, NULL, NULL,
+                              &parent_repos_root_url, NULL, NULL, NULL,
                               wc_ctx,
                               svn_dirent_dirname(this_abspath,
                                                   scratch_pool),
@@ -943,7 +943,7 @@ harvest_status_callback(void *status_baton,
            * directory. In either case, we require the op-root of the parent
            * to be part of the commit. See issue #4059. */
           SVN_ERR(svn_wc__node_get_origin(&parent_is_copy, NULL, NULL, NULL,
-                                          NULL, &copy_root_abspath,
+                                          NULL, NULL, &copy_root_abspath,
                                           wc_ctx, parent_abspath,
                                           FALSE, scratch_pool, scratch_pool));
 
