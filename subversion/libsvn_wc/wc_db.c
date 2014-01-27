@@ -12143,37 +12143,37 @@ scan_addition(svn_wc__db_status_t *status,
       {
         const char *base_relpath;
 
-    while (TRUE)
-      {
-        const char *tmp;
+        while (TRUE)
+          {
+            const char *tmp;
 
-        SVN_ERR(svn_sqlite__reset(stmt));
+            SVN_ERR(svn_sqlite__reset(stmt));
 
-        /* Pointing at op_depth, look at the parent */
-        repos_prefix_path =
-          svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
-                           repos_prefix_path,
-                           scratch_pool);
-        op_root_relpath = svn_relpath_dirname(op_root_relpath, scratch_pool);
+            /* Pointing at op_depth, look at the parent */
+            repos_prefix_path =
+                svn_relpath_join(svn_relpath_basename(op_root_relpath, NULL),
+                                 repos_prefix_path,
+                                 scratch_pool);
+            op_root_relpath = svn_relpath_dirname(op_root_relpath, scratch_pool);
 
 
-        SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, op_root_relpath));
-        SVN_ERR(svn_sqlite__step(&have_row, stmt));
+            SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, op_root_relpath));
+            SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-        if (! have_row)
-          break;
+            if (! have_row)
+              break;
 
-        op_depth = svn_sqlite__column_int(stmt, 0);
+            op_depth = svn_sqlite__column_int(stmt, 0);
 
-        /* Skip to op_depth */
-        tmp = op_root_relpath;
+            /* Skip to op_depth */
+            tmp = op_root_relpath;
 
-        op_root_relpath = svn_relpath_limit(op_root_relpath, op_depth,
-                                              scratch_pool);
-        repos_prefix_path = svn_relpath_join(
-                              svn_relpath_skip_ancestor(op_root_relpath, tmp),
-                              repos_prefix_path, scratch_pool);
-      }
+            op_root_relpath = svn_relpath_limit(op_root_relpath, op_depth,
+                                                scratch_pool);
+            repos_prefix_path = svn_relpath_join(
+                                                 svn_relpath_skip_ancestor(op_root_relpath, tmp),
+                                                 repos_prefix_path, scratch_pool);
+          }
 
       SVN_ERR(svn_sqlite__reset(stmt));
 
