@@ -759,7 +759,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   /* If PATH itself has been added there is no need to filter. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,  &target_base.rev, &repos_relpath,
                                   &target_base.repos_root_url,
-                                  &target_base.repos_uuid, NULL,
+                                  &target_base.repos_uuid, NULL, NULL,
                                   ctx->wc_ctx, target_abspath, FALSE,
                                   pool, pool));
 

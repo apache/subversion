@@ -528,27 +528,6 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-
-  SVN_ERR(svn_wc__db_read_info(&status,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  *is_deleted = (status == svn_wc__db_status_deleted);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
@@ -949,6 +928,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             const char **repos_relpath,
                             const char **repos_root_url,
                             const char **repos_uuid,
+                            svn_depth_t *depth,
                             const char **copy_root_abspath,
                             svn_wc__db_t *db,
                             const char *local_abspath,
@@ -969,7 +949,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, repos_relpath,
                                repos_root_url, repos_uuid, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               depth, NULL, NULL,
                                &original_repos_relpath,
                                &original_repos_root_url,
                                &original_repos_uuid, &original_revision,
@@ -1076,6 +1056,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        svn_depth_t *depth,
                         const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
@@ -1085,7 +1066,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
 {
   return svn_error_trace(svn_wc__internal_get_origin(is_copy, revision,
                            repos_relpath, repos_root_url, repos_uuid,
-                           copy_root_abspath,
+                           depth, copy_root_abspath,
                            wc_ctx->db, local_abspath, scan_deleted,
                            result_pool, scratch_pool));
 }
@@ -1361,16 +1342,22 @@ svn_wc__node_was_moved_away(const char **moved_to_abspath,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_boolean_t is_deleted;
+  svn_wc__db_status_t status;
 
   if (moved_to_abspath)
     *moved_to_abspath = NULL;
   if (op_root_abspath)
     *op_root_abspath = NULL;
 
-  SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, local_abspath,
-                                         scratch_pool));
-  if (is_deleted)
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status == svn_wc__db_status_deleted)
     SVN_ERR(svn_wc__db_scan_deletion(NULL, moved_to_abspath, NULL,
                                      op_root_abspath, wc_ctx->db,
                                      local_abspath,

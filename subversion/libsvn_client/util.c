@@ -224,7 +224,8 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                   &relpath,
                                   &(*origin_p)->repos_root_url,
                                   &(*origin_p)->repos_uuid,
-                                  NULL, ctx->wc_ctx, wc_abspath,
+                                  NULL, NULL,
+                                  ctx->wc_ctx, wc_abspath,
                                   FALSE /* scan_deleted */,
                                   result_pool, scratch_pool));
   if ((*origin_p)->repos_root_url && relpath)

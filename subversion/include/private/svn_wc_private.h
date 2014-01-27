@@ -465,18 +465,6 @@ svn_wc__node_get_repos_info(svn_revnum_t *revision,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-
-
-/**
- * Get the depth of @a local_abspath using @a wc_ctx.  If @a local_abspath is
- * not in the working copy, return @c SVN_ERR_WC_PATH_NOT_FOUND.
- */
-svn_error_t *
-svn_wc__node_get_depth(svn_depth_t *depth,
-                       svn_wc_context_t *wc_ctx,
-                       const char *local_abspath,
-                       apr_pool_t *scratch_pool);
-
 /**
  * Get the changed revision, date and author for @a local_abspath using @a
  * wc_ctx.  Allocate the return values in @a result_pool; use @a scratch_pool
@@ -524,6 +512,8 @@ svn_wc__node_get_url(const char **url,
  * If not NULL, sets @a revision, @a repos_relpath, @a repos_root_url and
  * @a repos_uuid to the original (if a copy) or their current values.
  *
+ * If not NULL, set @a depth, to the recorded depth on @a local_abspath.
+ *
  * If @a copy_root_abspath is not NULL, and @a *is_copy indicates that the
  * node was copied, set @a *copy_root_abspath to the local absolute path of
  * the root of the copied subtree containing the node. If the copied node is
@@ -542,24 +532,13 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                         const char **repos_relpath,
                         const char **repos_root_url,
                         const char **repos_uuid,
+                        svn_depth_t *depth,
                         const char **copy_root_abspath,
                         svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t scan_deleted,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
-
-/**
- * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using
- * @a wc_ctx.  If @a local_abspath is not in the working copy, return
- * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
- * allocations.
- */
-svn_error_t *
-svn_wc__node_is_status_deleted(svn_boolean_t *is_deleted,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *deleted_ancestor_abspath to the root of the delete operation

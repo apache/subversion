@@ -1848,6 +1848,7 @@ diff_repos_wc(const char *path_or_url1,
   svn_revnum_t cf_revision;
   const char *cf_repos_relpath;
   const char *cf_repos_root_url;
+  svn_depth_t cf_depth;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
@@ -1927,7 +1928,7 @@ diff_repos_wc(const char *path_or_url1,
                                   &cf_revision,
                                   &cf_repos_relpath,
                                   &cf_repos_root_url,
-                                  NULL, NULL,
+                                  NULL, &cf_depth, NULL,
                                   ctx->wc_ctx, abspath2,
                                   FALSE, pool, pool));
 
@@ -1960,7 +1961,6 @@ diff_repos_wc(const char *path_or_url1,
     {
       const char *copyfrom_parent_url;
       const char *copyfrom_basename;
-      svn_depth_t copy_depth;
 
       cmd_baton->repos_wc_diff_target_is_copy = TRUE;
 
@@ -1999,15 +1999,12 @@ diff_repos_wc(const char *path_or_url1,
                               diff_editor, diff_edit_baton, pool));
 
       /* Report the copy source. */
-      SVN_ERR(svn_wc__node_get_depth(&copy_depth, ctx->wc_ctx, abspath2,
-                                     pool));
-
-      if (copy_depth == svn_depth_unknown)
-        copy_depth = svn_depth_infinity;
+      if (cf_depth == svn_depth_unknown)
+        cf_depth = svn_depth_infinity;
 
       SVN_ERR(reporter->set_path(reporter_baton, "",
                                  cf_revision,
-                                 copy_depth, FALSE, NULL, scratch_pool));
+                                 cf_depth, FALSE, NULL, scratch_pool));
 
       if (strcmp(target, copyfrom_basename) != 0)
         SVN_ERR(reporter->link_path(reporter_baton, target,
@@ -2016,7 +2013,7 @@ diff_repos_wc(const char *path_or_url1,
                                                 cf_repos_relpath,
                                                 scratch_pool),
                                     cf_revision,
-                                    copy_depth, FALSE, NULL, scratch_pool));
+                                    cf_depth, FALSE, NULL, scratch_pool));
 
       /* Finish the report to generate the diff. */
       SVN_ERR(reporter->finish_report(reporter_baton, pool));

@@ -1494,7 +1494,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
             continue;
 
           svn_pool_clear(iterpool);
-          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL, NULL,
+          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL,
+                                          NULL, NULL,
                                           ctx->wc_ctx, item->path, FALSE,
                                           scratch_pool, iterpool));
           if (relpath)
@@ -2194,7 +2195,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
                   SVN_ERR(svn_wc__node_get_origin(NULL, &copyfrom_rev,
                                                   &copyfrom_repos_relpath,
                                                   &copyfrom_repos_root_url,
-                                                  NULL, NULL,
+                                                  NULL, NULL, NULL,
                                                   ctx->wc_ctx,
                                                   pair->src_abspath_or_url,
                                                   TRUE, iterpool, iterpool));
