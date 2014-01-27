@@ -242,7 +242,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
     char buffer[4];
     apr_size_t len = 4;
 
-    SVN_ERR(svn_stream_read(contents, buffer, &len));
+    SVN_ERR(svn_stream_read_full(contents, buffer, &len));
     SVN_TEST_ASSERT(len == 4);
     SVN_TEST_ASSERT(memcmp(buffer, data, len) == 0);
   }

@@ -3669,7 +3669,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
 
         /* read from the FS ... */
-        serr = svn_stream_read(stream, block, &bufsize);
+        serr = svn_stream_read_full(stream, block, &bufsize);
         if (serr != NULL)
           {
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

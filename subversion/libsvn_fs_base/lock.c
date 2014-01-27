@@ -496,12 +496,12 @@ svn_fs_base__get_locks(svn_fs_t *fs,
 
       /* Now read that much into a buffer. */
       skel_buf = apr_palloc(pool, skel_len + 1);
-      SVN_ERR(svn_stream_read(stream, skel_buf, &skel_len));
+      SVN_ERR(svn_stream_read_full(stream, skel_buf, &skel_len));
       skel_buf[skel_len] = '\0';
 
       /* Read the extra newline that follows the skel. */
       len = 1;
-      SVN_ERR(svn_stream_read(stream, &c, &len));
+      SVN_ERR(svn_stream_read_full(stream, &c, &len));
       if (c != '\n')
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL, NULL);
 

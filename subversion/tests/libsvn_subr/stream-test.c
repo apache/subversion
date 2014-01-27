@@ -73,7 +73,7 @@ test_stream_from_string(apr_pool_t *pool)
       while (len == TEST_BUF_SIZE)
         {
           /* Read a chunk ... */
-          SVN_ERR(svn_stream_read(stream, buffer, &len));
+          SVN_ERR(svn_stream_read_full(stream, buffer, &len));
 
           /* ... and append the chunk to the stringbuf. */
           svn_stringbuf_appendbytes(outbuf, buffer, len);
@@ -206,7 +206,7 @@ test_stream_compressed(apr_pool_t *pool)
       while (len >= TEST_BUF_SIZE)
         {
           len = TEST_BUF_SIZE;
-          SVN_ERR(svn_stream_read(stream, buf, &len));
+          SVN_ERR(svn_stream_read_full(stream, buf, &len));
           if (len > 0)
             svn_stringbuf_appendbytes(inbuf, buf, len);
         }
@@ -332,17 +332,17 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   stringbuf = svn_stringbuf_create("OneTwo", pool);
   stream = svn_stream_from_stringbuf(stringbuf, pool);
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[3] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "One");
   SVN_ERR(svn_stream_mark(stream, &mark, pool));
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[3] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "Two");
   SVN_ERR(svn_stream_seek(stream, mark));
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[3] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "Two");
 
@@ -351,7 +351,7 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   SVN_ERR(svn_stream_skip(stream, 2));
   /* The remaining line should be empty */
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[len] = '\0';
   SVN_TEST_ASSERT(len == 1);
   SVN_TEST_STRING_ASSERT(buf, "o");
@@ -381,7 +381,7 @@ test_stream_seek_translated(apr_pool_t *pool)
                                                   FALSE, keywords, TRUE, pool);
   /* Seek from outside of keyword to inside of keyword. */
   len = 25;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 25);
   buf[25] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "One$MyKeyword: my keyword");
@@ -389,7 +389,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_reset(translated_stream));
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 4;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 4);
   buf[4] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " was");
@@ -397,7 +397,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 2;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 2);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "as");
@@ -405,13 +405,13 @@ test_stream_seek_translated(apr_pool_t *pool)
   /* Seek from inside of keyword to inside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 9;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 9);
   buf[9] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " expanded");
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 9;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 9);
   buf[9] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " expanded");
@@ -419,7 +419,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 6));
   len = 3;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 3);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "ded");
@@ -427,13 +427,13 @@ test_stream_seek_translated(apr_pool_t *pool)
   /* Seek from inside of keyword to outside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 4;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 4);
   buf[4] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " $Tw");
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 4;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 4);
   buf[4] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " $Tw");
@@ -441,7 +441,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 2;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 2);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "Tw");
@@ -449,13 +449,13 @@ test_stream_seek_translated(apr_pool_t *pool)
   /* Seek from outside of keyword to outside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 1;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 1);
   buf[1] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "o");
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 1;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 1);
   buf[1] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "o");
@@ -463,7 +463,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 1;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 0);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "");
@@ -524,7 +524,7 @@ test_stream_compressed_empty_file(apr_pool_t *pool)
                                  pool, pool));
   stream = svn_stream_compressed(empty_file_stream, pool);
   len = sizeof(buf);
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   if (len > 0)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "Got unexpected result.");

@@ -780,7 +780,7 @@ read_one_byte(unsigned char *byte, svn_stream_t *stream)
   char c;
   apr_size_t len = 1;
 
-  SVN_ERR(svn_stream_read(stream, &c, &len));
+  SVN_ERR(svn_stream_read_full(stream, &c, &len));
   if (len == 0)
     return svn_error_create(SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
                             _("Unexpected end of svndiff input"));
@@ -861,7 +861,7 @@ svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
                              &inslen, &newlen));
   len = inslen + newlen;
   buf = apr_palloc(pool, len);
-  SVN_ERR(svn_stream_read(stream, (char*)buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, (char*)buf, &len));
   if (len < inslen + newlen)
     return svn_error_create(SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
                             _("Unexpected end of svndiff input"));

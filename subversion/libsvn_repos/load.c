@@ -150,7 +150,7 @@ read_key_or_val(char **pbuf,
   char c;
 
   numread = len;
-  SVN_ERR(svn_stream_read(stream, buf, &numread));
+  SVN_ERR(svn_stream_read_full(stream, buf, &numread));
   *actual_length += numread;
   if (numread != len)
     return svn_error_trace(stream_ran_dry());
@@ -158,7 +158,7 @@ read_key_or_val(char **pbuf,
 
   /* Suck up extra newline after key data */
   numread = 1;
-  SVN_ERR(svn_stream_read(stream, &c, &numread));
+  SVN_ERR(svn_stream_read_full(stream, &c, &numread));
   *actual_length += numread;
   if (numread != 1)
     return svn_error_trace(stream_ran_dry());
@@ -343,7 +343,7 @@ parse_text_block(svn_stream_t *stream,
         rlen = (apr_size_t) content_length;
 
       num_to_read = rlen;
-      SVN_ERR(svn_stream_read(stream, buffer, &rlen));
+      SVN_ERR(svn_stream_read_full(stream, buffer, &rlen));
       content_length -= rlen;
       if (rlen != num_to_read)
         return stream_ran_dry();
@@ -654,7 +654,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
                 rlen = (apr_size_t) remaining;
 
               num_to_read = rlen;
-              SVN_ERR(svn_stream_read(stream, buffer, &rlen));
+              SVN_ERR(svn_stream_read_full(stream, buffer, &rlen));
               remaining -= rlen;
               if (rlen != num_to_read)
                 return stream_ran_dry();

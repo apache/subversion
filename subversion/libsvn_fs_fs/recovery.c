@@ -129,7 +129,7 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
     bytes_to_read = (apr_size_t)b->remaining;
   b->remaining -= bytes_to_read;
 
-  return svn_stream_read(b->stream, buffer, &bytes_to_read);
+  return svn_stream_read_full(b->stream, buffer, &bytes_to_read);
 }
 
 /* Part of the recovery procedure.  Read the directory noderev at offset

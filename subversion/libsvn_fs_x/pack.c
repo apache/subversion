@@ -1272,7 +1272,7 @@ write_reps_containers(pack_context_t *context,
       contents->len = representation.expanded_size;
 
       /* The representation is immutable.  Read it normally. */
-      SVN_ERR(svn_stream_read(stream, contents->data, &contents->len));
+      SVN_ERR(svn_stream_read_full(stream, contents->data, &contents->len));
       SVN_ERR(svn_stream_close(stream));
 
       list_index = svn_fs_x__reps_add(container,
