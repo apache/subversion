@@ -290,7 +290,7 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * @a port, open a tunnel to the server and return its file handles,
  * which are owned by @a pool, in @a request and @a response.
  *
- * @a request and @a response are the standard input and output,
+ * @a request and @a response represent the standard input and output,
  * respectively, of the process on the other end of the tunnel.
  *
  * @a tunnel_context will be passed on to the close-unnel callback.
@@ -300,7 +300,7 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
-    apr_file_t **request, apr_file_t **response,
+    svn_stream_t **request, svn_stream_t **response,
     void **tunnel_context, void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port,

@@ -3877,7 +3877,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
 
       /* create the connection, configure ports etc. */
       connection->conn
-        = svn_ra_svn_create_conn3(connection->usock, NULL, NULL,
+        = svn_ra_svn_create_conn4(connection->usock, NULL, NULL,
                                   connection->params->compression_level,
                                   connection->params->zero_copy_limit,
                                   connection->params->error_check_interval,
