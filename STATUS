@@ -140,6 +140,7 @@ Candidate changes:
       of sqlite transactions used)
    Votes:
      +1: rhuijben
+     -0: philip (Doesn't build, needs a branch due to r1539279.)
 
  * r1549858, r1549874
    Make svn_client_proplist4() behave as documented when reporting inherited
