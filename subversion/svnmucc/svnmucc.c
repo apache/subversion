@@ -43,21 +43,19 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
+#include "svn_client_mtcc.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
-#include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_subst.h"
 #include "svn_utf.h"
 #include "svn_version.h"
 
 #include "private/svn_cmdline_private.h"
-#include "private/svn_ra_private.h"
-#include "private/svn_string_private.h"
 
 /* Version compatibility check */
 static svn_error_t *
