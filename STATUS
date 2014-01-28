@@ -107,14 +107,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1537018
-   Fix issue #4440, "Subversion sets permissions on files, when it shouldn't"
-   Justification:
-     Bug introduced by me. Unreasonable behaviour. User complained.
-   Votes:
-     +1: stsp, stefan2
-     +0.5: rhuijben (Change looks sane, but I'm unable to test this)
-
  * r1538812, r1538925, r1538928, r1538939
    Properly remove moved_to information when the node in its original location
    is removed.
@@ -296,3 +288,10 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1537018
+   Fix issue #4440, "Subversion sets permissions on files, when it shouldn't"
+   Justification:
+     Bug introduced by me. Unreasonable behaviour. User complained.
+   Votes:
+     +1: stsp, stefan2, philip
+     +0.5: rhuijben (Change looks sane, but I'm unable to test this)
