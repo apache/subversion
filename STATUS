@@ -178,6 +178,7 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1555491
    Votes:
      +1: stefan2, rhuijben
+     -0: philip (Seems to be a different name for the same pool?)
 
  * r1554978
    In FSFS, svn_fs_get_file_delta_stream shall return strictly the delta requested.
