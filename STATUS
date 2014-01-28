@@ -206,7 +206,7 @@ Candidate changes:
      Fixing swig bindings on OS X when used with the majority of the APR
      versions that incorrectly include this in their --cppflags output.
    Votes:
-     +1: breser
+     +1: breser, philip
      +0: rhuijben (looks good, untested)
 
  * r1547454
