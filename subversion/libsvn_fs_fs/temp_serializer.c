@@ -182,7 +182,6 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
                     svn_fs_fs__dirent_t **entry_p,
                     apr_uint32_t *length)
 {
-  static const char *const empty = "";
   svn_fs_fs__dirent_t *entry = *entry_p;
   apr_size_t initial_length = svn_temp_serializer__get_length(context);
 
@@ -193,12 +192,12 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
   svn_temp_serializer__add_string(context, &entry->dirent.name);
 
   /* Serialize the key. If it's the same as the dirent name, we'll
-     store an empty string instead, as a signal to the
+     store a null pointer instead instead, as a signal to the
      deserializer. */
   if (entry->key != entry->dirent.name)
     svn_temp_serializer__add_string(context, &entry->key);
   else
-    svn_temp_serializer__add_string(context, &empty);
+    svn_temp_serializer__set_null(context, &entry->key);
 
   *length = (apr_uint32_t)(  svn_temp_serializer__get_length(context)
                            - APR_ALIGN_DEFAULT(initial_length));
@@ -290,7 +289,7 @@ deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
       svn_fs_fs__id_deserialize(entry, (svn_fs_id_t **)&entry->dirent.id);
 
       /* fix up the entry key */
-      if (!(entry->key && *entry->key))
+      if (!entry->key)
         entry->key = entry->dirent.name;
 
       /* add the entry to the hash */
@@ -791,8 +790,12 @@ find_entry(svn_fs_fs__dirent_t **entries,
       const char* entry_key =
         svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
 
-      int diff = strcmp(entry_key, key);
-      if (diff < 0)
+      /* use the name if it's identical to the key */
+      if (!entry_key)
+        entry_key = svn_temp_deserializer__ptr(
+            entry, (const void *const *)&entry->dirent.name);
+
+      if (0 >= strcmp(entry_key, key))
         lower = middle + 1;
       else
         upper = middle;
@@ -807,6 +810,11 @@ find_entry(svn_fs_fs__dirent_t **entries,
         svn_temp_deserializer__ptr(entries, (const void *const *)&entries[lower]);
       const char* entry_key =
         svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
+
+      /* use the name if it's identical to the key */
+      if (!entry_key)
+        entry_key = svn_temp_deserializer__ptr(
+            entry, (const void *const *)&entry->dirent.name);
 
       *found = (strcmp(entry_key, key) == 0);
     }
@@ -864,7 +872,7 @@ svn_fs_fs__extract_dir_entry(void **out,
       svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->dirent.id);
 
       /* fix up the entry key */
-      if (!(new_entry->key && *new_entry->key))
+      if (!new_entry->key)
         new_entry->key = new_entry->dirent.name;
 
       *(svn_fs_fs__dirent_t **)out = new_entry;
