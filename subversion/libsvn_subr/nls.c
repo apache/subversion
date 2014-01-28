@@ -65,7 +65,7 @@ svn_nls_init(void)
           sizeof(ucs2_path) / sizeof(ucs2_path[0]));
       if (apr_get_os_error())
         {
-          err = svn_error_wrap_apr(apr_get_os_error()
+          err = svn_error_wrap_apr(apr_get_os_error(),
                                    _("Can't get module file name"));
         }
 
