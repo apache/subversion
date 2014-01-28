@@ -82,7 +82,7 @@ Candidate changes:
    Justification:
      The working copy database should be consistent on any normal operation.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1518942, r1536914, r1536931
    Fix commit of a specific mixed revision copy with non copy descendants that
