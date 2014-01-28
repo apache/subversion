@@ -223,10 +223,10 @@ svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
 }
 
 svn_error_t *
-svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream,
-                           svn_boolean_t *pending)
+svn_ra_svn__stream_data_available(svn_ra_svn__stream_t *stream,
+                                  svn_boolean_t *data_available)
 {
   return svn_error_trace(
           svn_stream_data_available(stream->in_stream,
-                                    pending));
+                                    data_available));
 }

@@ -706,10 +706,10 @@ static void sasl_timeout_cb(void *baton, apr_interval_time_t interval)
 
 /* Implements svn_stream_data_available_fn_t. */
 static svn_error_t *
-sasl_pending_cb(void *baton, svn_boolean_t *data_waiting)
+sasl_data_available_cb(void *baton, svn_boolean_t *data_available)
 {
   sasl_baton_t *sasl_baton = baton;
-  return svn_ra_svn__stream_pending(sasl_baton->stream, data_waiting);
+  return svn_ra_svn__stream_data_available(sasl_baton->stream, data_available);
 }
 
 svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
@@ -772,7 +772,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
             svn_stream_t *sasl_out = svn_stream_create(sasl_baton, conn->pool);
 
             svn_stream_set_read2(sasl_in, sasl_read_cb, NULL /* use default */);
-            svn_stream_set_data_available(sasl_in, sasl_pending_cb);
+            svn_stream_set_data_available(sasl_in, sasl_data_available_cb);
             svn_stream_set_write(sasl_out, sasl_write_cb);
 
             conn->stream = svn_ra_svn__stream_create(sasl_in, sasl_out,
