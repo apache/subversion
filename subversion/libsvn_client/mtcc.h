@@ -1,5 +1,6 @@
 /*
  * mtcc.h :  Multi Command Context definitions
+ *           (internal to mtcc implementation)
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -22,7 +23,7 @@
  */
 
 #ifndef SVN_LIBSVN_CLIENT_MTCC_H
-#define SVN_LIBSVN_CLIENT_H
+#define SVN_LIBSVN_CLIENT_MTCC_H
 
 /* The kind of operation to perform in an svn_client_mtcc_op_t */
 typedef enum svn_client_mtcc_kind_t
@@ -75,4 +76,4 @@ struct svn_client_mtcc_t
   svn_client_mtcc_op_t *root_op;
 };
 
-#endif
+#endif /* SVN_LIBSVN_CLIENT_MTCC_H */
