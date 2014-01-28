@@ -166,7 +166,7 @@ Candidate changes:
      Makes it much easier on users when their hoster migrates from http
      to https. (Too bad that there is no way to safely transfer credentials..)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1551524, 1551579
    Fix an 'No Write Lock' error when moving files between externals and
