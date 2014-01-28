@@ -124,15 +124,6 @@ sock_read_cb(void *baton, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-sock_read_full_cb(void *baton, char *buffer, apr_size_t *len)
-{
-  /* TODO: Implement */
-
-  /* ### Unreachable code */
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
-
 /* Implements svn_write_fn_t */
 static svn_error_t *
 sock_write_cb(void *baton, const char *buffer, apr_size_t *len)
@@ -182,7 +173,7 @@ svn_ra_svn__stream_from_sock(apr_socket_t *sock,
 
   sock_stream = svn_stream_create(b, result_pool);
 
-  svn_stream_set_read2(sock_stream, sock_read_cb, sock_read_full_cb);
+  svn_stream_set_read2(sock_stream, sock_read_cb, NULL /* use default */);
   svn_stream_set_write(sock_stream, sock_write_cb);
   svn_stream_set_data_available(sock_stream, sock_pending_cb);
 

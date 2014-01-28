@@ -1072,7 +1072,8 @@ void
 svn_stream_set_read(svn_stream_t *stream,
                     svn_read_fn_t read_fn)
 {
-  svn_stream_set_read2(stream, read_fn, read_fn);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       read_fn);
 }
 
 svn_error_t *

@@ -153,20 +153,52 @@ svn_stream__set_is_buffered(svn_stream_t *stream,
   stream->is_buffered_fn = is_buffered_fn;
 }
 
+/* Standard implementation for svn_stream_read_full() based on multiple.
+   svn_stream_read2() calls
+   (in separate function to make it more likely for svn_stream_read_full
+    to be inlined) */
+static svn_error_t *
+full_read_fallback(svn_stream_t *stream, char *buffer, apr_size_t *len)
+{
+  apr_size_t to_read;
+
+  to_read = *len;
+
+  while (to_read > 0)
+    {
+      *len = to_read;
+      SVN_ERR(svn_stream_read2(stream, buffer, len));
+
+      to_read -= *len;
+      buffer += *len;
+
+      if (*len == 0)
+        {
+          *len = to_read;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_stream_read2(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
-  SVN_ERR_ASSERT(stream->read_fn != NULL);
+  if (stream->read_fn == NULL)
+    return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED, NULL, NULL);
+
   return svn_error_trace(stream->read_fn(stream->baton, buffer, len));
 }
 
 svn_error_t *
 svn_stream_read_full(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
-  SVN_ERR_ASSERT(stream->read_full_fn != NULL);
+  if (stream->read_full_fn == NULL)
+    return svn_error_trace(full_read_fallback(stream, buffer, len));
+
   return svn_error_trace(stream->read_full_fn(stream->baton, buffer, len));
 }
-
 
 svn_error_t *
 svn_stream_skip(svn_stream_t *stream, apr_size_t len)
@@ -224,8 +256,7 @@ svn_stream_data_available(svn_stream_t *stream,
                           svn_boolean_t *data_available)
 {
   if (stream->data_available_fn == NULL)
-    return svn_error_create(SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED,
-                            NULL, NULL);
+    return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED, NULL, NULL);
 
   return svn_error_trace(stream->data_available_fn(stream->baton,
                                                    data_available));
@@ -936,7 +967,7 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
     }
   else
     {
-      return svn_error_create(SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED,
+      return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED,
                               svn_error_create(status, NULL, NULL),
                               NULL);
     }

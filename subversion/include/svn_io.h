@@ -910,7 +910,9 @@ void
 svn_stream_set_baton(svn_stream_t *stream,
                      void *baton);
 
-/** Set @a stream's read functions to @a read_fn and @a read_full_fn
+/** Set @a stream's read functions to @a read_fn and @a read_full_fn. If
+ * @a read_full_fn is NULL a default implementation based on multiple calls
+ * to @a read_fn will be used.
  *
  * @since New in 1.9.
  */
@@ -921,8 +923,7 @@ svn_stream_set_read2(svn_stream_t *stream,
 
 /** Set @a stream's read function to @a read_fn.
  *
- * This function now sets both the read and full read function to read_fn as
- * originally the stream api only supported full reads.
+ * This function sets only the full read function to read_fn.
  *
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
@@ -1218,7 +1219,8 @@ svn_stream_read_full(svn_stream_t *stream,
 
 /** Read all currently available upto @a *len into @a buffer. Use
  * svn_stream_read_full() if you want to wait for the buffer to be filled
- * or EOF.
+ * or EOF. If the stream doesn't support limited reads this function will
+ * return an #SVN_ERR_STREAM_NOT_SUPPORTED error.
  *
  * A 0 byte read signals the end of the stream.
  *
@@ -1316,8 +1318,8 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
 
 /** When a stream supports polling for available data, obtain a boolean
  * indicating whether data is waiting to be read. If the stream doesn't
- * support polling this function returns a
- * #SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED error.
+ * support polling this function returns a #SVN_ERR_STREAM_NOT_SUPPORTED
+ * error.
  *
  * If the data_available callback is implemented and the stream is at the end
  * the stream will set @a *data_available to FALSE.
