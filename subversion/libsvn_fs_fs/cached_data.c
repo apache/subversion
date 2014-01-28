@@ -1919,39 +1919,39 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   return SVN_NO_ERROR;
 }
 
-/* Return TRUE when all svn_fs_dirent_t* in ENTRIES are already sorted
+/* Return TRUE when all svn_fs_fs__dirent_t* in ENTRIES are already sorted
    by their respective name. */
 static svn_boolean_t
 sorted(apr_array_header_t *entries)
 {
   int i;
 
-  const svn_fs_dirent_t * const *dirents = (const void *)entries->elts;
+  const svn_fs_fs__dirent_t *const *dirents = (const void *)entries->elts;
   for (i = 0; i < entries->nelts-1; ++i)
-    if (strcmp(dirents[i]->name, dirents[i+1]->name) > 0)
+    if (strcmp(dirents[i]->key, dirents[i+1]->key) > 0)
       return FALSE;
 
   return TRUE;
 }
 
-/* Compare the names of the two dirents given in **A and **B. */
+/* Compare the keys of the two dirents given in **A and **B. */
 static int
 compare_dirents(const void *a, const void *b)
 {
-  const svn_fs_dirent_t *lhs = *((const svn_fs_dirent_t * const *) a);
-  const svn_fs_dirent_t *rhs = *((const svn_fs_dirent_t * const *) b);
+  const svn_fs_fs__dirent_t *lhs = *((const svn_fs_fs__dirent_t * const *) a);
+  const svn_fs_fs__dirent_t *rhs = *((const svn_fs_fs__dirent_t * const *) b);
 
-  return strcmp(lhs->name, rhs->name);
+  return strcmp(lhs->key, rhs->key);
 }
 
-/* Compare the name of the dirents given in **A with the C string in *B. */
+/* Compare the key of the dirents given in **A with the C string in *B. */
 static int
 compare_dirent_name(const void *a, const void *b)
 {
-  const svn_fs_dirent_t *lhs = *((const svn_fs_dirent_t * const *) a);
+  const svn_fs_fs__dirent_t *lhs = *((const svn_fs_fs__dirent_t * const *) a);
   const char *rhs = b;
 
-  return strcmp(lhs->name, rhs);
+  return strcmp(lhs->key, rhs);
 }
 
 /* Into ENTRIES, read all directories entries from the key-value text in
@@ -1963,6 +1963,7 @@ read_dir_entries(apr_array_header_t *entries,
                  svn_stream_t *stream,
                  svn_boolean_t incremental,
                  const svn_fs_id_t *id,
+                 svn_boolean_t normalized_lookup,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -1976,7 +1977,7 @@ read_dir_entries(apr_array_header_t *entries,
   while (1)
     {
       svn_hash__entry_t entry;
-      svn_fs_dirent_t *dirent;
+      svn_fs_fs__dirent_t *dirent;
       char *str;
 
       svn_pool_clear(iterpool);
@@ -2005,7 +2006,9 @@ read_dir_entries(apr_array_header_t *entries,
 
       /* Add a new directory entry. */
       dirent = apr_pcalloc(result_pool, sizeof(*dirent));
-      dirent->name = apr_pstrmemdup(result_pool, entry.key, entry.keylen);
+      dirent->dirent.name = apr_pstrmemdup(result_pool, entry.key, entry.keylen);
+      SVN_ERR(svn_fs_fs__set_dirent_key(dirent, normalized_lookup,
+                                        result_pool, scratch_pool));
 
       str = svn_cstring_tokenize(" ", &entry.val);
       if (str == NULL)
@@ -2015,11 +2018,11 @@ read_dir_entries(apr_array_header_t *entries,
 
       if (strcmp(str, SVN_FS_FS__KIND_FILE) == 0)
         {
-          dirent->kind = svn_node_file;
+          dirent->dirent.kind = svn_node_file;
         }
       else if (strcmp(str, SVN_FS_FS__KIND_DIR) == 0)
         {
-          dirent->kind = svn_node_dir;
+          dirent->dirent.kind = svn_node_dir;
         }
       else
         {
@@ -2034,14 +2037,14 @@ read_dir_entries(apr_array_header_t *entries,
                            _("Directory entry corrupt in '%s'"),
                            svn_fs_fs__id_unparse(id, scratch_pool)->data);
 
-      dirent->id = svn_fs_fs__id_parse(str, strlen(str), result_pool);
+      dirent->dirent.id = svn_fs_fs__id_parse(str, strlen(str), result_pool);
 
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
       if (incremental)
         apr_hash_set(hash, entry.key, entry.keylen, dirent);
       else
-        APR_ARRAY_PUSH(entries, svn_fs_dirent_t *) = dirent;
+        APR_ARRAY_PUSH(entries, svn_fs_fs__dirent_t *) = dirent;
     }
 
   /* Convert container to a sorted array. */
@@ -2049,7 +2052,7 @@ read_dir_entries(apr_array_header_t *entries,
     {
       apr_hash_index_t *hi;
       for (hi = apr_hash_first(iterpool, hash); hi; hi = apr_hash_next(hi))
-        APR_ARRAY_PUSH(entries, svn_fs_dirent_t *)
+        APR_ARRAY_PUSH(entries, svn_fs_fs__dirent_t *)
           = svn__apr_hash_index_val(hi);
     }
 
@@ -2063,7 +2066,7 @@ read_dir_entries(apr_array_header_t *entries,
 
 /* Fetch the contents of a directory into ENTRIES.  Values are stored
    as filename to string mappings; further conversion is necessary to
-   convert them into svn_fs_dirent_t values. */
+   convert them into svn_fs_fs__dirent_t values. */
 static svn_error_t *
 get_dir_contents(apr_array_header_t **entries,
                  svn_fs_t *fs,
@@ -2071,9 +2074,11 @@ get_dir_contents(apr_array_header_t **entries,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
+  const svn_boolean_t normalized_lookup =
+    ((fs_fs_data_t*)fs->fsap_data)->normalized_lookup;
   svn_stream_t *contents;
 
-  *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
+  *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_fs__dirent_t *));
   if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
       const char *filename
@@ -2085,7 +2090,7 @@ get_dir_contents(apr_array_header_t **entries,
       SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
                                        scratch_pool));
       SVN_ERR(read_dir_entries(*entries, contents, TRUE,  noderev->id,
-                               result_pool, scratch_pool));
+                               normalized_lookup, result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
   else if (noderev->data_rep)
@@ -2109,7 +2114,7 @@ get_dir_contents(apr_array_header_t **entries,
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, text_pool);
       SVN_ERR(read_dir_entries(*entries, contents, FALSE,  noderev->id,
-                               result_pool, scratch_pool));
+                               normalized_lookup, result_pool, scratch_pool));
 
       svn_pool_destroy(text_pool);
     }
@@ -2191,18 +2196,18 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
   return SVN_NO_ERROR;
 }
 
-svn_fs_dirent_t *
+svn_fs_fs__dirent_t *
 svn_fs_fs__find_dir_entry(apr_array_header_t *entries,
                           const char *name,
                           int *hint)
 {
-  svn_fs_dirent_t **result
+  svn_fs_fs__dirent_t **result
     = svn_sort__array_lookup(entries, name, hint, compare_dirent_name);
   return result ? *result : NULL;
 }
 
 svn_error_t *
-svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+svn_fs_fs__rep_contents_dir_entry(svn_fs_fs__dirent_t **dirent,
                                   svn_fs_t *fs,
                                   node_revision_t *noderev,
                                   const char *name,
@@ -2232,8 +2237,8 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
   if (! found)
     {
       apr_array_header_t *entries;
-      svn_fs_dirent_t *entry;
-      svn_fs_dirent_t *entry_copy = NULL;
+      svn_fs_fs__dirent_t *entry;
+      svn_fs_fs__dirent_t *entry_copy = NULL;
 
       /* read the dir from the file system. It will probably be put it
          into the cache for faster lookup in future calls. */
@@ -2244,10 +2249,18 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
       entry = svn_fs_fs__find_dir_entry(entries, name, NULL);
       if (entry)
         {
+          svn_fs_dirent_t *dirent_copy;
+
           entry_copy = apr_palloc(result_pool, sizeof(*entry_copy));
-          entry_copy->name = apr_pstrdup(result_pool, entry->name);
-          entry_copy->id = svn_fs_fs__id_copy(entry->id, result_pool);
-          entry_copy->kind = entry->kind;
+          dirent_copy = &entry_copy->dirent;
+          dirent_copy->name = apr_pstrdup(result_pool, entry->dirent.name);
+          dirent_copy->id = svn_fs_fs__id_copy(entry->dirent.id, result_pool);
+          dirent_copy->kind = entry->dirent.kind;
+
+          if (entry->key != entry->dirent.name)
+            entry_copy->key = apr_pstrdup(result_pool, entry->key);
+          else
+            entry_copy->key = dirent_copy->name;
         }
 
       *dirent = entry_copy;

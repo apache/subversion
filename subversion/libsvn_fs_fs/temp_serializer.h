@@ -24,6 +24,7 @@
 #define SVN_LIBSVN_FS__TEMP_SERIALIZER_H
 
 #include "fs.h"
+#include "dirent.h"
 
 /**
  * Prepend the @a number to the @a string in a space efficient way such that
@@ -189,9 +190,10 @@ svn_fs_fs__get_sharded_offset(void **out,
 
 /**
  * Implements #svn_cache__partial_getter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
- * identified by its name (const char @a *baton).
+ * #svn_fs_fs__dirent_t within a serialized directory contents hash,
+ * identified by its key (const char @a *baton).
  */
+/* UCSNORM TODO: NAME must always be the (normalized) entry key. */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
                              const void *data,
@@ -207,16 +209,17 @@ svn_fs_fs__extract_dir_entry(void **out,
  */
 typedef struct replace_baton_t
 {
-  /** name of the directory entry to modify */
+  /** Name of the directory entry to modify.
+      When normalized lookup is enabled, this name must be normalized. */
   const char *name;
 
   /** directory entry to insert instead */
-  svn_fs_dirent_t *new_entry;
+  svn_fs_fs__dirent_t *new_entry;
 } replace_baton_t;
 
 /**
  * Implements #svn_cache__partial_setter_func_t for a single
- * #svn_fs_dirent_t within a serialized directory contents hash,
+ * #svn_fs_fs__dirent_t within a serialized directory contents hash,
  * identified by its name in the #replace_baton_t in @a baton.
  */
 svn_error_t *

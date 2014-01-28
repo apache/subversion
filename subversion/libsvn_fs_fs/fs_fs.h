@@ -212,4 +212,8 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
 void
 svn_fs_fs__reset_txn_caches(svn_fs_t *fs);
 
-#endif
+/* Set *NORMSTR to a normalized form of STR, allocated from POOL. */
+svn_error_t *
+svn_fs_fs__normalize(const char **normstr, const char *str, apr_pool_t *pool);
+
+#endif /* SVN_LIBSVN_FS__FS_FS_H */

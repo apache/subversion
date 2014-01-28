@@ -27,6 +27,7 @@
 #include "svn_fs.h"
 
 #include "fs.h"
+#include "dirent.h"
 
 
 
@@ -115,7 +116,8 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
    entry exists, return NULL.  If HINT is not NULL, set *HINT to the array
    index of the entry returned.  Successive calls in a linear scan scenario
    will be faster called with the same HINT variable. */
-svn_fs_dirent_t *
+/* UCSNORM TODO: NAME must always be the (normalized) entry key. */
+svn_fs_fs__dirent_t *
 svn_fs_fs__find_dir_entry(apr_array_header_t *entries,
                           const char *name,
                           int *hint);
@@ -124,8 +126,9 @@ svn_fs_fs__find_dir_entry(apr_array_header_t *entries,
    by NODEREV in filesystem FS.  If no such entry exits, *DIRENT will
    be NULL. The returned object is allocated in RESULT_POOL; SCRATCH_POOL
    used for temporary allocations. */
+/* UCSNORM TODO: NAME must always be the (normalized) entry key. */
 svn_error_t *
-svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+svn_fs_fs__rep_contents_dir_entry(svn_fs_fs__dirent_t **dirent,
                                   svn_fs_t *fs,
                                   node_revision_t *noderev,
                                   const char *name,

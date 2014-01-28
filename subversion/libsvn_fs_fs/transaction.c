@@ -593,11 +593,11 @@ unparse_dir_entries(apr_array_header_t *entries,
   int i;
   for (i = 0; i < entries->nelts; ++i)
     {
-      svn_fs_dirent_t *dirent;
+      svn_fs_fs__dirent_t *entry;
 
       svn_pool_clear(iterpool);
-      dirent = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
-      SVN_ERR(unparse_dir_entry(dirent, stream, iterpool));
+      entry = APR_ARRAY_IDX(entries, i, svn_fs_fs__dirent_t *);
+      SVN_ERR(unparse_dir_entry(&entry->dirent, stream, iterpool));
     }
 
   SVN_ERR(svn_stream_printf(stream, pool, "%s\n", SVN_HASH_TERMINATOR));
@@ -1527,19 +1527,32 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   if (ffd->txn_dir_cache)
     {
       /* build parameters: (name, new entry) pair */
+      const svn_boolean_t normalized_lookup =
+        ((fs_fs_data_t*)fs->fsap_data)->normalized_lookup;
       const char *key =
-          svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
+        svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
 
-      baton.name = name;
-      baton.new_entry = NULL;
+
 
       if (id)
         {
           baton.new_entry = apr_pcalloc(subpool, sizeof(*baton.new_entry));
-          baton.new_entry->name = name;
-          baton.new_entry->kind = kind;
-          baton.new_entry->id = id;
+          baton.new_entry->dirent.name = name;
+          baton.new_entry->dirent.kind = kind;
+          baton.new_entry->dirent.id = id;
+          SVN_ERR(svn_fs_fs__set_dirent_key(baton.new_entry,
+                                            normalized_lookup,
+                                            subpool, subpool));
+          baton.name = baton.new_entry->key;
+        }
+      else
+        {
+          if (normalized_lookup)
+            SVN_ERR(svn_fs_fs__normalize(&baton.name, name, subpool));
+          else
+            baton.name = name;
+          baton.new_entry = NULL;
         }
 
       /* actually update the cached directory (if cached) */
@@ -2515,7 +2528,7 @@ write_hash_to_stream(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
-/* Implement collection_writer_t writing the svn_fs_dirent_t* array given
+/* Implement collection_writer_t writing the svn_fs_fs__dirent_t* array given
    as BATON. */
 static svn_error_t *
 write_directory_to_stream(svn_stream_t *stream,
@@ -2915,16 +2928,16 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                           subpool));
       for (i = 0; i < entries->nelts; ++i)
         {
-          svn_fs_dirent_t *dirent
-            = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
+          svn_fs_fs__dirent_t *entry
+            = APR_ARRAY_IDX(entries, i, svn_fs_fs__dirent_t *);
 
           svn_pool_clear(subpool);
-          SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
+          SVN_ERR(write_final_rev(&new_id, file, rev, fs, entry->dirent.id,
                                   start_node_id, start_copy_id, initial_offset,
                                   reps_to_cache, reps_hash, reps_pool, FALSE,
                                   subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
-            dirent->id = svn_fs_fs__id_copy(new_id, pool);
+            entry->dirent.id = svn_fs_fs__id_copy(new_id, pool);
         }
       svn_pool_destroy(subpool);
 

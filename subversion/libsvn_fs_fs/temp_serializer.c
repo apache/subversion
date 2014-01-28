@@ -166,7 +166,7 @@ typedef struct dir_data_t
   apr_size_t len;
 
   /* reference to the entries */
-  svn_fs_dirent_t **entries;
+  svn_fs_fs__dirent_t **entries;
 
   /* size of the serialized entries and don't be too wasteful
    * (needed since the entries are no longer in sequence) */
@@ -179,18 +179,26 @@ typedef struct dir_data_t
  */
 static void
 serialize_dir_entry(svn_temp_serializer__context_t *context,
-                    svn_fs_dirent_t **entry_p,
+                    svn_fs_fs__dirent_t **entry_p,
                     apr_uint32_t *length)
 {
-  svn_fs_dirent_t *entry = *entry_p;
+  static const char *const empty = "";
+  svn_fs_fs__dirent_t *entry = *entry_p;
   apr_size_t initial_length = svn_temp_serializer__get_length(context);
 
   svn_temp_serializer__push(context,
                             (const void * const *)entry_p,
-                            sizeof(svn_fs_dirent_t));
+                            sizeof(*entry));
+  svn_fs_fs__id_serialize(context, &entry->dirent.id);
+  svn_temp_serializer__add_string(context, &entry->dirent.name);
 
-  svn_fs_fs__id_serialize(context, &entry->id);
-  svn_temp_serializer__add_string(context, &entry->name);
+  /* Serialize the key. If it's the same as the dirent name, we'll
+     store an empty string instead, as a signal to the
+     deserializer. */
+  if (entry->key != entry->dirent.name)
+    svn_temp_serializer__add_string(context, &entry->key);
+  else
+    svn_temp_serializer__add_string(context, &empty);
 
   *length = (apr_uint32_t)(  svn_temp_serializer__get_length(context)
                            - APR_ALIGN_DEFAULT(initial_length));
@@ -211,7 +219,8 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   /* calculate sizes */
   apr_size_t count = entries->nelts;
   apr_size_t over_provision = 2 + count / 4;
-  apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_dirent_t*);
+  apr_size_t entries_len =
+    (count + over_provision) * sizeof(svn_fs_fs__dirent_t);
   apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
 
   /* copy the hash entries to an auxilliary struct of known layout */
@@ -222,7 +231,7 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   dir_data.lengths = apr_palloc(pool, lengths_len);
 
   for (i = 0; i < count; ++i)
-    dir_data.entries[i] = APR_ARRAY_IDX(entries, i, svn_fs_dirent_t *);
+    dir_data.entries[i] = APR_ARRAY_IDX(entries, i, svn_fs_fs__dirent_t *);
 
   /* Serialize that aux. structure into a new one. Also, provide a good
    * estimate for the size of the buffer that we will need. */
@@ -259,11 +268,11 @@ static apr_array_header_t *
 deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
 {
   apr_array_header_t *result
-    = apr_array_make(pool, dir_data->count, sizeof(svn_fs_dirent_t *));
+    = apr_array_make(pool, dir_data->count, sizeof(svn_fs_fs__dirent_t *));
   apr_size_t i;
   apr_size_t count;
-  svn_fs_dirent_t *entry;
-  svn_fs_dirent_t **entries;
+  svn_fs_fs__dirent_t *entry;
+  svn_fs_fs__dirent_t **entries;
 
   /* resolve the reference to the entries array */
   svn_temp_deserializer__resolve(buffer, (void **)&dir_data->entries);
@@ -276,11 +285,16 @@ deserialize_dir(void *buffer, dir_data_t *dir_data, apr_pool_t *pool)
       entry = dir_data->entries[i];
 
       /* pointer fixup */
-      svn_temp_deserializer__resolve(entry, (void **)&entry->name);
-      svn_fs_fs__id_deserialize(entry, (svn_fs_id_t **)&entry->id);
+      svn_temp_deserializer__resolve(entry, (void **)&entry->key);
+      svn_temp_deserializer__resolve(entry, (void **)&entry->dirent.name);
+      svn_fs_fs__id_deserialize(entry, (svn_fs_id_t **)&entry->dirent.id);
+
+      /* fix up the entry key */
+      if (!(entry->key && *entry->key))
+        entry->key = entry->dirent.name;
 
       /* add the entry to the hash */
-      APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = entry;
+      APR_ARRAY_PUSH(result, svn_fs_fs__dirent_t *) = entry;
     }
 
   /* return the now complete hash */
@@ -755,29 +769,29 @@ svn_fs_fs__get_sharded_offset(void **out,
 }
 
 /* Utility function that returns the lowest index of the first entry in
- * *ENTRIES that points to a dir entry with a name equal or larger than NAME.
+ * *ENTRIES that points to a dir entry with a key equal or larger than KEY.
  * If an exact match has been found, *FOUND will be set to TRUE. COUNT is
  * the number of valid entries in ENTRIES.
  */
 static apr_size_t
-find_entry(svn_fs_dirent_t **entries,
-           const char *name,
+find_entry(svn_fs_fs__dirent_t **entries,
+           const char *key,
            apr_size_t count,
            svn_boolean_t *found)
 {
-  /* binary search for the desired entry by name */
+  /* binary search for the desired entry by key */
   apr_size_t lower = 0;
   apr_size_t upper = count;
   apr_size_t middle;
 
   for (middle = upper / 2; lower < upper; middle = (upper + lower) / 2)
     {
-      const svn_fs_dirent_t *entry =
-          svn_temp_deserializer__ptr(entries, (const void *const *)&entries[middle]);
-      const char* entry_name =
-          svn_temp_deserializer__ptr(entry, (const void *const *)&entry->name);
+      const svn_fs_fs__dirent_t *entry =
+        svn_temp_deserializer__ptr(entries, (const void *const *)&entries[middle]);
+      const char* entry_key =
+        svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
 
-      int diff = strcmp(entry_name, name);
+      int diff = strcmp(entry_key, key);
       if (diff < 0)
         lower = middle + 1;
       else
@@ -785,16 +799,16 @@ find_entry(svn_fs_dirent_t **entries,
     }
 
   /* check whether we actually found a match */
-  *found = FALSE;
-  if (lower < count)
+  if (lower >= count)
+    *found = FALSE;
+  else
     {
-      const svn_fs_dirent_t *entry =
-          svn_temp_deserializer__ptr(entries, (const void *const *)&entries[lower]);
-      const char* entry_name =
-          svn_temp_deserializer__ptr(entry, (const void *const *)&entry->name);
+      const svn_fs_fs__dirent_t *entry =
+        svn_temp_deserializer__ptr(entries, (const void *const *)&entries[lower]);
+      const char* entry_key =
+        svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
 
-      if (strcmp(entry_name, name) == 0)
-        *found = TRUE;
+      *found = (strcmp(entry_key, key) == 0);
     }
 
   return lower;
@@ -812,7 +826,7 @@ svn_fs_fs__extract_dir_entry(void **out,
   svn_boolean_t found;
 
   /* resolve the reference to the entries array */
-  const svn_fs_dirent_t * const *entries =
+  const svn_fs_fs__dirent_t * const *entries =
     svn_temp_deserializer__ptr(data, (const void *const *)&dir_data->entries);
 
   /* resolve the reference to the lengths array */
@@ -820,7 +834,7 @@ svn_fs_fs__extract_dir_entry(void **out,
     svn_temp_deserializer__ptr(data, (const void *const *)&dir_data->lengths);
 
   /* binary search for the desired entry by name */
-  apr_size_t pos = find_entry((svn_fs_dirent_t **)entries,
+  apr_size_t pos = find_entry((svn_fs_fs__dirent_t **)entries,
                               name,
                               dir_data->count,
                               &found);
@@ -829,8 +843,8 @@ svn_fs_fs__extract_dir_entry(void **out,
   *out = NULL;
   if (found)
     {
-      const svn_fs_dirent_t *source =
-          svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
+      const svn_fs_fs__dirent_t *source =
+        svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
 
       /* Entries have been serialized one-by-one, each time including all
        * nested structures and strings. Therefore, they occupy a single
@@ -840,12 +854,20 @@ svn_fs_fs__extract_dir_entry(void **out,
       apr_size_t size = lengths[pos];
 
       /* copy & deserialize the entry */
-      svn_fs_dirent_t *new_entry = apr_palloc(pool, size);
+      svn_fs_fs__dirent_t *new_entry = apr_palloc(pool, size);
       memcpy(new_entry, source, size);
 
-      svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->name);
-      svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id);
-      *(svn_fs_dirent_t **)out = new_entry;
+      /* FIXME: Extract common code from here and deserialize_dir(). */
+      /* pointer fixup */
+      svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->key);
+      svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->dirent.name);
+      svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->dirent.id);
+
+      /* fix up the entry key */
+      if (!(new_entry->key && *new_entry->key))
+        new_entry->key = new_entry->dirent.name;
+
+      *(svn_fs_fs__dirent_t **)out = new_entry;
     }
 
   return SVN_NO_ERROR;
@@ -864,7 +886,7 @@ slowly_replace_dir_entry(void **data,
   dir_data_t *dir_data = (dir_data_t *)*data;
   apr_array_header_t *dir;
   int idx = -1;
-  svn_fs_dirent_t *entry;
+  svn_fs_fs__dirent_t *entry;
 
   SVN_ERR(svn_fs_fs__deserialize_dir_entries((void **)&dir,
                                              *data,
@@ -878,7 +900,7 @@ slowly_replace_dir_entry(void **data,
     {
       /* Replace ENTRY with / insert the NEW_ENTRY */
       if (entry)
-        APR_ARRAY_IDX(dir, idx, svn_fs_dirent_t *) = replace_baton->new_entry;
+        APR_ARRAY_IDX(dir, idx, svn_fs_fs__dirent_t *) = replace_baton->new_entry;
       else
         svn_sort__array_insert(dir, &replace_baton->new_entry, idx);
     }
@@ -901,7 +923,7 @@ svn_fs_fs__replace_dir_entry(void **data,
   replace_baton_t *replace_baton = (replace_baton_t *)baton;
   dir_data_t *dir_data = (dir_data_t *)*data;
   svn_boolean_t found;
-  svn_fs_dirent_t **entries;
+  svn_fs_fs__dirent_t **entries;
   apr_uint32_t *lengths;
   apr_uint32_t length;
   apr_size_t pos;
@@ -915,7 +937,7 @@ svn_fs_fs__replace_dir_entry(void **data,
     return slowly_replace_dir_entry(data, data_len, baton, pool);
 
   /* resolve the reference to the entries array */
-  entries = (svn_fs_dirent_t **)
+  entries = (svn_fs_fs__dirent_t **)
     svn_temp_deserializer__ptr((const char *)dir_data,
                                (const void *const *)&dir_data->entries);
 

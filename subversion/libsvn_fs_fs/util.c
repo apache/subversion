@@ -25,7 +25,9 @@
 #include "svn_ctype.h"
 #include "svn_dirent_uri.h"
 #include "private/svn_string_private.h"
+#include "private/svn_utf_private.h"
 
+#include "dirent.h"
 #include "fs_fs.h"
 #include "pack.h"
 #include "util.h"
@@ -644,4 +646,34 @@ svn_fs_fs__supports_move(svn_fs_t *fs)
   fs_fs_data_t *ffd = fs->fsap_data;
 
   return ffd->format >= SVN_FS_FS__MIN_MOVE_SUPPORT_FORMAT;
+}
+
+svn_error_t *
+svn_fs_fs__normalize(const char **normstr, const char *str, apr_pool_t *pool)
+{
+  svn_membuf_t buffer;
+  svn_membuf__create(&buffer, 0, pool);
+  return svn_error_trace(
+      svn_utf__normalize(normstr, str,
+                         SVN_UTF__UNKNOWN_LENGTH, &buffer));
+}
+
+svn_error_t *
+svn_fs_fs__set_dirent_key(svn_fs_fs__dirent_t *dirent,
+                          svn_boolean_t normalized,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  if (!normalized)
+    dirent->key = dirent->dirent.name;
+  else
+    {
+      SVN_ERR(svn_fs_fs__normalize(&dirent->key, dirent->dirent.name,
+                                   scratch_pool));
+      if (0 == strcmp(dirent->key, dirent->dirent.name))
+        dirent->key = dirent->dirent.name;
+      else if (result_pool != scratch_pool)
+        dirent->key = apr_pstrdup(result_pool, dirent->key);
+    }
+  return SVN_NO_ERROR;
 }
