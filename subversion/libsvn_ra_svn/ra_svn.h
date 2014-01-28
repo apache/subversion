@@ -147,8 +147,8 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
                                    void *baton);
 
 /* Return true if there is input waiting on conn. */
-svn_error_t *svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
-                                       svn_boolean_t *data_waiting);
+svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
+                                       svn_boolean_t *data_available);
 
 /* CRAM-MD5 client implementation. */
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -211,8 +211,8 @@ void svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
 
 /* Return whether or not there is data pending on STREAM. */
 svn_error_t *
-svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream,
-                           svn_boolean_t *pending);
+svn_ra_svn__stream_data_available(svn_ra_svn__stream_t *stream,
+                                  svn_boolean_t *data_available);
 
 /* Respond to an auth request and perform authentication.  Use the Cyrus
  * SASL library for mechanism negotiation and for creating authentication

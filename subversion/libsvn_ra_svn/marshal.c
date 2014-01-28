@@ -198,10 +198,10 @@ svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
   svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
 }
 
-svn_error_t *svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
-                                       svn_boolean_t *data_waiting)
+svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
+                                       svn_boolean_t *data_available)
 {
-  return svn_ra_svn__stream_pending(conn->stream, data_waiting);
+  return svn_ra_svn__stream_data_available(conn->stream, data_available);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -1249,12 +1249,12 @@ svn_ra_svn__has_item(svn_boolean_t *has_item,
     {
       if (conn->read_ptr == conn->read_end)
         {
-          svn_boolean_t waiting;
+          svn_boolean_t available;
           if (conn->write_pos)
             SVN_ERR(writebuf_flush(conn, pool));
 
-          SVN_ERR(svn_ra_svn__input_waiting(conn, &waiting));
-          if (!waiting)
+          SVN_ERR(svn_ra_svn__data_available(conn, &available));
+          if (!available)
             break;
 
           SVN_ERR(readbuf_fill(conn, pool));
