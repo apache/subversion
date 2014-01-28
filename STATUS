@@ -149,7 +149,7 @@ Candidate changes:
      just makes things hard on api users that want to use inherited properties
      as intended.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1541638, r1545302
    Fix automatic relocate during update for working copies that are
