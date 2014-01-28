@@ -62,7 +62,7 @@ svn_nls_init(void)
       scratch_pool = svn_pool_create(NULL);
       /* get exe name - our locale info will be in '../share/locale' */
       GetModuleFileNameW(NULL, ucs2_path,
-          sizeof(ucs2_path) / sizeof(ucs2_path[0]))
+          sizeof(ucs2_path) / sizeof(ucs2_path[0]));
       if (apr_get_os_error())
         {
           err = svn_error_wrap_apr(apr_get_os_error()
