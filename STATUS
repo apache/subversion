@@ -198,15 +198,6 @@ Candidate changes:
    Votes:
      +1: stefan2, rhuijben
 
- * r1557522
-   Make mod_dav_svn report all property changes in 'include-properties' mode,
-   even in uncommon configurations.
-   Justification:
-     This needs a fix in either client or server if we ever want to restart
-     using the report copyfrom mode.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1535610
    Filter out -no-cpp-precomp from flags passed to SWIG.
    Justification:
@@ -293,5 +284,14 @@ Approved changes:
    specific files when we find enough differences.
    Justification:
      Trivial fix that can have a huge performance impact for some users.
+   Votes:
+     +1: rhuijben, stefan2, philip
+
+ * r1557522
+   Make mod_dav_svn report all property changes in 'include-properties' mode,
+   even in uncommon configurations.
+   Justification:
+     This needs a fix in either client or server if we ever want to restart
+     using the report copyfrom mode.
    Votes:
      +1: rhuijben, stefan2, philip
