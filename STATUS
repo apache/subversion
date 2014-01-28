@@ -257,6 +257,7 @@ Candidate changes:
      feature availability check is incomplete.
    Votes:
      +1: stefan2
+     -0: rhuijben (Might require r1561703 to avoid breaking tests)
 
  * r1561426
    In FSFS, skip the generation of uniquifiers if rep-shared is no supported.
