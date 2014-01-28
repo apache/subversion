@@ -186,13 +186,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1553376, r1553377
-   Fix pool lifetime issue in serf commit processing for copied files and dirs
-   Justification:
-     Pool lifetime issues are bad. Reported by several git-svn users.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
    Justification:
@@ -295,3 +288,10 @@ Approved changes:
    Votes:
      +1: stsp, stefan2, philip
      +0.5: rhuijben (Change looks sane, but I'm unable to test this)
+
+ * r1553376, r1553377
+   Fix pool lifetime issue in serf commit processing for copied files and dirs
+   Justification:
+     Pool lifetime issues are bad. Reported by several git-svn users.
+   Votes:
+     +1: rhuijben, stefan2, philip
