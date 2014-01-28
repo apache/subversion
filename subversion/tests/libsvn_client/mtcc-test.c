@@ -21,15 +21,10 @@
  * ====================================================================
  */
 
-#define SVN_DEPRECATED
-
-#include "svn_mergeinfo.h"
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_client.h"
-#include "svn_repos.h"
-#include "svn_subst.h"
-#include "private/svn_wc_private.h"
+#include "svn_client_mtcc.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
