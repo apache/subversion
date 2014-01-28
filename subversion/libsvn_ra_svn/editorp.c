@@ -126,6 +126,7 @@ static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
 static svn_error_t *
 check_for_error_internal(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
 {
+  svn_boolean_t waiting;
   SVN_ERR_ASSERT(!eb->got_status);
 
   /* reset TX counter */
@@ -135,7 +136,8 @@ check_for_error_internal(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
   eb->conn->may_check_for_error = eb->conn->error_check_interval == 0;
 
   /* any incoming data? */
-  if (svn_ra_svn__input_waiting(eb->conn, pool))
+  SVN_ERR(svn_ra_svn__input_waiting(eb->conn, &waiting));
+  if (waiting)
     {
       eb->got_status = TRUE;
       SVN_ERR(svn_ra_svn__write_cmd_abort_edit(eb->conn, pool));
