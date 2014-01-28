@@ -897,8 +897,7 @@ typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
  *
  * @since New in 1.9.
  */
-typedef svn_error_t *
-            (*svn_stream_data_available_fn_t)(void *baton,
+typedef svn_error_t *(*svn_stream_data_available_fn_t)(void *baton,
                                               svn_boolean_t *data_available);
 
 /** Create a generic stream.  @see svn_stream_t. */
