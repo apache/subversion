@@ -890,7 +890,16 @@ typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
-                                         const svn_stream_mark_t *mark);
+                                             const svn_stream_mark_t *mark);
+
+/** Poll handler for generic streams that support incomplete reads, @see
+ * svn_stream_t and svn_stream_data_available().
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *
+            (*svn_stream_data_available_fn_t)(void *baton,
+                                              svn_boolean_t *data_available);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -956,6 +965,14 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_stream_seek_fn_t seek_fn);
+
+/** Set @a stream's data available function to @a data_available_fn
+ *
+ * @since New in 1.9.
+ */
+void
+svn_stream_set_data_available(svn_stream_t *stream,
+                              svn_stream_data_available_fn_t data_available);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1297,6 +1314,20 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
+
+/** When a stream supports polling for available data, obtain a boolean
+ * indicating whether data is waiting to be read. If the stream doesn't
+ * support polling this function returns a
+ * #SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED error.
+ *
+ * If the data_available callback is implemented and the stream is at the end
+ * the stream will set @a *data_available to FALSE.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_data_available(svn_stream_t *stream,
+                          svn_boolean_t *data_available);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
