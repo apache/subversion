@@ -650,12 +650,6 @@ static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *sasl_read_full_cb(void *baton, char *buffer, apr_size_t *len)
-{
-  /* ### Currently unused code path */
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
-
 /* Implements svn_write_fn_t. */
 static svn_error_t *
 sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
@@ -777,7 +771,7 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
             svn_stream_t *sasl_in = svn_stream_create(sasl_baton, conn->pool);
             svn_stream_t *sasl_out = svn_stream_create(sasl_baton, conn->pool);
 
-            svn_stream_set_read2(sasl_in, sasl_read_cb, sasl_read_full_cb);
+            svn_stream_set_read2(sasl_in, sasl_read_cb, NULL /* use default */);
             svn_stream_set_data_available(sasl_in, sasl_pending_cb);
             svn_stream_set_write(sasl_out, sasl_write_cb);
 
