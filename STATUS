@@ -141,14 +141,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1548486
-   When (during merge) we compare three files to each other stop reading
-   specific files when we find enough differences.
-   Justification:
-     Trivial fix that can have a huge performance impact for some users.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1549858, r1549874
    Make svn_client_proplist4() behave as documented when reporting inherited
    properties.
@@ -293,5 +285,13 @@ Approved changes:
      Easy fix for improving performance for everybody. More generic patch for
      old versions might be needed for other scenarios, but those scenarios
      were never supported on those old versions itself.
+   Votes:
+     +1: rhuijben, stefan2, philip
+
+ * r1548486
+   When (during merge) we compare three files to each other stop reading
+   specific files when we find enough differences.
+   Justification:
+     Trivial fix that can have a huge performance impact for some users.
    Votes:
      +1: rhuijben, stefan2, philip
