@@ -29,6 +29,7 @@
 #include <apr_strings.h>
 #include <apr_file_io.h>
 #include <apr_errno.h>
+#include <apr_poll.h>
 #include <apr_portable.h>
 
 #include <zlib.h>
@@ -58,6 +59,7 @@ struct svn_stream_t {
   svn_close_fn_t close_fn;
   svn_stream_mark_fn_t mark_fn;
   svn_stream_seek_fn_t seek_fn;
+  svn_stream_data_available_fn_t data_available_fn;
   svn_stream__is_buffered_fn_t is_buffered_fn;
   apr_file_t *file; /* Maybe NULL */
 };
@@ -84,6 +86,7 @@ svn_stream_create(void *baton, apr_pool_t *pool)
   stream->close_fn = NULL;
   stream->mark_fn = NULL;
   stream->seek_fn = NULL;
+  stream->data_available_fn = NULL;
   stream->is_buffered_fn = NULL;
   stream->file = NULL;
   return stream;
@@ -134,6 +137,13 @@ void
 svn_stream_set_seek(svn_stream_t *stream, svn_stream_seek_fn_t seek_fn)
 {
   stream->seek_fn = seek_fn;
+}
+
+void
+svn_stream_set_data_available(svn_stream_t *stream,
+                              svn_stream_data_available_fn_t data_available_fn)
+{
+  stream->data_available_fn = data_available_fn;
 }
 
 void
@@ -207,6 +217,18 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
 
   return svn_error_trace(stream->seek_fn(stream->baton, mark));
+}
+
+svn_error_t *
+svn_stream_data_available(svn_stream_t *stream,
+                          svn_boolean_t *data_available)
+{
+  if (stream->data_available_fn == NULL)
+    return svn_error_create(SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED,
+                            NULL, NULL);
+
+  return svn_error_trace(stream->data_available_fn(stream->baton,
+                                                   data_available));
 }
 
 svn_boolean_t
@@ -726,6 +748,12 @@ seek_handler_disown(void *baton, const svn_stream_mark_t *mark)
   return svn_error_trace(svn_stream_seek(baton, mark));
 }
 
+static svn_error_t *
+data_available_disown(void *baton, svn_boolean_t *data_available)
+{
+  return svn_error_trace(svn_stream_data_available(baton, data_available));
+}
+
 static svn_boolean_t
 is_buffered_handler_disown(void *baton)
 {
@@ -742,6 +770,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_write(s, write_handler_disown);
   svn_stream_set_mark(s, mark_handler_disown);
   svn_stream_set_seek(s, seek_handler_disown);
+  svn_stream_set_data_available(s, data_available_disown);
   svn_stream__set_is_buffered(s, is_buffered_handler_disown);
 
   return s;
@@ -879,6 +908,40 @@ seek_handler_apr(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+data_available_handler_apr(void *baton, svn_boolean_t *data_available)
+{
+  struct baton_apr *btn = baton;
+  apr_pollfd_t pfd;
+  apr_status_t status;
+  int n;
+
+  pfd.desc_type = APR_POLL_FILE;
+  pfd.desc.f = btn->file;
+  pfd.p = btn->pool;
+  pfd.reqevents = APR_POLLIN;
+
+  status = apr_poll(&pfd, 1, &n, 0);
+  svn_pool_clear(btn->pool);
+
+  if (status == APR_SUCCESS)
+    {
+      *data_available = (n > 0);
+      return SVN_NO_ERROR;
+    }
+  else if (APR_STATUS_IS_EOF(status))
+    {
+      *data_available = FALSE;
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return svn_error_create(SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED,
+                              svn_error_create(status, NULL, NULL),
+                              NULL);
+    }
+}
+
 static svn_boolean_t
 is_buffered_handler_apr(void *baton)
 {
@@ -960,6 +1023,7 @@ svn_stream_from_aprfile2(apr_file_t *file,
   svn_stream_set_skip(stream, skip_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
+  svn_stream_set_data_available(stream, data_available_handler_apr);
   svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
   stream->file = file;
 
@@ -1276,6 +1340,14 @@ write_handler_checksum(void *baton, const char *buffer, apr_size_t *len)
   return svn_error_trace(svn_stream_write(btn->proxy, buffer, len));
 }
 
+static svn_error_t *
+data_available_handler_checksum(void *baton, svn_boolean_t *data_available)
+{
+  struct checksum_stream_baton *btn = baton;
+
+  return svn_error_trace(svn_stream_data_available(btn->proxy,
+                                                   data_available));
+}
 
 static svn_error_t *
 close_handler_checksum(void *baton)
@@ -1340,6 +1412,7 @@ svn_stream_checksummed2(svn_stream_t *stream,
   s = svn_stream_create(baton, pool);
   svn_stream_set_read2(s, read_handler_checksum, read_full_handler_checksum);
   svn_stream_set_write(s, write_handler_checksum);
+  svn_stream_set_data_available(s, data_available_handler_checksum);
   svn_stream_set_close(s, close_handler_checksum);
   return s;
 }
@@ -1450,6 +1523,15 @@ seek_handler_stringbuf(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+data_available_handler_stringbuf(void *baton, svn_boolean_t *data_available)
+{
+  struct stringbuf_stream_baton *btn = baton;
+
+  *data_available = ((btn->str->len - btn->amt_read) > 0);
+  return SVN_NO_ERROR;
+}
+
 static svn_boolean_t
 is_buffered_handler_stringbuf(void *baton)
 {
@@ -1475,6 +1557,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   svn_stream_set_write(stream, write_handler_stringbuf);
   svn_stream_set_mark(stream, mark_handler_stringbuf);
   svn_stream_set_seek(stream, seek_handler_stringbuf);
+  svn_stream_set_data_available(stream, data_available_handler_stringbuf);
   svn_stream__set_is_buffered(stream, is_buffered_handler_stringbuf);
   return stream;
 }
@@ -1545,6 +1628,15 @@ skip_handler_string(void *baton, apr_size_t len)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+data_available_handler_string(void *baton, svn_boolean_t *data_available)
+{
+  struct string_stream_baton *btn = baton;
+
+  *data_available = ((btn->str->len - btn->amt_read) > 0);
+  return SVN_NO_ERROR;
+}
+
 static svn_boolean_t
 is_buffered_handler_string(void *baton)
 {
@@ -1569,6 +1661,7 @@ svn_stream_from_string(const svn_string_t *str,
   svn_stream_set_mark(stream, mark_handler_string);
   svn_stream_set_seek(stream, seek_handler_string);
   svn_stream_set_skip(stream, skip_handler_string);
+  svn_stream_set_data_available(stream, data_available_handler_string);
   svn_stream__set_is_buffered(stream, is_buffered_handler_string);
   return stream;
 }
@@ -1806,6 +1899,17 @@ seek_handler_lazyopen(void *baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+data_available_handler_lazyopen(void *baton,
+                                svn_boolean_t *data_available)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  return svn_error_trace(svn_stream_data_available(b->real_stream,
+                                                   data_available));
+}
+
 /* Implements svn_stream__is_buffered_fn_t */
 static svn_boolean_t
 is_buffered_lazyopen(void *baton)
@@ -1842,6 +1946,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_close(stream, close_handler_lazyopen);
   svn_stream_set_mark(stream, mark_handler_lazyopen);
   svn_stream_set_seek(stream, seek_handler_lazyopen);
+  svn_stream_set_data_available(stream, data_available_handler_lazyopen);
   svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
 
   return stream;

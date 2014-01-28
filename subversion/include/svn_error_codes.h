@@ -322,6 +322,11 @@ SVN_ERROR_START
              SVN_ERR_STREAM_CATEGORY_START + 3,
              "Stream doesn't support seeking")
 
+  /** Since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_STREAM_DATA_AVAILABLE_NOT_SUPPORTED,
+             SVN_ERR_STREAM_CATEGORY_START + 4,
+             "Stream doesn't support data available")
+
   /* node errors */
 
   SVN_ERRDEF(SVN_ERR_NODE_UNKNOWN_KIND,
