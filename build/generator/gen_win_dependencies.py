@@ -468,7 +468,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       dll_dir = None
       debug_dll_dir = None
       dll_name = None
-      defines.extend(["APR_DECLARE_STATIC"])
+      defines.extend(["APU_DECLARE_STATIC"])
       
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
