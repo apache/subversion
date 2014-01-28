@@ -31,6 +31,7 @@
 #include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
+#include "svn_client_mtcc.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
 #include "private/svn_wc_private.h"
