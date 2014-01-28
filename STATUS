@@ -176,16 +176,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1553101, r1553105, r1553113
-   Resolve performance regression in certain 'svn log' scenarios, especially
-   against pre Subversion 1.5 servers.
-   Justification:
-     Easy fix for improving performance for everybody. More generic patch for
-     old versions might be needed for other scenarios, but those scenarios
-     were never supported on those old versions itself.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1555491
    Fix svn_fs_close_root for FSFS transaction roots.
    Justification:
@@ -293,5 +283,15 @@ Approved changes:
    Fix pool lifetime issue in serf commit processing for copied files and dirs
    Justification:
      Pool lifetime issues are bad. Reported by several git-svn users.
+   Votes:
+     +1: rhuijben, stefan2, philip
+
+ * r1553101, r1553105, r1553113
+   Resolve performance regression in certain 'svn log' scenarios, especially
+   against pre Subversion 1.5 servers.
+   Justification:
+     Easy fix for improving performance for everybody. More generic patch for
+     old versions might be needed for other scenarios, but those scenarios
+     were never supported on those old versions itself.
    Votes:
      +1: rhuijben, stefan2, philip
