@@ -35,11 +35,61 @@
 #include "svn_private_config.h"
 
 #include "client.h"
-#include "mtcc.h"
 
 #include <assert.h>
 
 #define SVN_PATH_IS_EMPTY(s) ((s)[0] == '\0')
+
+/* The kind of operation to perform in an svn_client_mtcc_op_t */
+typedef enum svn_client_mtcc_kind_t
+{
+  OP_OPEN_DIR,
+  OP_OPEN_FILE,
+  OP_ADD_DIR,
+  OP_ADD_FILE,
+  OP_DELETE,
+} svn_client_mtcc_kind_t;
+
+typedef struct svn_client_mtcc_op_t
+{
+  const char *name;                 /* basename of operation */
+  svn_client_mtcc_kind_t kind;      /* editor operation */
+
+  apr_array_header_t *children;     /* List of svn_client_mtcc_op_t * */
+
+  const char *src_relpath;              /* For ADD_DIR, ADD_FILE */
+  svn_revnum_t src_rev;                 /* For ADD_DIR, ADD_FILE */
+  svn_stream_t *src_stream;             /* For ADD_FILE, OPEN_FILE */
+  svn_checksum_t *src_checksum;         /* For ADD_FILE, OPEN_FILE */
+  svn_stream_t *base_stream;            /* For ADD_FILE, OPEN_FILE */
+  const svn_checksum_t *base_checksum;  /* For ADD_FILE, OPEN_FILE */
+
+  apr_array_header_t *prop_mods;        /* For all except DELETE
+                                           List of svn_prop_t */
+
+  svn_boolean_t performed_stat;         /* Verified kind with repository */
+} svn_client_mtcc_op_t;
+
+/* Check if the mtcc doesn't contain any modifications yet */
+#define MTCC_UNMODIFIED(mtcc)                                               \
+    ((mtcc->root_op->kind == OP_OPEN_DIR                                    \
+                            || mtcc->root_op->kind == OP_OPEN_FILE)         \
+     && (mtcc->root_op->prop_mods == NULL                                   \
+                            || !mtcc->root_op->prop_mods->nelts)            \
+     && (mtcc->root_op->children == NULL                                    \
+                            || !mtcc->root_op->children->nelts))
+
+struct svn_client_mtcc_t
+{
+  apr_pool_t *pool;
+  svn_revnum_t head_revision;
+  svn_revnum_t base_revision;
+
+  svn_ra_session_t *ra_session;
+  svn_client_ctx_t *ctx;
+
+  svn_client_mtcc_op_t *root_op;
+};
 
 static svn_client_mtcc_op_t *
 mtcc_op_create(const char *name,
