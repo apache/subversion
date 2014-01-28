@@ -358,6 +358,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_dir = os.path.join(self.apr_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
+      dll_name = None
       defines.extend(["APR_DECLARE_STATIC"])
 
       if not os.path.isdir(lib_dir) and \
@@ -388,19 +389,20 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       else:
         dll_dir = os.path.join(self.apr_path, 'bin')
         debug_dll_dir = None
-        
-    bin_files = os.listdir(dll_dir)
-    if debug_dll_dir and os.path.isdir(debug_dll_dir):
-      debug_bin_files = os.listdir(debug_dll_dir)
-    else:
-      debug_bin_files = bin_files 
-    
+
     extra_bin = []
-    
-    for bin in bin_files:
-      if bin in debug_bin_files:
-        if re.match('^(lib)?apr[-_].*' + suffix + '(d)?.dll$', bin):
-          extra_bin.append(bin)
+
+    if dll_dir:        
+      bin_files = os.listdir(dll_dir)
+      if debug_dll_dir and os.path.isdir(debug_dll_dir):
+        debug_bin_files = os.listdir(debug_dll_dir)
+      else:
+        debug_bin_files = bin_files 
+      
+      for bin in bin_files:
+        if bin in debug_bin_files:
+          if re.match('^(lib)?apr[-_].*' + suffix + '(d)?.dll$', bin):
+            extra_bin.append(bin)
       
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
@@ -465,6 +467,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_dir = os.path.join(self.apr_util_path, 'LibR')
       dll_dir = None
       debug_dll_dir = None
+      dll_name = None
       defines.extend(["APR_DECLARE_STATIC"])
       
       if not os.path.isdir(lib_dir) and \
@@ -494,18 +497,19 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         dll_dir = os.path.join(self.apr_util_path, 'bin')
         debug_dll_dir = None
 
-    bin_files = os.listdir(dll_dir)
-    if debug_dll_dir and os.path.isdir(debug_dll_dir):
-      debug_bin_files = os.listdir(debug_dll_dir)
-    else:
-      debug_bin_files = bin_files 
-
     extra_bin = []
+    
+    if dll_dir:
+      bin_files = os.listdir(dll_dir)
+      if debug_dll_dir and os.path.isdir(debug_dll_dir):
+        debug_bin_files = os.listdir(debug_dll_dir)
+      else:
+        debug_bin_files = bin_files 
 
-    for bin in bin_files:
-      if bin in debug_bin_files:
-        if re.match('^(lib)?aprutil[-_].*' + suffix + '(d)?.dll$', bin):
-          extra_bin.append(bin)
+      for bin in bin_files:
+        if bin in debug_bin_files:
+          if re.match('^(lib)?aprutil[-_].*' + suffix + '(d)?.dll$', bin):
+            extra_bin.append(bin)
 
     self._libraries['aprutil'] = SVNCommonLibrary('apr-util', inc_path, lib_dir,
                                                    lib_name,
