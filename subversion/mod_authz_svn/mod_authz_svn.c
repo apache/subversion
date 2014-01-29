@@ -250,7 +250,7 @@ log_access_verdict(LOG_ARGS_SIGNATURE,
                    const request_rec *r, int allowed,
                    const char *repos_path, const char *dest_repos_path)
 {
-  int level = allowed ? APLOG_INFO : APLOG_ERR;
+  int level = allowed ? APLOG_INFO : APLOG_WARNING;
   const char *verdict = allowed ? "granted" : "denied";
 
   if (r->user)
