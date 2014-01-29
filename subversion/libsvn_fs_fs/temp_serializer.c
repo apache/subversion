@@ -197,7 +197,7 @@ serialize_dir_entry(svn_temp_serializer__context_t *context,
   if (entry->key != entry->dirent.name)
     svn_temp_serializer__add_string(context, &entry->key);
   else
-    svn_temp_serializer__set_null(context, &entry->key);
+    svn_temp_serializer__set_null(context, (const void *const *)&entry->key);
 
   *length = (apr_uint32_t)(  svn_temp_serializer__get_length(context)
                            - APR_ALIGN_DEFAULT(initial_length));
