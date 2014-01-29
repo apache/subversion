@@ -563,9 +563,6 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("Illegal svn repository URL '%s'"), url);
 
-  if (! uri->port)
-    uri->port = SVN_RA_SVN_PORT;
-
   return SVN_NO_ERROR;
 }
 
@@ -673,7 +670,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     }
   else
     {
-      SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
+      SVN_ERR(make_connection(uri->hostname,
+                              uri->port ? uri->port : SVN_RA_SVN_PORT,
+                              &sock, pool));
       conn = svn_ra_svn_create_conn4(sock, NULL, NULL,
                                      SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                                      0, 0, pool);
