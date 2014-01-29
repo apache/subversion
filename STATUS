@@ -255,12 +255,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1557522
-   Make mod_dav_svn report all property changes in 'include-properties' mode,
-   even in uncommon configurations.
-   Justification:
-     This needs a fix in either client or server if we ever want to restart
-     using the report copyfrom mode.
-   Votes:
-     +1: rhuijben, stefan2, philip
