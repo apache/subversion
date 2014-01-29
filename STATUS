@@ -256,14 +256,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1537018
-   Fix issue #4440, "Subversion sets permissions on files, when it shouldn't"
-   Justification:
-     Bug introduced by me. Unreasonable behaviour. User complained.
-   Votes:
-     +1: stsp, stefan2, philip
-     +0.5: rhuijben (Change looks sane, but I'm unable to test this)
-
  * r1553376, r1553377
    Fix pool lifetime issue in serf commit processing for copied files and dirs
    Justification:
