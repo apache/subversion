@@ -485,7 +485,9 @@ namespace {
 class TunnelContext
 {
 public:
-  explicit TunnelContext(apr_pool_t *pool)
+  explicit TunnelContext(const char *t_name, const char *t_user,
+                         const char *t_hostname, int t_port,
+                         apr_pool_t *pool)
     : request_in(NULL),
       request_out(NULL),
       response_in(NULL),
@@ -506,6 +508,10 @@ public:
       if (!status)
         status = apr_file_pipe_create(&response_in, &response_out, pool);
 #endif
+      tunnel_name = apr_pstrdup(pool, t_name);
+      user = apr_pstrdup(pool, t_user);
+      hostname = apr_pstrdup(pool, t_hostname);
+      port = t_port;
     }
 
   ~TunnelContext()
@@ -519,6 +525,11 @@ public:
   apr_file_t *response_in;
   apr_file_t *response_out;
   apr_status_t status;
+
+  const char *tunnel_name;
+  const char *user;
+  const char *hostname;
+  int port;
 };
 
 jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
@@ -573,12 +584,15 @@ OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
 
 svn_error_t *
 OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
-                             void **tunnel_context, void *tunnel_baton,
+                             svn_ra_close_tunnel_func_t *close_func,
+                             void **close_baton,
+                             void *tunnel_baton,
                              const char *tunnel_name, const char *user,
                              const char *hostname, int port,
                              apr_pool_t *pool)
 {
-  TunnelContext *tc = new TunnelContext(pool);
+  TunnelContext *tc = new TunnelContext(tunnel_name, user, hostname, port,
+                                        pool);
   if (tc->status)
     {
       delete tc;
@@ -586,7 +600,8 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
           svn_error_wrap_apr(tc->status, _("Could not open tunnel streams")));
     }
 
-  *tunnel_context = tc;
+  *close_func = closeTunnel;
+  *close_baton = tc;
   *request = svn_stream_from_aprfile2(tc->request_out, FALSE, pool);
   *response = svn_stream_from_aprfile2(tc->response_in, FALSE, pool);
 
@@ -632,11 +647,17 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
 }
 
 svn_error_t *
-OperationContext::closeTunnel(void *tunnel_context, void *tunnel_baton,
-                              const char *tunnel_name, const char *user,
-                              const char *hostname, int port)
+OperationContext::inner_closeTunnel(void *tunnel_context, void *tunnel_baton)
 {
-  delete static_cast<TunnelContext*>(tunnel_context);
+  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
+
+  /* ### These are allocated in the pool, so it is safe to cache them here */
+  const char *tunnel_name = tc->tunnel_name;
+  const char *user = tc->user;
+  const char *hostname = tc->hostname;
+  int port = tc->port;
+
+  delete tc;
 
   jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
   SVN_JNI_CATCH(, SVN_ERR_BASE);
@@ -669,4 +690,12 @@ OperationContext::closeTunnel(void *tunnel_context, void *tunnel_baton,
       SVN_ERR_BASE);
 
   return SVN_NO_ERROR;
+}
+
+void
+OperationContext::closeTunnel(void *tunnel_context, void *tunnel_baton)
+{
+  /* ### We now ignore all errors here. We used to ignore them in the
+         Subversion API */
+  svn_error_clear(inner_closeTunnel(tunnel_context, tunnel_baton));
 }

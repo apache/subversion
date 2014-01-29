@@ -75,7 +75,6 @@ RemoteSessionContext::RemoteSessionContext(
     {
       m_raCallbacks->check_tunnel_func = checkTunnel;
       m_raCallbacks->open_tunnel_func = openTunnel;
-      m_raCallbacks->close_tunnel_func = closeTunnel;
       m_raCallbacks->tunnel_baton = m_jtunnelcb;
     }
 }

@@ -352,7 +352,6 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     cbtable->get_wc_contents = get_wc_contents;
   cbtable->check_tunnel_func = ctx->check_tunnel_func;
   cbtable->open_tunnel_func = ctx->open_tunnel_func;
-  cbtable->close_tunnel_func = ctx->close_tunnel_func;
   cbtable->tunnel_baton = ctx->tunnel_baton;
 
   cb->commit_items = commit_items;

@@ -284,6 +284,22 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
     void *tunnel_baton, const char *tunnel_name);
 
 /**
+ * Callback function for closing a tunnel in ra_svn.
+ *
+ * This function will be called when the pool that owns the tunnel
+ * connection is cleared or destroyed.
+ *
+ * @a tunnel_context is the baton as returned from the 
+ * svn_ra_open_tunnel_func_t.
+ *
+ * @a tunnel_baton was returned by the open-tunnel callback.
+ *
+ * @since New in 1.9.
+ */
+typedef void (*svn_ra_close_tunnel_func_t)(
+    void *close_baton, void *tunnel_baton);
+
+/**
  * Callback function for opening a tunnel in ra_svn.
  *
  * Given the @a tunnel_name, tunnel @a user and server @a hostname and
@@ -293,37 +309,20 @@ typedef svn_boolean_t (*svn_ra_check_tunnel_func_t)(
  * @a request and @a response represent the standard input and output,
  * respectively, of the process on the other end of the tunnel.
  *
- * @a tunnel_context will be passed on to the close-unnel callback.
+ * If @a *close_func is set it will be called with @a close_baton when
+ * the tunnel is closed.
  *
- * @a tunnel_baton is the baton as originally passed to ra_open.
+ * @a tunnel_baton is the baton as set in the callbacks.
  *
  * @since New in 1.9.
  */
 typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
     svn_stream_t **request, svn_stream_t **response,
-    void **tunnel_context, void *tunnel_baton,
+    svn_ra_close_tunnel_func_t *close_func, void **close_baton,
+    void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port,
     apr_pool_t *pool);
-
-/**
- * Callback function for closing a tunnel in ra_svn.
- *
- * This function will be called when the pool that owns the tunnel
- * connection is cleared or destroyed. It receives the @a baton that
- * was created by the open-tunnel callback, and the same
- * @a tunnel_name, @a user, @a hostname and @a port parameters.
- *
- * @a tunel_baton was returned by the open-tunnel callback.
- *
- * @a open_baton is the baton as originally passed to ra_open.
- *
- * @since New in 1.9.
- */
-typedef svn_error_t *(*svn_ra_close_tunnel_func_t)(
-    void *tunnel_context, void *tunnel_baton,
-    const char *tunnel_name, const char *user,
-    const char *hostname, int port);
 
 
 /**
@@ -613,16 +612,6 @@ typedef struct svn_ra_callbacks2_t
    * @since New in 1.9.
    */
   svn_ra_open_tunnel_func_t open_tunnel_func;
-
-  /** Close-tunnel callback
-   *
-   * If not @c NULL, this callback will be invoked when the pool that
-   * owns the connection created by the open_tunnel callback is
-   * cleared or destroyed. This callback is used only for ra_svn and
-   * ignored by the other RA modules.
-   * @since New in 1.9.
-   */
-  svn_ra_close_tunnel_func_t close_tunnel_func;
 
   /** A baton used with open_tunnel_func and close_tunnel_func.
    * @since New in 1.9.

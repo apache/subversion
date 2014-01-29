@@ -26,7 +26,7 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
-
+#include <assert.h>
 #define SVN_DEPRECATED
 
 #include "svn_error.h"
@@ -108,9 +108,13 @@ check_tunnel(void *tunnel_baton, const char *tunnel_name)
   return last_tunnel_check;
 }
 
+static void
+close_tunnel(void *tunnel_context, void *tunnel_baton);
+
 static svn_error_t *
 open_tunnel(svn_stream_t **request, svn_stream_t **response,
-            void **tunnel_context, void *tunnel_baton,
+            svn_ra_close_tunnel_func_t *close_func, void **close_baton,
+            void *tunnel_baton,
             const char *tunnel_name, const char *user,
             const char *hostname, int port,
             apr_pool_t *pool)
@@ -160,20 +164,18 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
 
   *request = svn_stream_from_aprfile2(proc->in, FALSE, pool);
   *response = svn_stream_from_aprfile2(proc->out, FALSE, pool);
-  open_tunnel_context = *tunnel_context = &kind;
+  *close_func = close_tunnel;
+  open_tunnel_context = *close_baton = &last_tunnel_check;
   ++tunnel_open_count;
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-close_tunnel(void *tunnel_context, void *tunnel_baton,
-             const char *tunnel_name, const char *user,
-             const char *hostname, int port)
+static void
+close_tunnel(void *tunnel_context, void *tunnel_baton)
 {
-  SVN_TEST_ASSERT(tunnel_context == open_tunnel_context);
-  SVN_TEST_ASSERT(tunnel_baton == check_tunnel_baton);
+  assert(tunnel_context == open_tunnel_context);
+  assert(tunnel_baton == check_tunnel_baton);
   --tunnel_open_count;
-  return SVN_NO_ERROR;
 }
 
 
@@ -255,7 +257,6 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
-  cbtable->close_tunnel_func = close_tunnel;
   cbtable->tunnel_baton = check_tunnel_baton = &cbtable;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,
@@ -293,7 +294,6 @@ tunel_callback_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   cbtable->check_tunnel_func = check_tunnel;
   cbtable->open_tunnel_func = open_tunnel;
-  cbtable->close_tunnel_func = close_tunnel;
   cbtable->tunnel_baton = check_tunnel_baton = &cbtable;
   SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
                                         TRUE  /* non_interactive */,

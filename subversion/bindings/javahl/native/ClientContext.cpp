@@ -75,7 +75,6 @@ ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
       {
         m_context->check_tunnel_func = checkTunnel;
         m_context->open_tunnel_func = openTunnel;
-        m_context->close_tunnel_func = closeTunnel;
         m_context->tunnel_baton = m_jtunnelcb;
       }
 }
@@ -91,14 +90,12 @@ void ClientContext::setTunnelCallback(jobject jtunnelcb)
     {
       m_context->check_tunnel_func = checkTunnel;
       m_context->open_tunnel_func = openTunnel;
-      m_context->close_tunnel_func = closeTunnel;
       m_context->tunnel_baton = m_jtunnelcb;
     }
   else
     {
       m_context->check_tunnel_func = NULL;
       m_context->open_tunnel_func = NULL;
-      m_context->close_tunnel_func = NULL;
       m_context->tunnel_baton = NULL;
     }
 }
