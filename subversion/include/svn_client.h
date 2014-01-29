@@ -1040,17 +1040,7 @@ typedef struct svn_client_ctx_t
    */
   svn_ra_open_tunnel_func_t open_tunnel_func;
 
-  /** Close-tunnel callback
-   *
-   * If not @c NULL, this callback will be invoked when the pool that
-   * owns the connection created by the open_tunnel callback is
-   * cleared or destroyed. This callback is used only for ra_svn and
-   * ignored by the other RA modules.
-   * @since New in 1.9.
-   */
-  svn_ra_close_tunnel_func_t close_tunnel_func;
-
-  /** A baton used with open_tunnel_func and close_tunnel_func.
+  /** The baton used with check_tunnel_func and open_tunnel_func.
    * @since New in 1.9.
    */
   void *tunnel_baton;

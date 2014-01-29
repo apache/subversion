@@ -571,24 +571,26 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
 struct tunnel_data_t {
   void *tunnel_context;
   void *tunnel_baton;
-  const char *tunnel_name;
-  const char *user;
-  const char *hostname;
-  int port;
   svn_ra_close_tunnel_func_t close_tunnel;
+  svn_stream_t *request;
+  svn_stream_t *response;
 };
 
-/* Pool cleanup function that invokes the close-tunel callback. */
+/* Pool cleanup function that invokes the close-tunnel callback. */
 static apr_status_t close_tunnel_cleanup(void *baton)
 {
   const struct tunnel_data_t *const td = baton;
-  svn_error_t *const err =
-    svn_error_root_cause(td->close_tunnel(td->tunnel_context, td->tunnel_baton,
-                                          td->tunnel_name, td->user,
-                                          td->hostname, td->port));
-  const apr_status_t ret = (err ? err->apr_err : 0);
-  svn_error_clear(err);
-  return ret;
+
+  if (td->close_tunnel)
+    td->close_tunnel(td->tunnel_context, td->tunnel_baton);
+
+  svn_error_clear(svn_stream_close(td->request));
+
+  /* We might have one stream to use for both request and response! */
+  if (td->request != td->response);
+    svn_error_clear(svn_stream_close(td->response));
+
+  return APR_SUCCESS; /* ignored */
 }
 
 /* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
@@ -640,29 +642,22 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
         SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
       else
         {
-          void *tunnel_context;
-          svn_stream_t *request;
-          svn_stream_t *response;
+          struct tunnel_data_t *const td = apr_palloc(pool, sizeof(*td));
+
+          td->tunnel_baton = callbacks->tunnel_baton;
+          td->close_tunnel = NULL;
+
           SVN_ERR(callbacks->open_tunnel_func(
-                      &request, &response, &tunnel_context,
+                      &td->request, &td->response,
+                      &td->close_tunnel, &td->tunnel_context,
                       callbacks->tunnel_baton, tunnel_name,
                       uri->user, uri->hostname, uri->port,
                       pool));
-          if (callbacks->close_tunnel_func)
-            {
-              struct tunnel_data_t *const td = apr_palloc(pool, sizeof(*td));
-              td->tunnel_context = tunnel_context;
-              td->tunnel_baton = callbacks->tunnel_baton;
-              td->tunnel_name = apr_pstrdup(pool, tunnel_name);
-              td->user = apr_pstrdup(pool, uri->user);
-              td->hostname = apr_pstrdup(pool, uri->hostname);
-              td->port = uri->port;
-              td->close_tunnel = callbacks->close_tunnel_func;
-              apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
-                                        apr_pool_cleanup_null);
-            }
 
-          conn = svn_ra_svn_create_conn4(NULL, response, request,
+          apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
+                                    apr_pool_cleanup_null);
+
+          conn = svn_ra_svn_create_conn4(NULL, td->response, td->request,
                                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
                                          0, 0, pool);
           SVN_ERR(svn_ra_svn__skip_leading_garbage(conn, pool));
