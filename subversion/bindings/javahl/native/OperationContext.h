@@ -76,9 +76,6 @@ class OperationContext
       const char *hostname, int port,
       apr_pool_t *pool);
 
-  static svn_error_t *inner_closeTunnel(
-      void *tunnel_context, void *tunnel_baton);
-
   static void closeTunnel(
       void *tunnel_context, void *tunnel_baton);
 
