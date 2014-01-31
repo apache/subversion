@@ -104,8 +104,10 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
             try
             {
                 long revNum = Long.parseLong(revisionElement.trim());
-                this.from = new Revision.Number(revNum);
-                this.to = this.from;
+                if (revNum <= 0)
+                    return;
+                this.to = new Revision.Number(revNum);
+                this.from = new Revision.Number(revNum - 1);
             }
             catch (NumberFormatException e)
             {
@@ -133,8 +135,17 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
     {
         if (from != null && to != null)
         {
-            String rep = (from.equals(to) ? from.toString()
-                          : from.toString() + '-' + to.toString());
+            String rep;
+
+            if (from.getKind() == Revision.Kind.number
+                && to.getKind() == Revision.Kind.number
+                && (((Revision.Number)from).getNumber() + 1
+                    == ((Revision.Number)to).getNumber()))
+                rep = to.toString();
+            else if (from.equals(to)) // Such ranges should never happen
+                rep = from.toString();
+            else
+                rep = from.toString() + '-' + to.toString();
             if (!inheritable)
                 return rep + '*';
             return rep;
