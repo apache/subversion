@@ -45,6 +45,13 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Generate expected output
 
+def is_absolute_url(target):
+  return (target.startswith('file://')
+          or target.startswith('http://')
+          or target.startswith('https://')
+          or target.startswith('svn://')
+          or target.startswith('svn+ssh://'))
+
 def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
   """Generate the expected diff header for file PATH, with its old and new
   versions described in parentheses by OLD_TAG and NEW_TAG. SRC_LABEL and
@@ -53,12 +60,16 @@ def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
   Return the header as an array of newline-terminated strings."""
   if src_label:
     src_label = src_label.replace('\\', '/')
-    src_label = '\t(.../' + src_label + ')'
+    if not is_absolute_url(src_label):
+      src_label = '.../' + src_label
+    src_label = '\t(' + src_label + ')'
   else:
     src_label = ''
   if dst_label:
     dst_label = dst_label.replace('\\', '/')
-    dst_label = '\t(.../' + dst_label + ')'
+    if not is_absolute_url(dst_label):
+      dst_label = '.../' + dst_label
+    dst_label = '\t(' + dst_label + ')'
   else:
     dst_label = ''
   path_as_shown = path.replace('\\', '/')
@@ -3947,6 +3958,7 @@ test_list = [ None,
               no_spurious_conflict,
               diff_deleted_url,
               diff_git_format_wc_wc_dir_mv,
+              diff_repo_wc_copies,
               ]
 
 if __name__ == '__main__':
