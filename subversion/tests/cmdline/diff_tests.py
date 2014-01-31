@@ -3939,33 +3939,33 @@ def diff_repo_wc_file_props(sbox):
                                      '--old', iota_copy,
                                      '--new', iota + '@1')
 
-  # revert and commit with the eol-style of native and then update so
+  # revert and commit with the eol-style of LF and then update so
   # that we can see a change on either windows or *nix.
   sbox.simple_revert('iota', 'iota_copy')
-  sbox.simple_propset('svn:eol-style', 'native', 'iota')
+  sbox.simple_propset('svn:eol-style', 'LF', 'iota')
   sbox.simple_commit() #r2
   sbox.simple_update()
 
-  # now that we have a native file on disk switch to the opposing
-  # style from native
-  if svntest.main.is_os_windows():
-    native_eol = '\r\n'
-    foreign_eol = '\n'
-    foreign_eol_style = 'LF'
-  else:
-    native_eol = '\n'
-    foreign_eol = '\r\n'
-    foreign_eol_style = 'CRLF'
-  sbox.simple_propset('svn:eol-style', foreign_eol_style, 'iota')
+  # now that we have a LF file on disk switch to CRLF
+  sbox.simple_propset('svn:eol-style', 'CRLF', 'iota')
 
   # test that not only the property but also the file changes
   # i.e. that the line endings substitution works
+  if svntest.main.is_os_windows():
+    # test suite normalizes crlf output into just lf on Windows.
+    # so we have to assume it worked because there is an add and
+    # remove line with the same content.  Fortunately, it does't
+    # do this on *nix so we can be pretty sure that it works right.
+    # TODO: Provide a way to handle this better
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
   expected_output = make_diff_header(iota, 'revision 1', 'working copy') + \
                     [ '@@ -1 +1 @@\n',
-                      "-This is the file 'iota'." + native_eol,
-                      "+This is the file 'iota'." + foreign_eol ] + \
+                      "-This is the file 'iota'.\n",
+                      "+This is the file 'iota'." + crlf ] + \
                     make_diff_prop_header(iota) + \
-                    make_diff_prop_added('svn:eol-style', foreign_eol_style)
+                    make_diff_prop_added('svn:eol-style', 'CRLF')
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r1', iota)
