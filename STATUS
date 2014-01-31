@@ -221,19 +221,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1560723, r1561419, r1561427, r1561428
-   Fix the handling of pre-1.4 FSFS repositories.
-   Branch: ^/subversion/branches/1.8.x-r1560723-and-friends
-   Justification:
-     Without this, old SVN versions won't be able to e.g. hotcopy those
-     repos once 1.8.x made a commit in them.  Also, fix our hotcopy code
-     and make it cope with repositories broken by previous 1.8.x releases.
-   Votes:
-     +1: stefan2
-     -1: ivan (Significant performance degradation for svnadmin hotcopy,
-               the root cause is not fixed. Discussion:
-               http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
-
 Veto-blocked changes:
 =====================
 
@@ -246,6 +233,19 @@ Veto-blocked changes:
    Votes:
      +1: stsp
      -1: breser (see my email to dev@, <5282FE15.40505@reser.org>)
+
+ * r1560723, r1561419, r1561427, r1561428
+   Fix the handling of pre-1.4 FSFS repositories.
+   Branch: ^/subversion/branches/1.8.x-r1560723-and-friends
+   Justification:
+     Without this, old SVN versions won't be able to e.g. hotcopy those
+     repos once 1.8.x made a commit in them.  Also, fix our hotcopy code
+     and make it cope with repositories broken by previous 1.8.x releases.
+   Votes:
+     +1: stefan2
+     -1: ivan (Significant performance degradation for svnadmin hotcopy,
+               the root cause is not fixed. Discussion:
+               http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
 
 Approved changes:
 =================
