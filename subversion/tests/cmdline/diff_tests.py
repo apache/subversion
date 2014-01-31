@@ -4757,10 +4757,19 @@ def diff_repo_wc_file_props(sbox):
 
   # test that not only the property but also the file changes
   # i.e. that the line endings substitution works
+  if svntest.main.is_os_windows():
+    # test suite normalizes crlf output into just lf on Windows.
+    # so we have to assume it worked because there is an add and
+    # remove line with the same content.  Fortunately, it does't
+    # do this on *nix so we can be pretty sure that it works right.
+    # TODO: Provide a way to handle this better
+    crlf = '\n'
+  else:
+    crlf = '\r\n'
   expected_output = make_diff_header(iota, 'revision 1', 'working copy') + \
                     [ '@@ -1 +1 @@\n',
                       "-This is the file 'iota'.\n",
-                      "+This is the file 'iota'.\r\n" ] + \
+                      "+This is the file 'iota'." + crlf ] + \
                     make_diff_prop_header(iota) + \
                     make_diff_prop_added('svn:eol-style', 'CRLF')
 
