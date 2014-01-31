@@ -92,6 +92,9 @@ Candidate changes:
    Fix several issues with diff we broke in 1.7.14
    Justification:
      Regression from 1.7.13
+   Notes:
+     The guts of the fix are in r1563081 on the branch, the rest are just
+     support code for the tests and the tests themselves.
    Votes:
      +1: breser
 
