@@ -76,7 +76,6 @@ ClientContext::~ClientContext()
 {
 }
 
-
 /* Helper function to make sure that we don't keep dangling pointers in ctx.
    Note that this function might be called multiple times if getContext()
    is called on the same pool.

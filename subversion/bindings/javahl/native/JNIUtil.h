@@ -285,4 +285,13 @@ class JNIUtil
     SVN_ERR(JNIUtil::checkJavaException((errorcode)));  \
   } while(0)
 
+#define SVN_JNI_CATCH_VOID(statement)                   \
+  do {                                                  \
+    do { statement; } while(0);                         \
+    if (JNIUtil::getEnv()->ExceptionCheck()) {          \
+      JNIUtil::getEnv()->ExceptionClear();              \
+      return;                                           \
+    }                                                   \
+  } while(0)
+
 #endif  // JNIUTIL_H

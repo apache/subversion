@@ -50,6 +50,22 @@ public interface TunnelAgent
     boolean checkTunnel(String name);
 
     /**
+     * Callback interface returned from {@link #openTunnel()}.
+     */
+    public static interface CloseTunnelCallback
+    {
+        /**
+         * This callback method is called when a tunnel needs to be closed
+         * and the request and response streams detached from it.
+         * <p>
+         * <b>Note:</b> Errors on connection-close are not propagated
+         * to the implementation, therefore this method cannot throw
+         * any exceptions.
+         */
+        void closeTunnel();
+    }
+
+    /**
      * This callback method is called when a tunnel needs to be
      * created and the request and response streams attached to it.
      * @param request The request stream of the tunnel. The tunnel
@@ -63,21 +79,16 @@ public interface TunnelAgent
      * @param user the tunnel username
      * @param hostname the host part of the svn+tunnel:// URL
      * @param port the port part of the svn+tunnel:// URL
+     *
+     * @return an instance od {@link CloseTunnelCallback}, which will
+     *         be invoked when the connection is closed, or
+     *         <code>null</code>.
+     *
      * @throws any exception will abort the connection
      */
-    void openTunnel(ReadableByteChannel request, WritableByteChannel response,
-                    String name, String user, String hostname, int port)
-        throws Throwable;
-
-    /**
-     * This callback method is called when a tunnel needs to be closed
-     * and the request and response streams detached from it.
-     * @param name the name of the tunnel, as in
-     *                  <tt>svn+</tt><em>name</em><tt>://...</tt>
-     * @param user the tunnel username
-     * @param hostname the host part of the svn+tunnel:// URL
-     * @param port the port part of the svn+tunnel:// URL
-     */
-    void closeTunnel(String name, String user, String hostname, int port)
+    CloseTunnelCallback openTunnel(ReadableByteChannel request,
+                                   WritableByteChannel response,
+                                   String name, String user,
+                                   String hostname, int port)
         throws Throwable;
 }
