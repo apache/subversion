@@ -152,15 +152,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1541638, r1545302
-   Fix automatic relocate during update for working copies that are
-   not at repository root.
-   Justification:
-     Makes it much easier on users when their hoster migrates from http
-     to https. (Too bad that there is no way to safely transfer credentials..)
-   Votes:
-     +1: rhuijben, philip
-
  * r1551524, 1551579
    Fix an 'No Write Lock' error when moving files between externals and
    parent working copies or vice versa.
@@ -255,3 +246,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1541638, r1545302
+   Fix automatic relocate during update for working copies that are
+   not at repository root.
+   Justification:
+     Makes it much easier on users when their hoster migrates from http
+     to https. (Too bad that there is no way to safely transfer credentials..)
+   Votes:
+     +1: rhuijben, philip, ivan
