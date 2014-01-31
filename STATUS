@@ -221,6 +221,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1563110
+   Correct the default cache size in svnserve's help text for the -M option.
+   Justification:
+     Help text is wrong.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
