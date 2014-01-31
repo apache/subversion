@@ -230,6 +230,9 @@ Candidate changes:
      and make it cope with repositories broken by previous 1.8.x releases.
    Votes:
      +1: stefan2
+     -1: ivan (Significant performance degradation for svnadmin hotcopy,
+               the root cause is not fixed. Discussion:
+               http://svn.haxx.se/dev/archive-2014-01/0158.shtml)
 
 Veto-blocked changes:
 =====================
