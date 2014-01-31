@@ -4696,7 +4696,117 @@ def diff_repo_wc_copies(sbox):
                                      '--show-copies-as-adds',
                                      iota_url, iota_copy)
 
+@Issue(4460)
+def diff_repo_wc_file_props(sbox):
+  "diff repo to wc file target with props"
+  sbox.build()
+  iota = sbox.ospath('iota')
 
+  # add a mime-type and a line to iota to test the binary check
+  sbox.simple_propset('svn:mime-type', 'text/plain', 'iota')
+  sbox.simple_append('iota','second line\n')
+
+  # test that we get the line and the property add
+  expected_output = make_diff_header(iota, 'revision 1', 'working copy') + \
+                    [ '@@ -1 +1,2 @@\n',
+                      " This is the file 'iota'.\n",
+                      "+second line\n", ] + \
+                    make_diff_prop_header(iota) + \
+                    make_diff_prop_added('svn:mime-type', 'text/plain')
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r1', iota)
+
+  # reverse the diff, should get a property delete and line delete
+  expected_output = make_diff_header(iota, 'working copy', 'revision 1') + \
+                    [ '@@ -1,2 +1 @@\n',
+                      " This is the file 'iota'.\n",
+                      "-second line\n", ] + \
+                    make_diff_prop_header(iota) + \
+                    make_diff_prop_deleted('svn:mime-type', 'text/plain')
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', iota,
+                                     '--new', iota + '@1')
+
+  # copy iota to test with --show-copies as adds
+  sbox.simple_copy('iota', 'iota_copy')
+  iota_copy = sbox.ospath('iota_copy')
+
+  # test that we get all lines as added and the property added
+  # TODO: We only test that this test doesn't error out because of Issue #4464
+  # if and when that issue is fixed this test should check output
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff',
+                                     '--show-copies-as-adds', '-r1', iota_copy)
+
+  # reverse the diff, should get all lines as a delete and no property
+  # TODO: We only test that this test doesn't error out because of Issue #4464
+  # if and when that issue is fixed this test should check output
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff',
+                                     '--show-copies-as-adds',
+                                     '--old', iota_copy,
+                                     '--new', iota + '@1')
+
+  # revert and commit with the eol-style of native and then update so
+  # that we can see a change on either windows or *nix.
+  sbox.simple_revert('iota', 'iota_copy')
+  sbox.simple_propset('svn:eol-style', 'native', 'iota')
+  sbox.simple_commit() #r2
+  sbox.simple_update()
+
+  # now that we have a native file on disk switch to the opposing
+  # style from native
+  if svntest.main.is_os_windows():
+    native_eol = '\r\n'
+    foreign_eol = '\n'
+    foreign_eol_style = 'LF'
+  else:
+    native_eol = '\n'
+    foreign_eol = '\r\n'
+    foreign_eol_style = 'CRLF'
+  sbox.simple_propset('svn:eol-style', foreign_eol_style, 'iota')
+
+  # test that not only the property but also the file changes
+  # i.e. that the line endings substitution works
+  expected_output = make_diff_header(iota, 'revision 1', 'working copy') + \
+                    [ '@@ -1 +1 @@\n',
+                      "-This is the file 'iota'." + native_eol,
+                      "+This is the file 'iota'." + foreign_eol ] + \
+                    make_diff_prop_header(iota) + \
+                    make_diff_prop_added('svn:eol-style', foreign_eol_style)
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r1', iota)
+
+
+@Issue(4460)
+def diff_repo_repo_added_file_mime_type(sbox):
+    "diff repo to repo added file with mime-type"
+    sbox.build()
+    wc_dir = sbox.wc_dir
+    newfile = sbox.ospath('newfile')
+
+    # add a file with a mime-type
+    sbox.simple_append('newfile', "This is the file 'newfile'.\n")
+    sbox.simple_add('newfile')
+    sbox.simple_propset('svn:mime-type', 'text/plain', 'newfile')
+    sbox.simple_commit() # r2
+
+    # try to diff across the addition
+    expected_output = make_diff_header(newfile, 'revision 0', 'revision 2') + \
+                      [ '@@ -0,0 +1 @@\n',
+                        "+This is the file 'newfile'.\n" ] + \
+                      make_diff_prop_header(newfile) + \
+                      make_diff_prop_added('svn:mime-type', 'text/plain')
+
+    svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                       '-r1:2', newfile)
+
+    # reverse the diff to diff across a deletion
+    # Note no property delete is printed when whole file is deleted
+    expected_output = make_diff_header(newfile, 'revision 2', 'revision 1') + \
+                      [ '@@ -1, +0,0 @@\n',
+                        "-This is the file 'newfile'.\n" ]
+    svntest.actions.run_and_verify_svn(None, None, [], 'diff',
+                                       '-r2:1', newfile)
 
 ########################################################################
 #Run the tests
@@ -4781,6 +4891,8 @@ test_list = [ None,
               diff_local_missing_obstruction,
               diff_move_inside_copy,
               diff_repo_wc_copies,
+              diff_repo_wc_file_props,
+              diff_repo_repo_added_file_mime_type,
               ]
 
 if __name__ == '__main__':
