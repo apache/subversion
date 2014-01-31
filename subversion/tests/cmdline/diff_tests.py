@@ -3958,7 +3958,6 @@ test_list = [ None,
               no_spurious_conflict,
               diff_deleted_url,
               diff_git_format_wc_wc_dir_mv,
-              diff_repo_wc_copies,
               ]
 
 if __name__ == '__main__':
