@@ -88,6 +88,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * ^/subversion/branches/1.7.x-issue4460
+   Fix several issues with diff we broke in 1.7.14
+   Justification:
+     Regression from 1.7.13
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
