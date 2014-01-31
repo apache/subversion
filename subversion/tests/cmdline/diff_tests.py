@@ -45,16 +45,28 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Generate expected output
 
-def make_diff_header(path, old_tag, new_tag):
+def make_diff_header(path, old_tag, new_tag, src_label=None, dst_label=None):
   """Generate the expected diff header for file PATH, with its old and new
-  versions described in parentheses by OLD_TAG and NEW_TAG. Return the header
-  as an array of newline-terminated strings."""
+  versions described in parentheses by OLD_TAG and NEW_TAG. SRC_LABEL and
+  DST_LABEL are paths or urls that are added to the diff labels if we're
+  diffing against the repository or diffing two arbitrary paths.
+  Return the header as an array of newline-terminated strings."""
+  if src_label:
+    src_label = src_label.replace('\\', '/')
+    src_label = '\t(.../' + src_label + ')'
+  else:
+    src_label = ''
+  if dst_label:
+    dst_label = dst_label.replace('\\', '/')
+    dst_label = '\t(.../' + dst_label + ')'
+  else:
+    dst_label = ''
   path_as_shown = path.replace('\\', '/')
   return [
     "Index: " + path_as_shown + "\n",
     "===================================================================\n",
-    "--- " + path_as_shown + "\t(" + old_tag + ")\n",
-    "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
+    "--- " + path_as_shown + src_label + "\t(" + old_tag + ")\n",
+    "+++ " + path_as_shown + dst_label + "\t(" + new_tag + ")\n",
     ]
 
 def make_no_diff_deleted_header(path, old_tag, new_tag):
