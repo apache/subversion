@@ -2724,7 +2724,7 @@ merge_dir_opened(void **new_dir_baton,
 
           if (old_tc)
             {
-              /* svn_wc_add4 and svn_wc_add_from_disk2 can't add a node
+              /* svn_wc_add4 and svn_wc_add_from_disk3 can't add a node
                  over an existing tree conflict */
 
               /* ### These functions should take some tree conflict argument
@@ -2762,8 +2762,9 @@ merge_dir_opened(void **new_dir_baton,
             }
           else
             {
-              SVN_ERR(svn_wc_add_from_disk2(merge_b->ctx->wc_ctx, local_abspath,
+              SVN_ERR(svn_wc_add_from_disk3(merge_b->ctx->wc_ctx, local_abspath,
                                             apr_hash_make(scratch_pool),
+                                            FALSE /* skip checks */,
                                             NULL, NULL /* no notify! */,
                                             scratch_pool));
             }
