@@ -997,9 +997,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
 
 svn_error_t *
-svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
+svn_wc_add_from_disk3(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       const apr_hash_t *props,
+                      svn_boolean_t skip_checks,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       apr_pool_t *scratch_pool)
@@ -1018,7 +1019,7 @@ svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
 
       SVN_ERR(svn_wc__canonicalize_props(
                 &new_props,
-                local_abspath, kind, props, FALSE /* skip_some_checks */,
+                local_abspath, kind, props, skip_checks,
                 scratch_pool, scratch_pool));
       props = new_props;
     }

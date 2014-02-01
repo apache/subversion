@@ -316,7 +316,8 @@ add_file(const char *local_abspath,
     }
 
   /* Add the file */
-  SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, local_abspath, properties,
+  SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx, local_abspath, properties,
+                                FALSE /* skip checks */,
                                 ctx->notify_func2, ctx->notify_baton2, pool));
 
   return SVN_NO_ERROR;
@@ -378,7 +379,8 @@ add_dir_recursive(const char *dir_abspath,
   iterpool = svn_pool_create(scratch_pool);
 
   /* Add this directory to revision control. */
-  err = svn_wc_add_from_disk2(ctx->wc_ctx, dir_abspath, NULL /*props*/,
+  err = svn_wc_add_from_disk3(ctx->wc_ctx, dir_abspath, NULL /*props*/,
+                              FALSE /* skip checks */,
                               ctx->notify_func2, ctx->notify_baton2,
                               iterpool);
   if (err)
@@ -873,8 +875,9 @@ add(const char *local_abspath,
                                      parent_abspath, local_abspath);
 
           SVN_ERR(svn_io_make_dir_recursively(parent_abspath, scratch_pool));
-          SVN_ERR(svn_wc_add_from_disk2(ctx->wc_ctx, parent_abspath,
+          SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx, parent_abspath,
                                         NULL /*props*/,
+                                        FALSE /* skip checks */,
                                         ctx->notify_func2, ctx->notify_baton2,
                                         scratch_pool));
         }
