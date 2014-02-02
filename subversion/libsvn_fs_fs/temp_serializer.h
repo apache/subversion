@@ -209,9 +209,12 @@ svn_fs_fs__extract_dir_entry(void **out,
  */
 typedef struct replace_baton_t
 {
-  /** Name of the directory entry to modify.
-      When normalized lookup is enabled, this name must be normalized. */
-  const char *name;
+  /** The key of the directory entry to modify.
+
+   Note: When normalized lookups are enabled, this must be the
+         normalized form of the entry name; otherwise, it should be
+         the original form of the entry name. */
+  const char *key;
 
   /** directory entry to insert instead */
   svn_fs_fs__dirent_t *new_entry;

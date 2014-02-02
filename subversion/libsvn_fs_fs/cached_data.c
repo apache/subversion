@@ -1920,7 +1920,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 }
 
 /* Return TRUE when all svn_fs_fs__dirent_t* in ENTRIES are already sorted
-   by their respective name. */
+   by their respective key. */
 static svn_boolean_t
 sorted(apr_array_header_t *entries)
 {
@@ -1946,7 +1946,7 @@ compare_dirents(const void *a, const void *b)
 
 /* Compare the key of the dirents given in **A with the C string in *B. */
 static int
-compare_dirent_name(const void *a, const void *b)
+compare_dirent_key(const void *a, const void *b)
 {
   const svn_fs_fs__dirent_t *lhs = *((const svn_fs_fs__dirent_t * const *) a);
   const char *rhs = b;
@@ -2198,11 +2198,11 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
 
 svn_fs_fs__dirent_t *
 svn_fs_fs__find_dir_entry(apr_array_header_t *entries,
-                          const char *name,
+                          const char *key,
                           int *hint)
 {
   svn_fs_fs__dirent_t **result
-    = svn_sort__array_lookup(entries, name, hint, compare_dirent_name);
+    = svn_sort__array_lookup(entries, key, hint, compare_dirent_key);
   return result ? *result : NULL;
 }
 
@@ -2210,7 +2210,7 @@ svn_error_t *
 svn_fs_fs__rep_contents_dir_entry(svn_fs_fs__dirent_t **dirent,
                                   svn_fs_t *fs,
                                   node_revision_t *noderev,
-                                  const char *name,
+                                  const char *key,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
@@ -2218,8 +2218,8 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_fs__dirent_t **dirent,
 
   /* find the cache we may use */
   pair_cache_key_t pair_key = { 0 };
-  const void *key;
-  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
+  const void *cache_key;
+  svn_cache__t *cache = locate_dir_cache(fs, &cache_key, &pair_key, noderev,
                                          scratch_pool);
   if (cache)
     {
@@ -2227,9 +2227,9 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_fs__dirent_t **dirent,
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
                                      cache,
-                                     key,
+                                     cache_key,
                                      svn_fs_fs__extract_dir_entry,
-                                     (void*)name,
+                                     (void*)key,
                                      result_pool));
     }
 
@@ -2246,7 +2246,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_fs__dirent_t **dirent,
                                           scratch_pool, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
-      entry = svn_fs_fs__find_dir_entry(entries, name, NULL);
+      entry = svn_fs_fs__find_dir_entry(entries, key, NULL);
       if (entry)
         {
           svn_fs_dirent_t *dirent_copy;

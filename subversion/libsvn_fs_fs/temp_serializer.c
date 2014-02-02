@@ -802,9 +802,8 @@ find_entry(svn_fs_fs__dirent_t **entries,
     }
 
   /* check whether we actually found a match */
-  if (lower >= count)
-    *found = FALSE;
-  else
+  *found = FALSE;
+  if (lower < count)
     {
       const svn_fs_fs__dirent_t *entry =
         svn_temp_deserializer__ptr(entries, (const void *const *)&entries[lower]);
@@ -901,7 +900,7 @@ slowly_replace_dir_entry(void **data,
                                              dir_data->len,
                                              pool));
 
-  entry = svn_fs_fs__find_dir_entry(dir, replace_baton->name, &idx);
+  entry = svn_fs_fs__find_dir_entry(dir, replace_baton->key, &idx);
 
   /* Replacement or removal? */
   if (replace_baton->new_entry)
@@ -955,7 +954,7 @@ svn_fs_fs__replace_dir_entry(void **data,
                                (const void *const *)&dir_data->lengths);
 
   /* binary search for the desired entry by name */
-  pos = find_entry(entries, replace_baton->name, dir_data->count, &found);
+  pos = find_entry(entries, replace_baton->key, dir_data->count, &found);
 
   /* handle entry removal (if found at all) */
   if (replace_baton->new_entry == NULL)

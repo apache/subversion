@@ -1533,8 +1533,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
         svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
 
-
-
       if (id)
         {
           baton.new_entry = apr_pcalloc(subpool, sizeof(*baton.new_entry));
@@ -1544,14 +1542,14 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           SVN_ERR(svn_fs_fs__set_dirent_key(baton.new_entry,
                                             normalized_lookup,
                                             subpool, subpool));
-          baton.name = baton.new_entry->key;
+          baton.key = baton.new_entry->key;
         }
       else
         {
           if (normalized_lookup)
-            SVN_ERR(svn_fs_fs__normalize(&baton.name, name, subpool));
+            SVN_ERR(svn_fs_fs__normalize(&baton.key, name, subpool));
           else
-            baton.name = name;
+            baton.key = name;
           baton.new_entry = NULL;
         }
 
