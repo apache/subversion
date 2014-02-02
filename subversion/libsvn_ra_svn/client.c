@@ -587,7 +587,7 @@ static apr_status_t close_tunnel_cleanup(void *baton)
   svn_error_clear(svn_stream_close(td->request));
 
   /* We might have one stream to use for both request and response! */
-  if (td->request != td->response);
+  if (td->request != td->response)
     svn_error_clear(svn_stream_close(td->response));
 
   return APR_SUCCESS; /* ignored */
