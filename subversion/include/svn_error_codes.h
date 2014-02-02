@@ -846,6 +846,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 60,
              "Move without a suitable deletion")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_FS_NAME_COLLISION,
+             SVN_ERR_FS_CATEGORY_START + 61,
+             "Normalized directory entry names are identical")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

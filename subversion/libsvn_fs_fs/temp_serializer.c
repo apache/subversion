@@ -767,13 +767,30 @@ svn_fs_fs__get_sharded_offset(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Utility function that returns the lowest index of the first entry in
- * *ENTRIES that points to a dir entry with a key equal or larger than KEY.
- * If an exact match has been found, *FOUND will be set to TRUE. COUNT is
- * the number of valid entries in ENTRIES.
+/* Helper function for find_entry() that returns the key for ENTRIES[INDEX] */
+static const char *
+get_entry_key(svn_fs_fs__dirent_t **entries, apr_size_t index)
+{
+  const svn_fs_fs__dirent_t *entry =
+    svn_temp_deserializer__ptr(entries, (const void *const *)&entries[index]);
+  const char* entry_key =
+    svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
+
+  /* use the name if it's identical to the key */
+  if (!entry_key)
+    entry_key = svn_temp_deserializer__ptr(
+        entry, (const void *const *)&entry->dirent.name);
+  return entry_key;
+}
+
+/* Utility function that sets *POSITION to the lowest index of the
+ * first entry in *ENTRIES that points to a dir entry with a key equal
+ * or larger than KEY.  If an exact match has been found, *FOUND will
+ * be set to TRUE. COUNT is the number of valid entries in ENTRIES.
  */
-static apr_size_t
-find_entry(svn_fs_fs__dirent_t **entries,
+static svn_error_t *
+find_entry(apr_size_t *position,
+           svn_fs_fs__dirent_t **entries,
            const char *key,
            apr_size_t count,
            svn_boolean_t *found)
@@ -785,15 +802,7 @@ find_entry(svn_fs_fs__dirent_t **entries,
 
   for (middle = upper / 2; lower < upper; middle = (upper + lower) / 2)
     {
-      const svn_fs_fs__dirent_t *entry =
-        svn_temp_deserializer__ptr(entries, (const void *const *)&entries[middle]);
-      const char* entry_key =
-        svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
-
-      /* use the name if it's identical to the key */
-      if (!entry_key)
-        entry_key = svn_temp_deserializer__ptr(
-            entry, (const void *const *)&entry->dirent.name);
+      const char *entry_key = get_entry_key(entries, middle);
 
       if (0 >= strcmp(entry_key, key))
         lower = middle + 1;
@@ -805,20 +814,40 @@ find_entry(svn_fs_fs__dirent_t **entries,
   *found = FALSE;
   if (lower < count)
     {
-      const svn_fs_fs__dirent_t *entry =
-        svn_temp_deserializer__ptr(entries, (const void *const *)&entries[lower]);
-      const char* entry_key =
-        svn_temp_deserializer__ptr(entry, (const void *const *)&entry->key);
+      const char *entry_key = get_entry_key(entries, lower);
 
-      /* use the name if it's identical to the key */
-      if (!entry_key)
-        entry_key = svn_temp_deserializer__ptr(
-            entry, (const void *const *)&entry->dirent.name);
+      if (0 == strcmp(entry_key, key))
+        {
+          *found = TRUE;
 
-      *found = (strcmp(entry_key, key) == 0);
+          /* Check for name collisions in the directory list.
+
+             A repository that was upgraded from FSFS v6 or earlier
+             and had not been properly verified and sanitized might
+             contain name collisions. When normalized lookups are
+             enabled, we must forbid all operations on colliding
+             names, or users might end up making modifications to the
+             wrong node.
+
+             XXX This check is really only needed when normalized
+                 lookups are enabled. If it turns out to be a
+                 performance problem, we can propagate the
+                 normalized-lookups flag all the way through the API
+                 to here. */
+          if (/* normalized_lookup && */ count > 1 && lower < count - 1)
+            {
+              entry_key = get_entry_key(entries, lower + 1);
+              if (0 == strcmp(entry_key, key))
+                return svn_error_createf(
+                    SVN_ERR_FS_NAME_COLLISION, NULL,
+                    _("A directory contains more than one entry named '%s'"),
+                    key);
+            }
+        }
     }
 
-  return lower;
+  *position = lower;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -841,10 +870,9 @@ svn_fs_fs__extract_dir_entry(void **out,
     svn_temp_deserializer__ptr(data, (const void *const *)&dir_data->lengths);
 
   /* binary search for the desired entry by key */
-  apr_size_t pos = find_entry((svn_fs_fs__dirent_t **)entries,
-                              key,
-                              dir_data->count,
-                              &found);
+  apr_size_t pos;
+  SVN_ERR(find_entry(&pos, (svn_fs_fs__dirent_t **)entries,
+                     key, dir_data->count, &found));
 
   /* de-serialize that entry or return NULL, if no match has been found */
   *out = NULL;
@@ -954,7 +982,8 @@ svn_fs_fs__replace_dir_entry(void **data,
                                (const void *const *)&dir_data->lengths);
 
   /* binary search for the desired entry by key */
-  pos = find_entry(entries, replace_baton->key, dir_data->count, &found);
+  SVN_ERR(find_entry(&pos, entries, replace_baton->key,
+                     dir_data->count, &found));
 
   /* handle entry removal (if found at all) */
   if (replace_baton->new_entry == NULL)
