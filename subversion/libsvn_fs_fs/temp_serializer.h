@@ -192,8 +192,11 @@ svn_fs_fs__get_sharded_offset(void **out,
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_fs__dirent_t within a serialized directory contents hash,
  * identified by its key (const char @a *baton).
+ *
+ * Note: When normalized lookups are enabled, DATA must be the
+ *       normalized form of the entry name; otherwise, it should be
+ *       the original form of the entry name.
  */
-/* UCSNORM TODO: NAME must always be the (normalized) entry key. */
 svn_error_t *
 svn_fs_fs__extract_dir_entry(void **out,
                              const void *data,

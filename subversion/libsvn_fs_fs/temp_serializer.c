@@ -829,7 +829,7 @@ svn_fs_fs__extract_dir_entry(void **out,
                              apr_pool_t *pool)
 {
   const dir_data_t *dir_data = data;
-  const char* name = baton;
+  const char* key = baton;
   svn_boolean_t found;
 
   /* resolve the reference to the entries array */
@@ -840,9 +840,9 @@ svn_fs_fs__extract_dir_entry(void **out,
   const apr_uint32_t *lengths =
     svn_temp_deserializer__ptr(data, (const void *const *)&dir_data->lengths);
 
-  /* binary search for the desired entry by name */
+  /* binary search for the desired entry by key */
   apr_size_t pos = find_entry((svn_fs_fs__dirent_t **)entries,
-                              name,
+                              key,
                               dir_data->count,
                               &found);
 
@@ -953,7 +953,7 @@ svn_fs_fs__replace_dir_entry(void **data,
     svn_temp_deserializer__ptr((const char *)dir_data,
                                (const void *const *)&dir_data->lengths);
 
-  /* binary search for the desired entry by name */
+  /* binary search for the desired entry by key */
   pos = find_entry(entries, replace_baton->key, dir_data->count, &found);
 
   /* handle entry removal (if found at all) */
