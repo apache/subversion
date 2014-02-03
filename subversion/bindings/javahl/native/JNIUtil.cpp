@@ -46,6 +46,7 @@
 #include <apr_time.h>
 
 #include "svn_pools.h"
+#include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_ra.h"
 #include "svn_utf.h"
@@ -116,6 +117,33 @@ bool initialize_jni_util(JNIEnv *env)
 {
   return JNIUtil::JNIGlobalInit(env);
 }
+
+namespace {
+
+volatile apr_int32_t *gentle_crash_write_loc = NULL;
+
+svn_error_t *
+gently_crash_the_jvm(svn_boolean_t can_return,
+                     const char *file, int line, const char *expr)
+{
+  if (!can_return)
+    {
+      // Try not to abort; aborting prevents the JVM from creating
+      // a crash log, which is oh so useful for debugging.
+      // We can't just raise a SEGV signal, either, because it will
+      // be not be caught in the context that we're interested in
+      // getting the stack trace from.
+
+      // Try writing to the zero page
+      *gentle_crash_write_loc = 0xdeadbeef;
+    }
+
+  // Forward to the standard malfunction handler, which does call
+  // abort when !can_return; this will only happen if the write to the
+  // zero page did not cause a SEGV.
+  return svn_error_raise_on_malfunction(can_return, file, line, expr);
+}
+} // Anonymous namespace
 
 /**
  * Initialize the environment for all requests.
@@ -243,6 +271,10 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
   g_configMutex = new JNIMutex(g_pool);
   if (isExceptionThrown())
     return false;
+
+  // Set a malfunction handler that tries not to call abort, because
+  // that would prevent the JVM from creating a crash and stack log file.
+  svn_error_set_malfunction_handler(gently_crash_the_jvm);
 
   return true;
 }
