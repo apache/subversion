@@ -580,6 +580,7 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
                              void *tunnel_baton,
                              const char *tunnel_name, const char *user,
                              const char *hostname, int port,
+                             svn_cancel_func_t cancel_func, void *cancel_baton,
                              apr_pool_t *pool)
 {
   TunnelContext *tc = new TunnelContext(pool);

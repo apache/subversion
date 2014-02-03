@@ -312,6 +312,9 @@ typedef void (*svn_ra_close_tunnel_func_t)(
  * If @a *close_func is set it will be called with @a close_baton when
  * the tunnel is closed.
  *
+ * The optional @a cancel_func callback can be invoked as usual to allow
+ * the user to preempt potentially lengthy operations.
+ *
  * @a tunnel_baton is the baton as set in the callbacks.
  *
  * @since New in 1.9.
@@ -322,6 +325,7 @@ typedef svn_error_t *(*svn_ra_open_tunnel_func_t)(
     void *tunnel_baton,
     const char *tunnel_name, const char *user,
     const char *hostname, int port,
+    svn_cancel_func_t cancel_func, void *cancel_baton,
     apr_pool_t *pool);
 
 
