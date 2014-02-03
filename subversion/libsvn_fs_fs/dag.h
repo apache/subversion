@@ -118,7 +118,10 @@ const svn_fs_id_t *svn_fs_fs__dag_get_id(const dag_node_t *node);
 
 
 /* Return the created path of NODE.  The value returned is shared
-   with NODE, and will be deallocated when NODE is.  */
+   with NODE, and will be deallocated when NODE is.
+
+   Note: This is the path in its original form, even when normalized
+         lookups are enabled. */
 const char *svn_fs_fs__dag_get_created_path(dag_node_t *node);
 
 
@@ -252,14 +255,16 @@ svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
 /* Directories.  */
 
 
-/* Open the node named NAME in the directory PARENT.  Set *CHILD_P to
-   the new node, allocated in RESULT_POOL.  NAME must be a single path
-   component; it cannot be a slash-separated directory path.
+/* Open the node identified by KEY in the directory PARENT.  Set
+   *CHILD_P to the new node, allocated in RESULT_POOL.  KEY must be a
+   single path component; it cannot be a slash-separated directory
+   path, and must be the normalized form of the entry name if
+   normalized lookups are enabled.
  */
 svn_error_t *
 svn_fs_fs__dag_open(dag_node_t **child_p,
                     dag_node_t *parent,
-                    const char *name,
+                    const char *key,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
 
@@ -272,28 +277,36 @@ svn_error_t *svn_fs_fs__dag_dir_entries(apr_array_header_t **entries_p,
                                         apr_pool_t *pool);
 
 /* Fetches the NODE's entries and returns a copy of the entry selected
-   by the key value given in NAME and set *DIRENT to a copy of that
+   by the key value given in KEY and set *DIRENT to a copy of that
    entry. If such entry was found, the copy will be allocated in
    RESULT_POOL.  Temporary data will be used in SCRATCH_POOL.
    Otherwise, the *DIRENT will be set to NULL.
+
+   KEY must be the normalized form of the entry name if normalized
+   lookups are enabled.
  */
 /* ### This function is currently only called from dag.c. */
-svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
+svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_fs__dirent_t **dirent,
                                        dag_node_t *node,
-                                       const char* name,
+                                       const char *key,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
 
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
-   from POOL.  NODE must be a mutable directory.  ID can refer to a
-   mutable or immutable node.  If ENTRY_NAME does not exist, it will
-   be created.  TXN_ID is the Subversion transaction under which this
-   occurs.
+   from POOL.  Use ENTRY_KEY to find an existing entry in NODE.
+
+   ENTRY_KEY must be the normalized form of ENTRY_NAME if normalized
+   lookups are enabled; otherwise, it must be the same pointer value.
+
+   NODE must be a mutable directory.  ID can refer to a mutable or
+   immutable node.  If ENTRY_NAME does not exist, it will be created.
+   TXN_ID is the Subversion transaction under which this occurs.
 
    Use POOL for all allocations, including to cache the node_revision in
    NODE.
  */
 svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
+                                      const char *entry_key,
                                       const char *entry_name,
                                       const svn_fs_id_t *id,
                                       svn_node_kind_t kind,
@@ -301,11 +314,11 @@ svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
                                       apr_pool_t *pool);
 
 
-/* Make a new mutable clone of the node named NAME in PARENT, and
-   adjust PARENT's directory entry to point to it, unless NAME in
+/* Make a new mutable clone of the node PARENT referred to by KEY, and
+   adjust PARENT's directory entry to point to it, unless KEY in
    PARENT already refers to a mutable node.  In either case, set
    *CHILD_P to a reference to the new node, allocated in POOL.  PARENT
-   must be mutable.  NAME must be a single path component; it cannot
+   must be mutable.  KEY must be a single path component; it cannot
    be a slash-separated directory path.  PARENT_PATH must be the
    canonicalized absolute path of the parent directory.
 
@@ -318,32 +331,38 @@ svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
 
    TXN_ID is the Subversion transaction under which this occurs.
 
+   KEY must be the normalized form of the entry name if normalized
+   lookups are enabled.
+
    Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_clone_child(dag_node_t **child_p,
                                         dag_node_t *parent,
                                         const char *parent_path,
-                                        const char *name,
+                                        const char *key,
                                         const svn_fs_fs__id_part_t *copy_id,
                                         const svn_fs_fs__id_part_t *txn_id,
                                         svn_boolean_t is_parent_copyroot,
                                         apr_pool_t *pool);
 
 
-/* Delete the directory entry named NAME from PARENT, allocating from
-   POOL.  PARENT must be mutable.  NAME must be a single path
+/* Delete the directory entry from PARENT referred to by KEY, allocating from
+   POOL.  PARENT must be mutable.  KEY must be a single path
    component; it cannot be a slash-separated directory path.  If the
    node being deleted is a mutable directory, remove all mutable nodes
    reachable from it.  TXN_ID is the Subversion transaction under
    which this occurs.
 
-   If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
+   If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry KEY in
    PARENT.
+
+   KEY must be the normalized form of the entry name if normalized
+   lookups are enabled.
 
    Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_delete(dag_node_t *parent,
-                                   const char *name,
+                                   const char *key,
                                    const svn_fs_fs__id_part_t *txn_id,
                                    apr_pool_t *pool);
 
@@ -372,13 +391,17 @@ svn_error_t *svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
                                               apr_pool_t *pool);
 
 
-/* Create a new mutable directory named NAME in PARENT.  Set *CHILD_P
-   to a reference to the new node, allocated in POOL.  The new
+/* Create a new mutable directory named NAME in PARENT. Use KEY to
+   find any existing entry in PARENT. KEY must be the normalized form of
+   NAME if normalized lookups are enabled; otherwise, it must be the
+   same pointer value.
+
+   Set *CHILD_P to a reference to the new node, allocated in POOL.  The new
    directory has no contents, and no properties.  PARENT must be
    mutable.  NAME must be a single path component; it cannot be a
    slash-separated directory path.  PARENT_PATH must be the
    canonicalized absolute path of the parent directory.  PARENT must
-   not currently have an entry named NAME.  TXN_ID is the Subversion
+   not currently have an entry matching KEY.  TXN_ID is the Subversion
    transaction under which this occurs.
 
    Use POOL for all allocations.
@@ -386,6 +409,7 @@ svn_error_t *svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
 svn_error_t *svn_fs_fs__dag_make_dir(dag_node_t **child_p,
                                      dag_node_t *parent,
                                      const char *parent_path,
+                                     const char *key,
                                      const char *name,
                                      const svn_fs_fs__id_part_t *txn_id,
                                      apr_pool_t *pool);
@@ -484,12 +508,17 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
                              svn_checksum_kind_t kind,
                              apr_pool_t *pool);
 
-/* Create a new mutable file named NAME in PARENT.  Set *CHILD_P to a
-   reference to the new node, allocated in POOL.  The new file's
-   contents are the empty string, and it has no properties.  PARENT
-   must be mutable.  NAME must be a single path component; it cannot
+/* Create a new mutable file named NAME in PARENT. Use KEY to find any
+   existing entry in PARENT. KEY must be the normalized form of NAME
+   if normalized lookups are enabled; otherwise, it must be the same
+   pointer value.
+
+   Set *CHILD_P to a reference to the new node, allocated in POOL.
+   The new file's contents are the empty string, and it has no properties.
+   PARENT must be mutable.  NAME must be a single path component; it cannot
    be a slash-separated directory path.  PARENT_PATH must be the
-   canonicalized absolute path of the parent directory.  TXN_ID is the
+   canonicalized absolute path of the parent directory.  PARENT must
+   not currently have an entry matching KEY.  TXN_ID is the
    Subversion transaction under which this occurs.
 
    Use POOL for all allocations.
@@ -497,6 +526,7 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
 svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
                                       dag_node_t *parent,
                                       const char *parent_path,
+                                      const char *key,
                                       const char *name,
                                       const svn_fs_fs__id_part_t *txn_id,
                                       apr_pool_t *pool);
@@ -505,9 +535,11 @@ svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
 
 /* Copies */
 
-/* Make ENTRY in TO_NODE be a copy of FROM_NODE, allocating from POOL.
+/* Make NAME in TO_NODE be a copy of FROM_NODE, allocating from POOL.
    TO_NODE must be mutable.  TXN_ID is the Subversion transaction
-   under which this occurs.
+   under which this occurs.  Use KEY to find any existing entry in
+   TO_NODE. KEY must be the normalized form of NAME if normalized
+   lookups are enabled; otherwise, it must be the same pointer value.
 
    If PRESERVE_HISTORY is true, the new node will record that it was
    copied from FROM_PATH in FROM_REV; therefore, FROM_NODE should be
@@ -520,7 +552,8 @@ svn_error_t *svn_fs_fs__dag_make_file(dag_node_t **child_p,
    Use POOL for all allocations.
  */
 svn_error_t *svn_fs_fs__dag_copy(dag_node_t *to_node,
-                                 const char *entry,
+                                 const char *key,
+                                 const char *name,
                                  dag_node_t *from_node,
                                  svn_boolean_t preserve_history,
                                  svn_revnum_t from_rev,

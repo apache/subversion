@@ -74,7 +74,10 @@ struct dag_node_t
   /* The pool to allocate NODE_REVISION in. */
   apr_pool_t *node_pool;
 
-  /* the path at which this node was created. */
+  /* The path at which this node was created.
+
+     Note: This is the path in its original form, even when
+           normalized lookups are enabled. */
   const char *created_path;
 };
 
