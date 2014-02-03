@@ -652,6 +652,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                       &td->close_tunnel, &td->tunnel_context,
                       callbacks->tunnel_baton, tunnel_name,
                       uri->user, uri->hostname, uri->port,
+                      callbacks->cancel_func, callbacks_baton,
                       pool));
 
           apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
