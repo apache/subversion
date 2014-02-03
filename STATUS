@@ -96,7 +96,7 @@ Candidate changes:
      The guts of the fix are in r1563081 on the branch, the rest are just
      support code for the tests and the tests themselves.
    Votes:
-     +1: breser
+     +1: breser, philip
 
 Veto-blocked changes:
 =====================
