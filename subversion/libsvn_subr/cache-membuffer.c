@@ -2452,15 +2452,6 @@ typedef struct svn_membuffer_cache_t
    */
   entry_key_t combined_key;
 
-  /* a pool for temporary allocations during get() and set()
-   */
-  apr_pool_t *pool;
-
-  /* an internal counter that is used to clear the pool from time to time
-   * but not too frequently.
-   */
-  int alloc_counter;
-
   /* cache for the last key used.
    * Will be NULL for caches with short fix-sized keys.
    */
@@ -2694,16 +2685,6 @@ svn_membuffer_cache_set(void *cache_void,
   if (key == NULL)
     return SVN_NO_ERROR;
 
-  /* we do some allocations below, so increase the allocation counter
-   * by a slightly larger amount. Free allocated memory every now and then.
-   */
-  cache->alloc_counter += 3;
-  if (cache->alloc_counter > ALLOCATIONS_PER_POOL_CLEAR)
-    {
-      svn_pool_clear(cache->pool);
-      cache->alloc_counter = 0;
-    }
-
   /* construct the full, i.e. globally unique, key by adding
    * this cache instances' prefix
    */
@@ -2718,7 +2699,7 @@ svn_membuffer_cache_set(void *cache_void,
                              cache->serializer,
                              cache->priority,
                              DEBUG_CACHE_MEMBUFFER_TAG
-                             cache->pool);
+                             scratch_pool);
 }
 
 /* Implement svn_cache__vtable_t.iter as "not implemented"
@@ -3068,8 +3049,6 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->full_prefix = apr_pstrdup(pool, prefix);
   cache->priority = priority;
   cache->key_len = klen;
-  cache->pool = svn_pool_create(pool);
-  cache->alloc_counter = 0;
 
   SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, pool));
 
