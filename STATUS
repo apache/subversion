@@ -230,6 +230,7 @@ Candidate changes:
 
  * r1564215
    Reduce dynamic memory usage during c/o and export.
+   Branch: ^/subversion/branches/1.8.x-r1564215
    Justification:
      Without this patch, operations using the standard reporter (at least
      svn: c/o and export; probably same for httpv1) use more or less
