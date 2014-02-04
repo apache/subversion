@@ -120,7 +120,7 @@ bool initialize_jni_util(JNIEnv *env)
 
 namespace {
 
-volatile apr_int32_t *gentle_crash_write_loc = NULL;
+volatile svn_atomic_t *gentle_crash_write_loc = NULL;
 
 svn_error_t *
 gently_crash_the_jvm(svn_boolean_t can_return,
@@ -134,8 +134,9 @@ gently_crash_the_jvm(svn_boolean_t can_return,
       // be not be caught in the context that we're interested in
       // getting the stack trace from.
 
-      // Try writing to the zero page
-      *gentle_crash_write_loc = 0xdeadbeef;
+      // Try reading from and writing to the zero page
+      const svn_atomic_t zeropage = svn_atomic_read(gentle_crash_write_loc);
+      svn_atomic_set(gentle_crash_write_loc, zeropage);
     }
 
   // Forward to the standard malfunction handler, which does call
