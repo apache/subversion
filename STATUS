@@ -88,17 +88,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1564215
-   Reduce dynamic memory usage during c/o and export.
-   Branch: ^/subversion/branches/1.7.x-r1564215
-   Justification:
-     Without this patch, operations using the standard reporter (at least
-     svn: c/o and export; probably same for httpv1) use more or less
-     unboundary amounts of memory.  Dynamic peaks of up to 20GB have been
-     observed.  With this patch, those peaks come down to 100MB which 
-     matches our claim to streaminess.
-   Votes:
-     +1: stefan2, philip
 
 Veto-blocked changes:
 =====================
@@ -127,4 +116,16 @@ Approved changes:
      support code for the tests and the tests themselves.
    Votes:
      +1: breser, philip, stefan2
+
+ * r1564215
+   Reduce dynamic memory usage during c/o and export.
+   Branch: ^/subversion/branches/1.7.x-r1564215
+   Justification:
+     Without this patch, operations using the standard reporter (at least
+     svn: c/o and export; probably same for httpv1) use more or less
+     unbounded amounts of memory.  Dynamic peaks of up to 20GB have been
+     observed.  With this patch, those peaks come down to 100MB which
+     matches our claim to streaminess.
+   Votes:
+     +1: stefan2, philip, breser
 
