@@ -62,19 +62,6 @@ Candidate changes:
                    a related problem. It looks like this fix doesn't work for
                    the user scenario it was intended for)
 
- * r1534149, r1535676
-   In the windows CryptoAPI ssl certificate verification, properly handle
-   certificates that are only trusted via intermediate authorities.
-   Justification:
-      While not strictly a bug, intermediate authorities are getting more
-      common since recent Certificate Authority incidents.
-   Notes:
-      rhuijben: This introduces a new credential type as private API.
-      Not sure about our strict ABI guarantees here, but this affects
-      usability of users migrating to cloud platforms, etc.
-   Votes:
-     +1: rhuijben, steveking
-
  * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488
    Fix working copy database inconsistency on certain move scenarios,
    including those described in issue #4437 "Deleting a moved file can maintain a
@@ -268,3 +255,16 @@ Approved changes:
      matches our claim to streaminess.
    Votes:
      +1: stefan2, philip, breser
+
+ * r1534149, r1535676
+   In the windows CryptoAPI ssl certificate verification, properly handle
+   certificates that are only trusted via intermediate authorities.
+   Justification:
+      While not strictly a bug, intermediate authorities are getting more
+      common since recent Certificate Authority incidents.
+   Notes:
+      rhuijben: This introduces a new credential type as private API.
+      Not sure about our strict ABI guarantees here, but this affects
+      usability of users migrating to cloud platforms, etc.
+   Votes:
+     +1: rhuijben, steveking, breser
