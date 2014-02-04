@@ -1143,7 +1143,6 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_pool_t *iterpool;
   apr_array_header_t *t_ordered_entries = NULL;
   int i;
 
@@ -1158,6 +1157,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   if (requested_depth > svn_depth_empty
       || requested_depth == svn_depth_unknown)
     {
+      apr_pool_t *iterpool;
+
       /* Get the list of entries in each of source and target. */
       if (s_path && !start_empty)
         {
@@ -1169,7 +1170,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(svn_fs_dir_entries(&t_entries, b->t_root, t_path, subpool));
 
       /* Iterate over the report information for this directory. */
-      iterpool = svn_pool_create(pool);
+      iterpool = svn_pool_create(subpool);
 
       while (1)
         {
@@ -1327,7 +1328,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                iterpool));
         }
 
-      svn_pool_destroy(iterpool);
+      /* iterpool is destroyed by destroying its parent (subpool) below */
     }
 
   svn_pool_destroy(subpool);
