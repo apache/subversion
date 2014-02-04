@@ -88,16 +88,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * ^/subversion/branches/1.7.x-issue4460
-   Fix several issues with diff we broke in 1.7.14
-   Justification:
-     Regression from 1.7.13
-   Notes:
-     The guts of the fix are in r1563081 on the branch, the rest are just
-     support code for the tests and the tests themselves.
-   Votes:
-     +1: breser, philip
-
  * r1564215
    Reduce dynamic memory usage during c/o and export.
    Branch: ^/subversion/branches/1.7.x-r1564215
@@ -127,3 +117,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * ^/subversion/branches/1.7.x-issue4460
+   Fix several issues with diff we broke in 1.7.14
+   Justification:
+     Regression from 1.7.13
+   Notes:
+     The guts of the fix are in r1563081 on the branch, the rest are just
+     support code for the tests and the tests themselves.
+   Votes:
+     +1: breser, philip, stefan2
+
