@@ -98,7 +98,7 @@ Candidate changes:
      observed.  With this patch, those peaks come down to 100MB which 
      matches our claim to streaminess.
    Votes:
-     +1: stefan2
+     +1: stefan2, philip
 
 Veto-blocked changes:
 =====================
