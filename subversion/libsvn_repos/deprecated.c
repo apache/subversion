@@ -795,6 +795,30 @@ svn_repos_verify_fs(svn_repos_t *repos,
 /*** From load.c ***/
 
 svn_error_t *
+svn_repos_load_fs4(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_load_fs5(repos, dumpstream, start_rev, end_rev,
+                            uuid_action, parent_dir,
+                            use_post_commit_hook, use_post_commit_hook,
+                            validate_props, FALSE,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
 svn_repos_load_fs3(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    enum svn_repos_load_uuid uuid_action,

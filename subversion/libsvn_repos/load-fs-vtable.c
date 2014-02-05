@@ -55,6 +55,7 @@ struct parse_baton
 
   svn_boolean_t use_history;
   svn_boolean_t validate_props;
+  svn_boolean_t ignore_dates;
   svn_boolean_t use_pre_commit_hook;
   svn_boolean_t use_post_commit_hook;
   enum svn_repos_load_uuid uuid_action;
@@ -696,9 +697,15 @@ set_revision_property(void *baton,
                       const svn_string_t *value)
 {
   struct revision_baton *rb = baton;
+  struct parse_baton *pb = rb->pb;
+  svn_boolean_t is_date = strcmp(name, SVN_PROP_REVISION_DATE) == 0;
 
   /* If we're skipping this revision, we're done here. */
   if (rb->skipped)
+    return SVN_NO_ERROR;
+
+  /* If we're ignoring dates, and this is one, we're done here. */
+  if (is_date && pb->ignore_dates)
     return SVN_NO_ERROR;
 
   if (rb->rev > 0)
@@ -712,14 +719,13 @@ set_revision_property(void *baton,
 
       /* Remember any datestamp that passes through!  (See comment in
          close_revision() below.) */
-      if (! strcmp(name, SVN_PROP_REVISION_DATE))
+      if (is_date)
         rb->datestamp = svn_string_dup(value, rb->pool);
     }
   else if (rb->rev == 0)
     {
       /* Special case: set revision 0 properties when loading into an
          'empty' filesystem. */
-      struct parse_baton *pb = rb->pb;
       svn_revnum_t youngest_rev;
 
       SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, rb->pool));
@@ -927,10 +933,12 @@ close_revision(void *baton)
   if (rb->skipped || (rb->rev <= 0))
     return SVN_NO_ERROR;
 
-  if (!rb->datestamp)
+  /* If the dumpstream doesn't have an 'svn:date' property and we
+     aren't ignoring the dates in the dumpstream altogether, remove
+     any 'svn:date' revision property that was set by FS layer when
+     the TXN was created.  */
+  if (! (pb->ignore_dates || rb->datestamp))
     {
-      /* Remove 'svn:date' revision property that was set by FS layer when TXN
-         created if source dump doesn't have 'svn:date' property. */
       svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
       prop->name = SVN_PROP_REVISION_DATE;
       prop->value = NULL;
@@ -1108,9 +1116,8 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **callbacks,
 }
 
 
-
 svn_error_t *
-svn_repos_load_fs4(svn_repos_t *repos,
+svn_repos_load_fs5(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
@@ -1119,6 +1126,7 @@ svn_repos_load_fs4(svn_repos_t *repos,
                    svn_boolean_t use_pre_commit_hook,
                    svn_boolean_t use_post_commit_hook,
                    svn_boolean_t validate_props,
+                   svn_boolean_t ignore_dates,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -1147,6 +1155,7 @@ svn_repos_load_fs4(svn_repos_t *repos,
   pb = parse_baton;
   pb->use_pre_commit_hook = use_pre_commit_hook;
   pb->use_post_commit_hook = use_post_commit_hook;
+  pb->ignore_dates = ignore_dates;
 
   return svn_repos_parse_dumpstream3(dumpstream, parser, parse_baton, FALSE,
                                      cancel_func, cancel_baton, pool);

@@ -189,6 +189,7 @@ enum svnadmin__cmdline_options_t
     svnadmin__config_dir,
     svnadmin__bypass_hooks,
     svnadmin__bypass_prop_validation,
+    svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook,
     svnadmin__use_post_commit_hook,
     svnadmin__use_pre_revprop_change_hook,
@@ -234,6 +235,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"bypass-prop-validation",  svnadmin__bypass_prop_validation, 0,
      N_("bypass property validation logic")},
+
+    {"ignore-dates",  svnadmin__ignore_dates, 0,
+     N_("ignore revision datestamps found in the stream")},
 
     {"quiet",         'q', 0,
      N_("no progress (only errors to stderr)")},
@@ -404,6 +408,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "If --revision is specified, limit the loaded revisions to only those\n"
     "in the dump stream whose revision numbers match the specified range.\n"),
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
+    svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
 
@@ -534,6 +539,7 @@ struct svnadmin_opt_state
   svn_boolean_t keep_going;                         /* --keep-going */
   svn_boolean_t check_normalization;                /* --check-normalization */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
+  svn_boolean_t ignore_dates;                       /* --ignore-dates */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
@@ -1331,11 +1337,12 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     notify_baton.feedback_stream = recode_stream_create(stdout, pool);
 
-  err = svn_repos_load_fs4(repos, stdin_stream, lower, upper,
+  err = svn_repos_load_fs5(repos, stdin_stream, lower, upper,
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
                            !opt_state->bypass_prop_validation,
+                           opt_state->ignore_dates,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            &notify_baton, check_cancel, NULL, pool);
   if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
@@ -2467,6 +2474,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case svnadmin__bypass_prop_validation:
         opt_state.bypass_prop_validation = TRUE;
+        break;
+      case svnadmin__ignore_dates:
+        opt_state.ignore_dates = TRUE;
         break;
       case svnadmin__clean_logs:
         opt_state.clean_logs = TRUE;
