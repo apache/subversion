@@ -8950,9 +8950,9 @@ read_single_info(const struct svn_wc__db_info_t **info,
       apr_hash_t *properties;
 
       if (mtb->props_mod)
-        SVN_ERR(svn_wc__db_read_props_internal(&properties,
-                                               wcroot, local_relpath,
-                                               scratch_pool, scratch_pool));
+        SVN_ERR(db_read_props_internal(&properties,
+                                       wcroot, local_relpath,
+                                       scratch_pool, scratch_pool));
       else
         SVN_ERR(db_read_pristine_props(&properties, wcroot, local_relpath,
                                        TRUE /* deleted_ok */,
