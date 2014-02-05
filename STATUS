@@ -250,18 +250,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1564215
-   Reduce dynamic memory usage during c/o and export.
-   Branch: ^/subversion/branches/1.8.x-r1564215
-   Justification:
-     Without this patch, operations using the standard reporter (at least
-     svn: c/o and export; probably same for httpv1) use more or less
-     unbounded amounts of memory.  Dynamic peaks of up to 20GB have been
-     observed.  With this patch, those peaks come down to 100MB which
-     matches our claim to streaminess.
-   Votes:
-     +1: stefan2, philip, breser
-
  * r1534149, r1535676
    In the windows CryptoAPI ssl certificate verification, properly handle
    certificates that are only trusted via intermediate authorities.
