@@ -52,11 +52,12 @@ Candidate changes:
      -0: danielsh (restrictions not suitable for introduction in patch release;
                    dev@ thread started 2013/05/10 9pm)
 
- * r1542610
+ * r1542610, r1564576
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
    Votes:
-     +1: rhuijben
+     +1: breser
+     +1 (without r1564576): rhuijben
 
  * ^/subversion/branches/1.7.x-serf-1.3.x-Windows
    Allow compiling against Serf 1.3.x
@@ -74,7 +75,7 @@ Candidate changes:
    Justification:
      "Moves should just work" or "be nice to api users, like Markus"
    Votes:
-     +1: rhuijben
+     +1: rhuijben, breser
      +1 (non-binding): schabi (Fixes our use case, all our other tests pass.)
 
  * r1555491
@@ -86,7 +87,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.7.x-r1555491
    Votes:
-     +1: stefan2
+     +1: stefan2, breser
 
 
 Veto-blocked changes:
