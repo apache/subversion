@@ -935,13 +935,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.15
     * diff: fix regressions due to fixes in 1.7.14 (issue #4460)
 
   - Server-side bugfixes:
-    * mod_dav_svn: Prevent crashes with SVNListParentPath on (CVE-2014-0032)
+    * mod_dav_svn: prevent crashes with SVNListParentPath on (CVE-2014-0032)
     * reduce memory usage during checkout and export (r1564215)
 
  Developer-visible changes:
   - General:
     * fix failure in checkout_tests.py
-    * support compilling against Cyrus sasl 2.1.25 (r1404912, r1413402)
+    * support compiling against Cyrus sasl 2.1.25 (r1404912, r1413402)
 
 
 Version 1.7.14
