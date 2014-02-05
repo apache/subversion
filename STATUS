@@ -249,16 +249,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1534149, r1535676
-   In the windows CryptoAPI ssl certificate verification, properly handle
-   certificates that are only trusted via intermediate authorities.
-   Justification:
-      While not strictly a bug, intermediate authorities are getting more
-      common since recent Certificate Authority incidents.
-   Notes:
-      rhuijben: This introduces a new credential type as private API.
-      Not sure about our strict ABI guarantees here, but this affects
-      usability of users migrating to cloud platforms, etc.
-   Votes:
-     +1: rhuijben, steveking, breser
