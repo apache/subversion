@@ -109,8 +109,8 @@ Candidate changes:
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
    Votes:
-     +1: breser
-     +1 (without r1564567): rhuijben, stsp
+     +1: breser, rhuijben
+     +1 (without r1564567): stsp
      -0: brane (horrible grammar; suggest translation to English)
 
  * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
