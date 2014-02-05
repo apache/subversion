@@ -126,9 +126,14 @@ Candidate changes:
      matter how status is called: on the node or an ancestor.
      (It also improves status performance a tiny bit, by reducing the number
       of sqlite transactions used)
+   Notes:
+     r1564587 fixes a function reference on the branch in some code that
+     is disabled by the macro processor on Windows.
+   Branch:
+     ^/subversion/branches/1.8.x-r1544597
    Votes:
      +1: rhuijben
-     -0: philip (Doesn't build, needs a branch due to r1539279.)
+     -0 (before branch): philip (Doesn't build, needs a branch due to r1539279)
 
  * r1549858, r1549874
    Make svn_client_proplist4() behave as documented when reporting inherited
