@@ -133,7 +133,7 @@ svn_cl__help(apr_getopt_t *os,
     version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  if (!opt_state->non_interactive)
+  if (opt_state && !opt_state->non_interactive)
     SVN_ERR(svn_cl__start_pager(&pager_proc, pool, pool));
 
   SVN_ERR(svn_opt_print_help4(os,
