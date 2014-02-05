@@ -45,6 +45,7 @@ svn_cl__help(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = NULL;
   svn_stringbuf_t *version_footer = NULL;
+  apr_proc_t *pager_proc = NULL;
 
   char help_header[] =
   N_("usage: svn <subcommand> [options] [args]\n"
@@ -132,16 +133,24 @@ svn_cl__help(apr_getopt_t *os,
     version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  return svn_opt_print_help4(os,
-                             "svn",   /* ### erm, derive somehow? */
-                             opt_state ? opt_state->version : FALSE,
-                             opt_state ? opt_state->quiet : FALSE,
-                             opt_state ? opt_state->verbose : FALSE,
-                             version_footer->data,
-                             help_header,   /* already gettext()'d */
-                             svn_cl__cmd_table,
-                             svn_cl__options,
-                             svn_cl__global_options,
-                             _(help_footer),
-                             pool);
+  if (!opt_state->non_interactive)
+    SVN_ERR(svn_cl__start_pager(&pager_proc, pool, pool));
+
+  SVN_ERR(svn_opt_print_help4(os,
+                              "svn",   /* ### erm, derive somehow? */
+                              opt_state ? opt_state->version : FALSE,
+                              opt_state ? opt_state->quiet : FALSE,
+                              opt_state ? opt_state->verbose : FALSE,
+                              version_footer->data,
+                              help_header,   /* already gettext()'d */
+                              svn_cl__cmd_table,
+                              svn_cl__options,
+                              svn_cl__global_options,
+                              _(help_footer),
+                              pool));
+
+  if (pager_proc)
+    SVN_ERR(svn_cl__close_pager(pager_proc, pool));
+
+  return SVN_NO_ERROR;
 }

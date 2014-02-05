@@ -246,6 +246,7 @@ svn_cl__blame(apr_getopt_t *os,
   svn_boolean_t end_revision_unspecified = FALSE;
   svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
   svn_boolean_t seen_nonexistent_target = FALSE;
+  apr_proc_t *pager_proc = NULL;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -315,6 +316,9 @@ svn_cl__blame(apr_getopt_t *os,
                                 _("'incremental' option only valid in XML "
                                   "mode"));
     }
+
+  if (!opt_state->non_interactive && !opt_state->xml)
+    SVN_ERR(svn_cl__start_pager(&pager_proc, pool, pool));
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -408,6 +412,9 @@ svn_cl__blame(apr_getopt_t *os,
   svn_pool_destroy(subpool);
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("blame", pool));
+
+  if (pager_proc)
+    SVN_ERR(svn_cl__close_pager(pager_proc, pool));
 
   if (seen_nonexistent_target)
     return svn_error_create(

@@ -188,6 +188,7 @@ svn_cl__diff(apr_getopt_t *os,
   struct summarize_baton_t summarize_baton;
   const svn_client_diff_summarize_func_t summarize_func =
     (opt_state->xml ? summarize_xml : summarize_regular);
+  apr_proc_t *pager_proc = NULL;
 
   if (opt_state->extensions)
     options = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
@@ -355,6 +356,9 @@ svn_cl__diff(apr_getopt_t *os,
 
   svn_opt_push_implicit_dot_target(targets, pool);
 
+  if (!opt_state->non_interactive && !opt_state->diff.summarize)
+    SVN_ERR(svn_cl__start_pager(&pager_proc, pool, pool));
+
   iterpool = svn_pool_create(pool);
 
   for (i = 0; i < targets->nelts; ++i)
@@ -487,6 +491,9 @@ svn_cl__diff(apr_getopt_t *os,
     }
 
   svn_pool_destroy(iterpool);
+
+  if (pager_proc)
+    SVN_ERR(svn_cl__close_pager(pager_proc, pool));
 
   return SVN_NO_ERROR;
 }
