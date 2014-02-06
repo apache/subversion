@@ -206,17 +206,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1554978
-   In FSFS, svn_fs_get_file_delta_stream shall return strictly the delta requested.
-   Justification:
-     The delta stream returned here has been valid (a self-delta is a valid
-     txdelta against *any* source) but it may not strictly be what the user
-     requested.  As a side effect, this will produce smaller deltified dumps.
-   Branch:
-     ^/subversion/branches/1.8.x-r1554978
-   Votes:
-     +1: stefan2, rhuijben, breser
-
  * r1551524, 1551579
    Fix an 'No Write Lock' error when moving files between externals and
    parent working copies or vice versa.
