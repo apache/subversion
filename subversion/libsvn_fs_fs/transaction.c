@@ -2077,7 +2077,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   /* Get the base for this delta. */
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->pool));
-  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, b->pool));
+  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, TRUE, b->pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2668,7 +2668,7 @@ write_container_delta_rep(representation_t *rep,
 
   /* Get the base for this delta. */
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, pool));
-  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, pool));
+  SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, FALSE, pool));
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
 
