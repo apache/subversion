@@ -1690,6 +1690,7 @@ svn_error_t *
 svn_fs_fs__get_contents(svn_stream_t **contents_p,
                         svn_fs_t *fs,
                         representation_t *rep,
+                        svn_boolean_t cache_fulltext,
                         apr_pool_t *pool)
 {
   if (! rep)
@@ -1703,9 +1704,11 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
       svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
+      /* Cache lookup, if the fulltext may be cached. */
       fulltext_cache_key.revision = rep->revision;
       fulltext_cache_key.second = rep->item_index;
-      if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
+      if (ffd->fulltext_cache && cache_fulltext
+          && SVN_IS_VALID_REVNUM(rep->revision)
           && fulltext_size_is_cachable(ffd, len))
         {
           svn_stringbuf_t *fulltext;
@@ -1720,8 +1723,14 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
             }
         }
       else
-        fulltext_cache_key.revision = SVN_INVALID_REVNUM;
+        {
+          /* This will also prevent the reconstructed fulltext from being
+             put into the cache. */
+          fulltext_cache_key.revision = SVN_INVALID_REVNUM;
+        }
 
+      /* Create the object chain for reconstruction from deltas or for
+         reading plain text, depending on on-disk representation. */
       SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
 
       *contents_p = svn_stream_create(rb, pool);
@@ -1906,10 +1915,11 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   /* Read both fulltexts and construct a delta. */
   if (source)
     SVN_ERR(svn_fs_fs__get_contents(&source_stream, fs, source->data_rep,
-                                    pool));
+                                    TRUE, pool));
   else
     source_stream = svn_stream_empty(pool);
-  SVN_ERR(svn_fs_fs__get_contents(&target_stream, fs, target->data_rep, pool));
+  SVN_ERR(svn_fs_fs__get_contents(&target_stream, fs, target->data_rep,
+                                  TRUE, pool));
 
   /* Because source and target stream will already verify their content,
    * there is no need to do this once more.  In particular if the stream
@@ -2102,7 +2112,7 @@ get_dir_contents(apr_array_header_t **entries,
 
       /* The representation is immutable.  Read it normally. */
       SVN_ERR(svn_fs_fs__get_contents(&contents, fs, noderev->data_rep,
-                                      text_pool));
+                                      FALSE, text_pool));
       SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, text_pool));
       SVN_ERR(svn_stream_close(contents));
 
@@ -2293,7 +2303,8 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
         }
 
       proplist = apr_hash_make(pool);
-      SVN_ERR(svn_fs_fs__get_contents(&stream, fs, noderev->prop_rep, pool));
+      SVN_ERR(svn_fs_fs__get_contents(&stream, fs, noderev->prop_rep, FALSE,
+                                      pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_stream_close(stream));
 
