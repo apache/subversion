@@ -633,6 +633,7 @@ svn_client_update4(apr_array_header_t **result_revs,
   const char *path = NULL;
   svn_boolean_t sleep = FALSE;
   svn_error_t *err = SVN_NO_ERROR;
+  svn_boolean_t found_valid_target = FALSE;
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -694,12 +695,18 @@ svn_client_update4(apr_array_header_t **result_revs,
               (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
             }
         }
+      else
+        found_valid_target = TRUE;
+
       if (result_revs)
         APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
     }
   svn_pool_destroy(iterpool);
 
  cleanup:
+  if (!err && !found_valid_target)
+    return svn_error_create(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                            _("None of the targets are working copies"));
   if (sleep)
     {
       const char *wcroot_abspath;
