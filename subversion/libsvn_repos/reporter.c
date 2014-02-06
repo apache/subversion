@@ -1196,6 +1196,8 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                  but don't update the entry yet. */
               if (s_entries)
                 svn_hash_sets(s_entries, name, NULL);
+
+              svn_pool_destroy(info->pool);
               continue;
             }
 
