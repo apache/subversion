@@ -206,13 +206,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1563110
-   Correct the default cache size in svnserve's help text for the -M option.
-   Justification:
-     Help text is wrong.
-   Votes:
-     +1: philip, stefan2, breser
-
  * r1555499
    Release internal FS objects when closing a commit editor.
    Justification:
