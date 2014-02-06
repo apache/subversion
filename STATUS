@@ -206,14 +206,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1555499
-   Release internal FS objects when closing a commit editor.
-   Justification:
-     close_edit() and abort_edit() are supposed to do a complete internal
-     cleanup - albeit the API docs are slightly fuzzy about that.
-   Votes:
-     +1: stefan2, rhuijben, breser
-
  * r1554978
    In FSFS, svn_fs_get_file_delta_stream shall return strictly the delta requested.
    Justification:
