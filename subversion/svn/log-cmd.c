@@ -852,6 +852,8 @@ svn_cl__log(apr_getopt_t *os,
     }
   else  /* default output format */
     {
+      if (!opt_state->non_interactive)
+        SVN_ERR(svn_cmdline_start_pager(pool, pool));
       revprops = apr_array_make(pool, 3, sizeof(char *));
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
