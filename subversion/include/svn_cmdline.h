@@ -369,6 +369,17 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
+/* Launch an external pager program and redirect stdout to the pager.
+ * The pager is not started if the PAGER or SVN_PAGER environment
+ * variables are not set, or if standard output is not a terminal.
+ * The pager process is terminated from a cleanup handler of @a RESULT_POOL.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_cmdline_start_pager(apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

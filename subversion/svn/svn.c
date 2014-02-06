@@ -2907,6 +2907,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     ctx->conflict_baton2 = b;
   }
 
+  SVN_ERR(svn_cmdline_start_pager(pool, pool));
+
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
   if (err)

@@ -33,15 +33,6 @@
 #include <ctype.h>
 #include <assert.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#else
-#include <crtdbg.h>
-#include <io.h>
-#include <conio.h>
-#endif
-
-#include <apr.h>                /* for STDOUT_FILENO */
 #include <apr_env.h>
 #include <apr_errno.h>
 #include <apr_file_info.h>
@@ -1071,86 +1062,3 @@ svn_cl__propset_print_binary_mime_type_warning(apr_array_header_t *targets,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_cl__start_pager(apr_proc_t **pager_proc,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *pager_cmd;
-  const char *pager;
-  const char **args;
-  apr_file_t *stdout_file;
-  apr_status_t apr_err;
-  int i;
-
-  *pager_proc = NULL;
-
-  pager = getenv("SVN_PAGER");
-  if (pager == NULL)
-    pager = getenv("PAGER");
-  /* TODO get pager-cmd from config */
-  if (pager == NULL)
-    return SVN_NO_ERROR;
-
-#ifdef WIN32
-  if (_isatty(STDOUT_FILENO) == 0)
-    return SVN_NO_ERROR;
-#else
-  if (isatty(STDOUT_FILENO) == 0)
-    return SVN_NO_ERROR;
-#endif
-
-  pager_cmd = svn_cstring_split(pager, " \t", TRUE, scratch_pool);
-  if (pager_cmd->nelts <= 0)
-    return SVN_NO_ERROR;
-  args = apr_pcalloc(scratch_pool,
-                     (sizeof(const char *) * pager_cmd->nelts + 1));
-  for (i = 0; i < pager_cmd->nelts; i++)
-    args[i] = APR_ARRAY_IDX(pager_cmd, i, const char *);
-  args[i] = NULL;
-
-  apr_err = apr_file_open_stdout(&stdout_file, scratch_pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Can't open stdout");
-
-  *pager_proc = apr_pcalloc(result_pool, sizeof(**pager_proc));
-  SVN_ERR(svn_io_start_cmd3(*pager_proc, NULL, args[0], args, NULL, TRUE,
-                            TRUE, NULL,
-                            FALSE, NULL,
-                            FALSE, NULL,
-                            result_pool));
-
-  apr_err = apr_file_dup2(stdout_file, (*pager_proc)->in, result_pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Can't redirect stdout");
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_cl__close_pager(apr_proc_t *pager_proc,
-                    apr_pool_t *scratch_pool)
-{
-  apr_file_t *stdout_file;
-  apr_status_t apr_err;
-  svn_error_t *err;
-
-  apr_err = apr_file_open_stdout(&stdout_file, scratch_pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Can't open stdout");
-  SVN_ERR(svn_io_file_close(stdout_file, scratch_pool));
-  SVN_ERR(svn_io_file_close(pager_proc->in, scratch_pool));
-  err = svn_io_wait_for_cmd(pager_proc,
-                            apr_psprintf(scratch_pool, "%ld",
-                                         (long)pager_proc->pid),
-                            NULL, NULL, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
-    {
-      svn_handle_warning2(stderr, err, "svn: ");
-      svn_error_clear(err);
-    }
-  else
-    SVN_ERR(err);
-
-  return SVN_NO_ERROR;
-}

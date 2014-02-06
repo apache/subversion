@@ -89,6 +89,214 @@ static svn_boolean_t shortcut_stdout_to_console = FALSE;
 static svn_boolean_t shortcut_stderr_to_console = FALSE;
 #endif
 
+struct close_pager_baton {
+  apr_proc_t *pager_proc;
+  apr_pool_t *scratch_pool;
+};
+
+/* Close the pager with process handle PAGER_PROC.
+ * Must be called after all output has been written. */
+static apr_status_t
+close_pager(void *baton)
+{
+  struct close_pager_baton *b = baton;
+  apr_proc_t *pager_proc = b->pager_proc;
+  apr_pool_t *scratch_pool = b->scratch_pool;
+  apr_file_t *stdout_file;
+  apr_status_t apr_err;
+  svn_error_t *err;
+
+  apr_err = apr_file_open_stdout(&stdout_file, scratch_pool);
+  if (apr_err)
+    {
+      svn_handle_warning2(stderr,
+                          svn_error_wrap_apr(apr_err, "Can't open stdout"),
+                          "svn: ");
+      svn_error_clear(err);
+    }
+
+  err = svn_io_file_close(stdout_file, scratch_pool);
+  if (err)
+    {
+      svn_handle_warning2(stderr, err, "svn: ");
+      svn_error_clear(err);
+    }
+
+  err = svn_io_file_close(pager_proc->in, scratch_pool);
+  if (err)
+    {
+      svn_handle_warning2(stderr, err, "svn: ");
+      svn_error_clear(err);
+    }
+
+  err = svn_io_wait_for_cmd(pager_proc,
+                            apr_psprintf(scratch_pool, "%ld",
+                                         (long)pager_proc->pid),
+                            NULL, NULL, scratch_pool);
+  if (err)
+    {
+      svn_handle_warning2(stderr, err, "svn: ");
+      svn_error_clear(err);
+      svn_cmdline_fputs(_("svn: There was a problem with the pager. Please "
+                          "check whether the SVN_PAGER or PAGER environment "
+                          "variables are set correctly.\n"),
+                        stderr, scratch_pool);
+      svn_cmdline_fflush(stderr);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static apr_array_header_t *
+parse_pager_env(const char *pager_env, apr_pool_t *result_pool)
+{
+  apr_array_header_t *pager_cmd = apr_array_make(result_pool, 0,
+                                                 sizeof(const char *));
+  const char *p;
+  svn_boolean_t single_quote = FALSE;
+  svn_boolean_t double_quote = FALSE;
+#define quoted (single_quote || double_quote)
+  svn_stringbuf_t *next_arg = svn_stringbuf_create_empty(result_pool);
+
+  p = pager_env;
+  while (*p)
+    {
+      switch (*p)
+        {
+          case ' ':
+          case '\t':
+            if (quoted)
+              svn_stringbuf_appendbyte(next_arg, *p);
+            else
+              {
+                if (next_arg->len > 0)
+                  APR_ARRAY_PUSH(pager_cmd, const char *) =
+                    apr_pstrdup(result_pool, next_arg->data);
+                svn_stringbuf_setempty(next_arg);
+              }
+            break;
+
+          case '"':
+            if (single_quote)
+              svn_stringbuf_appendbyte(next_arg, *p);
+            else
+              double_quote = !double_quote;
+            break;
+
+          case '\'':
+            if (double_quote)
+              svn_stringbuf_appendbyte(next_arg, *p);
+            else
+              single_quote = !single_quote;
+            break;
+
+          case '\\':
+            if (quoted)
+              svn_stringbuf_appendbyte(next_arg, *p);
+            else if (*(p + 1))
+              {
+                svn_stringbuf_appendbyte(next_arg, *(p + 1));
+                p++;
+              }
+            break;
+
+          default:
+            svn_stringbuf_appendbyte(next_arg, *p);
+            break;
+        }
+      p++;
+    }
+
+  if (next_arg->len > 0)
+    APR_ARRAY_PUSH(pager_cmd, const char *) = apr_pstrdup(result_pool,
+                                                          next_arg->data);
+
+#undef quoted
+  return pager_cmd;
+}
+
+svn_error_t *
+svn_cmdline_start_pager(apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  apr_proc_t *pager_proc;
+  apr_array_header_t *pager_cmd;
+  const char *pager;
+  const char **args;
+  apr_file_t *stdout_file;
+  apr_status_t apr_err;
+  int i;
+  struct close_pager_baton *close_pager_baton;
+
+  pager = getenv("SVN_PAGER");
+  if (pager == NULL)
+    pager = getenv("PAGER");
+  /* TODO get pager-cmd from config */
+  if (pager == NULL)
+    return SVN_NO_ERROR;
+
+#ifdef WIN32
+  if (_isatty(STDOUT_FILENO) == 0)
+    return SVN_NO_ERROR;
+#else
+  if (isatty(STDOUT_FILENO) == 0)
+    return SVN_NO_ERROR;
+#endif
+
+  pager_cmd = parse_pager_env(pager, scratch_pool);
+  if (pager_cmd->nelts <= 0)
+    return SVN_NO_ERROR;
+  args = apr_pcalloc(scratch_pool,
+                     (sizeof(const char *) * pager_cmd->nelts + 1));
+  for (i = 0; i < pager_cmd->nelts; i++)
+    {
+      const char *arg;
+      const char *arg_utf8;
+
+      arg = APR_ARRAY_IDX(pager_cmd, i, const char *);
+      SVN_ERR(svn_cmdline_cstring_to_utf8(&arg_utf8, arg, scratch_pool));
+      args[i] = arg_utf8;
+    }
+  args[i] = NULL;
+
+  args[0] = svn_dirent_canonicalize(args[0], scratch_pool);
+
+  /* Set default options for 'less' to -FX. */
+  if (strcmp(svn_dirent_basename(args[0], scratch_pool), "less") == 0
+      && args[1] == NULL)
+    {
+      const char *less_env = getenv("LESS");
+      svn_stringbuf_t *new_less_env;
+      
+      new_less_env = svn_stringbuf_create(less_env ? less_env : "", scratch_pool);
+      svn_stringbuf_appendcstr(new_less_env, "FX");
+      setenv("LESS", new_less_env->data, 1);
+    }
+
+  apr_err = apr_file_open_stdout(&stdout_file, scratch_pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stdout");
+
+  pager_proc = apr_pcalloc(result_pool, sizeof(*pager_proc));
+  args[0] = svn_dirent_local_style(args[0], scratch_pool);
+  SVN_ERR(svn_io_start_cmd3(pager_proc, NULL, args[0], args, NULL, TRUE,
+                            TRUE, NULL,
+                            FALSE, NULL,
+                            FALSE, NULL,
+                            result_pool));
+
+  close_pager_baton = apr_pcalloc(result_pool, sizeof(*close_pager_baton));
+  close_pager_baton->pager_proc = pager_proc;
+  close_pager_baton->scratch_pool = result_pool;
+  apr_pool_cleanup_register(result_pool, close_pager_baton, close_pager, NULL);
+
+  SVN_ERR(svn_cmdline_fflush(stdout)); /* Flush existing output */
+  apr_err = apr_file_dup2(stdout_file, pager_proc->in, result_pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't redirect stdout");
+
+  return SVN_NO_ERROR;
+}
 
 int
 svn_cmdline_init(const char *progname, FILE *error_stream)

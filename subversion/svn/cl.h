@@ -848,22 +848,6 @@ svn_cl__deprecated_merge_reintegrate(const char *source_path_or_url,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
-
-/* Launch an external pager program and redirect stdout to the pager.
- *
- * If the pager was started, return a pointer to the process handle
- * for the pager in *PAGER_PROC. Else, set *PAGER_PROC to NULL. */
-svn_error_t *
-svn_cl__start_pager(apr_proc_t **pager_proc,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
-
-/* Close the pager with process handle PAGER_PROC.
- * Must be called after all output has been written. */
-svn_error_t *
-svn_cl__close_pager(apr_proc_t *pager_proc,
-                    apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
