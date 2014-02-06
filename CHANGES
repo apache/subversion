@@ -370,6 +370,53 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-pl: make svn_auth_set_parameter() usable (r1553823)
 
 
+Version 1.8.6
+(12 Feb 2014, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.6
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * use CryptoAPI to validate intermediary certificates on Windows (r1564623)
+    * fix automatic relocate for wcs not at repository root (r1541638 et al)
+    * diff: fix when target is a drive root on Windows (r1541635)
+    * wc: improve performance when used with SQLite 3.8 (r1542765)
+    * copy: fix some scenarios that broke the working copy (r1560690)
+    * move: fix errors when moving files between an external and the parent
+      working copy (r1551524, r1551579)
+    * log: resolve performance regression in certain scenarios (r1553101 et al)
+    * merge: decrease work to detect differences between 3 files (r1548486)
+    * checkout: don't require flush support for symlinks on Windows (r1547774)
+    * commit: don't change file permissions inappropriately (issue #4440)
+    * commit: fix assertion due to invalid pool lifetime (r1553376 et al)
+    * version: don't cut off the distribution version on Linux (r1544878 et al)
+    * flush stdout before exiting to avoid information being lost (r1499470)
+    * status: fix missing sentinel value on warning codes (r1543145)
+
+  - Server-side bugfixes:
+    * reduce memory usage during checkout and export (r1564215)
+    * fsfs: create rep-cache.db with proper permissions (issue #3437)
+    * mod_dav_svn: prevent crashes with SVNListParentPath on (CVE-2014-0032)
+    * mod_dav_svn: fix SVNAllowBulkUpdates directive merging (r1548105)
+    * mod_dav_svn: include requested property changes in reports (r1557522)
+    * svnserve: correct default cache size in help text (r1563110)
+    * svnadmin dump: reduce size of dump files with '--deltas' (r1554978)
+
+ Developer-visible changes:
+  - API changes:
+    * numerous documentation fixes
+    * svn_client_commit_item3_dup() fix pool lifetime issues (r1550803)
+    * ra_serf: properly ask multiple certificate validation providers for
+      acceptance of certificate failures (r1535532)
+    * release internal fs objects when closing commit editor (r1555499)
+    * svn_client_proplist4() don't call the callback multiple times for
+      the same path in order to deliver inherited properties (r1549858 et al)
+
+  - Bindings:
+    * javahl: make test suite run without installing on OS X (r1535115)
+    * swig: fix building out of tarball on OS X (r1555654)
+    * swig-pl: fix with --enable-sqlite-compatibility-version (r1559009)
+
+
 Version 1.8.5
 (25 November 2013, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.5
