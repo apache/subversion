@@ -482,7 +482,7 @@ body_allocate_all(body_create_baton_t *body,
         break;
     }
 
-  if (!SERF_BUCKET_READ_ERROR(s) && sz >= 0)
+  if (!SERF_BUCKET_READ_ERROR(s))
     {
       memcpy(next, data, sz);
     }

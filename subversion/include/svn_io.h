@@ -831,14 +831,16 @@ svn_io_dir_file_copy(const char *src_path,
  * On entry to the handler, the pointed-to value should be the amount
  * of data which can be read or the amount of data to write.  When the
  * handler returns, the value is reset to the amount of data actually
- * read or written.  Handlers are obliged to complete a read or write
- * to the maximum extent possible; thus, a short read with no
- * associated error implies the end of the input stream, and a short
- * write should never occur without an associated error.
+ * read or written.  The write and full read handler are obliged to
+ * complete a read or write to the maximum extent possible; thus, a
+ * short read with no associated error implies the end of the input
+ * stream, and a short write should never occur without an associated
+ * error. In Subversion 1.9 the stream api was extended to also support
+ * limited reads via the new svn_stream_read2() api.
  *
- * In Subversion 1.7 reset support was added as an optional feature of
- * streams. If a stream implements resetting it allows reading the data
- * again after a successful call to svn_stream_reset().
+ * In Subversion 1.7 mark, seek and reset support was added as an optional
+ * feature of streams. If a stream implements resetting it allows reading
+ * the data again after a successful call to svn_stream_reset().
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -888,7 +890,15 @@ typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
-                                         const svn_stream_mark_t *mark);
+                                             const svn_stream_mark_t *mark);
+
+/** Poll handler for generic streams that support incomplete reads, @see
+ * svn_stream_t and svn_stream_data_available().
+ *
+ * @since New in 1.9.
+ */
+typedef svn_error_t *(*svn_stream_data_available_fn_t)(void *baton,
+                                              svn_boolean_t *data_available);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -900,7 +910,24 @@ void
 svn_stream_set_baton(svn_stream_t *stream,
                      void *baton);
 
-/** Set @a stream's read function to @a read_fn */
+/** Set @a stream's read functions to @a read_fn and @a read_full_fn. If
+ * @a read_full_fn is NULL a default implementation based on multiple calls
+ * to @a read_fn will be used.
+ *
+ * @since New in 1.9.
+ */
+void
+svn_stream_set_read2(svn_stream_t *stream,
+                     svn_read_fn_t read_fn,
+                     svn_read_fn_t read_full_fn);
+
+/** Set @a stream's read function to @a read_fn.
+ *
+ * This function sets only the full read function to read_fn.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 void
 svn_stream_set_read(svn_stream_t *stream,
                     svn_read_fn_t read_fn);
@@ -938,6 +965,14 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_stream_seek_fn_t seek_fn);
+
+/** Set @a stream's data available function to @a data_available_fn
+ *
+ * @since New in 1.9.
+ */
+void
+svn_stream_set_data_available(svn_stream_t *stream,
+                              svn_stream_data_available_fn_t data_available);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1172,7 +1207,40 @@ svn_stream_checksummed(svn_stream_t *stream,
                        svn_boolean_t read_all,
                        apr_pool_t *pool);
 
-/** Read from a generic stream. @see svn_stream_t. */
+/** Read from a generic stream until @a buffer is filled upto @a *len or
+ * until EOF is reached. @see svn_stream_t
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_read_full(svn_stream_t *stream,
+                     char *buffer,
+                     apr_size_t *len);
+
+/** Read all currently available upto @a *len into @a buffer. Use
+ * svn_stream_read_full() if you want to wait for the buffer to be filled
+ * or EOF. If the stream doesn't support limited reads this function will
+ * return an #SVN_ERR_STREAM_NOT_SUPPORTED error.
+ *
+ * A 0 byte read signals the end of the stream.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_read2(svn_stream_t *stream,
+                 char *buffer,
+                 apr_size_t *len);
+
+
+/** Read from a generic stream until the buffer is completely filled or EOF.
+ * @see svn_stream_t.
+ *
+ * @note This function is a wrapper of svn_stream_read_full() now, which name
+ * better documents the behavior of this function.
+ *
+ * @deprecated Provided for backward compatibilty with the 1.8 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_read(svn_stream_t *stream,
                 char *buffer,
@@ -1247,6 +1315,20 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
+
+/** When a stream supports polling for available data, obtain a boolean
+ * indicating whether data is waiting to be read. If the stream doesn't
+ * support polling this function returns a #SVN_ERR_STREAM_NOT_SUPPORTED
+ * error.
+ *
+ * If the data_available callback is implemented and the stream is at the end
+ * the stream will set @a *data_available to FALSE.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_stream_data_available(svn_stream_t *stream,
+                          svn_boolean_t *data_available);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of

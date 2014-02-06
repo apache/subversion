@@ -1587,7 +1587,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       while (1)
         {
           len = sizeof(buf);
-          err = svn_stream_read(contents, buf, &len);
+          err = svn_stream_read_full(contents, buf, &len);
           if (err)
             break;
           if (len > 0)
@@ -3877,7 +3877,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
 
       /* create the connection, configure ports etc. */
       connection->conn
-        = svn_ra_svn_create_conn3(connection->usock, NULL, NULL,
+        = svn_ra_svn_create_conn4(connection->usock, NULL, NULL,
                                   connection->params->compression_level,
                                   connection->params->zero_copy_limit,
                                   connection->params->error_check_interval,

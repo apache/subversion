@@ -40,6 +40,7 @@
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
 #include "svn_ctype.h"
+#include "svn_sorts.h"
 #include "svn_time.h"
 
 #include "ra_svn.h"
@@ -80,19 +81,20 @@ get_timeout(svn_ra_svn_conn_t *conn)
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
-                                           apr_file_t *in_file,
-                                           apr_file_t *out_file,
+svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
+                                           svn_stream_t *in_stream,
+                                           svn_stream_t *out_stream,
                                            int compression_level,
                                            apr_size_t zero_copy_limit,
                                            apr_size_t error_check_interval,
-                                           apr_pool_t *pool)
+                                           apr_pool_t *result_pool)
 {
   svn_ra_svn_conn_t *conn;
-  void *mem = apr_palloc(pool, sizeof(*conn) + SVN_RA_SVN__PAGE_SIZE);
+  void *mem = apr_palloc(result_pool, sizeof(*conn) + SVN_RA_SVN__PAGE_SIZE);
   conn = (void*)APR_ALIGN((apr_uintptr_t)mem, SVN_RA_SVN__PAGE_SIZE);
 
-  assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
+  assert((sock && !in_stream && !out_stream)
+         || (!sock && in_stream && out_stream));
 #ifdef SVN_HAVE_SASL
   conn->sock = sock;
   conn->encrypted = FALSE;
@@ -106,15 +108,15 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
   conn->may_check_for_error = error_check_interval == 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
-  conn->capabilities = apr_hash_make(pool);
+  conn->capabilities = apr_hash_make(result_pool);
   conn->compression_level = compression_level;
   conn->zero_copy_limit = zero_copy_limit;
-  conn->pool = pool;
+  conn->pool = result_pool;
 
   if (sock != NULL)
     {
       apr_sockaddr_t *sa;
-      conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
+      conn->stream = svn_ra_svn__stream_from_sock(sock, result_pool);
       if (!(apr_socket_addr_get(&sa, APR_REMOTE, sock) == APR_SUCCESS
             && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
         conn->remote_ip = NULL;
@@ -122,7 +124,8 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn3(apr_socket_t *sock,
     }
   else
     {
-      conn->stream = svn_ra_svn__stream_from_files(in_file, out_file, pool);
+      conn->stream = svn_ra_svn__stream_from_streams(in_stream, out_stream,
+                                                     result_pool);
       conn->remote_ip = NULL;
     }
 
@@ -195,10 +198,10 @@ svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
   svn_ra_svn__stream_timeout(conn->stream, get_timeout(conn));
 }
 
-svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
-                                        apr_pool_t *pool)
+svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
+                                       svn_boolean_t *data_available)
 {
-  return svn_ra_svn__stream_pending(conn->stream);
+  return svn_ra_svn__stream_data_available(conn->stream, data_available);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -1246,10 +1249,12 @@ svn_ra_svn__has_item(svn_boolean_t *has_item,
     {
       if (conn->read_ptr == conn->read_end)
         {
+          svn_boolean_t available;
           if (conn->write_pos)
             SVN_ERR(writebuf_flush(conn, pool));
 
-          if (!svn_ra_svn__input_waiting(conn, pool))
+          SVN_ERR(svn_ra_svn__data_available(conn, &available));
+          if (!available)
             break;
 
           SVN_ERR(readbuf_fill(conn, pool));
@@ -2607,7 +2612,7 @@ svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
   *prop_mods = SVN_RA_SVN_UNSPECIFIED_NUMBER;
 
   /* top-level elements (mandatory) */
-  SVN_ERR(svn_ra_svn__read_check_array_size(items, 3, 4));
+  SVN_ERR(svn_ra_svn__read_check_array_size(items, 3, INT_MAX));
   SVN_ERR(svn_ra_svn__read_string(items, 0, cpath));
   SVN_ERR(svn_ra_svn__read_word(items, 1, action));
 
@@ -2621,12 +2626,10 @@ svn_ra_svn__read_data_log_changed_entry(const apr_array_header_t *items,
     }
 
   /* second sub-structure (optional) */
-  if (items->nelts == 4)
+  if (items->nelts >= 4)
     {
       SVN_ERR(svn_ra_svn__read_list(items, 3, &sub_items));
-      SVN_ERR(svn_ra_svn__read_check_array_size(sub_items, 0, 3));
-
-      switch (sub_items->nelts)
+      switch (MIN(3, sub_items->nelts))
         {
           case 3 : SVN_ERR(svn_ra_svn__read_boolean(sub_items, 2, prop_mods));
           case 2 : SVN_ERR(svn_ra_svn__read_boolean(sub_items, 1, text_mods));

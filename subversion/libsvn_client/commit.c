@@ -110,7 +110,8 @@ get_ra_editor(const svn_delta_editor_t **editor,
             continue;
 
           svn_pool_clear(iterpool);
-          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL, NULL,
+          SVN_ERR(svn_wc__node_get_origin(NULL, NULL, &relpath, NULL, NULL,
+                                          NULL, NULL,
                                           ctx->wc_ctx, item->path, FALSE, pool,
                                           iterpool));
           if (relpath)

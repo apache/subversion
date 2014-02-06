@@ -696,7 +696,7 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
                            APR_READ | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+                           APR_OS_DEFAULT, local_pool));
 
   /* process all entries until we fail due to EOF */
   for (entry = 0; !eof; ++entry)
@@ -754,6 +754,9 @@ svn_fs_x__l2p_index_create(svn_fs_t *fs,
           APR_ARRAY_IDX(entries, idx, l2p_page_entry_t) = page_entry;
         }
     }
+
+  /* we are now done with the source file */
+  SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* create the target file */
   SVN_ERR(svn_io_file_open(&index_file, file_name, APR_WRITE
@@ -1720,7 +1723,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
                            APR_READ | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+                           APR_OS_DEFAULT, local_pool));
 
   /* process all entries until we fail due to EOF */
   while (!eof)
@@ -1817,6 +1820,9 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
 
       svn_pool_clear(iter_pool);
     }
+
+  /* we are now done with the source file */
+  SVN_ERR(svn_io_file_close(proto_index, local_pool));
 
   /* store length of last table */
   APR_ARRAY_PUSH(table_sizes, apr_uint64_t)

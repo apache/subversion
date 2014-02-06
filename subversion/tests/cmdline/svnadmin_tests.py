@@ -26,11 +26,12 @@
 
 # General modules
 import os
+import logging
 import re
 import shutil
 import sys
 import threading
-import logging
+import time
 
 logger = logging.getLogger()
 
@@ -2242,6 +2243,36 @@ def fsfs_hotcopy_old_non_empty(sbox):
   check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
 
 
+def load_ignore_dates(sbox):
+  "svnadmin load --ignore-dates"
+
+  # All revisions in the loaded repository should come after this time.
+  start_time = time.localtime()
+  time.sleep(1)
+  
+  sbox.build(create_wc=False)
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
+                                        'svnadmin_tests_data',
+                                        'skeleton_repos.dump')).read()
+
+  load_dumpstream(sbox, dumpfile_skeleton, '--ignore-dates')
+  svntest.actions.run_and_verify_svnlook("Unexpected output", ['6\n'],
+                                         None, 'youngest', sbox.repo_dir)
+  for rev in range(6):
+    exit_code, output, errput = svntest.main.run_svnlook('date', '-r', rev,
+                                                         sbox.repo_dir)
+    if errput:
+      raise SVNUnexpectedStderr(errput)
+    rev_time = time.strptime(output[0].rstrip()[:19], '%Y-%m-%d %H:%M:%S')
+    if rev_time < start_time:
+      raise svntest.Failure("Revision time for r%d older than load start time\n"
+                            "    rev_time: %s\n"
+                            "  start_time: %s"
+                            % (rev, str(rev_time), str(start_time)))
+
 ########################################################################
 # Run the tests
 
@@ -2283,6 +2314,7 @@ test_list = [ None,
               verify_denormalized_names,
               fsfs_recover_old_non_empty,
               fsfs_hotcopy_old_non_empty,
+              load_ignore_dates,
              ]
 
 if __name__ == '__main__':

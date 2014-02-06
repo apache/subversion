@@ -2854,6 +2854,11 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * node properties (those in the svn: namespace) against established
  * rules for those things.
  *
+ * If @a ignore_dates is set, ignore any revision datestamps found in
+ * @a dumpstream, allowing the revisions created by the load process
+ * to be stamped as if they were newly created via the normal commit
+ * process.
+ *
  * If non-NULL, use @a notify_func and @a notify_baton to send notification
  * of events to the caller.
  *
@@ -2861,8 +2866,32 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_repos_load_fs5(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_boolean_t ignore_dates,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/** Similar to svn_repos_load_fs5(), but with @a ignore_dates
+ * always passed as FALSE.
+ *
+ * @since New in 1.9.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_load_fs4(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
@@ -3124,6 +3153,7 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **parser,
                                svn_repos_notify_func_t notify_func,
                                void *notify_baton,
                                apr_pool_t *pool);
+
 
 
 /**

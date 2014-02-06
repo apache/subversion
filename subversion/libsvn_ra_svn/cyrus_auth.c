@@ -704,11 +704,12 @@ static void sasl_timeout_cb(void *baton, apr_interval_time_t interval)
   svn_ra_svn__stream_timeout(sasl_baton->stream, interval);
 }
 
-/* Implements ra_svn_pending_fn_t. */
-static svn_boolean_t sasl_pending_cb(void *baton)
+/* Implements svn_stream_data_available_fn_t. */
+static svn_error_t *
+sasl_data_available_cb(void *baton, svn_boolean_t *data_available)
 {
   sasl_baton_t *sasl_baton = baton;
-  return svn_ra_svn__stream_pending(sasl_baton->stream);
+  return svn_ra_svn__stream_data_available(sasl_baton->stream, data_available);
 }
 
 svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
@@ -766,10 +767,19 @@ svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
           /* Wrap the existing stream. */
           sasl_baton->stream = conn->stream;
 
-          conn->stream = svn_ra_svn__stream_create(sasl_baton, sasl_read_cb,
-                                                   sasl_write_cb,
-                                                   sasl_timeout_cb,
-                                                   sasl_pending_cb, conn->pool);
+          {
+            svn_stream_t *sasl_in = svn_stream_create(sasl_baton, conn->pool);
+            svn_stream_t *sasl_out = svn_stream_create(sasl_baton, conn->pool);
+
+            svn_stream_set_read2(sasl_in, sasl_read_cb, NULL /* use default */);
+            svn_stream_set_data_available(sasl_in, sasl_data_available_cb);
+            svn_stream_set_write(sasl_out, sasl_write_cb);
+
+            conn->stream = svn_ra_svn__stream_create(sasl_in, sasl_out,
+                                                     sasl_baton,
+                                                     sasl_timeout_cb,
+                                                     conn->pool);
+          }
           /* Yay, we have a security layer! */
           conn->encrypted = TRUE;
         }

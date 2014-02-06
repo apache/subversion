@@ -489,7 +489,8 @@ public:
     : request_in(NULL),
       request_out(NULL),
       response_in(NULL),
-      response_out(NULL)
+      response_out(NULL),
+      jclosecb(NULL)
     {
 #if APR_VERSION_AT_LEAST(1, 3, 0)
       status = apr_file_pipe_create_ex(&request_in, &request_out,
@@ -519,6 +520,7 @@ public:
   apr_file_t *response_in;
   apr_file_t *response_out;
   apr_status_t status;
+  jobject jclosecb;
 };
 
 jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
@@ -572,10 +574,13 @@ OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
 }
 
 svn_error_t *
-OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
-                             void **tunnel_context, void *tunnel_baton,
+OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
+                             svn_ra_close_tunnel_func_t *close_func,
+                             void **close_baton,
+                             void *tunnel_baton,
                              const char *tunnel_name, const char *user,
                              const char *hostname, int port,
+                             svn_cancel_func_t cancel_func, void *cancel_baton,
                              apr_pool_t *pool)
 {
   TunnelContext *tc = new TunnelContext(pool);
@@ -586,9 +591,10 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
           svn_error_wrap_apr(tc->status, _("Could not open tunnel streams")));
     }
 
-  *tunnel_context = tc;
-  *request = tc->request_out;
-  *response = tc->response_in;
+  *close_func = closeTunnel;
+  *close_baton = tc;
+  *request = svn_stream_from_aprfile2(tc->request_out, FALSE, pool);
+  *response = svn_stream_from_aprfile2(tc->response_in, FALSE, pool);
 
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -613,60 +619,47 @@ OperationContext::openTunnel(apr_file_t **request, apr_file_t **response,
       jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
       SVN_JNI_CATCH(, SVN_ERR_BASE);
       SVN_JNI_CATCH(
-          mid = env->GetMethodID(cls, "openTunnel",
-                                 "(Ljava/nio/channels/ReadableByteChannel;"
-                                 "Ljava/nio/channels/WritableByteChannel;"
-                                 "Ljava/lang/String;"
-                                 "Ljava/lang/String;"
-                                 "Ljava/lang/String;I)V"),
+          mid = env->GetMethodID(
+              cls, "openTunnel",
+              "(Ljava/nio/channels/ReadableByteChannel;"
+              "Ljava/nio/channels/WritableByteChannel;"
+              "Ljava/lang/String;"
+              "Ljava/lang/String;"
+              "Ljava/lang/String;I)"
+              "L"JAVA_PACKAGE"/callback/TunnelAgent$CloseTunnelCallback;"),
           SVN_ERR_BASE);
     }
 
   jobject jtunnelcb = jobject(tunnel_baton);
   SVN_JNI_CATCH(
-      env->CallVoidMethod(jtunnelcb, mid, jrequest, jresponse,
-                          jtunnel_name, juser, jhostname, jint(port)),
+      tc->jclosecb = env->CallObjectMethod(
+          jtunnelcb, mid, jrequest, jresponse,
+          jtunnel_name, juser, jhostname, jint(port)),
       SVN_ERR_BASE);
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-OperationContext::closeTunnel(void *tunnel_context, void *tunnel_baton,
-                              const char *tunnel_name, const char *user,
-                              const char *hostname, int port)
+void
+OperationContext::closeTunnel(void *tunnel_context, void *)
 {
-  delete static_cast<TunnelContext*>(tunnel_context);
+  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
+  jobject jclosecb = tc->jclosecb;
+  delete tc;
 
-  jstring jtunnel_name = JNIUtil::makeJString(tunnel_name);
-  SVN_JNI_CATCH(, SVN_ERR_BASE);
-
-  jstring juser = JNIUtil::makeJString(user);
-  SVN_JNI_CATCH(, SVN_ERR_BASE);
-
-  jstring jhostname = JNIUtil::makeJString(hostname);
-  SVN_JNI_CATCH(, SVN_ERR_BASE);
+  if (!jclosecb)
+    return;
 
   JNIEnv *env = JNIUtil::getEnv();
 
   static jmethodID mid = 0;
   if (0 == mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
-      SVN_JNI_CATCH(, SVN_ERR_BASE);
-      SVN_JNI_CATCH(
-          mid = env->GetMethodID(cls, "closeTunnel",
-                                 "(Ljava/lang/String;"
-                                 "Ljava/lang/String;"
-                                 "Ljava/lang/String;I)V"),
-          SVN_ERR_BASE);
+      jclass cls;
+      SVN_JNI_CATCH_VOID(
+          cls= env->FindClass(
+              JAVA_PACKAGE"/callback/TunnelAgent$CloseTunnelCallback"));
+      SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "closeTunnel", "()V"));
     }
-
-  jobject jtunnelcb = jobject(tunnel_baton);
-  SVN_JNI_CATCH(
-      env->CallVoidMethod(jtunnelcb, mid,
-                          jtunnel_name, juser, jhostname, jint(port)),
-      SVN_ERR_BASE);
-
-  return SVN_NO_ERROR;
+  SVN_JNI_CATCH_VOID(env->CallVoidMethod(jclosecb, mid));
 }

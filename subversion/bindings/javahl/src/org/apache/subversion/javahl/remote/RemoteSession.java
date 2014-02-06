@@ -405,7 +405,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
     /*
      * Private helper methods.
      */
-    private final static void maybe_clear(Map clearable)
+    private final static<K,V> void maybe_clear(Map<K,V> clearable)
     {
         if (clearable != null && !clearable.isEmpty())
             try {

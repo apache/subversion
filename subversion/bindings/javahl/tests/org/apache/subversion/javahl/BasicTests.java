@@ -3933,30 +3933,37 @@ public class BasicTests extends SVNTests
         assertEquals(1, result.size());
     }
 
-    private class Tunnel extends Thread implements TunnelAgent
+    private class Tunnel extends Thread
+        implements TunnelAgent, TunnelAgent.CloseTunnelCallback
     {
         public boolean checkTunnel(String name)
         {
             return name.equals("test");
         }
 
-        public void openTunnel(ReadableByteChannel request,
-                               WritableByteChannel response,
-                               String name, String user,
-                               String hostname, int port)
+        public TunnelAgent.CloseTunnelCallback
+            openTunnel(ReadableByteChannel request,
+                       WritableByteChannel response,
+                       String name, String user,
+                       String hostname, int port)
         {
             this.request = request;
             this.response = response;
             start();
+            return this;
         }
 
-        public void closeTunnel(String name, String user,
-                                String hostname, int port)
-            throws Throwable
+        public void closeTunnel()
         {
-            request.close();
-            join();
-            response.close();
+            Throwable t = null;
+            try {
+                request.close();
+                join();
+                response.close();
+            } catch (Throwable ex) {
+                t = ex;
+            }
+            assertEquals("No exception thrown", null, t);
         }
 
         private ReadableByteChannel request;

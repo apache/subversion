@@ -69,16 +69,16 @@ class OperationContext
       void *tunnel_baton, const char *tunnel_name);
 
   static svn_error_t *openTunnel(
-      apr_file_t **request, apr_file_t **response,
-      void **tunnel_context, void *tunnel_baton,
+      svn_stream_t **request, svn_stream_t **response,
+      svn_ra_close_tunnel_func_t *close_func, void **close_baton,
+      void *tunnel_baton,
       const char *tunnel_name, const char *user,
       const char *hostname, int port,
+      svn_cancel_func_t cancel_func, void *cancel_baton,
       apr_pool_t *pool);
 
-  static svn_error_t *closeTunnel(
-      void *tunnel_context, void *tunnel_baton,
-      const char *tunnel_name, const char *user,
-      const char *hostname, int port);
+  static void closeTunnel(
+      void *tunnel_context, void *tunnel_baton);
 
  public:
   OperationContext(SVN::Pool &pool);

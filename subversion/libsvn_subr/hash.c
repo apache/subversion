@@ -136,12 +136,12 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
 
       /* Now read that much into a buffer. */
       entry->key = apr_palloc(pool, entry->keylen + 1);
-      SVN_ERR(svn_stream_read(stream, entry->key, &entry->keylen));
+      SVN_ERR(svn_stream_read_full(stream, entry->key, &entry->keylen));
       entry->key[entry->keylen] = '\0';
 
       /* Suck up extra newline after key data */
       len = 1;
-      SVN_ERR(svn_stream_read(stream, &c, &len));
+      SVN_ERR(svn_stream_read_full(stream, &c, &len));
       if (c != '\n')
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
                                 _("Serialized hash malformed"));
@@ -160,12 +160,12 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
           entry->vallen = (apr_size_t)ui64;
 
           entry->val = apr_palloc(pool, entry->vallen + 1);
-          SVN_ERR(svn_stream_read(stream, entry->val, &entry->vallen));
+          SVN_ERR(svn_stream_read_full(stream, entry->val, &entry->vallen));
           entry->val[entry->vallen] = '\0';
 
           /* Suck up extra newline after val data */
           len = 1;
-          SVN_ERR(svn_stream_read(stream, &c, &len));
+          SVN_ERR(svn_stream_read_full(stream, &c, &len));
           if (c != '\n')
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
                                     _("Serialized hash malformed"));
@@ -187,12 +187,12 @@ svn_hash__read_entry(svn_hash__entry_t *entry,
 
       /* Now read that much into a buffer. */
       entry->key = apr_palloc(pool, entry->keylen + 1);
-      SVN_ERR(svn_stream_read(stream, entry->key, &entry->keylen));
+      SVN_ERR(svn_stream_read_full(stream, entry->key, &entry->keylen));
       entry->key[entry->keylen] = '\0';
 
       /* Suck up extra newline after key data */
       len = 1;
-      SVN_ERR(svn_stream_read(stream, &c, &len));
+      SVN_ERR(svn_stream_read_full(stream, &c, &len));
       if (c != '\n')
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
                                 _("Serialized hash malformed"));

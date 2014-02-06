@@ -104,8 +104,8 @@ parser_getc(parse_context_t *ctx, int *c)
           ctx->buffer_pos = 0;
           ctx->buffer_size = sizeof(ctx->parser_buffer);
 
-          SVN_ERR(svn_stream_read(ctx->stream, ctx->parser_buffer,
-                                  &(ctx->buffer_size)));
+          SVN_ERR(svn_stream_read_full(ctx->stream, ctx->parser_buffer,
+                                       &(ctx->buffer_size)));
 
           if (ctx->buffer_pos < ctx->buffer_size)
             {

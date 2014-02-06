@@ -876,7 +876,7 @@ read_handler_copy(void *baton, char *buffer, apr_size_t *len)
 {
   struct copying_stream_baton *btn = baton;
 
-  SVN_ERR(svn_stream_read(btn->source, buffer, len));
+  SVN_ERR(svn_stream_read_full(btn->source, buffer, len));
 
   return svn_stream_write(btn->target, buffer, len);
 }

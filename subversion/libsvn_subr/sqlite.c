@@ -37,6 +37,10 @@
 #include "private/svn_atomic.h"
 #include "private/svn_skel.h"
 #include "private/svn_token.h"
+#ifdef WIN32
+#include "private/svn_io_private.h"
+#include "private/svn_utf_private.h"
+#endif
 
 #ifdef SVN_UNICODE_NORMALIZATION_FIXES
 #include "private/svn_utf_private.h"
@@ -854,11 +858,35 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
        occurs (except for out-of-memory); thus, we can safely use it to
        extract an error message and construct an svn_error_t. */
     {
+      const char *vFs = NULL;
+      int err_code;
       /* We'd like to use SQLITE_ERR here, but we can't since it would
          just return an error and leave the database open.  So, we need to
          do this manually. */
+
+#if defined(WIN32) && SQLITE_VERSION_AT_LEAST(3, 8, 1)
+      if (strlen(path) > 248)
+        {
+          WCHAR *win_path;
+          vFs = "win32-longpath"; /* Enable long paths in sqlite */
+
+          /* Long paths must be absolute */
+          if (!svn_dirent_is_absolute(path))
+            SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
+
+          /* Convert the path to a properly canonicalized \\?\C:\long\path */
+          SVN_ERR(svn_io__utf8_to_unicode_longpath(&win_path, path,
+                                                   scratch_pool));
+
+          /* And convert it back to UTF-8 because there is no
+              sqlite3_open16_v2() yet */
+          SVN_ERR(svn_utf__win32_utf16_to_utf8(&path, win_path, NULL,
+                                               scratch_pool));
+        }
+#endif
+
       /* ### SQLITE_CANTOPEN */
-      int err_code = sqlite3_open_v2(path, db3, flags, NULL);
+      err_code = sqlite3_open_v2(path, db3, flags, vFs);
       if (err_code != SQLITE_OK)
         {
           /* Save the error message before closing the SQLite handle. */

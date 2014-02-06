@@ -282,7 +282,7 @@ svn_test__stream_to_string(svn_stringbuf_t **string,
   do
     {
       len = sizeof(buf);
-      SVN_ERR(svn_stream_read(stream, buf, &len));
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
 
       /* Now copy however many bytes were *actually* read into str. */
       svn_stringbuf_appendbytes(str, buf, len);

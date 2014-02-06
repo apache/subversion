@@ -366,14 +366,14 @@ txdelta_next_window(svn_txdelta_window_t **window,
   /* Read the source stream. */
   if (b->more_source)
     {
-      SVN_ERR(svn_stream_read(b->source, b->buf, &source_len));
+      SVN_ERR(svn_stream_read_full(b->source, b->buf, &source_len));
       b->more_source = (source_len == SVN_DELTA_WINDOW_SIZE);
     }
   else
     source_len = 0;
 
   /* Read the target stream. */
-  SVN_ERR(svn_stream_read(b->target, b->buf + source_len, &target_len));
+  SVN_ERR(svn_stream_read_full(b->target, b->buf + source_len, &target_len));
   b->pos += source_len;
 
   if (target_len == 0)
@@ -522,7 +522,7 @@ tpush_write_handler(void *baton, const char *data, apr_size_t *len)
       if (tb->source_len == 0 && !tb->source_done)
         {
           tb->source_len = SVN_DELTA_WINDOW_SIZE;
-          SVN_ERR(svn_stream_read(tb->source, tb->buf, &tb->source_len));
+          SVN_ERR(svn_stream_read_full(tb->source, tb->buf, &tb->source_len));
           if (tb->source_len < SVN_DELTA_WINDOW_SIZE)
             tb->source_done = TRUE;
         }
@@ -819,7 +819,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
   if (ab->sbuf_len < window->sview_len)
     {
       len = window->sview_len - ab->sbuf_len;
-      err = svn_stream_read(ab->source, ab->sbuf + ab->sbuf_len, &len);
+      err = svn_stream_read_full(ab->source, ab->sbuf + ab->sbuf_len, &len);
       if (err == SVN_NO_ERROR && len != window->sview_len - ab->sbuf_len)
         err = svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
                                "Delta source ended unexpectedly");
@@ -836,13 +836,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 
   /* Write out the output. */
 
-  /* ### We've also considered just adding two (optionally null)
-     arguments to svn_stream_create(): read_checksum and
-     write_checksum.  Then instead of every caller updating an md5
-     context when it calls svn_stream_write() or svn_stream_read(),
-     streams would do it automatically, and verify the checksum in
-     svn_stream_closed().  But this might be overkill for issue #689;
-     so for now we just update the context here. */
+  /* Just update the context here. */
   if (ab->result_digest)
     apr_md5_update(&(ab->md5_context), ab->tbuf, len);
 
@@ -936,7 +930,7 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
     {
       apr_size_t read_len = SVN__STREAM_CHUNK_SIZE;
 
-      SVN_ERR(svn_stream_read(stream, read_buf, &read_len));
+      SVN_ERR(svn_stream_read_full(stream, read_buf, &read_len));
       if (read_len == 0)
         break;
 

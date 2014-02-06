@@ -1290,7 +1290,7 @@ translated_stream_read(void *baton,
 
           svn_stringbuf_setempty(b->readbuf);
           b->readbuf_off = 0;
-          SVN_ERR(svn_stream_read(b->stream, b->buf, &readlen));
+          SVN_ERR(svn_stream_read_full(b->stream, b->buf, &readlen));
           buf_stream = svn_stream_from_stringbuf(b->readbuf, b->iterpool);
 
           SVN_ERR(translate_chunk(buf_stream, b->in_baton, b->buf,
@@ -1850,7 +1850,7 @@ read_handler_special(void *baton, char *buffer, apr_size_t *len)
 
   if (btn->read_stream)
     /* We actually found a file to read from */
-    return svn_stream_read(btn->read_stream, buffer, len);
+    return svn_stream_read_full(btn->read_stream, buffer, len);
   else
     return svn_error_createf(APR_ENOENT, NULL,
                              "Can't read special file: File '%s' not found",

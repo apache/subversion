@@ -4730,10 +4730,9 @@ svn_wc_delete(const char *path,
  * addition to the working copy.  The added node will have the properties
  * provided in @a props, or none if that is NULL.
  *
- * Check and canonicalize the properties in the same way as
- * svn_wc_prop_set4().  Return an error and don't add the node if the
- * properties are not valid on this node.  Unlike svn_wc_prop_set4()
- * there is no option to skip some of the checks and canonicalizations.
+ * Unless @a skip_checks is TRUE, check and canonicalize the properties in the
+ * same way as svn_wc_prop_set4().  Return an error and don't add the node if
+ * the properties are not valid on this node.
  *
  * ### The error code on validity check failure should be specified, and
  *     preferably should be a single code.
@@ -4747,8 +4746,25 @@ svn_wc_delete(const char *path,
  *
  * ### TODO: Split into add_dir, add_file, add_symlink?
  *
- * @since New in 1.8.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_wc_add_from_disk3(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      const apr_hash_t *props,
+                      svn_boolean_t skip_checks,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_add_from_disk3(), but always passes FALSE for
+ * @a skip_som_prop_canon
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_from_disk2(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,

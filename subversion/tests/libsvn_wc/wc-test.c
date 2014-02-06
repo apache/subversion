@@ -182,6 +182,7 @@ test_node_get_origin(const svn_test_opts_t *opts, apr_pool_t *pool)
 
         SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
                                         &repos_root_url, &repos_uuid, NULL,
+                                        NULL,
                                         b->wc_ctx, local_abspath, FALSE,
                                         b->pool, b->pool));
         SVN_TEST_ASSERT(revision == subtest->origin.rev);
