@@ -28,6 +28,7 @@
 #include "private/svn_cache.h"
 
 #include "id.h"
+#include "dirent.h"
 
 #ifdef __cplusplus
 extern "C" {
