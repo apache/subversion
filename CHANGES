@@ -43,8 +43,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * minor speed up in string to time conversion (r1533387)
     * list: remove some unnecessary work from implementation (r1533392)
     * windows: speed up console output (r1533994)
-    * windows: accept intermediate certs with CRYPTOAPI based ssl
-      validation (r1534149)
     * update: optimize wc db usage (r1537065 et al)
     * decreased overhead for case-sensitive configuration access (r1538068)
     * avoid re-opening repo for in-repo authz if already open (r1538120)
@@ -91,7 +89,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * ra_serf: pipeline lock/unlock requests (r1551918, r1551993, r1552008)
     * ra_serf: pipeline requests for inherited properties against old servers
       that don't support the faster REPORT (r1552455, r1552475)
-    * log: speed up against old servers with a single rev range (r1553101 et al)
     * ra_serf: allow reuse of sessions after a timeout (r1557686)
     * ra_serf: reduce memory usage when retrieving revision props (r1557689)
     * svnrdump dump: reduce memory footprint (r1557736)
@@ -138,16 +135,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fix wc database inconsistency on certain move scenarios (issue #4437)
     * fix commit of of mixed revision copy with non copy descendants that
       shadow not present nodes (r1518942, 1536914, 1536931)
-    * fix permission changes on files that shouldn't be changed (issue #4440)
     * properly delete temporary files when atomic write fails (r1537466)
     * fix corner cases in move-update tree conflicts (r1538639 et al)
     * fix crash report indentation for x64 reports (r1543589)
     * status: fix output of multiple moves from same location (r1544690)
-    * update: fix automate relocate for wcs not at repo root (r1545302)
     * mergeinfo: allow to work on a moved target (issue #4301)
     * windows: avoid delay when no homedir is available (r1546814)
-    * windows: stop flushing buffers on temp files for symlinks (r1547774)
-    * merge: reduce disk I/O when needing to compare 3 files contents (r1548486)
     * status: report externals in a deterministic way (r1550200)
     * verify requested cached credentials match realm requested (r1550691 et al)
     * copy: avoid an unneeded extra ra session for wc to repo case (r1551564)
@@ -155,7 +148,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       vice-versa (r1551579)
     * ra_serf: show pre-revprop-change failure on revprop delete (issue #3086)
     * svnsync: avoid extra request at end of every revision sync (r1553370)
-    * ra_serf: fix canonicalization assertion due to pool lifetime (r1553376)
     * ra_serf: fix replace + propset of locked file failures (issue #3674)
     * ra_serf: prevent overwriting directory during copy (issue #3314)
     * commit: limit number of temporary files open at same time (issue #4172)
@@ -184,21 +176,16 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       2.4.5 and 2.4.6 (r1545835)
     * mod_dav_svn: XML escape lock tokens (r1547427)
     * hotcopy: don't create config files when copying pre-1.5 repos (r1547454)
-    * fsfs: create rep-cache.db with the proper permissions (issue #3437)
     * hotcopy: preserve the rep-cache.db permissions when hotcopying (r1547877)
-    * mod_dav_svn: fix SVNAllowBulkUpdates directive merging. (r1548105)
     * mod_dav_svn: fix SVNCacheTextDeltas and SVNAdvertisV2Protocol directive
       merging (r1548124)
     * mod_dav_svn: always produce an error text even when text specifies
       the default message to make diagnosing issues easier (r1553441)
     * mod_dav_svn: fix some pool lifetime issues with err messages (r1553868)
     * mod_dav_svn: avoid setting option headers multiple times (r1557103)
-    * mod_dav_svn: fix copyfrom mode failing to include props as requested
-      by the client (r1557522)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
-    * release all internal objects in commit editor (r1555499)
     * use more optimal code path with old txdelta v1 data (r1485480)
 
   - Other tool improvements and bugfixes:
@@ -308,8 +295,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * svn_fs_lock: control characters are not allowed in lock tokens (r1547445)
     * New api svn_wc_cleanup4() makes some functionality optional and adds
       notifications (r1548075 et al)
-    * svn_client_proplist4: report iprops with the target instead of reporting
-      the same target twice (r1549858)
     * New api svn_client_info4() supports walking externals (r1550206 et al)
     * New flag for svn_fs_begin_txn2() SVN_FS_TXN_CLIENT_DATE to allow client
       to set the final svn:date (r1550228)
