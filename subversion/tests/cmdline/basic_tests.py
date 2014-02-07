@@ -204,16 +204,32 @@ def basic_update(sbox):
                                         expected_status)
 
   # Unversioned paths, those that are not immediate children of a versioned
-  # path, are skipped and do not raise an error
+  # path, are skipped and do raise an error if they are the only targets
   xx_path = sbox.ospath('xx/xx')
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
+  expected_err = "svn: E155007: "
+  svntest.actions.run_and_verify_svn(
     "update xx/xx",
-    ["Skipped '"+xx_path+"'\n",
-    ] + svntest.main.summary_of_conflicts(skipped_paths=1),
-    [], 'update', xx_path)
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx", [], [],
+    ["Skipped '"+xx_path+"'\n", ],
+    expected_err,
+    'update', xx_path)
+  svntest.actions.run_and_verify_svn(
+    "update xx/xx", [], expected_err,
     'update', '--quiet', xx_path)
+
+  # Unversioned paths, that are not the only targets of the command are
+  # skipped without an error
+  svntest.actions.run_and_verify_svn(
+    "update A/mu xx/xx",
+    ["Updating '"+mu_path+"':\n",
+     "At revision 2.\n",
+     "Skipped '"+xx_path+"'\n",
+     "Summary of updates:\n",
+     "  Updated '"+mu_path+"' to r2.\n"
+    ] + svntest.main.summary_of_conflicts(skipped_paths=1),
+    [], 'update', mu_path, xx_path)
+  svntest.actions.run_and_verify_svn(
+    "update A/mu xx/xx",
+    [], [], 'update', '--quiet', mu_path, xx_path)
 
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
