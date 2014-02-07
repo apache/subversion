@@ -225,6 +225,7 @@ ssl_server_cert(void *baton, int failures,
       ### This should really be handled by serf, which should pass an error
           for this case, but that has backwards compatibility issues. */
       apr_array_header_t *san;
+      svn_boolean_t found_san_entry;
 
       serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
@@ -232,6 +233,7 @@ ssl_server_cert(void *baton, int failures,
       /* Try to find matching server name via subjectAltName first... */
       if (san) {
           int i;
+          found_san_entry = san->nelts > 0;
           for (i = 0; i < san->nelts; i++) {
               const char *s = APR_ARRAY_IDX(san, i, const char*);
               if (apr_fnmatch(s, conn->session->session_url.hostname,
@@ -243,8 +245,11 @@ ssl_server_cert(void *baton, int failures,
           }
       }
 
-      /* Match server certificate CN with the hostname of the server */
-      if (!found_matching_hostname)
+      /* Match server certificate CN with the hostname of the server iff
+       * we didn't find any subjectAltName fields and try to match them.
+       * Per RFC 2818 they are authoritative if present and CommonName
+       * should be ignored. */
+      if (!found_matching_hostname && !found_san_entry)
         {
           const char *hostname = NULL;
 
@@ -253,13 +258,16 @@ ssl_server_cert(void *baton, int failures,
           if (subject)
             hostname = svn_hash_gets(subject, "CN");
 
-          if (!hostname
-              || apr_fnmatch(hostname, conn->session->session_url.hostname,
-                             APR_FNM_PERIOD | APR_FNM_CASE_BLIND) != APR_SUCCESS)
+          if (hostname
+              && apr_fnmatch(hostname, conn->session->session_url.hostname,
+                             APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
           {
-              svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
+            found_matching_hostname = 1;
           }
       }
+
+      if (!found_matching_hostname)
+        svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
     }
 
   if (!svn_failures)
