@@ -43,7 +43,7 @@ my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 #    svn-role:      YES=1 MAY_COMMIT=1
 #    conflicts-bot: YES=1 MAY_COMMIT=0
 #    interactive:   YES=0 MAY_COMMIT=0      (default)
-my $YES = exists $ENV{YES}; # batch mode: eliminate prompts, add sleeps
+my $YES = ($ENV{YES} // "0") =~ /^(1|yes|true)$/i; # batch mode: eliminate prompts, add sleeps
 my $MAY_COMMIT = 'false';
 $MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
