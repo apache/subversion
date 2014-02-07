@@ -1219,7 +1219,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |

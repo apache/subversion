@@ -4071,7 +4071,7 @@ user can enter a new file name, or an existing directory: this is used as the ar
 ;;              ;; run  svn-status-goto-file-name to move point to line of file
 ;;              ;; run  svn-status-unset-user-mark to unmark dir+all contents
 ;;              ;; run  svn-status-set-user-mark   to remark dir
-;;              ;; maybe check for local mods here, and unmark if user does't say --force?
+;;              ;; maybe check for local mods here, and unmark if user doesn't say --force?
 ;;              ))
     (dolist (original marked-files)
       (let ((original-name (svn-status-line-info->filename original))

@@ -150,7 +150,7 @@ string_compare(const char *str1,
   if (len1 != len2)
     return FALSE;
 
-  /* now the strings must have identical lenghths */
+  /* now the strings must have identical lengths */
 
   if ((memcmp(str1, str2, len1)) == 0)
     return TRUE;

@@ -184,7 +184,7 @@ class SVNTests extends TestCase
             }
         }
 
-        // if not already set, get a usefull value for rootDir
+        // if not already set, get a useful value for rootDir
         if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
         if (rootDirectoryName == null)

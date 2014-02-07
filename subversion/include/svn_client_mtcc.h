@@ -73,7 +73,7 @@ svn_client_mtcc_create(svn_client_mtcc_t **mtcc,
 
 /** Adds a file add operation of @a relpath to @a mtcc. If @a src_checksum
  * is not null it will be provided to the repository to verify if the file
- * was transfered succesfull.
+ * was transferred successfully.
  *
  * Perform temporary allocations in @a scratch_pool.
  *

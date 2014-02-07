@@ -1502,7 +1502,7 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
       /* Get the perms for a newly created file to find out what bits
         should be set.
 
-        Explictly delete the file because we want this file to be as
+        Explicitly delete the file because we want this file to be as
         short-lived as possible since its presence means other
         processes may have to try multiple names.
 

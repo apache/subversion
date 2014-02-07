@@ -165,7 +165,7 @@ class Env
 {
 public:
   /**
-   * Constructs an environment object, retreiving the JNI environment
+   * Constructs an environment object, retrieving the JNI environment
    * reference from the global JVM reference.
    */
   explicit Env()
@@ -585,7 +585,7 @@ class LocalFrame
 
 public:
   /**
-   * Constructs a local frame, retreiving the JNI environment
+   * Constructs a local frame, retrieving the JNI environment
    * reference from the global JVM reference.
    */
   explicit LocalFrame()
@@ -605,7 +605,7 @@ public:
 
   /**
    * Constructs a local frame with the given initial @a capacity,
-   * retreiving the JNI environment reference from the global JVM
+   * retrieving the JNI environment reference from the global JVM
    * reference.
    */
   explicit LocalFrame(jint capacity)

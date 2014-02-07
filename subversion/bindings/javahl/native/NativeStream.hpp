@@ -83,7 +83,7 @@ public:
     }
 
   /**
-   * Retreive the address of the native object from the bound Java object.
+   * Retrieve the address of the native object from the bound Java object.
    */
   static NativeInputStream* get_self(::Java::Env env, jobject jthis);
 
@@ -183,7 +183,7 @@ public:
     }
 
   /**
-   * Retreive the address of the native object from the bound Java object.
+   * Retrieve the address of the native object from the bound Java object.
    */
   static NativeOutputStream* get_self(::Java::Env env, jobject jthis);
 

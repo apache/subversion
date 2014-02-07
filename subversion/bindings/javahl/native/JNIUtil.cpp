@@ -194,7 +194,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     }
 
   /* We shouldn't fill the JVMs memory with FS cache data unless
-     explictly requested. And we don't either, because the caches get
+     explicitly requested. And we don't either, because the caches get
      allocated outside the JVM heap. Duh. */
   {
     svn_cache_config_t settings = *svn_cache_config_get();

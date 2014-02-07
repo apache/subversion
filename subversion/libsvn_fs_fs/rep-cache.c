@@ -67,7 +67,7 @@ open_rep_cache(void *baton,
   int version;
 
   /* Open (or create) the sqlite database.  It will be automatically
-     closed when fs->pool is destoyed.  */
+     closed when fs->pool is destroyed. */
   db_path = path_rep_cache_db(fs->path, pool);
 #ifndef WIN32
   {

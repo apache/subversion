@@ -196,7 +196,7 @@ svn_utf__normalize(const char **result,
  * Assume BUFFER is already filled to *LENGTH and return the new size there.
  * This function does *not* nul-terminate the stringbuf!
  *
- * A returned error indicates that the codepoint is invalud.
+ * A returned error indicates that the codepoint is invalid.
  */
 static svn_error_t *
 encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
@@ -217,10 +217,10 @@ encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
 
 /* Decode an UCS-4 string to UTF-8, placing the result into BUFFER.
  * While utf8proc does have a similar function, it does more checking
- * and processing than we want here. Return the lenght of the result
+ * and processing than we want here. Return the length of the result
  * (excluding the NUL terminator) in *result_length.
  *
- * A returned error indicates that the codepoint is invalud.
+ * A returned error indicates that the codepoint is invalid.
  */
 static svn_error_t *
 encode_ucs4_string(svn_membuf_t *buffer,

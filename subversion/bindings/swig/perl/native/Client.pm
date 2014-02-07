@@ -961,7 +961,7 @@ reported.  $status is a svn_wc_status2_t object.  $pool is an apr_pool_t
 object which is cleaned beteween invocations to the callback.
 
 The return of the status_func subroutine can be a svn_error_t object created by
-SVN::Error::create in order to propogate an error up.
+SVN::Error::create in order to propagate an error up.
 
 =item $client-E<gt>switch($path, $url, $revision, $recursive, $pool);
 

@@ -97,7 +97,7 @@ public interface ISVNRepos {
 	 * @param end               the last revision to be dumped
 	 * @param incremental       the dump will be incremantal
 	 * @param useDeltas         the dump will contain deltas between nodes
-     * @param callback          the callback to recieve notifications
+     * @param callback          the callback to receive notifications
 	 * @throws ClientException  throw in case of problem
 	 */
 	public abstract void dump(File path, OutputStream dataOut,
@@ -258,7 +258,7 @@ public interface ISVNRepos {
 	 * @param path              the path to the repository
 	 * @param start             the first revision
 	 * @param end               the last revision
-     * @param callback          the callback to recieve notifications
+     * @param callback          the callback to receive notifications
 	 * @throws ClientException If an error occurred.
 	 */
 	public abstract void verify(File path, Revision start, Revision end,
