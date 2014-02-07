@@ -4092,9 +4092,9 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * as well.
  *
  * If @a remove_unversioned_items is @c TRUE, remove unversioned items
- * in @a dir after successfull working copy cleanup.
+ * in @a dir after successful working copy cleanup.
  * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
- * in @a dir after successfull working copy cleanup.
+ * in @a dir after successful working copy cleanup.
  *
  * When asked to remove unversioned or ignored items, and the working copy
  * is already locked, return #SVN_ERR_WC_LOCKED. This prevents accidental

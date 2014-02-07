@@ -1280,9 +1280,9 @@ public interface ISVNClient
      * @param revision      the revision of the item to return
      * @param pegRevision   the revision to interpret pathOrUrl
      * @param depth         the depth to recurse
-     * @param fetchExcluded when <code>true</code>, retreive
+     * @param fetchExcluded when <code>true</code>, retrieve
      * information about nodes that are excluded from the working copy
-     * @param fetchActualOnly when <code>true</code>, retreive
+     * @param fetchActualOnly when <code>true</code>, retrieve
      * information about node that are not versioned, but are still
      * tree conflicted.
      * @param changelists   if non-null, filter paths using changelists

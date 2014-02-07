@@ -4760,7 +4760,7 @@ def diff_repo_wc_file_props(sbox):
   if svntest.main.is_os_windows():
     # test suite normalizes crlf output into just lf on Windows.
     # so we have to assume it worked because there is an add and
-    # remove line with the same content.  Fortunately, it does't
+    # remove line with the same content.  Fortunately, it doesn't
     # do this on *nix so we can be pretty sure that it works right.
     # TODO: Provide a way to handle this better
     crlf = '\n'

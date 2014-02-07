@@ -97,7 +97,7 @@
 #
 # YOU ARE CORDIALLY INVITED to add/tweak/change to your needs.
 # If you want to know what's going on, look at the switch()
-# funtion of TestFactory below.
+# function of TestFactory below.
 #
 #
 # DETAILS

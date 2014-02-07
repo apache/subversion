@@ -187,7 +187,7 @@ print_status(void *baton,
    * ### _read_info() returns. The svn_wc_status_func4_t callback is
    * ### suppposed to handle the gathering of additional information from the
    * ### WORKING nodes on its own. Until we've agreed on how the CLI should
-   * ### handle the revision information, we use this appproach to stay compat
+   * ### handle the revision information, we use this approach to stay compat
    * ### with our testsuite. */
   if (status->versioned
       && !SVN_IS_VALID_REVNUM(status->revision)

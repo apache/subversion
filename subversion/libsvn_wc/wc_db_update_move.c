@@ -46,7 +46,7 @@
  * layer. The destination may have additional higher op-depths
  * representing adds, deletes, moves within the move destination. [2]
  *
- * After the intial move an update has modified the NODES in the move
+ * After the initial move an update has modified the NODES in the move
  * source and may have introduced a tree-conflict since the source and
  * destination trees are no longer equivalent.  The source is a
  * different revision and may have text, property and tree changes

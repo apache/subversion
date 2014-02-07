@@ -1430,7 +1430,7 @@ public class BasicTests extends SVNTests
     /**
      * Test the basic SVNClient.cleanup functionality.
      * Without a way to force a lock, this test just verifies
-     * the method can be called succesfully.
+     * the method can be called successfully.
      * @throws Throwable
      */
     public void testBasicCleanup() throws Throwable

@@ -377,7 +377,7 @@ TEST(Hashes, StringHash)
 TEST(Hashes, FixedStringHash)
 {
   // The point of this test is to verify that the key-length parameter
-  // of the template actually limits the lenght of the keys.
+  // of the template actually limits the length of the keys.
   typedef APR::Hash<char, const char, 2> H;
 
   APR::Pool pool;

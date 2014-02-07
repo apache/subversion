@@ -283,7 +283,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |
@@ -511,7 +511,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |

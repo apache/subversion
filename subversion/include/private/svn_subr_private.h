@@ -112,12 +112,12 @@ svn_spillbuf__get_size(const svn_spillbuf_t *buf);
 svn_filesize_t
 svn_spillbuf__get_memory_size(const svn_spillbuf_t *buf);
 
-/* Retreive the name of the spill file. The returned value can be NULL
+/* Retrieve the name of the spill file. The returned value can be NULL
    if the file has not been created yet. */
 const char *
 svn_spillbuf__get_filename(const svn_spillbuf_t *buf);
 
-/* Retreive the handle of the spill file. The returned value can be
+/* Retrieve the handle of the spill file. The returned value can be
    NULL if the file has not been created yet. */
 apr_file_t *
 svn_spillbuf__get_file(const svn_spillbuf_t *buf);
