@@ -196,6 +196,10 @@ record_conflict(svn_wc_conflict_result_t **result,
 
    Add the paths of any conflict victims to CONFLICTED_PATHS, if that
    is not null.
+
+   Use RA_SESSION_P to run the update if it is not NULL.  If it is then
+   open a new ra session and place it in RA_SESSION_P.  This allows 
+   repeated calls to update_internal to reuse the same session.
 */
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
@@ -211,6 +215,7 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
+                svn_ra_session_t **ra_session_p,
                 apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
@@ -229,7 +234,7 @@ update_internal(svn_revnum_t *result_rev,
   const char *diff3_cmd;
   apr_hash_t *wcroot_iprops;
   svn_opt_revision_t opt_rev;
-  svn_ra_session_t *ra_session;
+  svn_ra_session_t *ra_session = *ra_session_p;
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   struct svn_client__dirent_fetcher_baton_t dfb;
@@ -366,11 +371,41 @@ update_internal(svn_revnum_t *result_rev,
       (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
 
-  /* Open an RA session for the URL */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               anchor_url,
-                                               anchor_abspath, NULL, TRUE,
-                                               TRUE, ctx, pool, pool));
+  /* Try to reuse the RA session by reparenting it to the anchor_url.
+   * This code is probably overly cautious since we only use this
+   * currently when parents are missing and so all the anchor_urls
+   * have to be in the same repo. */
+  if (ra_session)
+    {
+      svn_error_t *err = svn_ra_reparent(ra_session, anchor_url, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+            {
+            /* session changed repos, can't reuse it */
+              svn_error_clear(err);
+              ra_session = NULL;
+            }
+          else
+            {
+              return svn_error_trace(err);
+            }
+        }
+      else
+        {
+          corrected_url = NULL;
+        }
+    }
+
+  /* Open an RA session for the URL if one isn't already available */
+  if (!ra_session)
+    {
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                                   anchor_url,
+                                                   anchor_abspath, NULL, TRUE,
+                                                   TRUE, ctx, pool, pool));
+      *ra_session_p = ra_session;
+    }
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
@@ -524,6 +559,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
   svn_opt_revision_t peg_revision = *revision;
+  svn_ra_session_t *ra_session = NULL;
   apr_hash_t *conflicted_paths
     = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
@@ -572,7 +608,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
                                 adds_as_modification, timestamp_sleep,
-                                FALSE, ctx, pool);
+                                FALSE, ctx, &ra_session, pool);
           if (err)
             goto cleanup;
           anchor_abspath = missing_parent;
@@ -597,7 +633,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification, timestamp_sleep,
-                        TRUE, ctx, pool);
+                        TRUE, ctx, &ra_session, pool);
 
   /* Give the conflict resolver callback the opportunity to
    * resolve any conflicts that were raised. */
