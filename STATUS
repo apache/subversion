@@ -89,6 +89,15 @@ Candidate changes:
    Votes:
      +1: stefan2, breser
 
+ * r1566320
+   Allow building with Neon 0.30.x.
+   Justification:
+     Version 0.30.0 is the latest Neon release, and the only reason that
+     we cannot use it in 1.7.x is the restriction in configure.ac.
+   Branch:
+     ^/subversion/branches/1.7.x-neon-0.30
+   Votes:
+     +1: brane
 
 Veto-blocked changes:
 =====================
