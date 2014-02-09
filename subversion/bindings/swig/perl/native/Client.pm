@@ -41,29 +41,35 @@ SVN::Client - Subversion client functions
 =head1 SYNOPSIS
 
     use SVN::Client;
-    my $client = new SVN::Client(
-      auth => [
-          SVN::Client::get_simple_provider(),
-          SVN::Client::get_simple_prompt_provider(\&simple_prompt,2),
-          SVN::Client::get_username_provider()
-      ]);
+    my $client = new SVN::Client();
 
-    $client->cat(\*STDOUT, 
-              'http://svn.apache.org/repos/asf/subversion/trunk/README', 'HEAD');
+    # setup to handle authentication the same as the command line client
+    my $config_dir = undef; # use default location
+    my $config = SVN:Core::config_get_config($config_dir);
+    my $config_category = $cfg->{SVN::Core::CONFIG_CATEGORY_CONFIG};
+    $client->auth(
+      SVN::Core::cmdline_create_auth_baton(0,           #non_interactive
+                                           undef,       #username
+                                           undef,       #password
+                                           $config_dir,
+                                           0,           #no_auth_cache
+                                           0,           #trust_server_cert
+                                           $config_category,
+                                           undef,       #cancel_func
+                                           undef)       #cancel_baton
+    );
 
-    sub simple_prompt {
-      my ($cred, $realm, $default_username, $may_save, $pool) = @_;
-
-      print "Enter authentication info for realm: $realm\n";
-      print "Username: ";
-      my $username = <>;
-      chomp($username);
-      $cred->username($username);
-      print "Password: ";
-      my $password = <>;
-      chomp($password);
-      $cred->password($password);
+    # Use first argument as target and canonicalize it before using
+    my $target;
+    if (SVN::Core::path_is_url($ARGV[0])) {
+      $target = SVN::Core::uri_canonicalize($ARGV[0]);
+    } else {
+      $target = SVN::Core::dirent_canonicalize($ARGV[0]);
     }
+
+    # fetch the head revision of the target
+    $client->cat(\*STDOUT, $target, 'HEAD');
+
 
 =head1 DESCRIPTION
 
@@ -111,18 +117,24 @@ This is a URL to a subversion repository.
 
 =item $path
 
-This is a path to a file or directory on the local file system.
+This is a path to a file or directory on the local file system.  Paths need
+to be canonicalized before being passed into the Subversion APIs.  Paths on
+the local file system are called dirents and can be canonicalized by calling
+C<SVN::Core::dirent_canonicalize>.
 
 =item $paths
 
-This argument can either be a single path to a file or directory on the local
-file system, or it can be a reference to an array of files or directories on
-the local file system.
+This argument can either be a single $path (as defined above) or a reference
+to an array of them.
 
 =item $target
 
 This is a path to a file or directory in a working copy or a URL to a file or
-directory in a subversion repository.
+directory in a subversion repository.  Both paths and URLs need to be
+canonicalized before being passed into the Subversion APIs.  Paths on the local
+file system are called dirents and can be canonicalized by calling 
+C<SVN::Core::dirent_canonicalize>.  URLs can be canonicalized by calling
+C<SVN::Core::uri_canonicalize>.
 
 =item $targets
 
