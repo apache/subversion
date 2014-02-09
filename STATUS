@@ -147,15 +147,6 @@ Candidate changes:
      +1: stefan2, rhuijben
      -0: philip (Seems to be a different name for the same pool?)
 
- * r1535610
-   Filter out -no-cpp-precomp from flags passed to SWIG.
-   Justification:
-     Fixing swig bindings on OS X when used with the majority of the APR
-     versions that incorrectly include this in their --cppflags output.
-   Votes:
-     +1: breser, philip
-     +0: rhuijben (looks good, untested)
-
  * r1547454
    In FSFS, omit config file when creating pre-1.5 format repositories.
    Justification:
@@ -184,7 +175,7 @@ Candidate changes:
    Notes: Test by using ./autogen.sh --release, then do an out of tree build
      without this fix swig-py and swig-rb fail immediately.
    Votes:
-     +1: breser
+     +1: breser, brane
 
 Veto-blocked changes:
 =====================
@@ -214,3 +205,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1535610
+   Filter out -no-cpp-precomp from flags passed to SWIG.
+   Justification:
+     Fixing swig bindings on OS X when used with the majority of the APR
+     versions that incorrectly include this in their --cppflags output.
+   Votes:
+     +1: breser, philip, brane
+     +0: rhuijben (looks good, untested)
