@@ -177,6 +177,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1543187
+   Fix SWIG bindings not building in release mode with out of tree builds.
+   Justification:
+     Build systems should work.  This makes Branko cranky every release.
+   Notes: Test by using ./autogen.sh --release, then do an out of tree build
+     without this fix swig-py and swig-rb fail immediately.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
