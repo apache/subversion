@@ -22,6 +22,7 @@
  */
 
 #include <cstring>
+#include <memory>
 #include <apr.h>
 
 #include "jni_env.hpp"
@@ -107,7 +108,7 @@ const char* Env::error_get_contents_string() throw()
 
 const char* Env::error_release_null_string() throw()
 {
-  return _("Can not release contents of a null String");
+  return _("Could not release contents of a null String");
 }
 
 const char* Env::error_create_object_array() throw()
@@ -116,13 +117,13 @@ const char* Env::error_create_object_array() throw()
 }
 
 namespace {
-// The typed array error messages are always fatal, so allocating the
-// error messages on the heap does not really constitute a memory
-// leak.
-const char* error_printf(const char* fmt, const char* type)
+// The typed array error messages are always fatal, so allocating
+// the buffer on the heap and never releasing it does not really
+// constitute a memory leak.
+const char* make_typed_error(const char* fmt, const char* type) throw()
 {
   const apr_size_t bufsize = 512;
-  char *msg = new char[bufsize];
+  char *msg = new(std::nothrow) char[bufsize];
   apr_snprintf(msg, bufsize, fmt, type);
   return msg;
 }
@@ -130,17 +131,18 @@ const char* error_printf(const char* fmt, const char* type)
 
 const char* Env::error_create_array(const char* type) throw()
 {
-  return error_printf(_("Could not create %sArray"), type);
+  return make_typed_error(_("Could not create %sArray"), type);
 }
 
-const char* error_get_contents_array(const char* type) throw()
+const char* Env::error_get_contents_array(const char* type) throw()
 {
-  return error_printf(_("Could not get %s array contents"), type);
+  return make_typed_error(_("Could not get %s array contents"), type);
 }
 
-const char* error_release_null_array(const char* type) throw()
+const char* Env::error_release_null_array(const char* type) throw()
 {
-  return error_printf(_("Can not release contents of a null %sArray"), type);
+  return make_typed_error(
+      _("Could not release contents of a null %sArray"), type);
 }
 
 ::JNIEnv* Env::env_from_jvm()
