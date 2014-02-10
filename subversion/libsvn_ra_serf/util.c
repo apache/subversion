@@ -213,7 +213,7 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *subject = NULL;
   apr_hash_t *serf_cert = NULL;
   void *creds;
-  int found_matching_hostname = 0;
+  svn_boolean_t found_matching_hostname = FALSE;
 
   svn_failures = (ssl_convert_serf_failures(failures)
       | conn->server_cert_failures);
@@ -231,19 +231,23 @@ ssl_server_cert(void *baton, int failures,
 
       san = svn_hash_gets(serf_cert, "subjectAltName");
       /* Try to find matching server name via subjectAltName first... */
-      if (san) {
+      if (san)
+        {
           int i;
           found_san_entry = san->nelts > 0;
-          for (i = 0; i < san->nelts; i++) {
+          for (i = 0; i < san->nelts; i++)
+            {
               const char *s = APR_ARRAY_IDX(san, i, const char*);
-              if (apr_fnmatch(s, conn->session->session_url.hostname,
-                  APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
-              {
-                  found_matching_hostname = 1;
+              if (APR_SUCCESS == apr_fnmatch(s,
+                                            conn->session->session_url.hostname,
+                                            APR_FNM_PERIOD |
+                                            APR_FNM_CASE_BLIND))
+                {
+                  found_matching_hostname = TRUE;
                   break;
-              }
-          }
-      }
+                }
+            }
+        }
 
       /* Match server certificate CN with the hostname of the server iff
        * we didn't find any subjectAltName fields and try to match them.
@@ -261,10 +265,10 @@ ssl_server_cert(void *baton, int failures,
           if (hostname
               && apr_fnmatch(hostname, conn->session->session_url.hostname,
                              APR_FNM_PERIOD | APR_FNM_CASE_BLIND) == APR_SUCCESS)
-          {
-            found_matching_hostname = 1;
-          }
-      }
+            {
+              found_matching_hostname = TRUE;
+            }
+        }
 
       if (!found_matching_hostname)
         svn_failures |= SVN_AUTH_SSL_CNMISMATCH;
