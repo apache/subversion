@@ -28,8 +28,6 @@
 #include <cstdarg>
 #include <stdexcept>
 
-#include "svn_private_config.h"
-
 #ifdef SVN_JAVAHL_DEBUG
 #  ifndef SVN_JAVAHL_JNIWRAPPER_LOG
 #    include <iostream>
@@ -150,8 +148,6 @@ private:
   jfieldID m_fid;
 };
 
-
-
 /**
  * Encapsulation of a JNI environment reference.
  *
@@ -199,7 +195,7 @@ public:
       jobject ret = m_env->NewGlobalRef(obj);
       check_java_exception();
       if (!ret)
-        throw_java_out_of_memory(_("Could not create global reference"));
+        throw_java_out_of_memory(error_create_global_reference());
       return ret;
     }
 
@@ -346,8 +342,7 @@ public:
       const char* text = m_env->GetStringUTFChars(str, is_copy);
       check_java_exception();
       if (!text)
-        throw_java_out_of_memory(
-              _("Could not get contents of Java String"));
+        throw_java_out_of_memory(error_get_contents_string());
       return text;
     }
 
@@ -355,8 +350,7 @@ public:
   void ReleaseStringUTFChars(jstring str, const char* new_text) const
     {
       if (!str)
-        throw std::logic_error(
-              _("Can not release contents of a null String"));
+        throw std::logic_error(error_release_null_string());
       m_env->ReleaseStringUTFChars(str, new_text);
     }
 
@@ -479,7 +473,7 @@ public:
     {
       jobjectArray array = m_env->NewObjectArray(length, cls, init);
       if (!array)
-        throw_java_out_of_memory(_("Could not create Object array"));
+        throw_java_out_of_memory(error_create_object_array());
       return array;
     }
 
@@ -505,7 +499,7 @@ public:
     {                                                                   \
       T##Array array = m_env->New##N##Array(length);                    \
       if (!array)                                                       \
-        throw_java_out_of_memory(_("Could not create "#T" array"));     \
+        throw_java_out_of_memory(error_create_array(#T));               \
       return array;                                                     \
     }                                                                   \
   T* Get##N##ArrayElements(T##Array array, jboolean* is_copy) const     \
@@ -516,15 +510,13 @@ public:
       T* data = m_env->Get##N##ArrayElements(array, is_copy);           \
       check_java_exception();                                           \
       if (!data)                                                        \
-        throw_java_out_of_memory(                                       \
-            _("Could not get "#N" array contents"));                    \
+        throw_java_out_of_memory(error_get_contents_array(#N));         \
       return data;                                                      \
     }                                                                   \
   void Release##N##ArrayElements(T##Array array, T* data, jint mode) const \
     {                                                                   \
       if (!array)                                                       \
-        throw std::logic_error(                                         \
-            _("Can not release contents of a null "#T"Array"));         \
+        throw std::logic_error(error_release_null_array(#T));           \
       m_env->Release##N##ArrayElements(array, data, mode);              \
     }
 
@@ -564,8 +556,19 @@ private:
 
   void throw_java_out_of_memory(const char* message) const;
 
+  // We cannont use svn_private_config.h in a header, so we move the
+  // actual message translations into the implementation file.
+  static const char* error_create_global_reference() throw();
+  static const char* error_get_contents_string() throw();
+  static const char* error_release_null_string() throw();
+
+  static const char* error_create_object_array() throw();
+  static const char* error_create_array(const char* type) throw();
+  static const char* error_get_contents_array(const char* type) throw();
+  static const char* error_release_null_array(const char* type) throw();
+
 public:
-  /* This static initializer must only be called by JNI_OnLoad */
+  // This static initializer must only be called by JNI_OnLoad
   static void static_init(::JavaVM*);
 };
 

@@ -112,8 +112,8 @@
     }                                                                   \
   catch (...)                                                           \
     {                                                                   \
-      X(::Java::Env(jenv))                                              \
-        .throw_java_exception(_("Caught unknown C++ exception"));       \
+      const char* const msg = Java::unknown_cxx_exception_message();    \
+      X(::Java::Env(jenv)).throw_java_exception(msg);                   \
     }
 
 /**
@@ -161,7 +161,7 @@
   catch (const ::Java::SignalExceptionThrown&)                          \
     {                                                                   \
       SVN_JAVAHL_ASSERT_EXCEPTION_THROWN((E));                          \
-      return svn_error_create((C), NULL, _("Java exception"));          \
+      return Java::caught_java_exception_error((C));                    \
     }                                                                   \
   catch (const ::std::exception& ex)                                    \
     {                                                                   \
@@ -171,7 +171,7 @@
     }                                                                   \
   catch (...)                                                           \
     {                                                                   \
-      const char* const msg = _("Caught unknown C++ exception");        \
+      const char* const msg = Java::unknown_cxx_exception_message();    \
       ::Java::RuntimeException((E)).throw_java_exception(msg);          \
       return svn_error_create((C), NULL, msg);                          \
     }
@@ -200,6 +200,20 @@ namespace Java {
  * @since New in 1.9.
  */
 void handle_svn_error(Env env, svn_error_t* err);
+
+/**
+ * Return a localized error string for an unknown C++ exception.
+ *
+ * @since New in 1.9.
+ */
+const char* unknown_cxx_exception_message() throw();
+
+/**
+ * Create an svn_error_t for a caught Java exception.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t* caught_java_exception_error(apr_status_t status) throw();
 
 } // namespace Java
 

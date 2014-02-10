@@ -35,6 +35,9 @@
 #include "../JNIUtil.h"
 bool initialize_jni_util(JNIEnv *env);
 
+#include "svn_private_config.h"
+
+
 // Global library initializaiton
 
 /**
@@ -90,6 +93,54 @@ namespace Java {
 void Env::static_init(::JavaVM* jvm)
 {
   m_jvm = jvm;
+}
+
+const char* Env::error_create_global_reference() throw()
+{
+  return _("Could not create global reference");
+}
+
+const char* Env::error_get_contents_string() throw()
+{
+  return _("Could not get contents of Java String");
+}
+
+const char* Env::error_release_null_string() throw()
+{
+  return _("Can not release contents of a null String");
+}
+
+const char* Env::error_create_object_array() throw()
+{
+  return _("Could not create Object array");
+}
+
+namespace {
+// The typed array error messages are always fatal, so allocating the
+// error messages on the heap does not really constitute a memory
+// leak.
+const char* error_printf(const char* fmt, const char* type)
+{
+  const apr_size_t bufsize = 512;
+  char *msg = new char[bufsize];
+  apr_snprintf(msg, bufsize, fmt, type);
+  return msg;
+}
+} // anonymous namespace
+
+const char* Env::error_create_array(const char* type) throw()
+{
+  return error_printf(_("Could not create %sArray"), type);
+}
+
+const char* error_get_contents_array(const char* type) throw()
+{
+  return error_printf(_("Could not get %s array contents"), type);
+}
+
+const char* error_release_null_array(const char* type) throw()
+{
+  return error_printf(_("Can not release contents of a null %sArray"), type);
 }
 
 ::JNIEnv* Env::env_from_jvm()
@@ -201,8 +252,36 @@ jstring Class::get_name() const
 
 const char* const String::m_class_name = "java/lang/String";
 
+void String::MutableContents::set_value(const char* new_text)
+{
+  if (!m_new_text)
+    throw std::invalid_argument(
+        _("Cannot set String contents to null"));
+  if (m_text)
+    {
+      m_new_text = new_text;
+      m_length = jsize(::std::strlen(new_text));
+    }
+  else
+    throw std::logic_error(
+        _("Cannot change the contents of a null String"));
+}
 
 // class Java::Exception
+
+void Exception::throw_java_exception() const
+{
+  if (instantiated()
+      ? m_env.Throw(throwable())
+      : m_env.ThrowNew(m_class, NULL))
+    throw std::runtime_error(_("Could not throw Java exception"));
+}
+
+void Exception::throw_java_exception(const char* message) const
+{
+  if (m_env.ThrowNew(m_class, message))
+    throw std::runtime_error(_("Could not throw Java exception"));
+}
 
 jstring Exception::get_message() const
 {
@@ -267,6 +346,16 @@ void handle_svn_error(Env env, ::svn_error_t* err)
 
   ::JNIUtil::handleSVNError(err, cause);
   throw SignalExceptionThrown();
+}
+
+const char* unknown_cxx_exception_message() throw()
+{
+  return _("Caught unknown C++ exception");
+}
+
+svn_error_t* caught_java_exception_error(apr_status_t status) throw()
+{
+  return svn_error_create(status, NULL, _("Java exception"));
 }
 
 } // namespace Java
