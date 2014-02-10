@@ -26,6 +26,8 @@
 #include "jni_string.hpp"
 #include "jni_string_map.hpp"
 
+#include "svn_private_config.h"
+
 namespace Java {
 
 // Class Java::BaseMap

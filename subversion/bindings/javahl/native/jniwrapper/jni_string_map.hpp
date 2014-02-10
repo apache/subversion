@@ -31,8 +31,6 @@
 #include "jni_env.hpp"
 #include "jni_object.hpp"
 
-#include "svn_private_config.h"
-
 namespace Java {
 
 /**
