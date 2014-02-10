@@ -205,12 +205,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1535610
-   Filter out -no-cpp-precomp from flags passed to SWIG.
-   Justification:
-     Fixing swig bindings on OS X when used with the majority of the APR
-     versions that incorrectly include this in their --cppflags output.
-   Votes:
-     +1: breser, philip, brane
-     +0: rhuijben (looks good, untested)
