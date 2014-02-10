@@ -33,7 +33,7 @@
 
 APR_VERSION=${APR_VERSION:-"1.4.6"}
 APU_VERSION=${APU_VERSION:-"1.5.1"}
-SERF_VERSION=${SERF_VERSION:-"1.2.1"}
+SERF_VERSION=${SERF_VERSION:-"1.3.4"}
 ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
 SQLITE_VERSION=${SQLITE_VERSION:-"3.7.15.1"}
 GMOCK_VERSION=${GMOCK_VERSION:-"1.6.0"}
@@ -89,7 +89,7 @@ get_serf() {
     test -d $BASEDIR/serf && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
+    $HTTP_FETCH http://serf.googlecode.com/svn/src_releases/$SERF.tar.bz2
     cd $BASEDIR
 
     bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
