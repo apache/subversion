@@ -1589,7 +1589,7 @@ WHERE wc_id = ?1
   AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth > ?3
   AND moved_to IS NOT NULL
-ORDER BY local_relpath
+ORDER BY local_relpath, op_depth
 
 -- STMT_SELECT_MOVED_OUTSIDE
 SELECT local_relpath, moved_to, op_depth FROM nodes
