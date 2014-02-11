@@ -902,6 +902,16 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
 
+  /* disable SQLITE_ENABLE_STAT3/4 from 3.8.1 - 3.8.3 (but not 3.8.3.1+)
+   * to prevent using it when it's buggy.
+   * See: https://www.sqlite.org/src/info/4c86b126f2 */
+  if (sqlite3_libversion_number() > 3008000 &&
+      sqlite3_libversion_number() < 3008004 &&
+      strcmp(sqlite3_sourceid(),"2014-02-11")<0)
+    {
+      sqlite3_test_control(SQLITE_TESTCTRL_OPTIMIZATIONS, (*db)->db3, 0x800);
+    }
+
 #ifdef SQLITE3_DEBUG
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
