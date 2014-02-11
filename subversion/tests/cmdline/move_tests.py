@@ -1397,7 +1397,6 @@ def move_many_update_add(sbox):
                                         wc_dir, '--accept', 'mine-conflict')
 
 
-@XFail()
 def move_to_from_external(sbox):
   "move to and from an external"
 
@@ -1416,7 +1415,7 @@ def move_to_from_external(sbox):
                                      sbox.ospath('GG/tau'))
                                      
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ic',
+                                     'ci', '-m', 'Commit both',
                                      sbox.ospath(''),
                                      sbox.ospath('GG'))
   
