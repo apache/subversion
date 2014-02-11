@@ -7851,7 +7851,7 @@ delete_node(void *baton,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_MOVED_FOR_DELETE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
-                                working_op_depth));
+                                delete_op_depth));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       iterpool = svn_pool_create(scratch_pool);
@@ -7887,7 +7887,9 @@ delete_node(void *baton,
                 }
               else
                 {
-                  /* Update the op-depth of an moved node below this tree */
+                  /* Update the op-depth of an moved away node that was
+                     registered as moved by the records that we are about
+                     to delete */
                   fixup = TRUE;
                   child_op_depth = delete_op_depth;
                 }
