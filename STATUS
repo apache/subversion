@@ -68,6 +68,8 @@ Candidate changes:
    half move"
    Justification:
      The working copy database should be consistent on any normal operation.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4437
    Votes:
      +1: rhuijben, philip
 
