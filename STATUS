@@ -190,8 +190,7 @@ Candidate changes:
    Url:
      http://www.sqlite.org/src/info/4c86b126f2
    Votes:
-     +1: breser
-     +1, rhuijben (without r1567392)
+     +1: breser, rhuijben
      +1: (different patch) brane
 
  * r1567109, r1567134
