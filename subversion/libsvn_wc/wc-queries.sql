@@ -951,19 +951,25 @@ SELECT wc_id, local_relpath, op_depth, parent_relpath,
    AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
    AND op_depth = ?3
 
-/* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
+/* If this query is updated, STMT_INSERT_DELETE_LIST should too.
+   Use UNION ALL instead of a simple 'OR' to avoid creating a temp table */
 -- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
 SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, MAP_BASE_DELETED,
        kind
 FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+UNION ALL
+SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, MAP_BASE_DELETED,
+       kind
+FROM nodes
 WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = ?3
   AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
   AND file_external IS NULL
+ORDER BY local_relpath
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
@@ -1397,16 +1403,18 @@ CREATE TEMPORARY TABLE delete_list (
    A subquery is used instead of nodes_current to avoid a table scan */
 -- STMT_INSERT_DELETE_LIST
 INSERT INTO delete_list(local_relpath)
+SELECT ?2
+UNION ALL
 SELECT local_relpath FROM nodes AS n
 WHERE wc_id = ?1
-  AND (local_relpath = ?2
-       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth >= ?3
   AND op_depth = (SELECT MAX(s.op_depth) FROM nodes AS s
                   WHERE s.wc_id = ?1
                     AND s.local_relpath = n.local_relpath)
   AND presence NOT IN (MAP_BASE_DELETED, MAP_NOT_PRESENT, MAP_EXCLUDED, MAP_SERVER_EXCLUDED)
   AND file_external IS NULL
+ORDER by local_relpath
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
