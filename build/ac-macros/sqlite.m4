@@ -96,6 +96,8 @@ AC_DEFUN(SVN_LIB_SQLITE,
     fi
   ])
 
+  SVN_SQLITE_BROKEN_OPTIONS
+
   AC_SUBST(SVN_SQLITE_INCLUDES)
   AC_SUBST(SVN_SQLITE_LIBS)
 ])
@@ -303,4 +305,57 @@ AC_DEFUN(_SVN_SQLITE_DSO_LIBS,
   else
     AC_MSG_RESULT(none)
   fi
+])
+
+dnl SQLIte 3.8.1 - 3.8.3 have a buggy SQLITE_ENABLE_STAT3 and
+dnl SQLITE_ENABLE_STAT4 options.  Discourage users from using
+dnl these versions.  See this SQLite bug:
+dnl https://www.sqlite.org/src/info/4c86b126f2
+AC_DEFUN(SVN_SQLITE_BROKEN_OPTIONS,
+[
+  AC_MSG_CHECKING([for broken sqlite options])
+
+  SVN_SQLITE_VERNUM_PARSE([3.8.1], [sqlite_min_buggy_stat])
+  SVN_SQLITE_VERNUM_PARSE([3.8.3], [sqlite_max_buggy_stat])
+
+  save_CPPFLAGS="$CPPFLAGS"
+  save_LDFLAGS="$LDFLAGS"
+
+  CPPFLAGS="$CPPFLAGS $SVN_SQLITE_INCLUDES"
+  LDFLAGS="$LDFLAGS $SVN_SQLITE_LIBS"
+
+  if test -z "$sqlite_amalg"; then
+
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdlib.h>
+#include <sqlite3.h>
+
+int main() {
+#if SQLITE_VERSION_NUMBER < $sqlite_min_buggy_stat || SQLITE_VERSION_NUMBER > $sqlite_max_buggy_stat
+  exit(0);
+#else
+  exit(sqlite3_compileoption_used("ENABLE_STAT3") | sqlite3_compileoption_used("ENABLE_STAT4"));
+#endif
+}
+    ]])],
+    [AC_MSG_RESULT([okay])],
+    [AC_MSG_ERROR([SQLITE_ENABLE_STAT3 or SQLITE_ENABLE_STAT4 defined with buggy SQLite version])],
+    [AC_MSG_RESULT([skipped])])
+
+  else
+
+    AC_TRY_CPP([
+#include "$sqlite_amalg"
+#if SQLITE_VERSION_NUMBER >= $sqlite_min_buggy_stat && \
+    SQLITE_VERSION_NUMBER <= $sqlite_max_buggy_stat && \
+    (defined(SQLITE_ENABLE_STAT3) || defined(SQLITE_ENABLE_STAT4))
+#error "SQLITE_ENABLE_STAT3 or SQLITE_ENABLE_STAT4 found"
+#endif],
+      [AC_MSG_RESULT([okay])],
+      [AC_MSG_ERROR([SQLITE_ENABLE_STAT3 or SQLITE_ENABLE_STAT4 defined with buggy SQLite version])
+    ])
+  fi
+
+  CPPFLAGS="$save_CPPFLAGS"
+  LDFLAGS="$save_LDFLAGS"
 ])
