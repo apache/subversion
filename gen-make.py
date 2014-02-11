@@ -210,6 +210,10 @@ def _usage_exit(err=None):
   print("           2010, 2012 or 2013)")
   print("           [only valid in combination with '-t vcproj']")
   print("")
+  print(" -D NAME[=value]")
+  print("           define NAME macro during compilation")
+  print("           [only valid in combination with '-t vcproj']")
+  print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
   print("  --disable-gmock")
@@ -232,7 +236,7 @@ class Options:
 
 if __name__ == '__main__':
   try:
-    opts, args = my_getopt(sys.argv[1:], 'st:',
+    opts, args = my_getopt(sys.argv[1:], 'st:D:',
                            ['debug',
                             'release',
                             'reload',
