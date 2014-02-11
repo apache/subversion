@@ -252,9 +252,14 @@ WHERE wc_id = ?1
 -- STMT_SELECT_LOCAL_RELPATH_OP_DEPTH
 SELECT local_relpath, kind
 FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+UNION ALL
+SELECT local_relpath, kind
+FROM nodes
 WHERE wc_id = ?1
-  AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+  AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
   AND op_depth = ?3
+ORDER BY local_relpath
 
 -- STMT_SELECT_CHILDREN_OP_DEPTH
 SELECT local_relpath, kind
