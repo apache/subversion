@@ -184,8 +184,7 @@ Candidate changes:
      SQLite returns incorrect results for queries.  Try to help our users
      and packagers from using buggy setups.
    Votes:
-     +1: breser
-     +1: brane (without r1566977)
+     +1: breser, brane
 
 Veto-blocked changes:
 =====================
