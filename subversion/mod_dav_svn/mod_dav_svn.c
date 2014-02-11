@@ -214,7 +214,7 @@ create_dir_config(apr_pool_t *p, char *dir)
      <Location /blah> directive. So we treat it as a urlpath. */
   if (dir)
     conf->root_dir = svn_urlpath__canonicalize(dir, p);
-  conf->bulk_updates = CONF_BULKUPD_ON;
+  conf->bulk_updates = CONF_BULKUPD_DEFAULT;
   conf->v2_protocol = CONF_FLAG_ON;
   conf->hooks_env = NULL;
 
@@ -812,7 +812,12 @@ dav_svn__get_bulk_updates_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->bulk_updates;
+
+  /* SVNAllowBulkUpdates is 'on' by default. */
+  if (conf->bulk_updates == CONF_BULKUPD_DEFAULT)
+    return CONF_BULKUPD_ON;
+  else
+    return conf->bulk_updates;
 }
 
 

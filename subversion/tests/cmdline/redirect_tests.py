@@ -140,6 +140,44 @@ def redirected_update(sbox):
   verify_url(wc_dir, sbox.repo_url)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_nonroot_update(sbox):
+  "redirected update of non-repos-root wc"
+
+  sbox.build(create_wc=False)
+  wc_dir = sbox.wc_dir
+  checkout_url = sbox.repo_url + '/A'
+  relocate_url = sbox.redirected_root_url() + '/A'
+
+  # Checkout a subdir of the repository root.
+  exit_code, out, err = svntest.main.run_svn(None, 'co',
+                                             checkout_url, wc_dir)
+  if err:
+    raise svntest.Failure
+  
+  # Relocate (by cheating) the working copy to the redirect URL.  When
+  # we then update, we'll expect to find ourselves automagically back
+  # to the original URL.  (This is because we can't easily introduce a
+  # redirect to the Apache configuration from the test suite here.)
+  svntest.actions.no_relocate_validation()
+  exit_code, out, err = svntest.main.run_svn(None, 'sw', '--relocate',
+                                             checkout_url, relocate_url,
+                                             wc_dir)
+  svntest.actions.do_relocate_validation()
+
+  # Now update the working copy.
+  exit_code, out, err = svntest.main.run_svn(None, 'up', wc_dir)
+  if err:
+    raise svntest.Failure
+  if not re.match("^Updating '.*':", out[0]):
+    raise svntest.Failure
+  if not redirect_regex.match(out[1]):
+    raise svntest.Failure
+
+  # Verify that we have the expected URL.
+  verify_url(wc_dir, checkout_url)
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -149,6 +187,7 @@ test_list = [ None,
               temporary_redirect,
               redirected_checkout,
               redirected_update,
+              redirected_nonroot_update,
              ]
 
 if __name__ == '__main__':
