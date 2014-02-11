@@ -189,6 +189,17 @@ Candidate changes:
      +1: (without r1567034) breser, brane
      +1: rhuijben
 
+ * r1567109
+   Fix an sqlite query definition to always return its rows in the order the
+   C code expects them to be. This resolves some potential problems in the
+   move logic on update/switch.
+   Justification:
+     Sqlite tries to execute queries in an 'optimal' way, but how this is
+     depends on factors like SQLITE_ENABLE_STAT3, code improvements in Sqlite,
+     etc. We shouldn't rely on a specific execution plan for correct behavior.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
