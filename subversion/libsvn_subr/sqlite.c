@@ -1162,13 +1162,27 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
               /* Enable recursive triggers so that a user trigger will fire
                  in the deletion phase of an INSERT OR REPLACE statement.
                  Requires SQLite >= 3.6.18  */
-              "PRAGMA recursive_triggers=ON;"));
+              "PRAGMA recursive_triggers=ON;"
+              /* Enforce current Sqlite default behavior. Some distributions
+                 might change the Sqlite defaults without realizing how this
+                 affects application(read: Subversion) performance/behavior. */
+              "PRAGMA foreign_keys=OFF;"      /* SQLITE_DEFAULT_FOREIGN_KEYS*/
+              "PRAGMA locking_mode = NORMAL;" /* SQLITE_DEFAULT_LOCKING_MODE */
+              ));
 
 #if defined(SVN_DEBUG)
   /* When running in debug mode, enable the checking of foreign key
      constraints.  This has possible performance implications, so we don't
      bother to do it for production...for now. */
   SVN_ERR(exec_sql(*db, "PRAGMA foreign_keys=ON;"));
+#endif
+
+#ifdef SVN_SQLITE_REVERSE_UNORDERED_SELECTS
+  /* When enabled, this PRAGMA causes SELECT statements without an ORDER BY
+     clause to emit their results in the reverse order of what they normally
+     would.  This can help detecting invalid assumptions about the result
+     order.*/
+  SVN_ERR(exec_sql(*db, "PRAGMA reverse_unordered_selects=ON;"));
 #endif
 
   /* Store temporary tables in RAM instead of in temporary files, but don't
