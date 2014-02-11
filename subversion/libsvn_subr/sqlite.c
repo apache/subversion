@@ -1076,6 +1076,20 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   SVN_ERR(svn_atomic__init_once(&sqlite_init_state,
                                 init_sqlite, NULL, scratch_pool));
 
+  /* runtime check for https://www.sqlite.org/src/info/4c86b126f2 */
+#if SQLITE_VERSION_NUMBER > 3008000 && SQLITE_VERSION_NUMBER < 3008004
+  if (sqlite3_compileoption_used("ENABLE_STAT3"))
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("'%s' compile time SQLite option is broken "
+                               "with SQLite 3.8.1 - 3.8.3"),
+                             "SQLITE_ENABLE_STAT3");
+  if (sqlite3_compileoption_used("ENABLE_STAT4"))
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("'%s' compile time SQLite option is broken "
+                               "with SQLite 3.8.1 - 3.8.3"),
+                             "SQLITE_ENABLE_STAT4");
+#endif
+
   *db = apr_pcalloc(result_pool, sizeof(**db));
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
