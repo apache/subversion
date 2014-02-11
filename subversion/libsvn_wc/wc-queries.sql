@@ -1555,9 +1555,7 @@ SELECT local_relpath, moved_to, op_depth,
 WHERE wc_id = ?1
   AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND moved_to IS NOT NULL
-  AND op_depth >= (SELECT MAX(op_depth) FROM nodes o
-                    WHERE o.wc_id = ?1
-                      AND o.local_relpath = ?2)
+  AND op_depth >= ?3
 
 -- STMT_SELECT_MOVED_FROM_FOR_DELETE
 SELECT local_relpath, op_depth,

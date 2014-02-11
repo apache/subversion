@@ -7669,19 +7669,70 @@ delete_node(void *baton,
   svn_boolean_t have_row, op_root;
   svn_boolean_t add_work = FALSE;
   svn_sqlite__stmt_t *stmt;
-  int select_depth; /* Depth of what is to be deleted */
-  svn_boolean_t refetch_depth = FALSE;
+  int working_op_depth; /* Depth of what is to be deleted */
+  int keep_op_depth = 0; /* Depth of what is below what is deleted */
   svn_node_kind_t kind;
   apr_array_header_t *moved_nodes = NULL;
-  int delete_depth = relpath_depth(local_relpath);
+  int delete_op_depth = relpath_depth(local_relpath);
 
-  SVN_ERR(read_info(&status,
-                    &kind, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    &op_root, NULL, NULL,
-                    NULL, NULL, NULL,
-                    wcroot, local_relpath,
-                    scratch_pool, scratch_pool));
+  assert(*local_relpath); /* Can't delete wcroot */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                               svn_sqlite__reset(stmt),
+                               _("The node '%s' was not found."),
+                               path_for_error_message(wcroot,
+                                                      local_relpath,
+                                                      scratch_pool));
+    }
+
+  working_op_depth = svn_sqlite__column_int(stmt, 0);
+  status = svn_sqlite__column_token(stmt, 3, presence_map);
+  kind = svn_sqlite__column_token(stmt, 4, kind_map);
+
+  if (working_op_depth < delete_op_depth)
+    {
+      op_root = FALSE;
+      add_work = TRUE;
+      keep_op_depth = working_op_depth;
+    }
+  else
+    {
+      op_root = TRUE;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+      if (have_row)
+        {
+          svn_wc__db_status_t below_status;
+          int below_op_depth;
+
+          below_op_depth = svn_sqlite__column_int(stmt, 0);
+          below_status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+          if (below_status != svn_wc__db_status_not_present
+              && below_status != svn_wc__db_status_base_deleted)
+            {
+              add_work = TRUE;
+              keep_op_depth = below_op_depth;
+            }
+          else
+            keep_op_depth = 0;
+        }
+      else
+        keep_op_depth = -1;
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (working_op_depth != 0) /* WORKING */
+    SVN_ERR(convert_to_working_status(&status, status));
 
   if (status == svn_wc__db_status_deleted
       || status == svn_wc__db_status_not_present)
@@ -7772,7 +7823,7 @@ delete_node(void *baton,
            * possibly because of a nested move operation. */
           moved_node = apr_palloc(scratch_pool, sizeof(struct moved_node_t));
           moved_node->local_relpath = local_relpath;
-          moved_node->op_depth = delete_depth;
+          moved_node->op_depth = delete_op_depth;
           moved_node->moved_to_relpath = b->moved_to_relpath;
           moved_node->moved_from_depth = -1;
 
@@ -7799,7 +7850,8 @@ delete_node(void *baton,
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_MOVED_FOR_DELETE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                                working_op_depth));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       iterpool = svn_pool_create(scratch_pool);
@@ -7821,7 +7873,7 @@ delete_node(void *baton,
               /* Plain delete. Fixup move information of descendants that were
                  moved here, or that were moved out */
 
-              if (moved_here_depth >= delete_depth)
+              if (moved_here_depth >= delete_op_depth)
                 {
                   /* The move we recorded here must be moved to the location
                      this node had before it was moved here.
@@ -7837,20 +7889,20 @@ delete_node(void *baton,
                 {
                   /* Update the op-depth of an moved node below this tree */
                   fixup = TRUE;
-                  child_op_depth = delete_depth;
+                  child_op_depth = delete_op_depth;
                 }
             }
           else if (b->moved_to_relpath)
             {
               /* The node is moved to a new location */
 
-              if (delete_depth == child_op_depth)
+              if (delete_op_depth == child_op_depth)
                 {
                   /* Update the op-depth of a tree shadowed by this tree */
                   fixup = TRUE;
-                  child_op_depth = delete_depth;
+                  /*child_op_depth = delete_depth;*/
                 }
-              else if (child_op_depth >= delete_depth
+              else if (child_op_depth >= delete_op_depth
                        && !svn_relpath_skip_ancestor(local_relpath,
                                                      mv_to_relpath))
                 {
@@ -7866,10 +7918,10 @@ delete_node(void *baton,
                                                        child_relpath,
                                                        scratch_pool);
 
-                      if (child_op_depth > delete_depth
+                      if (child_op_depth > delete_op_depth
                            && svn_relpath_skip_ancestor(local_relpath,
                                                         child_relpath))
-                        child_op_depth = delete_depth;
+                        child_op_depth = delete_op_depth;
                       else
                         child_op_depth = relpath_depth(child_relpath);
 
@@ -7939,34 +7991,6 @@ delete_node(void *baton,
         }
     }
 
-  if (op_root)
-    {
-      svn_boolean_t below_base;
-      svn_boolean_t below_work;
-      svn_wc__db_status_t below_status;
-
-      /* Use STMT_SELECT_NODE_INFO directly instead of read_info plus
-         info_below_working */
-      SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
-                                 wcroot, local_relpath, -1, scratch_pool));
-      if ((below_base || below_work)
-          && below_status != svn_wc__db_status_not_present
-          && below_status != svn_wc__db_status_deleted)
-        {
-          add_work = TRUE;
-          refetch_depth = TRUE;
-        }
-
-      select_depth = relpath_depth(local_relpath);
-    }
-  else
-    {
-      add_work = TRUE;
-      if (status != svn_wc__db_status_normal)
-        SVN_ERR(op_depth_of(&select_depth, wcroot, local_relpath));
-      else
-        select_depth = 0; /* Deleting BASE node */
-    }
 
   /* ### Put actual-only nodes into the list? */
   if (b->notify)
@@ -7974,18 +7998,15 @@ delete_node(void *baton,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_INSERT_DELETE_LIST));
       SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                                wcroot->wc_id, local_relpath, select_depth));
+                                wcroot->wc_id, local_relpath, working_op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_ABOVE_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isd",
-                            wcroot->wc_id, local_relpath, delete_depth));
+                            wcroot->wc_id, local_relpath, delete_op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
-
-  if (refetch_depth)
-    SVN_ERR(op_depth_of(&select_depth, wcroot, local_relpath));
 
   /* Delete ACTUAL_NODE rows, but leave those that have changelist
      and a NODES row. */
@@ -8016,7 +8037,7 @@ delete_node(void *baton,
                                  STMT_INSERT_DELETE_FROM_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isdd",
                                 wcroot->wc_id, local_relpath,
-                                select_depth, delete_depth));
+                                keep_op_depth, delete_op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
