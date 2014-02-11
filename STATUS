@@ -189,7 +189,7 @@ Candidate changes:
      +1: (without r1567034) breser, brane
      +1: rhuijben
 
- * r1567109
+ * r1567109, r1567134
    Fix an sqlite query definition to always return its rows in the order the
    C code expects them to be. This resolves some potential problems in the
    move logic on update/switch.
