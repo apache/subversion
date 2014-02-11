@@ -177,14 +177,15 @@ Candidate changes:
    Votes:
      +1: breser, brane
 
- * r1566960
+ * r1566960, r1566977
    Try to block people from using SQLITE_ENABLE_STAT3/4 with versions of
    SQLite that are buggy.
    Justification:
      SQLite returns incorrect results for queries.  Try to help our users
      and packagers from using buggy setups.
    Votes:
-     +1: breser, brane
+     +1: breser
+     +1: brane (without r1566977)
 
 Veto-blocked changes:
 =====================
