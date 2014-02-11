@@ -97,7 +97,7 @@ typedef struct shared_representation_t
      intra-node uniqification content. */
   struct
   {
-    svn_fs_x__id_part_t txn_id;
+    svn_fs_x__txn_id_t txn_id;
     apr_uint64_t number;
   } uniquifier;
 
@@ -584,7 +584,7 @@ write_reps(svn_packed__int_stream_t *rep_stream,
       svn_packed__add_uint(rep_stream, rep->item_index);
       svn_packed__add_uint(rep_stream, rep->size);
       svn_packed__add_uint(rep_stream, rep->expanded_size);
-      
+
       svn_packed__add_bytes(digest_stream,
                             (const char *)rep->md5_digest,
                             sizeof(rep->md5_digest));
@@ -656,11 +656,11 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
         = &APR_ARRAY_IDX(container->noderevs, i, binary_noderev_t);
 
       svn_packed__add_uint(noderevs_stream, noderev->flags);
-      
+
       svn_packed__add_uint(noderevs_stream, noderev->id);
       svn_packed__add_uint(noderevs_stream, noderev->predecessor_id);
       svn_packed__add_uint(noderevs_stream, noderev->predecessor_count);
-      
+
       svn_packed__add_uint(noderevs_stream, noderev->copyfrom_path);
       svn_packed__add_int(noderevs_stream, noderev->copyfrom_rev);
       svn_packed__add_uint(noderevs_stream, noderev->copyroot_path);
@@ -670,9 +670,7 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
       svn_packed__add_uint(noderevs_stream, noderev->data_rep.representation);
 
       svn_packed__add_int(noderevs_stream,
-                          noderev->data_rep.uniquifier.txn_id.revision);
-      svn_packed__add_uint(noderevs_stream,
-                           noderev->data_rep.uniquifier.txn_id.number);
+                          noderev->data_rep.uniquifier.txn_id);
       svn_packed__add_uint(noderevs_stream,
                            noderev->data_rep.uniquifier.number);
 
@@ -802,7 +800,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
 
       APR_ARRAY_PUSH(noderevs->ids, binary_id_t) = id;
     }
-    
+
   /* read rep arrays */
   SVN_ERR(read_reps(&noderevs->data_reps, data_reps_stream, digests_stream,
                     result_pool));
@@ -833,10 +831,8 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
       noderev.data_rep.representation
         = (int)svn_packed__get_uint(noderevs_stream);
 
-      noderev.data_rep.uniquifier.txn_id.revision
-        = (svn_revnum_t)svn_packed__get_int(noderevs_stream);
-      noderev.data_rep.uniquifier.txn_id.number
-        = svn_packed__get_uint(noderevs_stream);
+      noderev.data_rep.uniquifier.txn_id
+        = svn_packed__get_int(noderevs_stream);
       noderev.data_rep.uniquifier.number
         = svn_packed__get_uint(noderevs_stream);
 

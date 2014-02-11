@@ -29,6 +29,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Unique identifier for a transaction within the given repository. */
+typedef apr_int64_t svn_fs_x__txn_id_t;
+
+/* svn_fs_x__txn_id_t value for everything that is not a transaction. */
+#define SVN_FS_X__INVALID_TXN_ID ((svn_fs_x__txn_id_t)(-1))
+
 /* A rev node ID in FSX consists of a 3 of sub-IDs ("parts") that consist
  * of a creation REVISION number and some revision-local counter value
  * (NUMBER).  Old-style ID parts use global counter values.
@@ -56,19 +62,10 @@ svn_boolean_t svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
                                    const svn_fs_x__id_part_t *rhs);
 
 /* Return TRUE, if TXN_ID is used, i.e. doesn't contain just the defaults. */
-svn_boolean_t svn_fs_x__id_txn_used(const svn_fs_x__id_part_t *txn_id);
+svn_boolean_t svn_fs_x__id_txn_used(svn_fs_x__txn_id_t txn_id);
 
 /* Reset TXN_ID to the defaults. */
-void svn_fs_x__id_txn_reset(svn_fs_x__id_part_t *txn_id);
-
-/* Parse the transaction id in DATA and store the result in *TXN_ID */
-svn_error_t *svn_fs_x__id_txn_parse(svn_fs_x__id_part_t *txn_id,
-                                    const char *data);
-
-/* Convert the transaction id in *TXN_ID into a textual representation
- * allocated in POOL. */
-const char *svn_fs_x__id_txn_unparse(const svn_fs_x__id_part_t *txn_id,
-                                     apr_pool_t *pool);
+void svn_fs_x__id_txn_reset(svn_fs_x__txn_id_t *txn_id);
 
 
 /*** ID accessor functions. ***/
@@ -80,7 +77,7 @@ const svn_fs_x__id_part_t *svn_fs_x__id_node_id(const svn_fs_id_t *id);
 const svn_fs_x__id_part_t *svn_fs_x__id_copy_id(const svn_fs_id_t *id);
 
 /* Get the "txn id" portion of ID, or NULL if it is a permanent ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_txn_id(const svn_fs_id_t *id);
+svn_fs_x__txn_id_t svn_fs_x__id_txn_id(const svn_fs_id_t *id);
 
 /* Get the "rev,item" portion of ID. */
 const svn_fs_x__id_part_t *svn_fs_x__id_rev_item(const svn_fs_id_t *id);
@@ -117,7 +114,7 @@ int svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
                               const svn_fs_x__id_part_t *b);
 
 /* Create the txn root ID for transaction TXN_ID.  Allocate it in POOL. */
-svn_fs_id_t *svn_fs_x__id_txn_create_root(const svn_fs_x__id_part_t *txn_id,
+svn_fs_id_t *svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txnnum,
                                           apr_pool_t *pool);
 
 /* Create the root ID for REVISION.  Allocate it in POOL. */
@@ -128,7 +125,7 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
    TXN_ID, allocated in POOL. */
 svn_fs_id_t *svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
                                      const svn_fs_x__id_part_t *copy_id,
-                                     const svn_fs_x__id_part_t *txn_id,
+                                     svn_fs_x__txn_id_t txn_id,
                                      apr_pool_t *pool);
 
 /* Create a permanent ID based on NODE_ID, COPY_ID and REV_ITEM,

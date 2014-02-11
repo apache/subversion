@@ -190,7 +190,8 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
 
           /* get L2P entry.  Ignore unused entries. */
           SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs,
-                                        revision, NULL, k, iterpool));
+                                        revision, SVN_FS_X__INVALID_TXN_ID,
+                                        k, iterpool));
           if (offset == -1)
             continue;
 
@@ -289,7 +290,8 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
               svn_fs_x__id_part_t *p2l_item = &entry->items[k];
 
               SVN_ERR(svn_fs_x__item_offset(&l2p_offset, &sub_item, fs,
-                                            p2l_item->revision, NULL,
+                                            p2l_item->revision,
+                                            SVN_FS_X__INVALID_TXN_ID,
                                             p2l_item->number, iterpool));
 
               if (sub_item != k || l2p_offset != entry->offset)

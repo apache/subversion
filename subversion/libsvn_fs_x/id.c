@@ -25,6 +25,7 @@
 
 #include "id.h"
 #include "index.h"
+#include "util.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_temp_serializer.h"
@@ -39,8 +40,8 @@ typedef struct fs_x__id_t
   /* private members */
   svn_fs_x__id_part_t node_id;
   svn_fs_x__id_part_t copy_id;
-  svn_fs_x__id_part_t txn_id;
   svn_fs_x__id_part_t rev_item;
+  svn_fs_x__txn_id_t txn_id;
 
   apr_pool_t *pool; /* pool that was used to allocate this struct */
 } fs_x__id_t;
@@ -86,15 +87,10 @@ part_parse(svn_fs_x__id_part_t *part,
  * Return FALSE if there was some problem.
  */
 static svn_boolean_t
-txn_id_parse(svn_fs_x__id_part_t *txn_id,
+txn_id_parse(svn_fs_x__txn_id_t *txn_id,
              const char *data)
 {
-  txn_id->revision = SVN_STR_TO_REV(data);
-  data = strchr(data, '-');
-  if (data == NULL)
-    return FALSE;
-  
-  txn_id->number = svn__base36toui64(&data, ++data);
+  *txn_id = svn__base36toui64(&data, data);
   return *data == '\0';
 }
 
@@ -145,41 +141,15 @@ svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
 }
 
 svn_boolean_t
-svn_fs_x__id_txn_used(const svn_fs_x__id_part_t *txn_id)
+svn_fs_x__id_txn_used(svn_fs_x__txn_id_t txn_id)
 {
-  return SVN_IS_VALID_REVNUM(txn_id->revision) || (txn_id->number != 0);
+  return txn_id != SVN_FS_X__INVALID_TXN_ID;
 }
 
 void
-svn_fs_x__id_txn_reset(svn_fs_x__id_part_t *txn_id)
+svn_fs_x__id_txn_reset(svn_fs_x__txn_id_t *txn_id)
 {
-  txn_id->revision = SVN_INVALID_REVNUM;
-  txn_id->number = 0;
-}
-
-svn_error_t *
-svn_fs_x__id_txn_parse(svn_fs_x__id_part_t *txn_id,
-                       const char *data)
-{
-  if (! txn_id_parse(txn_id, data))
-    return svn_error_createf(SVN_ERR_FS_MALFORMED_TXN_ID, NULL,
-                             "malformed txn id '%s'", data);
-
-  return SVN_NO_ERROR;
-}
-
-const char *
-svn_fs_x__id_txn_unparse(const svn_fs_x__id_part_t *txn_id,
-                         apr_pool_t *pool)
-{
-  char string[2 * SVN_INT64_BUFFER_SIZE + 1];
-  char *p = string;
-  
-  p += svn__i64toa(p, txn_id->revision);
-  *(p++) = '-';
-  p += svn__ui64tobase36(p, txn_id->number);
-
-  return apr_pstrmemdup(pool, string, p - string);
+  *txn_id = SVN_FS_X__INVALID_TXN_ID;
 }
 
 
@@ -204,12 +174,12 @@ svn_fs_x__id_copy_id(const svn_fs_id_t *fs_id)
 }
 
 
-const svn_fs_x__id_part_t *
+svn_fs_x__txn_id_t
 svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 {
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return &id->txn_id;
+  return id->txn_id;
 }
 
 
@@ -243,7 +213,7 @@ svn_fs_x__id_is_txn(const svn_fs_id_t *fs_id)
 {
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return svn_fs_x__id_txn_used(&id->txn_id);
+  return svn_fs_x__id_txn_used(id->txn_id);
 }
 
 svn_string_t *
@@ -256,12 +226,10 @@ svn_fs_x__id_unparse(const svn_fs_id_t *fs_id,
   char *p = unparse_id_part(string, &id->node_id);
   p = unparse_id_part(p, &id->copy_id);
 
-  if (svn_fs_x__id_txn_used(&id->txn_id))
+  if (svn_fs_x__id_txn_used(id->txn_id))
     {
       *(p++) = 't';
-      p += svn__i64toa(p, id->txn_id.revision);
-      *(p++) = '-';
-      p += svn__ui64tobase36(p, id->txn_id.number);
+      p += svn__ui64tobase36(p, id->txn_id);
     }
   else
     {
@@ -287,8 +255,9 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return memcmp(&id_a->node_id, &id_b->node_id,
-                4 * sizeof(svn_fs_x__id_part_t)) == 0;
+  return id_a->txn_id == id_b->txn_id
+      && memcmp(&id_a->node_id, &id_b->node_id,
+                3 * sizeof(svn_fs_x__id_part_t)) == 0;
 }
 
 
@@ -305,11 +274,8 @@ svn_fs_x__id_check_related(const svn_fs_id_t *a,
   /* If both node_ids start with _ and they have differing transaction
      IDs, then it is impossible for them to be related. */
   if (id_a->node_id.revision == SVN_INVALID_REVNUM)
-    {
-      if (   !svn_fs_x__id_part_eq(&id_a->txn_id, &id_b->txn_id)
-          || !svn_fs_x__id_txn_used(&id_a->txn_id))
-        return FALSE;
-    }
+    if (id_a->txn_id != id_b->txn_id || !svn_fs_x__id_txn_used(id_a->txn_id))
+      return FALSE;
 
   return svn_fs_x__id_part_eq(&id_a->node_id, &id_b->node_id);
 }
@@ -346,14 +312,14 @@ static id_vtable_t id_vtable = {
 };
 
 svn_fs_id_t *
-svn_fs_x__id_txn_create_root(const svn_fs_x__id_part_t *txn_id,
+svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txn_id,
                              apr_pool_t *pool)
 {
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   /* node ID and copy ID are "0" */
 
-  id->txn_id = *txn_id;
+  id->txn_id = txn_id;
   id->rev_item.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
@@ -368,7 +334,7 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 {
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  id->txn_id.revision = SVN_INVALID_REVNUM;
+  id->txn_id = SVN_FS_X__INVALID_TXN_ID;
   id->rev_item.revision = revision;
   id->rev_item.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 
@@ -382,14 +348,14 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 svn_fs_id_t *
 svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
                         const svn_fs_x__id_part_t *copy_id,
-                        const svn_fs_x__id_part_t *txn_id,
+                        svn_fs_x__txn_id_t txn_id,
                         apr_pool_t *pool)
 {
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   id->node_id = *node_id;
   id->copy_id = *copy_id;
-  id->txn_id = *txn_id;
+  id->txn_id = txn_id;
   id->rev_item.revision = SVN_INVALID_REVNUM;
 
   id->generic_id.vtable = &id_vtable;
@@ -410,7 +376,7 @@ svn_fs_x__id_rev_create(const svn_fs_x__id_part_t *node_id,
 
   id->node_id = *node_id;
   id->copy_id = *copy_id;
-  id->txn_id.revision = SVN_INVALID_REVNUM;
+  id->txn_id = SVN_FS_X__INVALID_TXN_ID;
   id->rev_item = *rev_item;
 
   id->generic_id.vtable = &id_vtable;
@@ -483,8 +449,7 @@ svn_fs_x__id_parse(const char *data,
       svn_error_t *err;
 
       /* This is a revision type ID */
-      id->txn_id.revision = SVN_INVALID_REVNUM;
-      id->txn_id.number = 0;
+      id->txn_id = SVN_FS_X__INVALID_TXN_ID;
 
       data_copy = str + 1;
       str = svn_cstring_tokenize("/", &data_copy);
@@ -524,7 +489,7 @@ svn_fs_x__id_serialize(svn_temp_serializer__context_t *context,
                        const svn_fs_id_t * const *in)
 {
   const fs_x__id_t *id = (const fs_x__id_t *)*in;
-  
+
   /* nothing to do for NULL ids */
   if (id == NULL)
     return;

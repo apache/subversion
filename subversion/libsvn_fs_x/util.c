@@ -226,24 +226,47 @@ svn_fs_x__path_revprops(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
                          pool);
 }
 
+const char *
+svn_fs_x__txn_name(svn_fs_x__txn_id_t txn_id,
+                   apr_pool_t *pool)
+{
+  char *p = apr_palloc(pool, SVN_INT64_BUFFER_SIZE);
+  svn__ui64tobase36(p, txn_id);
+  return p;
+}
+
+svn_error_t *
+svn_fs_x__txn_by_name(svn_fs_x__txn_id_t *txn_id,
+                      const char *txn_name)
+{
+  const char *next;
+  apr_uint64_t id = svn__base36toui64(&next, txn_name);
+  if (next == NULL || *next != 0 || *txn_name == 0)
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             "Malformed TXN name '%s'", txn_name);
+
+  *txn_id = id;
+  return SVN_NO_ERROR;
+}
+
+
 /* Return TO_ADD appended to the C string representation of TXN_ID.
  * Allocate the result in POOL.
  */
 static const char *
-combine_txn_id_string(const svn_fs_x__id_part_t *txn_id,
+combine_txn_id_string(svn_fs_x__txn_id_t txn_id,
                       const char *to_add,
                       apr_pool_t *pool)
 {
-  return apr_pstrcat(pool, svn_fs_x__id_txn_unparse(txn_id, pool),
+  return apr_pstrcat(pool, svn_fs_x__txn_name(txn_id, pool),
                      to_add, SVN_VA_NULL);
 }
 
 const char *
 svn_fs_x__path_txn_dir(svn_fs_t *fs,
-                       const svn_fs_x__id_part_t *txn_id,
+                       svn_fs_x__txn_id_t txn_id,
                        apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT_NO_RETURN(txn_id != NULL);
   return svn_dirent_join_many(pool, fs->path, PATH_TXNS_DIR,
                               combine_txn_id_string(txn_id, PATH_EXT_TXN,
                                                     pool),
@@ -255,7 +278,7 @@ svn_fs_x__path_txn_dir(svn_fs_t *fs,
  */
 const char *
 svn_fs_x__path_txn_sha1(svn_fs_t *fs,
-                        const svn_fs_x__id_part_t *txn_id,
+                        svn_fs_x__txn_id_t txn_id,
                         const unsigned char *sha1,
                         apr_pool_t *pool)
 {
@@ -270,7 +293,7 @@ svn_fs_x__path_txn_sha1(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_changes(svn_fs_t *fs,
-                           const svn_fs_x__id_part_t *txn_id,
+                           svn_fs_x__txn_id_t txn_id,
                            apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -279,7 +302,7 @@ svn_fs_x__path_txn_changes(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_props(svn_fs_t *fs,
-                         const svn_fs_x__id_part_t *txn_id,
+                         svn_fs_x__txn_id_t txn_id,
                          apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -288,7 +311,7 @@ svn_fs_x__path_txn_props(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_props_final(svn_fs_t *fs,
-                               const svn_fs_x__id_part_t *txn_id,
+                               svn_fs_x__txn_id_t txn_id,
                                apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -297,7 +320,7 @@ svn_fs_x__path_txn_props_final(svn_fs_t *fs,
 
 const char*
 svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
-                               const svn_fs_x__id_part_t *txn_id,
+                               svn_fs_x__txn_id_t txn_id,
                                apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -306,7 +329,7 @@ svn_fs_x__path_l2p_proto_index(svn_fs_t *fs,
 
 const char*
 svn_fs_x__path_p2l_proto_index(svn_fs_t *fs,
-                               const svn_fs_x__id_part_t *txn_id,
+                               svn_fs_x__txn_id_t txn_id,
                                apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -315,7 +338,7 @@ svn_fs_x__path_p2l_proto_index(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_next_ids(svn_fs_t *fs,
-                            const svn_fs_x__id_part_t *txn_id,
+                            svn_fs_x__txn_id_t txn_id,
                             apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -330,7 +353,7 @@ svn_fs_x__path_min_unpacked_rev(svn_fs_t *fs, apr_pool_t *pool)
 
 const char *
 svn_fs_x__path_txn_item_index(svn_fs_t *fs,
-                              const svn_fs_x__id_part_t *txn_id,
+                              svn_fs_x__txn_id_t txn_id,
                               apr_pool_t *pool)
 {
   return svn_dirent_join(svn_fs_x__path_txn_dir(fs, txn_id, pool),
@@ -339,7 +362,7 @@ svn_fs_x__path_txn_item_index(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
-                             const svn_fs_x__id_part_t *txn_id,
+                             svn_fs_x__txn_id_t txn_id,
                              apr_pool_t *pool)
 {
   return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
@@ -350,7 +373,7 @@ svn_fs_x__path_txn_proto_rev(svn_fs_t *fs,
 
 const char *
 svn_fs_x__path_txn_proto_rev_lock(svn_fs_t *fs,
-                                  const svn_fs_x__id_part_t *txn_id,
+                                  svn_fs_x__txn_id_t txn_id,
                                   apr_pool_t *pool)
 {
   return svn_dirent_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
