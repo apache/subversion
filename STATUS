@@ -62,7 +62,7 @@ Candidate changes:
                    a related problem. It looks like this fix doesn't work for
                    the user scenario it was intended for)
 
- * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488
+ * r1531014, r1532316, r1536350, r1536383, r1536464, r1536488, r1567204, r1567228
    Fix working copy database inconsistency on certain move scenarios,
    including those described in issue #4437 "Deleting a moved file can maintain a
    half move"
@@ -71,7 +71,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4437
    Votes:
-     +1: rhuijben, philip
+     +1: rhuijben
+     +1: (before branch, without r1567204, r1567228) philip
 
  * r1518942, r1536914, r1536931
    Fix commit of a specific mixed revision copy with non copy descendants that
