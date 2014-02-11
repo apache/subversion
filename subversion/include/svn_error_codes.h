@@ -1420,11 +1420,6 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 42,
              "Additional errors:")
 
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_UNSUPPORTED_DEPENDENCY,
-             SVN_ERR_MISC_CATEGORY_START + 43,
-             "Dependency failed runtime compatibility test")
-
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
