@@ -203,7 +203,7 @@ Candidate changes:
      depends on factors like SQLITE_ENABLE_STAT3, code improvements in Sqlite,
      etc. We shouldn't rely on a specific execution plan for correct behavior.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, breser
 
  * r1567064
    Explicitly apply some Sqlite defaults to avoid unwanted side effects.
@@ -211,7 +211,7 @@ Candidate changes:
      We found distributions that enabled other flags. This might fix other
      similar cases.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, breser
 
 Veto-blocked changes:
 =====================
