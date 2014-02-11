@@ -177,17 +177,14 @@ Candidate changes:
    Votes:
      +1: breser, brane
 
- * -r1555653
-   Revert the addition of the 'sqlite_stat1' table.
+ * r1566960
+   Try to block people from using SQLITE_ENABLE_STAT3/4 with versions of
+   SQLite that are buggy.
    Justification:
-     The SQLITE_ENABLE_STAT[34] features of SQLite seem to have an issue with
-     producing incorrect results when this table exists.  It's safer not to
-     have it and perform slower with SQLite 3.8 than have it and get incorrect
-     results.
-   Notes:  Not intended for the backport.pl script to revert this.  I'll do
-     it by hand.
+     SQLite returns incorrect results for queries.  Try to help our users
+     and packagers from using buggy setups.
    Votes:
-     +1: breser, rhuijben
+     +1: breser
 
 Veto-blocked changes:
 =====================
