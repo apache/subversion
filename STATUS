@@ -185,11 +185,13 @@ Candidate changes:
    Justification:
      SQLite returns incorrect results for queries.  Try to help our users
      and packagers from using buggy setups.
+   Branch:
+     ^/subversion/branches/1.8.x-r1567286
    Url:
      http://www.sqlite.org/src/info/4c86b126f2
    Votes:
-     +1: (different patch) breser, brane
-     +1: rhuijben
+     +1: rhuijben, breser
+     +1: (different patch) brane
 
  * r1567109, r1567134
    Fix an sqlite query definition to always return its rows in the order the
