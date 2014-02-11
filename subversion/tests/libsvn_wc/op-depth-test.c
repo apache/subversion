@@ -9021,6 +9021,25 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(init_move4(&b, "del4_update_edit_AAA", opts, FALSE, pool));
 
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "A/A/A",     "normal",    1, "A/A/A" },
+      { 1, "A/A/A",     "normal",    1, "B/A/A", FALSE, "AAA_1", TRUE },
+      { 2, "A/A/A",     "normal",    1, "C/A/A", FALSE, "AAA_2", TRUE },
+      { 3, "A/A/A",     "normal",    1, "D/A/A", FALSE, "AAA_3", TRUE },
+
+      { 0, "A/A/A/A",   "normal",    1, "A/A/A/A" },
+      { 1, "A/A/A/A",   "normal",    1, "B/A/A/A", FALSE, NULL, TRUE },
+      { 2, "A/A/A/A",   "normal",    1, "C/A/A/A", FALSE, NULL, TRUE },
+      { 3, "A/A/A/A",   "normal",    1, "D/A/A/A", FALSE, NULL, TRUE },
+
+      { 0 },
+    };
+
+    SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+  }
+
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
@@ -9154,6 +9173,26 @@ move4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
     svn_test__sandbox_t b;
 
     SVN_ERR(init_move4(&b, "move4_update_edit_AAA", opts, TRUE, pool));
+
+    {
+      nodes_row_t nodes[] = {
+
+        { 0, "A/A/A",     "normal",    1, "A/A/A" },
+        { 1, "A/A/A",     "normal",    1, "B/A/A", FALSE, NULL /*"AAA_1"*/, TRUE },
+        { 2, "A/A/A",     "normal",    1, "C/A/A", FALSE, NULL /*"AAA_2"*/, TRUE },
+        { 3, "A/A/A",     "normal",    1, "D/A/A", FALSE, "AAA_3", TRUE },
+
+        { 0, "A/A/A/A",   "normal",    1, "A/A/A/A" },
+        { 1, "A/A/A/A",   "normal",    1, "B/A/A/A", FALSE, NULL, TRUE },
+        { 2, "A/A/A/A",   "normal",    1, "C/A/A/A", FALSE, NULL, TRUE },
+        { 3, "A/A/A/A",   "normal",    1, "D/A/A/A", FALSE, NULL, TRUE },
+
+
+        { 0 },
+      };
+
+      SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+    }
 
     /* Update and resolve via mine strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
