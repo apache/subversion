@@ -134,7 +134,7 @@ typedef struct fs_x_shared_txn_data_t
   struct fs_x_shared_txn_data_t *next;
 
   /* ID of this transaction. */
-  svn_fs_x__id_part_t txn_id;
+  svn_fs_x__txn_id_t txn_id;
 
   /* Whether the transaction's prototype revision file is locked for
      writing by any thread in this process (including the current
@@ -462,7 +462,7 @@ typedef struct representation_t
   svn_filesize_t expanded_size;
 
   /* Is this representation a transaction? */
-  svn_fs_x__id_part_t txn_id;
+  svn_fs_x__txn_id_t txn_id;
 
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_x__noderev_same_rep_key() ).  So, we
@@ -470,7 +470,7 @@ typedef struct representation_t
      intra-node uniqification content. */
   struct
   {
-    svn_fs_x__id_part_t txn_id;
+    svn_fs_x__txn_id_t txn_id;
     apr_uint64_t number;
   } uniquifier;
 } representation_t;

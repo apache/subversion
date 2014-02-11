@@ -401,12 +401,12 @@ svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
   SVN_ERR(svn_fs_x__get_contents(&stream, builder->fs, rep, scratch_pool));
   SVN_ERR(svn_string_from_stream(&contents, stream, scratch_pool,
                                  scratch_pool));
-  
+
   base.revision = rep->revision;
   base.item_index = rep->item_index;
   base.priority = priority;
   base.rep = (apr_uint32_t)svn_fs_x__reps_add(builder, contents);
-  
+
   APR_ARRAY_PUSH(builder->bases, base_t) = base;
   builder->base_text_len += builder->text->len - text_start_offset;
 

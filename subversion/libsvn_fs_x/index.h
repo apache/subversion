@@ -213,7 +213,7 @@ svn_fs_x__item_offset(apr_off_t *offset,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
                       svn_revnum_t revision,
-                      const svn_fs_x__id_part_t *txn_id,
+                      svn_fs_x__txn_id_t txn_id,
                       apr_uint64_t item_index,
                       apr_pool_t *pool);
 

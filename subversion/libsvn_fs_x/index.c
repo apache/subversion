@@ -1542,7 +1542,7 @@ static svn_error_t *
 l2p_proto_index_lookup(apr_off_t *offset,
                        apr_uint32_t *sub_item,
                        svn_fs_t *fs,
-                       const svn_fs_x__id_part_t *txn_id,
+                       svn_fs_x__txn_id_t txn_id,
                        apr_uint64_t item_index,
                        apr_pool_t *pool)
 {
@@ -1765,7 +1765,7 @@ svn_fs_x__p2l_index_create(svn_fs_t *fs,
       for (sub_item = 0; sub_item < entry.item_count; ++sub_item)
         if (entry.items[sub_item].revision == SVN_INVALID_REVNUM)
           entry.items[sub_item].revision = revision;
-      
+
       /* end pages if entry is extending beyond their boundaries */
       entry_end = entry.offset + entry.size;
       while (entry_end - last_page_end > page_size)
@@ -2672,11 +2672,11 @@ svn_fs_x__item_offset(apr_off_t *offset,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
                       svn_revnum_t revision,
-                      const svn_fs_x__id_part_t *txn_id,
+                      svn_fs_x__txn_id_t txn_id,
                       apr_uint64_t item_index,
                       apr_pool_t *pool)
 {
-  if (txn_id)
+  if (txn_id != SVN_FS_X__INVALID_TXN_ID)
     SVN_ERR(l2p_proto_index_lookup(offset, sub_item,
                                    fs, txn_id, item_index, pool));
   else
