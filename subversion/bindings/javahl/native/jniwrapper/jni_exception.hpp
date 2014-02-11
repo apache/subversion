@@ -82,13 +82,7 @@ public:
    * It is an error to call this method if an existing @c jthrowable
    * object was wrapped.
    */
-  void throw_java_exception() const
-    {
-      if (instantiated()
-          ? m_env.Throw(throwable())
-          : m_env.ThrowNew(m_class, NULL))
-        throw std::runtime_error(_("Could not throw Java exception"));
-    }
+  void throw_java_exception() const;
 
   /**
    * Raises a Java exception of the concrete class with the given
@@ -97,11 +91,7 @@ public:
    * It is an error to call this method if an existing @c jthrowable
    * object was wrapped.
    */
-  void throw_java_exception(const char* message) const
-    {
-      if (m_env.ThrowNew(m_class, message))
-        throw std::runtime_error(_("Could not throw Java exception"));
-    }
+  void throw_java_exception(const char* message) const;
 
   /**
    * Checks if an existing @c jthrowable object was wrapped.

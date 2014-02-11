@@ -255,7 +255,7 @@ public interface ISVNRemote
      * The implementations of <code>contents</code> and
      * <code>properties</code> may not perform any ISVNRemote
      * operations using this session.
-     * @return The revision of the file that was retreived.
+     * @return The revision of the file that was retrieved.
      * @throws ClientException
      */
     long getFile(long revision, String path,
@@ -295,7 +295,7 @@ public interface ISVNRemote
      * The implementations of <code>dirents</code> and
      * <code>properties</code> may not perform any ISVNRemote
      * operations using this session.
-     * @return The revision of the directory that was retreived.
+     * @return The revision of the directory that was retrieved.
      * @throws ClientException
      */
     long getDirectory(long revision, String path,
@@ -305,7 +305,7 @@ public interface ISVNRemote
             throws ClientException;
 
     /**
-     * Retreive the merginfo for <code>paths</code>, whose elements
+     * Retrieve the merginfo for <code>paths</code>, whose elements
      * are relative to the session's URL. The request will fail if any
      * one of <code>paths</code> does not exist in the given
      * <code>revision</code>.
