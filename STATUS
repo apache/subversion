@@ -39,11 +39,8 @@ Candidate changes:
    Justification:
      Spurious FAILs confuse people testing the release.
    Votes:
-     +1: breser
+     +1: breser, danielsh
      +1: philip, rhuijben (without r1567492, r1567494)
-     -0: danielsh (loses functionality; patch sent with alternative fix)
-     stsp: where exactly is the alternative patch?
-     danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
 
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
