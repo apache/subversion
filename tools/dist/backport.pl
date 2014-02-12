@@ -118,6 +118,7 @@ At a prompt, you have the following options:
 y:   Run a merge.  It will not be committed.
      WARNING: This will run 'update' and 'revert -R ./'.
 l:   Show logs for the entries being nominated.
+v:   Show the full entry (the prompt only shows an abridged version).
 q:   Quit the "for each nomination" loop.
 ±1:  Enter a +1 or -1 vote
      You will be prompted to commit your vote at the end.
@@ -731,7 +732,7 @@ sub handle_entry {
     # See above for why the while(1).
     QUESTION: while (1) {
     my $key = $entry{digest};
-    given (prompt 'Run a merge? [y,l,±1,±0,q,e,a, ,N] ',
+    given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
@@ -771,6 +772,12 @@ sub handle_entry {
                 '[[[', (join ';;', %entry), ']]]';
         }
         next PROMPT;
+      }
+      when (/^v/i) {
+        say "";
+        say for @{$entry{entry}};
+        say "";
+        next QUESTION;
       }
       when (/^q/i) {
         exit_stage_left $state, $approved, $votes;
