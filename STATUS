@@ -161,38 +161,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1567286, r1567392
-   Disable SQLITE_ENABLE_STAT3/4 with versions of SQLite that are buggy.
-   Justification:
-     SQLite returns incorrect results for queries.  Try to help our users
-     and packagers from using buggy setups.
-   Branch:
-     ^/subversion/branches/1.8.x-r1567286
-   Url:
-     http://www.sqlite.org/src/info/4c86b126f2
-   Votes:
-     +1: breser, rhuijben
-     +1: (different patch) brane
-
- * r1567109, r1567134
-   Fix an sqlite query definition to always return its rows in the order the
-   C code expects them to be. This resolves some potential problems in the
-   move logic on update/switch.
-   Justification:
-     Sqlite tries to execute queries in an 'optimal' way, but how this is
-     depends on factors like SQLITE_ENABLE_STAT3, code improvements in Sqlite,
-     etc. We shouldn't rely on a specific execution plan for correct behavior.
-   Votes:
-     +1: rhuijben, breser
-
- * r1567064
-   Explicitly apply some Sqlite defaults to avoid unwanted side effects.
-   Justification:
-     We found distributions that enabled other flags. This might fix other
-     similar cases.
-   Votes:
-     +1: rhuijben, breser
-
 Veto-blocked changes:
 =====================
 
@@ -229,3 +197,35 @@ Approved changes:
    Votes:
      +1: breser, danielsh, rhuijben
      +1: philip (without r1567492, r1567494)
+
+ * r1567286, r1567392
+   Disable SQLITE_ENABLE_STAT3/4 with versions of SQLite that are buggy.
+   Justification:
+     SQLite returns incorrect results for queries.  Try to help our users
+     and packagers from using buggy setups.
+   Branch:
+     ^/subversion/branches/1.8.x-r1567286
+   Url:
+     http://www.sqlite.org/src/info/4c86b126f2
+   Votes:
+     +1: breser, rhuijben, philip
+     +1: (different patch) brane
+
+ * r1567109, r1567134
+   Fix an sqlite query definition to always return its rows in the order the
+   C code expects them to be. This resolves some potential problems in the
+   move logic on update/switch.
+   Justification:
+     Sqlite tries to execute queries in an 'optimal' way, but how this is
+     depends on factors like SQLITE_ENABLE_STAT3, code improvements in Sqlite,
+     etc. We shouldn't rely on a specific execution plan for correct behavior.
+   Votes:
+     +1: rhuijben, breser, philip
+
+ * r1567064
+   Explicitly apply some Sqlite defaults to avoid unwanted side effects.
+   Justification:
+     We found distributions that enabled other flags. This might fix other
+     similar cases.
+   Votes:
+     +1: rhuijben, breser, philip
