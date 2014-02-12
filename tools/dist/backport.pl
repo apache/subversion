@@ -353,6 +353,10 @@ sub parse_entry {
   my $indentation = ' ' x (length($1) + 2);
   s/^$indentation// for @_;
 
+  # Ignore trailing spaces: it is not significant on any field, and makes the
+  # regexes simpler.
+  s/\s*$// for @_;
+
   # revisions
   $branch = sanitize_branch $1
     and shift
