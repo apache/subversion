@@ -299,9 +299,22 @@ public class SVNClient implements ISVNClient
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
                              boolean force, Depth depth,
-                             boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
-                             boolean dryRun, boolean recordOnly)
+                             boolean ignoreMergeinfo,
+                             boolean diffIgnoreAncestry,
+                             boolean dryRun, boolean allowMixedRev,
+                             boolean recordOnly)
             throws ClientException;
+
+    public void merge(String path1, Revision revision1, String path2,
+                      Revision revision2, String localPath,
+                      boolean force, Depth depth,
+                      boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+                      boolean dryRun, boolean recordOnly)
+            throws ClientException
+    {
+        merge(path1, revision1, path2, revision2, localPath, force, depth,
+              ignoreMergeinfo, diffIgnoreAncestry, dryRun, true, recordOnly);
+    }
 
     public void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
@@ -317,9 +330,22 @@ public class SVNClient implements ISVNClient
     public native void merge(String path, Revision pegRevision,
                              List<RevisionRange> revisions, String localPath,
                              boolean force, Depth depth,
-                             boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
-                             boolean dryRun, boolean recordOnly)
+                             boolean ignoreMergeinfo,
+                             boolean diffIgnoreAncestry,
+                             boolean dryRun, boolean allowMixedRev,
+                             boolean recordOnly)
             throws ClientException;
+
+    public void merge(String path, Revision pegRevision,
+                      List<RevisionRange> revisions, String localPath,
+                      boolean force, Depth depth,
+                      boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+                      boolean dryRun, boolean recordOnly)
+            throws ClientException
+    {
+        merge(path, pegRevision, revisions, localPath, force, depth,
+              ignoreMergeinfo, diffIgnoreAncestry, dryRun, true, recordOnly);
+    }
 
     public void merge(String path, Revision pegRevision,
                       List<RevisionRange> revisions, String localPath,

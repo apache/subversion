@@ -656,7 +656,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                       const char *path2, Revision &revision2,
                       const char *localPath, bool forceDelete, svn_depth_t depth,
                       bool ignoreMergeinfo, bool diffIgnoreAncestry,
-                      bool dryRun, bool recordOnly)
+                      bool dryRun, bool allowMixedRev, bool recordOnly)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path1, "path1", );
@@ -681,14 +681,15 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                                   depth,
                                   ignoreMergeinfo, diffIgnoreAncestry,
                                   forceDelete, recordOnly, dryRun,
-                                  TRUE, NULL, ctx, subPool.getPool()), );
+                                  allowMixedRev, NULL, ctx,
+                                  subPool.getPool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
                       std::vector<RevisionRange> *rangesToMerge,
                       const char *localPath, bool forceDelete, svn_depth_t depth,
                       bool ignoreMergeinfo, bool diffIgnoreAncestry,
-                      bool dryRun, bool recordOnly)
+                      bool dryRun, bool allowMixedRev, bool recordOnly)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -716,7 +717,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                       depth,
                                       ignoreMergeinfo, diffIgnoreAncestry,
                                       forceDelete, recordOnly,
-                                      dryRun, TRUE, NULL, ctx,
+                                      dryRun, allowMixedRev, NULL, ctx,
                                       subPool.getPool()), );
 }
 
