@@ -34,12 +34,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1496127
+ * r1496127, r1567492, r1567494
    Fix occasional failure of checkout_tests.py 12.
    Justification:
      Spurious FAILs confuse people testing the release.
    Votes:
-     +1: philip, rhuijben
+     +1: breser
+     +1: philip, rhuijben (without r1567492, r1567494)
      -0: danielsh (loses functionality; patch sent with alternative fix)
      stsp: where exactly is the alternative patch?
      danielsh: http://mid.gmane.org/20130705040533.GL3244@lp-shahaf.local
