@@ -161,6 +161,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1567752
+   Fix, very occasional, spurious FAIL in autoprop_tests.py.
+   Justification:
+     Spurious FAILs confuse people.
+   Votes:
+     +1: philip, breser
+
 Veto-blocked changes:
 =====================
 
