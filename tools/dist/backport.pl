@@ -241,7 +241,7 @@ sub merge {
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
+    $pattern = '^ *[*] \V' . 'r' . $entry{revisions}->[0];
     $mergeargs = join " ",
       ($entry{accept} ? "--accept=$entry{accept}" : ()),
       (map { "-c$_" } @{$entry{revisions}}),
