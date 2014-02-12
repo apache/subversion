@@ -544,6 +544,33 @@ public interface ISVNClient
      * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
      * @param diffIgnoreAncestry always treat source files as related
      * @param dryRun         do not change anything
+     * @param allowMixedRev  allow merging into a mixed-revision working copy
+     * @param recordOnly     record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.9
+     */
+    void merge(String path1, Revision revision1, String path2,
+               Revision revision2, String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean allowMixedRev, boolean recordOnly)
+            throws ClientException;
+
+    /**
+     * Merge changes from two paths into a new local path.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.9 version with allowMixedRev
+     *              always set to <code>true</code>.
+     *
+     * @param path1          first path or url
+     * @param revision1      first revision
+     * @param path2          second path or url
+     * @param revision2      second revision
+     * @param localPath      target local path
+     * @param force          overwrite local changes
+     * @param depth          how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun         do not change anything
      * @param recordOnly     record mergeinfo but do not run merge
      * @throws ClientException
      * @since 1.8
@@ -579,6 +606,33 @@ public interface ISVNClient
 
     /**
      * Merge set of revisions into a new local path.
+     * @param path          path or url
+     * @param pegRevision   revision to interpret path
+     * @param revisions     revisions to merge; may be null, indicating that
+     *                      the optimal range should be determined automatcially
+     * @param localPath     target local path
+     * @param force         overwrite local changes
+     * @param depth         how deep to traverse into subdirectories
+     * @param ignoreMergeinfo ignore merge history, treat sources as unrelated
+     * @param diffIgnoreAncestry always treat source files as related
+     * @param dryRun        do not change anything
+     * @param allowMixedRev  allow merging into a mixed-revision working copy
+     * @param recordOnly    record mergeinfo but do not run merge
+     * @throws ClientException
+     * @since 1.9
+     */
+    void merge(String path, Revision pegRevision, List<RevisionRange> revisions,
+               String localPath, boolean force, Depth depth,
+               boolean ignoreMergeinfo, boolean diffIgnoreAncestry,
+               boolean dryRun, boolean allowMixedRev, boolean recordOnly)
+             throws ClientException;
+
+    /**
+     * Merge set of revisions into a new local path.
+     * <p>
+     * <b>Note:</b> Behaves like the 1.9 version with allowMixedRev
+     *              always set to <code>true</code>.
+     *
      * @param path          path or url
      * @param pegRevision   revision to interpret path
      * @param revisions     revisions to merge; may be null, indicating that
