@@ -814,11 +814,11 @@ Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
  jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforceDelete,
  jobject jdepth, jboolean jignoreMergeinfo, jboolean jdiffIgnoreAncestry,
- jboolean jdryRun, jboolean jrecordOnly)
+ jboolean jdryRun, jboolean jallowMixedRev, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -853,15 +853,16 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
             jignoreMergeinfo ? true:false,
             jdiffIgnoreAncestry ? true:false,
             jdryRun ? true:false,
+            jallowMixedRev ? true:false,
             jrecordOnly ? true:false);
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jstring jlocalPath, jboolean jforceDelete, jobject jdepth,
  jboolean jignoreMergeinfo, jboolean jdiffIgnoreAncestry,
- jboolean jdryRun, jboolean jrecordOnly)
+ jboolean jdryRun, jboolean jallowMixedRev, jboolean jrecordOnly)
 {
   JNIEntry(SVNClient, merge);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -912,6 +913,7 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
             jignoreMergeinfo ? true:false,
             jdiffIgnoreAncestry ? true:false,
             jdryRun ? true:false,
+            jallowMixedRev ? true:false,
             jrecordOnly ? true:false);
 }
 
