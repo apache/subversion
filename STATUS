@@ -34,14 +34,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1496127, r1567492, r1567494
-   Fix occasional failure of checkout_tests.py 12.
-   Justification:
-     Spurious FAILs confuse people testing the release.
-   Votes:
-     +1: breser, danielsh
-     +1: philip, rhuijben (without r1567492, r1567494)
-
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
    Justification:
@@ -229,3 +221,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1496127, r1567492, r1567494
+   Fix occasional failure of checkout_tests.py 12.
+   Justification:
+     Spurious FAILs confuse people testing the release.
+   Votes:
+     +1: breser, danielsh, rhuijben
+     +1: philip (without r1567492, r1567494)
