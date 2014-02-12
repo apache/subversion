@@ -190,14 +190,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1496127, r1567492, r1567494
-   Fix occasional failure of checkout_tests.py 12.
-   Justification:
-     Spurious FAILs confuse people testing the release.
-   Votes:
-     +1: breser, danielsh, rhuijben
-     +1: philip (without r1567492, r1567494)
-
  * r1567286, r1567392
    Disable SQLITE_ENABLE_STAT3/4 with versions of SQLite that are buggy.
    Justification:
