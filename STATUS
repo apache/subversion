@@ -189,11 +189,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1567064
-   Explicitly apply some Sqlite defaults to avoid unwanted side effects.
-   Justification:
-     We found distributions that enabled other flags. This might fix other
-     similar cases.
-   Votes:
-     +1: rhuijben, breser, philip
