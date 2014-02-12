@@ -358,12 +358,8 @@ sub parse_entry {
     and shift
     if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
   while ($_[0] =~ /^(?:r?\d+[,; ]*)+$/) {
-    my $sawrevnum = 0;
-    while ($_[0] =~ s/^r?(\d+)(?:$|[,; ]+)//) {
-      push @revisions, $1;
-      $sawrevnum++;
-    }
-    $sawrevnum ? shift : last;
+    push @revisions, ($_[0] =~ /(\d+)/g);
+    shift;
   }
 
   # summary
