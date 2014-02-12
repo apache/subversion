@@ -348,9 +348,10 @@ sub parse_entry {
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
-  # strip first three spaces
-  $_[0] =~ s/^ \* /   /;
-  s/^   // for @_;
+  # strip spaces to match up with the indention
+  $_[0] =~ s/^( *)\* //;
+  my $indentation = ' ' x (length($1) + 2);
+  s/^$indentation// for @_;
 
   # revisions
   $branch = sanitize_branch $1
@@ -871,9 +872,9 @@ sub backport_main {
         break;
       }
       # Backport entry?
-      when (/^ \*/) {
+      when (/^ *\*/) {
         warn "Too many bullets in $lines[0]" and next
-          if grep /^ \*/, @lines[1..$#lines];
+          if grep /^ *\*/, @lines[1..$#lines];
         handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
                      @lines;
       }
