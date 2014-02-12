@@ -27,6 +27,7 @@
 
 # General modules
 import sys, re, os, time, subprocess
+import datetime
 
 # Our testing module
 import svntest
@@ -660,16 +661,27 @@ def checkout_peg_rev_date(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  ## Get svn:date.
   exit_code, output, errput = svntest.main.run_svn(None, 'propget', 'svn:date',
                                                    '--revprop', '-r1',
                                                    '--strict',
                                                    sbox.repo_url)
   if exit_code or errput != [] or len(output) != 1:
     raise svntest.Failure("svn:date propget failed")
-  r1_time = output[0]
 
-  # sleep till the next second.
-  time.sleep(1.1)
+  ## Increment the svn:date date by one microsecond.
+  # TODO: pass tzinfo=UTC to datetime.datetime()
+  date_pattern = re.compile(r'(\d+)-(\d+)-(\d+)T(\d\d):(\d\d):(\d\d)\.(\d+)Z$')
+  r1_time = datetime.datetime(*map(int, date_pattern.match(output[0]).groups()))
+  peg_time = r1_time + datetime.timedelta(microseconds=1)
+  assert r1_time != peg_time
+  # peg_string is, by all likelihood, younger than r1's svn:date and older than
+  # r2's svn:date.  It is also not equal to either of them, so we test the
+  # binary search of svn:date values.
+  peg_string = '%04d-%02d-%02dT%02d:%02d:%02d.%06dZ' % \
+               tuple(getattr(peg_time, x)
+                     for x in ["year", "month", "day", "hour", "minute",
+                               "second", "microsecond"])
 
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -691,7 +703,7 @@ def checkout_peg_rev_date(sbox):
 
   # use an old date to checkout, that way we're sure we get the first revision
   svntest.actions.run_and_verify_checkout(sbox.repo_url +
-                                          '@{' + r1_time + '}',
+                                          '@{' + peg_string + '}',
                                           checkout_target,
                                           expected_output,
                                           expected_wc)
