@@ -88,12 +88,6 @@
  * with new entries. For details on the fine-tuning involved, see the
  * comments in ensure_data_insertable().
  *
- * Reads will update hit counts without synchronization, i.e. some updates
- * will be lost and mostly so on the segment-global counters because read
- * conflicts are more common on them.  I.e. sum(entry.hits) > cache->hits.
- * Thus, we must check for underflows when removing or aging an entry and
- * update the segment-global hit counter.
- * 
  * To limit the entry size and management overhead, not the actual item keys
  * but only their MD5 checksums will not be stored. This is reasonably safe
  * to do since users have only limited control over the full keys, even if
@@ -452,17 +446,23 @@ struct svn_membuffer_t
 
 
   /* Total number of calls to membuffer_cache_get.
-   * Purely statistical information that may be used for profiling.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint64_t total_reads;
 
   /* Total number of calls to membuffer_cache_set.
-   * Purely statistical information that may be used for profiling.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint64_t total_writes;
 
   /* Total number of hits since the cache's creation.
-   * Purely statistical information that may be used for profiling.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint64_t total_hits;
 
@@ -479,6 +479,12 @@ struct svn_membuffer_t
    */
   svn_boolean_t allow_blocking_writes;
 #endif
+
+  /* All counters that have consistency requirements on thems (currently,
+   * that's only the hit counters) must use this mutex to serialize their
+   * updates.
+   */
+  svn_mutex__t *counter_mutex;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -647,10 +653,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update global cache usage counters
    */
   cache->used_entries--;
-  if (cache->hit_count > entry->hit_count)
-    cache->hit_count -= entry->hit_count;
-  else
-    cache->hit_count = 0;
+  cache->hit_count -= entry->hit_count;
 
   /* extend the insertion window, if the entry happens to border it
    */
@@ -810,11 +813,7 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t hits_removed = (entry->hit_count + 1) >> 1;
 
-  if (cache->hit_count > hits_removed)
-    cache->hit_count -= hits_removed;
-  else
-    cache->hit_count = 0;
-
+  cache->hit_count -= hits_removed;
   entry->hit_count -= hits_removed;
 }
 
@@ -1315,6 +1314,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].allow_blocking_writes = allow_blocking_writes;
 #endif
+
+      SVN_ERR(svn_mutex__init(&c[seg].counter_mutex, thread_safe, pool));
     }
 
   /* done here
@@ -1498,13 +1499,12 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
 /* Count a hit in ENTRY within CACHE.
  */
-static void
+static svn_error_t *
 increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
 {
   /* To minimize the memory footprint of the cache index, we limit local
    * hit counters to 32 bits.  These may overflow and we must make sure that
-   * the global sums are still (roughly due to races) the sum of all local
-   * counters. */
+   * the global sums are still the sum of all local counters. */
   if (++entry->hit_count == 0)
     cache->hit_count -= APR_UINT32_MAX;
   else
@@ -1512,6 +1512,8 @@ increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
 
   /* That one is for stats only. */
   cache->total_hits++;
+
+  return SVN_NO_ERROR;
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
@@ -1570,7 +1572,8 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* update hit statistics
    */
-  increment_hit_counters(cache, entry);
+  SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                       increment_hit_counters(cache, entry));
   *item_size = entry->size;
 
   return SVN_NO_ERROR;
@@ -1651,7 +1654,8 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     {
       *found = TRUE;
 
-      increment_hit_counters(cache, entry);
+      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                           increment_hit_counters(cache, entry));
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -1741,7 +1745,8 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       char *orig_data = data;
       apr_size_t size = entry->size;
 
-      increment_hit_counters(cache, entry);
+      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                           increment_hit_counters(cache, entry));
       cache->total_writes++;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
