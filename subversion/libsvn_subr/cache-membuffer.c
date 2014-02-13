@@ -88,6 +88,12 @@
  * with new entries. For details on the fine-tuning involved, see the
  * comments in ensure_data_insertable().
  *
+ * Reads will update hit counts without synchronization, i.e. some updates
+ * will be lost and mostly so on the segment-global counters because read
+ * conflicts are more common on them.  I.e. sum(entry.hits) > cache->hits.
+ * Thus, we must check for underflows when removing or aging an entry and
+ * update the segment-global hit counter.
+ * 
  * To limit the entry size and management overhead, not the actual item keys
  * but only their MD5 checksums will not be stored. This is reasonably safe
  * to do since users have only limited control over the full keys, even if
@@ -641,8 +647,10 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update global cache usage counters
    */
   cache->used_entries--;
-  cache->hit_count -= entry->hit_count;
-  cache->data_used -= entry->size;
+  if (cache->hit_count > entry->hit_count)
+    cache->hit_count -= entry->hit_count;
+  else
+    cache->hit_count = 0;
 
   /* extend the insertion window, if the entry happens to border it
    */
@@ -802,7 +810,11 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t hits_removed = (entry->hit_count + 1) >> 1;
 
-  cache->hit_count -= hits_removed;
+  if (cache->hit_count > hits_removed)
+    cache->hit_count -= hits_removed;
+  else
+    cache->hit_count = 0;
+
   entry->hit_count -= hits_removed;
 }
 
@@ -1484,6 +1496,24 @@ membuffer_cache_set(svn_membuffer_t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Count a hit in ENTRY within CACHE.
+ */
+static void
+increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
+{
+  /* To minimize the memory footprint of the cache index, we limit local
+   * hit counters to 32 bits.  These may overflow and we must make sure that
+   * the global sums are still (roughly due to races) the sum of all local
+   * counters. */
+  if (++entry->hit_count == 0)
+    cache->hit_count -= APR_UINT32_MAX;
+  else
+    cache->hit_count++;
+
+  /* That one is for stats only. */
+  cache->total_hits++;
+}
+
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. If no item has been stored for KEY,
  * *BUFFER will be NULL. Otherwise, return a copy of the serialized
@@ -1540,10 +1570,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* update hit statistics
    */
-  entry->hit_count++;
-  cache->hit_count++;
-  cache->total_hits++;
-
+  increment_hit_counters(cache, entry);
   *item_size = entry->size;
 
   return SVN_NO_ERROR;
@@ -1624,9 +1651,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     {
       *found = TRUE;
 
-      entry->hit_count++;
-      cache->hit_count++;
-      cache->total_hits++;
+      increment_hit_counters(cache, entry);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -1716,8 +1741,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       char *orig_data = data;
       apr_size_t size = entry->size;
 
-      entry->hit_count++;
-      cache->hit_count++;
+      increment_hit_counters(cache, entry);
       cache->total_writes++;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
