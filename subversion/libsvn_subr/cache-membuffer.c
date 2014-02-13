@@ -508,7 +508,7 @@ struct svn_membuffer_t
    */
   unsigned char *data;
 
-  /* Total number of data buffer bytes in use. This is for statistics only.
+  /* Total number of data buffer bytes in use.
    */
   apr_uint64_t data_used;
 
@@ -1881,7 +1881,11 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
    * the old spot, just re-use that space. */
   if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
     {
-      cache->data_used += size - entry->size;
+      /* Careful! We need to cast SIZE to the full width of CACHE->DATA_USED
+       * lest we run into trouble with 32 bit underflow *not* treated as a
+       * negative value.
+       */
+      cache->data_used += (apr_uint64_t)size - entry->size;
       entry->size = size;
       entry->priority = priority;
 
