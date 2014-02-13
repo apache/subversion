@@ -2018,8 +2018,7 @@ increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
 {
   /* To minimize the memory footprint of the cache index, we limit local
    * hit counters to 32 bits.  These may overflow and we must make sure that
-   * the global sums are still (roughly due to races) the sum of all local
-   * counters. */
+   * the global sums are still the sum of all local counters. */
   if (++entry->hit_count == 0)
     cache->hit_count -= APR_UINT32_MAX;
   else
