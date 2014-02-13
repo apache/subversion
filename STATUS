@@ -177,7 +177,7 @@ Candidate changes:
      the infinite loop, all other threads in the same process will soon hang
      as well.
    Votes:
-     +1: stefan2
+     +1: stefan2, breser
 
 Veto-blocked changes:
 =====================
