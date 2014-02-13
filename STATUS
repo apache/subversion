@@ -168,6 +168,18 @@ Candidate changes:
    Votes:
      +1: philip, breser
 
+ * r1567996, r1568009, r1568062, r1568063
+   Fix a caching inefficiency in multi-threaded servers.
+   Justification:
+     .
+   Notes:
+     Due to going back and forth with different approaches to solve this
+     issue, the best way to review this 
+   Branch:
+     ^/subversion/branches/1.8.x-r1567996
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
