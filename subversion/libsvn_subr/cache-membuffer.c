@@ -975,6 +975,7 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
    */
   cache->used_entries--;
   cache->hit_count -= entry->hit_count;
+  cache->data_used -= entry->size;
 
   /* extend the insertion window, if the entry happens to border it
    */
