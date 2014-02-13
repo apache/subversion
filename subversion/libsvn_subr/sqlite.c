@@ -1131,14 +1131,14 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
-  /* ### simplify this. remnants of some old SQLite compat code.  */
-  {
-    int ignored_err = SQLITE_OK;
-
-    SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", ignored_err));
-  }
-
   SVN_ERR(exec_sql(*db,
+              /* The default behavior of the LIKE operator is to ignore case
+                 for ASCII characters. Hence, by default 'a' LIKE 'A' is true.
+                 The case_sensitive_like pragma installs a new application-
+                 defined LIKE function that is either case sensitive or
+                 insensitive depending on the value of the case_sensitive_like
+                 pragma. */
+              "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small
                  transactions.
