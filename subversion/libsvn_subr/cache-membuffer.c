@@ -97,6 +97,12 @@
  * about 50% of the content survives every 50% of the cache being re-written
  * with new entries. For details on the fine-tuning involved, see the
  * comments in ensure_data_insertable_l2().
+ *
+ * Reads will update hit counts without synchronization, i.e. some updates
+ * will be lost and mostly so on the segment-global counters because read
+ * conflicts are more common on them.  I.e. sum(entry.hits) > cache->hits.
+ * Thus, we must check for underflows when removing or aging an entry and
+ * update the segment-global hit counter.
  * 
  * Due to the randomized mapping of keys to entry groups, some groups may
  * overflow.  In that case, there are spare groups that can be chained to
@@ -545,12 +551,8 @@ struct svn_membuffer_t
   /* Sum of (read) hit counts of all used dictionary entries.
    * In conjunction used_entries used_entries, this is used calculate
    * the average hit count as part of the randomized LFU algorithm.
-   * 
-   * Note that we update this value "racily" from multiple threads.
-   * Thus, allow it to hover around the actual value which includes the
-   * possibility of being slightly below 0.
    */
-  apr_int64_t hit_count;
+  apr_uint64_t hit_count;
 
 
   /* Total number of calls to membuffer_cache_get.
@@ -966,8 +968,10 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update global cache usage counters
    */
   cache->used_entries--;
-  cache->hit_count -= entry->hit_count;
-  cache->data_used -= entry->size;
+  if (cache->hit_count > entry->hit_count)
+    cache->hit_count -= entry->hit_count;
+  else
+    cache->hit_count = 0;
 
   /* extend the insertion window, if the entry happens to border it
    */
@@ -1100,7 +1104,11 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t hits_removed = (entry->hit_count + 1) >> 1;
 
-  cache->hit_count -= hits_removed;
+  if (cache->hit_count > hits_removed)
+    cache->hit_count -= hits_removed;
+  else
+    cache->hit_count = 0;
+
   entry->hit_count -= hits_removed;
 }
 
