@@ -102,7 +102,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = sbox.add_wc_path('autoprops')
+  tmp_dir = os.path.abspath(sbox.add_wc_path('autoprops'))
   config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
   repos_url = sbox.repo_url
 
@@ -415,7 +415,7 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = sbox.add_wc_path('iautoprops')
+  tmp_dir = os.path.abspath(sbox.add_wc_path('iautoprops'))
   config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
   repos_url = sbox.repo_url
 
@@ -646,7 +646,7 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   #
   # Then revert the previous additions and add again, only the
   # svn:auto-props should be applied.
-  tmp_dir = sbox.add_wc_path('temp')
+  tmp_dir = os.path.abspath(sbox.add_wc_path('temp'))
   config_dir = os.path.join(tmp_dir,
                             'autoprops_config_disabled_' + sbox.name)
   create_inherited_autoprops_config(config_dir, False)
