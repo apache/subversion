@@ -381,9 +381,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: expose --alow-mixed-revisions merge option (r1567602)
 
 
-Version 1.8.7
+Version 1.8.8
 (19 Feb 2014, from /branches/1.8.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.8.7
+http://svn.apache.org/repos/asf/subversion/tags/1.8.8
 
  User-visible changes:
   - Client-side bugfixes:
@@ -413,6 +413,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.7
     * mod_dav_svn: include requested property changes in reports (r1557522)
     * svnserve: correct default cache size in help text (r1563110)
     * svnadmin dump: reduce size of dump files with '--deltas' (r1554978)
+    * resolve integer underflow that resulted in infinite loops (r1567985)
 
  Developer-visible changes:
   - General:
@@ -440,8 +441,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.7
     * swig: fix building from tarball with an out-of-tree build (r1543187)
 
 
+Version 1.8.7
+(Not released, see changes for 1.8.8.)
+
 Version 1.8.6
-(Not released, see changes for 1.8.7.)
+(Not released, see changes for 1.8.8.)
 
 
 Version 1.8.5
