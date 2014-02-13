@@ -168,17 +168,6 @@ Candidate changes:
    Votes:
      +1: philip, breser
 
- * r1567985
-   Infinite loop in caching code on 32 bit platforms.
-   Branch: ^/subversion/branches/1.8.x-r1567985
-   Justification:
-     This affects all threaded servers and gets more frequent when only small
-     caches like the 16MB default have been configured.  Once a thread enters
-     the infinite loop, all other threads in the same process will soon hang
-     as well.
-   Votes:
-     +1: stefan2, breser
-
 Veto-blocked changes:
 =====================
 
@@ -207,3 +196,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1567985
+   Infinite loop in caching code on 32 bit platforms.
+   Branch: ^/subversion/branches/1.8.x-r1567985
+   Justification:
+     This affects all threaded servers and gets more frequent when only small
+     caches like the 16MB default have been configured.  Once a thread enters
+     the infinite loop, all other threads in the same process will soon hang
+     as well.
+   Votes:
+     +1: stefan2, breser, philip
