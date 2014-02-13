@@ -77,6 +77,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: speed up critical open_path() call (r1483301 et al)
     * fsfs: speed up node verification (r1520421 et al)
     * fsfs: speed up serialization into cache buffer format (r1505056)
+    * fsfs: checkpoint after each rev during hotcopy (r1560723)
+    * fsfs: avoid caching intermediate fulltexts (r1565100)
     * svnadmin: don't display warnings as errors (r1556297)
     * ra_serf: avoid caching properties in the update editor (r1557538)
     * ra_serf: decrease latency of requests to get directory contents by
@@ -119,6 +121,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * use a cheaper ra operation for common client calculation (r1496468 et al)
     * ra_svn: avoid unnecessary work when doing a blame (r1503046)
     * optimize reading files into memory if size is known (r1505068)
+    * mod_authz_svn: log access denied messages as warnings (r1562417)
+    * copy: do not error on properties when doing a foreign copy (r1563361)
+    * membuffer: reduce memory usage by using shorter lived pools (r1564217)
+    * svnadmin load: add '--ignore-dates' option (r1564789)
+    * update: reduce sessions used with '--parents' option (r1565920)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -144,8 +151,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * status: report externals in a deterministic way (r1550200)
     * verify requested cached credentials match realm requested (r1550691 et al)
     * copy: avoid an unneeded extra ra session for wc to repo case (r1551564)
-    * commit: fix committing a move from external to ancestor directory or
-      vice-versa (r1551579)
     * ra_serf: show pre-revprop-change failure on revprop delete (issue #3086)
     * svnsync: avoid extra request at end of every revision sync (r1553370)
     * ra_serf: fix replace + propset of locked file failures (issue #3674)
@@ -159,6 +164,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * log: reduce performance penalties of using -g (r1559912)
     * blame: reduce performance penalties of using -g (r1560112)
     * ra_local: set svn:txn-user-agent for consistency (r1498608)
+    * ra_svn: use the stream api properly for communications (r1562072)
+    * update: provide error when none of targets are wcs (r1565388)
+    * ra_serf: follow RFC 2818, ignore common name when subjectAltNames are
+      present (r1565531)
+    * wc: reduce dependence on unspecified SQLite behavior (r1567080 et al)
+    * delete/move: explicitly specify node to delete rather than querying
+      wc db multiple times to determine on the fly (r1567204 et al)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -183,10 +195,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       the default message to make diagnosing issues easier (r1553441)
     * mod_dav_svn: fix some pool lifetime issues with err messages (r1553868)
     * mod_dav_svn: avoid setting option headers multiple times (r1557103)
+    * fsfs: prevent some commits that could cause future corruption (r1560673)
+    * fsfs: fix a problem verifying pre-1.4 repos used with 1.8 (r1561419)
+    * fsfs: don't write uniquifiers for old repo formats (r1561426)
+    * fsfs: fix hotcopy for pre-1.4 repositories (r1561427)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
     * use more optimal code path with old txdelta v1 data (r1485480)
+    * windows: allow opening SQLite databases on long paths (r1564338)
 
   - Other tool improvements and bugfixes:
     * windows: add build-svn-deps-win.pl tool to build dependencies (r1467715)
@@ -216,7 +233,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * include symbolic names for warning codes in maintainer mode (r1469855)
     * support YouCompleteMe vim plugin (r1476374 et al)
     * reduce getenv() call overhead in maintainer mode (r1476554)
-    * fix occasional failure of checkout_test.py 12 (r1496127)
     * allow tests to be run with exclusive wc locks (r1496475)
     * fix check for Microsoft C/C++ compiler (r1503148)
     * improve windows build to use pre-built dependencies
@@ -244,6 +260,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * tests: stop rewriting shared authz file for every sandbox (r1552064 et al)
     * get-deps.sh: Use a stable URL for zlib download (r1552957 et al)
     * fix unnecessary aborts in maintainer mode on sqlite errors (r1536325)
+    * new --sqlite-logging option for C tests (r1560409)
+    * allow building with APR-2 (r1560586)
+    * remove support for ASM Zlib from Windows build system (r1560864)
+    * gen-make.py: new -D option (r1567046)
+    * prevent spurious failures in autoprop_tests.py (r1567752 et al)
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
@@ -309,6 +330,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * SVN_EXPERIMENTAL to mark functions that might change in future (r1526012)
     * fix bug in svn_client_get_merging_summary() with some params (r1532396)
     * New error code SVN_ERR_XML_UNEXPECTED_ELEMENT (r1498938)
+    * Extend stream API to also support incomplete reads (r1561688 et al)
+    * New api svn_wc_add_from_disk3() (r1563361)
 
   - Bindings:
     * javahl: add support for the RA layer (r1494650 et al)
@@ -330,7 +353,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: simplify JNI environment handling (r1533804)
     * javahl: Revsion.UNSPECIFIED added as alias to Revision.START (r1533928)
     * javahl: do not require JUnit to build javahl; only to test (r1535603)
-    * swig: fix bindings build problems on OS X (r1535610)
     * javahl: update Action enum with new entries added in 1.9 (r1536319)
     * javahl: expose node property validation utility (r1538133)
     * javahl: new style JNI wrapper (r1539114 et al)
@@ -339,7 +361,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: expose and use the url member of svn_wc_notify_t (r1539601)
     * javahl: expose a utility api to resolve relative externals (r1540921)
     * javahl: new utility API for file content translation (r1542401)
-    * swig: fix bindings with out of tree builds in release mode (r1543187)
     * javahl: throw NullPointerException when sources is empty (r1543328)
     * swig-pl: fix compilation against perl 5.18 on Windows (r1543980)
     * javahl: implement streamed file contents translation (r1543985)
@@ -353,6 +374,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       ISVNClient.getChangelists (r1553254)
     * swig-pl: fix pool issues with setting dates as revisions (r1553822)
     * swig-pl: make svn_auth_set_parameter() usable (r1553823)
+    * javahl: expose inheritiable property names (r1560338)
+    * javahl: fix bug in parsing single revision merginfo data (r1563140)
+    * javahl: create JVM crashlogs from svn malfunctions (r1563927, r1564252)
+    * javahl: avoid problems when building without NLS support (r1566578)
+    * javahl: expose --alow-mixed-revisions merge option (r1567602)
 
 
 Version 1.8.7
