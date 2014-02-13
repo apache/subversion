@@ -545,8 +545,12 @@ struct svn_membuffer_t
   /* Sum of (read) hit counts of all used dictionary entries.
    * In conjunction used_entries used_entries, this is used calculate
    * the average hit count as part of the randomized LFU algorithm.
+   * 
+   * Note that we update this value "racily" from multiple threads.
+   * Thus, allow it to hover around the actual value which includes the
+   * possibility of being slightly below 0.
    */
-  apr_uint64_t hit_count;
+  apr_int64_t hit_count;
 
 
   /* Total number of calls to membuffer_cache_get.
@@ -1998,6 +2002,24 @@ membuffer_cache_set(svn_membuffer_t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Count a hit in ENTRY within CACHE.
+ */
+static void
+increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
+{
+  /* To minimize the memory footprint of the cache index, we limit local
+   * hit counters to 32 bits.  These may overflow and we must make sure that
+   * the global sums are still (roughly due to races) the sum of all local
+   * counters. */
+  if (++entry->hit_count == 0)
+    cache->hit_count -= APR_UINT32_MAX;
+  else
+    cache->hit_count++;
+
+  /* That one is for stats only. */
+  cache->total_hits++;
+}
+
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. If no item has been stored for KEY,
  * *BUFFER will be NULL. Otherwise, return a copy of the serialized
@@ -2054,10 +2076,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* update hit statistics
    */
-  entry->hit_count++;
-  cache->hit_count++;
-  cache->total_hits++;
-
+  increment_hit_counters(cache, entry);
   *item_size = entry->size;
 
   return SVN_NO_ERROR;
@@ -2116,14 +2135,12 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
   if (entry)
     {
-      /* This is often happen in "block read" where most data is already
+      /* This often be called by "block read" when most data is already
          in L2 and only a few previously evicted items are added to L1
          again.  While items in L1 are well protected for a while, L2
          items may get evicted soon.  Thus, mark all them as "hit" to give
-         them a higher chance for survival. */
-      entry->hit_count++;
-      cache->hit_count++;
-      cache->total_hits++;
+         them a higher chance of survival. */
+      increment_hit_counters(cache, entry);
 
       *found = TRUE;
     }
@@ -2194,9 +2211,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     {
       *found = TRUE;
 
-      entry->hit_count++;
-      cache->hit_count++;
-      cache->total_hits++;
+      increment_hit_counters(cache, entry);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -2286,8 +2301,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       char *orig_data = data;
       apr_size_t size = entry->size;
 
-      entry->hit_count++;
-      cache->hit_count++;
+      increment_hit_counters(cache, entry);
       cache->total_writes++;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
