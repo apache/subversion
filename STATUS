@@ -105,8 +105,7 @@ Candidate changes:
      r1564576 breaks compilation on Visual Studio 2010, 2012 and 2013 of
      this project. r1568180 fixes this problem.
    Votes:
-     +1: rhuijben
-     +1: (without r1568180): breser
+     +1: rhuijben, breser
      +1: (without r1564567, r1568180): stsp
      -0: brane (horrible grammar; suggest translation to English)
 
