@@ -98,12 +98,16 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * r1542610, r1564576
+ * r1542610, r1564576, r1568180
    Add missing description to build.conf, to properly generate a version
    resource (including icon) for this executable on Windows.
+   Notes:
+     r1564576 breaks compilation on Visual Studio 2010, 2012 and 2013 of
+     this project. r1568180 fixes this problem.
    Votes:
-     +1: breser, rhuijben
-     +1 (without r1564567): stsp
+     +1: rhuijben
+     +1: (without r1568180): breser
+     +1: (without r1564567, r1568180): stsp
      -0: brane (horrible grammar; suggest translation to English)
 
  * r1544597, r1544600, r1544688, r1544690, r1545111, r1545122
