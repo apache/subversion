@@ -325,12 +325,23 @@ EOF
   unlink $logmsg_filename unless $? or $!;
 }
 
+# Input formats:
+#    "1.8.x-r42",
+#    "branches/1.8.x-r42",
+#    "branches/1.8.x-r42/",
+#    "subversion/branches/1.8.x-r42",
+#    "subversion/branches/1.8.x-r42/",
+#    "^/subversion/branches/1.8.x-r42",
+#    "^/subversion/branches/1.8.x-r42/",
+# Return value:
+#    "1.8.x-r42"
+# Works for any branch name that doesn't include slashes.
 sub sanitize_branch {
   local $_ = shift;
-  my $branches_re = quotemeta $BRANCHES;
-  s#.*$branches_re/##;
   s/^\s*//;
   s/\s*$//;
+  s#/*$##;
+  s#.*/##;
   return $_;
 }
 
