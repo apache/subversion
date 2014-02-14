@@ -225,7 +225,7 @@ ssl_server_cert(void *baton, int failures,
       ### This should really be handled by serf, which should pass an error
           for this case, but that has backwards compatibility issues. */
       apr_array_header_t *san;
-      svn_boolean_t found_san_entry;
+      svn_boolean_t found_san_entry = FALSE;
 
       serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
