@@ -99,6 +99,13 @@ Candidate changes:
    Votes:
      +1: brane, breser
 
+ * ^/subversion/branches/1.7.x-diff-translate
+   Fix regression found in 1.7.15 on Windows.
+   Justification:
+     We really should be doing translations right on all platforms.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
