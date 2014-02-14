@@ -213,7 +213,6 @@ ssl_server_cert(void *baton, int failures,
   apr_hash_t *subject = NULL;
   apr_hash_t *serf_cert = NULL;
   void *creds;
-  svn_boolean_t found_matching_hostname = FALSE;
 
   svn_failures = (ssl_convert_serf_failures(failures)
       | conn->server_cert_failures);
@@ -226,6 +225,7 @@ ssl_server_cert(void *baton, int failures,
           for this case, but that has backwards compatibility issues. */
       apr_array_header_t *san;
       svn_boolean_t found_san_entry = FALSE;
+      svn_boolean_t found_matching_hostname = FALSE;
 
       serf_cert = serf_ssl_cert_certificate(cert, scratch_pool);
 
