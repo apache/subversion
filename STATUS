@@ -179,6 +179,9 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1567996
    Votes:
      +1: stefan2
+     -0: rhuijben (incomplete (misses cache->total_reads accesses) and
+                   overkill. The whole thing can be implemented with simple
+                   atomic operations while mutexes may be a limited resource)
 
 Veto-blocked changes:
 =====================
