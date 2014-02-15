@@ -284,7 +284,8 @@ svn_fs_x__parse_representation(representation_t **rep_p,
                             _("Malformed text representation offset line in node-rev"));
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str, pool));
-  memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
+  if (checksum)
+    memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
 
   /* The remaining fields are only used for formats >= 4, so check that. */
   str = svn_cstring_tokenize(" ", &string);
@@ -298,7 +299,8 @@ svn_fs_x__parse_representation(representation_t **rep_p,
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str, pool));
   rep->has_sha1 = checksum != NULL;
-  memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
+  if (checksum)
+    memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
   return SVN_NO_ERROR;
 }
