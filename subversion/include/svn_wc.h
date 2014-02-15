@@ -7610,6 +7610,9 @@ svn_wc_relocate(const char *path,
  * changelists.  If @a changelist_filter is empty (or altogether @c NULL),
  * no changelist filtering occurs.
  *
+ * If @a clear_changelists is TRUE, then changelist information for the
+ * paths is cleared.
+ *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
  * error (typically #SVN_ERR_CANCELLED), return that error
@@ -7626,8 +7629,28 @@ svn_wc_relocate(const char *path,
  * If @a path is not under version control, return the error
  * #SVN_ERR_UNVERSIONED_RESOURCE.
  *
- * @since New in 1.7.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_wc_revert5(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelist_filter,
+               svn_boolean_t clear_changelists,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_revert5() but with @a clear_changelists always set to
+ * FALSE.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revert4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,

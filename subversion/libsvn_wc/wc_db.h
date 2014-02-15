@@ -1615,6 +1615,9 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
  *
  * At present only depth=empty and depth=infinity are supported.
  *
+ * If @a clear_changelists is FALSE then changelist information is kept,
+ * otherwise it is cleared.
+ *
  * This function populates the revert list that can be queried to
  * determine what was reverted.
  */
@@ -1622,6 +1625,7 @@ svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
+                     svn_boolean_t clear_changelists,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 

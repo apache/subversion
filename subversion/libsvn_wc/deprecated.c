@@ -1037,6 +1037,29 @@ svn_wc_add(const char *path,
                      compat_call_notify_func, &nb, pool);
 }
 
+/*** From revert.c ***/
+svn_error_t *
+svn_wc_revert4(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelist_filter,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc_revert5(wc_ctx, local_abspath,
+                                        depth,
+                                        use_commit_times,
+                                        changelist_filter,
+                                        FALSE /* clear_changelists*/,
+                                        cancel_func, cancel_baton,
+                                        notify_func, notify_baton,
+                                        scratch_pool));
+}
+
 svn_error_t *
 svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
