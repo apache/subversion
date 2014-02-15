@@ -1449,10 +1449,10 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
                * or is smaller than the one to insert - both relative to
                * their respective priority.
                */
-              keep = to_fit_in->hit_count * to_fit_in->priority
-                   < entry->hit_count * entry->priority
-                  || to_fit_in->size * to_fit_in->priority
-                   < entry->size * entry->priority;
+              keep = (apr_uint64_t)to_fit_in->hit_count * to_fit_in->priority
+                   < (apr_uint64_t)entry->hit_count * entry->priority
+                  || (apr_uint64_t)to_fit_in->size * to_fit_in->priority
+                   < (apr_uint64_t)entry->size * entry->priority;
             }
           else if (cache->hit_count > cache->used_entries)
             {
