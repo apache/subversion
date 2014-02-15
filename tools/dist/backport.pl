@@ -70,6 +70,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
+$ENV{LC_ALL} = "C";  # since we parse 'svn info' output
 
 # Globals.
 my %ERRORS = ();
