@@ -1405,23 +1405,6 @@ svn_fs_x__abort_txn(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* Assign the UNIQUIFIER member of REP based on the current state of TXN_ID
- * in FS.  Allocate the uniquifier in POOL.
- */
-static svn_error_t *
-set_uniquifier(svn_fs_t *fs,
-               representation_t *rep,
-               apr_pool_t *pool)
-{
-  svn_fs_x__id_part_t temp;
-
-  SVN_ERR(get_new_txn_node_id(&temp, fs, rep->txn_id, pool));
-  rep->uniquifier.txn_id = rep->txn_id;
-  rep->uniquifier.number = temp.number;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_x__set_entry(svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
@@ -1460,7 +1443,6 @@ svn_fs_x__set_entry(svn_fs_t *fs,
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
       rep->txn_id = txn_id;
-      SVN_ERR(set_uniquifier(fs, rep, pool));
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_x__put_node_revision(fs, parent_noderev->id,
                                           parent_noderev, FALSE, pool));
@@ -2019,7 +2001,6 @@ get_shared_rep(representation_t **old_rep,
     {
       /* Use the old rep for this content. */
       memcpy((*old_rep)->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
-      (*old_rep)->uniquifier = rep->uniquifier;
     }
 
   return SVN_NO_ERROR;
@@ -2071,7 +2052,6 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
   rep->txn_id = svn_fs_x__id_txn_id(b->noderev->id);
-  SVN_ERR(set_uniquifier(b->fs, rep, b->pool));
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */

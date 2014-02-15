@@ -300,21 +300,6 @@ svn_fs_x__parse_representation(representation_t **rep_p,
   rep->has_sha1 = checksum != NULL;
   memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
-  /* Read the uniquifier. */
-  str = svn_cstring_tokenize("/", &string);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
-
-  SVN_ERR(svn_fs_x__txn_by_name(&rep->uniquifier.txn_id, str));
-
-  str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
-
-  rep->uniquifier.number = svn__base36toui64(NULL, str);
-
   return SVN_NO_ERROR;
 }
 
@@ -579,7 +564,6 @@ svn_fs_x__unparse_representation(representation_t *rep,
                                  svn_boolean_t mutable_rep_truncated,
                                  apr_pool_t *pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
   if (svn_fs_x__id_txn_used(rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, pool);
 
@@ -591,17 +575,14 @@ svn_fs_x__unparse_representation(representation_t *rep,
              rep->expanded_size,
              format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
 
-  svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
           (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-           " %" SVN_FILESIZE_T_FMT " %s %s %s/%s",
+           " %" SVN_FILESIZE_T_FMT " %s %s",
            rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,
-                         !rep->has_sha1, pool),
-           svn_fs_x__txn_name(rep->uniquifier.txn_id, pool),
-           buffer);
+                         !rep->has_sha1, pool));
 
 #undef DISPLAY_MAYBE_NULL_CHECKSUM
 

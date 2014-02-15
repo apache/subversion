@@ -650,10 +650,7 @@ svn_fs_x__noderev_same_rep_key(representation_t *a,
   if (a->item_index != b->item_index)
     return FALSE;
 
-  if (a->revision != b->revision)
-    return FALSE;
-
-  return memcmp(&a->uniquifier, &b->uniquifier, sizeof(a->uniquifier)) == 0;
+  return a->revision == b->revision;
 }
 
 svn_error_t *
