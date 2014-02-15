@@ -200,7 +200,8 @@ InputStream::get_global_stream(Env env, jobject jstream,
   std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
 
   svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
-  svn_stream_set_read(stream, global_stream_read);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       global_stream_read);
   svn_stream_set_skip(stream, global_stream_skip);
   svn_stream_set_close(stream, global_stream_close_input);
   if (has_mark)
@@ -223,7 +224,8 @@ svn_stream_t* InputStream::get_stream(const SVN::Pool& pool)
   const bool has_mark = mark_supported();
 
   svn_stream_t* const stream = svn_stream_create(this, pool.getPool());
-  svn_stream_set_read(stream, stream_read);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       stream_read);
   svn_stream_set_skip(stream, stream_skip);
   svn_stream_set_close(stream, stream_close_input);
   if (has_mark)

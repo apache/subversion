@@ -1224,7 +1224,8 @@ svn_fs_base__rep_contents_read_stream(svn_stream_t **rs_p,
   SVN_ERR(rep_read_get_baton(&rb, fs, rep_key, use_trail_for_reads,
                              trail, pool));
   *rs_p = svn_stream_create(rb, pool);
-  svn_stream_set_read(*rs_p, rep_read_contents);
+  svn_stream_set_read2(*rs_p, NULL /* only full read support */,
+                       rep_read_contents);
 
   return SVN_NO_ERROR;
 }

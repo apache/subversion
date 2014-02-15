@@ -909,7 +909,8 @@ copying_stream(svn_stream_t *source,
   baton->target = target;
 
   stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(stream, read_handler_copy);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       read_handler_copy);
   svn_stream_set_close(stream, close_handler_copy);
 
   return stream;

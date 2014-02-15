@@ -141,7 +141,8 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
                                                 keywords, TRUE, result_pool);
 
           /* Enforce our contract. FROM_NF streams are write-only */
-          svn_stream_set_read(*stream, read_handler_unsupported);
+          svn_stream_set_read2(*stream, NULL /* only full read support */,
+                               read_handler_unsupported);
         }
     }
 
