@@ -20,6 +20,7 @@
  * ====================================================================
  */
 
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -40,13 +41,56 @@ typedef struct fs_x__id_t
   /* private members */
   svn_fs_x__id_part_t node_id;
   svn_fs_x__id_part_t copy_id;
-  svn_fs_x__id_part_t rev_item;
-  svn_fs_x__txn_id_t txn_id;
+  svn_fs_x__id_part_t noderev_id;
 
   apr_pool_t *pool; /* pool that was used to allocate this struct */
 } fs_x__id_t;
 
 
+
+svn_boolean_t
+svn_fs_x__is_txn(svn_fs_x__change_set_t change_set)
+{
+  return change_set < SVN_FS_X__INVALID_CHANGE_SET;
+}
+
+svn_boolean_t
+svn_fs_x__is_revision(svn_fs_x__change_set_t change_set)
+{
+  return change_set > SVN_FS_X__INVALID_CHANGE_SET;
+}
+
+svn_revnum_t
+svn_fs_x__get_revnum(svn_fs_x__change_set_t change_set)
+{
+  return svn_fs_x__is_revision(change_set)
+       ? (svn_revnum_t)change_set
+       : SVN_INVALID_REVNUM;
+}
+
+apr_int64_t
+svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set)
+{
+  return svn_fs_x__is_txn(change_set)
+       ? -change_set + SVN_FS_X__INVALID_CHANGE_SET -1
+       : SVN_FS_X__INVALID_TXN_ID;
+}
+
+
+svn_fs_x__change_set_t
+svn_fs_x__change_set_by_rev(svn_revnum_t revnum)
+{
+  assert(revnum >= SVN_FS_X__INVALID_CHANGE_SET);
+  return revnum;
+}
+
+svn_fs_x__change_set_t
+svn_fs_x__change_set_by_txn(apr_int64_t txn_id)
+{
+  assert(txn_id >= SVN_FS_X__INVALID_CHANGE_SET);
+  return -txn_id + SVN_FS_X__INVALID_CHANGE_SET -1;
+}
+
 
 /* Parse the NUL-terminated ID part at DATA and write the result into *PART.
  * Return TRUE if no errors were detected. */
@@ -54,71 +98,40 @@ static svn_boolean_t
 part_parse(svn_fs_x__id_part_t *part,
            const char *data)
 {
-  /* special case: ID inside some transaction */
-  if (data[0] == '_')
-    {
-      part->revision = SVN_INVALID_REVNUM;
-      part->number = svn__base36toui64(&data, data + 1);
-      return *data == '\0';
-    }
-
-  /* special case: 0 / default ID */
-  if (data[0] == '0' && data[1] == '\0')
-    {
-      part->revision = 0;
-      part->number = 0;
-      return TRUE;
-    }
-
-  /* read old style / new style ID */
   part->number = svn__base36toui64(&data, data);
-  if (data[0] != '-')
+  switch (data[0])
     {
-      part->revision = 0;
-      return *data == '\0';
+      /* txn number? */
+      case '-': part->change_set = -svn__base36toui64(&data, data + 1);
+                return TRUE;
+
+      /* revision number? */
+      case '+': part->change_set = svn__base36toui64(&data, data + 1);
+                return TRUE;
+
+      /* everything else is forbidden */
+      default:  return FALSE;
     }
-
-  part->revision = SVN_STR_TO_REV(++data);
-
-  return TRUE;
-}
-
-/* Parse the transaction id in DATA and store the result in *TXN_ID.
- * Return FALSE if there was some problem.
- */
-static svn_boolean_t
-txn_id_parse(svn_fs_x__txn_id_t *txn_id,
-             const char *data)
-{
-  *txn_id = svn__base36toui64(&data, data);
-  return *data == '\0';
 }
 
 /* Write the textual representation of *PART into P and return a pointer
  * to the first position behind that string.
  */
 static char *
-unparse_id_part(char *p,
-                const svn_fs_x__id_part_t *part)
+part_unparse(char *p,
+             const svn_fs_x__id_part_t *part)
 {
-  if (SVN_IS_VALID_REVNUM(part->revision))
+  p += svn__ui64tobase36(p, part->number);
+  if (part->change_set >= 0)
     {
-      /* ordinary old style / new style ID */
-      p += svn__ui64tobase36(p, part->number);
-      if (part->revision > 0)
-        {
-          *(p++) = '-';
-          p += svn__i64toa(p, part->revision);
-        }
+      *(p++) = '+';
+      p += svn__ui64tobase36(p, part->change_set);
     }
   else
     {
-      /* in txn: mark with "_" prefix */
-      *(p++) = '_';
-      p += svn__ui64tobase36(p, part->number);
+      *(p++) = '-';
+      p += svn__ui64tobase36(p, -part->change_set);
     }
-
-  *(p++) = '.';
 
   return p;
 }
@@ -130,14 +143,14 @@ unparse_id_part(char *p,
 svn_boolean_t
 svn_fs_x__id_part_is_root(const svn_fs_x__id_part_t* part)
 {
-  return part->revision == 0 && part->number == 0;
+  return part->change_set == 0 && part->number == 0;
 }
 
 svn_boolean_t
 svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
                      const svn_fs_x__id_part_t *rhs)
 {
-  return lhs->revision == rhs->revision && lhs->number == rhs->number;
+  return lhs->change_set == rhs->change_set && lhs->number == rhs->number;
 }
 
 svn_boolean_t
@@ -179,16 +192,18 @@ svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 {
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return id->txn_id;
+  return svn_fs_x__get_txn_id(id->noderev_id.change_set);
 }
 
 
 const svn_fs_x__id_part_t *
 svn_fs_x__id_rev_item(const svn_fs_id_t *fs_id)
 {
+  const static svn_fs_x__id_part_t invalid
+    = { SVN_FS_X__INVALID_CHANGE_SET, 0};
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return &id->rev_item;
+  return svn_fs_x__id_is_txn(fs_id) ? &invalid : &id->noderev_id;
 }
 
 svn_revnum_t
@@ -196,7 +211,7 @@ svn_fs_x__id_rev(const svn_fs_id_t *fs_id)
 {
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return id->rev_item.revision;
+  return svn_fs_x__get_revnum(id->noderev_id.change_set);
 }
 
 
@@ -205,7 +220,7 @@ svn_fs_x__id_item(const svn_fs_id_t *fs_id)
 {
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return id->rev_item.number;
+  return id->noderev_id.number;
 }
 
 svn_boolean_t
@@ -213,7 +228,7 @@ svn_fs_x__id_is_txn(const svn_fs_id_t *fs_id)
 {
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return svn_fs_x__id_txn_used(id->txn_id);
+  return svn_fs_x__is_txn(id->noderev_id.change_set);
 }
 
 svn_string_t *
@@ -223,21 +238,11 @@ svn_fs_x__id_unparse(const svn_fs_id_t *fs_id,
   char string[6 * SVN_INT64_BUFFER_SIZE + 10];
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  char *p = unparse_id_part(string, &id->node_id);
-  p = unparse_id_part(p, &id->copy_id);
-
-  if (svn_fs_x__id_txn_used(id->txn_id))
-    {
-      *(p++) = 't';
-      p += svn__ui64tobase36(p, id->txn_id);
-    }
-  else
-    {
-      *(p++) = 'r';
-      p += svn__i64toa(p, id->rev_item.revision);
-      *(p++) = '/';
-      p += svn__i64toa(p, id->rev_item.number);
-    }
+  char *p = part_unparse(string, &id->node_id);
+  *(p++) = '.';
+  p = part_unparse(p, &id->copy_id);
+  *(p++) = '.';
+  p = part_unparse(p, &id->noderev_id);
 
   return svn_string_ncreate(string, p - string, pool);
 }
@@ -255,8 +260,7 @@ svn_fs_x__id_eq(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  return id_a->txn_id == id_b->txn_id
-      && memcmp(&id_a->node_id, &id_b->node_id,
+  return memcmp(&id_a->node_id, &id_b->node_id,
                 3 * sizeof(svn_fs_x__id_part_t)) == 0;
 }
 
@@ -271,12 +275,13 @@ svn_fs_x__id_check_related(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  /* If both node_ids start with _ and they have differing transaction
-     IDs, then it is impossible for them to be related. */
-  if (id_a->node_id.revision == SVN_INVALID_REVNUM)
-    if (id_a->txn_id != id_b->txn_id || !svn_fs_x__id_txn_used(id_a->txn_id))
-      return FALSE;
+  /* Items from different txns are unrelated. */
+  if (   svn_fs_x__is_txn(id_a->noderev_id.change_set)
+      && svn_fs_x__is_txn(id_b->noderev_id.change_set)
+      && id_a->noderev_id.change_set != id_a->noderev_id.change_set)
+    return FALSE;
 
+  /* related if they trace back to the same node creation */
   return svn_fs_x__id_part_eq(&id_a->node_id, &id_b->node_id);
 }
 
@@ -294,9 +299,9 @@ int
 svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
                           const svn_fs_x__id_part_t *b)
 {
-  if (a->revision < b->revision)
+  if (a->change_set < b->change_set)
     return -1;
-  if (a->revision > b->revision)
+  if (a->change_set > b->change_set)
     return 1;
 
   return a->number < b->number ? -1 : a->number == b->number ? 0 : 1;
@@ -319,8 +324,8 @@ svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txn_id,
 
   /* node ID and copy ID are "0" */
 
-  id->txn_id = txn_id;
-  id->rev_item.revision = SVN_INVALID_REVNUM;
+  id->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
+  id->noderev_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
@@ -334,9 +339,10 @@ svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
 {
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
-  id->txn_id = SVN_FS_X__INVALID_TXN_ID;
-  id->rev_item.revision = revision;
-  id->rev_item.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
+  /* node ID and copy ID are "0" */
+
+  id->noderev_id.change_set = svn_fs_x__change_set_by_rev(revision);
+  id->noderev_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
@@ -355,8 +361,8 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
 
   id->node_id = *node_id;
   id->copy_id = *copy_id;
-  id->txn_id = txn_id;
-  id->rev_item.revision = SVN_INVALID_REVNUM;
+
+  id->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
@@ -376,8 +382,7 @@ svn_fs_x__id_rev_create(const svn_fs_x__id_part_t *node_id,
 
   id->node_id = *node_id;
   id->copy_id = *copy_id;
-  id->txn_id = SVN_FS_X__INVALID_TXN_ID;
-  id->rev_item = *rev_item;
+  id->noderev_id = *rev_item;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
@@ -438,43 +443,12 @@ svn_fs_x__id_parse(const char *data,
   if (! part_parse(&id->copy_id, str))
     return NULL;
 
-  /* Txn/Rev Id */
+  /* NodeRev Id */
   str = svn_cstring_tokenize(".", &data_copy);
   if (str == NULL)
     return NULL;
 
-  if (str[0] == 'r')
-    {
-      apr_int64_t val;
-      svn_error_t *err;
-
-      /* This is a revision type ID */
-      id->txn_id = SVN_FS_X__INVALID_TXN_ID;
-
-      data_copy = str + 1;
-      str = svn_cstring_tokenize("/", &data_copy);
-      if (str == NULL)
-        return NULL;
-      id->rev_item.revision = SVN_STR_TO_REV(str);
-
-      err = svn_cstring_atoi64(&val, data_copy);
-      if (err)
-        {
-          svn_error_clear(err);
-          return NULL;
-        }
-      id->rev_item.number = (apr_uint64_t)val;
-    }
-  else if (str[0] == 't')
-    {
-      /* This is a transaction type ID */
-      id->rev_item.revision = SVN_INVALID_REVNUM;
-      id->rev_item.number = 0;
-
-      if (! txn_id_parse(&id->txn_id, str + 1))
-        return NULL;
-    }
-  else
+  if (! part_parse(&id->noderev_id, str))
     return NULL;
 
   return (svn_fs_id_t *)id;

@@ -35,18 +35,44 @@ typedef apr_int64_t svn_fs_x__txn_id_t;
 /* svn_fs_x__txn_id_t value for everything that is not a transaction. */
 #define SVN_FS_X__INVALID_TXN_ID ((svn_fs_x__txn_id_t)(-1))
 
+/* Change set is the umbrella term for transaction and revision in FSX.
+ * Revision numbers (>=0) map 1:1 onto change sets while txns are mapped
+ * onto the negatve value range. */
+typedef apr_int64_t svn_fs_x__change_set_t;
+
+/* Invalid / unused change set number. */
+#define SVN_FS_X__INVALID_CHANGE_SET  ((svn_fs_x__change_set_t)(-1))
+
+/* Return TRUE iff the CHANGE_SET refers to a revision
+   (will return FALSE for SVN_INVALID_REVNUM). */
+svn_boolean_t svn_fs_x__is_revision(svn_fs_x__change_set_t change_set);
+
+/* Return TRUE iff the CHANGE_SET refers to a transaction
+   (will return FALSE for SVN_FS_X__INVALID_TXN_ID). */
+svn_boolean_t svn_fs_x__is_txn(svn_fs_x__change_set_t change_set);
+
+/* Return the revision number that corresponds to CHANGE_SET.
+   Will SVN_INVALID_REVNUM for transactions. */
+svn_revnum_t svn_fs_x__get_revnum(svn_fs_x__change_set_t change_set);
+
+/* Return the transaction ID that corresponds to CHANGE_SET.
+   Will SVN_FS_X__INVALID_TXN_ID for revisions. */
+apr_int64_t svn_fs_x__get_txn_id(svn_fs_x__change_set_t change_set);
+
+/* Convert REVNUM into a change set number */
+svn_fs_x__change_set_t svn_fs_x__change_set_by_rev(svn_revnum_t revnum);
+
+/* Convert TXN_ID into a change set number */
+svn_fs_x__change_set_t svn_fs_x__change_set_by_txn(apr_int64_t txn_id);
+
 /* A rev node ID in FSX consists of a 3 of sub-IDs ("parts") that consist
- * of a creation REVISION number and some revision-local counter value
- * (NUMBER).  Old-style ID parts use global counter values.
+ * of a creation CHANGE_SET number and some revision-local counter value
+ * (NUMBER).
  */
 typedef struct svn_fs_x__id_part_t
 {
-  /* SVN_INVALID_REVNUM for txns -> not a txn, COUNTER must be 0.
-     SVN_INVALID_REVNUM for others -> not assigned to a revision, yet.
-     0                  for others -> old-style ID or the root in rev 0. */
-  svn_revnum_t revision;
+  svn_fs_x__change_set_t change_set;
 
-  /* some numerical value. */
   apr_uint64_t number;
 } svn_fs_x__id_part_t;
 

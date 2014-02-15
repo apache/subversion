@@ -498,7 +498,7 @@ add_item_rep_mapping(pack_context_t *context,
 
   /* index of INFO */
   idx = get_item_array_index(context,
-                             entry->items[0].revision,
+                             entry->items[0].change_set,
                              entry->items[0].number);
 
   /* make sure the index exists in the array */
@@ -521,9 +521,10 @@ get_item(pack_context_t *context,
          svn_boolean_t reset)
 {
   svn_fs_x__p2l_entry_t *result = NULL;
-  if (id->number && id->revision >= context->start_rev)
+  svn_revnum_t revision = svn_fs_x__get_revnum(id->change_set);
+  if (id->number && revision >= context->start_rev)
     {
-      int idx = get_item_array_index(context, id->revision, id->number);
+      int idx = get_item_array_index(context, revision, id->number);
       if (context->reps->nelts > idx)
         {
           result = APR_ARRAY_IDX(context->reps, idx, void *);
@@ -569,7 +570,8 @@ copy_rep_to_temp(pack_context_t *context,
       reference_t *reference = apr_pcalloc(context->info_pool,
                                            sizeof(*reference));
       reference->from = entry->items[0];
-      reference->to.revision = rep_header->base_revision;
+      reference->to.change_set
+        = svn_fs_x__change_set_by_rev(rep_header->base_revision);
       reference->to.number = rep_header->base_item_index;
       APR_ARRAY_PUSH(context->references, reference_t *) = reference;
     }
@@ -664,7 +666,8 @@ copy_node_to_temp(pack_context_t *context,
       reference_t *reference = apr_pcalloc(context->info_pool,
                                            sizeof(*reference));
       reference->from = entry->items[0];
-      reference->to.revision = noderev->data_rep->revision;
+      reference->to.change_set
+        = svn_fs_x__change_set_by_rev(noderev->data_rep->revision);
       reference->to.number = noderev->data_rep->item_index;
       APR_ARRAY_PUSH(context->references, reference_t *) = reference;
 
@@ -694,10 +697,10 @@ compare_p2l_info(const svn_fs_x__p2l_entry_t * const * lhs,
   if ((*lhs)->item_count == 0)
     return 1;
   
-  if ((*lhs)->items[0].revision == (*rhs)->items[0].revision)
+  if ((*lhs)->items[0].change_set == (*rhs)->items[0].change_set)
     return (*lhs)->items[0].number > (*rhs)->items[0].number ? -1 : 1;
 
-  return (*lhs)->items[0].revision > (*rhs)->items[0].revision ? -1 : 1;
+  return (*lhs)->items[0].change_set > (*rhs)->items[0].change_set ? -1 : 1;
 }
 
 /* Sort svn_fs_x__p2l_entry_t * array ENTRIES by age.  Place the latest
@@ -730,9 +733,9 @@ static int
 compare_sub_items(const svn_fs_x__id_part_t * const * lhs,
                   const svn_fs_x__id_part_t * const * rhs)
 {
-  return (*lhs)->revision < (*rhs)->revision
+  return (*lhs)->change_set < (*rhs)->change_set
        ? 1
-       : ((*lhs)->revision > (*rhs)->revision ? -1 : 0);
+       : ((*lhs)->change_set > (*rhs)->change_set ? -1 : 0);
 }
 
 /* implements compare_fn_t. Place LHS before RHS, if the latter belongs to
@@ -756,10 +759,10 @@ compare_p2l_info_rev(const sub_item_ordered_t * lhs,
   rhs_part = rhs->order ? rhs->order[rhs->entry->item_count - 1]
                         : &rhs->entry->items[0];
 
-  if (lhs_part->revision == rhs_part->revision)
+  if (lhs_part->change_set == rhs_part->change_set)
     return 0;
 
-  return lhs_part->revision < rhs_part->revision ? -1 : 1;
+  return lhs_part->change_set < rhs_part->change_set ? -1 : 1;
 }
 
 /* implements compare_fn_t.  Sort descending by PATH, NODE_ID and REVISION.
@@ -1253,7 +1256,8 @@ write_reps_containers(pack_context_t *context,
         }
 
       assert(entry->item_count == 1);
-      representation.revision = entry->items[0].revision;
+      representation.revision
+        = svn_fs_x__get_revnum(entry->items[0].change_set);
       representation.item_index = entry->items[0].number;
       svn_fs_x__id_txn_reset(&representation.txn_id);
 
@@ -1714,9 +1718,9 @@ write_l2p_index(pack_context_t *context,
                    : &ordered->entry->items[0];
 
           /* next revision? */
-          if (prev_rev != sub_item->revision)
+          if (prev_rev != svn_fs_x__get_revnum(sub_item->change_set))
             {
-              prev_rev = sub_item->revision;
+              prev_rev = svn_fs_x__get_revnum(sub_item->change_set);
               SVN_ERR(svn_fs_x__l2p_proto_index_add_revision
                           (context->proto_l2p_index, iterpool));
             }
