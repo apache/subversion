@@ -3532,7 +3532,7 @@ x_node_origin_rev(svn_revnum_t *revision,
 
   SVN_ERR(svn_fs_x__node_id(&given_noderev_id, root, path, pool));
   node_id = svn_fs_x__id_node_id(given_noderev_id);
-  *revision = node_id->revision;
+  *revision = svn_fs_x__get_revnum(node_id->change_set);
 
   return SVN_NO_ERROR;
 }

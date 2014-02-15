@@ -602,11 +602,11 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
     {
       binary_id_t *id = &APR_ARRAY_IDX(container->ids, i, binary_id_t);
 
-      svn_packed__add_int(ids_stream, id->node_id.revision);
+      svn_packed__add_int(ids_stream, id->node_id.change_set);
       svn_packed__add_uint(ids_stream, id->node_id.number);
-      svn_packed__add_int(ids_stream, id->copy_id.revision);
+      svn_packed__add_int(ids_stream, id->copy_id.change_set);
       svn_packed__add_uint(ids_stream, id->copy_id.number);
-      svn_packed__add_int(ids_stream, id->rev_id.revision);
+      svn_packed__add_int(ids_stream, id->rev_id.change_set);
       svn_packed__add_uint(ids_stream, id->rev_id.number);
     }
 
@@ -751,11 +751,11 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
     {
       binary_id_t id;
 
-      id.node_id.revision = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.node_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
       id.node_id.number = svn_packed__get_uint(ids_stream);
-      id.copy_id.revision = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.copy_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
       id.copy_id.number = svn_packed__get_uint(ids_stream);
-      id.rev_id.revision = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.rev_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
       id.rev_id.number = svn_packed__get_uint(ids_stream);
 
       APR_ARRAY_PUSH(noderevs->ids, binary_id_t) = id;
