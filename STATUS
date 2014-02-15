@@ -89,22 +89,12 @@ Candidate changes:
    Votes:
      +1: stefan2, breser
 
- * r1566320
-   Allow building with Neon 0.30.x.
-   Justification:
-     Version 0.30.0 is the latest Neon release, and the only reason that
-     we cannot use it in 1.7.x is the restriction in configure.ac.
-   Branch:
-     ^/subversion/branches/1.7.x-neon-0.30
-   Votes:
-     +1: brane, breser
-
  * ^/subversion/branches/1.7.x-diff-translate
    Fix regression found in 1.7.15 on Windows.
    Justification:
      We really should be doing translations right on all platforms.
    Votes:
-     +1: breser
+     +1: breser, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -124,3 +114,12 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1566320
+   Allow building with Neon 0.30.x.
+   Justification:
+     Version 0.30.0 is the latest Neon release, and the only reason that
+     we cannot use it in 1.7.x is the restriction in configure.ac.
+   Branch:
+     ^/subversion/branches/1.7.x-neon-0.30
+   Votes:
+     +1: brane, breser, rhuijben
