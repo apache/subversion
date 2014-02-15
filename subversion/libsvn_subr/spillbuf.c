@@ -697,7 +697,8 @@ svn_stream__from_spillbuf(svn_spillbuf_t *buf,
 
   stream = svn_stream_create(sb, result_pool);
 
-  svn_stream_set_read(stream, read_handler_spillbuf);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       read_handler_spillbuf);
   svn_stream_set_write(stream, write_handler_spillbuf);
 
   return stream;

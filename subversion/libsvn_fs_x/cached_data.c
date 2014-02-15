@@ -1845,7 +1845,8 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
       SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
 
       *contents_p = svn_stream_create(rb, pool);
-      svn_stream_set_read(*contents_p, rep_read_contents);
+      svn_stream_set_read2(*contents_p, NULL /* only full read support */,
+                           rep_read_contents);
       svn_stream_set_close(*contents_p, rep_read_contents_close);
     }
 

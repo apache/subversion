@@ -198,7 +198,8 @@ recover_find_max_ids(svn_fs_t *fs,
                   ? noderev->data_rep->expanded_size
                   : noderev->data_rep->size;
   stream = svn_stream_create(&baton, pool);
-  svn_stream_set_read(stream, read_handler_recover);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       read_handler_recover);
 
   /* Now read the entries from that stream. */
   entries = apr_hash_make(pool);
