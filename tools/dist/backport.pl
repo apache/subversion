@@ -40,7 +40,7 @@ my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 
 # Mode flags.
-#    svn-role:      YES=1 MAY_COMMIT=1
+#    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
 #    conflicts-bot: YES=1 MAY_COMMIT=0
 #    interactive:   YES=0 MAY_COMMIT=0      (default)
 my $YES = ($ENV{YES} // "0") =~ /^(1|yes|true)$/i; # batch mode: eliminate prompts, add sleeps
@@ -291,7 +291,11 @@ if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
   fi
 fi
 if $sh[$MAY_COMMIT]; then
+  # Remove the approved entry.  The sentinel guarantees the right number of blank
+  # lines is removed, which prevents spurious '--renormalize' commits tomorrow.
+  echo "sentinel" >> $STATUS
   $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
+  $VIM -e -s -n -N -i NONE -u NONE -c '\$d' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
 elif ! $sh[$YES]; then
   echo "Would have committed:"
@@ -601,6 +605,28 @@ sub check_local_mods_to_STATUS {
   return 0;
 }
 
+sub renormalize_STATUS {
+  my $vimscript = <<'EOVIM';
+:"" Strip trailing whitespace.
+:%s/\s*$//
+:"" Ensure there is exactly one blank line around each entry and header.
+:0/^=/,$ g/^ *[*]/normal! O
+:g/^=/normal! o
+:g/^=/-normal! O
+:%s/\n\n\n\+/\r\r/g
+:"" Save.
+:wq
+EOVIM
+  open VIM, '|-', $VIM, qw/-e -s -n -N -i NONE -u NONE --/, $STATUS
+    or die "Can't renormalize STATUS: $!";
+  print VIM $vimscript;
+  close VIM or warn "$0: renormalize_STATUS failed ($?): $!)";
+
+  system("$SVN commit -m '* STATUS: Whitespace changes only.' -- $STATUS") == 0
+    or die "$0: Can't renormalize STATUS ($?): $!"
+    if $MAY_COMMIT;
+}
+
 sub revert {
   copy $STATUS, "$STATUS.$$.tmp";
   system "$SVN revert -q $STATUS";
@@ -844,6 +870,11 @@ sub backport_main {
   my %approved;
   my %votes;
   my $state = read_state;
+
+  if (@ARGV && $ARGV[0] eq '--renormalize') {
+    renormalize_STATUS;
+    shift;
+  }
 
   backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1) or grep /^--help$/, @ARGV;
   backport_usage, exit 0 if grep /^(?:-h|-\?|--help|help)$/, @ARGV;
