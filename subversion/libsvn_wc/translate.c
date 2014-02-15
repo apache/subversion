@@ -49,20 +49,6 @@
 #include "private/svn_wc_private.h"
 
 
-/* */
-static svn_error_t *
-read_handler_unsupported(void *baton, char *buffer, apr_size_t *len)
-{
-  SVN_ERR_MALFUNCTION();
-}
-
-/* */
-static svn_error_t *
-write_handler_unsupported(void *baton, const char *buffer, apr_size_t *len)
-{
-  SVN_ERR_MALFUNCTION();
-}
-
 svn_error_t *
 svn_wc__internal_translated_stream(svn_stream_t **stream,
                                    svn_wc__db_t *db,
@@ -132,17 +118,18 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
                                                 FALSE /* expand */,
                                                 result_pool);
 
-          /* Enforce our contract. TO_NF streams are readonly */
-          svn_stream_set_write(*stream, write_handler_unsupported);
+          /* streams enforce our contract that TO_NF streams are read-only
+           * by returning if SVN_ERR_STREAM_NOT_SUPPORTED when trying to
+           * write to them. */
         }
       else
         {
           *stream = svn_subst_stream_translated(*stream, eol, TRUE,
                                                 keywords, TRUE, result_pool);
 
-          /* Enforce our contract. FROM_NF streams are write-only */
-          svn_stream_set_read2(*stream, NULL /* only full read support */,
-                               read_handler_unsupported);
+          /* streams enforce our contract that FROM_NF streams are write-only
+           * by returning if SVN_ERR_STREAM_NOT_SUPPORTED when trying to
+           * read them. */
         }
     }
 
