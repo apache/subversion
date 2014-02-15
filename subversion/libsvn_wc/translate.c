@@ -119,7 +119,7 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
                                                 result_pool);
 
           /* streams enforce our contract that TO_NF streams are read-only
-           * by returning if SVN_ERR_STREAM_NOT_SUPPORTED when trying to
+           * by returning SVN_ERR_STREAM_NOT_SUPPORTED when trying to
            * write to them. */
         }
       else
@@ -128,7 +128,7 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
                                                 keywords, TRUE, result_pool);
 
           /* streams enforce our contract that FROM_NF streams are write-only
-           * by returning if SVN_ERR_STREAM_NOT_SUPPORTED when trying to
+           * by returning SVN_ERR_STREAM_NOT_SUPPORTED when trying to
            * read them. */
         }
     }
