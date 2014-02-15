@@ -4258,6 +4258,9 @@ svn_client_relocate(const char *dir,
  * changelists.  If @a changelists is empty (or altogether @c NULL),
  * no changelist filtering occurs.
  *
+ * If @a clear_changelists is TRUE, then changelist information for the
+ * paths is cleared while reverting.
+ *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
@@ -4266,8 +4269,23 @@ svn_client_relocate(const char *dir,
  * then do not error, just invoke @a ctx->notify_func2 with @a
  * ctx->notify_baton2, using notification code #svn_wc_notify_skip.
  *
- * @since New in 1.5.
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_client_revert3(const apr_array_header_t *paths,
+                   svn_depth_t depth,
+                   const apr_array_header_t *changelists,
+                   svn_boolean_t clear_changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/** Similar to svn_client_revert2, but with @a clear_changelists set to
+ * FALSE.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
                    svn_depth_t depth,
@@ -4285,7 +4303,7 @@ svn_client_revert2(const apr_array_header_t *paths,
  * @note Most APIs map @a recurse==FALSE to @a depth==svn_depth_files;
  * revert is deliberately different.
  *
- * @deprecated Provided for backwards compatibility with the 1.0 API.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *

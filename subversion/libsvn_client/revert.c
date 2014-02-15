@@ -48,6 +48,7 @@ struct revert_with_write_lock_baton {
   svn_depth_t depth;
   svn_boolean_t use_commit_times;
   const apr_array_header_t *changelists;
+  svn_boolean_t clear_changelists;
   svn_client_ctx_t *ctx;
 };
 
@@ -77,11 +78,12 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   struct revert_with_write_lock_baton *b = baton;
   svn_error_t *err;
 
-  err = svn_wc_revert4(b->ctx->wc_ctx,
+  err = svn_wc_revert5(b->ctx->wc_ctx,
                        b->local_abspath,
                        b->depth,
                        b->use_commit_times,
                        b->changelists,
+                       b->clear_changelists,
                        b->ctx->cancel_func, b->ctx->cancel_baton,
                        b->ctx->notify_func2, b->ctx->notify_baton2,
                        scratch_pool);
@@ -111,9 +113,10 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 
 
 svn_error_t *
-svn_client_revert2(const apr_array_header_t *paths,
+svn_client_revert3(const apr_array_header_t *paths,
                    svn_depth_t depth,
                    const apr_array_header_t *changelists,
+                   svn_boolean_t clear_changelists,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -167,6 +170,7 @@ svn_client_revert2(const apr_array_header_t *paths,
       baton.depth = depth;
       baton.use_commit_times = use_commit_times;
       baton.changelists = changelists;
+      baton.clear_changelists = clear_changelists;
       baton.ctx = ctx;
 
       err = svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath, pool);

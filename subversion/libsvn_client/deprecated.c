@@ -2810,6 +2810,21 @@ svn_client_resolved(const char *path,
 }
 /*** From revert.c ***/
 svn_error_t *
+svn_client_revert2(const apr_array_header_t *paths,
+                   svn_depth_t depth,
+                   const apr_array_header_t *changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_revert3(paths,
+                                            depth,
+                                            changelists,
+                                            FALSE /* clear_changelists */,
+                                            ctx,
+                                            pool));
+}
+
+svn_error_t *
 svn_client_revert(const apr_array_header_t *paths,
                   svn_boolean_t recursive,
                   svn_client_ctx_t *ctx,

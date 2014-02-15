@@ -6443,6 +6443,13 @@ clear_moved_to(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Baton for op_revert_txn and op_revert_recursive_txn */
+struct revert_baton_t
+{
+  svn_wc__db_t *db;
+  svn_boolean_t clear_changelists;
+};
+
 /* One of the two alternative bodies of svn_wc__db_op_revert().
  *
  * Implements svn_wc__db_txn_callback_t. */
@@ -6452,7 +6459,8 @@ op_revert_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = baton;
+  struct revert_baton_t *rvb = baton;
+  svn_wc__db_t *db = rvb->db;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int op_depth;
@@ -6597,16 +6605,26 @@ op_revert_txn(void *baton,
         SVN_ERR(clear_moved_to(wcroot, local_relpath, scratch_pool));
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                  STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-  if (!affected_rows)
+  if (rvb->clear_changelists)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+                                        STMT_DELETE_ACTUAL_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                  STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+      if (!affected_rows)
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                  STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -6622,6 +6640,7 @@ op_revert_recursive_txn(void *baton,
                         const char *local_relpath,
                         apr_pool_t *scratch_pool)
 {
+  struct revert_baton_t *rvb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   int op_depth;
@@ -6703,17 +6722,28 @@ op_revert_recursive_txn(void *baton,
                             local_relpath, select_op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(svn_sqlite__get_statement(
-                    &stmt, wcroot->sdb,
-                    STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(
-                    &stmt, wcroot->sdb,
-                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  if (rvb->clear_changelists)
+    {
+      SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, wcroot->sdb,
+                        STMT_DELETE_ACTUAL_NODE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, wcroot->sdb,
+                        STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      
+      SVN_ERR(svn_sqlite__get_statement(
+                        &stmt, wcroot->sdb,
+                        STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* ### This removes the locks, but what about the access batons? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -6760,22 +6790,27 @@ svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
+                     svn_boolean_t clear_changelists,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct revert_baton_t rvb;
   struct with_triggers_baton_t wtb = { STMT_CREATE_REVERT_LIST,
                                        STMT_DROP_REVERT_LIST_TRIGGERS,
                                        NULL, NULL};
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  rvb.db = db;
+  rvb.clear_changelists = clear_changelists;
+  wtb.cb_baton = &rvb;
+
   switch (depth)
     {
     case svn_depth_empty:
       wtb.cb_func = op_revert_txn;
-      wtb.cb_baton = db;
       break;
     case svn_depth_infinity:
       wtb.cb_func = op_revert_recursive_txn;
