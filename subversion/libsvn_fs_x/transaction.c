@@ -2437,14 +2437,11 @@ validate_root_noderev(svn_fs_t *fs,
 }
 
 /* Given the potentially txn-local id PART, update that to a permanent ID
- * based on the REVISION currently being written and the START_ID for that
- * revision.  Use the repo FORMAT to decide which implementation to use.
+ * based on the REVISION.
  */
 static void
 get_final_id(svn_fs_x__id_part_t *part,
-             svn_revnum_t revision,
-             apr_uint64_t start_id,
-             int format)
+             svn_revnum_t revision)
 {
   if (part->change_set == SVN_FS_X__INVALID_CHANGE_SET)
     part->change_set = svn_fs_x__change_set_by_rev(revision);
@@ -2482,8 +2479,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 svn_revnum_t rev,
                 svn_fs_t *fs,
                 const svn_fs_id_t *id,
-                apr_uint64_t start_node_id,
-                apr_uint64_t start_copy_id,
                 apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_hash_t *reps_hash,
@@ -2532,7 +2527,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
-                                  start_node_id, start_copy_id,
                                   initial_offset, reps_to_cache, reps_hash,
                                   reps_pool, FALSE, subpool));
           if (new_id && (svn_fs_x__id_rev(new_id) == rev))
@@ -2589,9 +2583,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
   /* Convert our temporary ID into a permanent revision one. */
   node_id = *svn_fs_x__id_node_id(noderev->id);
-  get_final_id(&node_id, rev, start_node_id, ffd->format);
+  get_final_id(&node_id, rev);
   copy_id = *svn_fs_x__id_copy_id(noderev->id);
-  get_final_id(&copy_id, rev, start_copy_id, ffd->format);
+  get_final_id(&copy_id, rev);
 
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
@@ -3103,8 +3097,6 @@ commit_body(void *baton, apr_pool_t *pool)
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
-  apr_uint64_t start_node_id = 0;
-  apr_uint64_t start_copy_id = 0;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
@@ -3145,9 +3137,8 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_x__id_txn_create_root(txn_id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
-                          start_node_id, start_copy_id, initial_offset,
-                          cb->reps_to_cache, cb->reps_hash, cb->reps_pool,
-                          TRUE, pool));
+                          initial_offset, cb->reps_to_cache, cb->reps_hash,
+                          cb->reps_pool, TRUE, pool));
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
