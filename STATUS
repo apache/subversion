@@ -90,13 +90,6 @@ Candidate changes:
      +1: stefan2, breser
      -0: rhuijben (Seems to be a different name for the same pool. See 1.8?)
 
- * ^/subversion/branches/1.7.x-diff-translate
-   Fix regression found in 1.7.15 on Windows.
-   Justification:
-     We really should be doing translations right on all platforms.
-   Votes:
-     +1: breser, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -114,3 +107,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * ^/subversion/branches/1.7.x-diff-translate
+   Fix regression found in 1.7.15 on Windows.
+   Justification:
+     We really should be doing translations right on all platforms.
+   Votes:
+     +1: breser, rhuijben, danielsh
