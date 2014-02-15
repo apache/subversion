@@ -63,7 +63,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
     python subversion\bindings\swig\python\tests\run_all.py
     IF ERRORLEVEL 1 (
         echo [Python tests reported error !ERRORLEVEL!] 1>&2
-        SET result=1
+        REM SET result=1
     ) ELSE (
         echo Done.
     )
@@ -100,7 +100,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
     perl -MExtUtils::Command::MM -e "test_harness()" t\*.t
     IF ERRORLEVEL 1 (
         echo [Test runner reported error !ERRORLEVEL!]
-        SET result=1
+        REM SET result=1
     )
     popd
 )
