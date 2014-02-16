@@ -955,9 +955,11 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev;
-  const svn_fs_x__id_part_t *node_id, *copy_id;
 
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src, pool));
+
+  /* This must be a root node. */
+  SVN_ERR_ASSERT(svn_fs_x__id_node_id(noderev->id)->number == 0);
 
   if (svn_fs_x__id_is_txn(noderev->id))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -970,9 +972,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
 
   /* For the transaction root, the copyroot never changes. */
 
-  node_id = svn_fs_x__id_node_id(noderev->id);
-  copy_id = svn_fs_x__id_copy_id(noderev->id);
-  noderev->id = svn_fs_x__id_txn_create(node_id, copy_id, txn_id, pool);
+  noderev->id = svn_fs_x__id_txn_create_root(txn_id, pool);
 
   return svn_fs_x__put_node_revision(fs, noderev->id, noderev, TRUE, pool);
 }
