@@ -402,8 +402,8 @@ svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
   SVN_ERR(svn_string_from_stream(&contents, stream, scratch_pool,
                                  scratch_pool));
 
-  base.revision = rep->revision;
-  base.item_index = rep->item_index;
+  base.revision = svn_fs_x__get_revnum(rep->id.change_set);
+  base.item_index = rep->id.number;
   base.priority = priority;
   base.rep = (apr_uint32_t)svn_fs_x__reps_add(builder, contents);
 

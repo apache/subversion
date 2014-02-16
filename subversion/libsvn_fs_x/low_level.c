@@ -241,17 +241,16 @@ svn_fs_x__parse_representation(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
+  SVN_ERR(svn_cstring_atoi64(&rep->id.change_set, str));
 
-  rep->revision = SVN_STR_TO_REV(str);
-
-  /* initialize transaction info (never stored) */
-  svn_fs_x__id_txn_reset(&rep->txn_id);
-  
   /* while in transactions, it is legal to simply write "-1" */
+  if (rep->id.change_set == -1)
+    return SVN_NO_ERROR;
+
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
     {
-      if (rep->revision == SVN_INVALID_REVNUM)
+      if (rep->id.change_set == SVN_FS_X__INVALID_CHANGE_SET)
         return SVN_NO_ERROR;
 
       return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -259,7 +258,7 @@ svn_fs_x__parse_representation(representation_t **rep_p,
     }
 
   SVN_ERR(svn_cstring_atoi64(&val, str));
-  rep->item_index = (apr_off_t)val;
+  rep->id.number = (apr_off_t)val;
 
   str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
@@ -328,10 +327,6 @@ read_rep_offsets(representation_t **rep_p,
 
       return svn_error_quick_wrap(err, where);
     }
-
-  if ((*rep_p)->revision == SVN_INVALID_REVNUM)
-    if (noderev_id)
-      (*rep_p)->txn_id = svn_fs_x__id_txn_id(noderev_id);
 
   return SVN_NO_ERROR;
 }
@@ -566,21 +561,18 @@ svn_fs_x__unparse_representation(representation_t *rep,
                                  svn_boolean_t mutable_rep_truncated,
                                  apr_pool_t *pool)
 {
-  if (svn_fs_x__id_txn_used(rep->txn_id) && mutable_rep_truncated)
-    return svn_stringbuf_ncreate("-1", 2, pool);
-
   if (!rep->has_sha1)
     return svn_stringbuf_createf
-            (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+            (pool, "%ld %" APR_INT64_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
-             rep->revision, rep->item_index, rep->size,
+             rep->id.change_set, rep->id.number, rep->size,
              rep->expanded_size,
              format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
 
   return svn_stringbuf_createf
-          (pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
+          (pool, "%ld %" APR_INT64_T_FMT " %" SVN_FILESIZE_T_FMT
            " %" SVN_FILESIZE_T_FMT " %s %s",
-           rep->revision, rep->item_index, rep->size,
+           rep->id.change_set, rep->id.number, rep->size,
            rep->expanded_size,
            format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool),
            format_digest(rep->sha1_digest, svn_checksum_sha1,

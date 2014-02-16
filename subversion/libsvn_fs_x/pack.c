@@ -661,14 +661,15 @@ copy_node_to_temp(pack_context_t *context,
    * This will (often) cause the noderev to be placed right in front of
    * its data representation. */
 
-  if (noderev->data_rep && noderev->data_rep->revision >= context->start_rev)
+  if (noderev->data_rep
+      &&    svn_fs_x__get_revnum(noderev->data_rep->id.change_set)
+         >= context->start_rev)
     {
       reference_t *reference = apr_pcalloc(context->info_pool,
                                            sizeof(*reference));
       reference->from = entry->items[0];
-      reference->to.change_set
-        = svn_fs_x__change_set_by_rev(noderev->data_rep->revision);
-      reference->to.number = noderev->data_rep->item_index;
+      reference->to.change_set = noderev->data_rep->id.change_set;
+      reference->to.number = noderev->data_rep->id.number;
       APR_ARRAY_PUSH(context->references, reference_t *) = reference;
 
       path_order->rep_id = reference->to;
@@ -1256,10 +1257,7 @@ write_reps_containers(pack_context_t *context,
         }
 
       assert(entry->item_count == 1);
-      representation.revision
-        = svn_fs_x__get_revnum(entry->items[0].change_set);
-      representation.item_index = entry->items[0].number;
-      svn_fs_x__id_txn_reset(&representation.txn_id);
+      representation.id = entry->items[0];
 
       /* select the change list in the source file, parse it and add it to
        * the container */
