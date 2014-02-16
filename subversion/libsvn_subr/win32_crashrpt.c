@@ -37,6 +37,8 @@ typedef int win32_crashrpt__dummy;
 
 #include "svn_version.h"
 
+#include "sysinfo.h"
+
 #include "win32_crashrpt.h"
 #include "win32_crashrpt_dll.h"
 
@@ -188,7 +190,7 @@ static void
 write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                    FILE *log_file)
 {
-  OSVERSIONINFOW oi;
+  OSVERSIONINFOEXW oi;
   const char *cmd_line;
   char workingdir[8192];
 
@@ -207,13 +209,11 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 SVN_VERSION, __DATE__, __TIME__);
 
   /* write information about the OS */
-  oi.dwOSVersionInfoSize = sizeof(oi);
-  GetVersionExW(&oi);
-
-  fprintf(log_file,
-                "Platform: Windows OS version %d.%d build %d %s\n\n",
-                oi.dwMajorVersion, oi.dwMinorVersion, oi.dwBuildNumber,
-                oi.szCSDVersion);
+  if (svn_sysinfo___fill_windows_version(&oi))
+    fprintf(log_file,
+                  "Platform: Windows OS version %d.%d build %d %S\n\n",
+                  oi.dwMajorVersion, oi.dwMinorVersion, oi.dwBuildNumber,
+                  oi.szCSDVersion);
 
   /* write the exception code */
   fprintf(log_file,

@@ -550,22 +550,46 @@ linux_release_name(apr_pool_t *pool)
 typedef DWORD (WINAPI *FNGETNATIVESYSTEMINFO)(LPSYSTEM_INFO);
 typedef BOOL (WINAPI *FNENUMPROCESSMODULES) (HANDLE, HMODULE*, DWORD, LPDWORD);
 
-/* Get system and version info, and try to tell the difference
-   between the native system type and the runtime environment of the
-   current process. Populate results in SYSINFO, LOCAL_SYSINFO
-   (optional) and OSINFO. */
+svn_boolean_t
+svn_sysinfo___fill_windows_version(OSVERSIONINFOEXW *version_info)
+{
+  memset(version_info, 0, sizeof(*version_info));
+
+  version_info->dwOSVersionInfoSize = sizeof(*version_info);
+
+  /* Kill warnings with the Windows 8 and later platform SDK */
+#if _MSC_VER > 1600 && NTDDI_VERSION >= _0x06020000
+  /* Windows 8 deprecated the API to retrieve the Windows version to avoid
+     backwards compatibility problems... It might return a constant version
+     in future Windows versions... But let's kill the warning.
+
+     We can implementation this using a different function later. */
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
+  /* Prototype supports OSVERSIONINFO */
+  return GetVersionExW((LPVOID)version_info);
+#if _MSC_VER > 1600 && NTDDI_VERSION >= _0x06020000
+#pragma warning(pop)
+#pragma warning(disable: 4996)
+#endif
+}
+
+/* Get system info, and try to tell the difference between the native
+   system type and the runtime environment of the current process.
+   Populate results in SYSINFO and LOCAL_SYSINFO (optional). */
 static BOOL
 system_info(SYSTEM_INFO *sysinfo,
-            SYSTEM_INFO *local_sysinfo,
-            OSVERSIONINFOEXW *osinfo)
+            SYSTEM_INFO *local_sysinfo)
 {
   FNGETNATIVESYSTEMINFO GetNativeSystemInfo_ = (FNGETNATIVESYSTEMINFO)
     GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetNativeSystemInfo");
 
-  ZeroMemory(sysinfo, sizeof *sysinfo);
+  memset(sysinfo, 0, sizeof *sysinfo);
   if (local_sysinfo)
     {
-      ZeroMemory(local_sysinfo, sizeof *local_sysinfo);
+      memset(local_sysinfo, 0, sizeof *local_sysinfo);
       GetSystemInfo(local_sysinfo);
       if (GetNativeSystemInfo_)
         GetNativeSystemInfo_(sysinfo);
@@ -574,11 +598,6 @@ system_info(SYSTEM_INFO *sysinfo,
     }
   else
     GetSystemInfo(sysinfo);
-
-  ZeroMemory(osinfo, sizeof *osinfo);
-  osinfo->dwOSVersionInfoSize = sizeof *osinfo;
-  if (!GetVersionExW((LPVOID)osinfo))
-    return FALSE;
 
   return TRUE;
 }
@@ -612,7 +631,8 @@ win32_canonical_host(apr_pool_t *pool)
   SYSTEM_INFO local_sysinfo;
   OSVERSIONINFOEXW osinfo;
 
-  if (system_info(&sysinfo, &local_sysinfo, &osinfo))
+  if (system_info(&sysinfo, &local_sysinfo)
+      && svn_sysinfo___fill_windows_version(&osinfo))
     {
       const char *arch = processor_name(&local_sysinfo);
       const char *machine = processor_name(&sysinfo);
@@ -676,7 +696,8 @@ win32_release_name(apr_pool_t *pool)
   OSVERSIONINFOEXW osinfo;
   HKEY hkcv;
 
-  if (!system_info(&sysinfo, NULL, &osinfo))
+  if (!system_info(&sysinfo, NULL)
+      || !svn_sysinfo___fill_windows_version(&osinfo))
     return NULL;
 
   if (!RegOpenKeyExW(HKEY_LOCAL_MACHINE,
