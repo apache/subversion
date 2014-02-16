@@ -2607,7 +2607,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                 pool));
 
   noderev_id.change_set = change_set;
-  new_id = svn_fs_x__id_rev_create(&node_id, &copy_id, &noderev_id, pool);
+  new_id = svn_fs_x__id_create(&node_id, &copy_id, &noderev_id, pool);
 
   noderev->id = new_id;
 

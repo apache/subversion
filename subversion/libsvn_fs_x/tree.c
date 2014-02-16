@@ -1319,7 +1319,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
 {
   dag_node_t *node;
   const svn_fs_id_t *id;
-  svn_fs_x__id_part_t rev_item_a, rev_item_b, node_id_a, node_id_b;
+  svn_fs_x__id_part_t noderev_id_a, noderev_id_b, node_id_a, node_id_b;
 
   /* Root paths are a common special case. */
   svn_boolean_t a_is_root_dir
@@ -1357,15 +1357,15 @@ x_node_relation(svn_fs_node_relation_t *relation,
    * Now, we can simply test for the ID values themselves. */
   SVN_ERR(get_dag(&node, root_a, path_a, FALSE, pool));
   id = svn_fs_x__dag_get_id(node);
-  rev_item_a = *svn_fs_x__id_rev_item(id);
+  noderev_id_a = *svn_fs_x__id_noderev_id(id);
   node_id_a = *svn_fs_x__id_node_id(id);
 
   SVN_ERR(get_dag(&node, root_b, path_b, FALSE, pool));
   id = svn_fs_x__dag_get_id(node);
-  rev_item_b = *svn_fs_x__id_rev_item(id);
+  noderev_id_b = *svn_fs_x__id_noderev_id(id);
   node_id_b = *svn_fs_x__id_node_id(id);
 
-  if (svn_fs_x__id_part_eq(&rev_item_a, &rev_item_b))
+  if (svn_fs_x__id_part_eq(&noderev_id_a, &noderev_id_b))
     *relation = svn_fs_node_same;
   else if (svn_fs_x__id_part_eq(&node_id_a, &node_id_b))
     *relation = svn_fs_node_common_anchestor;

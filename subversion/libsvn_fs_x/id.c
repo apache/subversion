@@ -153,18 +153,6 @@ svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
   return lhs->change_set == rhs->change_set && lhs->number == rhs->number;
 }
 
-svn_boolean_t
-svn_fs_x__id_txn_used(svn_fs_x__txn_id_t txn_id)
-{
-  return txn_id != SVN_FS_X__INVALID_TXN_ID;
-}
-
-void
-svn_fs_x__id_txn_reset(svn_fs_x__txn_id_t *txn_id)
-{
-  *txn_id = SVN_FS_X__INVALID_TXN_ID;
-}
-
 
 
 /* Accessing ID Pieces.  */
@@ -197,13 +185,11 @@ svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 
 
 const svn_fs_x__id_part_t *
-svn_fs_x__id_rev_item(const svn_fs_id_t *fs_id)
+svn_fs_x__id_noderev_id(const svn_fs_id_t *fs_id)
 {
-  const static svn_fs_x__id_part_t invalid
-    = { SVN_FS_X__INVALID_CHANGE_SET, 0};
   fs_x__id_t *id = (fs_x__id_t *)fs_id;
 
-  return svn_fs_x__id_is_txn(fs_id) ? &invalid : &id->noderev_id;
+  return &id->noderev_id;
 }
 
 svn_revnum_t
@@ -373,16 +359,16 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
 
 
 svn_fs_id_t *
-svn_fs_x__id_rev_create(const svn_fs_x__id_part_t *node_id,
-                        const svn_fs_x__id_part_t *copy_id,
-                        const svn_fs_x__id_part_t *rev_item,
-                        apr_pool_t *pool)
+svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
+                    const svn_fs_x__id_part_t *copy_id,
+                    const svn_fs_x__id_part_t *noderev_id,
+                    apr_pool_t *pool)
 {
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   id->node_id = *node_id;
   id->copy_id = *copy_id;
-  id->noderev_id = *rev_item;
+  id->noderev_id = *noderev_id;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;

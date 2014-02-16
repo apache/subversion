@@ -302,7 +302,7 @@ get_node_revision_body(node_revision_t **noderev_p,
   else
     {
       /* noderevs in rev / pack files can be cached */
-      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_rev_item(id);
+      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
       svn_revnum_t revision = svn_fs_x__get_revnum(noderev_id->change_set);
       pair_cache_key_t key;
 
@@ -363,7 +363,7 @@ svn_fs_x__get_node_revision(node_revision_t **noderev_p,
                             const svn_fs_id_t *id,
                             apr_pool_t *pool)
 {
-  const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_rev_item(id);
+  const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
 
   svn_error_t *err = get_node_revision_body(noderev_p, fs, id, pool);
   if (err && err->apr_err == SVN_ERR_FS_CORRUPT)
@@ -397,7 +397,7 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
   if (! svn_fs_x__id_is_txn(id))
     {
       /* noderevs in rev / pack files can be cached */
-      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_rev_item(id);
+      const svn_fs_x__id_part_t *noderev_id = svn_fs_x__id_noderev_id(id);
       fs_x_data_t *ffd = fs->fsap_data;
       svn_revnum_t revision = svn_fs_x__get_revnum(noderev_id->change_set);
 

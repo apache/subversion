@@ -87,12 +87,6 @@ svn_boolean_t svn_fs_x__id_part_is_root(const svn_fs_x__id_part_t *part);
 svn_boolean_t svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
                                    const svn_fs_x__id_part_t *rhs);
 
-/* Return TRUE, if TXN_ID is used, i.e. doesn't contain just the defaults. */
-svn_boolean_t svn_fs_x__id_txn_used(svn_fs_x__txn_id_t txn_id);
-
-/* Reset TXN_ID to the defaults. */
-void svn_fs_x__id_txn_reset(svn_fs_x__txn_id_t *txn_id);
-
 
 /*** ID accessor functions. ***/
 
@@ -102,11 +96,12 @@ const svn_fs_x__id_part_t *svn_fs_x__id_node_id(const svn_fs_id_t *id);
 /* Get the "copy id" portion of ID. */
 const svn_fs_x__id_part_t *svn_fs_x__id_copy_id(const svn_fs_id_t *id);
 
-/* Get the "txn id" portion of ID, or NULL if it is a permanent ID. */
+/* Get the "txn id" portion of ID,
+ * or SVN_FS_X__INVALID_TXN_ID if it is a permanent ID. */
 svn_fs_x__txn_id_t svn_fs_x__id_txn_id(const svn_fs_id_t *id);
 
-/* Get the "rev,item" portion of ID. */
-const svn_fs_x__id_part_t *svn_fs_x__id_rev_item(const svn_fs_id_t *id);
+/* Get the "noderev id" portion of ID. */
+const svn_fs_x__id_part_t *svn_fs_x__id_noderev_id(const svn_fs_id_t *id);
 
 /* Get the "rev" portion of ID, or SVN_INVALID_REVNUM if it is a
    transaction ID. */
@@ -154,12 +149,12 @@ svn_fs_id_t *svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
                                      svn_fs_x__txn_id_t txn_id,
                                      apr_pool_t *pool);
 
-/* Create a permanent ID based on NODE_ID, COPY_ID and REV_ITEM,
+/* Create a permanent ID based on NODE_ID, COPY_ID and NODEREV_ID,
    allocated in POOL. */
-svn_fs_id_t *svn_fs_x__id_rev_create(const svn_fs_x__id_part_t *node_id,
-                                     const svn_fs_x__id_part_t *copy_id,
-                                     const svn_fs_x__id_part_t *rev_item,
-                                     apr_pool_t *pool);
+svn_fs_id_t *svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
+                                 const svn_fs_x__id_part_t *copy_id,
+                                 const svn_fs_x__id_part_t *noderev_id,
+                                 apr_pool_t *pool);
 
 /* Return a copy of ID, allocated from POOL. */
 svn_fs_id_t *svn_fs_x__id_copy(const svn_fs_id_t *id,
