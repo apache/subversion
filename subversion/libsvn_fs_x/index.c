@@ -2675,17 +2675,17 @@ svn_error_t *
 svn_fs_x__item_offset(apr_off_t *offset,
                       apr_uint32_t *sub_item,
                       svn_fs_t *fs,
-                      svn_revnum_t revision,
-                      svn_fs_x__txn_id_t txn_id,
-                      apr_uint64_t item_index,
+                      const svn_fs_x__id_part_t *item_id,
                       apr_pool_t *pool)
 {
-  if (txn_id != SVN_FS_X__INVALID_TXN_ID)
-    SVN_ERR(l2p_proto_index_lookup(offset, sub_item,
-                                   fs, txn_id, item_index, pool));
+  if (svn_fs_x__is_txn(item_id->change_set))
+    SVN_ERR(l2p_proto_index_lookup(offset, sub_item, fs,
+                                   svn_fs_x__get_txn_id(item_id->change_set),
+                                   item_id->number, pool));
   else
-    SVN_ERR(l2p_index_lookup(offset, sub_item,
-                             fs, revision, item_index, pool));
+    SVN_ERR(l2p_index_lookup(offset, sub_item, fs,
+                             svn_fs_x__get_revnum(item_id->change_set),
+                             item_id->number, pool));
 
   return SVN_NO_ERROR;
 }
