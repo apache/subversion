@@ -193,9 +193,8 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
           l2p_item.number = k;
 
           /* get L2P entry.  Ignore unused entries. */
-          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs,
-                                        revision, SVN_FS_X__INVALID_TXN_ID,
-                                        k, iterpool));
+          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, &l2p_item,
+                                        iterpool));
           if (offset == -1)
             continue;
 
@@ -296,9 +295,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                 = svn_fs_x__get_revnum(p2l_item->change_set);
 
               SVN_ERR(svn_fs_x__item_offset(&l2p_offset, &sub_item, fs,
-                                            revision,
-                                            SVN_FS_X__INVALID_TXN_ID,
-                                            p2l_item->number, iterpool));
+                                            p2l_item, iterpool));
 
               if (sub_item != k || l2p_offset != entry->offset)
                 return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
