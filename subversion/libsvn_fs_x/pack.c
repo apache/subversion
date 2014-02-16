@@ -680,7 +680,7 @@ copy_node_to_temp(pack_context_t *context,
                                                noderev->created_path);
   path_order->node_id = *svn_fs_x__id_node_id(noderev->id);
   path_order->revision = svn_fs_x__id_rev(noderev->id);
-  path_order->noderev_id = *svn_fs_x__id_rev_item(noderev->id);
+  path_order->noderev_id = *svn_fs_x__id_noderev_id(noderev->id);
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
   return SVN_NO_ERROR;
