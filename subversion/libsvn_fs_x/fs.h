@@ -448,11 +448,8 @@ typedef struct representation_t
   unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
-  /* Revision where this representation is located. */
-  svn_revnum_t revision;
-
-  /* Item index with the the revision. */
-  apr_uint64_t item_index;
+  /* Change set and item number where this representation is located. */
+  svn_fs_x__id_part_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -460,9 +457,6 @@ typedef struct representation_t
 
   /* The size of the fulltext of the representation. */
   svn_filesize_t expanded_size;
-
-  /* Is this representation a transaction? */
-  svn_fs_x__txn_id_t txn_id;
 
 } representation_t;
 

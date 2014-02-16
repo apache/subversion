@@ -78,13 +78,14 @@ verify_walker(representation_t *rep,
   if (   walker_baton->iteration_count > 1000
       || walker_baton->file_count > 16)
     {
+      svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
       if (   walker_baton->notify_func
-          && rep->revision != walker_baton->last_notified_revision)
+          && revision != walker_baton->last_notified_revision)
         {
-          walker_baton->notify_func(rep->revision,
+          walker_baton->notify_func(revision,
                                     walker_baton->notify_baton,
                                     scratch_pool);
-          walker_baton->last_notified_revision = rep->revision;
+          walker_baton->last_notified_revision = revision;
         }
 
       svn_pool_clear(walker_baton->pool);

@@ -56,9 +56,10 @@ rep_has_been_born(representation_t *rep,
                   svn_fs_t *fs,
                   apr_pool_t *pool)
 {
+  svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
   SVN_ERR_ASSERT(rep);
 
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rep->revision, fs, pool));
+  SVN_ERR(svn_fs_x__ensure_revision_exists(revision, fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -191,7 +192,6 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
 
       /* Construct a representation_t. */
       rep = apr_pcalloc(iterpool, sizeof(*rep));
-      svn_fs_x__id_txn_reset(&rep->txn_id);
       sha1_digest = svn_sqlite__column_text(stmt, 0, iterpool);
       err = svn_checksum_parse_hex(&checksum, svn_checksum_sha1,
                                    sha1_digest, iterpool);
@@ -200,8 +200,8 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
 
       rep->has_sha1 = TRUE;
       memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
-      rep->revision = svn_sqlite__column_revnum(stmt, 1);
-      rep->item_index = svn_sqlite__column_int64(stmt, 2);
+      rep->id.change_set = svn_sqlite__column_revnum(stmt, 1);
+      rep->id.number = svn_sqlite__column_int64(stmt, 2);
       rep->size = svn_sqlite__column_int64(stmt, 3);
       rep->expanded_size = svn_sqlite__column_int64(stmt, 4);
 
@@ -251,12 +251,11 @@ svn_fs_x__get_rep_reference(representation_t **rep,
   if (have_row)
     {
       *rep = apr_pcalloc(pool, sizeof(**rep));
-      svn_fs_x__id_txn_reset(&(*rep)->txn_id);
       memcpy((*rep)->sha1_digest, checksum->digest,
              sizeof((*rep)->sha1_digest));
       (*rep)->has_sha1 = TRUE;
-      (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);
+      (*rep)->id.change_set = svn_sqlite__column_revnum(stmt, 0);
+      (*rep)->id.number = svn_sqlite__column_int64(stmt, 1);
       (*rep)->size = svn_sqlite__column_int64(stmt, 2);
       (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
@@ -297,8 +296,8 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__get_statement(&stmt, ffd->rep_cache_db, STMT_SET_REP));
   SVN_ERR(svn_sqlite__bindf(stmt, "siiii",
                             svn_checksum_to_cstring(&checksum, pool),
-                            (apr_int64_t) rep->revision,
-                            (apr_int64_t) rep->item_index,
+                            (apr_int64_t) rep->id.change_set,
+                            (apr_int64_t) rep->id.number,
                             (apr_int64_t) rep->size,
                             (apr_int64_t) rep->expanded_size));
 
@@ -320,8 +319,7 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
 
       if (old_rep)
         {
-          if (reject_dup && ((old_rep->revision != rep->revision)
-                             || (old_rep->item_index != rep->item_index)
+          if (reject_dup && (!svn_fs_x__id_part_eq(&old_rep->id, &rep->id)
                              || (old_rep->size != rep->size)
                              || (old_rep->expanded_size != rep->expanded_size)))
             return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -334,9 +332,9 @@ svn_fs_x__set_rep_reference(svn_fs_t *fs,
                               SVN_FILESIZE_T_FMT, APR_OFF_T_FMT,
                               SVN_FILESIZE_T_FMT, SVN_FILESIZE_T_FMT),
                  svn_checksum_to_cstring_display(&checksum, pool),
-                 fs->path, old_rep->revision, old_rep->item_index,
-                 old_rep->size, old_rep->expanded_size, rep->revision,
-                 rep->item_index, rep->size, rep->expanded_size);
+                 fs->path, old_rep->id.change_set, old_rep->id.number,
+                 old_rep->size, old_rep->expanded_size, rep->id.change_set,
+                 rep->id.number, rep->size, rep->expanded_size);
           else
             return SVN_NO_ERROR;
         }

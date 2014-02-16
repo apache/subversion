@@ -71,11 +71,8 @@ typedef struct binary_representation_t
   unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
-  /* Revision where this representation is located. */
-  svn_revnum_t revision;
-
-  /* Item index with the the revision. */
-  apr_uint64_t item_index;
+  /* Location of this representation. */
+  svn_fs_x__id_part_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -250,8 +247,7 @@ store_representation(apr_array_header_t *reps,
   binary_rep.has_sha1 = rep->has_sha1;
   memcpy(binary_rep.sha1_digest, rep->sha1_digest, sizeof(rep->sha1_digest));
   memcpy(binary_rep.md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
-  binary_rep.revision = rep->revision;
-  binary_rep.item_index = rep->item_index;
+  binary_rep.id = rep->id;
   binary_rep.size = rep->size;
   binary_rep.expanded_size = rep->expanded_size;
 
@@ -415,11 +411,9 @@ get_representation(representation_t **rep,
          sizeof((*rep)->sha1_digest));
   memcpy((*rep)->md5_digest, binary_rep->md5_digest,
          sizeof((*rep)->md5_digest));
-  (*rep)->revision = binary_rep->revision;
-  (*rep)->item_index = binary_rep->item_index;
+  (*rep)->id = binary_rep->id;
   (*rep)->size = binary_rep->size;
   (*rep)->expanded_size = binary_rep->expanded_size;
-  svn_fs_x__id_txn_reset(&(*rep)->txn_id);
 
   return SVN_NO_ERROR;
 }
@@ -545,8 +539,8 @@ write_reps(svn_packed__int_stream_t *rep_stream,
 
       svn_packed__add_uint(rep_stream, rep->has_sha1);
 
-      svn_packed__add_uint(rep_stream, rep->revision);
-      svn_packed__add_uint(rep_stream, rep->item_index);
+      svn_packed__add_uint(rep_stream, rep->id.change_set);
+      svn_packed__add_uint(rep_stream, rep->id.number);
       svn_packed__add_uint(rep_stream, rep->size);
       svn_packed__add_uint(rep_stream, rep->expanded_size);
 
@@ -670,8 +664,8 @@ read_reps(apr_array_header_t **reps_p,
 
       rep.has_sha1 = (svn_boolean_t)svn_packed__get_uint(rep_stream);
 
-      rep.revision = (svn_revnum_t)svn_packed__get_uint(rep_stream);
-      rep.item_index = svn_packed__get_uint(rep_stream);
+      rep.id.change_set = (svn_revnum_t)svn_packed__get_uint(rep_stream);
+      rep.id.number = svn_packed__get_uint(rep_stream);
       rep.size = svn_packed__get_uint(rep_stream);
       rep.expanded_size = svn_packed__get_uint(rep_stream);
 

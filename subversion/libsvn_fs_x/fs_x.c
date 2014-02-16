@@ -647,10 +647,7 @@ svn_fs_x__noderev_same_rep_key(representation_t *a,
   if (a == NULL || b == NULL)
     return FALSE;
 
-  if (a->item_index != b->item_index)
-    return FALSE;
-
-  return a->revision == b->revision;
+  return svn_fs_x__id_part_eq(&a->id, &b->id);
 }
 
 svn_error_t *

@@ -578,8 +578,10 @@ store_sha1_rep_mapping(svn_fs_t *fs,
       && noderev->data_rep->has_sha1)
     {
       apr_file_t *rep_file;
+      apr_int64_t txn_id
+        = svn_fs_x__get_txn_id(noderev->data_rep->id.change_set);
       const char *file_name
-        = svn_fs_x__path_txn_sha1(fs,  noderev->data_rep->txn_id,
+        = svn_fs_x__path_txn_sha1(fs, txn_id,
                                   noderev->data_rep->sha1_digest, pool);
       svn_stringbuf_t *rep_string
         = svn_fs_x__unparse_representation(noderev->data_rep,
@@ -1422,7 +1424,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
   fs_x_data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  if (!rep || !svn_fs_x__id_txn_used(rep->txn_id))
+  if (!rep || !svn_fs_x__is_txn(rep->id.change_set))
     {
       apr_hash_t *entries;
 
@@ -1441,8 +1443,8 @@ svn_fs_x__set_entry(svn_fs_t *fs,
 
       /* Mark the node-rev's data rep as mutable. */
       rep = apr_pcalloc(pool, sizeof(*rep));
-      rep->revision = SVN_INVALID_REVNUM;
-      rep->txn_id = txn_id;
+      rep->id.change_set = svn_fs_x__change_set_by_txn(txn_id);
+      rep->id.number = SVN_FS_X__ITEM_INDEX_UNUSED;
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_x__put_node_revision(fs, parent_noderev->id,
                                           parent_noderev, FALSE, pool));
@@ -1764,12 +1766,14 @@ choose_delta_base(representation_t **rep,
       base_revision = svn_fs_x__id_rev(base->id);
       if (props)
         {
-          if (base->prop_rep && base_revision > base->prop_rep->revision)
+          if (base->prop_rep &&
+              base_revision > svn_fs_x__get_revnum(base->prop_rep->id.change_set))
             maybe_shared_rep = TRUE;
         }
       else
         {
-          if (base->data_rep && base_revision > base->data_rep->revision)
+          if (base->data_rep &&
+              base_revision > svn_fs_x__get_revnum(base->data_rep->id.change_set))
             maybe_shared_rep = TRUE;
         }
     }
@@ -1873,8 +1877,8 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   /* Write out the rep header. */
   if (base_rep)
     {
-      header.base_revision = base_rep->revision;
-      header.base_item_index = base_rep->item_index;
+      header.base_revision = svn_fs_x__get_revnum(base_rep->id.change_set);
+      header.base_item_index = base_rep->id.number;
       header.base_length = base_rep->size;
       header.type = svn_fs_x__rep_delta;
     }
@@ -1978,11 +1982,13 @@ get_shared_rep(representation_t **old_rep,
   /* look for intra-revision matches (usually data reps but not limited
      to them in case props happen to look like some data rep)
    */
-  if (*old_rep == NULL && svn_fs_x__id_txn_used(rep->txn_id))
+  if (*old_rep == NULL && svn_fs_x__is_txn(rep->id.change_set))
     {
       svn_node_kind_t kind;
       const char *file_name
-        = svn_fs_x__path_txn_sha1(fs, rep->txn_id, rep->sha1_digest, pool);
+        = svn_fs_x__path_txn_sha1(fs,
+                                  svn_fs_x__get_txn_id(rep->id.change_set),
+                                  rep->sha1_digest, pool);
 
       /* in our txn, is there a rep file named with the wanted SHA1?
          If so, read it and use that rep.
@@ -2037,6 +2043,7 @@ rep_write_contents_close(void *baton)
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
+  apr_int64_t txn_id;
 
   rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
 
@@ -2051,8 +2058,8 @@ rep_write_contents_close(void *baton)
 
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->rep_size;
-  rep->txn_id = svn_fs_x__id_txn_id(b->noderev->id);
-  rep->revision = SVN_INVALID_REVNUM;
+  txn_id = svn_fs_x__id_txn_id(b->noderev->id);
+  rep->id.change_set = svn_fs_x__change_set_by_txn(txn_id);
 
   /* Finalize the checksum. */
   SVN_ERR(digests_final(rep, b->md5_checksum_ctx, b->sha1_checksum_ctx,
@@ -2074,7 +2081,7 @@ rep_write_contents_close(void *baton)
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
-      SVN_ERR(allocate_item_index(&rep->item_index, b->fs, rep->txn_id,
+      SVN_ERR(allocate_item_index(&rep->id.number, b->fs, txn_id,
                                   b->rep_offset, b->pool));
 
       b->noderev->data_rep = rep;
@@ -2091,7 +2098,7 @@ rep_write_contents_close(void *baton)
       svn_fs_x__p2l_entry_t entry;
       svn_fs_x__id_part_t noderev_id;
       noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
-      noderev_id.number = rep->item_index;
+      noderev_id.number = rep->id.number;
 
       entry.offset = b->rep_offset;
       SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->pool));
@@ -2101,11 +2108,11 @@ rep_write_contents_close(void *baton)
       entry.items = &noderev_id;
 
       SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->pool));
-      SVN_ERR(store_p2l_index_entry(b->fs, rep->txn_id, &entry, b->pool));
+      SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->pool));
     }
 
   SVN_ERR(svn_io_file_close(b->file, b->pool));
-  SVN_ERR(unlock_proto_rev(b->fs, rep->txn_id, b->lockcookie, b->pool));
+  SVN_ERR(unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->pool));
   svn_pool_destroy(b->pool);
 
   return SVN_NO_ERROR;
@@ -2205,10 +2212,11 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
 
   /* Mark the node-rev's prop rep as mutable, if not already done. */
   if (!noderev->prop_rep
-      || !svn_fs_x__id_txn_used(noderev->prop_rep->txn_id))
+      || svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
-      noderev->prop_rep->txn_id = svn_fs_x__id_txn_id(noderev->id);
+      noderev->prop_rep->id.change_set
+        = svn_fs_x__change_set_by_txn(svn_fs_x__id_txn_id(noderev->id));
       SVN_ERR(svn_fs_x__put_node_revision(fs, noderev->id, noderev, FALSE,
                                           pool));
     }
@@ -2293,8 +2301,8 @@ write_hash_delta_rep(representation_t *rep,
   /* Write out the rep header. */
   if (base_rep)
     {
-      header.base_revision = base_rep->revision;
-      header.base_item_index = base_rep->item_index;
+      header.base_revision = svn_fs_x__get_revnum(base_rep->id.change_set);
+      header.base_item_index = base_rep->id.number;
       header.base_length = base_rep->size;
       header.type = svn_fs_x__rep_delta;
     }
@@ -2352,11 +2360,11 @@ write_hash_delta_rep(representation_t *rep,
       SVN_ERR(svn_fs_x__get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
-      SVN_ERR(allocate_item_index(&rep->item_index, fs, txn_id, offset,
+      SVN_ERR(allocate_item_index(&rep->id.number, fs, txn_id, offset,
                                   pool));
 
       noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
-      noderev_id.number = rep->item_index;
+      noderev_id.number = rep->id.number;
 
       entry.offset = offset;
       SVN_ERR(svn_fs_x__get_file_offset(&offset, file, pool));
@@ -2535,18 +2543,16 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       svn_pool_destroy(subpool);
 
       if (noderev->data_rep
-          && svn_fs_x__id_txn_used(noderev->data_rep->txn_id))
+          && ! svn_fs_x__is_revision(noderev->data_rep->id.change_set))
         {
           /* Write out the contents of this directory as a text rep. */
           SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
-          noderev->data_rep->revision = rev;
+          noderev->data_rep->id.change_set = change_set;
 
           SVN_ERR(write_hash_delta_rep(noderev->data_rep, file,
                                        str_entries, fs, txn_id, noderev,
                                        NULL, SVN_FS_X__ITEM_TYPE_DIR_REP,
                                        pool));
-
-          svn_fs_x__id_txn_reset(&noderev->data_rep->txn_id);
         }
     }
   else
@@ -2556,16 +2562,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
          num. */
 
       if (noderev->data_rep
-          && svn_fs_x__id_txn_used(noderev->data_rep->txn_id))
+          && svn_fs_x__is_txn(noderev->data_rep->id.change_set))
         {
-          svn_fs_x__id_txn_reset(&noderev->data_rep->txn_id);
-          noderev->data_rep->revision = rev;
+          noderev->data_rep->id.change_set = change_set;
         }
     }
 
   /* Fix up the property reps. */
   if (noderev->prop_rep
-      && svn_fs_x__id_txn_used(noderev->prop_rep->txn_id))
+      && svn_fs_x__is_txn(noderev->prop_rep->id.change_set))
     {
       apr_hash_t *proplist;
       int item_type = noderev->kind == svn_node_dir
@@ -2573,8 +2578,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                     : SVN_FS_X__ITEM_TYPE_FILE_PROPS;
       SVN_ERR(svn_fs_x__get_proplist(&proplist, fs, noderev, pool));
 
-      svn_fs_x__id_txn_reset(&noderev->prop_rep->txn_id);
-      noderev->prop_rep->revision = rev;
+      noderev->prop_rep->id.change_set = change_set;
 
       SVN_ERR(write_hash_delta_rep(noderev->prop_rep, file,
                                    proplist, fs, txn_id, noderev,
@@ -2611,14 +2615,15 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     {
       /* Save the data representation's hash in the rep cache. */
       if (   noderev->data_rep && noderev->kind == svn_node_file
-          && noderev->data_rep->revision == rev)
+          && svn_fs_x__get_revnum(noderev->data_rep->id.change_set) == rev)
         {
           SVN_ERR_ASSERT(reps_to_cache && reps_pool);
           APR_ARRAY_PUSH(reps_to_cache, representation_t *)
             = svn_fs_x__rep_copy(noderev->data_rep, reps_pool);
         }
 
-      if (noderev->prop_rep && noderev->prop_rep->revision == rev)
+      if (   noderev->prop_rep
+          && svn_fs_x__get_revnum(noderev->prop_rep->id.change_set) == rev)
         {
           /* Add new property reps to hash and on-disk cache. */
           representation_t *copy
@@ -3419,13 +3424,13 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
 
   /* Delete any mutable property representation. */
   if (noderev->prop_rep
-      && svn_fs_x__id_txn_used(noderev->prop_rep->txn_id))
+      && svn_fs_x__is_txn(noderev->prop_rep->id.change_set))
     SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_props(fs, id, pool),
                                 FALSE, pool));
 
   /* Delete any mutable data representation. */
   if (noderev->data_rep
-      && svn_fs_x__id_txn_used(noderev->data_rep->txn_id)
+      && svn_fs_x__is_txn(noderev->data_rep->id.change_set)
       && noderev->kind == svn_node_dir)
     {
       fs_x_data_t *ffd = fs->fsap_data;
