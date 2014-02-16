@@ -188,7 +188,7 @@ static void
 write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                    FILE *log_file)
 {
-  OSVERSIONINFO oi;
+  OSVERSIONINFOW oi;
   const char *cmd_line;
   char workingdir[8192];
 
@@ -208,7 +208,7 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
 
   /* write information about the OS */
   oi.dwOSVersionInfoSize = sizeof(oi);
-  GetVersionEx(&oi);
+  GetVersionExW(&oi);
 
   fprintf(log_file,
                 "Platform: Windows OS version %d.%d build %d %s\n\n",
