@@ -1233,6 +1233,92 @@ svn_fs_x__get_txn(transaction_t **txn_p,
   return SVN_NO_ERROR;
 }
 
+/* If it is supported by the format of file system FS, store the (ITEM_INDEX,
+ * OFFSET) pair in the log-to-phys proto index file of transaction TXN_ID.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+store_l2p_index_entry(svn_fs_t *fs,
+                      svn_fs_x__txn_id_t txn_id,
+                      apr_off_t offset,
+                      apr_uint64_t item_index,
+                      apr_pool_t *pool)
+{
+  const char *path = svn_fs_x__path_l2p_proto_index(fs, txn_id, pool);
+  apr_file_t *file;
+  SVN_ERR(svn_fs_x__l2p_proto_index_open(&file, path, pool));
+  SVN_ERR(svn_fs_x__l2p_proto_index_add_entry(file, offset, 0,
+                                              item_index, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* If it is supported by the format of file system FS, store ENTRY in the
+ * phys-to-log proto index file of transaction TXN_ID.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+store_p2l_index_entry(svn_fs_t *fs,
+                      svn_fs_x__txn_id_t txn_id,
+                      svn_fs_x__p2l_entry_t *entry,
+                      apr_pool_t *pool)
+{
+  const char *path = svn_fs_x__path_p2l_proto_index(fs, txn_id, pool);
+  apr_file_t *file;
+  SVN_ERR(svn_fs_x__p2l_proto_index_open(&file, path, pool));
+  SVN_ERR(svn_fs_x__p2l_proto_index_add_entry(file, entry, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Allocate an item index for the given MY_OFFSET in the transaction TXN_ID
+ * of file system FS and return it in *ITEM_INDEX.  For old formats, it
+ * will simply return the offset as item index; in new formats, it will
+ * increment the txn's item index counter file and store the mapping in
+ * the proto index file.
+ * Use POOL for allocations.
+ */
+static svn_error_t *
+allocate_item_index(apr_uint64_t *item_index,
+                    svn_fs_t *fs,
+                    svn_fs_x__txn_id_t txn_id,
+                    apr_off_t my_offset,
+                    apr_pool_t *pool)
+{
+  apr_file_t *file;
+  char buffer[SVN_INT64_BUFFER_SIZE] = { 0 };
+  svn_boolean_t eof = FALSE;
+  apr_size_t to_write;
+  apr_size_t read;
+  apr_off_t offset = 0;
+
+  /* read number, increment it and write it back to disk */
+  SVN_ERR(svn_io_file_open(&file,
+                            svn_fs_x__path_txn_item_index(fs, txn_id, pool),
+                            APR_READ | APR_WRITE
+                            | APR_CREATE | APR_BUFFERED,
+                            APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
+                                  &read, &eof, pool));
+  if (read)
+    SVN_ERR(svn_cstring_atoui64(item_index, buffer));
+  else
+    *item_index = SVN_FS_X__ITEM_INDEX_FIRST_USER;
+
+  to_write = svn__ui64toa(buffer, *item_index + 1);
+  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
+  SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* write log-to-phys index */
+  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, *item_index,
+                                pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Write out the currently available next node_id NODE_ID and copy_id
    COPY_ID for transaction TXN_ID in filesystem FS.  The next node-id is
    used both for creating new unique nodes for the given transaction, as
@@ -1538,92 +1624,6 @@ svn_fs_x__add_change(svn_fs_t *fs,
                                   fs, changes, FALSE, pool));
 
   return svn_io_file_close(file, pool);
-}
-
-/* If it is supported by the format of file system FS, store the (ITEM_INDEX,
- * OFFSET) pair in the log-to-phys proto index file of transaction TXN_ID.
- * Use POOL for allocations.
- */
-static svn_error_t *
-store_l2p_index_entry(svn_fs_t *fs,
-                      svn_fs_x__txn_id_t txn_id,
-                      apr_off_t offset,
-                      apr_uint64_t item_index,
-                      apr_pool_t *pool)
-{
-  const char *path = svn_fs_x__path_l2p_proto_index(fs, txn_id, pool);
-  apr_file_t *file;
-  SVN_ERR(svn_fs_x__l2p_proto_index_open(&file, path, pool));
-  SVN_ERR(svn_fs_x__l2p_proto_index_add_entry(file, offset, 0,
-                                              item_index, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* If it is supported by the format of file system FS, store ENTRY in the
- * phys-to-log proto index file of transaction TXN_ID.
- * Use POOL for allocations.
- */
-static svn_error_t *
-store_p2l_index_entry(svn_fs_t *fs,
-                      svn_fs_x__txn_id_t txn_id,
-                      svn_fs_x__p2l_entry_t *entry,
-                      apr_pool_t *pool)
-{
-  const char *path = svn_fs_x__path_p2l_proto_index(fs, txn_id, pool);
-  apr_file_t *file;
-  SVN_ERR(svn_fs_x__p2l_proto_index_open(&file, path, pool));
-  SVN_ERR(svn_fs_x__p2l_proto_index_add_entry(file, entry, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Allocate an item index for the given MY_OFFSET in the transaction TXN_ID
- * of file system FS and return it in *ITEM_INDEX.  For old formats, it
- * will simply return the offset as item index; in new formats, it will
- * increment the txn's item index counter file and store the mapping in
- * the proto index file.
- * Use POOL for allocations.
- */
-static svn_error_t *
-allocate_item_index(apr_uint64_t *item_index,
-                    svn_fs_t *fs,
-                    svn_fs_x__txn_id_t txn_id,
-                    apr_off_t my_offset,
-                    apr_pool_t *pool)
-{
-  apr_file_t *file;
-  char buffer[SVN_INT64_BUFFER_SIZE] = { 0 };
-  svn_boolean_t eof = FALSE;
-  apr_size_t to_write;
-  apr_size_t read;
-  apr_off_t offset = 0;
-
-  /* read number, increment it and write it back to disk */
-  SVN_ERR(svn_io_file_open(&file,
-                            svn_fs_x__path_txn_item_index(fs, txn_id, pool),
-                            APR_READ | APR_WRITE
-                            | APR_CREATE | APR_BUFFERED,
-                            APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
-                                  &read, &eof, pool));
-  if (read)
-    SVN_ERR(svn_cstring_atoui64(item_index, buffer));
-  else
-    *item_index = SVN_FS_X__ITEM_INDEX_FIRST_USER;
-
-  to_write = svn__ui64toa(buffer, *item_index + 1);
-  SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
-  SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  /* write log-to-phys index */
-  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, *item_index,
-                                pool));
-
-  return SVN_NO_ERROR;
 }
 
 /* This baton is used by the representation writing streams.  It keeps
