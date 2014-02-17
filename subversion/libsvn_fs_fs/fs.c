@@ -107,7 +107,7 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
          transaction list and free transaction pointer.  This one is
          enabled unconditionally. */
       SVN_ERR(svn_mutex__init(&ffsd->txn_list_lock,
-                              APR_HAS_THREADS, common_pool));
+                              TRUE, common_pool));
 
       key = apr_pstrdup(common_pool, key);
       status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
