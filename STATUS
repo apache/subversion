@@ -189,6 +189,15 @@ Candidate changes:
    Votes:
      +1: brane, rhuijben
 
+ * r1568953, r1568955
+   Ensure that access to the FSFS transaction list and free transaction pointer
+   is properly synchronized on Windows.
+   Justification:
+     Possible memory corruption in multi-threaded server on Windows. Regression
+     from 1.7.x.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
