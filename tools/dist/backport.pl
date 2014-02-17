@@ -235,7 +235,7 @@ sub merge {
       map { sprintf '\[%s%s]', $_, ($_ x ($_ eq '\\')) }
       split //,
       $entry{branch};
-    $pattern = sprintf '\VBranch: \*\n\? \*\(\.\*\/branches\/\)\?%s',
+    $pattern = sprintf '\V\(Branch: \*\n\?\)\? \*\(\.\*\/branches\/\)\?%s',
                  $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
