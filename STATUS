@@ -101,7 +101,7 @@ Candidate changes:
      equivalent test with the same bug.
    Branch: ^/subversion/branches/1.7.x-r1568872-neon+serf
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
 Veto-blocked changes:
 =====================
