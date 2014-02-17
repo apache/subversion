@@ -126,11 +126,15 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
 
 /* Add or set in filesystem FS, transaction TXN_ID, in directory
    PARENT_NODEREV a directory entry for NAME pointing to ID of type
-   KIND.  Allocations are done in POOL. */
+   KIND.  Allocations are done in POOL.
+
+   KEY must be the normalized form of NAME if normalized lookups are
+   enabled; otherwise, it must be the same pointer value. */
 svn_error_t *
 svn_fs_fs__set_entry(svn_fs_t *fs,
                      const svn_fs_fs__id_part_t *txn_id,
                      node_revision_t *parent_noderev,
+                     const char *key,
                      const char *name,
                      const svn_fs_id_t *id,
                      svn_node_kind_t kind,

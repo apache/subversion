@@ -1477,6 +1477,7 @@ svn_error_t *
 svn_fs_fs__set_entry(svn_fs_t *fs,
                      const svn_fs_fs__id_part_t *txn_id,
                      node_revision_t *parent_noderev,
+                     const char *key,
                      const char *name,
                      const svn_fs_id_t *id,
                      svn_node_kind_t kind,
@@ -1527,9 +1528,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   if (ffd->txn_dir_cache)
     {
       /* build parameters: (name, new entry) pair */
-      const svn_boolean_t normalized_lookup =
-        ((fs_fs_data_t*)fs->fsap_data)->normalized_lookup;
-      const char *key =
+      const char *cache_key =
         svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
       replace_baton_t baton;
 
@@ -1539,22 +1538,20 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           baton.new_entry->dirent.name = name;
           baton.new_entry->dirent.kind = kind;
           baton.new_entry->dirent.id = id;
-          SVN_ERR(svn_fs_fs__set_dirent_key(baton.new_entry,
-                                            normalized_lookup,
-                                            subpool, subpool));
+          if (0 == strcmp(key, name))
+            baton.new_entry->key = baton.new_entry->dirent.name;
+          else
+            baton.new_entry->key = key;
           baton.key = baton.new_entry->key;
         }
       else
         {
-          if (normalized_lookup)
-            SVN_ERR(svn_fs_fs__normalize(&baton.key, name, subpool));
-          else
-            baton.key = name;
+          baton.key = key;
           baton.new_entry = NULL;
         }
 
       /* actually update the cached directory (if cached) */
-      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key,
+      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, cache_key,
                                      svn_fs_fs__replace_dir_entry, &baton,
                                      subpool));
     }

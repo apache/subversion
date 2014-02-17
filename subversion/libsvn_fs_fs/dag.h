@@ -257,13 +257,15 @@ svn_error_t *svn_fs_fs__dag_clone_root(dag_node_t **root_p,
 
 
 /* Open the node identified by KEY in the directory PARENT.  Set
-   *CHILD_P to the new node, allocated in RESULT_POOL.  KEY must be a
-   single path component; it cannot be a slash-separated directory
-   path, and must be the normalized form of the entry name if
-   normalized lookups are enabled.
+   *CHILD_P to the new node, and *NAME_P to its name in the oriinal
+   form, allocated in RESULT_POOL.  KEY must be a single path
+   component; it cannot be a slash-separated directory path, and must
+   be the normalized form of the entry name if normalized lookups are
+   enabled.
  */
 svn_error_t *
 svn_fs_fs__dag_open(dag_node_t **child_p,
+                    const char **name_p,
                     dag_node_t *parent,
                     const char *key,
                     apr_pool_t *result_pool,
@@ -296,8 +298,8 @@ svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_fs__dirent_t **dirent,
 /* Set ENTRY_NAME in NODE to point to ID (with kind KIND), allocating
    from POOL.  Use ENTRY_KEY to find an existing entry in NODE.
 
-   ENTRY_KEY must be the normalized form of ENTRY_NAME if normalized
-   lookups are enabled; otherwise, it must be the same pointer value.
+   KEY must be the normalized form of NAME if normalized lookups are
+   enabled; otherwise, it must be the same pointer value.
 
    NODE must be a mutable directory.  ID can refer to a mutable or
    immutable node.  If ENTRY_NAME does not exist, it will be created.
@@ -307,8 +309,8 @@ svn_error_t * svn_fs_fs__dag_dir_entry(svn_fs_fs__dirent_t **dirent,
    NODE.
  */
 svn_error_t *svn_fs_fs__dag_set_entry(dag_node_t *node,
-                                      const char *entry_key,
-                                      const char *entry_name,
+                                      const char *key,
+                                      const char *name,
                                       const svn_fs_id_t *id,
                                       svn_node_kind_t kind,
                                       const svn_fs_fs__id_part_t *txn_id,
