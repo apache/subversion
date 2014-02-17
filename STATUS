@@ -90,6 +90,19 @@ Candidate changes:
      +1: stefan2, breser
      -0: rhuijben (Seems to be a different name for the same pool. See 1.8?)
 
+ * r1568943
+   Justification:
+     Fixes an API implementation bug in ra_serf and ra_neon.
+   Notes:
+     This a backport of r1568872 from trunk, with an equivalent change
+     for ra_neon. r1568871 added a test case to JavaHL that exposed
+     this bug on trunk, but it can't be used to test on 1.7.x. Trunk
+     and branch code are identical in ra_serf, and ra_neon has an
+     equivalent test with the same bug.
+   Branch: ^/subversion/branches/1.7.x-r1568872-neon+serf
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
