@@ -56,7 +56,7 @@ typedef struct binary_id_t
 {
   svn_fs_x__id_part_t node_id;
   svn_fs_x__id_part_t copy_id;
-  svn_fs_x__id_part_t rev_id;
+  svn_fs_x__id_part_t noderev_id;
 } binary_id_t;
 
 /* Our internal representation of an representation.
@@ -71,11 +71,8 @@ typedef struct binary_representation_t
   unsigned char sha1_digest[APR_SHA1_DIGESTSIZE];
   unsigned char md5_digest[APR_MD5_DIGESTSIZE];
 
-  /* Revision where this representation is located. */
-  svn_revnum_t revision;
-
-  /* Item index with the the revision. */
-  apr_uint64_t item_index;
+  /* Location of this representation. */
+  svn_fs_x__id_part_t id;
 
   /* The size of the representation in bytes as seen in the revision
      file. */
@@ -85,27 +82,6 @@ typedef struct binary_representation_t
    * the fulltext size is equal to representation size in the rev file, */
   svn_filesize_t expanded_size;
 } binary_representation_t;
-
-/* Add a uniquifier to binary_representation_t to distinguish between
- * multiple uses of the same shared representation.
- */
-typedef struct shared_representation_t
-{
-  /* For rep-sharing, we need a way of uniquifying node-revs which share the
-     same representation (see svn_fs_x__noderev_same_rep_key() ).  So, we
-     store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content. */
-  struct
-  {
-    svn_fs_x__id_part_t txn_id;
-    apr_uint64_t number;
-  } uniquifier;
-
-  /* Index+1 of the representation.
-   */
-  int representation;
-} shared_representation_t;
-
 
 /* Our internal representation of a node_revision_t.
  * 
@@ -151,7 +127,7 @@ typedef struct binary_noderev_t
 
   /* Index+1 of the representation for this node's data.
      May be 0 if there is no data. */
-  shared_representation_t data_rep;
+  int data_rep;
 
   /* String index+1 of the path at which this node first came into
      existence.  */
@@ -240,7 +216,7 @@ store_id(apr_array_header_t *ids,
   
   bin_id.node_id = *svn_fs_x__id_node_id(id);
   bin_id.copy_id = *svn_fs_x__id_copy_id(id);
-  bin_id.rev_id = *svn_fs_x__id_rev_item(id);
+  bin_id.noderev_id = *svn_fs_x__id_noderev_id(id);
 
   idx = (int)(apr_uintptr_t)apr_hash_get(dict, &bin_id, sizeof(bin_id));
   if (idx == 0)
@@ -271,8 +247,7 @@ store_representation(apr_array_header_t *reps,
   binary_rep.has_sha1 = rep->has_sha1;
   memcpy(binary_rep.sha1_digest, rep->sha1_digest, sizeof(rep->sha1_digest));
   memcpy(binary_rep.md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
-  binary_rep.revision = rep->revision;
-  binary_rep.item_index = rep->item_index;
+  binary_rep.id = rep->id;
   binary_rep.size = rep->size;
   binary_rep.expanded_size = rep->expanded_size;
 
@@ -329,16 +304,9 @@ svn_fs_x__noderevs_add(svn_fs_x__noderevs_t *container,
                                                  container->prop_reps_dict,
                                                  noderev->prop_rep);
   if (noderev->data_rep)
-    {
-      binary_noderev.data_rep.representation
-        = store_representation(container->data_reps,
-                               container->data_reps_dict,
-                               noderev->data_rep);
-      binary_noderev.data_rep.uniquifier.txn_id
-        = noderev->data_rep->uniquifier.txn_id;
-      binary_noderev.data_rep.uniquifier.number
-        = noderev->data_rep->uniquifier.number;
-    }
+    binary_noderev.data_rep = store_representation(container->data_reps,
+                                                   container->data_reps_dict,
+                                                   noderev->data_rep);
 
   if (noderev->created_path)
     binary_noderev.created_path
@@ -401,10 +369,10 @@ get_id(const svn_fs_id_t **id,
 
   /* create a svn_fs_id_t from stored info */
   binary_id = &APR_ARRAY_IDX(ids, idx - 1, binary_id_t);
-  *id = svn_fs_x__id_rev_create(&binary_id->node_id,
-                                &binary_id->copy_id,
-                                &binary_id->rev_id,
-                                pool);
+  *id = svn_fs_x__id_create(&binary_id->node_id,
+                            &binary_id->copy_id,
+                            &binary_id->noderev_id,
+                            pool);
 
   return SVN_NO_ERROR;
 }
@@ -443,11 +411,9 @@ get_representation(representation_t **rep,
          sizeof((*rep)->sha1_digest));
   memcpy((*rep)->md5_digest, binary_rep->md5_digest,
          sizeof((*rep)->md5_digest));
-  (*rep)->revision = binary_rep->revision;
-  (*rep)->item_index = binary_rep->item_index;
+  (*rep)->id = binary_rep->id;
   (*rep)->size = binary_rep->size;
   (*rep)->expanded_size = binary_rep->expanded_size;
-  svn_fs_x__id_txn_reset(&(*rep)->txn_id);
 
   return SVN_NO_ERROR;
 }
@@ -518,14 +484,7 @@ svn_fs_x__noderevs_get(node_revision_t **noderev_p,
   SVN_ERR(get_representation(&noderev->prop_rep, container->prop_reps,
                              binary_noderev->prop_rep, pool));
   SVN_ERR(get_representation(&noderev->data_rep, container->data_reps,
-                             binary_noderev->data_rep.representation, pool));
-  if (noderev->data_rep)
-    {
-      noderev->data_rep->uniquifier.txn_id
-        = binary_noderev->data_rep.uniquifier.txn_id;
-      noderev->data_rep->uniquifier.number
-        = binary_noderev->data_rep.uniquifier.number;
-    }
+                             binary_noderev->data_rep, pool));
 
   if (binary_noderev->flags & NODEREV_HAS_CPATH)
     noderev->created_path
@@ -580,11 +539,11 @@ write_reps(svn_packed__int_stream_t *rep_stream,
 
       svn_packed__add_uint(rep_stream, rep->has_sha1);
 
-      svn_packed__add_uint(rep_stream, rep->revision);
-      svn_packed__add_uint(rep_stream, rep->item_index);
+      svn_packed__add_uint(rep_stream, rep->id.change_set);
+      svn_packed__add_uint(rep_stream, rep->id.number);
       svn_packed__add_uint(rep_stream, rep->size);
       svn_packed__add_uint(rep_stream, rep->expanded_size);
-      
+
       svn_packed__add_bytes(digest_stream,
                             (const char *)rep->md5_digest,
                             sizeof(rep->md5_digest));
@@ -629,7 +588,7 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
     svn_packed__create_int_substream(ids_stream, TRUE, FALSE);
 
   svn_packed__create_int_substream(noderevs_stream, FALSE, FALSE);
-  for (i = 0; i < 14; ++i)
+  for (i = 0; i < 12; ++i)
     svn_packed__create_int_substream(noderevs_stream, TRUE, FALSE);
 
   /* serialize ids array */
@@ -637,12 +596,12 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
     {
       binary_id_t *id = &APR_ARRAY_IDX(container->ids, i, binary_id_t);
 
-      svn_packed__add_int(ids_stream, id->node_id.revision);
+      svn_packed__add_int(ids_stream, id->node_id.change_set);
       svn_packed__add_uint(ids_stream, id->node_id.number);
-      svn_packed__add_int(ids_stream, id->copy_id.revision);
+      svn_packed__add_int(ids_stream, id->copy_id.change_set);
       svn_packed__add_uint(ids_stream, id->copy_id.number);
-      svn_packed__add_int(ids_stream, id->rev_id.revision);
-      svn_packed__add_uint(ids_stream, id->rev_id.number);
+      svn_packed__add_int(ids_stream, id->noderev_id.change_set);
+      svn_packed__add_uint(ids_stream, id->noderev_id.number);
     }
 
   /* serialize rep arrays */
@@ -656,25 +615,18 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
         = &APR_ARRAY_IDX(container->noderevs, i, binary_noderev_t);
 
       svn_packed__add_uint(noderevs_stream, noderev->flags);
-      
+
       svn_packed__add_uint(noderevs_stream, noderev->id);
       svn_packed__add_uint(noderevs_stream, noderev->predecessor_id);
       svn_packed__add_uint(noderevs_stream, noderev->predecessor_count);
-      
+
       svn_packed__add_uint(noderevs_stream, noderev->copyfrom_path);
       svn_packed__add_int(noderevs_stream, noderev->copyfrom_rev);
       svn_packed__add_uint(noderevs_stream, noderev->copyroot_path);
       svn_packed__add_int(noderevs_stream, noderev->copyroot_rev);
 
       svn_packed__add_uint(noderevs_stream, noderev->prop_rep);
-      svn_packed__add_uint(noderevs_stream, noderev->data_rep.representation);
-
-      svn_packed__add_int(noderevs_stream,
-                          noderev->data_rep.uniquifier.txn_id.revision);
-      svn_packed__add_uint(noderevs_stream,
-                           noderev->data_rep.uniquifier.txn_id.number);
-      svn_packed__add_uint(noderevs_stream,
-                           noderev->data_rep.uniquifier.number);
+      svn_packed__add_uint(noderevs_stream, noderev->data_rep);
 
       svn_packed__add_uint(noderevs_stream, noderev->created_path);
       svn_packed__add_uint(noderevs_stream, noderev->mergeinfo_count);
@@ -712,8 +664,8 @@ read_reps(apr_array_header_t **reps_p,
 
       rep.has_sha1 = (svn_boolean_t)svn_packed__get_uint(rep_stream);
 
-      rep.revision = (svn_revnum_t)svn_packed__get_uint(rep_stream);
-      rep.item_index = svn_packed__get_uint(rep_stream);
+      rep.id.change_set = (svn_revnum_t)svn_packed__get_uint(rep_stream);
+      rep.id.number = svn_packed__get_uint(rep_stream);
       rep.size = svn_packed__get_uint(rep_stream);
       rep.expanded_size = svn_packed__get_uint(rep_stream);
 
@@ -793,16 +745,16 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
     {
       binary_id_t id;
 
-      id.node_id.revision = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.node_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
       id.node_id.number = svn_packed__get_uint(ids_stream);
-      id.copy_id.revision = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.copy_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
       id.copy_id.number = svn_packed__get_uint(ids_stream);
-      id.rev_id.revision = (svn_revnum_t)svn_packed__get_int(ids_stream);
-      id.rev_id.number = svn_packed__get_uint(ids_stream);
+      id.noderev_id.change_set = (svn_revnum_t)svn_packed__get_int(ids_stream);
+      id.noderev_id.number = svn_packed__get_uint(ids_stream);
 
       APR_ARRAY_PUSH(noderevs->ids, binary_id_t) = id;
     }
-    
+
   /* read rep arrays */
   SVN_ERR(read_reps(&noderevs->data_reps, data_reps_stream, digests_stream,
                     result_pool));
@@ -830,15 +782,7 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
       noderev.copyroot_rev = (svn_revnum_t)svn_packed__get_int(noderevs_stream);
 
       noderev.prop_rep = (int)svn_packed__get_uint(noderevs_stream);
-      noderev.data_rep.representation
-        = (int)svn_packed__get_uint(noderevs_stream);
-
-      noderev.data_rep.uniquifier.txn_id.revision
-        = (svn_revnum_t)svn_packed__get_int(noderevs_stream);
-      noderev.data_rep.uniquifier.txn_id.number
-        = svn_packed__get_uint(noderevs_stream);
-      noderev.data_rep.uniquifier.number
-        = svn_packed__get_uint(noderevs_stream);
+      noderev.data_rep = (int)svn_packed__get_uint(noderevs_stream);
 
       noderev.created_path = (int)svn_packed__get_uint(noderevs_stream);
       noderev.mergeinfo_count = svn_packed__get_uint(noderevs_stream);
@@ -998,14 +942,7 @@ svn_fs_x__noderevs_get_func(void **out,
   SVN_ERR(get_representation(&noderev->prop_rep, &prop_reps,
                              binary_noderev->prop_rep, pool));
   SVN_ERR(get_representation(&noderev->data_rep, &data_reps,
-                             binary_noderev->data_rep.representation, pool));
-  if (noderev->data_rep)
-    {
-      noderev->data_rep->uniquifier.txn_id
-        = binary_noderev->data_rep.uniquifier.txn_id;
-      noderev->data_rep->uniquifier.number
-        = binary_noderev->data_rep.uniquifier.number;
-    }
+                             binary_noderev->data_rep, pool));
 
   if (binary_noderev->flags & NODEREV_HAS_CPATH)
     noderev->created_path

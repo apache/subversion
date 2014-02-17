@@ -37,6 +37,13 @@ const char* const NativeInputStream::m_class_name =
 
 NativeInputStream::~NativeInputStream() {}
 
+void NativeInputStream::set_stream(svn_stream_t* stream)
+{
+  if (m_stream)
+    throw std::logic_error(_("Native input stream is already bound"));
+  m_stream = stream;
+}
+
 NativeInputStream*
 NativeInputStream::get_self(::Java::Env env, jobject jthis)
 {
@@ -128,6 +135,13 @@ const char* const NativeOutputStream::m_class_name =
   JAVA_PACKAGE "/types/NativeOutputStream";
 
 NativeOutputStream::~NativeOutputStream() {}
+
+void NativeOutputStream::set_stream(svn_stream_t* stream)
+{
+  if (m_stream)
+    throw std::logic_error(_("Native output stream is already bound"));
+  m_stream = stream;
+}
 
 NativeOutputStream*
 NativeOutputStream::get_self(::Java::Env env, jobject jthis)

@@ -25,6 +25,9 @@
  *        util.ConfigImpl.Category.
  */
 
+#include <string>
+#include <vector>
+
 #include "../include/org_apache_subversion_javahl_util_ConfigImpl_Category.h"
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
@@ -33,12 +36,9 @@
 #include "CreateJ.h"
 #include "EnumMapper.h"
 
-#include "svn_private_config.h"
 #include "svn_config.h"
 #include "svn_hash.h"
-
-#include <string>
-#include <vector>
+#include "svn_private_config.h"
 
 namespace {
 struct ImplContext

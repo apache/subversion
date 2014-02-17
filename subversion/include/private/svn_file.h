@@ -59,14 +59,14 @@ extern "C" {
  * applications if more threads than this limit are interacting with files
  * at the same time.
  */
-apr_size_t
+int
 svn_file__get_max_shared_handles(void);
 
 /* Allow up to NEW_MAX OS-level file handles to be open at the same time.
  * The limit may be changed at any time.  0 is a valid limit.
  */
 svn_error_t *
-svn_file__set_max_shared_handles(apr_size_t new_max);
+svn_file__set_max_shared_handles(int new_max);
 
 /* Opaque file data type.
  */

@@ -214,7 +214,9 @@ svn_stream_skip(svn_stream_t *stream, apr_size_t len)
 svn_error_t *
 svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 {
-  SVN_ERR_ASSERT(stream->write_fn != NULL);
+  if (stream->write_fn == NULL)
+    return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED, NULL, NULL);
+
   return svn_error_trace(stream->write_fn(stream->baton, data, len));
 }
 
@@ -1305,7 +1307,8 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
   baton->read_flush = Z_SYNC_FLUSH;
 
   zstream = svn_stream_create(baton, pool);
-  svn_stream_set_read(zstream, read_handler_gz);
+  svn_stream_set_read2(zstream, NULL /* only full read support */,
+                       read_handler_gz);
   svn_stream_set_write(zstream, write_handler_gz);
   svn_stream_set_close(zstream, close_handler_gz);
 

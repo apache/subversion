@@ -121,7 +121,7 @@ ensure_state(struct diff_baton *eb,
       if (! relpath)
         return SVN_NO_ERROR;
 
-      /* Don't recurse on the anchor, as that might loop infinately because
+      /* Don't recurse on the anchor, as that might loop infinitely because
             svn_dirent_dirname("/",...)   -> "/"
             svn_dirent_dirname("C:/",...) -> "C:/" (Windows) */
       if (*relpath)

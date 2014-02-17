@@ -97,7 +97,7 @@
  * about 50% of the content survives every 50% of the cache being re-written
  * with new entries. For details on the fine-tuning involved, see the
  * comments in ensure_data_insertable_l2().
- * 
+ *
  * Due to the randomized mapping of keys to entry groups, some groups may
  * overflow.  In that case, there are spare groups that can be chained to
  * an already used group to extend it.
@@ -508,7 +508,7 @@ struct svn_membuffer_t
    */
   unsigned char *data;
 
-  /* Total number of data buffer bytes in use. This is for statistics only.
+  /* Total number of data buffer bytes in use.
    */
   apr_uint64_t data_used;
 
@@ -550,17 +550,23 @@ struct svn_membuffer_t
 
 
   /* Total number of calls to membuffer_cache_get.
-   * Purely statistical information that may be used for profiling.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint64_t total_reads;
 
   /* Total number of calls to membuffer_cache_set.
-   * Purely statistical information that may be used for profiling.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint64_t total_writes;
 
   /* Total number of hits since the cache's creation.
-   * Purely statistical information that may be used for profiling.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint64_t total_hits;
 
@@ -577,6 +583,12 @@ struct svn_membuffer_t
    */
   svn_boolean_t allow_blocking_writes;
 #endif
+
+  /* All counters that have consistency requirements on thems (currently,
+   * that's only the hit counters) must use this mutex to serialize their
+   * updates.
+   */
+  svn_mutex__t *counter_mutex;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -1437,10 +1449,10 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
                * or is smaller than the one to insert - both relative to
                * their respective priority.
                */
-              keep = to_fit_in->hit_count * to_fit_in->priority
-                   < entry->hit_count * entry->priority
-                  || to_fit_in->size * to_fit_in->priority
-                   < entry->size * entry->priority;
+              keep = (apr_uint64_t)to_fit_in->hit_count * to_fit_in->priority
+                   < (apr_uint64_t)entry->hit_count * entry->priority
+                  || (apr_uint64_t)to_fit_in->size * to_fit_in->priority
+                   < (apr_uint64_t)entry->size * entry->priority;
             }
           else if (cache->hit_count > cache->used_entries)
             {
@@ -1774,6 +1786,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].allow_blocking_writes = allow_blocking_writes;
 #endif
+
+      SVN_ERR(svn_mutex__init(&c[seg].counter_mutex, thread_safe, pool));
     }
 
   /* done here
@@ -1881,7 +1895,11 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
    * the old spot, just re-use that space. */
   if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
     {
-      cache->data_used += size - entry->size;
+      /* Careful! We need to cast SIZE to the full width of CACHE->DATA_USED
+       * lest we run into trouble with 32 bit underflow *not* treated as a
+       * negative value.
+       */
+      cache->data_used += (apr_uint64_t)size - entry->size;
       entry->size = size;
       entry->priority = priority;
 
@@ -1994,6 +2012,25 @@ membuffer_cache_set(svn_membuffer_t *cache,
   return SVN_NO_ERROR;
 }
 
+/* Count a hit in ENTRY within CACHE.
+ */
+static svn_error_t *
+increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
+{
+  /* To minimize the memory footprint of the cache index, we limit local
+   * hit counters to 32 bits.  These may overflow and we must make sure that
+   * the global sums are still the sum of all local counters. */
+  if (++entry->hit_count == 0)
+    cache->hit_count -= APR_UINT32_MAX;
+  else
+    cache->hit_count++;
+
+  /* That one is for stats only. */
+  cache->total_hits++;
+
+  return SVN_NO_ERROR;
+}
+
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
  * by the hash value TO_FIND. If no item has been stored for KEY,
  * *BUFFER will be NULL. Otherwise, return a copy of the serialized
@@ -2050,10 +2087,8 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* update hit statistics
    */
-  entry->hit_count++;
-  cache->hit_count++;
-  cache->total_hits++;
-
+  SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                       increment_hit_counters(cache, entry));
   *item_size = entry->size;
 
   return SVN_NO_ERROR;
@@ -2112,14 +2147,13 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
   if (entry)
     {
-      /* This is often happen in "block read" where most data is already
+      /* This often be called by "block read" when most data is already
          in L2 and only a few previously evicted items are added to L1
          again.  While items in L1 are well protected for a while, L2
          items may get evicted soon.  Thus, mark all them as "hit" to give
-         them a higher chance for survival. */
-      entry->hit_count++;
-      cache->hit_count++;
-      cache->total_hits++;
+         them a higher chance of survival. */
+      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                           increment_hit_counters(cache, entry));
 
       *found = TRUE;
     }
@@ -2190,9 +2224,8 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     {
       *found = TRUE;
 
-      entry->hit_count++;
-      cache->hit_count++;
-      cache->total_hits++;
+      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                           increment_hit_counters(cache, entry));
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -2282,8 +2315,8 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       char *orig_data = data;
       apr_size_t size = entry->size;
 
-      entry->hit_count++;
-      cache->hit_count++;
+      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
+                           increment_hit_counters(cache, entry));
       cache->total_writes++;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER

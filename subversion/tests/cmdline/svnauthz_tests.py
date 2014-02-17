@@ -874,7 +874,7 @@ def svnauthz_accessof_txn_test(sbox):
   verify_logfile(logfilepath, expected_data)
 
 def svnauthz_compat_mode_file_test(sbox):
-  "test 'svnauthz-validate' compatability mode file"
+  "test 'svnauthz-validate' compatibility mode file"
 
 
   # Create an authz file
@@ -906,7 +906,7 @@ def svnauthz_compat_mode_file_test(sbox):
 
 @SkipUnless(svntest.main.is_ra_type_file)
 def svnauthz_compat_mode_repo_test(sbox):
-  "test 'svnauthz-validate' compatability mode url"
+  "test 'svnauthz-validate' compatibility mode url"
 
   sbox.build()
   wc_dir = sbox.wc_dir

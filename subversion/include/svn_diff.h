@@ -922,7 +922,7 @@ typedef struct svn_diff_hunk_t svn_diff_hunk_t;
  * hunk does not end with a newline character and @a eol is not NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
- * @note The hunk header information can be retrievied with the following
+ * @note The hunk header information can be retrieved with the following
  * functions: 
  * @see svn_diff_hunk_get_original_start()
  * @see svn_diff_hunk_get_original_length()

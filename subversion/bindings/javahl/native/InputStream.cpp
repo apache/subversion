@@ -54,7 +54,8 @@ svn_stream_t *InputStream::getStream(const SVN::Pool &pool)
   // Create a stream with this as the baton and set the read and
   // close functions.
   svn_stream_t *ret = svn_stream_create(this, pool.getPool());
-  svn_stream_set_read(ret, InputStream::read);
+  svn_stream_set_read2(ret, NULL /* only full read support */,
+                       InputStream::read);
   svn_stream_set_close(ret, InputStream::close);
   return ret;
 }

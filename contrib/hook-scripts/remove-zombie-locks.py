@@ -59,7 +59,7 @@ For additional information read the commented notes in this script.
 #
 #  There is a theoretical and very small chance that before this
 #  script runs another commit adds a file with the same path as one
-#  just deleted in this revision, and then a lock is aquired for it,
+#  just deleted in this revision, and then a lock is acquired for it,
 #  resulting in this script unlocking the "wrong" file. In practice it
 #  seems highly improbable and would require very strange performance
 #  characteristics on your svn server.  However, to minimize the

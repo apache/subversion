@@ -3240,7 +3240,8 @@ svn_swig_rb_make_stream(VALUE io)
     pool_wrapper_p = &pool_wrapper;
     r2c_swig_type2(rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
     stream = svn_stream_create((void *)io, pool_wrapper->pool);
-    svn_stream_set_read(stream, read_handler_rbio);
+    svn_stream_set_read2(stream, NULL /* only full read support */,
+                         read_handler_rbio);
     svn_stream_set_write(stream, write_handler_rbio);
   }
 

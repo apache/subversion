@@ -334,7 +334,6 @@ def three_way_merge_no_op(base_node, source_right_node):
 def cherry_pick(sbox, rev, source, target):
   """Cherry-pick merge revision REV from branch SOURCE to branch TARGET
   (both WC-relative paths), and commit."""
-  sbox.simple_update(target)
   svn_merge(rev, source, target)
   sbox.simple_commit()
 
@@ -691,6 +690,7 @@ def cherry1_fwd(sbox):
   #     2  34  5  67  8  9  0  1
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=False)
+  sbox.simple_update()
   modify_branch(sbox, 'A', 8)
   cherry_pick(sbox, 8, 'A', 'B')
   modify_branch(sbox, 'A', 10)

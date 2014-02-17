@@ -1541,7 +1541,8 @@ stream_translated(svn_stream_t *stream,
   baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
 
   /* Setup the stream methods */
-  svn_stream_set_read(s, translated_stream_read);
+  svn_stream_set_read2(s, NULL /* only full read support */,
+                       translated_stream_read);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_mark(s, translated_stream_mark);
@@ -1940,7 +1941,8 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
   baton->write_stream = svn_stream_from_stringbuf(baton->write_content, pool);
 
   *stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(*stream, read_handler_special);
+  svn_stream_set_read2(*stream, NULL /* only full read support */,
+                       read_handler_special);
   svn_stream_set_write(*stream, write_handler_special);
   svn_stream_set_close(*stream, close_handler_special);
 

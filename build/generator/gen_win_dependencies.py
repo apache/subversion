@@ -164,6 +164,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
     self.sasl_path = None
+    self.cpp_defines = []
 
     # NLS options
     self.enable_nls = None
@@ -218,6 +219,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.static_apr = 1
       elif opt == '--with-static-openssl':
         self.static_openssl = 1
+      elif opt == '-D':
+        self.cpp_defines.append(val)
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?$', val):
           self.vs_version = '2002'

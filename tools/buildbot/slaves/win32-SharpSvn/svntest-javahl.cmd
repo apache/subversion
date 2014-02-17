@@ -24,7 +24,7 @@ CALL ..\svn-config.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
 IF "%SVN_BRANCH%" LEQ "1.6.x" (
-    ECHO --- Building 1.6.x or older: Skipping bindings ---
+    ECHO --- Building 1.6.x or older: Skipping JavaHL ---
     EXIT /B 0
 )
 
@@ -32,7 +32,7 @@ IF "%SVN_BRANCH%" LSS "1.9." (
     IF NOT EXIST "%TESTDIR%\bin" MKDIR "%TESTDIR%\bin"
     xcopy /y /i ..\deps\release\bin\*.dll "%TESTDIR%\bin"
 
-    PATH %TESTDIR%\bin;!PATH!
+    PATH %TESTDIR%\bin;!PATH!;!JAVADIR!
 )
 
 SET result=0

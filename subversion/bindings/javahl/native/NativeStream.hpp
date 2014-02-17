@@ -31,7 +31,6 @@
 #include "SVNBase.h"
 
 #include "svn_io.h"
-#include "svn_private_config.h"
 
 namespace JavaHL {
 
@@ -67,12 +66,7 @@ public:
    * Sets the @a stream that this object will own.
    * Do not call this function if a stream was passed to the constructor.
    */
-  void set_stream(svn_stream_t* stream)
-    {
-      if (m_stream)
-        throw std::logic_error(_("Native input stream is already bound"));
-      m_stream = stream;
-    }
+  void set_stream(svn_stream_t* stream);
 
   /**
    * Create the Java object that binds to this native object.
@@ -83,7 +77,7 @@ public:
     }
 
   /**
-   * Retreive the address of the native object from the bound Java object.
+   * Retrieve the address of the native object from the bound Java object.
    */
   static NativeInputStream* get_self(::Java::Env env, jobject jthis);
 
@@ -167,12 +161,7 @@ public:
    * Sets the @a stream that this object will own.
    * Do not call this function if a stream was passed to the constructor.
    */
-  void set_stream(svn_stream_t* stream)
-    {
-      if (m_stream)
-        throw std::logic_error(_("Native output stream is already bound"));
-      m_stream = stream;
-    }
+  void set_stream(svn_stream_t* stream);
 
   /**
    * Create the Java object that binds to this native object.
@@ -183,7 +172,7 @@ public:
     }
 
   /**
-   * Retreive the address of the native object from the bound Java object.
+   * Retrieve the address of the native object from the bound Java object.
    */
   static NativeOutputStream* get_self(::Java::Env env, jobject jthis);
 

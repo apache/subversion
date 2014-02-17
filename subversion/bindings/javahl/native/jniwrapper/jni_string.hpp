@@ -196,20 +196,7 @@ public:
      * @throw std::invalid_argument if the @a new_text is @c null
      * @throw std::logic_error if this is a @c null or immutable string
      */
-    void set_value(const char* new_text)
-      {
-        if (!m_new_text)
-          throw std::invalid_argument(
-              _("Cannot set String contents to null"));
-        if (m_text)
-          {
-            m_new_text = new_text;
-            m_length = jsize(::std::strlen(new_text));
-          }
-        else
-          throw std::logic_error(
-              _("Cannot change the contents of a null String"));
-      }
+    void set_value(const char* new_text);
 
   private:
     const char* m_new_text;

@@ -396,7 +396,7 @@ sub download_file {
   # the file.
   my $response = mirror($url, $file);
   if (is_error($response)) {
-    die "Couldn't save $url to $file recieved $response";
+    die "Couldn't save $url to $file received $response";
   }
   $$dest_ref = $file;
 }

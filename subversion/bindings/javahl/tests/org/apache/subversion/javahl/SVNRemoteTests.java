@@ -916,8 +916,15 @@ public class SVNRemoteTests extends SVNTests
                        Revision.SVN_INVALID_REVNUM,
                        0, false, false, false, null,
                        receiver);
-
         assertEquals(1, receiver.logs.size());
+
+        receiver.logs.clear();
+        session.reparent(getTestRepoUrl() + "/A");
+        session.getLog(null,
+                       Revision.SVN_INVALID_REVNUM,
+                       0, 0, false, false, false, null,
+                       receiver);
+        assertEquals(2, receiver.logs.size());
     }
 
     public void testGetLogMissing() throws Exception

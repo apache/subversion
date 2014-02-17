@@ -2083,7 +2083,7 @@ revert(svn_test__sandbox_t *b,
   SVN_ERR(insert_actual(b, before_actual));
   SVN_ERR(check_db_rows(b, "", before_nodes));
   SVN_ERR(check_db_actual(b, before_actual));
-  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth,
+  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth, FALSE,
                              b->pool, b->pool);
   if (err)
     {
@@ -9021,15 +9021,73 @@ del4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(init_move4(&b, "del4_update_edit_AAA", opts, FALSE, pool));
 
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "A/A/A",     "normal",    1, "A/A/A" },
+      { 1, "A/A/A",     "normal",    1, "B/A/A", FALSE, "AAA_1", TRUE },
+      { 2, "A/A/A",     "normal",    1, "C/A/A", FALSE, "AAA_2", TRUE },
+      { 3, "A/A/A",     "normal",    1, "D/A/A", FALSE, "AAA_3", TRUE },
+
+      { 0, "A/A/A/A",   "normal",    1, "A/A/A/A" },
+      { 1, "A/A/A/A",   "normal",    1, "B/A/A/A", FALSE, NULL, TRUE },
+      { 2, "A/A/A/A",   "normal",    1, "C/A/A/A", FALSE, NULL, TRUE },
+      { 3, "A/A/A/A",   "normal",    1, "D/A/A/A", FALSE, NULL, TRUE },
+
+      { 0 },
+    };
+
+    SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+  }
+
   /* Update and resolve via mine strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
+
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "A/A/A",     "normal",    2, "A/A/A", NOT_MOVED,            "key" },
+      { 1, "A/A/A",     "normal",    2, "B/A/A", FALSE, "AAA_1", TRUE, "key" },
+      { 2, "A/A/A",     "normal",    2, "C/A/A", FALSE, "AAA_2", TRUE, "key" },
+      { 3, "A/A/A",     "normal",    2, "D/A/A", FALSE, "AAA_3", TRUE, "key" },
+
+      { 0, "A/A/A/A",   "normal",    2, "A/A/A/A", NOT_MOVED,          "key" },
+      { 1, "A/A/A/A",   "normal",    2, "B/A/A/A", FALSE, NULL, TRUE,  "key" },
+      { 2, "A/A/A/A",   "normal",    2, "C/A/A/A", FALSE, NULL, TRUE,  "key" },
+      { 3, "A/A/A/A",   "normal",    2, "D/A/A/A", FALSE, NULL, TRUE,  "key" },
+
+      { 0 },
+    };
+
+    SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+  }
+
   /* Go back to start position */
   SVN_ERR(sbox_wc_update(&b, "", 1));
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
   /* Update and resolve via their strategy */
   SVN_ERR(sbox_wc_update(&b, "", 2));
   SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
+
+  {
+    nodes_row_t nodes[] = {
+
+      { 0, "A/A/A",     "normal",    2, "A/A/A", NOT_MOVED, "key" },
+      { 1, "A/A/A",     "normal",    1, "B/A/A", FALSE, "AAA_1" },
+      { 2, "A/A/A",     "normal",    1, "C/A/A", FALSE, "AAA_2" },
+      { 3, "A/A/A",     "normal",    1, "D/A/A", FALSE, "AAA_3" },
+
+      { 0, "A/A/A/A",   "normal",    2, "A/A/A/A", NOT_MOVED, "key" },
+      { 1, "A/A/A/A",   "normal",    1, "B/A/A/A" },
+      { 2, "A/A/A/A",   "normal",    1, "C/A/A/A" },
+      { 3, "A/A/A/A",   "normal",    1, "D/A/A/A" },
+
+      { 0 },
+    };
+      SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+  }
+
 
   return SVN_NO_ERROR;
 }
@@ -9116,15 +9174,72 @@ move4_update_edit_AAA(const svn_test_opts_t *opts, apr_pool_t *pool)
 
     SVN_ERR(init_move4(&b, "move4_update_edit_AAA", opts, TRUE, pool));
 
+    {
+      nodes_row_t nodes[] = {
+
+        { 0, "A/A/A",     "normal",    1, "A/A/A" },
+        { 1, "A/A/A",     "normal",    1, "B/A/A", FALSE, NULL /*"AAA_1"*/, TRUE },
+        { 2, "A/A/A",     "normal",    1, "C/A/A", FALSE, NULL /*"AAA_2"*/, TRUE },
+        { 3, "A/A/A",     "normal",    1, "D/A/A", FALSE, "AAA_3", TRUE },
+
+        { 0, "A/A/A/A",   "normal",    1, "A/A/A/A" },
+        { 1, "A/A/A/A",   "normal",    1, "B/A/A/A", FALSE, NULL, TRUE },
+        { 2, "A/A/A/A",   "normal",    1, "C/A/A/A", FALSE, NULL, TRUE },
+        { 3, "A/A/A/A",   "normal",    1, "D/A/A/A", FALSE, NULL, TRUE },
+
+
+        { 0 },
+      };
+
+      SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+    }
+
     /* Update and resolve via mine strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
+
+    {
+      nodes_row_t nodes[] = {
+
+        { 0, "A/A/A",     "normal",  2, "A/A/A", NOT_MOVED,            "key" },
+        { 1, "A/A/A",     "normal",  2, "B/A/A", FALSE, NULL /*"AAA_1"*/, TRUE, "key" },
+        { 2, "A/A/A",     "normal",  2, "C/A/A", FALSE, NULL /*"AAA_2"*/, TRUE, "key" },
+        { 3, "A/A/A",     "normal",  2, "D/A/A", FALSE, "AAA_3", TRUE, "key" },
+
+        { 0, "A/A/A/A",   "normal",  2, "A/A/A/A", NOT_MOVED,          "key" },
+        { 1, "A/A/A/A",   "normal",  2, "B/A/A/A", FALSE, NULL,  TRUE, "key" },
+        { 2, "A/A/A/A",   "normal",  2, "C/A/A/A", FALSE, NULL,  TRUE, "key" },
+        { 3, "A/A/A/A",   "normal",  2, "D/A/A/A", FALSE, NULL,  TRUE, "key" },
+
+        { 0 },
+      };
+        SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+    }
+
     /* Go back to start position */
     SVN_ERR(sbox_wc_update(&b, "", 1));
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_mine_conflict));
     /* Update and resolve via their strategy */
     SVN_ERR(sbox_wc_update(&b, "", 2));
     SVN_ERR(sbox_wc_resolve(&b, "", svn_depth_infinity, svn_wc_conflict_choose_merged));
+
+    {
+      nodes_row_t nodes[] = {
+
+        { 0, "A/A/A",     "normal",       2, "A/A/A", NOT_MOVED, "key" },
+        { 1, "A/A/A",     "normal",       1, "B/A/A" },
+        { 2, "A/A/A",     "normal",       1, "C/A/A" },
+        { 3, "A/A/A",     "normal",       1, "D/A/A" },
+
+        { 0, "A/A/A/A",   "normal",       2, "A/A/A/A", NOT_MOVED, "key" },
+        { 1, "A/A/A/A",   "normal",       1, "B/A/A/A" },
+        { 2, "A/A/A/A",   "normal",       1, "C/A/A/A" },
+        { 3, "A/A/A/A",   "normal",       1, "D/A/A/A" },
+
+        { 0 },
+      };
+        SVN_ERR(check_db_rows(&b, "A/A/A", nodes));
+    }
 
     return SVN_NO_ERROR;
 }

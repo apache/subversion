@@ -403,7 +403,7 @@ close_file(svn_file_t *file)
   return SVN_NO_ERROR;
 }
 
-apr_size_t
+int
 svn_file__get_max_shared_handles(void)
 {
   return get_handle_pool()->capacity;
@@ -411,7 +411,7 @@ svn_file__get_max_shared_handles(void)
 
 static svn_error_t *
 set_max_shared_handles_internal(shared_handle_pool_t *handle_pool,
-                                apr_size_t new_max)
+                                int new_max)
 {
   handle_pool->capacity = new_max;
   while (   (handle_pool->capacity > handle_pool->open_count)
@@ -425,7 +425,7 @@ set_max_shared_handles_internal(shared_handle_pool_t *handle_pool,
 }
 
 svn_error_t *
-svn_file__set_max_shared_handles(apr_size_t new_max)
+svn_file__set_max_shared_handles(int new_max)
 {
   shared_handle_pool_t *handle_pool = get_handle_pool();
   SVN_MUTEX__WITH_LOCK(handle_pool->mutex,

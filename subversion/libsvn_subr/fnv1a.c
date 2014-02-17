@@ -37,7 +37,7 @@
  * http://www.isthe.com/chongo/tech/comp/fnv/ 
  */
 #define FNV1_PRIME_32 0x01000193
-#define FNV1_BASE_32 2166136261
+#define FNV1_BASE_32 2166136261U
 
 /* FNV-1a core implementation returning a 32 bit checksum over the first
  * LEN bytes in INPUT.  HASH is the checksum over preceding data (if any).

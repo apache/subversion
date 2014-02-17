@@ -1080,6 +1080,18 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
   SVN_ERR(internal_open(&(*db)->db3, path, mode, scratch_pool));
 
+#if SQLITE_VERSION_NUMBER >= 3008000 && SQLITE_VERSION_NUMBER < 3009000
+  /* disable SQLITE_ENABLE_STAT3/4 from 3.8.1 - 3.8.3 (but not 3.8.3.1+)
+   * to prevent using it when it's buggy.
+   * See: https://www.sqlite.org/src/info/4c86b126f2 */
+  if (sqlite3_libversion_number() > 3008000 &&
+      sqlite3_libversion_number() < 3008004 &&
+      strcmp(sqlite3_sourceid(),"2014-02-11")<0)
+    {
+      sqlite3_test_control(SQLITE_TESTCTRL_OPTIMIZATIONS, (*db)->db3, 0x800);
+    }
+#endif
+
 #ifdef SVN_UNICODE_NORMALIZATION_FIXES
   /* Create extension buffers with space for 200 UCS-4 characters. */
   svn_membuf__create(&(*db)->sqlext_buf1, 800, result_pool);
@@ -1119,14 +1131,14 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
-  /* ### simplify this. remnants of some old SQLite compat code.  */
-  {
-    int ignored_err = SQLITE_OK;
-
-    SVN_ERR(exec_sql2(*db, "PRAGMA case_sensitive_like=1;", ignored_err));
-  }
-
   SVN_ERR(exec_sql(*db,
+              /* The default behavior of the LIKE operator is to ignore case
+                 for ASCII characters. Hence, by default 'a' LIKE 'A' is true.
+                 The case_sensitive_like pragma installs a new application-
+                 defined LIKE function that is either case sensitive or
+                 insensitive depending on the value of the case_sensitive_like
+                 pragma. */
+              "PRAGMA case_sensitive_like=1;"
               /* Disable synchronization to disable the explicit disk flushes
                  that make Sqlite up to 50 times slower; especially on small
                  transactions.
@@ -1143,13 +1155,27 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
               /* Enable recursive triggers so that a user trigger will fire
                  in the deletion phase of an INSERT OR REPLACE statement.
                  Requires SQLite >= 3.6.18  */
-              "PRAGMA recursive_triggers=ON;"));
+              "PRAGMA recursive_triggers=ON;"
+              /* Enforce current Sqlite default behavior. Some distributions
+                 might change the Sqlite defaults without realizing how this
+                 affects application(read: Subversion) performance/behavior. */
+              "PRAGMA foreign_keys=OFF;"      /* SQLITE_DEFAULT_FOREIGN_KEYS*/
+              "PRAGMA locking_mode = NORMAL;" /* SQLITE_DEFAULT_LOCKING_MODE */
+              ));
 
 #if defined(SVN_DEBUG)
   /* When running in debug mode, enable the checking of foreign key
      constraints.  This has possible performance implications, so we don't
      bother to do it for production...for now. */
   SVN_ERR(exec_sql(*db, "PRAGMA foreign_keys=ON;"));
+#endif
+
+#ifdef SVN_SQLITE_REVERSE_UNORDERED_SELECTS
+  /* When enabled, this PRAGMA causes SELECT statements without an ORDER BY
+     clause to emit their results in the reverse order of what they normally
+     would.  This can help detecting invalid assumptions about the result
+     order.*/
+  SVN_ERR(exec_sql(*db, "PRAGMA reverse_unordered_selects=ON;"));
 #endif
 
   /* Store temporary tables in RAM instead of in temporary files, but don't

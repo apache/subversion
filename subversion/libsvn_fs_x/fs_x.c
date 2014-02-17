@@ -647,13 +647,7 @@ svn_fs_x__noderev_same_rep_key(representation_t *a,
   if (a == NULL || b == NULL)
     return FALSE;
 
-  if (a->item_index != b->item_index)
-    return FALSE;
-
-  if (a->revision != b->revision)
-    return FALSE;
-
-  return memcmp(&a->uniquifier, &b->uniquifier, sizeof(a->uniquifier)) == 0;
+  return svn_fs_x__id_part_eq(&a->id, &b->id);
 }
 
 svn_error_t *
@@ -728,14 +722,14 @@ write_revision_zero(svn_fs_t *fs)
                  "\1\x84"     /* 1 instr byte, new 4 bytes */
                  "\4END\n"    /* 4 new bytes, E, N, D, \n */
                  "ENDREP\n"
-               "id: 0.0.r0/2\n"
+               "id: 0+0.0+0.2+0\n"
                "type: dir\n"
                "count: 0\n"
                "text: 0 3 16 4 "
                "2d2977d1c96f487abe4a1e202dd03b4e\n"
                "cpath: /\n"
                "\n\n",
-               0x78, fs->pool));
+               0x7b, fs->pool));
 
   SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
 
@@ -745,7 +739,7 @@ write_revision_zero(svn_fs_t *fs)
               "\0\1\x80\x40\1\1" /* rev 0, single page */
               "\5\4"             /* page size: bytes, count */
               "\0"               /* 0 container offsets in list */
-              "\0\x78\x1e\1",    /* phys offsets + 1 */
+              "\0\x7b\x1e\1",    /* phys offsets + 1 */
               13,
               fs->pool));
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));
@@ -757,9 +751,9 @@ write_revision_zero(svn_fs_t *fs)
               "\x80\x80\4\1\x11"  /* 64k pages, 1 page using 17 bytes */
               "\0"                /* offset entry 0 page 1 */
               "\x1d\x11\0\6"      /* len, type + 16 * count, (rev, 2*item)* */
-              "\x5a\x15\0\4"
+              "\x5d\x15\0\4"
               "\1\x16\0\2"
-              "\x88\xff\3\0",     /* last entry fills up 64k page */
+              "\x85\xff\3\0",     /* last entry fills up 64k page */
               23,
               fs->pool));
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, fs->pool));

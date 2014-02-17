@@ -78,13 +78,14 @@ verify_walker(representation_t *rep,
   if (   walker_baton->iteration_count > 1000
       || walker_baton->file_count > 16)
     {
+      svn_revnum_t revision = svn_fs_x__get_revnum(rep->id.change_set);
       if (   walker_baton->notify_func
-          && rep->revision != walker_baton->last_notified_revision)
+          && revision != walker_baton->last_notified_revision)
         {
-          walker_baton->notify_func(rep->revision,
+          walker_baton->notify_func(revision,
                                     walker_baton->notify_baton,
                                     scratch_pool);
-          walker_baton->last_notified_revision = rep->revision;
+          walker_baton->last_notified_revision = revision;
         }
 
       svn_pool_clear(walker_baton->pool);
@@ -186,11 +187,15 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
         {
           apr_off_t offset;
           apr_uint32_t sub_item;
+          svn_fs_x__id_part_t l2p_item;
           svn_fs_x__id_part_t *p2l_item;
 
+          l2p_item.change_set = svn_fs_x__change_set_by_rev(revision);
+          l2p_item.number = k;
+
           /* get L2P entry.  Ignore unused entries. */
-          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs,
-                                        revision, NULL, k, iterpool));
+          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, &l2p_item,
+                                        iterpool));
           if (offset == -1)
             continue;
 
@@ -207,13 +212,13 @@ compare_l2p_to_p2l_index(svn_fs_t *fs,
                                      apr_off_t_toa(pool, offset),
                                      (long)sub_item, revision, (long)k);
 
-          if (p2l_item->number != k || p2l_item->revision != revision)
+          if (!svn_fs_x__id_part_eq(&l2p_item, p2l_item))
             return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
                                      NULL,
                                      _("p2l index info LOG r%ld:i%ld"
                                        " does not match "
                                        "l2p index for LOG r%ld:i%ld"),
-                                     p2l_item->revision,
+                                     svn_fs_x__get_revnum(p2l_item->change_set),
                                      (long)p2l_item->number, revision,
                                      (long)k);
 
@@ -287,10 +292,11 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
               apr_off_t l2p_offset;
               apr_uint32_t sub_item;
               svn_fs_x__id_part_t *p2l_item = &entry->items[k];
+              svn_revnum_t revision
+                = svn_fs_x__get_revnum(p2l_item->change_set);
 
               SVN_ERR(svn_fs_x__item_offset(&l2p_offset, &sub_item, fs,
-                                            p2l_item->revision, NULL,
-                                            p2l_item->number, iterpool));
+                                            p2l_item, iterpool));
 
               if (sub_item != k || l2p_offset != entry->offset)
                 return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_INCONSISTENT,
@@ -300,7 +306,7 @@ compare_p2l_to_l2p_index(svn_fs_t *fs,
                                            "LOG r%ld:i%ld for PHYS o%s:s%ld"),
                                          apr_off_t_toa(pool, l2p_offset),
                                          (long)sub_item,
-                                         p2l_item->revision,
+                                         revision,
                                          (long)p2l_item->number,
                                          apr_off_t_toa(pool, entry->offset),
                                          (long)k);

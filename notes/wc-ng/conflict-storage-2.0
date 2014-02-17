@@ -56,7 +56,7 @@ same information. In most cases this can be accomplished by collecting the
 information and storing it in a conflict-ng skel that can be stored in the
 ACTUAL table, like we do for tree conflicts now.
 
-The Skel I would like to propose for the intial version would be
+The Skel I would like to propose for the initial version would be
 
 (WHY (CONFLICT*) ...)
 

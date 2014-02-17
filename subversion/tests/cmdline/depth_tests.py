@@ -504,26 +504,10 @@ def depth_immediates_bring_in_file(sbox):
                                         A_mu_path)
 
   # Run 'svn up A/D/gamma' to test the edge case 'Skipped'.
-  expected_output = svntest.wc.State(wc_imm, {
-    'A/D/gamma'   : Item(verb='Skipped'),
-    })
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
-                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
-  expected_status = svntest.actions.get_virginal_state(wc_imm, 1)
-  expected_status.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
-                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
-  svntest.actions.run_and_verify_update(wc_imm,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None,
-                                        None, None, None,
-                                        gamma_path)
+  svntest.actions.run_and_verify_svn("update A/D/gamma",
+                       ["Skipped '"+gamma_path+"'\n", ],
+                       "svn: E155007: ", 'update', gamma_path)
+  svntest.actions.run_and_verify_status(wc_imm, expected_status)
 
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):

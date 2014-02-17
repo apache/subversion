@@ -363,7 +363,7 @@ the bottom of the file. To avoid renumbering of existing tests, you
 should add new tests to the end of the list.
 
 
-Testing Compatability With Previous Release
+Testing Compatibility With Previous Release
 ===========================================
 
 You can run the Python test suite against older installed versions of

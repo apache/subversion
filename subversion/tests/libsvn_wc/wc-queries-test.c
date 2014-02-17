@@ -413,7 +413,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
           return SVN_NO_ERROR;
         }
 
-      /* Parsing successfull */
+      /* Parsing successful */
     }
   else if (MATCH_TOKEN(item->operation, "EXECUTE"))
     {

@@ -782,19 +782,6 @@ svn_wc__externals_find_target_dups(apr_array_header_t **duplicate_targets,
                                    apr_pool_t *pool,
                                    apr_pool_t *scratch_pool);
 
-/* Revert tree LOCAL_ABSPATH to depth DEPTH and notify for all
-   reverts. */
-svn_error_t *
-svn_wc__revert_internal(svn_wc__db_t *db,
-                        const char *local_abspath,
-                        svn_depth_t depth,
-                        svn_boolean_t use_commit_times,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *scratch_pool);
-
 svn_error_t *
 svn_wc__node_has_local_mods(svn_boolean_t *modified,
                             svn_boolean_t *all_edits_are_deletes,

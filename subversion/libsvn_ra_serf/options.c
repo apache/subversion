@@ -368,7 +368,7 @@ options_response_handler(serf_request_t *request,
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
                              opt_ctx);
 
-      /* Assume mergeinfo capability unsupported, if didn't recieve information
+      /* Assume mergeinfo capability unsupported, if didn't receive information
          about server or repository mergeinfo capability. */
       if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
         svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,

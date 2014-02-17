@@ -577,7 +577,7 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
    indexes to make better decisions in the query planner.
 
    For every interesting index this contains a number of rows where the
-   statistics ar calculated for and then for every column in the index the
+   statistics are calculated for and then for every column in the index the
    average number of rows with the same value in all columns left of this
    column including the column itself.
 

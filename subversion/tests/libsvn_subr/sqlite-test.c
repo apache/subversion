@@ -71,13 +71,14 @@ test_sqlite_reset(apr_pool_t *pool)
 
   static const char *const statements[] = {
     "CREATE TABLE reset ("
-    "    one TEXT NOT NULL,"
+    "    one TEXT NOT NULL PRIMARY KEY,"
     "    two TEXT"
     ");"
     "INSERT INTO reset(one, two) VALUES ('foo', 'bar');"
     "INSERT INTO reset(one, two) VALUES ('zig', 'zag')",
 
-    "SELECT one FROM reset WHERE two IS NOT NULL AND error_second(one)",
+    "SELECT one FROM reset WHERE two IS NOT NULL AND error_second(one) "
+    "ORDER BY one",
 
     NULL
   };

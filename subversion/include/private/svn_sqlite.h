@@ -535,7 +535,7 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
    SCRATCH_POOL will be passed to the callback (NULL is valid).
 
    ### Since we now require SQLite >= 3.6.18, this function has the effect of
-       always behaving like a defered transaction.  Can it be combined with
+       always behaving like a deferred transaction.  Can it be combined with
        svn_sqlite__with_transaction()?
  */
 svn_error_t *

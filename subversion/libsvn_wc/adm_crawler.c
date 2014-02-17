@@ -144,7 +144,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-/* Try to restore LOCAL_ABSPATH of node type KIND and if successfull,
+/* Try to restore LOCAL_ABSPATH of node type KIND and if successful,
    notify that the node is restored.  Use DB for accessing the working copy.
    If USE_COMMIT_TIMES is set, then set working file's timestamp to
    last-commit-time.
@@ -909,7 +909,8 @@ copying_stream(svn_stream_t *source,
   baton->target = target;
 
   stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(stream, read_handler_copy);
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       read_handler_copy);
   svn_stream_set_close(stream, close_handler_copy);
 
   return stream;

@@ -6763,21 +6763,20 @@ def update_child_below_add(sbox):
   wc_dir = sbox.wc_dir
 
   sbox.simple_update('A/B', 0)
+  e_path = sbox.ospath('A/B/E')
 
-  # Update skips A/B/E because A/B has a not-present BASE node.
-  expected_output = svntest.wc.State(wc_dir, {
-      'A/B/E' : Item(verb='Skipped'),
-  })
+  # Update skips and errors on A/B/E because A/B has a not-present BASE node.
+  expected_output = ["Skipped '"+e_path+"'\n"]
+  expected_err = "svn: E155007: "
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                          'A/B/F', 'A/B/lambda')
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        None,
-                                        expected_status,
-                                        None, None, None,
-                                        None, None, None,
-                                        sbox.ospath('A/B/E'))
+  svntest.actions.run_and_verify_svn("update A/B/E",
+                                     expected_output,
+                                     expected_err,
+                                     'update', e_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
   # Add working nodes over A/B
   sbox.simple_mkdir('A/B')
@@ -6788,6 +6787,9 @@ def update_child_below_add(sbox):
       'A/B'         : Item(status='A ', wc_rev='-'),
       'A/B/E'       : Item(status='A ', wc_rev='-'),
       'A/B/E/alpha' : Item(status='A ', wc_rev='-'),
+  })
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B/E' : Item(verb='Skipped'),
   })
   # Update should still skip A/B/E
   svntest.actions.run_and_verify_update(wc_dir,

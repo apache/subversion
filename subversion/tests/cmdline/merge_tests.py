@@ -5845,7 +5845,7 @@ def empty_mergeinfo(sbox):
   #   B) Empty mergeinfo elides to empty mergeinfo.
   #
   #   C) If a merge sets empty mergeinfo on its target and that target has
-  #      no ancestor in either the WC or the repository with explict
+  #      no ancestor in either the WC or the repository with explicit
   #      mergeinfo, then the target's mergeinfo is removed (a.k.a. elides
   #      to nothing).
   sbox.build()
@@ -15602,7 +15602,7 @@ def dav_skelta_mode_causes_spurious_conflicts(sbox):
   A_branch_path = sbox.ospath('A-branch')
   C_branch_path = sbox.ospath('A-branch/C')
 
-  # r2 - Set some intial properties:
+  # r2 - Set some initial properties:
   #
   #  'dir-prop'='value1' on A/C.
   #  'svn:eol-style'='native' on A/mu.

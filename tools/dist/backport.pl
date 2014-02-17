@@ -40,16 +40,19 @@ my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
 my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
 
 # Mode flags.
-#    svn-role:      YES=1 MAY_COMMIT=1
+#    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
 #    conflicts-bot: YES=1 MAY_COMMIT=0
 #    interactive:   YES=0 MAY_COMMIT=0      (default)
-my $YES = exists $ENV{YES}; # batch mode: eliminate prompts, add sleeps
-my $MAY_COMMIT = 'false';
-$MAY_COMMIT = 'true' if ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
+my $YES = ($ENV{YES} // "0") =~ /^(1|yes|true)$/i; # batch mode: eliminate prompts, add sleeps
+my $MAY_COMMIT = ($ENV{MAY_COMMIT} // "false") =~ /^(1|yes|true)$/i;
 
 # Other knobs.
 my $VERBOSE = 0;
-my $DEBUG = (exists $ENV{DEBUG}) ? 'true' : 'false'; # 'set -x', etc
+my $DEBUG = (exists $ENV{DEBUG}); # 'set -x', etc
+
+# Force all these knobs to be usable via @sh.
+my @sh = qw/false true/;
+die if grep { ($sh[$_] eq 'true') != !!$_ } $DEBUG, $MAY_COMMIT, $VERBOSE, $YES;
 
 # Username for entering votes.
 my $SVN_A_O_REALM = '<https://svn.apache.org:443> ASF Committers';            
@@ -70,6 +73,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
+$ENV{LC_ALL} = "C";  # since we parse 'svn info' output
 
 # Globals.
 my %ERRORS = ();
@@ -83,7 +87,7 @@ my $SVNvsn = do {
 };
 $SVN .= " --non-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
-$SVNq =~ s/-q// if $DEBUG eq 'true';
+$SVNq =~ s/-q// if $DEBUG;
 
 
 sub backport_usage {
@@ -118,6 +122,7 @@ At a prompt, you have the following options:
 y:   Run a merge.  It will not be committed.
      WARNING: This will run 'update' and 'revert -R ./'.
 l:   Show logs for the entries being nominated.
+v:   Show the full entry (the prompt only shows an abridged version).
 q:   Quit the "for each nomination" loop.
 ±1:  Enter a +1 or -1 vote
      You will be prompted to commit your vote at the end.
@@ -241,7 +246,7 @@ sub merge {
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $pattern = '^ [*] \V' . 'r' . $entry{revisions}->[0];
+    $pattern = '^ *[*] \V' . 'r' . $entry{revisions}->[0];
     $mergeargs = join " ",
       ($entry{accept} ? "--accept=$entry{accept}" : ()),
       (map { "-c$_" } @{$entry{revisions}}),
@@ -262,15 +267,15 @@ sub merge {
   my $script = <<"EOF";
 #!/bin/sh
 set -e
-if $DEBUG; then
+if $sh[$DEBUG]; then
   set -x
 fi
 $SVN diff > $backupfile
-if ! $MAY_COMMIT ; then
+if ! $sh[$MAY_COMMIT] ; then
   cp STATUS STATUS.$$
 fi
 $SVNq revert -R .
-if ! $MAY_COMMIT ; then
+if ! $sh[$MAY_COMMIT] ; then
   mv STATUS.$$ STATUS
 fi
 $SVNq up
@@ -285,10 +290,14 @@ if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
     exit 2
   fi
 fi
-if $MAY_COMMIT; then
+if $sh[$MAY_COMMIT]; then
+  # Remove the approved entry.  The sentinel guarantees the right number of blank
+  # lines is removed, which prevents spurious '--renormalize' commits tomorrow.
+  echo "sentinel" >> $STATUS
   $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
+  $VIM -e -s -n -N -i NONE -u NONE -c '\$d' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
-elif test -z "\$YES"; then
+elif ! $sh[$YES]; then
   echo "Would have committed:"
   echo '[[['
   $SVN status -q
@@ -300,12 +309,12 @@ EOF
 
   $script .= <<"EOF" if $entry{branch};
 reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
-if $MAY_COMMIT; then
+if $sh[$MAY_COMMIT]; then
   # Sleep to avoid out-of-order commit notifications
-  if [ -n "\$YES" ]; then sleep 15; fi
+  if $sh[$YES]; then sleep 15; fi
   $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
-  if [ -n "\$YES" ]; then sleep 1; fi
-elif test -z "\$YES"; then
+  if $sh[$YES]; then sleep 1; fi
+elif ! $sh[$YES]; then
   echo "Would remove $reintegrated_word '$entry{branch}' branch"
 fi
 EOF
@@ -324,12 +333,23 @@ EOF
   unlink $logmsg_filename unless $? or $!;
 }
 
+# Input formats:
+#    "1.8.x-r42",
+#    "branches/1.8.x-r42",
+#    "branches/1.8.x-r42/",
+#    "subversion/branches/1.8.x-r42",
+#    "subversion/branches/1.8.x-r42/",
+#    "^/subversion/branches/1.8.x-r42",
+#    "^/subversion/branches/1.8.x-r42/",
+# Return value:
+#    "1.8.x-r42"
+# Works for any branch name that doesn't include slashes.
 sub sanitize_branch {
   local $_ = shift;
-  my $branches_re = quotemeta $BRANCHES;
-  s#.*$branches_re/##;
   s/^\s*//;
   s/\s*$//;
+  s#/*$##;
+  s#.*/##;
   return $_;
 }
 
@@ -348,21 +368,22 @@ sub parse_entry {
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
-  # strip first three spaces
-  $_[0] =~ s/^ \* /   /;
-  s/^   // for @_;
+  # strip spaces to match up with the indention
+  $_[0] =~ s/^( *)\* //;
+  my $indentation = ' ' x (length($1) + 2);
+  s/^$indentation// for @_;
+
+  # Ignore trailing spaces: it is not significant on any field, and makes the
+  # regexes simpler.
+  s/\s*$// for @_;
 
   # revisions
   $branch = sanitize_branch $1
     and shift
     if $_[0] =~ /^(\S*) branch$/ or $_[0] =~ m#branches/(\S+)#;
-  while ($_[0] =~ /^r/) {
-    my $sawrevnum = 0;
-    while ($_[0] =~ s/^r(\d+)(?:$|[,; ]+)//) {
-      push @revisions, $1;
-      $sawrevnum++;
-    }
-    $sawrevnum ? shift : last;
+  while ($_[0] =~ /^(?:r?\d+[,; ]*)+$/) {
+    push @revisions, ($_[0] =~ /(\d+)/g);
+    shift;
   }
 
   # summary
@@ -584,10 +605,32 @@ sub check_local_mods_to_STATUS {
   return 0;
 }
 
+sub renormalize_STATUS {
+  my $vimscript = <<'EOVIM';
+:"" Strip trailing whitespace.
+:%s/\s*$//
+:"" Ensure there is exactly one blank line around each entry and header.
+:0/^=/,$ g/^ *[*]/normal! O
+:g/^=/normal! o
+:g/^=/-normal! O
+:%s/\n\n\n\+/\r\r/g
+:"" Save.
+:wq
+EOVIM
+  open VIM, '|-', $VIM, qw/-e -s -n -N -i NONE -u NONE --/, $STATUS
+    or die "Can't renormalize STATUS: $!";
+  print VIM $vimscript;
+  close VIM or warn "$0: renormalize_STATUS failed ($?): $!)";
+
+  system("$SVN commit -m '* STATUS: Whitespace changes only.' -- $STATUS") == 0
+    or die "$0: Can't renormalize STATUS ($?): $!"
+    if $MAY_COMMIT;
+}
+
 sub revert {
   copy $STATUS, "$STATUS.$$.tmp";
   system "$SVN revert -q $STATUS";
-  system "$SVN revert -R ./" . ($YES && $MAY_COMMIT ne 'true'
+  system "$SVN revert -R ./" . ($YES && !$MAY_COMMIT
                              ? " -q" : "");
   move "$STATUS.$$.tmp", $STATUS;
   $MERGED_SOMETHING = 0;
@@ -672,10 +715,10 @@ sub handle_entry {
   if ($YES) {
     # Run a merge if:
     unless (@vetoes) {
-      if ($MAY_COMMIT eq 'true' and $in_approved) {
+      if ($MAY_COMMIT and $in_approved) {
         # svn-role mode
         merge %entry;
-      } elsif ($MAY_COMMIT ne 'true') {
+      } elsif (!$MAY_COMMIT) {
         # Scan-for-conflicts mode
         merge %entry;
 
@@ -730,7 +773,7 @@ sub handle_entry {
     # See above for why the while(1).
     QUESTION: while (1) {
     my $key = $entry{digest};
-    given (prompt 'Run a merge? [y,l,±1,±0,q,e,a, ,N] ',
+    given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
         merge %entry;
@@ -770,6 +813,12 @@ sub handle_entry {
                 '[[[', (join ';;', %entry), ']]]';
         }
         next PROMPT;
+      }
+      when (/^v/i) {
+        say "";
+        say for @{$entry{entry}};
+        say "";
+        next QUESTION;
       }
       when (/^q/i) {
         exit_stage_left $state, $approved, $votes;
@@ -822,6 +871,11 @@ sub backport_main {
   my %votes;
   my $state = read_state;
 
+  if (@ARGV && $ARGV[0] eq '--renormalize') {
+    renormalize_STATUS;
+    shift;
+  }
+
   backport_usage, exit 0 if @ARGV > ($YES ? 0 : 1) or grep /^--help$/, @ARGV;
   backport_usage, exit 0 if grep /^(?:-h|-\?|--help|help)$/, @ARGV;
   my $skip = shift; # maybe undef
@@ -831,7 +885,7 @@ sub backport_main {
 
   # Because we use the ':normal' command in Vim...
   die "A vim with the +ex_extra feature is required for \$MAY_COMMIT mode"
-      if $MAY_COMMIT eq 'true' and `${VIM} --version` !~ /[+]ex_extra/;
+      if $MAY_COMMIT and `${VIM} --version` !~ /[+]ex_extra/;
 
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
@@ -871,9 +925,9 @@ sub backport_main {
         break;
       }
       # Backport entry?
-      when (/^ \*/) {
+      when (/^ *\*/) {
         warn "Too many bullets in $lines[0]" and next
-          if grep /^ \*/, @lines[1..$#lines];
+          if grep /^ *\*/, @lines[1..$#lines];
         handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
                      @lines;
       }

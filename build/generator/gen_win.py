@@ -750,6 +750,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
 
+    if self.cpp_defines:
+      fakedefines.extend(self.cpp_defines)
+
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
 
@@ -768,7 +771,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
 
-    # check we have sasl
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
 

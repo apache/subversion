@@ -24,6 +24,11 @@
  * @brief: Implementation of the SVNClient class
  */
 
+#include <vector>
+#include <iostream>
+#include <sstream>
+#include <string>
+
 #include "SVNClient.h"
 #include "JNIUtil.h"
 #include "CopySources.h"
@@ -54,6 +59,8 @@
 #include "PropertyTable.h"
 #include "DiffOptions.h"
 #include "CreateJ.h"
+#include "JNIStringHolder.h"
+
 #include "svn_auth.h"
 #include "svn_dso.h"
 #include "svn_types.h"
@@ -67,12 +74,6 @@
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
-#include "JNIStringHolder.h"
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <string>
-
 
 SVNClient::SVNClient(jobject jthis_in)
     : m_lastPath("", pool), context(jthis_in, pool)
@@ -656,7 +657,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                       const char *path2, Revision &revision2,
                       const char *localPath, bool forceDelete, svn_depth_t depth,
                       bool ignoreMergeinfo, bool diffIgnoreAncestry,
-                      bool dryRun, bool recordOnly)
+                      bool dryRun, bool allowMixedRev, bool recordOnly)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path1, "path1", );
@@ -681,14 +682,15 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                                   depth,
                                   ignoreMergeinfo, diffIgnoreAncestry,
                                   forceDelete, recordOnly, dryRun,
-                                  TRUE, NULL, ctx, subPool.getPool()), );
+                                  allowMixedRev, NULL, ctx,
+                                  subPool.getPool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision,
                       std::vector<RevisionRange> *rangesToMerge,
                       const char *localPath, bool forceDelete, svn_depth_t depth,
                       bool ignoreMergeinfo, bool diffIgnoreAncestry,
-                      bool dryRun, bool recordOnly)
+                      bool dryRun, bool allowMixedRev, bool recordOnly)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -716,7 +718,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                       depth,
                                       ignoreMergeinfo, diffIgnoreAncestry,
                                       forceDelete, recordOnly,
-                                      dryRun, TRUE, NULL, ctx,
+                                      dryRun, allowMixedRev, NULL, ctx,
                                       subPool.getPool()), );
 }
 

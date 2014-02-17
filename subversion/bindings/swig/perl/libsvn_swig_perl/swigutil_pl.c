@@ -1764,7 +1764,8 @@ svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj)
         iob->obj = obj;
         iob->io = io;
         *stream = svn_stream_create(iob, pool);
-        svn_stream_set_read(*stream, io_handle_read);
+        svn_stream_set_read2(*stream, NULL /* only full read support */,
+                             io_handle_read);
         svn_stream_set_write(*stream, io_handle_write);
         svn_stream_set_close(*stream, io_handle_close);
         apr_pool_cleanup_register(pool, iob, io_handle_cleanup,
