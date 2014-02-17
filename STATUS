@@ -164,13 +164,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1567752
-   Fix, very occasional, spurious FAIL in autoprop_tests.py.
-   Justification:
-     Spurious FAILs confuse people.
-   Votes:
-     +1: philip, breser
-
  * r1567996, r1568009, r1568062, r1568063
    Fix a caching inefficiency in multi-threaded servers.
    Justification:
@@ -224,3 +217,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1567752
+   Fix, very occasional, spurious FAIL in autoprop_tests.py.
+   Justification:
+     Spurious FAILs confuse people.
+   Votes:
+     +1: philip, breser, brane
