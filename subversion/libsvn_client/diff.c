@@ -2317,6 +2317,12 @@ diff_repos_wc_file_target(const char *target,
           svn_stream_t *working_content;
           svn_stream_t *normalized_content;
 
+          if (eol_style == svn_subst_eol_style_native)
+            eol_str = SVN_SUBST_NATIVE_EOL_STR;
+          else if (! (eol_style == svn_subst_eol_style_fixed
+                      || eol_style == svn_subst_eol_style_none))
+            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+
           SVN_ERR(svn_stream_open_readonly(&working_content, file2_abspath,
                                            scratch_pool, scratch_pool));
 
@@ -2326,7 +2332,8 @@ diff_repos_wc_file_target(const char *target,
                                          scratch_pool, scratch_pool));
           normalized_content = svn_subst_stream_translated(
                                  file2_content, eol_str,
-                                 TRUE, keywords, FALSE, scratch_pool);
+                                 eol_style == svn_subst_eol_style_fixed,
+                                 keywords, FALSE, scratch_pool);
           SVN_ERR(svn_stream_copy3(working_content, normalized_content,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    scratch_pool));

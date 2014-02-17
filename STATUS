@@ -119,13 +119,3 @@ Veto-blocked changes:
      -1: stsp (not a bug fix, changes output in a patch release)
 
 Approved changes:
-=================
-
- * ^/subversion/branches/1.7.x-diff-translate
-   Fix regression found in 1.7.15 on Windows.
-   Justification:
-     We really should be doing translations right on all platforms.
-   Votes:
-     +1: breser, rhuijben, danielsh
-     +0: ivan (tested, but I don't have enough knowledge about this code for
-               proper review)
