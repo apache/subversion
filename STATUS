@@ -114,3 +114,5 @@ Approved changes:
      We really should be doing translations right on all platforms.
    Votes:
      +1: breser, rhuijben, danielsh
+     +0: ivan (tested, but I don't have enough knowledge about this code for
+               proper review)
