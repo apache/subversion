@@ -187,7 +187,7 @@ Candidate changes:
      but it can't be used to test on 1.8.x. Trunk and branch code are
      identical, however.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -224,3 +224,4 @@ Approved changes:
      Spurious FAILs confuse people.
    Votes:
      +1: philip, breser, brane
+     +0: rhuijben (The patch is ok, but there is a better version on trunk)
