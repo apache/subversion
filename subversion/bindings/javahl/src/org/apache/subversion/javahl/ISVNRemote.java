@@ -397,11 +397,13 @@ public interface ISVNRemote
 
     /**
      * Invoke <code>callback</code> for each log message from
-     * <code>start</code> to <code>end</code>.  <code>start</code> may be greater or less than <code>end</code>;
-     * this just controls whether the log messages are processed in descending
-     * or ascending revision number order.
+     * <code>startRevision</code> to <code>endRevision</code>.
+     * <code>startRevision</code> may be greater or less than
+     * <code>endRevision</code>; this just controls whether the log
+     * messages are processed in descending or ascending revision
+     * number order.
      * <p>
-     * If <code>start</code> or <code>end</code> is
+     * If <code>startRevision</code> or <code>endRevision</code> is
      * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM},
      * the HEAD revision is uses for that argument. If eiter is an
      * invaild non-existent revision, an error will be returned.
@@ -416,7 +418,7 @@ public interface ISVNRemote
      * the first code>limit</code> logs.
      * <p>
      * If <code>discoverPath</code> is set, then each call to
-     * <code>callback</code> the list of changed paths in that
+     * <code>callback</code> contains the list of changed paths in that
      * revision.
      * <p>
      * If <code>strictNodeHistory</code> is set, copy history will not be

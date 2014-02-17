@@ -24,6 +24,11 @@
  * @brief: Implementation of the SVNClient class
  */
 
+#include <vector>
+#include <iostream>
+#include <sstream>
+#include <string>
+
 #include "SVNClient.h"
 #include "JNIUtil.h"
 #include "CopySources.h"
@@ -54,6 +59,8 @@
 #include "PropertyTable.h"
 #include "DiffOptions.h"
 #include "CreateJ.h"
+#include "JNIStringHolder.h"
+
 #include "svn_auth.h"
 #include "svn_dso.h"
 #include "svn_types.h"
@@ -67,12 +74,6 @@
 #include "svn_path.h"
 #include "svn_utf.h"
 #include "svn_private_config.h"
-#include "JNIStringHolder.h"
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <string>
-
 
 SVNClient::SVNClient(jobject jthis_in)
     : m_lastPath("", pool), context(jthis_in, pool)

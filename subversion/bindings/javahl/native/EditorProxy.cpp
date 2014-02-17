@@ -23,6 +23,7 @@
  * @file EditorProxy.h
  * @brief Interface of all editor proxy classes
  */
+#include <apr_pools.h>
 
 #include "JNIUtil.h"
 #include "JNIStackElement.h"
@@ -30,15 +31,13 @@
 #include "CreateJ.h"
 #include "EnumMapper.h"
 
-#include <apr_pools.h>
-#include "svn_error.h"
-#include "svn_private_config.h"
-
 // Newstyle: stream wrapper
 #include <memory>
 #include "NativeStream.hpp"
 #include "jniwrapper/jni_stack.hpp"
 
+#include "svn_error.h"
+#include "svn_private_config.h"
 
 EditorProxy::EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
                          const char* repos_root_url, const char* base_relpath,

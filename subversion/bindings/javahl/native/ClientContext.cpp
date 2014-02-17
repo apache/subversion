@@ -26,7 +26,6 @@
 
 #include "svn_client.h"
 #include "private/svn_wc_private.h"
-#include "svn_private_config.h"
 
 #include "ClientContext.h"
 #include "JNIUtil.h"
@@ -37,6 +36,7 @@
 #include "EnumMapper.h"
 #include "CommitMessage.h"
 
+#include "svn_private_config.h"
 
 ClientContext::ClientContext(jobject jsvnclient, SVN::Pool &pool)
     : OperationContext(pool)

@@ -24,10 +24,6 @@
  * @brief Implementation of the class OperationContext
  */
 
-#include "svn_client.h"
-#include "private/svn_wc_private.h"
-#include "svn_private_config.h"
-
 #include "GlobalConfig.h"
 #include "OperationContext.h"
 #include "JNIUtil.h"
@@ -37,6 +33,11 @@
 #include "CreateJ.h"
 #include "EnumMapper.h"
 #include "CommitMessage.h"
+
+#include "svn_client.h"
+#include "private/svn_wc_private.h"
+#include "private/svn_dep_compat.h"
+#include "svn_private_config.h"
 
 OperationContext::OperationContext(SVN::Pool &pool)
   : m_config(NULL),
