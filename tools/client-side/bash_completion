@@ -803,7 +803,7 @@ _svn()
 		         -x --extensions --force $gOpts"
 		;;
 	cat)
-		cmdOpts="$rOpts $pOpts"
+		cmdOpts="$rOpts $pOpts --ignore-keywords"
 		;;
 	changelist|cl)
 		cmdOpts="--targets $pOpts $qOpts $cOpts \
@@ -851,7 +851,7 @@ _svn()
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
-                         --incremental --xml $cOpts"
+                         --include-externals --incremental --xml $cOpts"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
@@ -876,7 +876,7 @@ _svn()
 		;;
 	mergeinfo)
 	        cmdOpts="$rOpts $pOpts --depth --show-revs -R --recursive \
-			--log"
+		         $qOpts -v --verbose --incremental --log"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
@@ -1231,8 +1231,8 @@ _svnlook ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='author cat changed date diff dirs-changed help history info \
-	      lock log propget proplist tree uuid youngest --version'
+	cmds='author cat changed date diff dirs-changed filesize help history \
+	      info lock log propget proplist tree uuid youngest --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -1271,6 +1271,9 @@ _svnlook ()
 		         --no-diff-added --no-diff-deleted -x --extensions"
 		;;
 	dirs-changed)
+		cmdOpts="-r --revision -t --transaction"
+		;;
+	filesize)
 		cmdOpts="-r --revision -t --transaction"
 		;;
 	help|h|\?)
