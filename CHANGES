@@ -1003,9 +1003,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
 
-Version 1.7.15
-(12 Feb 2014, from /branches/1.7.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.7.15
+Version 1.7.16
+(26 Feb 2014, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.16
 
  User-visible changes:
   - Client-side bugfixes:
@@ -1020,6 +1020,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.15
   - General:
     * fix failure in checkout_tests.py
     * support compiling against Cyrus sasl 2.1.25 (r1404912, r1413402)
+    * support compiling against neon 0.30.x (r1566320)
+
+
+Version 1.7.15
+(Not released, see changes for 1.7.16.)
 
 
 Version 1.7.14
