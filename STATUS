@@ -196,7 +196,7 @@ Candidate changes:
      Possible memory corruption in multi-threaded server on Windows. Regression
      from 1.7.x.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
