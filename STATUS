@@ -186,6 +186,14 @@ Candidate changes:
                    overkill. The whole thing can be implemented with simple
                    atomic operations while mutexes may be a limited resource)
 
+ * r1568872
+   Justification:
+     Fixes an ra_serf-specific API implementation bug.
+   Notes:
+     r1568871 added a test case to JavaHL that exposed this bug.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
