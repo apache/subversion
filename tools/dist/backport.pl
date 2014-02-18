@@ -624,8 +624,10 @@ sub revert {
   my %args = @_;
   die "Bug: \$args{verbose} undefined" unless exists $args{verbose};
   copy $STATUS, "$STATUS.$$.tmp";
-  system "$SVN revert -q $STATUS";
-  system "$SVN revert -R ./" . (" -q" x !$args{verbose});
+  system("$SVN revert -q $STATUS") == 0
+    or die "revert failed ($?): $!";
+  system("$SVN revert -R ./" . (" -q" x !$args{verbose})) == 0
+    or die "revert failed ($?): $!";
   move "$STATUS.$$.tmp", $STATUS;
   $MERGED_SOMETHING = 0;
 }
