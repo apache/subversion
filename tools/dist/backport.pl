@@ -621,10 +621,11 @@ EOVIM
 }
 
 sub revert {
+  my %args = @_;
+  die "Bug: \$args{verbose} undefined" unless exists $args{verbose};
   copy $STATUS, "$STATUS.$$.tmp";
   system "$SVN revert -q $STATUS";
-  system "$SVN revert -R ./" . ($YES && !$MAY_COMMIT
-                             ? " -q" : "");
+  system "$SVN revert -R ./" . (" -q" x !$args{verbose});
   move "$STATUS.$$.tmp", $STATUS;
   $MERGED_SOMETHING = 0;
 }
@@ -633,7 +634,7 @@ sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
   # @_ is 'INT' in the former case and () in the latter.
   delete $SIG{INT} unless @_;
-  revert if !$YES and $MERGED_SOMETHING and prompt 'Revert? ';
+  revert verbose => 1 if !$YES and $MERGED_SOMETHING and prompt 'Revert? ';
   (@_ ? exit : return);
 }
 
@@ -738,7 +739,7 @@ sub handle_entry {
         } elsif (@conflicts) {
           say "Conflicts found merging $entry{header}, as expected.";
         }
-        revert;
+        revert verbose => 0;
       }
     }
   } elsif (defined($skip) ? not $match : $state->{$entry{digest}}) {
@@ -788,7 +789,7 @@ sub handle_entry {
               next;
             }
           }
-          revert;
+          revert verbose => 1;
           next PROMPT;
         }
         # NOTREACHED
