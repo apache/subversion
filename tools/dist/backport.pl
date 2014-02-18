@@ -596,13 +596,24 @@ sub check_local_mods_to_STATUS {
 
 sub renormalize_STATUS {
   my $vimscript = <<'EOVIM';
-:"" Strip trailing whitespace.
-:%s/\s*$//
+:"" Strip trailing whitespace before entries and section headers, but not
+:"" inside entries (e.g., multi-paragraph Notes: fields).
+:""
+:"" Since an entry is always followed by another entry, section header, or EOF,
+:"" there is no need to separately strip trailing whitespace from lines following
+:"" entries.
+:%s/\v\s+\n(\s*\n)*\ze(\s*[*]|\w)/\r\r/g
+
 :"" Ensure there is exactly one blank line around each entry and header.
+:""
+:"" First, inject a new empty line above and below each entry and header; then,
+:"" squeeze runs of empty lines together.
 :0/^=/,$ g/^ *[*]/normal! O
 :g/^=/normal! o
 :g/^=/-normal! O
+:
 :%s/\n\n\n\+/\r\r/g
+
 :"" Save.
 :wq
 EOVIM
