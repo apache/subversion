@@ -737,6 +737,29 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        None, True, True,
                                        '--reintegrate', A_path)
 
+# ### Replace these XFails with @Skip(svntest.main.is_ra_type_file) when fixed.
+@XFail(svntest.main.is_ra_type_dav)
+@XFail(svntest.main.is_ra_type_svn)
+def diff_unauth_parent(sbox):
+  "diff directory without reading parent"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         'propset', 'k', 'v',
+                                         sbox.repo_url + '/A',
+                                         '-m', 'set prop')
+
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_restrictive_svnserve_conf(sbox.repo_dir)
+    write_authz_file(sbox, {"/"       : "* =",
+                            "/A"      : "* = rw"})
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'diff', sbox.repo_url + '/A',
+                                     '-r', '1:2')
+
+
 ########################################################################
 # Run the tests
 
@@ -746,6 +769,7 @@ test_list = [ None,
               mergeinfo_and_skipped_paths,
               merge_fails_if_subtree_is_deleted_on_src,
               reintegrate_fails_if_no_root_access,
+              diff_unauth_parent,
              ]
 serial_only = True
 
