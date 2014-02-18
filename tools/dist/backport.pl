@@ -32,6 +32,8 @@ use Tie::File ();
 ############### Start of reading values from environment ###############
 
 # Programs we use.
+#
+# TODO: document which are interpreted by sh and which should point to binary.
 my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
