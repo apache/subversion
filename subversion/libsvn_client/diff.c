@@ -1521,12 +1521,38 @@ diff_prepare_repos_repos(const char **url1,
   if (strcmp(*url1, repos_root_url) != 0
       && strcmp(*url2, repos_root_url) != 0)
     {
+      svn_node_kind_t ignored_kind;
+      svn_error_t *err;
       svn_uri_split(anchor1, target1, *url1, pool);
       svn_uri_split(anchor2, target2, *url2, pool);
       if (*base_path
           && (*kind1 == svn_node_file || *kind2 == svn_node_file))
         *base_path = svn_dirent_dirname(*base_path, pool);
       SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));
+
+      /* We might not have the necessary rights to read the root now.
+         (It is ok to pass a revision here where the node doesn't exist) */
+      err = svn_ra_check_path(*ra_session, "", *rev1, &ignored_kind, pool);
+
+      if (err && (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN
+                  || err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED))
+        {
+          svn_error_clear(err);
+
+          /* Ok, lets undo the reparent...
+
+             We can't report replacements this way, but at least we can
+             report changes on the descendants */
+
+          *anchor1 = svn_path_url_add_component2(*anchor1, *target1, pool);
+          *anchor2 = svn_path_url_add_component2(*anchor2, *target2, pool);
+          *target1 = "";
+          *target2 = "";
+
+          SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));
+        }
+      else
+        SVN_ERR(err);
     }
 
   return SVN_NO_ERROR;

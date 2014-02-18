@@ -737,28 +737,162 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        None, True, True,
                                        '--reintegrate', A_path)
 
-# ### Replace these XFails with @Skip(svntest.main.is_ra_type_file) when fixed.
-@XFail(svntest.main.is_ra_type_dav)
-@XFail(svntest.main.is_ra_type_svn)
 def diff_unauth_parent(sbox):
   "diff directory without reading parent"
 
   sbox.build(create_wc=False)
 
+  # Create r2: Change A a bit
   svntest.actions.run_and_verify_svnmucc(None, None, [],
                                          'propset', 'k', 'v',
                                          sbox.repo_url + '/A',
                                          '-m', 'set prop')
 
+  # Create r3 Mark E and G
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         'propset', 'this-is', 'E',
+                                         sbox.repo_url + '/A/B/E',
+                                         'propset', 'this-is', 'G',
+                                         sbox.repo_url + '/A/D/G',
+                                         '-m', 'set prop')
+
+  # Create r4: Replace A/B/E with A/D/G
+  svntest.actions.run_and_verify_svnmucc(None, None, [],
+                                         'rm', sbox.repo_url + '/A/B/E',
+                                         'cp', '3', sbox.repo_url + '/A/D/G',
+                                         sbox.repo_url + '/A/B/E',
+                                         '-m', 'replace A/B/E')
+
+
   if is_ra_type_svn() or is_ra_type_dav():
     write_restrictive_svnserve_conf(sbox.repo_dir)
     write_authz_file(sbox, {"/"       : "* =",
-                            "/A"      : "* = rw"})
+                            "/A"    : "* = rw"})
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'diff', sbox.repo_url + '/A',
-                                     '-r', '1:2')
+  # Diff the property change
+  expected_output = [
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(revision 1)\n',
+    '+++ .\t(revision 2)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+    'Added: k\n',
+    '## -0,0 +1 ##\n',
+    '+v\n',
+    '\ No newline at end of property\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.repo_url + '/A', '-c', '2')
 
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_authz_file(sbox, {"/"       : "* =",
+                            "/A/B/E"    : "* = rw"})
+
+  # Diff the replacement
+  expected_output = [
+    'Index: alpha\n',
+    '===================================================================\n',
+    '--- alpha\t(revision 3)\n',
+    '+++ alpha\t(revision 4)\n',
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: beta\n',
+    '===================================================================\n',
+    '--- beta\t(revision 3)\n',
+    '+++ beta\t(revision 4)\n',
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'beta\'.\n',
+    'Index: tau\n',
+    '===================================================================\n',
+    '--- tau\t(revision 0)\n',
+    '+++ tau\t(revision 4)\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is the file \'tau\'.\n',
+    'Index: rho\n',
+    '===================================================================\n',
+    '--- rho\t(revision 0)\n',
+    '+++ rho\t(revision 4)\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is the file \'rho\'.\n',
+    'Index: pi\n',
+    '===================================================================\n',
+    '--- pi\t(revision 0)\n',
+    '+++ pi\t(revision 4)\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is the file \'pi\'.\n',
+  ]
+
+  if is_ra_type_svn() or is_ra_type_dav():
+    # Because we can't anchor above C we see just a changed C, not a
+    # replacement
+    expected_output += [
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(revision 3)\n',
+    '+++ .\t(revision 4)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+      'Modified: this-is\n',
+      '## -1 +1 ##\n',
+      '-E\n',
+      '\ No newline at end of property\n',
+      '+G\n',
+      '\ No newline at end of property\n',
+    ]
+  else:
+    # ### We should also see a property deletion here!
+    expected_output += [
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(revision 0)\n',
+    '+++ .\t(revision 4)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+      'Added: this-is\n',
+      '## -0,0 +1 ##\n',
+      '+G\n',
+      '\ No newline at end of property\n',
+    ]
+
+  # Use two url diff, because 'svn diff url -c' uses copyfrom to diff against
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.repo_url + '/A/B/E@3',
+                                      sbox.repo_url + '/A/B/E@4',
+                                      '--notice-ancestry')
+
+  # Do the same thing with summarize to really see directory deletes and adds
+  if is_ra_type_svn() or is_ra_type_dav():
+    # With no rights on the parent directory we just see a property change on E
+    expected_output = [
+      'D       %s/A/B/E/alpha\n' % sbox.repo_url,
+      'D       %s/A/B/E/beta\n' % sbox.repo_url,
+      'A       %s/A/B/E/tau\n' % sbox.repo_url,
+      'A       %s/A/B/E/rho\n' % sbox.repo_url,
+      'A       %s/A/B/E/pi\n' % sbox.repo_url,
+      ' M      %s/A/B/E\n' % sbox.repo_url,
+    ]
+  else:
+    # But with rights on the parent we see a replacement of E
+    expected_output = [
+      'D       %s/A/B/E/alpha\n' % sbox.repo_url,
+      'D       %s/A/B/E/beta\n' % sbox.repo_url,
+      'D       %s/A/B/E\n' % sbox.repo_url,
+      'A       %s/A/B/E/tau\n' % sbox.repo_url,
+      'A       %s/A/B/E/rho\n' % sbox.repo_url,
+      'A       %s/A/B/E/pi\n' % sbox.repo_url,
+      'A       %s/A/B/E\n' % sbox.repo_url,
+    ]
+
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', sbox.repo_url + '/A/B/E@3',
+                                      sbox.repo_url + '/A/B/E@4',
+                                      '--notice-ancestry', '--summarize')
 
 ########################################################################
 # Run the tests
