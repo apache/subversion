@@ -37,7 +37,7 @@ my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
-my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
+my $PAGER = $ENV{PAGER} // 'less' // 'cat';
 
 # Mode flags.
 #    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
