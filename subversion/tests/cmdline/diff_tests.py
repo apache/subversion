@@ -4801,11 +4801,18 @@ def diff_repo_repo_added_file_mime_type(sbox):
                                        '-r1:2', newfile)
 
     # reverse the diff to diff across a deletion
-    # Note no property delete is printed when whole file is deleted
     expected_output = make_diff_header(newfile, 'revision 2', 'revision 1') + \
-                      [ '@@ -1, +0,0 @@\n',
-                        "-This is the file 'newfile'.\n" ]
-    svntest.actions.run_and_verify_svn(None, None, [], 'diff',
+                      [ '@@ -1 +0,0 @@\n',
+                        "-This is the file 'newfile'.\n",
+                        '\n',
+                        'Property changes on: %s\n' % sbox.path('newfile'),
+                        '__________________________________________________' +
+                              '_________________\n',
+                        'Deleted: svn:mime-type\n',
+                        '## -1 +0,0 ##\n',
+                        '-text/plain\n',
+                        '\ No newline at end of property\n']
+    svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                        '-r2:1', newfile)
 
 ########################################################################

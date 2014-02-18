@@ -1118,6 +1118,7 @@ diff_file_deleted(svn_wc_notify_state_t *state,
   else
     {
       svn_boolean_t wrote_header = FALSE;
+
       if (tmpfile1)
         SVN_ERR(diff_content_changed(&wrote_header, diff_relpath,
                                      tmpfile1, tmpfile2,
@@ -1129,10 +1130,21 @@ diff_file_deleted(svn_wc_notify_state_t *state,
                                      diff_cmd_baton,
                                      scratch_pool));
 
-      /* Should we also report the properties as deleted? */
-    }
+      if (original_props && apr_hash_count(original_props))
+        {
+          apr_array_header_t *prop_changes;
 
-  /* We don't list all the deleted properties. */
+          SVN_ERR(svn_prop_diffs(&prop_changes, apr_hash_make(scratch_pool),
+                                 original_props, scratch_pool));
+
+          SVN_ERR(diff_props_changed(diff_relpath,
+                                     diff_cmd_baton->revnum1,
+                                     diff_cmd_baton->revnum2,
+                                     wrote_header, prop_changes,
+                                     original_props, ! wrote_header,
+                                     diff_cmd_baton, scratch_pool));
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1163,7 +1175,6 @@ diff_dir_deleted(svn_wc_notify_state_t *state,
                  void *diff_baton,
                  apr_pool_t *scratch_pool)
 {
-  /* Do nothing. */
 
   return SVN_NO_ERROR;
 }
