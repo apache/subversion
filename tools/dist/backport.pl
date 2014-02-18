@@ -225,10 +225,6 @@ sub merge {
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my ($mergeargs);
 
-  # Include the time so it's easier to find the interesting backups.
-  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
-  die if -s $backupfile;
-
   if ($entry{branch}) {
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
@@ -262,7 +258,6 @@ set -e
 if $sh[$DEBUG]; then
   set -x
 fi
-$SVN diff > $backupfile
 if ! $sh[$MAY_COMMIT] ; then
   cp STATUS STATUS.$$
 fi
@@ -311,16 +306,21 @@ elif ! $sh[$YES]; then
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
-  print SHELL $script;
-  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
-
+  # Include the time so it's easier to find the interesting backups.
+  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
+  die if -s $backupfile;
+  system("$SVN diff > $backupfile") == 0
+    or die "Saving a backup diff ($backupfile) failed ($?): $!";
   if (-z $backupfile) {
     unlink $backupfile;
   } else {
     warn "Local mods saved to '$backupfile'\n";
   }
+
+  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
+  print SHELL $script;
+  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
+  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
 
   unlink $logmsg_filename unless $? or $!;
 }
