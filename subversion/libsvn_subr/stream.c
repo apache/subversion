@@ -153,30 +153,26 @@ svn_stream__set_is_buffered(svn_stream_t *stream,
   stream->is_buffered_fn = is_buffered_fn;
 }
 
-/* Standard implementation for svn_stream_read_full() based on multiple.
-   svn_stream_read2() calls
-   (in separate function to make it more likely for svn_stream_read_full
-    to be inlined) */
+/* Standard implementation for svn_stream_read_full() based on
+   multiple svn_stream_read2() calls (in separate function to make
+   it more likely for svn_stream_read_full to be inlined) */
 static svn_error_t *
 full_read_fallback(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
-  apr_size_t to_read;
-
-  to_read = *len;
-
-  while (to_read > 0)
+  apr_size_t remaining = *len;
+  while (remaining > 0)
     {
-      *len = to_read;
-      SVN_ERR(svn_stream_read2(stream, buffer, len));
+      apr_size_t length = remaining;
+      SVN_ERR(svn_stream_read2(stream, buffer, &length));
 
-      to_read -= *len;
-      buffer += *len;
-
-      if (*len == 0)
+      if (length == 0)
         {
-          *len = to_read;
+          *len -= remaining;
           return SVN_NO_ERROR;
         }
+
+      remaining -= length;
+      buffer += length;
     }
 
   return SVN_NO_ERROR;
