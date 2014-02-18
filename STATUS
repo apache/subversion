@@ -217,14 +217,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1567752
-   Fix, very occasional, spurious FAIL in autoprop_tests.py.
-   Justification:
-     Spurious FAILs confuse people.
-   Votes:
-     +1: philip, breser, brane
-     +0: rhuijben (The patch is ok, but there is a better version on trunk)
-
  * r1568872
    Justification:
      Fixes an API implementation bug in ra_serf.
