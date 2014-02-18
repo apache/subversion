@@ -795,7 +795,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
             http://subversion.apache.org/security/CVE-2011-1752-advisory.txt
     * fixed: write-through proxy could direcly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
-    * improve error message when clients refer to unkown revisions (r939000)
+    * improve error message when clients refer to unknown revisions (r939000)
     * bugfixes and optimizations to the DAV mirroring code (r878607)
     * fixed: locked and deleted file causes tree conflict (issue #3525)
     * fixed: update touches locked file with svn:keywords property (issue #3471)
@@ -1165,7 +1165,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.1
   * improve performance of 'svn update' on large files (r36389, et. al.)
   * fixed: error leak and potential crash (r36860)
   * fixed: parent directory handling on Windows (r36049, -50, -51, -131)
-  * fixed: unintialized memory errors (r36252, -3)
+  * fixed: uninitialized memory errors (r36252, -3)
   * fixed: potential working copy corruption (r36714)
   * fixed: working copy upgrade error (r36302)
   * fixed: pointer dereference error (r36783)
