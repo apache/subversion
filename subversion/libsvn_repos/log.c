@@ -728,7 +728,7 @@ next_history_rev(const apr_array_header_t *histories)
 
 /* Set *DELETED_MERGEINFO_CATALOG and *ADDED_MERGEINFO_CATALOG to
    catalogs describing how mergeinfo values on paths (which are the
-   keys of those catalogs) were changed in REV.  If *PREFETCHED_CAHNGES
+   keys of those catalogs) were changed in REV.  If *PREFETCHED_CHANGES
    already contains the changed paths for REV, use that.  Otherwise,
    request that data and return it in *PREFETCHED_CHANGES. */
 /* ### TODO: This would make a *great*, useful public function,
@@ -953,9 +953,9 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
 /* Determine what (if any) mergeinfo for PATHS was modified in
    revision REV, returning the differences for added mergeinfo in
    *ADDED_MERGEINFO and deleted mergeinfo in *DELETED_MERGEINFO.
-   If *PREFETCHED_CAHNGES already contains the changed paths for
+   If *PREFETCHED_CHANGES already contains the changed paths for
    REV, use that.  Otherwise, request that data and return it in
-   *PREFETCHED_CHANGES.  Use POOL for all allocations. */
+   *PREFETCHED_CHANGES. */
 static svn_error_t *
 get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                svn_mergeinfo_t *deleted_mergeinfo,
