@@ -223,20 +223,13 @@ sub merge {
   $MERGED_SOMETHING++;
 
   my ($logmsg_fh, $logmsg_filename) = tempfile();
-  my ($mergeargs, $pattern);
+  my ($mergeargs);
 
   # Include the time so it's easier to find the interesting backups.
   my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
   die if -s $backupfile;
 
   if ($entry{branch}) {
-    my $vim_escaped_branch = 
-      join "",
-      map { sprintf '\[%s%s]', $_, ($_ x ($_ eq '\\')) }
-      split //,
-      $entry{branch};
-    $pattern = sprintf '\V\(Branch: \*\n\?\)\? \*\(\.\*\/branches\/\)\?%s',
-                 $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
       $mergeargs = "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Merge $entry{header}:";
@@ -246,7 +239,6 @@ sub merge {
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $pattern = '^ *[*] \V' . 'r' . $entry{revisions}->[0];
     $mergeargs = join " ",
       ($entry{accept} ? "--accept=$entry{accept}" : ()),
       (map { "-c$_" } @{$entry{revisions}}),
@@ -294,7 +286,7 @@ if $sh[$MAY_COMMIT]; then
   # Remove the approved entry.  The sentinel guarantees the right number of blank
   # lines is removed, which prevents spurious '--renormalize' commits tomorrow.
   echo "sentinel" >> $STATUS
-  $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
+  $VIM -e -s -n -N -i NONE -u NONE -c ':0normal! $entry{parno}\x{7d}kdap' -c wq $STATUS
   $VIM -e -s -n -N -i NONE -u NONE -c '\$d' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
 elif ! $sh[$YES]; then
@@ -454,6 +446,7 @@ sub parse_entry {
     accept => $accept,
     raw => $raw,
     digest => digest_entry($raw),
+    parno => ($.),
   );
 }
 
