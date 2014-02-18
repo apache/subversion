@@ -220,7 +220,6 @@ sub prompt {
 
 sub merge {
   my %entry = @_;
-  $MERGED_SOMETHING++;
 
   my ($logmsg_fh, $logmsg_filename) = tempfile();
   my ($mergeargs);
@@ -257,13 +256,6 @@ sub merge {
 set -e
 if $sh[$DEBUG]; then
   set -x
-fi
-if ! $sh[$MAY_COMMIT] ; then
-  cp STATUS STATUS.$$
-fi
-$SVNq revert -R .
-if ! $sh[$MAY_COMMIT] ; then
-  mv STATUS.$$ STATUS
 fi
 $SVNq up
 $SVNq merge $mergeargs
@@ -317,6 +309,10 @@ EOF
     warn "Local mods saved to '$backupfile'\n";
   }
 
+  # If $MAY_COMMIT, then $script will edit STATUS anyway.
+  revert(verbose => 0, discard_STATUS => $MAY_COMMIT);
+
+  $MERGED_SOMETHING++;
   open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
   print SHELL $script;
   close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
@@ -623,12 +619,14 @@ EOVIM
 sub revert {
   my %args = @_;
   die "Bug: \$args{verbose} undefined" unless exists $args{verbose};
-  copy $STATUS, "$STATUS.$$.tmp";
+  die "Bug: unknown argument" if grep !/^(?:verbose|discard_STATUS)$/, keys %args;
+
+  copy $STATUS, "$STATUS.$$.tmp"        unless $args{discard_STATUS};
   system("$SVN revert -q $STATUS") == 0
     or die "revert failed ($?): $!";
   system("$SVN revert -R ./" . (" -q" x !$args{verbose})) == 0
     or die "revert failed ($?): $!";
-  move "$STATUS.$$.tmp", $STATUS;
+  move "$STATUS.$$.tmp", $STATUS        unless $args{discard_STATUS};
   $MERGED_SOMETHING = 0;
 }
 
