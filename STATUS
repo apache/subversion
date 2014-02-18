@@ -216,13 +216,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1568872
-   Justification:
-     Fixes an API implementation bug in ra_serf.
-   Notes:
-     r1568871 added a test case to JavaHL that exposed this bug on trunk,
-     but it can't be used to test on 1.8.x. Trunk and branch code are
-     identical, however.
-   Votes:
-     +1: brane, rhuijben, ivan
