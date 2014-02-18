@@ -649,7 +649,8 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
       const svn_txdelta_op_t *const op = &window->ops[op_ndx];
       const apr_size_t *const off = &ndx->offs[op_ndx];
       const apr_size_t fix_offset = (offset > off[0] ? offset - off[0] : 0);
-      const apr_size_t fix_limit = (off[1] > limit ? off[1] - limit : 0);
+      const apr_size_t fix_limit = (off[0] >= limit ? 0
+                                    : (off[1] > limit ? off[1] - limit : 0));
 
       /* Ideally, we'd do this check before assigning fix_offset and
          fix_limit; but then we couldn't make them const whilst still
