@@ -3935,7 +3935,7 @@ def diff_two_working_copies(sbox):
 
   src_label = os.path.basename(wc_dir_old)
   dst_label = os.path.basename(wc_dir)
-  expected_output = make_diff_header('newdir/newfile', 'working copy',
+  expected_output = make_diff_header('newdir/newfile', 'revision 0',
                                      'working copy',
                                      src_label, dst_label) + [
                       "@@ -0,0 +1 @@\n",
@@ -3945,13 +3945,13 @@ def diff_two_working_copies(sbox):
                                          src_label, dst_label) + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'mu'.\n",
-                    ] + make_diff_header('A/B/F', 'working copy',
+                    ] + make_diff_header('A/B/F', 'revision 0',
                                          'working copy',
                                          src_label, dst_label) + [
                       "@@ -0,0 +1 @@\n",
                       "+new text\n",
                     ] + make_diff_prop_header('A/B/F') + \
-                        make_diff_prop_modified("newprop", "propval-old\n",
+                        make_diff_prop_added("newprop",
                                                 "propval-new\n") + \
                     make_diff_header('A/B/lambda', 'working copy',
                                          'working copy',
@@ -3973,7 +3973,7 @@ def diff_two_working_copies(sbox):
                                          src_label, dst_label) + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'pi'.\n",
-                    ] + make_diff_header('A/D/G/pi', 'working copy',
+                    ] + make_diff_header('A/D/G/pi', 'revision 0',
                                          'working copy',
                                          src_label, dst_label) + \
                         make_diff_prop_header('A/D/G/pi') + \
@@ -4047,27 +4047,27 @@ def diff_arbitrary_files_and_dirs(sbox):
                                      '--new', sbox.ospath('A/mu'))
 
   # diff A/B/E with A/D
-  expected_output = make_diff_header("G/pi", "working copy", "working copy",
+  expected_output = make_diff_header("G/pi", "revision 0", "working copy",
                                      "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'pi'.\n"
-                    ] + make_diff_header("G/rho", "working copy",
+                    ] + make_diff_header("G/rho", "revision 0",
                                          "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'rho'.\n"
-                    ] + make_diff_header("G/tau", "working copy",
+                    ] + make_diff_header("G/tau", "revision 0",
                                          "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'tau'.\n"
-                    ] + make_diff_header("H/chi", "working copy",
+                    ] + make_diff_header("H/chi", "revision 0",
                                          "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'chi'.\n"
-                    ] + make_diff_header("H/omega", "working copy",
+                    ] + make_diff_header("H/omega", "revision 0",
                                          "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'omega'.\n"
-                    ] + make_diff_header("H/psi", "working copy",
+                    ] + make_diff_header("H/psi", "revision 0",
                                          "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'psi'.\n"
@@ -4079,7 +4079,7 @@ def diff_arbitrary_files_and_dirs(sbox):
                                          "working copy", "B/E", "D") + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'beta'.\n"
-                    ] + make_diff_header("gamma", "working copy",
+                    ] + make_diff_header("gamma", "revision 0",
                                          "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'gamma'.\n"
