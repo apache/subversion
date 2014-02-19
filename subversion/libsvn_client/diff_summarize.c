@@ -25,22 +25,26 @@
 #include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
+#include "svn_path.h"
 #include "svn_props.h"
 #include "svn_pools.h"
+
+#include "private/svn_wc_private.h"
 
 #include "client.h"
 
 
 /* Diff callbacks baton.  */
 struct summarize_baton_t {
+  apr_pool_t *baton_pool; /* For allocating skip_path */
+
   /* The target path of the diff, relative to the anchor; "" if target == anchor. */
-  const char *target;
+  const char *original_target;
+  const char *anchor_path;
+  const char *skip_relpath;
 
   /* The summarize callback passed down from the API */
   svn_client_diff_summarize_func_t summarize_func;
-
-  /* Is the diff handling reversed? (add<->delete) */
-  svn_boolean_t reversed;
 
   /* The summarize callback baton */
   void *summarize_func_baton;
@@ -50,6 +54,28 @@ struct summarize_baton_t {
   apr_hash_t *prop_changes;
 };
 
+/* Calculate skip_relpath from original_target and anchor_path */
+static APR_INLINE void
+ensure_skip_relpath(struct summarize_baton_t *b)
+{
+  if (b->skip_relpath)
+    return;
+
+  if (svn_path_is_url(b->original_target))
+    {
+      b->skip_relpath = svn_uri_skip_ancestor(b->anchor_path,
+                                              b->original_target,
+                                              b->baton_pool);
+    }
+  else
+    {
+      b->skip_relpath = svn_dirent_skip_ancestor(b->anchor_path,
+                                                 b->original_target);
+    }
+
+  if (!b->skip_relpath)
+    b->skip_relpath = "";
+}
 
 /* Call B->summarize_func with B->summarize_func_baton, passing it a
  * summary object composed from PATH (but made to be relative to the target
@@ -68,24 +94,11 @@ send_summary(struct summarize_baton_t *b,
   SVN_ERR_ASSERT(summarize_kind != svn_client_diff_summarize_kind_normal
                  || prop_changed);
 
-  if (b->reversed)
-    {
-      switch(summarize_kind)
-        {
-          case svn_client_diff_summarize_kind_added:
-            summarize_kind = svn_client_diff_summarize_kind_deleted;
-            break;
-          case svn_client_diff_summarize_kind_deleted:
-            summarize_kind = svn_client_diff_summarize_kind_added;
-            break;
-          default:
-            break;
-        }
-    }
-
   /* PATH is relative to the anchor of the diff, but SUM->path needs to be
      relative to the target of the diff. */
-  sum->path = svn_relpath_skip_ancestor(b->target, path);
+  ensure_skip_relpath(b);
+
+  sum->path = svn_relpath_skip_ancestor(b->skip_relpath, path);
   sum->summarize_kind = summarize_kind;
   if (summarize_kind == svn_client_diff_summarize_kind_modified
       || summarize_kind == svn_client_diff_summarize_kind_normal)
@@ -183,7 +196,8 @@ cb_dir_closed(svn_wc_notify_state_t *contentstate,
   struct summarize_baton_t *b = diff_baton;
   svn_boolean_t prop_change;
 
-  if (! svn_relpath_skip_ancestor(b->target, path))
+  ensure_skip_relpath(b);
+  if (! svn_relpath_skip_ancestor(b->skip_relpath, path))
     return SVN_NO_ERROR;
 
   prop_change = svn_hash_gets(b->prop_changes, path) != NULL;
@@ -283,22 +297,23 @@ cb_dir_props_changed(svn_wc_notify_state_t *propstate,
 
 svn_error_t *
 svn_client__get_diff_summarize_callbacks(
-                        svn_wc_diff_callbacks4_t **callbacks,
-                        void **callback_baton,
-                        const char *target,
-                        svn_boolean_t reversed,
+                        const svn_diff_tree_processor_t **diff_processor,
+                        const char ***anchor_path,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
-                        apr_pool_t *pool)
+                        const char *original_target,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
-  svn_wc_diff_callbacks4_t *cb = apr_palloc(pool, sizeof(*cb));
-  struct summarize_baton_t *b = apr_palloc(pool, sizeof(*b));
+  svn_wc_diff_callbacks4_t *cb = apr_palloc(result_pool, sizeof(*cb));
+  struct summarize_baton_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
-  b->target = target;
+  *anchor_path = &b->anchor_path;
+  b->baton_pool = result_pool;
   b->summarize_func = summarize_func;
   b->summarize_func_baton = summarize_baton;
-  b->prop_changes = apr_hash_make(pool);
-  b->reversed = reversed;
+  b->original_target = apr_pstrdup(result_pool, original_target);
+  b->prop_changes = apr_hash_make(result_pool);
 
   cb->file_opened = cb_file_opened;
   cb->file_changed = cb_file_changed;
@@ -310,8 +325,8 @@ svn_client__get_diff_summarize_callbacks(
   cb->dir_props_changed = cb_dir_props_changed;
   cb->dir_closed = cb_dir_closed;
 
-  *callbacks = cb;
-  *callback_baton = b;
+  SVN_ERR(svn_wc__wrap_diff_callbacks(diff_processor, cb, b, TRUE,
+                                      result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
