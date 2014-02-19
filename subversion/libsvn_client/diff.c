@@ -1918,8 +1918,6 @@ diff_repos_wc(const char **anchor_path,
   const char *abspath_or_url1;
   const char *abspath2;
   const char *anchor_abspath;
-  svn_node_kind_t kind1;
-  svn_node_kind_t kind2;
   svn_boolean_t is_copy;
   svn_revnum_t cf_revision;
   const char *cf_repos_relpath;
@@ -1989,12 +1987,6 @@ diff_repos_wc(const char **anchor_path,
                                           (strcmp(path_or_url1, url1) == 0)
                                                     ? NULL : abspath_or_url1,
                                           ra_session, revision1, pool));
-  SVN_ERR(svn_ra_check_path(ra_session, "", rev, &kind1, pool));
-
-  /* Figure out the node kind of the local target. */
-  SVN_ERR(svn_wc_read_kind2(&kind2, ctx->wc_ctx, abspath2,
-                            TRUE, FALSE, pool));
-
   if (cmd_baton)
     {
       cmd_baton->ra_session = ra_session;
