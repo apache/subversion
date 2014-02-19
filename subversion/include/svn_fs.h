@@ -1773,12 +1773,14 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * If @a adjust_inherited_mergeinfo is @c TRUE, then any inherited
  * mergeinfo returned in @a *catalog is normalized to represent the
- * inherited mergeinfo on the path which inherits it.  If
+ * inherited mergeinfo on the path which inherits it.  This adjusted
+ * mergeinfo is keyed by the path which inherits it.  If
  * @a adjust_inherited_mergeinfo is @c FALSE, then any inherited
  * mergeinfo is the raw explicit mergeinfo from the nearest parent
  * of the path with explicit mergeinfo, unadjusted for the path-wise
  * difference between the path and its parent.  This may include
- * non-inheritable mergeinfo.
+ * non-inheritable mergeinfo.  This unadjusted mergeinfo is keyed by
+ * the path at which it was found.
  *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
