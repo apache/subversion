@@ -596,7 +596,7 @@ typedef struct diff_writer_info_t
   svn_boolean_t no_diff_deleted;
 
   /* Whether to ignore copyfrom information when showing adds */
-  svn_boolean_t no_copyfrom_on_add;
+  svn_boolean_t show_copies_as_adds;
 
   /* Empty files for creating diffs or NULL if not used yet */
   const char *empty_file;
@@ -1012,7 +1012,7 @@ diff_file_added(svn_wc_notify_state_t *content_state,
         rev2 = diff_cmd_baton->ddi.revnum2;
     }
 
-  if (diff_cmd_baton->no_copyfrom_on_add
+  if (diff_cmd_baton->show_copies_as_adds
       && (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_revision)))
     {
       apr_hash_t *empty_hash = apr_hash_make(scratch_pool);
@@ -2399,7 +2399,7 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
-  diff_cmd_baton.no_copyfrom_on_add = show_copies_as_adds;
+  diff_cmd_baton.show_copies_as_adds = show_copies_as_adds;
 
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ddi.session_relpath = NULL;
@@ -2477,7 +2477,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.use_git_diff_format = use_git_diff_format;
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
-  diff_cmd_baton.no_copyfrom_on_add = show_copies_as_adds;
+  diff_cmd_baton.show_copies_as_adds = show_copies_as_adds;
 
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ddi.session_relpath = NULL;
