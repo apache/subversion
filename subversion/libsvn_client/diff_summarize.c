@@ -48,10 +48,6 @@ struct summarize_baton_t {
 
   /* The summarize callback baton */
   void *summarize_func_baton;
-
-  /* Which paths have a prop change. Key is a (const char *) path; the value
-   * is any non-null pointer to indicate that this path has a prop change. */
-  apr_hash_t *prop_changes;
 };
 
 /* Calculate skip_relpath from original_target and anchor_path */
@@ -109,6 +105,29 @@ send_summary(struct summarize_baton_t *b,
   return SVN_NO_ERROR;
 }
 
+/* Are there any changes to relevant (normal) props in PROPS? */
+static svn_boolean_t
+props_changed_hash(apr_hash_t *props,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  if (!props)
+    return FALSE;
+
+  for (hi = apr_hash_first(scratch_pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+
+      if (svn_property_kind2(name) == svn_prop_regular_kind)
+        {
+          return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
 /* Are there any changes to relevant (normal) props in PROPCHANGES? */
 static svn_boolean_t
 props_changed(const apr_array_header_t *propchanges,
@@ -121,176 +140,152 @@ props_changed(const apr_array_header_t *propchanges,
   return (props->nelts != 0);
 }
 
-
+/* svn_diff_tree_processor_t callback */
 static svn_error_t *
-cb_dir_deleted(svn_wc_notify_state_t *state,
-               svn_boolean_t *tree_conflicted,
-               const char *path,
-               void *diff_baton,
+diff_dir_opened(void **new_dir_baton,
+                svn_boolean_t *skip,
+                svn_boolean_t *skip_children,
+                const char *relpath,
+                const svn_diff_source_t *left_source,
+                const svn_diff_source_t *right_source,
+                const svn_diff_source_t *copyfrom_source,
+                void *parent_dir_baton,
+                const struct svn_diff_tree_processor_t *processor,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  /* struct summarize_baton_t *b = processor->baton; */
+
+  /* ### Send here instead of from dir_added() ? */
+  /*if (!left_source)
+    {
+      SVN_ERR(send_summary(b, relpath, svn_client_diff_summarize_kind_added,
+                           FALSE, svn_node_dir, scratch_pool));
+    }*/
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t callback */
+static svn_error_t *
+diff_dir_changed(const char *relpath,
+                 const svn_diff_source_t *left_source,
+                 const svn_diff_source_t *right_source,
+                 /*const*/ apr_hash_t *left_props,
+                 /*const*/ apr_hash_t *right_props,
+                 const apr_array_header_t *prop_changes,
+                 void *dir_baton,
+                 const struct svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool)
+{
+  struct summarize_baton_t *b = processor->baton;
+
+  SVN_ERR(send_summary(b, relpath, svn_client_diff_summarize_kind_normal,
+                       TRUE, svn_node_dir, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t callback */
+static svn_error_t *
+diff_dir_added(const char *relpath,
+               const svn_diff_source_t *copyfrom_source,
+               const svn_diff_source_t *right_source,
+               /*const*/ apr_hash_t *copyfrom_props,
+               /*const*/ apr_hash_t *right_props,
+               void *dir_baton,
+               const struct svn_diff_tree_processor_t *processor,
                apr_pool_t *scratch_pool)
 {
-  struct summarize_baton_t *b = diff_baton;
+  struct summarize_baton_t *b = processor->baton;
 
-  SVN_ERR(send_summary(b, path, svn_client_diff_summarize_kind_deleted,
+  /* ### Send from dir_opened without prop info? */
+  SVN_ERR(send_summary(b, relpath, svn_client_diff_summarize_kind_added,
+                       props_changed_hash(right_props, scratch_pool),
+                       svn_node_dir, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_diff_tree_processor_t callback */
+static svn_error_t *
+diff_dir_deleted(const char *relpath,
+                 const svn_diff_source_t *left_source,
+                 /*const*/ apr_hash_t *left_props,
+                 void *dir_baton,
+                 const struct svn_diff_tree_processor_t *processor,
+                 apr_pool_t *scratch_pool)
+{
+  struct summarize_baton_t *b = processor->baton;
+
+  SVN_ERR(send_summary(b, relpath, svn_client_diff_summarize_kind_deleted,
                        FALSE, svn_node_dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
+/* svn_diff_tree_processor_t callback */
 static svn_error_t *
-cb_file_deleted(svn_wc_notify_state_t *state,
-                svn_boolean_t *tree_conflicted,
-                const char *path,
-                const char *tmpfile1,
-                const char *tmpfile2,
-                const char *mimetype1,
-                const char *mimetype2,
-                apr_hash_t *originalprops,
-                void *diff_baton,
+diff_file_added(const char *relpath,
+                const svn_diff_source_t *copyfrom_source,
+                const svn_diff_source_t *right_source,
+                const char *copyfrom_file,
+                const char *right_file,
+                /*const*/ apr_hash_t *copyfrom_props,
+                /*const*/ apr_hash_t *right_props,
+                void *file_baton,
+                const struct svn_diff_tree_processor_t *processor,
                 apr_pool_t *scratch_pool)
 {
-  struct summarize_baton_t *b = diff_baton;
+  struct summarize_baton_t *b = processor->baton;
 
-  SVN_ERR(send_summary(b, path, svn_client_diff_summarize_kind_deleted,
-                       FALSE, svn_node_file, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cb_dir_added(svn_wc_notify_state_t *state,
-             svn_boolean_t *tree_conflicted,
-             svn_boolean_t *skip,
-             svn_boolean_t *skip_children,
-             const char *path,
-             svn_revnum_t rev,
-             const char *copyfrom_path,
-             svn_revnum_t copyfrom_revision,
-             void *diff_baton,
-             apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cb_dir_opened(svn_boolean_t *tree_conflicted,
-              svn_boolean_t *skip,
-              svn_boolean_t *skip_children,
-              const char *path,
-              svn_revnum_t rev,
-              void *diff_baton,
-              apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cb_dir_closed(svn_wc_notify_state_t *contentstate,
-              svn_wc_notify_state_t *propstate,
-              svn_boolean_t *tree_conflicted,
-              const char *path,
-              svn_boolean_t dir_was_added,
-              void *diff_baton,
-              apr_pool_t *scratch_pool)
-{
-  struct summarize_baton_t *b = diff_baton;
-  svn_boolean_t prop_change;
-
-  ensure_skip_relpath(b);
-  if (! svn_relpath_skip_ancestor(b->skip_relpath, path))
-    return SVN_NO_ERROR;
-
-  prop_change = svn_hash_gets(b->prop_changes, path) != NULL;
-  if (dir_was_added || prop_change)
-    SVN_ERR(send_summary(b, path,
-                         dir_was_added ? svn_client_diff_summarize_kind_added
-                                       : svn_client_diff_summarize_kind_normal,
-                         prop_change, svn_node_dir, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-cb_file_added(svn_wc_notify_state_t *contentstate,
-              svn_wc_notify_state_t *propstate,
-              svn_boolean_t *tree_conflicted,
-              const char *path,
-              const char *tmpfile1,
-              const char *tmpfile2,
-              svn_revnum_t rev1,
-              svn_revnum_t rev2,
-              const char *mimetype1,
-              const char *mimetype2,
-              const char *copyfrom_path,
-              svn_revnum_t copyfrom_revision,
-              const apr_array_header_t *propchanges,
-              apr_hash_t *originalprops,
-              void *diff_baton,
-              apr_pool_t *scratch_pool)
-{
-  struct summarize_baton_t *b = diff_baton;
-
-  SVN_ERR(send_summary(b, path, svn_client_diff_summarize_kind_added,
-                       props_changed(propchanges, scratch_pool),
+  SVN_ERR(send_summary(b, relpath, svn_client_diff_summarize_kind_added,
+                       props_changed_hash(right_props, scratch_pool),
                        svn_node_file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
+/* svn_diff_tree_processor_t callback */
 static svn_error_t *
-cb_file_opened(svn_boolean_t *tree_conflicted,
-               svn_boolean_t *skip,
-               const char *path,
-               svn_revnum_t rev,
-               void *diff_baton,
-               apr_pool_t *scratch_pool)
+diff_file_changed(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const svn_diff_source_t *right_source,
+                  const char *left_file,
+                  const char *right_file,
+                  /*const*/ apr_hash_t *left_props,
+                  /*const*/ apr_hash_t *right_props,
+                  svn_boolean_t file_modified,
+                  const apr_array_header_t *prop_changes,
+                  void *file_baton,
+                  const struct svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
-}
+  struct summarize_baton_t *b = processor->baton;
 
-static svn_error_t *
-cb_file_changed(svn_wc_notify_state_t *contentstate,
-                svn_wc_notify_state_t *propstate,
-                svn_boolean_t *tree_conflicted,
-                const char *path,
-                const char *tmpfile1,
-                const char *tmpfile2,
-                svn_revnum_t rev1,
-                svn_revnum_t rev2,
-                const char *mimetype1,
-                const char *mimetype2,
-                const apr_array_header_t *propchanges,
-                apr_hash_t *originalprops,
-                void *diff_baton,
-                apr_pool_t *scratch_pool)
-{
-  struct summarize_baton_t *b = diff_baton;
-  svn_boolean_t text_change = (tmpfile2 != NULL);
-  svn_boolean_t prop_change = props_changed(propchanges, scratch_pool);
-
-  if (text_change || prop_change)
-    SVN_ERR(send_summary(b, path,
-                         text_change ? svn_client_diff_summarize_kind_modified
+  SVN_ERR(send_summary(b, relpath,
+                       file_modified ? svn_client_diff_summarize_kind_modified
                                      : svn_client_diff_summarize_kind_normal,
-                         prop_change, svn_node_file, scratch_pool));
+                       props_changed(prop_changes, scratch_pool),
+                       svn_node_file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
+/* svn_diff_tree_processor_t callback */
 static svn_error_t *
-cb_dir_props_changed(svn_wc_notify_state_t *propstate,
-                     svn_boolean_t *tree_conflicted,
-                     const char *path,
-                     svn_boolean_t dir_was_added,
-                     const apr_array_header_t *propchanges,
-                     apr_hash_t *original_props,
-                     void *diff_baton,
-                     apr_pool_t *scratch_pool)
+diff_file_deleted(const char *relpath,
+                  const svn_diff_source_t *left_source,
+                  const char *left_file,
+                  /*const*/ apr_hash_t *left_props,
+                  void *file_baton,
+                  const struct svn_diff_tree_processor_t *processor,
+                  apr_pool_t *scratch_pool)
 {
-  struct summarize_baton_t *b = diff_baton;
+  struct summarize_baton_t *b = processor->baton;
 
-  if (props_changed(propchanges, scratch_pool))
-    svn_hash_sets(b->prop_changes, path, path);
+  SVN_ERR(send_summary(b, relpath, svn_client_diff_summarize_kind_deleted,
+                       FALSE, svn_node_file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -305,7 +300,7 @@ svn_client__get_diff_summarize_callbacks(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_wc_diff_callbacks4_t *cb = apr_palloc(result_pool, sizeof(*cb));
+  svn_diff_tree_processor_t *dp;
   struct summarize_baton_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
   *anchor_path = &b->anchor_path;
@@ -313,20 +308,20 @@ svn_client__get_diff_summarize_callbacks(
   b->summarize_func = summarize_func;
   b->summarize_func_baton = summarize_baton;
   b->original_target = apr_pstrdup(result_pool, original_target);
-  b->prop_changes = apr_hash_make(result_pool);
 
-  cb->file_opened = cb_file_opened;
-  cb->file_changed = cb_file_changed;
-  cb->file_added = cb_file_added;
-  cb->file_deleted = cb_file_deleted;
-  cb->dir_deleted = cb_dir_deleted;
-  cb->dir_opened = cb_dir_opened;
-  cb->dir_added = cb_dir_added;
-  cb->dir_props_changed = cb_dir_props_changed;
-  cb->dir_closed = cb_dir_closed;
+  dp = svn_diff__tree_processor_create(b, result_pool);
 
-  SVN_ERR(svn_wc__wrap_diff_callbacks(diff_processor, cb, b, TRUE,
-                                      result_pool, scratch_pool));
+  /*dp->file_opened = diff_file_opened;*/
+  dp->file_added = diff_file_added;
+  dp->file_deleted = diff_file_deleted;
+  dp->file_changed = diff_file_changed;
+
+  dp->dir_opened = diff_dir_opened;
+  dp->dir_changed = diff_dir_changed;
+  dp->dir_deleted = diff_dir_deleted;
+  dp->dir_added = diff_dir_added;
+
+  *diff_processor = dp;
 
   return SVN_NO_ERROR;
 }
