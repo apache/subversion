@@ -178,6 +178,12 @@ full_read_fallback(svn_stream_t *stream, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_stream_supports_partial_read(svn_stream_t *stream)
+{
+  return stream->read_fn != NULL;
+}
+
 svn_error_t *
 svn_stream_read2(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
