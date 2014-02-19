@@ -1559,7 +1559,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  * Diffs will be reported as valid relpaths, with @a anchor_abspath being
  * the root ("").
  *
- * @a callbacks/@a callback_baton is the callback table to use.
+ * @a diff_processor will retrieve the diff report.
  *
  * If @a depth is #svn_depth_empty, just diff exactly @a target or
  * @a anchor_path if @a target is empty.  If #svn_depth_files then do the same
@@ -1630,14 +1630,11 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         const char *target,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
-                        svn_boolean_t show_copies_as_adds,
-                        svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         svn_boolean_t server_performs_filtering,
                         const apr_array_header_t *changelist_filter,
-                        const svn_wc_diff_callbacks4_t *callbacks,
-                        void *callback_baton,
+                        const svn_diff_tree_processor_t *diff_processor,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
@@ -1842,6 +1839,25 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
                                        const char *local_abspath,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
+
+/* The implemementation of svn_wc_diff6(), but reporting to a diff processor
+ *
+ * If ANCHOR_ABSPATH is not null, set it to the anchor of the diff before
+ * the first processor call. (The anchor is LOCAL_ABSPATH or an ancestor of it)
+ */
+svn_error_t *
+svn_wc__diff7(const char **anchor_abspath,
+              svn_wc_context_t *wc_ctx,
+              const char *local_abspath,
+              svn_depth_t depth,
+              svn_boolean_t ignore_ancestry,
+              const apr_array_header_t *changelist_filter,
+              const svn_diff_tree_processor_t *diff_processor,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
