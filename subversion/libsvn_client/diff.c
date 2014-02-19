@@ -1633,7 +1633,8 @@ diff_wc_wc(const char **anchor_path,
            struct diff_cmd_baton *callback_baton,
            const svn_diff_tree_processor_t *diff_processor,
            svn_client_ctx_t *ctx,
-           apr_pool_t *pool)
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   const char *abspath1;
   svn_error_t *err;
@@ -1641,7 +1642,7 @@ diff_wc_wc(const char **anchor_path,
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
+  SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, scratch_pool));
 
   /* Currently we support only the case where path1 and path2 are the
      same path. */
@@ -1658,7 +1659,7 @@ diff_wc_wc(const char **anchor_path,
   /* Resolve named revisions to real numbers. */
   err = svn_client__get_revision_number(&callback_baton->revnum1, NULL,
                                         ctx->wc_ctx, abspath1, NULL,
-                                        revision1, pool);
+                                        revision1, scratch_pool);
 
   /* In case of an added node, we have no base rev, and we show a revision
    * number of 0. Note that this code is currently always asking for
@@ -1679,17 +1680,17 @@ diff_wc_wc(const char **anchor_path,
       /* ### Eventually we want to get rid of this wrapping as it loses
              information that we might need for some cases */
       diff_processor = svn_diff__tree_processor_copy_as_changed_create(
-                                  diff_processor, pool);
+                                  diff_processor, scratch_pool);
     }
 
   {
     svn_node_kind_t kind;
 
     SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
-                            TRUE, FALSE, pool));
+                            TRUE, FALSE, scratch_pool));
 
     if (kind != svn_node_dir)
-      callback_baton->anchor = svn_dirent_dirname(path1, pool);
+      callback_baton->anchor = svn_dirent_dirname(path1, scratch_pool);
     else
       callback_baton->anchor = path1;
   }
@@ -1704,7 +1705,7 @@ diff_wc_wc(const char **anchor_path,
                         ignore_ancestry, changelists,
                         diff_processor,
                         ctx->cancel_func, ctx->cancel_baton,
-                        pool, pool));
+                        result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1718,7 +1719,8 @@ diff_wc_wc(const char **anchor_path,
 
    All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
-diff_repos_repos(struct diff_cmd_baton *callback_baton,
+diff_repos_repos(const char **anchor_path_or_url,
+                 struct diff_cmd_baton *callback_baton,
                  const char *path_or_url1,
                  const char *path_or_url2,
                  const svn_opt_revision_t *revision1,
@@ -1726,9 +1728,11 @@ diff_repos_repos(struct diff_cmd_baton *callback_baton,
                  const svn_opt_revision_t *peg_revision,
                  svn_depth_t depth,
                  svn_boolean_t ignore_ancestry,
+                 svn_boolean_t text_deltas,
                  const svn_diff_tree_processor_t *diff_processor,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *extra_ra_session;
 
@@ -1758,27 +1762,30 @@ diff_repos_repos(struct diff_cmd_baton *callback_baton,
                                    &kind1, &kind2, &ra_session,
                                    ctx, path_or_url1, path_or_url2,
                                    revision1, revision2, peg_revision,
-                                   pool));
+                                   scratch_pool));
 
   /* Find a WC path for the ra session */
   if (!svn_path_is_url(path_or_url1))
-    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url1, pool));
+    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url1, scratch_pool));
   else if (!svn_path_is_url(path_or_url2))
-    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url2, pool));
+    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url2, scratch_pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
 
-  /* Get actual URLs. */
-  callback_baton->orig_path_1 = url1;
-  callback_baton->orig_path_2 = url2;
+  if (callback_baton)
+    {
+      /* Get actual URLs. */
+      callback_baton->orig_path_1 = url1;
+      callback_baton->orig_path_2 = url2;
 
-  /* Get numeric revisions. */
-  callback_baton->revnum1 = rev1;
-  callback_baton->revnum2 = rev2;
+      /* Get numeric revisions. */
+      callback_baton->revnum1 = rev1;
+      callback_baton->revnum2 = rev2;
 
-  callback_baton->ra_session = ra_session;
-  callback_baton->anchor = base_path;
+      callback_baton->ra_session = ra_session;
+      callback_baton->anchor = base_path;
+    }
 
   /* The repository can bring in a new working copy, but not delete
      everything. Luckily our new diff handler can just be reversed. */
@@ -1804,45 +1811,65 @@ diff_repos_repos(struct diff_cmd_baton *callback_baton,
       target1 = str_tmp;
 
       diff_processor = svn_diff__tree_processor_reverse_create(diff_processor,
-                                                               NULL, pool);
+                                                               NULL,
+                                                               scratch_pool);
     }
 
   /* Filter the first path component using a filter processor, until we fixed
      the diff processing to handle this directly */
   if ((kind1 != svn_node_file && kind2 != svn_node_file) && target1[0] != '\0')
   {
-    diff_processor = svn_diff__tree_processor_filter_create(diff_processor,
-                                                            target1, pool);
+    diff_processor = svn_diff__tree_processor_filter_create(
+                                      diff_processor, target1, scratch_pool);
   }
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
   SVN_ERR(svn_ra_dup_session(&extra_ra_session, ra_session, anchor1,
-                             pool, pool));
+                             scratch_pool, scratch_pool));
+
+  if (anchor_path_or_url)
+    {
+      if (base_path)
+        {
+          *anchor_path_or_url = apr_pstrdup(result_pool, base_path);
+        }
+      else
+        {
+          SVN_ERR(svn_ra_get_session_url(ra_session, anchor_path_or_url,
+                                         scratch_pool));
+
+          *anchor_path_or_url = svn_path_url_add_component2(
+                                                  *anchor_path_or_url,
+                                                  target1,
+                                                  result_pool);
+        }
+    }
 
   SVN_ERR(svn_client__get_diff_editor2(
                 &diff_editor, &diff_edit_baton,
                 extra_ra_session, depth,
                 rev1,
-                TRUE /* text_deltas */,
+                text_deltas,
                 diff_processor,
                 ctx->cancel_func, ctx->cancel_baton,
-                pool));
+                scratch_pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3(ra_session, &reporter, &reporter_baton,
                           rev2, target1,
-                          depth, ignore_ancestry, TRUE /* text_deltas */,
-                          url2, diff_editor, diff_edit_baton, pool));
+                          depth, ignore_ancestry, text_deltas,
+                          url2, diff_editor, diff_edit_baton, scratch_pool));
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
                              svn_depth_infinity,
                              FALSE, NULL,
-                             pool));
+                             scratch_pool));
 
-  return svn_error_trace(reporter->finish_report(reporter_baton, pool));
+  return svn_error_trace(
+                  reporter->finish_report(reporter_baton, scratch_pool));
 }
 
 /* Perform a diff between a repository path and a working-copy path.
@@ -1856,7 +1883,8 @@ diff_repos_repos(struct diff_cmd_baton *callback_baton,
 
    All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
-diff_repos_wc(const char *path_or_url1,
+diff_repos_wc(const char **anchor_path,
+              const char *path_or_url1,
               const svn_opt_revision_t *revision1,
               const svn_opt_revision_t *peg_revision,
               const char *path2,
@@ -1870,6 +1898,7 @@ diff_repos_wc(const char *path_or_url1,
               struct diff_cmd_baton *cmd_baton,
               const svn_diff_tree_processor_t *diff_processor,
               svn_client_ctx_t *ctx,
+              apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool = scratch_pool;
@@ -2014,6 +2043,9 @@ diff_repos_wc(const char *path_or_url1,
   else
     diff_depth = svn_depth_unknown;
 
+  if (anchor_path)
+    *anchor_path = apr_pstrdup(result_pool, anchor_abspath);
+
   if (is_copy)
     {
       const char *copyfrom_parent_url;
@@ -2106,7 +2138,8 @@ diff_repos_wc(const char *path_or_url1,
 
 /* This is basically just the guts of svn_client_diff[_peg]6(). */
 static svn_error_t *
-do_diff(const svn_wc_diff_callbacks4_t *callbacks,
+do_diff(const char **anchor_path,
+        const svn_wc_diff_callbacks4_t *callbacks,
         struct diff_cmd_baton *callback_baton,
         svn_client_ctx_t *ctx,
         const char *path_or_url1,
@@ -2119,7 +2152,8 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
         svn_boolean_t show_copies_as_adds,
         svn_boolean_t use_git_diff_format,
         const apr_array_header_t *changelists,
-        apr_pool_t *pool)
+        apr_pool_t *result_pool,
+        apr_pool_t *scratch_pool)
 {
   svn_boolean_t is_repos1;
   svn_boolean_t is_repos2;
@@ -2132,39 +2166,46 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
   SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
                                       callbacks, callback_baton,
                                       TRUE /* walk_deleted_dirs */,
-                                      pool, pool));
+                                      scratch_pool, scratch_pool));
 
   if (is_repos1)
     {
       if (is_repos2)
         {
           /* ### Ignores 'show_copies_as_adds'. */
-          SVN_ERR(diff_repos_repos(callback_baton,
+          SVN_ERR(diff_repos_repos(anchor_path,
+                                   callback_baton,
                                    path_or_url1, path_or_url2,
                                    revision1, revision2,
                                    peg_revision, depth, ignore_ancestry,
-                                   diff_processor, ctx, pool));
+                                   TRUE /* text_deltas */,
+                                   diff_processor, ctx,
+                                   result_pool, scratch_pool));
         }
       else /* path_or_url2 is a working copy path */
         {
-          SVN_ERR(diff_repos_wc(path_or_url1, revision1, peg_revision,
+          SVN_ERR(diff_repos_wc(anchor_path,
+                                path_or_url1, revision1, peg_revision,
                                 path_or_url2, revision2, FALSE, depth,
                                 ignore_ancestry, show_copies_as_adds,
                                 use_git_diff_format, changelists,
                                 callback_baton,
-                                diff_processor, ctx, pool));
+                                diff_processor, ctx,
+                                result_pool, scratch_pool));
         }
     }
   else /* path_or_url1 is a working copy path */
     {
       if (is_repos2)
         {
-          SVN_ERR(diff_repos_wc(path_or_url2, revision2, peg_revision,
+          SVN_ERR(diff_repos_wc(anchor_path,
+                                path_or_url2, revision2, peg_revision,
                                 path_or_url1, revision1, TRUE, depth,
                                 ignore_ancestry, show_copies_as_adds,
                                 use_git_diff_format, changelists,
                                 callback_baton,
-                                diff_processor, ctx, pool));
+                                diff_processor, ctx,
+                                result_pool, scratch_pool));
         }
       else /* path_or_url2 is a working copy path */
         {
@@ -2174,21 +2215,26 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
               const char *abspath1;
               const char *abspath2;
 
-              SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1, pool));
-              SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, pool));
+              SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1,
+                                              scratch_pool));
+              SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, 
+                                              scratch_pool));
 
-              SVN_ERR(svn_client__arbitrary_nodes_diff(NULL, abspath1, abspath2,
+              SVN_ERR(svn_client__arbitrary_nodes_diff(anchor_path,
+                                                       abspath1, abspath2,
                                                        depth,
                                                        diff_processor,
-                                                       ctx, pool, pool));
+                                                       ctx,
+                                                       result_pool, scratch_pool));
             }
           else
-            SVN_ERR(diff_wc_wc(NULL,
+            SVN_ERR(diff_wc_wc(anchor_path,
                                path_or_url1, revision1,
                                path_or_url2, revision2,
                                depth, ignore_ancestry, show_copies_as_adds,
                                use_git_diff_format, changelists,
-                               callback_baton, diff_processor, ctx, pool));
+                               callback_baton, diff_processor, ctx,
+                               result_pool, scratch_pool));
         }
     }
 
@@ -2220,31 +2266,27 @@ diff_summarize_repos_wc(svn_client_diff_summarize_func_t summarize_func,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
-  const char *anchor, *target;
-  svn_wc_diff_callbacks4_t *callbacks;
-  void *callback_baton;
   struct diff_cmd_baton cmd_baton;
   const svn_diff_tree_processor_t *diff_processor;
+  const char **anchor_path;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
-  SVN_ERR(svn_wc_get_actual_target2(&anchor, &target,
-                                    ctx->wc_ctx, path2,
-                                    pool, pool));
-
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
-            &callbacks, &callback_baton, target, reverse,
-            summarize_func, summarize_baton, pool));
+                          &diff_processor, &anchor_path,
+                          summarize_func, summarize_baton,
+                          path2, pool, pool));
 
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
-                                      callbacks, callback_baton, TRUE,
-                                      pool, pool));
+  if (reverse)
+    diff_processor = svn_diff__tree_processor_reverse_create(
+                              diff_processor, NULL, pool);
 
-  SVN_ERR(diff_repos_wc(path_or_url1, revision1, peg_revision,
+  SVN_ERR(diff_repos_wc(anchor_path,
+                        path_or_url1, revision1, peg_revision,
                         path2, revision2, reverse,
                         depth, FALSE, TRUE, FALSE, changelists,
                         &cmd_baton,
-                        diff_processor, ctx, pool));
+                        diff_processor, ctx, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2267,11 +2309,9 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  svn_wc_diff_callbacks4_t *callbacks;
-  void *callback_baton;
-  const char *abspath1, *target1;
-  svn_node_kind_t kind;
+  const char *abspath1;
   const svn_diff_tree_processor_t *diff_processor;
+  const char **anchor_path;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -2290,18 +2330,13 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
   /* Find the node kind of PATH1 so that we know whether the diff drive will
      be anchored at PATH1 or its parent dir. */
   SVN_ERR(svn_dirent_get_absolute(&abspath1, path1, pool));
-  SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
-                            TRUE, FALSE, pool));
-  target1 = (kind == svn_node_dir) ? "" : svn_dirent_basename(path1, pool);
-  SVN_ERR(svn_client__get_diff_summarize_callbacks(
-            &callbacks, &callback_baton, target1, FALSE,
-            summarize_func, summarize_baton, pool));
 
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
-                                      callbacks, callback_baton, TRUE,
+  SVN_ERR(svn_client__get_diff_summarize_callbacks(
+                                      &diff_processor, &anchor_path,
+                                      summarize_func, summarize_baton, path1,
                                       pool, pool));
 
-  SVN_ERR(svn_wc__diff7(NULL,
+  SVN_ERR(svn_wc__diff7(anchor_path,
                         ctx->wc_ctx,
                         abspath1,
                         depth, ignore_ancestry, changelists,
@@ -2309,119 +2344,6 @@ diff_summarize_wc_wc(svn_client_diff_summarize_func_t summarize_func,
                         ctx->cancel_func, ctx->cancel_baton,
                         pool, pool));
   return SVN_NO_ERROR;
-}
-
-/* Perform a diff summary between two repository paths. */
-static svn_error_t *
-diff_summarize_repos_repos(svn_client_diff_summarize_func_t summarize_func,
-                           void *summarize_baton,
-                           svn_client_ctx_t *ctx,
-                           const char *path_or_url1,
-                           const char *path_or_url2,
-                           const svn_opt_revision_t *revision1,
-                           const svn_opt_revision_t *revision2,
-                           const svn_opt_revision_t *peg_revision,
-                           svn_depth_t depth,
-                           svn_boolean_t ignore_ancestry,
-                           apr_pool_t *pool)
-{
-  svn_ra_session_t *extra_ra_session;
-
-  const svn_ra_reporter3_t *reporter;
-  void *reporter_baton;
-
-  const svn_delta_editor_t *diff_editor;
-  void *diff_edit_baton;
-
-  const svn_diff_tree_processor_t *diff_processor;
-
-  const char *url1;
-  const char *url2;
-  const char *base_path;
-  svn_revnum_t rev1;
-  svn_revnum_t rev2;
-  svn_node_kind_t kind1;
-  svn_node_kind_t kind2;
-  const char *anchor1;
-  const char *anchor2;
-  const char *target1;
-  const char *target2;
-  svn_ra_session_t *ra_session;
-  svn_wc_diff_callbacks4_t *callbacks;
-  void *callback_baton;
-
-  /* Prepare info for the repos repos diff. */
-  SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &base_path, &rev1, &rev2,
-                                   &anchor1, &anchor2, &target1, &target2,
-                                   &kind1, &kind2, &ra_session,
-                                   ctx, path_or_url1, path_or_url2,
-                                   revision1, revision2,
-                                   peg_revision, pool));
-
-  /* Set up the repos_diff editor. */
-  SVN_ERR(svn_client__get_diff_summarize_callbacks(
-            &callbacks, &callback_baton,
-            target1, FALSE, summarize_func, summarize_baton, pool));
-
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
-                                      callbacks, callback_baton,
-                                      TRUE /* walk_deleted_dirs */,
-                                      pool, pool));
-
-
-  /* The repository can bring in a new working copy, but not delete
-     everything. Luckily our new diff handler can just be reversed. */
-  if (kind2 == svn_node_none)
-    {
-      const char *str_tmp;
-      svn_revnum_t rev_tmp;
-
-      str_tmp = url2;
-      url2 = url1;
-      url1 = str_tmp;
-
-      rev_tmp = rev2;
-      rev2 = rev1;
-      rev1 = rev_tmp;
-
-      str_tmp = anchor2;
-      anchor2 = anchor1;
-      anchor1 = str_tmp;
-
-      str_tmp = target2;
-      target2 = target1;
-      target1 = str_tmp;
-
-      diff_processor = svn_diff__tree_processor_reverse_create(diff_processor,
-                                                               NULL, pool);
-    }
-
-  /* Now, we open an extra RA session to the correct anchor
-     location for URL1.  This is used to get deleted path information.  */
-  SVN_ERR(svn_ra_dup_session(&extra_ra_session, ra_session, anchor1,
-                             pool, pool));
-
-  SVN_ERR(svn_client__get_diff_editor2(&diff_editor, &diff_edit_baton,
-                                       extra_ra_session,
-                                       depth,
-                                       rev1,
-                                       FALSE /* text_deltas */,
-                                       diff_processor,
-                                       ctx->cancel_func, ctx->cancel_baton,
-                                       pool));
-
-  /* We want to switch our txn into URL2 */
-  SVN_ERR(svn_ra_do_diff3
-          (ra_session, &reporter, &reporter_baton, rev2, target1,
-           depth, ignore_ancestry,
-           FALSE /* do not create text delta */, url2, diff_editor,
-           diff_edit_baton, pool));
-
-  /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
-                             svn_depth_infinity,
-                             FALSE, NULL, pool));
-  return svn_error_trace(reporter->finish_report(reporter_baton, pool));
 }
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg]2(). */
@@ -2440,6 +2362,7 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
                   apr_pool_t *pool)
 {
   const svn_diff_tree_processor_t *diff_processor;
+  const char **anchor_path;
   svn_boolean_t is_repos1;
   svn_boolean_t is_repos2;
 
@@ -2450,11 +2373,22 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
   if (is_repos1)
     {
       if (is_repos2)
-        SVN_ERR(diff_summarize_repos_repos(summarize_func, summarize_baton, ctx,
-                                           path_or_url1, path_or_url2,
-                                           revision1, revision2,
-                                           peg_revision, depth, ignore_ancestry,
-                                           pool));
+        {
+
+          SVN_ERR(svn_client__get_diff_summarize_callbacks(
+                        &diff_processor,
+                        &anchor_path,
+                        summarize_func, summarize_baton,
+                        path_or_url1,
+                        pool, pool));
+        SVN_ERR(diff_repos_repos(anchor_path, NULL,
+                                 path_or_url1, path_or_url2,
+                                 revision1, revision2,
+                                 peg_revision, depth, ignore_ancestry,
+                                 FALSE /* text_deltas */,
+                                 diff_processor, ctx,
+                                 pool, pool));
+        }
       else
         SVN_ERR(diff_summarize_repos_wc(summarize_func, summarize_baton,
                                         path_or_url1, revision1,
@@ -2483,31 +2417,17 @@ do_diff_summarize(svn_client_diff_summarize_func_t summarize_func,
            {
              const char *abspath1;
              const char *abspath2;
-             svn_wc_diff_callbacks4_t *callbacks;
-             void *callback_baton;
-             const char *target;
-             svn_node_kind_t kind;
-
              SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1, pool));
              SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2, pool));
 
-             SVN_ERR(svn_io_check_resolved_path(abspath1, &kind, pool));
-
-             if (kind == svn_node_dir)
-               target = "";
-             else
-               target = svn_dirent_basename(path_or_url1, NULL);
-
              SVN_ERR(svn_client__get_diff_summarize_callbacks(
-                     &callbacks, &callback_baton, target, FALSE,
-                     summarize_func, summarize_baton, pool));
+                     &diff_processor, &anchor_path,
+                     summarize_func, summarize_baton,
+                     path_or_url1,
+                     pool, pool));
 
-             SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
-                                                 callbacks, callback_baton,
-                                                 TRUE /* walk_deleted*/,
-                                                 pool, pool));
-
-             SVN_ERR(svn_client__arbitrary_nodes_diff(NULL, abspath1, abspath2,
+             SVN_ERR(svn_client__arbitrary_nodes_diff(anchor_path,
+                                                      abspath1, abspath2,
                                                       depth,
                                                       diff_processor,
                                                       ctx, pool, pool));
@@ -2685,11 +2605,11 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
 
-  return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
+  return do_diff(NULL, &diff_callbacks, &diff_cmd_baton, ctx,
                  path_or_url1, path_or_url2, revision1, revision2,
                  &peg_revision,
                  depth, ignore_ancestry, show_copies_as_adds,
-                 use_git_diff_format, changelists, pool);
+                 use_git_diff_format, changelists, pool, pool);
 }
 
 svn_error_t *
@@ -2748,11 +2668,11 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.anchor = NULL;
 
-  return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
+  return do_diff(NULL, &diff_callbacks, &diff_cmd_baton, ctx,
                  path_or_url, path_or_url, start_revision, end_revision,
                  peg_revision,
                  depth, ignore_ancestry, show_copies_as_adds,
-                 use_git_diff_format, changelists, pool);
+                 use_git_diff_format, changelists, pool, pool);
 }
 
 svn_error_t *
