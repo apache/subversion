@@ -355,7 +355,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
                        const char *hex,
                        apr_pool_t *pool)
 {
-  int i, len;
+  apr_size_t i, len;
   char is_nonzero = '\0';
   char *digest;
   static const char xdigitval[256] =
