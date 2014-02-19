@@ -249,11 +249,9 @@ make_edit_baton(struct edit_baton_t **edit_baton,
                 svn_wc__db_t *db,
                 const char *anchor_abspath,
                 const char *target,
-                const svn_wc_diff_callbacks4_t *callbacks,
-                void *callback_baton,
+                const svn_diff_tree_processor_t *diff_processor,
                 svn_depth_t depth,
                 svn_boolean_t ignore_ancestry,
-                svn_boolean_t show_copies_as_adds,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
                 const apr_array_header_t *changelist_filter,
@@ -263,7 +261,6 @@ make_edit_baton(struct edit_baton_t **edit_baton,
 {
   apr_hash_t *changelist_hash = NULL;
   struct edit_baton_t *eb;
-  const svn_diff_tree_processor_t *processor;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
@@ -271,26 +268,11 @@ make_edit_baton(struct edit_baton_t **edit_baton,
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                        pool));
 
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&processor,
-                                      callbacks, callback_baton, TRUE,
-                                      pool, pool));
-
-  if (reverse_order)
-    processor = svn_diff__tree_processor_reverse_create(processor, NULL, pool);
-
-  /* --show-copies-as-adds implies --notice-ancestry */
-  if (show_copies_as_adds)
-    ignore_ancestry = FALSE;
-
-  if (! show_copies_as_adds)
-    processor = svn_diff__tree_processor_copy_as_changed_create(processor,
-                                                                pool);
-
   eb = apr_pcalloc(pool, sizeof(*eb));
   eb->db = db;
   eb->anchor_abspath = apr_pstrdup(pool, anchor_abspath);
   eb->target = apr_pstrdup(pool, target);
-  eb->processor = processor;
+  eb->processor = diff_processor;
   eb->depth = depth;
   eb->ignore_ancestry = ignore_ancestry;
   eb->local_before_remote = reverse_order;
@@ -2251,14 +2233,11 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         const char *target,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
-                        svn_boolean_t show_copies_as_adds,
-                        svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         svn_boolean_t server_performs_filtering,
                         const apr_array_header_t *changelist_filter,
-                        const svn_wc_diff_callbacks4_t *callbacks,
-                        void *callback_baton,
+                        const svn_diff_tree_processor_t *diff_processor,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
@@ -2274,15 +2253,11 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
-  /* --git implies --show-copies-as-adds */
-  if (use_git_diff_format)
-    show_copies_as_adds = TRUE;
-
   SVN_ERR(make_edit_baton(&eb,
                           wc_ctx->db,
                           anchor_abspath, target,
-                          callbacks, callback_baton,
-                          depth, ignore_ancestry, show_copies_as_adds,
+                          diff_processor,
+                          depth, ignore_ancestry,
                           use_text_base, reverse_order, changelist_filter,
                           cancel_func, cancel_baton,
                           result_pool));

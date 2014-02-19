@@ -575,12 +575,13 @@ do_dir_diff(const char *left_abspath,
 }
 
 svn_error_t *
-svn_client__arbitrary_nodes_diff(const char *left_abspath,
+svn_client__arbitrary_nodes_diff(const char **anchor_abspath,
+                                 const char *left_abspath,
                                  const char *right_abspath,
                                  svn_depth_t depth,
-                                 const svn_wc_diff_callbacks4_t *callbacks,
-                                 void *diff_baton,
+                                 const svn_diff_tree_processor_t *diff_processor,
                                  svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
   svn_node_kind_t left_kind;
@@ -588,12 +589,6 @@ svn_client__arbitrary_nodes_diff(const char *left_abspath,
   const char *left_root_abspath;
   const char *right_root_abspath;
   svn_boolean_t left_before_right = FALSE; /* Future argument */
-  const svn_diff_tree_processor_t *diff_processor;
-
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
-                                      callbacks, diff_baton,
-                                      TRUE /* walk_deleted_dirs */,
-                                      scratch_pool, scratch_pool));
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
@@ -614,6 +609,9 @@ svn_client__arbitrary_nodes_diff(const char *left_abspath,
       left_root_abspath = svn_dirent_dirname(left_abspath, scratch_pool);
       right_root_abspath = svn_dirent_dirname(right_abspath, scratch_pool);
     }
+
+  if (anchor_abspath)
+    *anchor_abspath = apr_pstrdup(result_pool, left_root_abspath);
 
   if (left_kind == svn_node_dir && right_kind == svn_node_dir)
     {

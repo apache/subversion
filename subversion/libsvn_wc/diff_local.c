@@ -88,9 +88,6 @@ struct diff_baton
   /* Should this diff ignore node ancestry? */
   svn_boolean_t ignore_ancestry;
 
-  /* Should this diff not compare copied files with their source? */
-  svn_boolean_t show_copies_as_adds;
-
   /* Hash whose keys are const char * changelist names. */
   apr_hash_t *changelist_hash;
 
@@ -431,23 +428,21 @@ diff_status_callback(void *baton,
 
 /* Public Interface */
 svn_error_t *
-svn_wc_diff6(svn_wc_context_t *wc_ctx,
-             const char *local_abspath,
-             const svn_wc_diff_callbacks4_t *callbacks,
-             void *callback_baton,
-             svn_depth_t depth,
-             svn_boolean_t ignore_ancestry,
-             svn_boolean_t show_copies_as_adds,
-             svn_boolean_t use_git_diff_format,
-             const apr_array_header_t *changelist_filter,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
-             apr_pool_t *scratch_pool)
+svn_wc__diff7(const char **anchor_abspath,
+              svn_wc_context_t *wc_ctx,
+              const char *local_abspath,
+              svn_depth_t depth,
+              svn_boolean_t ignore_ancestry,
+              const apr_array_header_t *changelist_filter,
+              const svn_diff_tree_processor_t *diff_processor,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
   struct diff_baton eb = { 0 };
   svn_node_kind_t kind;
   svn_boolean_t get_all;
-  const svn_diff_tree_processor_t *processor;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
@@ -461,37 +456,19 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
   else
     eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(svn_wc__wrap_diff_callbacks(&processor,
-                                      callbacks, callback_baton, TRUE,
-                                      scratch_pool, scratch_pool));
-
-  if (use_git_diff_format)
-    show_copies_as_adds = TRUE;
-  if (show_copies_as_adds)
-    ignore_ancestry = FALSE;
-
-
-
-  /*
-  if (reverse_order)
-    processor = svn_diff__tree_processor_reverse_create(processor, NULL, pool);
-   */
-
-  if (! show_copies_as_adds && !use_git_diff_format)
-    processor = svn_diff__tree_processor_copy_as_changed_create(processor,
-                                                                scratch_pool);
+  if (anchor_abspath)
+    *anchor_abspath = apr_pstrdup(result_pool, eb.anchor_abspath);
 
   eb.db = wc_ctx->db;
-  eb.processor = processor;
+  eb.processor = diff_processor;
   eb.ignore_ancestry = ignore_ancestry;
-  eb.show_copies_as_adds = show_copies_as_adds;
   eb.pool = scratch_pool;
 
   if (changelist_filter && changelist_filter->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&eb.changelist_hash, changelist_filter,
                                        scratch_pool));
 
-  if (show_copies_as_adds || use_git_diff_format || !ignore_ancestry)
+  if (ignore_ancestry)
     get_all = TRUE; /* We need unmodified descendants of copies */
   else
     get_all = FALSE;
@@ -514,22 +491,22 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
       if (!ns->skip)
         {
           if (ns->propchanges)
-            SVN_ERR(processor->dir_changed(ns->relpath,
-                                           ns->left_src,
-                                           ns->right_src,
-                                           ns->left_props,
-                                           ns->right_props,
-                                           ns->propchanges,
-                                           ns->baton,
-                                           processor,
-                                           ns->pool));
+            SVN_ERR(diff_processor->dir_changed(ns->relpath,
+                                                ns->left_src,
+                                                ns->right_src,
+                                                ns->left_props,
+                                                ns->right_props,
+                                                ns->propchanges,
+                                                ns->baton,
+                                                diff_processor,
+                                                ns->pool));
           else
-            SVN_ERR(processor->dir_closed(ns->relpath,
-                                          ns->left_src,
-                                          ns->right_src,
-                                          ns->baton,
-                                          processor,
-                                          ns->pool));
+            SVN_ERR(diff_processor->dir_closed(ns->relpath,
+                                               ns->left_src,
+                                               ns->right_src,
+                                               ns->baton,
+                                               diff_processor,
+                                               ns->pool));
         }
       eb.cur = ns->parent;
       svn_pool_clear(ns->pool);
@@ -537,3 +514,43 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc_diff6(svn_wc_context_t *wc_ctx,
+             const char *local_abspath,
+             const svn_wc_diff_callbacks4_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
+             const apr_array_header_t *changelist_filter,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool)
+{
+  const svn_diff_tree_processor_t *processor;
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&processor,
+                                      callbacks, callback_baton, TRUE,
+                                      scratch_pool, scratch_pool));
+
+  if (use_git_diff_format)
+    show_copies_as_adds = TRUE;
+  if (show_copies_as_adds)
+    ignore_ancestry = FALSE;
+
+  if (! show_copies_as_adds && !use_git_diff_format)
+    processor = svn_diff__tree_processor_copy_as_changed_create(processor,
+                                                                scratch_pool);
+
+  return svn_error_trace(svn_wc__diff7(NULL,
+                                       wc_ctx, local_abspath,
+                                       depth,
+                                       ignore_ancestry,
+                                       changelist_filter,
+                                       processor,
+                                       cancel_func, cancel_baton,
+                                       scratch_pool, scratch_pool));
+}
+
