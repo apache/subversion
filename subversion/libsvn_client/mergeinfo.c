@@ -361,7 +361,7 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
       SVN_ERR(svn_mergeinfo_inheritable2(mergeinfo, *mergeinfo, NULL,
                                          SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                                          TRUE, result_pool, scratch_pool));
-      svn_mergeinfo__remove_empty_rangelists(*mergeinfo, result_pool);
+      svn_mergeinfo__remove_empty_rangelists(*mergeinfo, scratch_pool);
     }
 
   if (inherited_p)
