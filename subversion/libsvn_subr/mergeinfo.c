@@ -677,7 +677,11 @@ svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
   return SVN_NO_ERROR;
 }
 
-/* revisionline -> PATHNAME COLON revisionlist */
+/* revisionline -> PATHNAME COLON revisionlist
+ *
+ * Parse one line of mergeinfo starting at INPUT, not reading beyond END,
+ * into HASH. Allocate the new entry in HASH deeply from HASH's pool.
+ */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *scratch_pool)
@@ -740,12 +744,16 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
   return SVN_NO_ERROR;
 }
 
-/* top -> revisionline (NEWLINE revisionline)*  */
+/* top -> revisionline (NEWLINE revisionline)*
+ *
+ * Parse mergeinfo starting at INPUT, not reading beyond END, into HASH.
+ * Allocate all the new entries in HASH deeply from HASH's pool.
+ */
 static svn_error_t *
 parse_top(const char **input, const char *end, svn_mergeinfo_t hash,
-          apr_pool_t *pool)
+          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   while (*input < end)
     {
@@ -2129,14 +2137,15 @@ svn_rangelist_inheritable2(svn_rangelist_t **inheritable_rangelist,
 
 svn_boolean_t
 svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
-                                       apr_pool_t *pool)
+                                       apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
   svn_boolean_t removed_some_ranges = FALSE;
 
   if (mergeinfo)
     {
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(scratch_pool, mergeinfo); hi;
+           hi = apr_hash_next(hi))
         {
           const char *path = svn__apr_hash_index_key(hi);
           svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
