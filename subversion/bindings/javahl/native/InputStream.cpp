@@ -68,6 +68,9 @@ svn_stream_t *InputStream::getStream(const SVN::Pool &pool)
  */
 svn_error_t *InputStream::read(void *baton, char *buffer, apr_size_t *len)
 {
+  if (0 == *len)
+    return SVN_NO_ERROR;
+
   JNIEnv *env = JNIUtil::getEnv();
   // An object of our class is passed in as the baton.
   InputStream *that = static_cast<InputStream *>(baton);

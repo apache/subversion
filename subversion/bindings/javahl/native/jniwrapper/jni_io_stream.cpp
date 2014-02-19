@@ -70,9 +70,17 @@ svn_error_t* stream_seek(void* baton, const svn_stream_mark_t* mark)
 
 svn_error_t* stream_read(void* baton, char* buffer, apr_size_t* len)
 {
+  if (0 == *len)
+    return SVN_NO_ERROR;
+
+  jint length = jint(*len);
   InputStream* const self = static_cast<InputStream*>(baton);
   SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_BASE,
-                   *len = self->read(buffer, jint(*len)));
+                   length = self->read(buffer, length));
+  if (length < 0)
+    *len = 0;
+  else
+    *len = length;
   return SVN_NO_ERROR;
 }
 
@@ -234,6 +242,17 @@ svn_stream_t* InputStream::get_stream(const SVN::Pool& pool)
   return stream;
 }
 
+jint InputStream::read(void* data, jint length)
+{
+  ByteArray array(m_env, length);
+  const jint size = read(array);
+  if (size > 0)
+    {
+      ByteArray::Contents contents(array);
+      ::memcpy(static_cast<char*>(data), contents.data(), size);
+    }
+  return size;
+}
 
 // Class Java::OutputStream
 

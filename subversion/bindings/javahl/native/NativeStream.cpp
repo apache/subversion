@@ -90,7 +90,7 @@ jint NativeInputStream::read(::Java::Env env)
   SVN_JAVAHL_CHECK(env, svn_stream_read(m_stream, &byte, &len));
   if (len == 0)
     return -1;                  // EOF
-  if (len != 1)
+  if (len == 1)
     return jint(byte & 0xff);
   ::Java::IOException(env).raise(_("Read from native stream failed"));
   return -1;
