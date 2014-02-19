@@ -359,6 +359,8 @@ svn_rangelist_merge(svn_rangelist_t **rangelist,
  * @c svn_merge_range_t inheritable field when comparing @a whiteboard's
  * and @a *eraser's rangelists for equality.  @see svn_mergeinfo_diff().
  *
+ * Allocate the entire output in @a pool.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -413,6 +415,9 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
  * svn_sort_compare_ranges(). @a *rangelist is guaranteed to be in sorted
  * order.
+ *
+ * Allocate the entire output in @a pool.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
