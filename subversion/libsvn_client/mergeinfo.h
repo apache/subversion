@@ -316,7 +316,9 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
    *MERGEINFO.  If no record of any mergeinfo exists, set *MERGEINFO to NULL.
-   Does not acount for inherited mergeinfo. */
+   Does not acount for inherited mergeinfo.
+
+   Allocate the result deeply in @a result_pool. */
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             svn_wc_context_t *wc_ctx,

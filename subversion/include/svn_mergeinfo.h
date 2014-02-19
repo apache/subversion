@@ -145,7 +145,6 @@ typedef apr_hash_t *svn_mergeinfo_catalog_t;
 
 /** Parse the mergeinfo from @a input into @a *mergeinfo.  If no
  * mergeinfo is available, return an empty mergeinfo (never @c NULL).
- * Perform temporary allocations in @a pool.
  *
  * If @a input is not a grammatically correct @c SVN_PROP_MERGEINFO
  * property, contains overlapping revision ranges of differing
@@ -159,6 +158,9 @@ typedef apr_hash_t *svn_mergeinfo_catalog_t;
  *
  * @a input may contain relative merge source paths, but these are
  * converted to absolute paths in @a *mergeinfo.
+ *
+ * Allocate the result deeply in @a pool. Also perform temporary
+ * allocations in @a pool.
  *
  * @since New in 1.5.
  */
