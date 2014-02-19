@@ -2099,28 +2099,24 @@ svn_rangelist_inheritable2(svn_rangelist_t **inheritable_rangelist,
           || !SVN_IS_VALID_REVNUM(end)
           || end < start)
         {
+          /* We want all (non-inheritable or inheritable) ranges removed. */
           int i;
-          /* We want all non-inheritable ranges removed. */
+
           for (i = 0; i < rangelist->nelts; i++)
             {
               svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                        svn_merge_range_t *);
               if (range->inheritable == inheritable)
                 {
-                  svn_merge_range_t *inheritable_range =
-                    apr_palloc(result_pool, sizeof(*inheritable_range));
-                  inheritable_range->start = range->start;
-                  inheritable_range->end = range->end;
-                  inheritable_range->inheritable = range->inheritable;
-                  APR_ARRAY_PUSH(*inheritable_rangelist,
-                                 svn_merge_range_t *) = inheritable_range;
+                  APR_ARRAY_PUSH(*inheritable_rangelist, svn_merge_range_t *)
+                    = svn_merge_range_dup(range, result_pool);
                 }
             }
         }
       else
         {
-          /* We want only the non-inheritable ranges bound by START
-             and END removed. */
+          /* We want only the (non-inheritable or inheritable) ranges
+             bound by START and END removed. */
           svn_rangelist_t *ranges_inheritable =
             svn_rangelist__initialize(start, end, inheritable, scratch_pool);
 
