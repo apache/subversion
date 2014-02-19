@@ -2123,7 +2123,7 @@ do_diff(const svn_wc_diff_callbacks4_t *callbacks,
 {
   svn_boolean_t is_repos1;
   svn_boolean_t is_repos2;
-  svn_diff_tree_processor_t *diff_processor;
+  const svn_diff_tree_processor_t *diff_processor;
 
   /* Check if paths/revisions are urls/local. */
   SVN_ERR(check_paths(&is_repos1, &is_repos2, path_or_url1, path_or_url2,
