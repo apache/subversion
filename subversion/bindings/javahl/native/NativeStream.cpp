@@ -87,10 +87,10 @@ jint NativeInputStream::read(::Java::Env env)
 {
   apr_size_t len = 1;
   char byte;
-  SVN_JAVAHL_CHECK(env, svn_stream_read(m_stream, &byte, &len));
+  SVN_JAVAHL_CHECK(env, svn_stream_read_full(m_stream, &byte, &len));
   if (len == 0)
     return -1;                  // EOF
-  if (len != 1)
+  if (len == 1)
     return jint(byte & 0xff);
   ::Java::IOException(env).raise(_("Read from native stream failed"));
   return -1;
@@ -106,7 +106,12 @@ jint NativeInputStream::read(::Java::Env env,
     ::Java::NullPointerException(env).raise();
 
   apr_size_t len = length;
-  SVN_JAVAHL_CHECK(env, svn_stream_read(m_stream, dst.data() + offset, &len));
+  if (svn_stream_supports_partial_read(m_stream))
+    SVN_JAVAHL_CHECK(env, svn_stream_read2(m_stream,
+                                           dst.data() + offset, &len));
+  else
+    SVN_JAVAHL_CHECK(env, svn_stream_read_full(m_stream,
+                                               dst.data() + offset, &len));
   if (len == 0)
     return -1;                  // EOF
   if (len <= length)
