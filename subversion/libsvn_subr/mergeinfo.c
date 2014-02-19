@@ -2105,7 +2105,7 @@ svn_rangelist_inheritable2(svn_rangelist_t **inheritable_rangelist,
                   inheritable_range->end = range->end;
                   inheritable_range->inheritable = range->inheritable;
                   APR_ARRAY_PUSH(*inheritable_rangelist,
-                                 svn_merge_range_t *) = range;
+                                 svn_merge_range_t *) = inheritable_range;
                 }
             }
         }
