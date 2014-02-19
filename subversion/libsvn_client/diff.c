@@ -1951,13 +1951,15 @@ diff_repos_wc(const char **anchor_path,
                                pool, pool));
   SVN_ERR_ASSERT(anchor_url != NULL);
 
+  SVN_ERR(svn_client_open_ra_session2(&ra_session, url1, abspath2,
+                                      ctx, pool, pool));
+
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
   if (peg_revision->kind != svn_opt_revision_unspecified)
     {
       SVN_ERR(svn_client__repos_locations(&url1, NULL, NULL, NULL,
-                                          NULL,
-                                          path_or_url1,
+                                          ra_session, path_or_url1,
                                           peg_revision,
                                           revision1, NULL,
                                           ctx, pool));
@@ -1965,6 +1967,9 @@ diff_repos_wc(const char **anchor_path,
 
   if (cmd_baton)
     {
+      cmd_baton->ra_session = ra_session;
+      cmd_baton->anchor = anchor;
+
       if (!reverse)
         {
           cmd_baton->orig_path_1 = url1;
@@ -1980,8 +1985,7 @@ diff_repos_wc(const char **anchor_path,
     }
 
   /* Open an RA session to URL1 to figure out its node kind. */
-  SVN_ERR(svn_client_open_ra_session2(&ra_session, url1, abspath2,
-                                      ctx, pool, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, url1, pool));
   /* Resolve the revision to use for URL1. */
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
                                           (strcmp(path_or_url1, url1) == 0)
@@ -1989,9 +1993,6 @@ diff_repos_wc(const char **anchor_path,
                                           ra_session, revision1, pool));
   if (cmd_baton)
     {
-      cmd_baton->ra_session = ra_session;
-      cmd_baton->anchor = anchor;
-
       if (!reverse)
         cmd_baton->revnum1 = rev;
       else
