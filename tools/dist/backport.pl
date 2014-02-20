@@ -883,6 +883,7 @@ sub handle_entry {
         my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header},
                         trailing_eol => 2;
+        # TODO: parse the edited entry (empty lines, logsummary+votes, etc.)
         $votes->{$key} = ['edit', \%entry] # marker for the 2nd pass
             if $original ne $entry{raw};
         last PROMPT;
