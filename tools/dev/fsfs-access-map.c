@@ -172,7 +172,7 @@ open_file(const char *name, int handle)
 
       apr_file_t *apr_file = NULL;
       apr_finfo_t finfo = { 0 };
-      apr_size_t cluster_count = 0;
+      int cluster_count = 0;
 
       /* determine file size (if file still exists) */
       apr_file_open(&apr_file, name,
@@ -187,7 +187,7 @@ open_file(const char *name, int handle)
 
       /* pre-allocate cluster map accordingly
        * (will be auto-expanded later if necessary) */
-      cluster_count = (apr_size_t)(1 + (file->size - 1) / cluster_size);
+      cluster_count = (int)(1 + (file->size - 1) / cluster_size);
       file->read_map = apr_array_make(pool, file->size
                                           ? cluster_count
                                           : 1, sizeof(word));
@@ -595,14 +595,14 @@ scale_line(color_t* out,
  */
 static void
 write_bitmap(apr_array_header_t *info,
-             apr_size_t max_x,
+             int max_x,
              apr_file_t *file,
              apr_pool_t *pool)
 {
   int ysize = info->nelts;
   int xsize = 0;
   int x, y;
-  int row_size;
+  apr_size_t row_size;
   apr_size_t written;
   color_t *line, *scaled_line;
   svn_boolean_t do_scale = max_x > 0;
