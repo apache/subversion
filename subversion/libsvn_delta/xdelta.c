@@ -408,7 +408,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
 
   /* Initialize our rolling checksum.  */
   rolling = init_adler32(b + lo);
-  while (lo < bsize)
+  while (lo < upper)
     {
       apr_size_t matchlen;
       apr_size_t apos;
