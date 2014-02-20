@@ -1329,8 +1329,8 @@ diff_prepare_repos_repos(const char **url1,
                          const svn_opt_revision_t *peg_revision,
                          apr_pool_t *pool)
 {
-  const char *abspath_or_url2;
-  const char *abspath_or_url1;
+  const char *local_abspath1 = NULL;
+  const char *local_abspath2 = NULL;
   const char *repos_root_url;
   const char *wri_abspath = NULL;
   svn_client__pathrev_t *resolved1;
@@ -1339,21 +1339,19 @@ diff_prepare_repos_repos(const char **url1,
 
   if (!svn_path_is_url(path_or_url2))
     {
-      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url2, path_or_url2, pool));
-      SVN_ERR(svn_wc__node_get_url(url2, ctx->wc_ctx, abspath_or_url2,
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath2, path_or_url2, pool));
+      SVN_ERR(svn_wc__node_get_url(url2, ctx->wc_ctx, local_abspath2,
                                    pool, pool));
-      wri_abspath = abspath_or_url2;
+      wri_abspath = local_abspath2;
     }
   else
-    *url2 = abspath_or_url2 = apr_pstrdup(pool, path_or_url2);
+    *url2 = apr_pstrdup(pool, path_or_url2);
 
   if (!svn_path_is_url(path_or_url1))
     {
-      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
-      wri_abspath = abspath_or_url1;
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath1, path_or_url1, pool));
+      wri_abspath = local_abspath1;
     }
-  else
-    abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
 
   SVN_ERR(svn_client_open_ra_session2(ra_session, *url2, wri_abspath,
                                       ctx, pool, pool));
@@ -1362,7 +1360,7 @@ diff_prepare_repos_repos(const char **url1,
      actual URLs will be. */
   if (peg_kind != svn_opt_revision_unspecified
       || path_or_url1 == path_or_url2
-      || ! svn_path_is_url(path_or_url2))
+      || local_abspath2)
     {
       svn_error_t *err;
 
@@ -1385,7 +1383,7 @@ diff_prepare_repos_repos(const char **url1,
 
   if (peg_kind != svn_opt_revision_unspecified
       || path_or_url1 == path_or_url2
-      || ! svn_path_is_url(path_or_url1))
+      || local_abspath1)
     {
       svn_error_t *err;
 
@@ -1416,20 +1414,20 @@ diff_prepare_repos_repos(const char **url1,
       /* It would be nice if we could just return an error when resolving a
          location fails... But in many such cases we prefer diffing against
          an not existing location to show adds od removes (see issue #4153) */
+
       if (resolved2
           && (peg_kind != svn_opt_revision_unspecified
               || path_or_url1 == path_or_url2))
         *url1 = resolved2->url;
-      else if (svn_path_is_url(path_or_url1))
+      else if (! local_abspath1)
         *url1 = path_or_url1;
       else
-        SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, abspath_or_url1,
-                                      pool, pool));
+        SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, local_abspath1,
+                                     pool, pool));
 
       SVN_ERR(svn_client__get_revision_number(rev1, NULL, ctx->wc_ctx,
-                                          (strcmp(path_or_url1, *url1) == 0)
-                                              ? NULL : abspath_or_url1,
-                                          *ra_session, revision1, pool));
+                                              local_abspath1 /* may be NULL */,
+                                              *ra_session, revision1, pool));
     }
 
   if (resolved2)
@@ -1442,18 +1440,16 @@ diff_prepare_repos_repos(const char **url1,
       /* It would be nice if we could just return an error when resolving a
          location fails... But in many such cases we prefer diffing against
          an not existing location to show adds od removes (see issue #4153) */
+
       if (resolved1
           && (peg_kind != svn_opt_revision_unspecified
               || path_or_url1 == path_or_url2))
         *url2 = resolved1->url;
-      else if (svn_path_is_url(path_or_url2))
-        *url2 = path_or_url2;
       /* else keep url2 */
 
       SVN_ERR(svn_client__get_revision_number(rev2, NULL, ctx->wc_ctx,
-                                          (strcmp(path_or_url2, *url2) == 0)
-                                              ? NULL : abspath_or_url2,
-                                          *ra_session, revision2, pool));
+                                              local_abspath2 /* may be NULL */,
+                                              *ra_session, revision2, pool));
     }
 
   /* Resolve revision and get path kind for the second target. */
