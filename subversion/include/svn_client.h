@@ -2671,8 +2671,8 @@ svn_client_status(svn_revnum_t *result_rev,
  * #svn_opt_revision_unspecified, it defaults to #svn_opt_revision_head
  * for URLs or #svn_opt_revision_working for WC paths.
  *
- * If @a limit is non-zero only invoke @a receiver on the first @a limit
- * logs.
+ * If @a limit is greater than zero only invoke @a receiver on the first
+ * @a limit logs.
  *
  * If @a discover_changed_paths is set, then the @c changed_paths and @c
  * changed_paths2 fields in the @c log_entry argument to @a receiver will be

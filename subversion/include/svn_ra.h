@@ -1575,8 +1575,8 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * was added or deleted).  Each path is an <tt>const char *</tt>, relative
  * to the @a session's common parent.
  *
- * If @a limit is non-zero only invoke @a receiver on the first @a limit
- * logs.
+ * If @a limit is greater than zero only invoke @a receiver on the first
+ * @a limit logs.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths argument;
