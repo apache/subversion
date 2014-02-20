@@ -944,7 +944,6 @@ diff_file_added(const char *relpath,
   svn_boolean_t wrote_header = FALSE;
   const char *left_file;
   apr_hash_t *left_props;
-  svn_revnum_t left_rev;
   apr_array_header_t *prop_changes;
 
   /* During repos->wc diff of a copy revision numbers obtained
@@ -953,7 +952,6 @@ diff_file_added(const char *relpath,
     {
       left_file = copyfrom_file;
       left_props = copyfrom_props ? copyfrom_props : apr_hash_make(scratch_pool);
-      left_rev = copyfrom_source->revision;
     }
   else
     {
