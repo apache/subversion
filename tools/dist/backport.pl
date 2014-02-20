@@ -906,9 +906,10 @@ sub backport_main {
   my %approved;
   my %votes;
   my $state = read_state;
+  my $renormalize;
 
   if (@ARGV && $ARGV[0] eq '--renormalize') {
-    renormalize_STATUS;
+    $renormalize = 1;
     shift;
   }
 
@@ -920,8 +921,9 @@ sub backport_main {
   open STATUS, "<", $STATUS or (backport_usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
-  die "A vim with the +ex_extra feature is required for \$MAY_COMMIT mode"
-      if $MAY_COMMIT and `${VIM} --version` !~ /[+]ex_extra/;
+  die "A vim with the +ex_extra feature is required for --renormalize and "
+      ."\$MAY_COMMIT modes"
+      if ($renormalize or $MAY_COMMIT) and `${VIM} --version` !~ /[+]ex_extra/;
 
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
@@ -931,6 +933,7 @@ sub backport_main {
     or die "$0: svn error; point \$SVN to an appropriate binary";
 
   check_local_mods_to_STATUS;
+  renormalize_STATUS if $renormalize;
 
   # Skip most of the file
   $/ = ""; # paragraph mode
