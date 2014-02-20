@@ -143,6 +143,33 @@ wrap_diff_fns(svn_diff_fns2_t **diff_fns2,
 
 
 /*** From diff_file.c ***/
+
+svn_error_t *
+svn_diff_file_output_unified3(svn_stream_t *output_stream,
+                              svn_diff_t *diff,
+                              const char *original_path,
+                              const char *modified_path,
+                              const char *original_header,
+                              const char *modified_header,
+                              const char *header_encoding,
+                              const char *relative_to_dir,
+                              svn_boolean_t show_c_function,
+                              apr_pool_t *pool)
+{
+  return svn_error_trace(
+              svn_diff_file_output_unified4(output_stream,
+                                            diff,
+                                            original_path,
+                                            modified_path,
+                                            original_header,
+                                            modified_header,
+                                            header_encoding,
+                                            relative_to_dir,
+                                            show_c_function,
+                                            NULL, NULL, /* cancel */
+                                            pool));
+}
+
 svn_error_t *
 svn_diff_file_output_unified2(svn_stream_t *output_stream,
                               svn_diff_t *diff,
@@ -287,3 +314,14 @@ svn_diff_diff4(svn_diff_t **diff,
   wrap_diff_fns(&diff_fns2, &fwb, vtable, diff_baton, pool);
   return svn_diff_diff4_2(diff, fwb, diff_fns2, pool);
 }
+
+/*** From util.c ***/
+svn_error_t *
+svn_diff_output(svn_diff_t *diff,
+                void *output_baton,
+                const svn_diff_output_fns_t *output_fns)
+{
+  return svn_error_trace(svn_diff_output2(diff, output_baton, output_fns,
+                                          NULL, NULL /* cancel */));
+}
+
