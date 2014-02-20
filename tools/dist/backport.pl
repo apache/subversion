@@ -26,7 +26,7 @@ use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
-use POSIX qw/ctermid strftime/;
+use POSIX qw/ctermid strftime isprint isspace/;
 use Text::Wrap qw/wrap/;
 use Tie::File ();
 
@@ -76,7 +76,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
-$ENV{LC_ALL} = "C";  # since we parse 'svn info' output
+$ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
 
 # Globals.
 my %ERRORS = ();
@@ -203,10 +203,17 @@ sub prompt {
   my %args = @_;
   my $getchar = sub {
     my $answer;
-    ReadMode 'cbreak';
-    eval { $answer = (ReadKey 0) };
-    ReadMode 'normal';
-    die $@ if $@;
+    do {
+      ReadMode 'cbreak';
+      $answer = (ReadKey 0);
+      ReadMode 'normal';
+      die if $@ or not defined $answer;
+      # Swallow terminal escape codes (e.g., arrow keys).
+      unless (isprint $answer or isspace $answer) {
+        $answer = (ReadKey -1) while defined $answer;
+        # TODO: provide an indication that the keystroke was sensed and ignored.
+      }
+    } until defined $answer and (isprint $answer or isspace $answer);
     print $answer;
     return $answer;
   };
