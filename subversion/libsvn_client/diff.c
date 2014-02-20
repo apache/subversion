@@ -1706,7 +1706,7 @@ diff_repos_repos(const char **root_relpath,
       /* This should be moved to the diff writer
          - path_or_url are provided by the caller
          - target1 is available as *root_relpath
-         - (kind1 != svn_node_dir || kind2 == svn_node_dir) = *root_is_dir */
+         - (kind1 != svn_node_dir || kind2 != svn_node_dir) = !*root_is_dir */
 
       if (!svn_path_is_url(path_or_url2))
         ddi->anchor = path_or_url2;
@@ -1716,7 +1716,7 @@ diff_repos_repos(const char **root_relpath,
         ddi->anchor = NULL;
 
       if (*target1 && ddi->anchor
-          && (kind1 != svn_node_dir || kind2 == svn_node_dir))
+          && (kind1 != svn_node_dir || kind2 != svn_node_dir))
         ddi->anchor = svn_dirent_dirname(ddi->anchor, result_pool);
     }
 
