@@ -716,7 +716,7 @@ sub handle_entry {
   my $parno = shift;
   my $skip = shift;
   my %entry = parse_entry $raw, $parno, @_;
-  my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
+  my @vetoes = grep /^\s*-1:/, @{$entry{votes}};
 
   my $match = defined($skip) ? ($raw =~ /\Q$skip\E/ or $raw =~ /$skip/msi) : 0
               unless $YES;
