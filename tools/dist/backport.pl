@@ -766,7 +766,11 @@ sub handle_entry {
         merge %entry;
 
         my $output = `$SVN status`;
-        my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
+
+        # Pre-1.6 svn's don't have the 7th column, so fake it.
+        $output =~ s/^(......)/$1 /mg if $SVNvsn < 1_006_000;
+
+        my (@conflicts) = ($output =~ m#^(?:C......|.C.....|......C)\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
           $ERRORS{$entry{id}} //= [\%entry,
                                    sprintf "Conflicts on %s%s%s",
