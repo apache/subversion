@@ -1842,11 +1842,15 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
 
 /* The implemementation of svn_wc_diff6(), but reporting to a diff processor
  *
- * If ANCHOR_ABSPATH is not null, set it to the anchor of the diff before
+ * If ROOT_RELPATH is not NULL, set *ROOT_RELPATH to the target of the diff
+ * within the diff namespace. ("" or a single path component).
+ *
+ * If ROOT_IS_FILE is NOT NULL set it 
  * the first processor call. (The anchor is LOCAL_ABSPATH or an ancestor of it)
  */
 svn_error_t *
-svn_wc__diff7(const char **anchor_abspath,
+svn_wc__diff7(const char **root_relpath,
+              svn_boolean_t *root_is_dir,
               svn_wc_context_t *wc_ctx,
               const char *local_abspath,
               svn_depth_t depth,

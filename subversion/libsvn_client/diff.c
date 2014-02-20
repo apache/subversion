@@ -1581,7 +1581,8 @@ unsupported_diff_error(svn_error_t *child_err)
 
    All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
-diff_wc_wc(const char **anchor_path,
+diff_wc_wc(const char **root_relpath,
+           svn_boolean_t *root_is_dir,
            struct diff_driver_info_t *ddi,
            const char *path1,
            const svn_opt_revision_t *revision1,
@@ -1626,9 +1627,8 @@ diff_wc_wc(const char **anchor_path,
         ddi->anchor = path1;
     }
 
-  SVN_ERR(svn_wc__diff7(anchor_path, ctx->wc_ctx,
-                        abspath1,
-                        depth,
+  SVN_ERR(svn_wc__diff7(root_relpath, root_is_dir,
+                        ctx->wc_ctx, abspath1, depth,
                         ignore_ancestry, changelists,
                         diff_processor,
                         ctx->cancel_func, ctx->cancel_baton,
@@ -1646,7 +1646,8 @@ diff_wc_wc(const char **anchor_path,
 
    All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
-diff_repos_repos(const char **anchor_path_or_url,
+diff_repos_repos(const char **root_relpath,
+                 svn_boolean_t *root_is_dir,
                  struct diff_driver_info_t *ddi,
                  const char *path_or_url1,
                  const char *path_or_url2,
@@ -1740,35 +1741,20 @@ diff_repos_repos(const char **anchor_path_or_url,
 
   /* Filter the first path component using a filter processor, until we fixed
      the diff processing to handle this directly */
-  if ((kind1 != svn_node_file && kind2 != svn_node_file) && target1[0] != '\0')
-  {
-    diff_processor = svn_diff__tree_processor_filter_create(
-                                      diff_processor, target1, scratch_pool);
-  }
+  if (root_relpath)
+    *root_relpath = apr_pstrdup(result_pool, target1);
+  else if ((kind1 != svn_node_file && kind2 != svn_node_file)
+           && target1[0] != '\0')
+    {
+      diff_processor = svn_diff__tree_processor_filter_create(
+                                        diff_processor, target1, scratch_pool);
+    }
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
      contents.  */
   SVN_ERR(svn_ra_dup_session(&extra_ra_session, ra_session, anchor1,
                              scratch_pool, scratch_pool));
-
-  if (anchor_path_or_url)
-    {
-      if (base_path)
-        {
-          *anchor_path_or_url = apr_pstrdup(result_pool, base_path);
-        }
-      else
-        {
-          SVN_ERR(svn_ra_get_session_url(ra_session, anchor_path_or_url,
-                                         scratch_pool));
-
-          *anchor_path_or_url = svn_path_url_add_component2(
-                                                  *anchor_path_or_url,
-                                                  target1,
-                                                  result_pool);
-        }
-    }
 
   if (ddi)
     {
@@ -1821,7 +1807,8 @@ diff_repos_repos(const char **anchor_path_or_url,
 
    All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
-diff_repos_wc(const char **anchor_path,
+diff_repos_wc(const char **root_relpath,
+              svn_boolean_t *root_is_dir,
               struct diff_driver_info_t *ddi,
               const char *path_or_url1,
               const svn_opt_revision_t *revision1,
@@ -1877,6 +1864,11 @@ diff_repos_wc(const char **anchor_path,
   SVN_ERR(svn_wc_get_actual_target2(&anchor, &target,
                                     ctx->wc_ctx, path2,
                                     pool, pool));
+
+  if (root_relpath)
+    *root_relpath = apr_pstrdup(result_pool, target);
+  if (root_is_dir)
+    *root_is_dir = (*target == '\0');
 
   /* Fetch the URL of the anchor directory. */
   SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
@@ -1959,9 +1951,6 @@ diff_repos_wc(const char **anchor_path,
     diff_depth = depth;
   else
     diff_depth = svn_depth_unknown;
-
-  if (anchor_path)
-    *anchor_path = apr_pstrdup(result_pool, anchor_abspath);
 
   if (is_copy)
     {
@@ -2083,7 +2072,8 @@ diff_repos_wc(const char **anchor_path,
 
 /* This is basically just the guts of svn_client_diff[_summarize][_peg]6(). */
 static svn_error_t *
-do_diff(const char **anchor_path,
+do_diff(const char **root_relpath,
+        svn_boolean_t *root_is_dir,
         diff_driver_info_t *ddi,
         const char *path_or_url1,
         const char *path_or_url2,
@@ -2111,7 +2101,8 @@ do_diff(const char **anchor_path,
       if (is_repos2)
         {
           /* ### Ignores 'show_copies_as_adds'. */
-          SVN_ERR(diff_repos_repos(anchor_path, ddi,
+          SVN_ERR(diff_repos_repos(root_relpath, root_is_dir,
+                                   ddi,
                                    path_or_url1, path_or_url2,
                                    revision1, revision2,
                                    peg_revision, depth, ignore_ancestry,
@@ -2121,7 +2112,7 @@ do_diff(const char **anchor_path,
         }
       else /* path_or_url2 is a working copy path */
         {
-          SVN_ERR(diff_repos_wc(anchor_path, ddi,
+          SVN_ERR(diff_repos_wc(root_relpath, root_is_dir, ddi,
                                 path_or_url1, revision1, peg_revision,
                                 path_or_url2, revision2, FALSE, depth,
                                 ignore_ancestry, changelists,
@@ -2133,7 +2124,7 @@ do_diff(const char **anchor_path,
     {
       if (is_repos2)
         {
-          SVN_ERR(diff_repos_wc(anchor_path, ddi,
+          SVN_ERR(diff_repos_wc(root_relpath, root_is_dir, ddi,
                                 path_or_url2, revision2, peg_revision,
                                 path_or_url1, revision1, TRUE, depth,
                                 ignore_ancestry, changelists,
@@ -2155,7 +2146,7 @@ do_diff(const char **anchor_path,
 
               /* ### What about ddi? */
 
-              SVN_ERR(svn_client__arbitrary_nodes_diff(anchor_path,
+              SVN_ERR(svn_client__arbitrary_nodes_diff(root_relpath, root_is_dir,
                                                        abspath1, abspath2,
                                                        depth,
                                                        diff_processor,
@@ -2164,7 +2155,7 @@ do_diff(const char **anchor_path,
             }
           else
             {
-              SVN_ERR(diff_wc_wc(anchor_path, ddi,
+              SVN_ERR(diff_wc_wc(root_relpath, root_is_dir, ddi,
                                  path_or_url1, revision1,
                                  path_or_url2, revision2,
                                  depth, ignore_ancestry, changelists,
@@ -2356,7 +2347,7 @@ svn_client_diff6(const apr_array_header_t *options,
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
 
-  return svn_error_trace(do_diff(NULL, &diff_cmd_baton.ddi,
+  return svn_error_trace(do_diff(NULL, NULL, &diff_cmd_baton.ddi,
                                  path_or_url1, path_or_url2,
                                  revision1, revision2, &peg_revision,
                                  depth, ignore_ancestry, changelists,
@@ -2439,7 +2430,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
 
-  return svn_error_trace(do_diff(NULL, &diff_cmd_baton.ddi,
+  return svn_error_trace(do_diff(NULL, NULL, &diff_cmd_baton.ddi,
                                  path_or_url, path_or_url,
                                  start_revision, end_revision, peg_revision,
                                  depth, ignore_ancestry, changelists,
@@ -2462,17 +2453,17 @@ svn_client_diff_summarize2(const char *path_or_url1,
 {
   const svn_diff_tree_processor_t *diff_processor;
   svn_opt_revision_t peg_revision;
-  const char **anchor_path;
+  const char **p_root_relpath;
 
   /* We will never do a pegged diff from here. */
   peg_revision.kind = svn_opt_revision_unspecified;
 
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
-                     &diff_processor, &anchor_path,
+                     &diff_processor, &p_root_relpath,
                      summarize_func, summarize_baton,
                      path_or_url1, pool, pool));
 
-  return svn_error_trace(do_diff(anchor_path, NULL,
+  return svn_error_trace(do_diff(p_root_relpath, NULL, NULL,
                                  path_or_url1, path_or_url2,
                                  revision1, revision2, &peg_revision,
                                  depth, ignore_ancestry, changelists,
@@ -2494,14 +2485,14 @@ svn_client_diff_summarize_peg2(const char *path_or_url,
                                apr_pool_t *pool)
 {
   const svn_diff_tree_processor_t *diff_processor;
-  const char **anchor_path;
+  const char **p_root_relpath;
 
   SVN_ERR(svn_client__get_diff_summarize_callbacks(
-                     &diff_processor, &anchor_path,
+                     &diff_processor, &p_root_relpath,
                      summarize_func, summarize_baton,
                      path_or_url, pool, pool));
 
-  return svn_error_trace(do_diff(anchor_path, NULL,
+  return svn_error_trace(do_diff(p_root_relpath, NULL, NULL,
                                  path_or_url, path_or_url,
                                  start_revision, end_revision, peg_revision,
                                  depth, ignore_ancestry, changelists,

@@ -236,25 +236,6 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Produce a diff with depth DEPTH between two files or two directories at
- * LEFT_ABSPATH1 and RIGHT_ABSPATH, using the provided diff callbacks to
- * show changes in files. The files and directories involved may be part of
- * a working copy or they may be unversioned. For versioned files, show
- * property changes, too.
- *
- * If ANCHOR_ABSPATH is not null, set it to the anchor of the diff before
- * the first processor call. (The anchor is LEFT_ABSPATH or an ancestor of it)
- */
-svn_error_t *
-svn_client__arbitrary_nodes_diff(const char **anchor_abspath,
-                                 const char *left_abspath,
-                                 const char *right_abspath,
-                                 svn_depth_t depth,
-                                 const svn_diff_tree_processor_t *diff_processor,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
-                                 apr_pool_t *scratch_pool);
-
 /* Copy the file or directory on URL in some repository to DST_ABSPATH,
  * copying node information and properties. Resolve URL using PEG_REV and
  * REVISION.
