@@ -1802,7 +1802,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * show all revisions regardless of what paths were changed in those
  * revisions.
  *
- * If @a limit is non-zero then only invoke @a receiver on the first
+ * If @a limit is greater than zero then only invoke @a receiver on the first
  * @a limit logs.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
