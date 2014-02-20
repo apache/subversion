@@ -661,26 +661,24 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      svn_boolean_t force_diff,
                      const char *copyfrom_path,
                      svn_revnum_t copyfrom_rev,
-                     diff_writer_info_t *diff_cmd_baton,
+                     diff_writer_info_t *dwi,
                      apr_pool_t *scratch_pool)
 {
-  int exitcode;
-  const char *rel_to_dir = diff_cmd_baton->relative_to_dir;
-  svn_stream_t *errstream = diff_cmd_baton->errstream;
-  svn_stream_t *outstream = diff_cmd_baton->outstream;
+  const char *rel_to_dir = dwi->relative_to_dir;
+  svn_stream_t *outstream = dwi->outstream;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
   const char *index_path = diff_relpath;
-  const char *path1 = diff_cmd_baton->ddi.orig_path_1;
-  const char *path2 = diff_cmd_baton->ddi.orig_path_2;
+  const char *path1 = dwi->ddi.orig_path_1;
+  const char *path2 = dwi->ddi.orig_path_2;
 
   /* If only property differences are shown, there's nothing to do. */
-  if (diff_cmd_baton->properties_only)
+  if (dwi->properties_only)
     return SVN_NO_ERROR;
 
   /* Generate the diff headers. */
   SVN_ERR(adjust_paths_for_diff_labels(&index_path, &path1, &path2,
-                                       rel_to_dir, diff_cmd_baton->ddi.anchor,
+                                       rel_to_dir, dwi->ddi.anchor,
                                        scratch_pool, scratch_pool));
 
   label1 = diff_label(path1, rev1, scratch_pool);
@@ -694,11 +692,11 @@ diff_content_changed(svn_boolean_t *wrote_header,
   if (mimetype2)
     mt2_binary = svn_mime_type_is_binary(mimetype2);
 
-  if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
+  if (! dwi->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
-               diff_cmd_baton->header_encoding, scratch_pool,
+               dwi->header_encoding, scratch_pool,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                index_path));
@@ -706,28 +704,28 @@ diff_content_changed(svn_boolean_t *wrote_header,
       /* ### Print git diff headers. */
 
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
-               diff_cmd_baton->header_encoding, scratch_pool,
+               dwi->header_encoding, scratch_pool,
                _("Cannot display: file marked as a binary type.%s"),
                APR_EOL_STR));
 
       if (mt1_binary && !mt2_binary)
         SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                 diff_cmd_baton->header_encoding, scratch_pool,
+                 dwi->header_encoding, scratch_pool,
                  "svn:mime-type = %s" APR_EOL_STR, mimetype1));
       else if (mt2_binary && !mt1_binary)
         SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                 diff_cmd_baton->header_encoding, scratch_pool,
+                 dwi->header_encoding, scratch_pool,
                  "svn:mime-type = %s" APR_EOL_STR, mimetype2));
       else if (mt1_binary && mt2_binary)
         {
           if (strcmp(mimetype1, mimetype2) == 0)
             SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                     diff_cmd_baton->header_encoding, scratch_pool,
+                     dwi->header_encoding, scratch_pool,
                      "svn:mime-type = %s" APR_EOL_STR,
                      mimetype1));
           else
             SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                     diff_cmd_baton->header_encoding, scratch_pool,
+                     dwi->header_encoding, scratch_pool,
                      "svn:mime-type = (%s, %s)" APR_EOL_STR,
                      mimetype1, mimetype2));
         }
@@ -737,17 +735,19 @@ diff_content_changed(svn_boolean_t *wrote_header,
     }
 
 
-  if (diff_cmd_baton->diff_cmd)
+  if (dwi->diff_cmd)
     {
+      svn_stream_t *errstream = dwi->errstream;
       apr_file_t *outfile;
       apr_file_t *errfile;
       const char *outfilename;
       const char *errfilename;
       svn_stream_t *stream;
+      int exitcode;
 
       /* Print out the diff header. */
       SVN_ERR(svn_stream_printf_from_utf8(outstream,
-               diff_cmd_baton->header_encoding, scratch_pool,
+               dwi->header_encoding, scratch_pool,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                index_path));
@@ -777,12 +777,12 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                          scratch_pool, scratch_pool));
 
       SVN_ERR(svn_io_run_diff2(".",
-                               diff_cmd_baton->options.for_external.argv,
-                               diff_cmd_baton->options.for_external.argc,
+                               dwi->options.for_external.argv,
+                               dwi->options.for_external.argc,
                                label1, label2,
                                tmpfile1, tmpfile2,
                                &exitcode, outfile, errfile,
-                               diff_cmd_baton->diff_cmd, scratch_pool));
+                               dwi->diff_cmd, scratch_pool));
 
       /* Now, open and copy our files to our output streams. */
       if (outfilename)
@@ -812,35 +812,35 @@ diff_content_changed(svn_boolean_t *wrote_header,
       svn_diff_t *diff;
 
       SVN_ERR(svn_diff_file_diff_2(&diff, tmpfile1, tmpfile2,
-                                   diff_cmd_baton->options.for_internal,
+                                   dwi->options.for_internal,
                                    scratch_pool));
 
       if (force_diff
-          || diff_cmd_baton->use_git_diff_format
+          || dwi->use_git_diff_format
           || svn_diff_contains_diffs(diff))
         {
           /* Print out the diff header. */
           SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                   diff_cmd_baton->header_encoding, scratch_pool,
+                   dwi->header_encoding, scratch_pool,
                    "Index: %s" APR_EOL_STR
                    SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                    index_path));
 
-          if (diff_cmd_baton->use_git_diff_format)
+          if (dwi->use_git_diff_format)
             {
               const char *repos_relpath1;
               const char *repos_relpath2;
               SVN_ERR(make_repos_relpath(&repos_relpath1, diff_relpath,
-                                         diff_cmd_baton->ddi.orig_path_1,
-                                         diff_cmd_baton->ddi.session_relpath,
-                                         diff_cmd_baton->wc_ctx,
-                                         diff_cmd_baton->ddi.anchor,
+                                         dwi->ddi.orig_path_1,
+                                         dwi->ddi.session_relpath,
+                                         dwi->wc_ctx,
+                                         dwi->ddi.anchor,
                                          scratch_pool, scratch_pool));
               SVN_ERR(make_repos_relpath(&repos_relpath2, diff_relpath,
-                                         diff_cmd_baton->ddi.orig_path_2,
-                                         diff_cmd_baton->ddi.session_relpath,
-                                         diff_cmd_baton->wc_ctx,
-                                         diff_cmd_baton->ddi.anchor,
+                                         dwi->ddi.orig_path_2,
+                                         dwi->ddi.session_relpath,
+                                         dwi->wc_ctx,
+                                         dwi->ddi.anchor,
                                          scratch_pool, scratch_pool));
               SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
                                             operation,
@@ -848,7 +848,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                             rev1, rev2,
                                             copyfrom_path,
                                             copyfrom_rev,
-                                            diff_cmd_baton->header_encoding,
+                                            dwi->header_encoding,
                                             scratch_pool));
             }
 
@@ -856,8 +856,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
           if (force_diff || svn_diff_contains_diffs(diff))
             SVN_ERR(svn_diff_file_output_unified3(outstream, diff,
                      tmpfile1, tmpfile2, label1, label2,
-                     diff_cmd_baton->header_encoding, rel_to_dir,
-                     diff_cmd_baton->options.for_internal->show_c_function,
+                     dwi->header_encoding, rel_to_dir,
+                     dwi->options.for_internal->show_c_function,
                      scratch_pool));
 
           /* We have a printed a diff for this path, mark it as visited. */
