@@ -352,6 +352,7 @@ sub logsummarysummary {
 # TODO: may need to parse other headers too?
 sub parse_entry {
   my $raw = shift;
+  my $parno = shift;
   my @lines = @_;
   my $depends;
   my $accept;
@@ -444,7 +445,7 @@ sub parse_entry {
     accept => $accept,
     raw => $raw,
     digest => digest_entry($raw),
-    parno => ($.),
+    parno => $parno, # $. from backport_main()
   );
 }
 
@@ -712,8 +713,9 @@ sub handle_entry {
   my $votes = shift;
   my $state = shift;
   my $raw = shift;
+  my $parno = shift;
   my $skip = shift;
-  my %entry = parse_entry $raw, @_;
+  my %entry = parse_entry $raw, $parno, @_;
   my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
 
   my $match = defined($skip) ? ($raw =~ /\Q$skip\E/ or $raw =~ /$skip/msi) : 0
@@ -935,7 +937,8 @@ sub backport_main {
       when (/^ *\*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ *\*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
+        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $.,
+                     $skip,
                      @lines;
       }
       default {
