@@ -522,7 +522,6 @@ typedef struct diff_driver_info_t
 {
   /* The anchor to prefix before wc paths */
   const char *anchor;
-  const char *anchor_url;
 
    /* Relative path of ra session from repos_root_url */
   const char *session_relpath;
@@ -533,9 +532,6 @@ typedef struct diff_driver_info_t
      (for example, when comparing a trunk against a branch). */
   const char *orig_path_1;
   const char *orig_path_2;
-
-  /* Whether the local diff target of a repos->wc diff is a copy. */
-  svn_boolean_t repos_wc_diff_target_is_copy;
 } diff_driver_info_t;
 
 
@@ -1122,20 +1118,31 @@ diff_dir_added(const char *relpath,
                apr_pool_t *scratch_pool)
 {
   diff_writer_info_t *dwi = processor->baton;
-  apr_hash_t *original_props = apr_hash_make(scratch_pool);
+  apr_hash_t *left_props;
   apr_array_header_t *prop_changes;
 
   if (dwi->no_diff_added)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_prop_diffs(&prop_changes, right_props, original_props,
+  if (copyfrom_source && !dwi->show_copies_as_adds)
+    {
+      left_props = copyfrom_props ? copyfrom_props
+                                  : apr_hash_make(scratch_pool);
+    }
+  else
+    {
+      left_props = apr_hash_make(scratch_pool);
+      copyfrom_source = NULL;
+    }
+
+  SVN_ERR(svn_prop_diffs(&prop_changes, right_props, left_props,
                          scratch_pool));
 
   return svn_error_trace(diff_props_changed(relpath,
                                             DIFF_REVNUM_NONEXISTENT,
                                             right_source->revision,
                                             prop_changes,
-                                            original_props,
+                                            left_props,
                                             TRUE /* show_diff_header */,
                                             dwi,
                                             scratch_pool));
@@ -1697,9 +1704,6 @@ diff_repos_repos(const char **anchor_path_or_url,
 
       /* Get numeric revisions. */
       ddi->anchor = base_path;
-
-      SVN_ERR(svn_ra_get_session_url(ra_session, &ddi->anchor_url,
-                                     result_pool));
     }
 
   /* The repository can bring in a new working copy, but not delete
@@ -1959,9 +1963,6 @@ diff_repos_wc(const char **anchor_path,
     {
       const char *copyfrom_parent_url;
       const char *copyfrom_basename;
-
-      if (ddi)
-        ddi->repos_wc_diff_target_is_copy = TRUE;
 
       /* We're diffing a locally copied/moved node.
        * Describe the copy source to the reporter instead of the copy itself.
@@ -2344,10 +2345,6 @@ svn_client_diff6(const apr_array_header_t *options,
 
   diff_processor = processor;
 
-  if (! show_copies_as_adds && !use_git_diff_format)
-    diff_processor = svn_diff__tree_processor_copy_as_changed_create(
-                      diff_processor, pool);
-
   /* --show-copies-as-adds and --git imply --notice-ancestry */
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
@@ -2427,10 +2424,6 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   processor->file_deleted = diff_file_deleted;
 
   diff_processor = processor;
-
-  if (! show_copies_as_adds && !use_git_diff_format)
-    diff_processor = svn_diff__tree_processor_copy_as_changed_create(
-                      diff_processor, pool);
 
   /* --show-copies-as-adds and --git imply --notice-ancestry */
   if (show_copies_as_adds || use_git_diff_format)
