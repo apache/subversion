@@ -2889,7 +2889,7 @@ log_receiver(void *baton,
              svn_log_entry_t *log_entry,
              apr_pool_t *pool)
 {
-  int *count = baton;
+  svn_revnum_t *count = baton;
   (*count)++;
   return SVN_NO_ERROR;
 }
@@ -2947,13 +2947,18 @@ get_logs(const svn_test_opts_t *opts,
           svn_revnum_t end_arg   = end ? end : SVN_INVALID_REVNUM;
           svn_revnum_t eff_start = start ? start : youngest_rev;
           svn_revnum_t eff_end   = end ? end : youngest_rev;
-          int limit, max_logs =
+          int limit;
+          svn_revnum_t max_logs =
             MAX(eff_start, eff_end) + 1 - MIN(eff_start, eff_end);
-          int num_logs;
+          svn_revnum_t num_logs;
 
+          /* this may look like it can get in an infinite loop if max_logs
+           * ended up being larger than the size limit can represent.  It
+           * can't because a negative limit will end up failing to match
+           * the existed number of logs. */
           for (limit = 0; limit <= max_logs; limit++)
             {
-              int num_expected = limit ? limit : max_logs;
+              svn_revnum_t num_expected = limit ? limit : max_logs;
 
               svn_pool_clear(subpool);
               num_logs = 0;
@@ -2964,7 +2969,7 @@ get_logs(const svn_test_opts_t *opts,
               if (num_logs != num_expected)
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "Log with start=%ld,end=%ld,limit=%d "
-                                         "returned %d entries (expected %d)",
+                                         "returned %ld entries (expected %ld)",
                                          start_arg, end_arg, limit,
                                          num_logs, max_logs);
             }
