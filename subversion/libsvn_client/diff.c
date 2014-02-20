@@ -1308,13 +1308,10 @@ check_diff_target_exists(const char *url,
  * *TARGET1 and *TARGET2, based on *URL1 and *URL2.
  * Indicate the corresponding node kinds in *KIND1 and *KIND2, and verify
  * that at least one of the diff targets exists.
- * Set *BASE_PATH corresponding to the URL opened in the new *RA_SESSION
- * which is pointing at *ANCHOR1.
  * Use client context CTX. Do all allocations in POOL. */
 static svn_error_t *
 diff_prepare_repos_repos(const char **url1,
                          const char **url2,
-                         const char **base_path,
                          svn_revnum_t *rev1,
                          svn_revnum_t *rev2,
                          const char **anchor1,
@@ -1356,15 +1353,6 @@ diff_prepare_repos_repos(const char **url1,
     }
   else
     *url1 = abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
-
-  /* We need exactly one BASE_PATH, so we'll let the BASE_PATH
-     calculated for PATH_OR_URL2 override the one for PATH_OR_URL1
-     (since the diff will be "applied" to URL2 anyway). */
-  *base_path = NULL;
-  if (strcmp(*url1, path_or_url1) != 0)
-    *base_path = path_or_url1;
-  if (strcmp(*url2, path_or_url2) != 0)
-    *base_path = path_or_url2;
 
   SVN_ERR(svn_client_open_ra_session2(ra_session, *url2, wri_abspath,
                                       ctx, pool, pool));
@@ -1477,11 +1465,10 @@ diff_prepare_repos_repos(const char **url1,
     {
       svn_node_kind_t ignored_kind;
       svn_error_t *err;
+
       svn_uri_split(anchor1, target1, *url1, pool);
       svn_uri_split(anchor2, target2, *url2, pool);
-      if (*base_path
-          && (*kind1 == svn_node_file || *kind2 == svn_node_file))
-        *base_path = svn_dirent_dirname(*base_path, pool);
+
       SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));
 
       /* We might not have the necessary rights to read the root now.
@@ -1654,7 +1641,6 @@ diff_repos_repos(const char **root_relpath,
 
   const char *url1;
   const char *url2;
-  const char *base_path;
   svn_revnum_t rev1;
   svn_revnum_t rev2;
   svn_node_kind_t kind1;
@@ -1664,21 +1650,14 @@ diff_repos_repos(const char **root_relpath,
   const char *target1;
   const char *target2;
   svn_ra_session_t *ra_session;
-  const char *wri_abspath = NULL;
 
   /* Prepare info for the repos repos diff. */
-  SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &base_path, &rev1, &rev2,
+  SVN_ERR(diff_prepare_repos_repos(&url1, &url2, &rev1, &rev2,
                                    &anchor1, &anchor2, &target1, &target2,
                                    &kind1, &kind2, &ra_session,
                                    ctx, path_or_url1, path_or_url2,
                                    revision1, revision2, peg_revision,
                                    scratch_pool));
-
-  /* Find a WC path for the ra session */
-  if (!svn_path_is_url(path_or_url1))
-    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url1, scratch_pool));
-  else if (!svn_path_is_url(path_or_url2))
-    SVN_ERR(svn_dirent_get_absolute(&wri_abspath, path_or_url2, scratch_pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
@@ -1689,8 +1668,21 @@ diff_repos_repos(const char **root_relpath,
       ddi->orig_path_1 = url1;
       ddi->orig_path_2 = url2;
 
-      /* Get numeric revisions. */
-      ddi->anchor = base_path;
+      /* This should be moved to the diff writer
+         - path_or_url are provided by the caller
+         - target1 is available as *root_relpath
+         - (kind1 != svn_node_dir || kind2 == svn_node_dir) = *root_is_dir */
+
+      if (!svn_path_is_url(path_or_url2))
+        ddi->anchor = path_or_url2;
+      else if (!svn_path_is_url(path_or_url1))
+        ddi->anchor = path_or_url1;
+      else
+        ddi->anchor = NULL;
+
+      if (*target1 && ddi->anchor
+          && (kind1 != svn_node_dir || kind2 == svn_node_dir))
+        ddi->anchor = svn_dirent_dirname(ddi->anchor, result_pool);
     }
 
   /* The repository can bring in a new working copy, but not delete
