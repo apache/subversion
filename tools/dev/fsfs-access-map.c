@@ -553,9 +553,9 @@ add_sample(color_t color,
  */
 static void
 scale_line(color_t* out,
-           apr_size_t out_len,
+           int out_len,
            color_t *in,
-           apr_size_t in_len)
+           int in_len)
 {
   double scaling_factor = (double)(in_len) / (double)(out_len);
   
