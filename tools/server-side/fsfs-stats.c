@@ -1551,9 +1551,14 @@ read_revisions(fs_t **fs,
   SVN_ERR(fs_open(fs, path, pool));
   ffd = (*fs)->fs->fsap_data;
 
-  /* create data containers and caches */
+  /* create data containers and caches
+   * Note: this assumes that int is at least 32-bits and that we only support
+   * 32-bit wide revision numbers (actually 31-bits due to the signedness
+   * of both the nelts field of the array and our revision numbers). This
+   * means this code will fail on platforms where int is less than 32-bits
+   * and the repository has more revisions than int can hold. */
   (*fs)->revisions = apr_array_make(pool,
-                                    ffd->youngest_rev_cache + 1,
+                                    (int) ffd->youngest_rev_cache + 1,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
   initialize_largest_changes(*fs, 64, pool);
