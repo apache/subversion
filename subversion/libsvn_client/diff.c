@@ -591,6 +591,9 @@ typedef struct diff_writer_info_t
 
   svn_wc_context_t *wc_ctx;
 
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
   struct diff_driver_info_t ddi;
 } diff_writer_info_t;
 
@@ -854,10 +857,11 @@ diff_content_changed(svn_boolean_t *wrote_header,
 
           /* Output the actual diff */
           if (force_diff || svn_diff_contains_diffs(diff))
-            SVN_ERR(svn_diff_file_output_unified3(outstream, diff,
+            SVN_ERR(svn_diff_file_output_unified4(outstream, diff,
                      tmpfile1, tmpfile2, label1, label2,
                      dwi->header_encoding, rel_to_dir,
                      dwi->options.for_internal->show_c_function,
+                     dwi->cancel_func, dwi->cancel_baton,
                      scratch_pool));
 
           /* We have a printed a diff for this path, mark it as visited. */
@@ -2329,6 +2333,9 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.show_copies_as_adds = show_copies_as_adds;
 
+  diff_cmd_baton.cancel_func = ctx->cancel_func;
+  diff_cmd_baton.cancel_baton = ctx->cancel_baton;
+
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ddi.session_relpath = NULL;
   diff_cmd_baton.ddi.anchor = NULL;
@@ -2408,6 +2415,9 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.no_diff_added = no_diff_added;
   diff_cmd_baton.no_diff_deleted = no_diff_deleted;
   diff_cmd_baton.show_copies_as_adds = show_copies_as_adds;
+
+  diff_cmd_baton.cancel_func = ctx->cancel_func;
+  diff_cmd_baton.cancel_baton = ctx->cancel_baton;
 
   diff_cmd_baton.wc_ctx = ctx->wc_ctx;
   diff_cmd_baton.ddi.session_relpath = NULL;

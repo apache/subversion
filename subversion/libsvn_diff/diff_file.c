@@ -1815,7 +1815,7 @@ static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
 };
 
 svn_error_t *
-svn_diff_file_output_unified3(svn_stream_t *output_stream,
+svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               svn_diff_t *diff,
                               const char *original_path,
                               const char *modified_path,
@@ -1824,6 +1824,8 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               const char *header_encoding,
                               const char *relative_to_dir,
                               svn_boolean_t show_c_function,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *pool)
 {
   if (svn_diff_contains_diffs(diff))
@@ -1918,8 +1920,9 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                                              original_header, modified_header,
                                              pool));
 
-      SVN_ERR(svn_diff_output(diff, &baton,
-                              &svn_diff__file_output_unified_vtable));
+      SVN_ERR(svn_diff_output2(diff, &baton,
+                               &svn_diff__file_output_unified_vtable,
+                               cancel_func, cancel_baton));
       SVN_ERR(output_unified_flush_hunk(&baton));
 
       for (i = 0; i < 2; i++)

@@ -75,9 +75,11 @@ svn_diff_contains_diffs(svn_diff_t *diff)
 }
 
 svn_error_t *
-svn_diff_output(svn_diff_t *diff,
-                void *output_baton,
-                const svn_diff_output_fns_t *vtable)
+svn_diff_output2(svn_diff_t *diff,
+                 void *output_baton,
+                 const svn_diff_output_fns_t *vtable,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton)
 {
   svn_error_t *(*output_fn)(void *,
                             apr_off_t, apr_off_t,
@@ -86,6 +88,9 @@ svn_diff_output(svn_diff_t *diff,
 
   while (diff != NULL)
     {
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       switch (diff->type)
         {
         case svn_diff__type_common:
