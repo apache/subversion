@@ -1417,8 +1417,8 @@ diff_prepare_repos_repos(const char **url1,
          location fails... But in many such cases we prefer diffing against
          an not existing location to show adds od removes (see issue #4153) */
       if (resolved2
-          && (peg_kind != svn_opt_revision_unspecified)
-              || path_or_url1 == path_or_url2)
+          && (peg_kind != svn_opt_revision_unspecified
+              || path_or_url1 == path_or_url2))
         *url1 = resolved2->url;
       else if (svn_path_is_url(path_or_url1))
         *url1 = path_or_url1;
@@ -1443,8 +1443,8 @@ diff_prepare_repos_repos(const char **url1,
          location fails... But in many such cases we prefer diffing against
          an not existing location to show adds od removes (see issue #4153) */
       if (resolved1
-          && (peg_kind != svn_opt_revision_unspecified)
-              || path_or_url1 == path_or_url2)
+          && (peg_kind != svn_opt_revision_unspecified
+              || path_or_url1 == path_or_url2))
         *url2 = resolved1->url;
       else if (svn_path_is_url(path_or_url2))
         *url2 = path_or_url2;
