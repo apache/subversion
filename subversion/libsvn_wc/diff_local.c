@@ -42,8 +42,8 @@
 #include "private/svn_diff_tree.h"
 
 #include "wc.h"
+#include "wc_db.h"
 #include "props.h"
-#include "translate.h"
 #include "diff.h"
 
 /*-------------------------------------------------------------------------*/
@@ -428,7 +428,8 @@ diff_status_callback(void *baton,
 
 /* Public Interface */
 svn_error_t *
-svn_wc__diff7(const char **anchor_abspath,
+svn_wc__diff7(const char **root_relpath,
+              svn_boolean_t *root_is_dir,
               svn_wc_context_t *wc_ctx,
               const char *local_abspath,
               svn_depth_t depth,
@@ -451,13 +452,27 @@ svn_wc__diff7(const char **anchor_abspath,
                                FALSE /* show_hidden */,
                                scratch_pool));
 
-  if (kind == svn_node_dir)
-    eb.anchor_abspath = local_abspath;
-  else
+  eb.anchor_abspath = local_abspath;
+
+  if (root_relpath)
+    {
+      svn_boolean_t is_wcroot;
+
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot,
+                                   wc_ctx->db, local_abspath, scratch_pool));
+
+      if (!is_wcroot)
+        eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    }
+  else if (kind != svn_node_dir)
     eb.anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  if (anchor_abspath)
-    *anchor_abspath = apr_pstrdup(result_pool, eb.anchor_abspath);
+  if (root_relpath)
+    *root_relpath = apr_pstrdup(result_pool,
+                                svn_dirent_skip_ancestor(eb.anchor_abspath,
+                                                         local_abspath));
+  if (root_is_dir)
+    *root_is_dir = (kind == svn_node_dir);
 
   eb.db = wc_ctx->db;
   eb.processor = diff_processor;
@@ -544,7 +559,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
     processor = svn_diff__tree_processor_copy_as_changed_create(processor,
                                                                 scratch_pool);
 
-  return svn_error_trace(svn_wc__diff7(NULL,
+  return svn_error_trace(svn_wc__diff7(NULL, NULL,
                                        wc_ctx, local_abspath,
                                        depth,
                                        ignore_ancestry,

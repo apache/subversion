@@ -39,8 +39,6 @@ struct summarize_baton_t {
   apr_pool_t *baton_pool; /* For allocating skip_path */
 
   /* The target path of the diff, relative to the anchor; "" if target == anchor. */
-  const char *original_target;
-  const char *anchor_path;
   const char *skip_relpath;
 
   /* The summarize callback passed down from the API */
@@ -49,29 +47,6 @@ struct summarize_baton_t {
   /* The summarize callback baton */
   void *summarize_func_baton;
 };
-
-/* Calculate skip_relpath from original_target and anchor_path */
-static APR_INLINE void
-ensure_skip_relpath(struct summarize_baton_t *b)
-{
-  if (b->skip_relpath)
-    return;
-
-  if (svn_path_is_url(b->original_target))
-    {
-      b->skip_relpath = svn_uri_skip_ancestor(b->anchor_path,
-                                              b->original_target,
-                                              b->baton_pool);
-    }
-  else
-    {
-      b->skip_relpath = svn_dirent_skip_ancestor(b->anchor_path,
-                                                 b->original_target);
-    }
-
-  if (!b->skip_relpath)
-    b->skip_relpath = "";
-}
 
 /* Call B->summarize_func with B->summarize_func_baton, passing it a
  * summary object composed from PATH (but made to be relative to the target
@@ -92,8 +67,6 @@ send_summary(struct summarize_baton_t *b,
 
   /* PATH is relative to the anchor of the diff, but SUM->path needs to be
      relative to the target of the diff. */
-  ensure_skip_relpath(b);
-
   sum->path = svn_relpath_skip_ancestor(b->skip_relpath, path);
   sum->summarize_kind = summarize_kind;
   if (summarize_kind == svn_client_diff_summarize_kind_modified
@@ -293,7 +266,7 @@ diff_file_deleted(const char *relpath,
 svn_error_t *
 svn_client__get_diff_summarize_callbacks(
                         const svn_diff_tree_processor_t **diff_processor,
-                        const char ***anchor_path,
+                        const char ***p_root_relpath,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
                         const char *original_target,
@@ -303,11 +276,9 @@ svn_client__get_diff_summarize_callbacks(
   svn_diff_tree_processor_t *dp;
   struct summarize_baton_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
-  *anchor_path = &b->anchor_path;
   b->baton_pool = result_pool;
   b->summarize_func = summarize_func;
   b->summarize_func_baton = summarize_baton;
-  b->original_target = apr_pstrdup(result_pool, original_target);
 
   dp = svn_diff__tree_processor_create(b, result_pool);
 
@@ -322,6 +293,7 @@ svn_client__get_diff_summarize_callbacks(
   dp->dir_added = diff_dir_added;
 
   *diff_processor = dp;
+  *p_root_relpath = &b->skip_relpath;
 
   return SVN_NO_ERROR;
 }

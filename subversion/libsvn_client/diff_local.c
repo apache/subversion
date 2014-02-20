@@ -575,7 +575,8 @@ do_dir_diff(const char *left_abspath,
 }
 
 svn_error_t *
-svn_client__arbitrary_nodes_diff(const char **anchor_abspath,
+svn_client__arbitrary_nodes_diff(const char **root_relpath,
+                                 svn_boolean_t *root_is_dir,
                                  const char *left_abspath,
                                  const char *right_abspath,
                                  svn_depth_t depth,
@@ -603,15 +604,23 @@ svn_client__arbitrary_nodes_diff(const char **anchor_abspath,
     {
       left_root_abspath = left_abspath;
       right_root_abspath = right_abspath;
+
+      if (root_relpath)
+        *root_relpath = "";
+      if (root_is_dir)
+        *root_is_dir = TRUE;
     }
   else
     {
-      left_root_abspath = svn_dirent_dirname(left_abspath, scratch_pool);
+      svn_dirent_split(&left_root_abspath, root_relpath, left_abspath,
+                       scratch_pool);
       right_root_abspath = svn_dirent_dirname(right_abspath, scratch_pool);
-    }
 
-  if (anchor_abspath)
-    *anchor_abspath = apr_pstrdup(result_pool, left_root_abspath);
+      if (root_relpath)
+        *root_relpath = apr_pstrdup(result_pool, *root_relpath);
+      if (root_is_dir)
+        *root_is_dir = FALSE;
+    }
 
   if (left_kind == svn_node_dir && right_kind == svn_node_dir)
     {
