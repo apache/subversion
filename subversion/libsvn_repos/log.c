@@ -2527,7 +2527,7 @@ svn_repos_get_logs5(svn_repos_t *repos,
         }
 
       send_count = end - start + 1;
-      if (limit && send_count > limit)
+      if (limit > 0 && send_count > limit)
         send_count = limit;
       for (i = 0; i < send_count; ++i)
         {
