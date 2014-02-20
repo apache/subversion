@@ -1125,6 +1125,9 @@ diff_dir_added(const char *relpath,
   apr_hash_t *original_props = apr_hash_make(scratch_pool);
   apr_array_header_t *prop_changes;
 
+  if (dwi->no_diff_added)
+    return SVN_NO_ERROR;
+
   SVN_ERR(svn_prop_diffs(&prop_changes, right_props, original_props,
                          scratch_pool));
 
@@ -1147,6 +1150,24 @@ diff_dir_deleted(const char *relpath,
                  const struct svn_diff_tree_processor_t *processor,
                  apr_pool_t *scratch_pool)
 {
+  diff_writer_info_t *dwi = processor->baton;
+  apr_array_header_t *prop_changes;
+
+  if (dwi->no_diff_deleted)
+    return SVN_NO_ERROR;
+
+
+  SVN_ERR(svn_prop_diffs(&prop_changes, apr_hash_make(scratch_pool),
+                         left_props, scratch_pool));
+
+  SVN_ERR(diff_props_changed(relpath,
+                             left_source->revision,
+                             DIFF_REVNUM_NONEXISTENT,
+                             prop_changes,
+                             left_props,
+                             TRUE /* show_diff_header */,
+                             dwi,
+                             scratch_pool));
 
   return SVN_NO_ERROR;
 }

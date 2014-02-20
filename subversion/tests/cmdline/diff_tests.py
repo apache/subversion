@@ -3982,9 +3982,14 @@ def diff_two_working_copies(sbox):
                                          src_label, dst_label) + [
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'psi'.\n",
-                    ]
+                    ] + make_diff_header('A/B/F', 'working copy',
+                                         'nonexistent',
+                                         src_label, dst_label) + \
+                        make_diff_prop_header('A/B/F') + \
+                        make_diff_prop_deleted('newprop', 'propval-old\n')
 
-  # Files in diff may be in any order.
+
+  # Files in diff may be in any order. #### Not any more, but test order is wrong.
   expected_output = svntest.verify.UnorderedOutput(expected_output)
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--old', wc_dir_old,
