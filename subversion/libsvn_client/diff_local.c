@@ -588,7 +588,7 @@ svn_client__arbitrary_nodes_diff(const char **anchor_abspath,
   svn_node_kind_t right_kind;
   const char *left_root_abspath;
   const char *right_root_abspath;
-  svn_boolean_t left_before_right = FALSE; /* Future argument */
+  svn_boolean_t left_before_right = TRUE; /* Future argument? */
 
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
