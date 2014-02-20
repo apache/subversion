@@ -1848,6 +1848,7 @@ diff_repos_wc(const char **root_relpath,
   const char *cf_repos_relpath;
   const char *cf_repos_root_url;
   svn_depth_t cf_depth;
+  svn_client__pathrev_t *loc1;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
@@ -1886,14 +1887,15 @@ diff_repos_wc(const char **root_relpath,
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
-  if (peg_revision->kind != svn_opt_revision_unspecified)
-    {
-      SVN_ERR(svn_client__repos_locations(&url1, NULL, NULL, NULL,
-                                          ra_session, path_or_url1,
-                                          peg_revision,
-                                          revision1, NULL,
-                                          ctx, pool));
-    }
+  SVN_ERR(svn_client__resolve_rev_and_url(&loc1, ra_session, path_or_url1,
+                                          peg_revision, revision1, ctx,
+                                          pool));
+
+  url1 = loc1->url;
+  rev = loc1->rev;
+
+  /* Url1 might have changed */
+  SVN_ERR(svn_ra_reparent(ra_session, url1, pool));
 
   if (ddi)
     {
@@ -1912,14 +1914,6 @@ diff_repos_wc(const char **root_relpath,
           ddi->orig_path_2 = url1;
         }
     }
-
-  /* Open an RA session to URL1 to figure out its node kind. */
-  SVN_ERR(svn_ra_reparent(ra_session, url1, pool));
-  /* Resolve the revision to use for URL1. */
-  SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
-                                          (strcmp(path_or_url1, url1) == 0)
-                                                    ? NULL : abspath_or_url1,
-                                          ra_session, revision1, pool));
 
   /* Check if our diff target is a copied node. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,
