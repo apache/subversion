@@ -1238,7 +1238,7 @@ def actual_only_node_behaviour(sbox):
 
   # diff (di)
   expected_stdout = None
-  expected_stderr = ".*foo.*is not under version control.*"
+  expected_stderr = ".*E155.*foo.*was not found.*"
   run_and_verify_svn(None, expected_stdout, expected_stderr,
                      "diff", foo_path)
   # export
