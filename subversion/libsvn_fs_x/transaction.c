@@ -1273,18 +1273,13 @@ store_p2l_index_entry(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Allocate an item index for the given MY_OFFSET in the transaction TXN_ID
- * of file system FS and return it in *ITEM_INDEX.  For old formats, it
- * will simply return the offset as item index; in new formats, it will
- * increment the txn's item index counter file and store the mapping in
- * the proto index file.
- * Use POOL for allocations.
+/* Allocate an item index in the transaction TXN_ID of file system FS and
+ * return it in *ITEM_INDEX.  Use POOL for allocations.
  */
 static svn_error_t *
 allocate_item_index(apr_uint64_t *item_index,
                     svn_fs_t *fs,
                     svn_fs_x__txn_id_t txn_id,
-                    apr_off_t my_offset,
                     apr_pool_t *pool)
 {
   apr_file_t *file;
@@ -1294,7 +1289,7 @@ allocate_item_index(apr_uint64_t *item_index,
   apr_size_t read;
   apr_off_t offset = 0;
 
-  /* read number, increment it and write it back to disk */
+  /* read number */
   SVN_ERR(svn_io_file_open(&file,
                             svn_fs_x__path_txn_item_index(fs, txn_id, pool),
                             APR_READ | APR_WRITE
@@ -1307,14 +1302,13 @@ allocate_item_index(apr_uint64_t *item_index,
   else
     *item_index = SVN_FS_X__ITEM_INDEX_FIRST_USER;
 
+  /* increment it */
   to_write = svn__ui64toa(buffer, *item_index + 1);
+
+  /* write it back to disk */
   SVN_ERR(svn_io_file_seek(file, SEEK_SET, &offset, pool));
   SVN_ERR(svn_io_file_write_full(file, buffer, to_write, NULL, pool));
   SVN_ERR(svn_io_file_close(file, pool));
-
-  /* write log-to-phys index */
-  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, *item_index,
-                                pool));
 
   return SVN_NO_ERROR;
 }
@@ -1398,7 +1392,7 @@ get_new_txn_node_id(svn_fs_x__id_part_t *node_id_p,
   /* First read in the current next-ids file. */
   SVN_ERR(read_next_ids(&node_id, &copy_id, fs, txn_id, pool));
 
-  node_id_p->change_set = SVN_FS_X__INVALID_CHANGE_SET;
+  node_id_p->change_set = svn_fs_x__change_set_by_txn(txn_id);
   node_id_p->number = node_id;
 
   SVN_ERR(write_next_ids(fs, txn_id, ++node_id, copy_id, pool));
@@ -1417,7 +1411,7 @@ svn_fs_x__reserve_copy_id(svn_fs_x__id_part_t *copy_id_p,
   /* First read in the current next-ids file. */
   SVN_ERR(read_next_ids(&node_id, &copy_id, fs, txn_id, pool));
 
-  copy_id_p->change_set = SVN_FS_X__INVALID_CHANGE_SET;
+  copy_id_p->change_set = svn_fs_x__change_set_by_txn(txn_id);
   copy_id_p->number = copy_id;
 
   SVN_ERR(write_next_ids(fs, txn_id, node_id, ++copy_id, pool));
@@ -1435,12 +1429,16 @@ svn_fs_x__create_node(const svn_fs_id_t **id_p,
 {
   svn_fs_x__id_part_t node_id;
   const svn_fs_id_t *id;
+  apr_uint64_t number;
 
   /* Get a new node-id for this node. */
   SVN_ERR(get_new_txn_node_id(&node_id, fs, txn_id, pool));
 
-  id = svn_fs_x__id_txn_create(&node_id, copy_id, txn_id, pool);
+  /* Item number within this change set. */
+  SVN_ERR(allocate_item_index(&number, fs, txn_id, pool));
 
+  /* Construct the ID object from all the above parts. */
+  id = svn_fs_x__id_txn_create(&node_id, copy_id, txn_id, number, pool);
   noderev->id = id;
 
   SVN_ERR(svn_fs_x__put_node_revision(fs, noderev->id, noderev, FALSE, pool));
@@ -2081,8 +2079,9 @@ rep_write_contents_close(void *baton)
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
-      SVN_ERR(allocate_item_index(&rep->id.number, b->fs, txn_id,
-                                  b->rep_offset, b->pool));
+      SVN_ERR(allocate_item_index(&rep->id.number, b->fs, txn_id, b->pool));
+      SVN_ERR(store_l2p_index_entry(b->fs, txn_id, b->rep_offset,
+                                    rep->id.number, b->pool));
 
       b->noderev->data_rep = rep;
     }
@@ -2168,11 +2167,14 @@ svn_fs_x__create_successor(const svn_fs_id_t **new_id_p,
                            apr_pool_t *pool)
 {
   const svn_fs_id_t *id;
+  apr_uint64_t number;
 
   if (! copy_id)
     copy_id = svn_fs_x__id_copy_id(old_idp);
+
+  SVN_ERR(allocate_item_index(&number, fs, txn_id, pool));
   id = svn_fs_x__id_txn_create(svn_fs_x__id_node_id(old_idp), copy_id,
-                               txn_id, pool);
+                               txn_id, number, pool);
 
   new_noderev->id = id;
 
@@ -2216,7 +2218,9 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
       noderev->prop_rep->id.change_set
-        = svn_fs_x__change_set_by_txn(svn_fs_x__id_txn_id(noderev->id));
+        = svn_fs_x__id_noderev_id(noderev->id)->change_set;
+      SVN_ERR(allocate_item_index(&noderev->prop_rep->id.number, fs,
+                                  svn_fs_x__id_txn_id(noderev->id), pool));
       SVN_ERR(svn_fs_x__put_node_revision(fs, noderev->id, noderev, FALSE,
                                           pool));
     }
@@ -2360,8 +2364,8 @@ write_hash_delta_rep(representation_t *rep,
       SVN_ERR(svn_fs_x__get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
-      SVN_ERR(allocate_item_index(&rep->id.number, fs, txn_id, offset,
-                                  pool));
+      SVN_ERR(allocate_item_index(&rep->id.number, fs, txn_id, pool));
+      SVN_ERR(store_l2p_index_entry(fs, txn_id, offset, rep->id.number, pool));
 
       noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
       noderev_id.number = rep->id.number;
@@ -2451,7 +2455,7 @@ static void
 get_final_id(svn_fs_x__id_part_t *part,
              svn_revnum_t revision)
 {
-  if (part->change_set == SVN_FS_X__INVALID_CHANGE_SET)
+  if (!svn_fs_x__is_revision(part->change_set))
     part->change_set = svn_fs_x__change_set_by_rev(revision);
 }
 
@@ -2590,25 +2594,17 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   get_final_id(&node_id, rev);
   copy_id = *svn_fs_x__id_copy_id(noderev->id);
   get_final_id(&copy_id, rev);
+  noderev_id = *svn_fs_x__id_noderev_id(noderev->id);
+  get_final_id(&noderev_id, rev);
 
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
 
   SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, pool));
-  if (at_root)
-    {
-      /* reference the root noderev from the log-to-phys index */
-      noderev_id.number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
-      SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, noderev_id.number,
-                                    pool));
-    }
-  else
-    SVN_ERR(allocate_item_index(&noderev_id.number, fs, txn_id, my_offset,
+
+  SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset, noderev_id.number,
                                 pool));
-
-  noderev_id.change_set = change_set;
   new_id = svn_fs_x__id_create(&node_id, &copy_id, &noderev_id, pool);
-
   noderev->id = new_id;
 
   if (ffd->rep_sharing_allowed)

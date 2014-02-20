@@ -341,6 +341,7 @@ svn_fs_id_t *
 svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
                         const svn_fs_x__id_part_t *copy_id,
                         svn_fs_x__txn_id_t txn_id,
+                        apr_uint64_t item,
                         apr_pool_t *pool)
 {
   fs_x__id_t *id = apr_pcalloc(pool, sizeof(*id));
@@ -349,6 +350,7 @@ svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
   id->copy_id = *copy_id;
 
   id->noderev_id.change_set = svn_fs_x__change_set_by_txn(txn_id);
+  id->noderev_id.number = item;
 
   id->generic_id.vtable = &id_vtable;
   id->generic_id.fsap_data = id;
