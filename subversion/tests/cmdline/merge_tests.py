@@ -1327,7 +1327,7 @@ def merge_in_new_file_and_diff(sbox):
   expected_output = [
     "Index: " + url_branch_path + "/newfile\n",
     "===================================================================\n",
-    "--- "+ url_branch_path + "/newfile	(revision 0)\n",
+    "--- "+ url_branch_path + "/newfile	(nonexistent)\n",
     "+++ "+ url_branch_path + "/newfile	(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+newfile\n",

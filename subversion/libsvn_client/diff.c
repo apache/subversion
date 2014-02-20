@@ -58,6 +58,7 @@
 
 /* Utilities */
 
+#define DIFF_REVNUM_NONEXISTENT ((svn_revnum_t) -100)
 
 #define MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir) \
         svn_error_createf(SVN_ERR_BAD_RELATIVE_PATH, NULL, \
@@ -238,9 +239,11 @@ diff_label(const char *path,
            apr_pool_t *pool)
 {
   const char *label;
-  if (revnum != SVN_INVALID_REVNUM)
+  if (revnum >= 0)
     label = apr_psprintf(pool, _("%s\t(revision %ld)"), path, revnum);
-  else
+  else if (revnum == DIFF_REVNUM_NONEXISTENT)
+    label = apr_psprintf(pool, _("%s\t(nonexistent)"), path);
+  else /* SVN_INVALID_REVNUM */
     label = apr_psprintf(pool, _("%s\t(working copy)"), path);
 
   return label;
@@ -533,16 +536,6 @@ typedef struct diff_driver_info_t
 
   /* Whether the local diff target of a repos->wc diff is a copy. */
   svn_boolean_t repos_wc_diff_target_is_copy;
-
-  /* These are the numeric representations of the revisions passed to
-     svn_client_diff6(), either may be SVN_INVALID_REVNUM.  We need these
-     because some of the svn_wc_diff_callbacks4_t don't get revision
-     arguments.
-
-     ### Perhaps we should change the callback signatures and eliminate
-     ### these? (### Done in the diff processor)
-  */
-  svn_revnum_t revnum2;
 } diff_driver_info_t;
 
 
@@ -987,7 +980,7 @@ diff_file_added(const char *relpath,
   else if (copyfrom_source && right_file)
     SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                  left_file, right_file,
-                                 0 /* magic revision */,
+                                 DIFF_REVNUM_NONEXISTENT,
                                  right_source->revision,
                                  svn_prop_get_value(left_props,
                                                     SVN_PROP_MIME_TYPE),
@@ -1001,7 +994,7 @@ diff_file_added(const char *relpath,
   else if (right_file)
     SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                  left_file, right_file,
-                                 0 /* magic revision */,
+                                 DIFF_REVNUM_NONEXISTENT,
                                  right_source->revision,
                                  svn_prop_get_value(left_props,
                                                     SVN_PROP_MIME_TYPE),
@@ -1012,11 +1005,10 @@ diff_file_added(const char *relpath,
                                  NULL, SVN_INVALID_REVNUM,
                                  dwi, scratch_pool));
 
-  SVN_DBG(("Added %s, propchanges: %d / %d", relpath, prop_changes->nelts,
-                                                apr_hash_count(right_props)));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(relpath,
-                               copyfrom_source ? copyfrom_source->revision : 0,
+                               copyfrom_source ? copyfrom_source->revision
+                                               : DIFF_REVNUM_NONEXISTENT,
                                right_source->revision,
                                prop_changes,
                                left_props, ! wrote_header,
@@ -1064,7 +1056,7 @@ diff_file_deleted(const char *relpath,
         SVN_ERR(diff_content_changed(&wrote_header, relpath,
                                      left_file, dwi->empty_file,
                                      left_source->revision,
-                                     dwi->ddi.revnum2,
+                                     DIFF_REVNUM_NONEXISTENT,
                                      svn_prop_get_value(left_props,
                                                         SVN_PROP_MIME_TYPE),
                                      NULL,
@@ -1082,7 +1074,7 @@ diff_file_deleted(const char *relpath,
 
           SVN_ERR(diff_props_changed(relpath,
                                      left_source->revision,
-                                     dwi->ddi.revnum2,
+                                     DIFF_REVNUM_NONEXISTENT,
                                      prop_changes,
                                      left_props, ! wrote_header,
                                      dwi, scratch_pool));
@@ -1137,7 +1129,7 @@ diff_dir_added(const char *relpath,
                          scratch_pool));
 
   return svn_error_trace(diff_props_changed(relpath,
-                                            0 /* Magic legacy value */,
+                                            DIFF_REVNUM_NONEXISTENT,
                                             right_source->revision,
                                             prop_changes,
                                             original_props,
@@ -1593,8 +1585,6 @@ diff_wc_wc(const char **anchor_path,
     {
       svn_node_kind_t kind;
 
-      ddi->revnum2 = SVN_INVALID_REVNUM;  /* WC */
-
       SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
                               TRUE, FALSE, scratch_pool));
 
@@ -1685,8 +1675,6 @@ diff_repos_repos(const char **anchor_path_or_url,
       ddi->orig_path_2 = url2;
 
       /* Get numeric revisions. */
-      ddi->revnum2 = rev2;
-
       ddi->anchor = base_path;
 
       SVN_ERR(svn_ra_get_session_url(ra_session, &ddi->anchor_url,
@@ -1906,11 +1894,6 @@ diff_repos_wc(const char **anchor_path,
                                           (strcmp(path_or_url1, url1) == 0)
                                                     ? NULL : abspath_or_url1,
                                           ra_session, revision1, pool));
-  if (ddi)
-    {
-      if (reverse)
-        ddi->revnum2 = rev;
-    }
 
   /* Check if our diff target is a copied node. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,
@@ -2314,7 +2297,6 @@ svn_client_diff6(const apr_array_header_t *options,
   diff_cmd_baton.outstream = outstream;
   diff_cmd_baton.errstream = errstream;
   diff_cmd_baton.header_encoding = header_encoding;
-  diff_cmd_baton.ddi.revnum2 = SVN_INVALID_REVNUM;
 
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.ignore_properties = ignore_properties;
@@ -2399,7 +2381,6 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   diff_cmd_baton.outstream = outstream;
   diff_cmd_baton.errstream = errstream;
   diff_cmd_baton.header_encoding = header_encoding;
-  diff_cmd_baton.ddi.revnum2 = SVN_INVALID_REVNUM;
 
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.ignore_properties = ignore_properties;

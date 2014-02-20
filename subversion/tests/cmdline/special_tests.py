@@ -537,7 +537,7 @@ def diff_symlink_to_dir(sbox):
   expected_output = [
     "Index: link\n",
     "===================================================================\n",
-    "--- link\t(revision 0)\n",
+    "--- link\t(nonexistent)\n",
     "+++ link\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+link A/D\n",
