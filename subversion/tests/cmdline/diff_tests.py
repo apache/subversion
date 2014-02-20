@@ -732,20 +732,9 @@ def diff_non_version_controlled_file(sbox):
 
   svntest.main.file_append(sbox.ospath('A/D/foo'), "a new file")
 
-  exit_code, diff_output, err_output = svntest.main.run_svn(
-    1, 'diff', sbox.ospath('A/D/foo'))
-
-  if count_diff_output(diff_output) != 0: raise svntest.Failure
-
-  # At one point this would crash, so we would only get a 'Segmentation Fault'
-  # error message.  The appropriate response is a few lines of errors.  I wish
-  # there was a way to figure out if svn crashed, but all run_svn gives us is
-  # the output, so here we are...
-  for line in err_output:
-    if re.search("foo' is not under version control$", line):
-      break
-  else:
-    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, None,
+                                     'svn: E155010: .*foo\' was not found.',
+                                     'diff', sbox.ospath('A/D/foo'))
 
 # test 9
 def diff_pure_repository_update_a_file(sbox):
