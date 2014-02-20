@@ -1137,7 +1137,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
           svn_boolean_t same_mergeinfo;
           SVN_ERR(svn_mergeinfo__equals(&same_mergeinfo,
                                         prev_inherited_mergeinfo,
-                                        FALSE,
+                                        NULL,
                                         TRUE, iterpool));
           if (same_mergeinfo)
             continue;
