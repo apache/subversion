@@ -20,6 +20,7 @@ use feature qw/switch say/;
 # specific language governing permissions and limitations
 # under the License.
 
+use Carp qw/croak confess carp cluck/;
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename dirname/;
@@ -219,28 +220,57 @@ sub prompt {
          : ($answer =~ /^y/i) ? 1 : 0;
 }
 
+# Bourne-escape a string.
+# Example:
+#     >>> shell_escape(q[foo'bar]) eq q['foo'\''bar']
+#     True
+sub shell_escape {
+  map {
+    local $_ = $_; # the LHS $_ is mutable; the RHS $_ may not be.
+    s/\x27/'\\\x27'/g;
+    "'$_'"
+  } @_
+}
+
+sub shell_safe_path_or_url($) {
+  local $_ = shift;
+  return m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/;
+}
+  
+# Shell-safety-validating wrapper for File::Temp::tempfile
+sub my_tempfile {
+  my ($fh, $fn) = tempfile();
+  croak "Tempfile name '$fn' not shell-safe; aborting"
+        unless shell_safe_path_or_url $fn;
+  return ($fh, $fn);
+}
+
 
 sub merge {
   my %entry = @_;
 
-  my ($logmsg_fh, $logmsg_filename) = tempfile();
-  my ($mergeargs);
+  my ($logmsg_fh, $logmsg_filename) = my_tempfile();
+  my (@mergeargs);
+
+  my $shell_escaped_branch = shell_escape($entry{branch})
+    if defined($entry{branch});
 
   if ($entry{branch}) {
     if ($SVNvsn >= 1_008_000) {
-      $mergeargs = "$BRANCHES/$entry{branch}";
+      @mergeargs = shell_escape "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Merge $entry{header}:";
     } else {
-      $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
+      @mergeargs = shell_escape qw/--reintegrate/, "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Reintegrate $entry{header}:";
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $mergeargs = join " ",
+    @mergeargs = shell_escape(
       ($entry{accept} ? "--accept=$entry{accept}" : ()),
       (map { "-c$_" } @{$entry{revisions}}),
       '--',
-      '^/subversion/trunk';
+      '^/subversion/trunk',
+    );
     say $logmsg_fh
       "Merge $entry{header} from trunk",
       $entry{accept} ? ", with --accept=$entry{accept}" : "",
@@ -260,7 +290,7 @@ if $sh[$DEBUG]; then
   set -x
 fi
 $SVNq up
-$SVNq merge $mergeargs
+$SVNq merge @mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
   if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
     # This check detects STATUS entries that name non-^/subversion/ revnums.
@@ -293,10 +323,10 @@ reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $sh[$MAY_COMMIT]; then
   # Sleep to avoid out-of-order commit notifications
   if $sh[$YES]; then sleep 15; fi
-  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
+  $SVNq rm $BRANCHES/$shell_escaped_branch -m "Remove the '"$shell_escaped_branch"' branch, $reintegrated_word in r\$reinteg_rev."
   if $sh[$YES]; then sleep 1; fi
 elif ! $sh[$YES]; then
-  echo "Would remove $reintegrated_word '$entry{branch}' branch"
+  echo "Would remove $reintegrated_word '"$shell_escaped_branch"' branch"
 fi
 EOF
 
@@ -457,7 +487,7 @@ sub edit_string {
   my $name = shift;
   my %args = @_;
   my $trailing_eol = $args{trailing_eol};
-  my ($fh, $fn) = tempfile;
+  my ($fh, $fn) = my_tempfile();
   print $fh $string;
   $fh->flush or die $!;
   system("$EDITOR -- $fn") == 0
@@ -569,12 +599,9 @@ sub vote {
   system "$SVN diff -- $STATUS";
   printf "[[[\n%s%s]]]\n", $logmsg, ("\n" x ($logmsg !~ /\n\z/));
   if (prompt "Commit these votes? ") {
-    my ($logmsg_fh, $logmsg_filename) = tempfile();
+    my ($logmsg_fh, $logmsg_filename) = my_tempfile();
     print $logmsg_fh $logmsg;
     close $logmsg_fh;
-    warn("Tempfile name '$logmsg_filename' not shell-safe; "
-         ."refraining from commit.\n") and return
-        unless $logmsg_filename =~ /^([A-Z0-9._-]|\x2f)+$/i;
     system("$SVN commit -F $logmsg_filename -- $STATUS") == 0
         or warn("Committing the votes failed($?): $!") and return;
     unlink $logmsg_filename;
@@ -745,7 +772,7 @@ sub handle_entry {
           say STDERR "Conflicts merging $entry{header}!";
           say STDERR "";
           say STDERR $output;
-          system "$SVN diff -- @conflicts";
+          system "$SVN diff -- " . join ' ', shell_escape @conflicts;
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
           # also committing the dependent in the same pass.
@@ -812,7 +839,7 @@ sub handle_entry {
       when (/^l/i) {
         if ($entry{branch}) {
             system "$SVN log --stop-on-copy -v -g -r 0:HEAD -- "
-                   ."$BRANCHES/$entry{branch} "
+                   .shell_escape("$BRANCHES/$entry{branch}")." "
                    ."| $PAGER";
         } elsif (@{$entry{revisions}}) {
             system "$SVN log ".(join ' ', map { "-r$_" } @{$entry{revisions}})
@@ -969,7 +996,7 @@ sub nominate_main {
   my ($URL) = `$SVN info` =~ /^URL: (.*)$/m;
   die "Can't retrieve URL of cwd" unless $URL;
 
-  die if $URL !~ m%^[A-Za-z0-9:_.+/][A-Za-z0-9:_.+/-]*$%;
+  die unless shell_safe_path_or_url $URL;
   system "$SVN info -- $URL-r$revnums[0] 2>/dev/null";
   my $branch = ($? == 0) ? basename("$URL-r$revnums[0]") : undef;
 
