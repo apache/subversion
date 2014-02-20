@@ -1333,6 +1333,9 @@ diff_prepare_repos_repos(const char **url1,
   const char *abspath_or_url1;
   const char *repos_root_url;
   const char *wri_abspath = NULL;
+  svn_client__pathrev_t *resolved1;
+  svn_client__pathrev_t *resolved2 = NULL;
+  enum svn_opt_revision_kind peg_kind = peg_revision->kind;
 
   if (!svn_path_is_url(path_or_url2))
     {
@@ -1347,22 +1350,20 @@ diff_prepare_repos_repos(const char **url1,
   if (!svn_path_is_url(path_or_url1))
     {
       SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
-      SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, abspath_or_url1,
-                                   pool, pool));
       wri_abspath = abspath_or_url1;
     }
   else
-    *url1 = abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
+    abspath_or_url1 = apr_pstrdup(pool, path_or_url1);
 
   SVN_ERR(svn_client_open_ra_session2(ra_session, *url2, wri_abspath,
                                       ctx, pool, pool));
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
-  if (peg_revision->kind != svn_opt_revision_unspecified)
+  if (peg_kind != svn_opt_revision_unspecified
+      || path_or_url1 == path_or_url2
+      || ! svn_path_is_url(path_or_url2))
     {
-      svn_client__pathrev_t *resolved1;
-      svn_client__pathrev_t *resolved2;
       svn_error_t *err;
 
       err = svn_client__resolve_rev_and_url(&resolved2,
@@ -1378,8 +1379,16 @@ diff_prepare_repos_repos(const char **url1,
           svn_error_clear(err);
           resolved2 = NULL;
         }
+    }
+  else
+    resolved2 = NULL;
 
-      SVN_ERR(svn_ra_reparent(*ra_session, *url1, pool));
+  if (peg_kind != svn_opt_revision_unspecified
+      || path_or_url1 == path_or_url2
+      || ! svn_path_is_url(path_or_url1))
+    {
+      svn_error_t *err;
+
       err = svn_client__resolve_rev_and_url(&resolved1,
                                             *ra_session, path_or_url1,
                                             peg_revision, revision1,
@@ -1393,36 +1402,62 @@ diff_prepare_repos_repos(const char **url1,
           svn_error_clear(err);
           resolved1 = NULL;
         }
-
-      /* Either or both URLs might have changed as a result of resolving
-        * the PATH_OR_URL@PEG_REVISION's history. If only one of the URLs
-        * could be resolved, use the same URL for URL1 and URL2, so we can
-        * show a diff that adds or removes the object (see issue #4153). */
-      *url1 = resolved1 ? resolved1->url : resolved2->url;
-      *url2 = resolved2 ? resolved2->url : resolved1->url;
-
-      *rev1 = resolved1 ? resolved1->rev : SVN_INVALID_REVNUM;
-      *rev2 = resolved2 ? resolved2->rev : SVN_INVALID_REVNUM;
-
-      /* Reparent the session, since *URL2 might have changed as a result
-          the above call. */
-      SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
     }
   else
-    *rev1 = *rev2 = SVN_INVALID_REVNUM;
+    resolved1 = NULL;
 
-  if (!SVN_IS_VALID_REVNUM(*rev1))
-    SVN_ERR(svn_client__get_revision_number(rev1, NULL, ctx->wc_ctx,
-                                            (strcmp(path_or_url1, *url1) == 0)
-                                                ? NULL : abspath_or_url1,
-                                            *ra_session, revision1, pool));
-  if (!SVN_IS_VALID_REVNUM(*rev2))
-    SVN_ERR(svn_client__get_revision_number(rev2, NULL, ctx->wc_ctx,
-                                            (strcmp(path_or_url2, *url2) == 0)
-                                                ? NULL : abspath_or_url2,
-                                            *ra_session, revision2, pool));
+  if (resolved1)
+    {
+      *url1 = resolved1->url;
+      *rev1 = resolved1->rev;
+    }
+  else
+    {
+      /* It would be nice if we could just return an error when resolving a
+         location fails... But in many such cases we prefer diffing against
+         an not existing location to show adds od removes (see issue #4153) */
+      if (resolved2
+          && (peg_kind != svn_opt_revision_unspecified)
+              || path_or_url1 == path_or_url2)
+        *url1 = resolved2->url;
+      else if (svn_path_is_url(path_or_url1))
+        *url1 = path_or_url1;
+      else
+        SVN_ERR(svn_wc__node_get_url(url1, ctx->wc_ctx, abspath_or_url1,
+                                      pool, pool));
+
+      SVN_ERR(svn_client__get_revision_number(rev1, NULL, ctx->wc_ctx,
+                                          (strcmp(path_or_url1, *url1) == 0)
+                                              ? NULL : abspath_or_url1,
+                                          *ra_session, revision1, pool));
+    }
+
+  if (resolved2)
+    {
+      *url2 = resolved2->url;
+      *rev2 = resolved2->rev;
+    }
+  else
+    {
+      /* It would be nice if we could just return an error when resolving a
+         location fails... But in many such cases we prefer diffing against
+         an not existing location to show adds od removes (see issue #4153) */
+      if (resolved1
+          && (peg_kind != svn_opt_revision_unspecified)
+              || path_or_url1 == path_or_url2)
+        *url2 = resolved1->url;
+      else if (svn_path_is_url(path_or_url2))
+        *url2 = path_or_url2;
+      /* else keep url2 */
+
+      SVN_ERR(svn_client__get_revision_number(rev2, NULL, ctx->wc_ctx,
+                                          (strcmp(path_or_url2, *url2) == 0)
+                                              ? NULL : abspath_or_url2,
+                                          *ra_session, revision2, pool));
+    }
 
   /* Resolve revision and get path kind for the second target. */
+  SVN_ERR(svn_ra_reparent(*ra_session, *url2, pool));
   SVN_ERR(svn_ra_check_path(*ra_session, "", *rev2, kind2, pool));
 
   /* Do the same for the first target. */
@@ -2403,8 +2438,6 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   /* --show-copies-as-adds and --git imply --notice-ancestry */
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
-
-  SVN_DBG(("Diff peg"));
 
   return svn_error_trace(do_diff(NULL, NULL, &diff_cmd_baton.ddi,
                                  path_or_url, path_or_url,
