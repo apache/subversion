@@ -1223,6 +1223,30 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 }
 
 svn_error_t *
+svn_fs__get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               svn_mergeinfo_inheritance_t inherit,
+                               svn_boolean_t adjust_inherited_mergeinfo,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *paths
+    = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  svn_mergeinfo_catalog_t catalog;
+
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR(svn_fs_get_mergeinfo2(&catalog, root, paths,
+                                inherit, FALSE /*include_descendants*/,
+                                adjust_inherited_mergeinfo,
+                                result_pool, scratch_pool));
+  *mergeinfo = svn_hash_gets(catalog, path);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_merge(const char **conflict_p, svn_fs_root_t *source_root,
              const char *source_path, svn_fs_root_t *target_root,
              const char *target_path, svn_fs_root_t *ancestor_root,

@@ -39,6 +39,7 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 #include "private/svn_fspath.h"
+#include "private/svn_fs_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
 
@@ -741,7 +742,6 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                      svn_revnum_t rev,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
-
 {
   svn_fs_root_t *root;
   apr_pool_t *iterpool;
@@ -882,16 +882,12 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
          inherited mergeinfo for that path/revision.  */
       if (prev_mergeinfo_value && (! mergeinfo_value))
         {
-          apr_array_header_t *query_paths =
-            apr_array_make(iterpool, 1, sizeof(const char *));
           svn_mergeinfo_t tmp_mergeinfo;
-          svn_mergeinfo_catalog_t tmp_catalog;
 
-          APR_ARRAY_PUSH(query_paths, const char *) = changed_path;
-          SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root,
-                                        query_paths, svn_mergeinfo_inherited,
-                                        FALSE, TRUE, iterpool, iterpool));
-          tmp_mergeinfo = svn_hash_gets(tmp_catalog, changed_path);
+          SVN_ERR(svn_fs__get_mergeinfo_for_path(&tmp_mergeinfo,
+                                                 root, changed_path,
+                                                 svn_mergeinfo_inherited, TRUE,
+                                                 iterpool, iterpool));
           if (tmp_mergeinfo)
             SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_value,
                                             tmp_mergeinfo,
@@ -900,16 +896,12 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
       else if (mergeinfo_value && (! prev_mergeinfo_value)
                && base_path && SVN_IS_VALID_REVNUM(base_rev))
         {
-          apr_array_header_t *query_paths =
-            apr_array_make(iterpool, 1, sizeof(const char *));
           svn_mergeinfo_t tmp_mergeinfo;
-          svn_mergeinfo_catalog_t tmp_catalog;
 
-          APR_ARRAY_PUSH(query_paths, const char *) = base_path;
-          SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, base_root,
-                                        query_paths, svn_mergeinfo_inherited,
-                                        FALSE, TRUE, iterpool, iterpool));
-          tmp_mergeinfo = svn_hash_gets(tmp_catalog, base_path);
+          SVN_ERR(svn_fs__get_mergeinfo_for_path(&tmp_mergeinfo,
+                                                 base_root, base_path,
+                                                 svn_mergeinfo_inherited, TRUE,
+                                                 iterpool, iterpool));
           if (tmp_mergeinfo)
             SVN_ERR(svn_mergeinfo_to_string(&prev_mergeinfo_value,
                                             tmp_mergeinfo,
@@ -1023,13 +1015,10 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *prev_path;
-      apr_ssize_t klen;
       svn_revnum_t appeared_rev, prev_rev;
       svn_fs_root_t *prev_root;
-      svn_mergeinfo_catalog_t catalog, inherited_catalog;
       svn_mergeinfo_t prev_mergeinfo, mergeinfo, deleted, added,
         prev_inherited_mergeinfo, inherited_mergeinfo;
-      apr_array_header_t *query_paths;
 
       svn_pool_clear(iterpool);
 
@@ -1065,11 +1054,10 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
          this path.  Ignore not-found errors returned by the
          filesystem or invalid mergeinfo (Issue #3896).*/
       SVN_ERR(svn_fs_revision_root(&prev_root, fs, prev_rev, iterpool));
-      query_paths = apr_array_make(iterpool, 1, sizeof(const char *));
-      APR_ARRAY_PUSH(query_paths, const char *) = prev_path;
-      err = svn_fs_get_mergeinfo2(&catalog, prev_root, query_paths,
-                                  svn_mergeinfo_inherited, FALSE, TRUE,
-                                  iterpool, iterpool);
+      err = svn_fs__get_mergeinfo_for_path(&prev_mergeinfo,
+                                           prev_root, prev_path,
+                                           svn_mergeinfo_inherited, TRUE,
+                                           iterpool, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
                   err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
                   err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
@@ -1089,31 +1077,25 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
 
          To check for this we must fetch the "raw" previous inherited
          mergeinfo and the "raw" mergeinfo @REV then compare these. */
-      SVN_ERR(svn_fs_get_mergeinfo2(&inherited_catalog, prev_root, query_paths,
-                                    svn_mergeinfo_nearest_ancestor, FALSE,
-                                    FALSE, /* adjust_inherited_mergeinfo */
-                                    iterpool, iterpool));
-
-      klen = strlen(prev_path);
-      prev_mergeinfo = apr_hash_get(catalog, prev_path, klen);
-      prev_inherited_mergeinfo = apr_hash_get(inherited_catalog, prev_path, klen);
+      SVN_ERR(svn_fs__get_mergeinfo_for_path(&prev_inherited_mergeinfo,
+                                             prev_root, prev_path,
+                                             svn_mergeinfo_nearest_ancestor,
+                                             FALSE, /* adjust_inherited_mergeinfo */
+                                             iterpool, iterpool));
 
       /* Fetch the current mergeinfo (as of REV, and including
          inherited stuff) for this path. */
-      APR_ARRAY_IDX(query_paths, 0, const char *) = path;
-      SVN_ERR(svn_fs_get_mergeinfo2(&catalog, root, query_paths,
-                                    svn_mergeinfo_inherited, FALSE, TRUE,
-                                    iterpool, iterpool));
+      SVN_ERR(svn_fs__get_mergeinfo_for_path(&mergeinfo,
+                                             root, path,
+                                             svn_mergeinfo_inherited, TRUE,
+                                             iterpool, iterpool));
 
       /* Issue #4022 again, fetch the raw inherited mergeinfo. */
-      SVN_ERR(svn_fs_get_mergeinfo2(&inherited_catalog, root, query_paths,
-                                    svn_mergeinfo_nearest_ancestor, FALSE,
-                                    FALSE, /* adjust_inherited_mergeinfo */
-                                    iterpool, iterpool));
-
-      klen = strlen(path);
-      mergeinfo = apr_hash_get(catalog, path, klen);
-      inherited_mergeinfo = apr_hash_get(inherited_catalog, path, klen);
+      SVN_ERR(svn_fs__get_mergeinfo_for_path(&inherited_mergeinfo,
+                                             root, path,
+                                             svn_mergeinfo_nearest_ancestor,
+                                             FALSE, /* adjust_inherited_mergeinfo */
+                                             iterpool, iterpool));
 
       if (!prev_mergeinfo && !mergeinfo)
         continue;
