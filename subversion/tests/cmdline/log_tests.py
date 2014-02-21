@@ -35,7 +35,7 @@ from svntest.main import server_has_mergeinfo
 from svntest.main import server_has_auto_move
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.mergetrees import set_up_branch
-from diff_tests import make_diff_header, make_no_diff_deleted_header
+from svntest.verify import make_diff_header, make_no_diff_deleted_header
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -718,6 +718,13 @@ def compare_diff_output(expected_diffs, output):
   if diffs.issubset(expected_diffs) and diffs.issuperset(expected_diffs):
     return
 
+  print("=============== DIFFS NOT EQUAL ===================")
+  print("Expected")
+  for line in expected_diffs:
+    print(line)
+  print("Actual:")
+  for line in output:
+    print(line)
   raise svntest.Failure("Diffs not equal")
 
 
