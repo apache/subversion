@@ -2209,6 +2209,8 @@ output_conflict_with_context_marker(svn_diff3__file_output_baton_t *btn,
                               "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")",
                               label, start + 1, length));
 
+  SVN_ERR(output_marker_eol(btn));
+
   return SVN_NO_ERROR;
 }
 
@@ -2236,12 +2238,10 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
   /* Output the conflict itself. */
   SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_modified,
                                               modified_start, modified_length));
-  SVN_ERR(output_marker_eol(btn));
   SVN_ERR(output_hunk(btn, 1/*modified*/, modified_start, modified_length));
 
   SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_original,
                                               original_start, original_length));
-  SVN_ERR(output_marker_eol(btn));
   SVN_ERR(output_hunk(btn, 0/*original*/, original_start, original_length));
 
   SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
@@ -2249,7 +2249,6 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
   SVN_ERR(output_hunk(btn, 2/*latest*/, latest_start, latest_length));
   SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_latest,
                                               latest_start, latest_length));
-  SVN_ERR(output_marker_eol(btn));
 
   /* Go into print-trailing-context mode instead. */
   make_trailing_context_printer(btn);
