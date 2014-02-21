@@ -80,10 +80,10 @@ void svn_fs_base__next_key(const char *this, apr_size_t *len, char *next);
 
 /* Compare two strings A and B as base-36 alphanumeric keys.
  *
- * Return -1, 0, or 1 if A is less than, equal to, or greater than B,
- * respectively.
+ * Return an integer value less than zero, zero, or greater than zero if A is
+ * less than, equal to, or greater than B, respectively.
  */
-int svn_fs_base__key_compare(const char *a, const char *b);
+#define svn_fs_base__key_compare strcmp
 
 /* Compare two strings A and B as base-36 alphanumber keys.
  *
