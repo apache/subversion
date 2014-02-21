@@ -215,7 +215,7 @@ adjust_paths_for_diff_labels(const char **index_path,
   if (new_path2[0] == '\0')
     new_path2 = new_path;
   else if (svn_path_is_url(new_path2))
-    new_path1 = apr_psprintf(result_pool, "%s\t(%s)", new_path, new_path2);
+    new_path2 = apr_psprintf(result_pool, "%s\t(%s)", new_path, new_path2);
   else if (new_path2[0] == '/')
     new_path2 = apr_psprintf(result_pool, "%s\t(...%s)", new_path, new_path2);
   else
