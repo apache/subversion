@@ -392,7 +392,7 @@ unpack_subs(svn_packed__int_stream_t *int_stream,
   apr_size_t i;
   for (i = 0; i < count; ++i)
     {
-      records[i].sub_counter = svn_packed__get_int(int_stream);
+      records[i].sub_counter = (int) svn_packed__get_int(int_stream);
       records[i].text.data = svn_packed__get_bytes(text_stream,
                                                    &records[i].text.len);
     }
@@ -431,7 +431,7 @@ unpack(apr_size_t *count,
   
   for (i = 0; i < *count; ++i)
     {
-      data[i].counter = svn_packed__get_int(base_stream);
+      data[i].counter = (int) svn_packed__get_int(base_stream);
       data[i].description.data
         = svn_packed__get_bytes(base_description_stream,
                                 &data[i].description.len);
@@ -443,7 +443,7 @@ unpack(apr_size_t *count,
 
       data[i].large_signed1 = svn_packed__get_int(base_stream);
       data[i].large_signed2 = svn_packed__get_int(base_stream);
-      data[i].prime = svn_packed__get_uint(base_stream);
+      data[i].prime = (unsigned) svn_packed__get_uint(base_stream);
       data[i].right_subs = unpack_subs(right_sub_stream, sub_text_stream,
                       (apr_size_t)svn_packed__get_uint(sub_count_stream),
                       pool);
