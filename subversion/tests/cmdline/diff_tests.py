@@ -4809,6 +4809,45 @@ def diff_repo_repo_added_file_mime_type(sbox):
     svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                        '-r2:1', newfile)
 
+def diff_switched_file(sbox):
+  "diff a switched file against repository"
+
+  sbox.build()
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     sbox.repo_url + '/A/mu',
+                                     sbox.ospath('iota'), '--ignore-ancestry')
+  sbox.simple_append('iota', 'Mu????')
+
+  # This diffs the file against its origin
+  expected_output = [
+    'Index: %s\n' % sbox.path('iota'),
+    '===================================================================\n',
+    '--- %s\t(.../A/mu)\t(revision 1)\n' % sbox.path('iota'),
+    '+++ %s\t(.../iota)\t(working copy)\n' % sbox.path('iota'),
+    '@@ -1 +1,2 @@\n',
+    ' This is the file \'mu\'.\n',
+    '+Mu????\n',
+    '\ No newline at end of file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', '1', sbox.ospath('iota'))
+
+  # And this undoes the switch for the diff
+  expected_output = [
+    'Index: %s\n' % sbox.path('iota'),
+    '===================================================================\n',
+    '--- %s\t(revision 1)\n' % sbox.path('iota'),
+    '+++ %s\t(working copy)\n' % sbox.path('iota'),
+    '@@ -1 +1,2 @@\n',
+    '-This is the file \'iota\'.\n',
+    '+This is the file \'mu\'.\n',
+    '+Mu????\n',
+    '\ No newline at end of file\n',
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r', '1', sbox.ospath(''))
+
+
 ########################################################################
 #Run the tests
 
@@ -4894,6 +4933,7 @@ test_list = [ None,
               diff_repo_wc_copies,
               diff_repo_wc_file_props,
               diff_repo_repo_added_file_mime_type,
+              diff_switched_file,
               ]
 
 if __name__ == '__main__':
