@@ -544,7 +544,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   parent_copy_id = svn_fs_base__id_copy_id(parent_id);
 
   /* Easy out: if this child is already mutable, we have nothing to do. */
-  if (svn_fs_base__key_compare(svn_fs_base__id_txn_id(child_id), txn_id) == 0)
+  if (strcmp(svn_fs_base__id_txn_id(child_id), txn_id) == 0)
     return SVN_NO_ERROR;
 
   /* If the child and its parent are on the same branch, then the
@@ -561,7 +561,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
      target of any copy, and therefore must be on the same branch as
      its parent.  */
   if ((strcmp(child_copy_id, "0") == 0)
-      || (svn_fs_base__key_compare(child_copy_id, parent_copy_id) == 0))
+      || (strcmp(child_copy_id, parent_copy_id) == 0))
     {
       *inherit_p = copy_id_inherit_parent;
       return SVN_NO_ERROR;
@@ -3354,8 +3354,8 @@ txn_body_copied_from(void *baton, trail_t *trail)
     return SVN_NO_ERROR;
 
   /* If NODE's copy-ID is the same as that of its predecessor... */
-  if (svn_fs_base__key_compare(svn_fs_base__id_copy_id(node_id),
-                               svn_fs_base__id_copy_id(pred_id)) != 0)
+  if (strcmp(svn_fs_base__id_copy_id(node_id),
+             svn_fs_base__id_copy_id(pred_id)) != 0)
     {
       /* ... then NODE was either the target of a copy operation,
          a copied subtree item.  We examine the actual copy record
@@ -4360,8 +4360,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
      (which is either a real predecessor, or is the node itself
      playing the predecessor role to an imaginary mutable successor),
      then we need to report a copy.  */
-  if (svn_fs_base__key_compare(svn_fs_base__id_copy_id(node_id),
-                               end_copy_id) != 0)
+  if (strcmp(svn_fs_base__id_copy_id(node_id), end_copy_id) != 0)
     {
       const char *remainder;
       dag_node_t *dst_node;
