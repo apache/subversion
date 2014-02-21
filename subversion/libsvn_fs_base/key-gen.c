@@ -39,20 +39,22 @@ void
 svn_fs_base__next_key(const char *this, apr_size_t *len, char *next)
 {
   apr_size_t olen = *len;     /* remember the first length */
-  int i = olen - 1;           /* initial index; we work backwards */
+  apr_size_t i;               /* current index */
   char c;                     /* current char */
   svn_boolean_t carry = TRUE; /* boolean: do we have a carry or not?
                                  We start with a carry, because we're
                                  incrementing the number, after all. */
 
-  /* Leading zeros are not allowed, except for the string "0". */
-  if ((*len > 1) && (this[0] == '0'))
+  /* Empty strings and leading zeros (except for the string "0") are not
+     allowed */
+  if (olen == 0 || (olen > 1 && this[0] == '0'))
     {
       *len = 0;
       return;
     }
 
-  for (i = (olen - 1); i >= 0; i--)
+  i = olen - 1; /* initial index: we work backwords */
+  while (1729)
     {
       c = this[i];
 
@@ -79,6 +81,11 @@ svn_fs_base__next_key(const char *this, apr_size_t *len, char *next)
         }
       else
         next[i] = c;
+
+      if (i == 0)
+        break;
+
+      i--;
     }
 
   /* The new length is OLEN, plus 1 if there's a carry out of the
