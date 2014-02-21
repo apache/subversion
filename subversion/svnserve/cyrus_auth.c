@@ -184,7 +184,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
   /* For CRAM-MD5, we don't base64-encode stuff. */
   use_base64 = (strcmp(mech, "CRAM-MD5") != 0);
 
-  /* sasl uses unsigned for the length of strings, we use apr_size_t
+  /* sasl uses unsigned int for the length of strings, we use apr_size_t
    * which may not be the same size.  Deal with potential integer overflow */
   if (in->len > UINT_MAX)
     return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
@@ -192,7 +192,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
 
   result = sasl_server_start(sasl_ctx, mech,
                              in ? in->data : NULL,
-                             in ? (unsigned) in->len : 0, &out, &outlen);
+                             in ? (unsigned int) in->len : 0, &out, &outlen);
 
   if (result != SASL_OK && result != SASL_CONTINUE)
     return fail_auth(conn, pool, sasl_ctx);
@@ -221,7 +221,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
         return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  _("Step response is too long"));
 
-      result = sasl_server_step(sasl_ctx, in->data, (unsigned) in->len,
+      result = sasl_server_step(sasl_ctx, in->data, (unsigned int) in->len,
                                 &out, &outlen);
     }
 
