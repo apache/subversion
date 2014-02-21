@@ -225,7 +225,7 @@ typedef struct pack_context_t
    * each revision range. */
   apr_array_header_t *rev_offsets;
 
-  /* temp file receiving all items referenced by REPS_INFOS.
+  /* temp file receiving all items referenced by REPS.
    * Will be filled in phase 2 and be cleared after each revision range.*/
   apr_file_t *reps_file;
 
@@ -491,7 +491,7 @@ copy_item_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Return the offset within CONTEXT->REPS_INFOS that corresponds to item
+/* Return the offset within CONTEXT->REPS that corresponds to item
  * ITEM_INDEX in  REVISION.
  */
 static int
