@@ -1829,9 +1829,7 @@ diff_repos_wc(const char **root_relpath,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  apr_pool_t *pool = scratch_pool;
-  const char *url1, *anchor, *anchor_url, *target;
-  svn_revnum_t rev;
+  const char *anchor, *anchor_url, *target;
   svn_ra_session_t *ra_session;
   svn_depth_t diff_depth;
   const svn_ra_reporter3_t *reporter;
@@ -1848,89 +1846,155 @@ diff_repos_wc(const char **root_relpath,
   const char *cf_repos_relpath;
   const char *cf_repos_root_url;
   svn_depth_t cf_depth;
+  const char *copy_root_abspath;
+  const char *target_url;
   svn_client__pathrev_t *loc1;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
   if (!svn_path_is_url(path_or_url1))
     {
-      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1, pool));
-      SVN_ERR(svn_wc__node_get_url(&url1, ctx->wc_ctx, abspath_or_url1,
-                                   pool, pool));
+      SVN_ERR(svn_dirent_get_absolute(&abspath_or_url1, path_or_url1,
+                                      scratch_pool));
     }
   else
     {
-      url1 = path_or_url1;
       abspath_or_url1 = path_or_url1;
     }
 
-  SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, pool));
-
-  /* Convert path_or_url1 to a URL to feed to do_diff. */
-  SVN_ERR(svn_wc_get_actual_target2(&anchor, &target,
-                                    ctx->wc_ctx, path2,
-                                    pool, pool));
-
-  if (root_relpath)
-    *root_relpath = apr_pstrdup(result_pool, target);
-  if (root_is_dir)
-    *root_is_dir = (*target == '\0');
-
-  /* Fetch the URL of the anchor directory. */
-  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, pool));
-  SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
-                               pool, pool));
-  SVN_ERR_ASSERT(anchor_url != NULL);
-
-  SVN_ERR(svn_client_open_ra_session2(&ra_session, url1, abspath2,
-                                      ctx, pool, pool));
-
-  /* If we are performing a pegged diff, we need to find out what our
-     actual URLs will be. */
-  SVN_ERR(svn_client__resolve_rev_and_url(&loc1, ra_session, path_or_url1,
-                                          peg_revision, revision1, ctx,
-                                          pool));
-
-  url1 = loc1->url;
-  rev = loc1->rev;
-
-  /* Url1 might have changed */
-  SVN_ERR(svn_ra_reparent(ra_session, url1, pool));
-
-  if (ddi)
-    {
-      ddi->anchor = anchor;
-
-      if (!reverse)
-        {
-          ddi->orig_path_1 = url1;
-          ddi->orig_path_2 =
-            svn_path_url_add_component2(anchor_url, target, pool);
-        }
-      else
-        {
-          ddi->orig_path_1 =
-            svn_path_url_add_component2(anchor_url, target, pool);
-          ddi->orig_path_2 = url1;
-        }
-    }
+  SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, scratch_pool));
 
   /* Check if our diff target is a copied node. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,
                                   &cf_revision,
                                   &cf_repos_relpath,
                                   &cf_repos_root_url,
-                                  NULL, &cf_depth, NULL,
+                                  NULL, &cf_depth,
+                                  &copy_root_abspath,
                                   ctx->wc_ctx, abspath2,
-                                  FALSE, pool, pool));
+                                  FALSE, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc1,
+                                            path_or_url1, abspath2,
+                                            peg_revision, revision1,
+                                            ctx, scratch_pool));
+
+  if (revision2->kind == svn_opt_revision_base || !is_copy)
+    {
+      /* Convert path_or_url1 to a URL to feed to do_diff. */
+      SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path2,
+                                        scratch_pool, scratch_pool));
+
+      if (root_relpath)
+        *root_relpath = apr_pstrdup(result_pool, target);
+      if (root_is_dir)
+        *root_is_dir = (*target == '\0');
+
+      /* Fetch the URL of the anchor directory. */
+      SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, scratch_pool));
+      SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
+                                   scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(anchor_url != NULL);
+
+      target_url = NULL;
+    }
+  else /* is_copy && revision2->kind == svn_opt_revision_base */
+    {
+#if 0
+      svn_node_kind_t kind;
+#endif
+      /* ### Ugly hack ahead ###
+       *
+       * We're diffing a locally copied/moved node.
+       * Describe the copy source to the reporter instead of the copy itself.
+       * Doing the latter would generate a single add_directory() call to the
+       * diff editor which results in an unexpected diff (the copy would
+       * be shown as deleted).
+       *
+       * ### But if we will receive any real changes from the repositor we
+       * will most likely fail to apply them as the wc diff editor assumes
+       * that we have the data to which the change applies in BASE...
+       */
+
+      target_url = svn_path_url_add_component2(cf_repos_root_url,
+                                               cf_repos_relpath,
+                                               scratch_pool);
+
+#if 0
+      /*SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath2, FALSE, FALSE,
+                                scratch_pool));
+
+      if (kind != svn_node_dir
+          || strcmp(copy_root_abspath, abspath2) != 0) */
+#endif
+        {
+          /* We are looking at a subdirectory of the repository,
+             We can describe the parent directory as the anchor..
+
+             ### This 'appears to work', but that is really dumb luck
+             ### for the simple cases in the test suite */
+          anchor_abspath = svn_dirent_dirname(abspath2, scratch_pool);
+          anchor_url = svn_path_url_add_component2(cf_repos_root_url,
+                                                   svn_relpath_dirname(
+                                                            cf_repos_relpath,
+                                                            scratch_pool),
+                                                   scratch_pool);
+          target = svn_dirent_basename(abspath2, NULL);
+          anchor = svn_dirent_dirname(path2, scratch_pool);
+        }
+#if 0
+      else
+        {
+          /* This code, while ok can't be enabled without causing test
+           * failures. The repository will send some changes against
+           * BASE for nodes that don't have BASE...
+           */
+          anchor_abspath = abspath2;
+          anchor_url = svn_path_url_add_component2(cf_repos_root_url,
+                                                   cf_repos_relpath,
+                                                   scratch_pool);
+          anchor = path2;
+          target = "";
+        }
+#endif
+    }
+
+  SVN_ERR(svn_ra_reparent(ra_session, anchor_url, scratch_pool));
+
+  if (ddi)
+    {
+      const char *repos_root_url;
+
+      ddi->anchor = anchor;
+
+      if (!reverse)
+        {
+          ddi->orig_path_1 = apr_pstrdup(result_pool, loc1->url);
+          ddi->orig_path_2 =
+            svn_path_url_add_component2(anchor_url, target, result_pool);
+        }
+      else
+        {
+          ddi->orig_path_1 =
+            svn_path_url_add_component2(anchor_url, target, result_pool);
+          ddi->orig_path_2 = apr_pstrdup(result_pool, loc1->url);
+        }
+
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
+                                      scratch_pool));
+
+      ddi->session_relpath = svn_uri_skip_ancestor(repos_root_url,
+                                                   anchor_url,
+                                                   result_pool);
+    }
 
   if (reverse)
     diff_processor = svn_diff__tree_processor_reverse_create(
-                              diff_processor, NULL, pool);
+                              diff_processor, NULL, scratch_pool);
 
   /* Use the diff editor to generate the diff. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
+                                SVN_RA_CAPABILITY_DEPTH, scratch_pool));
   SVN_ERR(svn_wc__get_diff_editor(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
@@ -1943,67 +2007,28 @@ diff_repos_wc(const char **root_relpath,
                                   changelists,
                                   diff_processor,
                                   ctx->cancel_func, ctx->cancel_baton,
-                                  pool, pool));
-  SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
+                                  scratch_pool, scratch_pool));
 
   if (depth != svn_depth_infinity)
     diff_depth = depth;
   else
     diff_depth = svn_depth_unknown;
 
-  if (is_copy)
+
+
+  if (is_copy && revision2->kind != svn_opt_revision_base)
     {
-      const char *copyfrom_parent_url;
-      const char *copyfrom_basename;
-
-      /* We're diffing a locally copied/moved node.
-       * Describe the copy source to the reporter instead of the copy itself.
-       * Doing the latter would generate a single add_directory() call to the
-       * diff editor which results in an unexpected diff (the copy would
-       * be shown as deleted). */
-
-      if (cf_repos_relpath[0] == '\0')
-        {
-          copyfrom_parent_url = cf_repos_root_url;
-          copyfrom_basename = "";
-        }
-      else
-        {
-          const char *parent_relpath;
-          svn_relpath_split(&parent_relpath, &copyfrom_basename,
-                            cf_repos_relpath, scratch_pool);
-
-          copyfrom_parent_url = svn_path_url_add_component2(cf_repos_root_url,
-                                                            parent_relpath,
-                                                            scratch_pool);
-        }
-      SVN_ERR(svn_ra_reparent(ra_session, copyfrom_parent_url, pool));
-
-      if (ddi)
-        {
-          const char *repos_root_url;
-          const char *session_url;
-
-          SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
-                                         scratch_pool));
-          SVN_ERR(svn_ra_get_session_url(ra_session, &session_url,
-                                         scratch_pool));
-
-          ddi->session_relpath = svn_uri_skip_ancestor(repos_root_url,
-                                                       session_url,
-                                                       result_pool);
-        }
-
       /* Tell the RA layer we want a delta to change our txn to URL1 */
       SVN_ERR(svn_ra_do_diff3(ra_session,
                               &reporter, &reporter_baton,
-                              rev,
+                              loc1->rev,
                               target,
                               diff_depth,
                               ignore_ancestry,
                               TRUE,  /* text_deltas */
-                              url1,
-                              diff_editor, diff_edit_baton, pool));
+                              loc1->url,
+                              diff_editor, diff_edit_baton,
+                              scratch_pool));
 
       /* Report the copy source. */
       if (cf_depth == svn_depth_unknown)
@@ -2013,45 +2038,28 @@ diff_repos_wc(const char **root_relpath,
                                  cf_revision,
                                  cf_depth, FALSE, NULL, scratch_pool));
 
-      if (strcmp(target, copyfrom_basename) != 0)
+      if (*target)
         SVN_ERR(reporter->link_path(reporter_baton, target,
-                                    svn_path_url_add_component2(
-                                                cf_repos_root_url,
-                                                cf_repos_relpath,
-                                                scratch_pool),
-                                    cf_revision,
-                                    cf_depth, FALSE, NULL, scratch_pool));
+                                      target_url,
+                                      cf_revision,
+                                      cf_depth, FALSE, NULL, scratch_pool));
 
       /* Finish the report to generate the diff. */
-      SVN_ERR(reporter->finish_report(reporter_baton, pool));
+      SVN_ERR(reporter->finish_report(reporter_baton, scratch_pool));
     }
   else
     {
-      if (ddi)
-        {
-          const char *repos_root_url;
-          const char *session_url;
-
-          SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
-                                         scratch_pool));
-          SVN_ERR(svn_ra_get_session_url(ra_session, &session_url,
-                                         scratch_pool));
-
-          ddi->session_relpath = svn_uri_skip_ancestor(repos_root_url,
-                                                       session_url,
-                                                       result_pool);
-        }
-
       /* Tell the RA layer we want a delta to change our txn to URL1 */
       SVN_ERR(svn_ra_do_diff3(ra_session,
                               &reporter, &reporter_baton,
-                              rev,
+                              loc1->rev,
                               target,
                               diff_depth,
                               ignore_ancestry,
                               TRUE,  /* text_deltas */
-                              url1,
-                              diff_editor, diff_edit_baton, pool));
+                              loc1->url,
+                              diff_editor, diff_edit_baton,
+                              scratch_pool));
 
       /* Create a txn mirror of path2;  the diff editor will print
          diffs in reverse.  :-)  */
@@ -2062,7 +2070,7 @@ diff_repos_wc(const char **root_relpath,
                                       FALSE,
                                       ctx->cancel_func, ctx->cancel_baton,
                                       NULL, NULL, /* notification is N/A */
-                                      pool));
+                                      scratch_pool));
     }
 
   return SVN_NO_ERROR;
