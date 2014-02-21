@@ -469,7 +469,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        1024, 8,
                        svn_fs_x__serialize_dir_entries,
                        svn_fs_x__deserialize_dir_entries,
-                       sizeof(pair_cache_key_t),
+                       sizeof(svn_fs_x__id_part_t),
                        apr_pstrcat(pool, prefix, "DIR", SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
                        fs,
@@ -753,115 +753,4 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        fs->pool));
 
   return SVN_NO_ERROR;
-}
-
-/* Baton to be used for the remove_txn_cache() pool cleanup function, */
-struct txn_cleanup_baton_t
-{
-  /* the cache to reset */
-  svn_cache__t *txn_cache;
-
-  /* the position where to reset it */
-  svn_cache__t **to_reset;
-};
-
-/* APR pool cleanup handler that will reset the cache pointer given in
-   BATON_VOID. */
-static apr_status_t
-remove_txn_cache(void *baton_void)
-{
-  struct txn_cleanup_baton_t *baton = baton_void;
-
-  /* be careful not to hurt performance by resetting newer txn's caches. */
-  if (*baton->to_reset == baton->txn_cache)
-    {
-     /* This is equivalent to calling svn_fs_x__reset_txn_caches(). */
-      *baton->to_reset  = NULL;
-    }
-
-  return  APR_SUCCESS;
-}
-
-/* This function sets / registers the required callbacks for a given
- * transaction-specific *CACHE object, if CACHE is not NULL and a no-op
- * otherwise. In particular, it will ensure that *CACHE gets reset to NULL
- * upon POOL destruction latest.
- */
-static void
-init_txn_callbacks(svn_cache__t **cache,
-                   apr_pool_t *pool)
-{
-  if (*cache != NULL)
-    {
-      struct txn_cleanup_baton_t *baton;
-
-      baton = apr_palloc(pool, sizeof(*baton));
-      baton->txn_cache = *cache;
-      baton->to_reset = cache;
-
-      apr_pool_cleanup_register(pool,
-                                baton,
-                                remove_txn_cache,
-                                apr_pool_cleanup_null);
-    }
-}
-
-svn_error_t *
-svn_fs_x__initialize_txn_caches(svn_fs_t *fs,
-                                const char *txn_id,
-                                apr_pool_t *pool)
-{
-  fs_x_data_t *ffd = fs->fsap_data;
-
-  /* Transaction content needs to be carefully prefixed to virtually
-     eliminate any chance for conflicts. The (repo, txn_id) pair
-     should be unique but if a transaction fails, it might be possible
-     to start a new transaction later that receives the same id.
-     Therefore, throw in a uuid as well - just to be sure. */
-  const char *prefix = apr_pstrcat(pool,
-                                   "fsx:", fs->uuid,
-                                   "/", fs->path,
-                                   ":", txn_id,
-                                   ":", svn_uuid_generate(pool), ":",
-                                   SVN_VA_NULL);
-
-  /* We don't support caching for concurrent transactions in the SAME
-   * FSX session. Maybe, you forgot to clean POOL. */
-  if (ffd->txn_dir_cache != NULL || ffd->concurrent_transactions)
-    {
-      ffd->txn_dir_cache = NULL;
-      ffd->concurrent_transactions = TRUE;
-
-      return SVN_NO_ERROR;
-    }
-
-  /* create a txn-local directory cache */
-  SVN_ERR(create_cache(&ffd->txn_dir_cache,
-                       NULL,
-                       svn_cache__get_global_membuffer_cache(),
-                       1024, 8,
-                       svn_fs_x__serialize_dir_entries,
-                       svn_fs_x__deserialize_dir_entries,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrcat(pool, prefix, "TXNDIR",
-                                   SVN_VA_NULL),
-                       0,
-                       fs,
-                       TRUE,
-                       pool));
-
-  /* reset the transaction-specific cache if the pool gets cleaned up. */
-  init_txn_callbacks(&(ffd->txn_dir_cache), pool);
-
-  return SVN_NO_ERROR;
-}
-
-void
-svn_fs_x__reset_txn_caches(svn_fs_t *fs)
-{
-  /* we can always just reset the caches. This may degrade performance but
-   * can never cause in incorrect behavior. */
-
-  fs_x_data_t *ffd = fs->fsap_data;
-  ffd->txn_dir_cache = NULL;
 }

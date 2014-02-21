@@ -513,7 +513,6 @@ purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   svn_fs_x__txn_id_t txn_id = *(const svn_fs_x__txn_id_t *)baton;
 
   free_shared_txn(fs, txn_id);
-  svn_fs_x__reset_txn_caches(fs);
 
   return SVN_NO_ERROR;
 }
@@ -1541,12 +1540,11 @@ svn_fs_x__set_entry(svn_fs_t *fs,
       out = svn_stream_from_aprfile2(file, TRUE, pool);
     }
 
-  /* if we have a directory cache for this transaction, update it */
-  if (ffd->txn_dir_cache)
+  /* update directory cache */
     {
       /* build parameters: (name, new entry) pair */
-      const char *key =
-          svn_fs_x__id_unparse(parent_noderev->id, subpool)->data;
+      const svn_fs_x__id_part_t *key
+        = svn_fs_x__id_noderev_id(parent_noderev->id);
       replace_baton_t baton;
 
       baton.name = name;
@@ -1561,7 +1559,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
         }
 
       /* actually update the cached directory (if cached) */
-      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key,
+      SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
                                      svn_fs_x__replace_dir_entry, &baton,
                                      subpool));
     }
@@ -3430,16 +3428,14 @@ svn_fs_x__delete_node_revision(svn_fs_t *fs,
       && noderev->kind == svn_node_dir)
     {
       fs_x_data_t *ffd = fs->fsap_data;
+      const svn_fs_x__id_part_t *key = svn_fs_x__id_noderev_id(id);
+
       SVN_ERR(svn_io_remove_file2(svn_fs_x__path_txn_node_children(fs, id,
                                                                    pool),
                                   FALSE, pool));
 
       /* remove the corresponding entry from the cache, if such exists */
-      if (ffd->txn_dir_cache)
-        {
-          const char *key = svn_fs_x__id_unparse(id, pool)->data;
-          SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, NULL, pool));
-        }
+      SVN_ERR(svn_cache__set(ffd->dir_cache, key, NULL, pool));
     }
 
   return svn_io_remove_file2(svn_fs_x__path_txn_node_rev(fs, id, pool),
