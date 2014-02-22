@@ -305,26 +305,14 @@ add_file_blame(const char *last_file,
   return SVN_NO_ERROR;
 }
 
-/* The delta window handler for the text delta between the previously seen
- * revision and the revision currently being handled.
- *
- * Record the blame information for this revision in BATON->file_rev_baton.
- *
- * Implements svn_txdelta_window_handler_t.
+/* Record the blame information for the revision in BATON->file_rev_baton.
  */
 static svn_error_t *
-window_handler(svn_txdelta_window_t *window, void *baton)
+update_blame(void *baton)
 {
   struct delta_baton *dbaton = baton;
   struct file_rev_baton *frb = dbaton->file_rev_baton;
   struct blame_chain *chain;
-
-  /* Call the wrapped handler first. */
-  SVN_ERR(dbaton->wrapped_handler(window, dbaton->wrapped_baton));
-
-  /* We patiently wait for the NULL window marking the end. */
-  if (window)
-    return SVN_NO_ERROR;
 
   /* Close the source file used for the delta.
      It is important to do this early, since otherwise, they will be deleted
@@ -382,6 +370,32 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
+/* The delta window handler for the text delta between the previously seen
+ * revision and the revision currently being handled.
+ *
+ * Record the blame information for this revision in BATON->file_rev_baton.
+ *
+ * Implements svn_txdelta_window_handler_t.
+ */
+static svn_error_t *
+window_handler(svn_txdelta_window_t *window, void *baton)
+{
+  struct delta_baton *dbaton = baton;
+
+  /* Call the wrapped handler first. */
+  if (dbaton->wrapped_handler)
+    SVN_ERR(dbaton->wrapped_handler(window, dbaton->wrapped_baton));
+
+  /* We patiently wait for the NULL window marking the end. */
+  if (window)
+    return SVN_NO_ERROR;
+
+  /* Diff and update blame info. */
+  SVN_ERR(update_blame(baton));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Calculate and record blame information for one revision of the file,
  * by comparing the file content against the previously seen revision.
@@ -430,17 +444,18 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (frb->ctx->cancel_func)
     SVN_ERR(frb->ctx->cancel_func(frb->ctx->cancel_baton));
 
-  /* If there were no content changes, we couldn't care less about this
-     revision now.  Note that we checked the mime type above, so things
-     work if the user just changes the mime type in a commit.
+  /* If there were no content changes and no (potential) merges, we couldn't
+     care less about this revision now.  Note that we checked the mime type
+     above, so things work if the user just changes the mime type in a commit.
      Also note that we don't switch the pools in this case.  This is important,
      since the tempfile will be removed by the pool and we need the tempfile
      from the last revision with content changes. */
-  if (!content_delta_handler)
+  if (!content_delta_handler
+      && (!frb->include_merged_revisions || merged_revision))
     return SVN_NO_ERROR;
 
   /* Create delta baton. */
-  delta_baton = apr_palloc(frb->currpool, sizeof(*delta_baton));
+  delta_baton = apr_pcalloc(frb->currpool, sizeof(*delta_baton));
 
   /* Prepare the text delta window handler. */
   if (frb->last_filename)
@@ -460,17 +475,9 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                                  svn_io_file_del_on_pool_cleanup,
                                  filepool, filepool));
 
-  /* Get window handler for applying delta. */
-  svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
-                    frb->currpool,
-                    &delta_baton->wrapped_handler,
-                    &delta_baton->wrapped_baton);
-
   /* Wrap the window handler with our own. */
   delta_baton->file_rev_baton = frb;
   delta_baton->is_merged_revision = merged_revision;
-  *content_delta_handler = window_handler;
-  *content_delta_baton = delta_baton;
 
   /* Create the rev structure. */
   delta_baton->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
@@ -501,6 +508,28 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   /* Keep last revision for postprocessing after all changes */
   frb->last_rev = delta_baton->rev;
+
+  /* Handle all delta - even if it is empty.
+     We must do the latter to "merge" blame info from other branches. */
+  if (content_delta_handler)
+    {
+      /* Proper delta - get window handler for applying delta.
+         svn_ra_get_file_revs2 will drive the delta editor. */
+      svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
+                        frb->currpool,
+                        &delta_baton->wrapped_handler,
+                        &delta_baton->wrapped_baton);
+      *content_delta_handler = window_handler;
+      *content_delta_baton = delta_baton;
+    }
+  else
+    {
+      /* Apply an empty delta, i.e. simply copy the old contents.
+         We can't simply use the existing file due to the pool rotation logic.
+         Trigger the blame update magic. */
+      SVN_ERR(svn_stream_copy3(last_stream, cur_stream, NULL, NULL, pool));
+      SVN_ERR(update_blame(delta_baton));
+    }
 
   return SVN_NO_ERROR;
 }
