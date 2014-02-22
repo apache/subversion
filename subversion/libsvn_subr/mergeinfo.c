@@ -2240,29 +2240,42 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-svn_rangelist_t *
-svn_rangelist_dup(const svn_rangelist_t *rangelist, apr_pool_t *pool)
+/* Deep-copy an array of pointers to simple objects.
+ *
+ * Return a duplicate in POOL of the array ARRAY of pointers to objects
+ * of size OBJECT_SIZE bytes. Duplicate each object bytewise.
+ */
+static apr_array_header_t *
+ptr_array_dup(const apr_array_header_t *array,
+              size_t object_size,
+              apr_pool_t *pool)
 {
-  svn_rangelist_t *new_rl = apr_array_make(pool, rangelist->nelts,
-                                           sizeof(svn_merge_range_t *));
+  apr_array_header_t *new_array = apr_array_make(pool, array->nelts,
+                                                 sizeof(void *));
 
   /* allocate target range buffer with a single operation */
-  svn_merge_range_t *copy = apr_palloc(pool, sizeof(*copy) * rangelist->nelts);
+  char *copy = apr_palloc(pool, object_size * array->nelts);
 
   /* for efficiency, directly address source and target reference buffers */
-  svn_merge_range_t **source = (svn_merge_range_t **)(rangelist->elts);
-  svn_merge_range_t **target = (svn_merge_range_t **)(new_rl->elts);
+  void **source = (void **)(array->elts);
+  void **target = (void **)(new_array->elts);
   int i;
 
   /* copy ranges iteratively and link them into the target range list */
-  for (i = 0; i < rangelist->nelts; i++)
+  for (i = 0; i < array->nelts; i++)
     {
-      copy[i] = *source[i];
-      target[i] = &copy[i];
+      target[i] = &copy[i * object_size];
+      memcpy(target[i], source[i], object_size);
     }
-  new_rl->nelts = rangelist->nelts;
+  new_array->nelts = array->nelts;
 
-  return new_rl;
+  return new_array;
+}
+
+svn_rangelist_t *
+svn_rangelist_dup(const svn_rangelist_t *rangelist, apr_pool_t *pool)
+{
+  return ptr_array_dup(rangelist, sizeof(svn_merge_range_t), pool);
 }
 
 svn_merge_range_t *
