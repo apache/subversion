@@ -18,12 +18,13 @@ In particular, interface naming rules do not apply here. I.e. even
 SVN_* identifiers are not part of the public API unless declared
 as public in some public header file.
 
-The SVN source code boasts a number of enviroment variable or C pre-
+The SVN source code boasts a number of environment variable or C pre-
 processor enabled tweaks that are mainly aimed at developer support.
 If you introduce new ones, please document them here.
 
 Macros documented in the configure-generated ../subversion/svn_private_config.h
 file are not repeated here.
+
 
 2 Defines and Environment Variables
 ===================================
@@ -53,6 +54,7 @@ SVN_FS_FS_DELTIFY_PROPS
 SVN_SQLITE_MIN_VERSION_NUMBER
 SVN_SQLITE_MIN_VERSION
 SVN_SERF_NO_LOGGING
+SVN_ALLOW_SHORT_INTS
 
 2.3 Debugging Support
 
@@ -275,6 +277,18 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     SQLite versions, as string literals
   Default:   SQLITE_VERSION
   Suggested: not defined (to use default)
+
+4.11 SVN_ALLOW_SHORT_INTS
+
+  Scope:     global
+  Purpose:   Disables the size check for the 'int' type.  We assume ints to
+             be large enough (32 bits) to index various container objects.
+             16 ints will break that assumption.  Defining this option will
+             allow SVN to be compiled even if the size check would fail for
+             some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
 
 
 5 Defines controling debug support
