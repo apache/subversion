@@ -3842,6 +3842,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
                     apr_pool_t *pool)
 {
   svn_boolean_t terminate = FALSE;
+  svn_error_t *err;
   const svn_ra_svn_cmd_entry_t *command;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -3855,7 +3856,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
     {
       /* This is not the first call for CONNECTION. */
       if (connection->baton->repository->repos == NULL)
-        SVN_ERR(reopen_repos(connection, pool));
+        err = reopen_repos(connection, pool);
     }
   else
     {
@@ -3884,12 +3885,16 @@ serve_interruptable(svn_boolean_t *terminate_p,
                                   connection->pool);
 
       /* Construct server baton and open the repository for the first time. */
-      SVN_ERR(construct_server_baton(&connection->baton, connection->conn,
-                                     connection->params, pool));
+      err = construct_server_baton(&connection->baton, connection->conn,
+                                   connection->params, pool);
     }
 
+  /* If we can't access the repo for some reason, end this connection. */
+  if (err)
+    terminate = TRUE;
+
   /* Process incoming commands. */
-  while (!terminate)
+  while (!terminate && !err)
     {
       svn_pool_clear(iterpool);
       if (is_busy && is_busy(connection))
@@ -3899,13 +3904,13 @@ serve_interruptable(svn_boolean_t *terminate_p,
           /* If the server is busy, execute just one command and only if
            * there is one currently waiting in our receive buffers.
            */
-          SVN_ERR(svn_ra_svn__has_command(&has_command, &terminate,
-                                          connection->conn, iterpool));
-          if (has_command)
-            SVN_ERR(svn_ra_svn__handle_command(&terminate, cmd_hash,
-                                              connection->baton,
-                                              connection->conn,
-                                              FALSE, iterpool));
+          err = svn_ra_svn__has_command(&has_command, &terminate,
+                                        connection->conn, iterpool);
+          if (!err && has_command)
+            err = svn_ra_svn__handle_command(&terminate, cmd_hash,
+                                             connection->baton,
+                                             connection->conn,
+                                             FALSE, iterpool);
 
           break;
         }
@@ -3916,10 +3921,10 @@ serve_interruptable(svn_boolean_t *terminate_p,
            * busy() callback test to return TRUE while there are still some
            * resources left.
            */
-          SVN_ERR(svn_ra_svn__handle_command(&terminate, cmd_hash,
-                                             connection->baton,
-                                             connection->conn,
-                                             FALSE, iterpool));
+          err = svn_ra_svn__handle_command(&terminate, cmd_hash,
+                                           connection->baton,
+                                           connection->conn,
+                                           FALSE, iterpool);
         }
     }
 
@@ -3928,7 +3933,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
   if (terminate_p)
     *terminate_p = terminate;
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn,
