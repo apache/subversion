@@ -100,6 +100,18 @@ typedef apr_uint32_t apr_uintptr_t;
 #endif /* !APR_VERSION_AT_LEAST(1,3,0) */
 
 /**
+ * We assume that 'int' and 'unsigned' are at least 32 bits wide.
+ * This also implies that long (rev numbers) is 32 bits or wider.
+ *
+ * @since New in 1.9.
+ */
+#if    defined(APR_HAVE_LIMITS_H) \
+    && !defined(SVN_ALLOW_SHORT_INTS) \
+    && (INT_MAX < 0x7FFFFFFFl)
+#error int is shorter than 32 bits and may break Subversion. Define SVN_ALLOW_SHORT_INTS to skip this check.
+#endif
+
+/**
  * Work around a platform dependency issue. apr_thread_rwlock_trywrlock()
  * will make APR_STATUS_IS_EBUSY() return TRUE if the lock could not be
  * acquired under Unix. Under Windows, this will not work. So, provide
