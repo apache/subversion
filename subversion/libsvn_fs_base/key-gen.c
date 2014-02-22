@@ -46,12 +46,9 @@ svn_fs_base__next_key(const char *this, apr_size_t *len, char *next)
                                  incrementing the number, after all. */
 
   /* Empty strings and leading zeros (except for the string "0") are not
-     allowed */
-  if (olen == 0 || (olen > 1 && this[0] == '0'))
-    {
-      *len = 0;
-      return;
-    }
+   * allowed.  Run our malfunction handler to prevent possible db corruption
+   * from being propagated further. */
+  SVN_ERR_ASSERT_NO_RETURN(olen != 0 && (olen == 1 || this[0] != '0'));
 
   i = olen - 1; /* initial index: we work backwords */
   while (1729)
