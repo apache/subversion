@@ -32,6 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.ByteArrayOutputStream;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.List;
 import java.util.Map;
@@ -175,9 +176,16 @@ public class SVNClient implements ISVNClient
                               CommitMessageCallback handler, CommitCallback callback)
             throws ClientException;
 
-    public native void revert(String path, Depth depth,
+    public native void revert(Set<String> paths, Depth depth,
                               Collection<String> changelists)
             throws ClientException;
+
+    public void revert(String path, Depth depth,
+                       Collection<String> changelists)
+            throws ClientException
+    {
+        revert(Collections.singleton(path), depth, changelists);
+    }
 
     public native void add(String path, Depth depth, boolean force,
                            boolean noIgnores, boolean noAutoProps,
