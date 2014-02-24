@@ -3842,7 +3842,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
                     apr_pool_t *pool)
 {
   svn_boolean_t terminate = FALSE;
-  svn_error_t *err;
+  svn_error_t *err = NULL;
   const svn_ra_svn_cmd_entry_t *command;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
