@@ -1645,6 +1645,10 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = XXX;
         /* FALLTHROUGH  */
 #endif
+
+        SVN_SQLITE__WITH_LOCK(
+            svn_wc__db_install_schema_statistics(sdb, scratch_pool),
+            sdb);
     }
 
 #ifdef SVN_DEBUG
