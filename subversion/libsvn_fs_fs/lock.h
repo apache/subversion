@@ -32,26 +32,26 @@ extern "C" {
 /* These functions implement some of the calls in the FS loader
    library's fs vtables. */
 
-svn_error_t *svn_fs_fs__lock(svn_lock_t **lock,
+svn_error_t *svn_fs_fs__lock(apr_hash_t **results,
                              svn_fs_t *fs,
-                             const char *path,
-                             const char *token,
+                             apr_hash_t *targets,
                              const char *comment,
                              svn_boolean_t is_dav_comment,
                              apr_time_t expiration_date,
-                             svn_revnum_t current_rev,
                              svn_boolean_t steal_lock,
-                             apr_pool_t *pool);
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 svn_error_t *svn_fs_fs__generate_lock_token(const char **token,
                                             svn_fs_t *fs,
                                             apr_pool_t *pool);
 
-svn_error_t *svn_fs_fs__unlock(svn_fs_t *fs,
-                               const char *path,
-                               const char *token,
+svn_error_t *svn_fs_fs__unlock(apr_hash_t **results,
+                               svn_fs_t *fs,
+                               apr_hash_t *targets,
                                svn_boolean_t break_lock,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 svn_error_t *svn_fs_fs__get_lock(svn_lock_t **lock,
                                  svn_fs_t *fs,
