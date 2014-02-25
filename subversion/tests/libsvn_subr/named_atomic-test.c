@@ -34,6 +34,10 @@
 /* shared test implementation */
 #include "named_atomic-test-common.h"
 
+/* to separate this code from any production environment */
+static const char *name_namespace1 = NULL;
+static const char *name_namespace2 = NULL;
+
 /* Name of the worker process executable */
 #define TEST_PROC "named_atomic-proc-test"
 
