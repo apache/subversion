@@ -1652,6 +1652,9 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = XXX;
         /* FALLTHROUGH  */
 #endif
+      case SVN_WC__VERSION:
+        /* already upgraded */
+        *result_format = SVN_WC__VERSION;
 
         SVN_ERR(svn_sqlite__with_transaction(sdb, install_stats, NULL,
                                              scratch_pool));
