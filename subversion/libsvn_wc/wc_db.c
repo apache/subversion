@@ -9218,9 +9218,7 @@ read_single_info(const struct svn_wc__db_info_t **info,
       if (have_work)
         lock_arg = &mtb->lock;
 
-      SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
-                                                &mtb->repos_relpath,
-                                                &repos_id,
+      SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL, NULL, NULL,
                                                 NULL, NULL, NULL, NULL, NULL,
                                                 NULL, lock_arg, NULL, NULL,
                                                 &update_root,
