@@ -833,6 +833,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     fakelibdirs = []
 
+    # When nls is enabled, all our projects use it directly via the _() macro,
+    # even though only libsvn_subr references it in build.conf
+    if self.enable_nls:
+      lib = self._libraries['intl']
+      if debug and lib.debug_lib_dir:
+        fakelibdirs.append(lib.debug_lib_dir)
+      else:
+        fakelibdirs.append(lib.lib_dir)
+
     if (isinstance(target, gen_base.TargetSWIG)
           or isinstance(target, gen_base.TargetSWIGLib)):
       if target.lang in self._libraries:
@@ -879,6 +888,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if isinstance(target, gen_base.TargetExe):
       nondeplibs.append('setargv.obj')
+
+    # When nls is enabled, all our projects use it directly via the _() macro,
+    # even though only libsvn_subr references it in build.conf
+    if self.enable_nls:
+      lib = self._libraries['intl']
+      if debug and lib.debug_lib_name:
+        nondeplibs.append(lib.debug_lib_name)
+      else:
+        nondeplibs.append(lib.lib_name)
 
     if (isinstance(target, gen_base.TargetSWIG)
           or isinstance(target, gen_base.TargetSWIGLib)):
