@@ -337,21 +337,18 @@ void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
                                    ctx, subPool.getPool()), );
 }
 
-void SVNClient::revert(const char *path, svn_depth_t depth,
+void SVNClient::revert(StringArray &paths, svn_depth_t depth,
                        StringArray &changelists)
 {
     SVN::Pool subPool(pool);
-
-    SVN_JNI_NULL_PTR_EX(path, "path", );
 
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
         return;
 
-    Targets target(path, subPool);
-    const apr_array_header_t *targets = target.array(subPool);
-    SVN_JNI_ERR(target.error_occurred(), );
-    SVN_JNI_ERR(svn_client_revert2(targets, depth,
+    Targets targets(paths, subPool);
+    SVN_JNI_ERR(targets.error_occurred(), );
+    SVN_JNI_ERR(svn_client_revert2(targets.array(subPool), depth,
                                    changelists.array(subPool), ctx,
                                    subPool.getPool()), );
 }
