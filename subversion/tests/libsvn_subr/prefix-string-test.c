@@ -59,7 +59,7 @@ test_empty_string(apr_pool_t *pool)
 
 enum {TEST_CASE_COUNT = 9};
 
-const char *test_cases[TEST_CASE_COUNT] =
+static const char *test_cases[TEST_CASE_COUNT] =
 {
   "a longish string of sorts, longer than 7 anyway",
   "some other string",

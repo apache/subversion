@@ -266,7 +266,7 @@ typedef struct base_record_t
 enum {SUB_RECORD_COUNT = 7};
 enum {BASE_RECORD_COUNT = 4};
 
-const sub_record_t sub_records[SUB_RECORD_COUNT] =
+static const sub_record_t sub_records[SUB_RECORD_COUNT] =
 {
   { 6, { "this is quite a longish piece of text", 37} },
   { 5, { "x", 1} },
@@ -277,7 +277,7 @@ const sub_record_t sub_records[SUB_RECORD_COUNT] =
   { 0 }
 };
 
-const base_record_t test_data[BASE_RECORD_COUNT] =
+static const base_record_t test_data[BASE_RECORD_COUNT] =
 {
   { 1, { "maximum", 7},
     0xffffffffffffffffull, 0xffffffffffffffffull, sub_records,

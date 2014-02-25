@@ -364,7 +364,7 @@ struct parse_hooks_env_option_baton {
    * options apply. */
   const char *section;
   apr_hash_t *hooks_env;
-} parse_hooks_env_option_baton;
+};
 
 /* An implementation of svn_config_enumerator2_t.
  * Set environment variable NAME to value VALUE in the environment for
@@ -394,7 +394,7 @@ parse_hooks_env_option(const char *name, const char *value,
 struct parse_hooks_env_section_baton {
   svn_config_t *cfg;
   apr_hash_t *hooks_env;
-} parse_hooks_env_section_baton;
+};
 
 /* An implementation of svn_config_section_enumerator2_t. */
 static svn_boolean_t

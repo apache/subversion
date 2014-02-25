@@ -970,7 +970,7 @@ close_revision(void *revision_baton)
 
 
 /* Filtering vtable */
-svn_repos_parse_fns3_t filtering_vtable =
+static svn_repos_parse_fns3_t filtering_vtable =
   {
     magic_header_record,
     uuid_record,

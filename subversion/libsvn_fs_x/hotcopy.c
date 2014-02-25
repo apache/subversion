@@ -491,7 +491,7 @@ struct hotcopy_body_baton {
   svn_boolean_t incremental;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-} hotcopy_body_baton;
+};
 
 /* Perform a hotcopy, either normal or incremental.
  *

@@ -37,9 +37,9 @@
 #define HUGE_VALUE 1234567890123456ll
 
 /* to separate this code from any production environment */
-const char *name_namespace = NULL;
-const char *name_namespace1 = NULL;
-const char *name_namespace2 = NULL;
+static const char *name_namespace = NULL;
+static const char *name_namespace1 = NULL;
+static const char *name_namespace2 = NULL;
 
 /* data structure containing all information we need to check for
  * a) passing some deadline

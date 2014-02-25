@@ -60,6 +60,8 @@
 
 /* Some Subversion test programs may want to parse options in the
    argument list, so we remember it here. */
+extern int test_argc;
+extern const char **test_argv;
 int test_argc;
 const char **test_argv;
 
@@ -82,7 +84,7 @@ static svn_boolean_t allow_segfaults = FALSE;
 
 /* Test option: Limit testing to a given mode (i.e. XFail, Skip,
    Pass, All). */
-enum svn_test_mode_t mode_filter = svn_test_all;
+static enum svn_test_mode_t mode_filter = svn_test_all;
 
 /* Test option: Allow concurrent execution of tests */
 static svn_boolean_t parallel = FALSE;

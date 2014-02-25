@@ -30,7 +30,7 @@
  * generate strings of arbitrary length.
  */
 enum { STRING_COUNT = 12 };
-const char *basic_strings[STRING_COUNT] =
+static const char *basic_strings[STRING_COUNT] =
   {
      "some string",
      "this is another string",
