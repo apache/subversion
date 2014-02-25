@@ -357,26 +357,10 @@ unlock_proto_rev(svn_fs_t *fs,
   return with_txnlist_lock(fs, unlock_proto_rev_body, &b, pool);
 }
 
-/* Same as unlock_proto_rev(), but requires that the transaction list
-   lock is already held. */
-static svn_error_t *
-unlock_proto_rev_list_locked(svn_fs_t *fs,
-                             svn_fs_x__txn_id_t txn_id,
-                             void *lockcookie,
-                             apr_pool_t *pool)
-{
-  struct unlock_proto_rev_baton b;
-
-  b.txn_id = txn_id;
-  b.lockcookie = lockcookie;
-  return unlock_proto_rev_body(fs, &b, pool);
-}
-
 /* A structure used by get_writable_proto_rev() and
    get_writable_proto_rev_body(), which see. */
 struct get_writable_proto_rev_baton
 {
-  apr_file_t **file;
   void **lockcookie;
   svn_fs_x__txn_id_t txn_id;
 };
@@ -386,9 +370,7 @@ static svn_error_t *
 get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const struct get_writable_proto_rev_baton *b = baton;
-  apr_file_t **file = b->file;
   void **lockcookie = b->lockcookie;
-  svn_error_t *err;
   fs_x_shared_txn_data_t *txn = get_shared_txn(fs, b->txn_id, TRUE);
 
   /* First, ensure that no thread in this process (including this one)
@@ -449,35 +431,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   /* We've successfully locked the transaction; mark it as such. */
   txn->being_written = TRUE;
 
-
-  /* Now open the prototype revision file and seek to the end. */
-  err = svn_io_file_open(file,
-                         svn_fs_x__path_txn_proto_rev(fs, b->txn_id, pool),
-                         APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT, pool);
-
-  /* You might expect that we could dispense with the following seek
-     and achieve the same thing by opening the file using APR_APPEND.
-     Unfortunately, APR's buffered file implementation unconditionally
-     places its initial file pointer at the start of the file (even for
-     files opened with APR_APPEND), so we need this seek to reconcile
-     the APR file pointer to the OS file pointer (since we need to be
-     able to read the current file position later). */
-  if (!err)
-    {
-      apr_off_t offset = 0;
-      err = svn_io_file_seek(*file, APR_END, &offset, pool);
-    }
-
-  if (err)
-    {
-      err = svn_error_compose_create(
-              err,
-              unlock_proto_rev_list_locked(fs, b->txn_id, *lockcookie, pool));
-
-      *lockcookie = NULL;
-    }
-
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 /* Get a handle to the prototype revision file for transaction TXN_ID in
@@ -498,12 +452,41 @@ get_writable_proto_rev(apr_file_t **file,
                        apr_pool_t *pool)
 {
   struct get_writable_proto_rev_baton b;
+  svn_error_t *err;
 
-  b.file = file;
   b.lockcookie = lockcookie;
   b.txn_id = txn_id;
 
-  return with_txnlist_lock(fs, get_writable_proto_rev_body, &b, pool);
+  SVN_ERR(with_txnlist_lock(fs, get_writable_proto_rev_body, &b, pool));
+
+  /* Now open the prototype revision file and seek to the end. */
+  err = svn_io_file_open(file,
+                         svn_fs_x__path_txn_proto_rev(fs, txn_id, pool),
+                         APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT, pool);
+
+  /* You might expect that we could dispense with the following seek
+     and achieve the same thing by opening the file using APR_APPEND.
+     Unfortunately, APR's buffered file implementation unconditionally
+     places its initial file pointer at the start of the file (even for
+     files opened with APR_APPEND), so we need this seek to reconcile
+     the APR file pointer to the OS file pointer (since we need to be
+     able to read the current file position later). */
+  if (!err)
+    {
+      apr_off_t offset = 0;
+      err = svn_io_file_seek(*file, APR_END, &offset, pool);
+    }
+
+  if (err)
+    {
+      err = svn_error_compose_create(
+              err,
+              unlock_proto_rev(fs, txn_id, *lockcookie, pool));
+
+      *lockcookie = NULL;
+    }
+
+  return svn_error_trace(err);
 }
 
 /* Callback used in the implementation of purge_shared_txn(). */
