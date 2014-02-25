@@ -3015,7 +3015,20 @@ def commit_cp_with_deep_delete(sbox):
                                         None,
                                         wc_dir)
 
-  
+@XFail()
+def commit_deep_deleted(sbox):
+  "try to commit a deep descendant of a deleted node"
+
+  sbox.build()
+
+  sbox.simple_move('A', 'AA')
+  sbox.simple_rm('AA/D')
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        None,
+                                        sbox.ospath('AA/D'))
 
 ########################################################################
 # Run the tests
@@ -3090,6 +3103,7 @@ test_list = [ None,
               last_changed_of_copied_subdir,
               commit_unversioned,
               commit_cp_with_deep_delete,
+              commit_deep_deleted,
              ]
 
 if __name__ == '__main__':
