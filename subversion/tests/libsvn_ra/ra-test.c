@@ -35,6 +35,7 @@
 #include "svn_pools.h"
 #include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -58,6 +59,13 @@ make_and_open_local_repos(svn_ra_session_t **session,
   svn_ra_callbacks2_t *cbtable;
 
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
+  SVN_ERR(svn_cmdline_create_auth_baton(&cbtable->auth_baton,
+                                        TRUE  /* non_interactive */,
+                                        "jrandom", "rayjandom",
+                                        NULL,
+                                        TRUE  /* no_auth_cache */,
+                                        FALSE /* trust_server_cert */,
+                                        NULL, NULL, NULL, pool));
 
   SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
   SVN_ERR(svn_ra_initialize(pool));
@@ -90,6 +98,48 @@ commit_changes(svn_ra_session_t *session,
   /* copy root-dir@0 to A@1 */
   SVN_ERR(editor->add_directory("A", root_baton, repos_root_url, 0,
                                pool, &dir_baton));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_tree(svn_ra_session_t *session,
+            apr_pool_t *pool)
+{
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  const char *repos_root_url;
+  void *root_baton, *A_baton, *B_baton, *file_baton;
+
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, pool));
+  SVN_ERR(svn_ra_get_repos_root(session, &repos_root_url, pool));
+
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->add_directory("A", root_baton, NULL, SVN_INVALID_REVNUM,
+                                pool, &A_baton));
+  SVN_ERR(editor->add_directory("A/B", A_baton, NULL, SVN_INVALID_REVNUM,
+                                pool, &B_baton));
+  SVN_ERR(editor->add_file("A/B/f", B_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->add_file("A/B/g", B_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(B_baton, pool));
+  SVN_ERR(editor->add_directory("A/BB", A_baton, NULL, SVN_INVALID_REVNUM,
+                                pool, &B_baton));
+  SVN_ERR(editor->add_file("A/BB/f", B_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->add_file("A/BB/g", B_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(B_baton, pool));
+  SVN_ERR(editor->close_directory(A_baton, pool));
   SVN_ERR(editor->close_edit(edit_baton, pool));
   return SVN_NO_ERROR;
 }
@@ -324,6 +374,113 @@ tunnel_callback_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+struct lock_baton_t {
+  apr_hash_t *results;
+  apr_pool_t *pool;
+};
+
+/* Implements svn_ra_lock_callback_t. */
+static svn_error_t *
+lock_cb(void *baton,
+        const char *path,
+        svn_boolean_t do_lock,
+        const svn_lock_t *lock,
+        svn_error_t *ra_err,
+        apr_pool_t *pool)
+{
+  struct lock_baton_t *b = baton;
+  svn_fs_lock_result_t *result = apr_palloc(b->pool,
+                                            sizeof(svn_fs_lock_result_t));
+
+  if (lock)
+    {
+      result->lock = apr_palloc(b->pool, sizeof(svn_lock_t));
+      *result->lock = *lock;
+      result->lock->path = apr_pstrdup(b->pool, lock->path);
+      result->lock->token = apr_pstrdup(b->pool, lock->token);
+      result->lock->owner = apr_pstrdup(b->pool, lock->owner);
+      result->lock->comment = apr_pstrdup(b->pool, lock->comment);
+    }
+  else
+    result->lock = NULL;
+  result->err = ra_err;
+
+  svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
+  
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_ra_lock(). */
+static svn_error_t *
+lock_test(const svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+  svn_ra_session_t *session;
+  apr_hash_t *targets = apr_hash_make(pool);
+  svn_revnum_t rev = 1;
+  svn_fs_lock_result_t *result;
+  struct lock_baton_t baton;
+  svn_lock_t *lock;
+
+  SVN_ERR(make_and_open_local_repos(&session, "test-repo-lock", opts,
+                                    pool));
+  SVN_ERR(commit_tree(session, pool));
+
+  baton.results = apr_hash_make(pool);
+  baton.pool = pool;
+
+  svn_hash_sets(targets, "A/B/f", &rev);
+  svn_hash_sets(targets, "A/B/g", &rev);
+  svn_hash_sets(targets, "A/B/z", &rev);
+  svn_hash_sets(targets, "A/BB/f", &rev);
+  svn_hash_sets(targets, "X/z", &rev);
+
+#define EXPECT_LOCK(path)                                  \
+  result = svn_hash_gets(baton.results, (path));           \
+  SVN_TEST_ASSERT(result && result->lock && !result->err); \
+  SVN_ERR(svn_ra_get_lock(session, &lock, (path), pool));  \
+  SVN_TEST_ASSERT(lock)
+
+#define EXPECT_ERROR(path)                                 \
+  result = svn_hash_gets(baton.results, (path));           \
+  SVN_TEST_ASSERT(result && !result->lock && result->err); \
+  SVN_ERR(svn_ra_get_lock(session, &lock, (path), pool));  \
+  SVN_TEST_ASSERT(!lock)
+
+  SVN_ERR(svn_ra_lock(session, targets, "foo", FALSE, lock_cb, &baton, pool));
+
+  apr_hash_clear(targets);
+
+  EXPECT_LOCK("A/B/f");
+  svn_hash_sets(targets, "A/B/f", result->lock->token);
+  EXPECT_LOCK("A/B/g");
+  svn_hash_sets(targets, "A/B/g", result->lock->token);
+  EXPECT_ERROR("A/B/z");
+  svn_hash_sets(targets, "A/B/z", "foo");
+  EXPECT_LOCK("A/BB/f");
+  svn_hash_sets(targets, "A/BB/f", result->lock->token);
+  EXPECT_ERROR("X/z");
+  svn_hash_sets(targets, "X/z", "foo");
+
+#define EXPECT_NO_ERROR(path)                    \
+  result = svn_hash_gets(baton.results, (path)); \
+  SVN_TEST_ASSERT(result && !result->err)
+
+  apr_hash_clear(baton.results);
+
+  SVN_ERR(svn_ra_unlock(session, targets, FALSE, lock_cb, &baton, pool));
+
+  apr_hash_clear(targets);
+  EXPECT_NO_ERROR("A/B/f");
+  EXPECT_NO_ERROR("A/B/g");
+  EXPECT_ERROR("A/B/z");
+  EXPECT_NO_ERROR("A/BB/f");
+  EXPECT_ERROR("X/z");
+  EXPECT_ERROR("X/z");
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -339,5 +496,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test ra_svn tunnel callback check"),
     SVN_TEST_OPTS_PASS(tunnel_callback_test,
                        "test ra_svn tunnel creation callbacks"),
+    SVN_TEST_OPTS_PASS(lock_test,
+                       "lock multiple paths"),
     SVN_TEST_NULL
   };
