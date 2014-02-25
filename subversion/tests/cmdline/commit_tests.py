@@ -3015,20 +3015,64 @@ def commit_cp_with_deep_delete(sbox):
                                         None,
                                         wc_dir)
 
-@XFail()
 def commit_deep_deleted(sbox):
   "try to commit a deep descendant of a deleted node"
 
   sbox.build()
 
   sbox.simple_move('A', 'AA')
-  sbox.simple_rm('AA/D')
+
+  sbox.simple_propset('k', 'v', 'AA/D/G')
+
+  # Committing some added descendant returns a proper error
+  expected_err = ('svn: E200009: \'%s\' is not known to exist in the ' +
+                  'repository and is not part of the commit, yet its ' +
+                  'child \'%s\' is part of the commit') % (
+                    re.escape(os.path.abspath(sbox.ospath('AA'))),
+                    re.escape(os.path.abspath(sbox.ospath('AA/D/G'))))
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         None,
                                         None,
+                                        expected_err,
+                                        sbox.ospath('AA/D/G'))
+
+  sbox.simple_propdel('k', 'AA/D/G')
+  sbox.simple_rm('AA/D/G')
+
+  # But a delete fails..
+  # This used to trigger an assertion in Subversion 1.8.0-1.8.8, because
+  # the status walker couldn't find the repository path for AA/D/G
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         None,
-                                        sbox.ospath('AA/D'))
+                                        None,
+                                        expected_err,
+                                        sbox.ospath('AA/D/G'))
+
+  # And now commit like how a GUI client would do it, but forgetting the move
+  expected_err = ('svn: E200009: Cannot commit \'%s\' because it was moved ' +
+                  'from \'%s\' which is not part of the commit; both sides ' +
+                  'of the move must be committed together') % (
+                     re.escape(os.path.abspath(sbox.ospath('AA'))),
+                     re.escape(os.path.abspath(sbox.ospath('A'))))
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        expected_err,
+                                        '--depth', 'empty',
+                                        sbox.ospath('AA/D/G'),
+                                        sbox.ospath('AA'))
+
+
+  # And now how it works
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        None,
+                                        None,
+                                        [],
+                                        '--depth', 'empty',
+                                        sbox.ospath('AA/D/G'),
+                                        sbox.ospath('AA'),
+                                        sbox.ospath('A'))
 
 ########################################################################
 # Run the tests
