@@ -72,7 +72,7 @@ struct base_origin_t
 };
 
 /* Data for testing node_get_base and node_get_origin. */
-struct base_origin_t base_origin_subtests[] =
+static struct base_origin_t base_origin_subtests[] =
   {
     /* file copied onto nothing */
     { "A/C/copy1",  -1, "iota",   {"iota", 1} },

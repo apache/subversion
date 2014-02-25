@@ -59,8 +59,8 @@ fail(apr_pool_t *pool, const char *fmt, ...)
 
 /* Some of our own global variables, for simplicity.  Yes,
    simplicity. */
-const char *phrase_1 = "hello, ";
-const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
+static const char *phrase_1 = "hello, ";
+static const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
 
 
 

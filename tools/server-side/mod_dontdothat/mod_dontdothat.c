@@ -711,6 +711,8 @@ dontdothat_register_hooks(apr_pool_t *pool)
                            AP_FTYPE_RESOURCE);
 }
 
+extern module AP_MODULE_DECLARE_DATA dontdothat_module;
+
 module AP_MODULE_DECLARE_DATA dontdothat_module =
 {
   STANDARD20_MODULE_STUFF,

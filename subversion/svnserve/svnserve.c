@@ -538,12 +538,12 @@ serve_socket(connection_t *connection,
 
 /* allocate and recycle root pools for connection objects.
    There should be at most THREADPOOL_MAX_SIZE such pools. */
-svn_root_pools__t *connection_pools;
+static svn_root_pools__t *connection_pools;
 
 #if HAVE_THREADPOOLS
 
 /* The global thread pool serving all connections. */
-apr_thread_pool_t *threads;
+static apr_thread_pool_t *threads;
 
 /* Very simple load determination callback for serve_interruptable:
    With less than have the threads in THREADS in use, we can afford to

@@ -8132,7 +8132,7 @@ struct op_delete_many_baton_t {
   apr_array_header_t *rel_targets;
   svn_boolean_t delete_dir_externals;
   const svn_skel_t *work_items;
-} op_delete_many_baton_t;
+};
 
 static svn_error_t *
 op_delete_many_txn(void *baton,

@@ -66,7 +66,7 @@ struct test_file_definition_t
     char* created_path;
   };
 
-struct test_file_definition_t test_file_definitions_template[] =
+static struct test_file_definition_t test_file_definitions_template[] =
   {
     {"empty",                 "",      0},
     {"single_a",              "a",     1},

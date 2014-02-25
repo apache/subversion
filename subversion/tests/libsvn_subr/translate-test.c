@@ -48,7 +48,7 @@
 /*** Helpers ***/
 
 /* (Almost) all the tests share the same test data. */
-const char *lines[] =
+static const char *lines[] =
   {
     "Line 1: fairly boring subst test data... blah blah",
     "Line 2: fairly boring subst test data... blah blah.",

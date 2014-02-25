@@ -80,7 +80,7 @@ struct file_merge_baton {
 
   /* Pool for temporary allocations. */
   apr_pool_t *scratch_pool;
-} file_merge_baton;
+};
 
 /* Copy LEN lines from SOURCE_FILE to the MERGED_FILE, starting at
  * line START. The CURRENT_LINE is the current line in the source file.
