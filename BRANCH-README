@@ -1,0 +1,19 @@
+FSFS locking doesn't scale well as lock and unlock operate on single
+paths and every operation has to rewrite all the digests and the digest
+of '/' refers to every lock in the repository.  A long-term solution
+probably involves a repository upgrade to a new storage scheme but a
+short-term fix is to operate on multiple paths and reduce the number
+of times the digest files are written.
+
+Create new APIs that operate on multiple paths:
+
+  svn_fs_lock2
+  svn_fs_unlock2
+  svn_repos_fs_lock2
+  svn_repos_fs_unlock2
+
+For ra_local connect svn_ra__vtable_t.lock and unlock to the repos
+functions.
+
+For svnserver connect "lock-many" and "unlock-many" to the repos
+functions.
