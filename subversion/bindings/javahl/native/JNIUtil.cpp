@@ -206,7 +206,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 #ifdef WIN32
   {
     WCHAR ucs2_path[MAX_PATH];
-    char *utf8_path;
+    const char *utf8_path;
     const char *internal_path;
     svn_error_t *err;
     apr_pool_t *pool = svn_pool_create(g_pool);
