@@ -563,14 +563,16 @@ svn_fs_x__unparse_representation(representation_t *rep,
 {
   if (!rep->has_sha1)
     return svn_stringbuf_createf
-            (pool, "%ld %" APR_INT64_T_FMT " %" SVN_FILESIZE_T_FMT
+            (pool,
+             "%" APR_INT64_T_FMT " %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
              " %" SVN_FILESIZE_T_FMT " %s",
              rep->id.change_set, rep->id.number, rep->size,
              rep->expanded_size,
              format_digest(rep->md5_digest, svn_checksum_md5, FALSE, pool));
 
   return svn_stringbuf_createf
-          (pool, "%ld %" APR_INT64_T_FMT " %" SVN_FILESIZE_T_FMT
+          (pool,
+           "%" APR_INT64_T_FMT " %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
            " %" SVN_FILESIZE_T_FMT " %s %s",
            rep->id.change_set, rep->id.number, rep->size,
            rep->expanded_size,
