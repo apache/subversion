@@ -40,7 +40,7 @@
 #include "svn_path.h"
 #include "private/svn_fspath.h"
 
-module AP_MODULE_DECLARE_DATA dontdothat_module;
+extern module AP_MODULE_DECLARE_DATA dontdothat_module;
 
 typedef struct dontdothat_config_rec {
   const char *config_file;
@@ -710,8 +710,6 @@ dontdothat_register_hooks(apr_pool_t *pool)
                            NULL,
                            AP_FTYPE_RESOURCE);
 }
-
-extern module AP_MODULE_DECLARE_DATA dontdothat_module;
 
 module AP_MODULE_DECLARE_DATA dontdothat_module =
 {
