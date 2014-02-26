@@ -88,10 +88,21 @@ svn_error_t *svn_fs_x__file_length(svn_filesize_t *length,
                                    node_revision_t *noderev,
                                    apr_pool_t *pool);
 
-/* Return TRUE if the representation keys in A and B both point to the
-   same representation, else return FALSE. */
-svn_boolean_t svn_fs_x__noderev_same_rep_key(representation_t *a,
-                                             representation_t *b);
+/* Return TRUE if the representations in A and B have equal contents, else
+   return FALSE. */
+svn_boolean_t svn_fs_x__file_text_rep_equal(representation_t *a,
+                                            representation_t *b);
+
+/* Set *EQUAL to TRUE if the property representations in A and B within FS
+   have equal contents, else set it to FALSE.  If STRICT is not set, allow
+   for false negatives.
+   Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
+                                      svn_fs_t *fs,
+                                      node_revision_t *a,
+                                      node_revision_t *b,
+                                      svn_boolean_t strict,
+                                      apr_pool_t *scratch_pool);
 
 
 /* Return a copy of the representation REP allocated from POOL. */
