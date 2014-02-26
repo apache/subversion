@@ -264,7 +264,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * allow building with APR-2 (r1560586)
     * remove support for ASM Zlib from Windows build system (r1560864)
     * gen-make.py: new -D option (r1567046)
-    * prevent spurious failures in autoprop_tests.py (r1567752 et al)
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
