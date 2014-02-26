@@ -565,7 +565,7 @@ svn_repos_fs_lock2(apr_hash_t **results,
 
   err = svn_fs_lock2(&pre_results, repos->fs, pre_targets, comment,
                      is_dav_comment, expiration_date, steal_lock,
-                     iterpool, result_pool);
+                     result_pool, iterpool);
 
   /* Combine results so the caller can handle all the errors. */
   for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
@@ -698,7 +698,7 @@ svn_repos_fs_unlock2(apr_hash_t **results,
     }
 
   err = svn_fs_unlock2(&pre_results, repos->fs, pre_targets, break_lock,
-                       iterpool, result_pool);
+                       result_pool, iterpool);
 
   /* Combine results for all paths. */
   for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
