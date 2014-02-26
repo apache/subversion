@@ -74,6 +74,15 @@ del_lines_res = [
                  re.compile(r"  - with Cyrus SASL authentication"),
                  re.compile(r"  - using serf \d+\.\d+\.\d+"),
                  re.compile(r"\* fs_(base|fs) :"),
+
+                 # Remove 'svn --version' list of platform-specific
+                 # auth cache providers.
+                 re.compile(r"\* Wincrypt cache.*"),
+                 re.compile(r"\* Plaintext cache.*"),
+                 re.compile(r"\* Gnome Keyring"),
+                 re.compile(r"\* GPG-Agent"),
+                 re.compile(r"\* Mac OS X Keychain"),
+                 re.compile(r"\* Kwallet \(KDE\)"),
                 ]
 
 # This is a list of lines to search and replace text on.
