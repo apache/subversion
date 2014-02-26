@@ -1050,24 +1050,116 @@ svn_fs_fs__file_length(svn_filesize_t *length,
   return SVN_NO_ERROR;
 }
 
-svn_boolean_t
-svn_fs_fs__noderev_same_rep_key(representation_t *a,
-                                representation_t *b)
+svn_error_t *
+svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
+                               svn_fs_t *fs,
+                               node_revision_t *a,
+                               node_revision_t *b,
+                               svn_boolean_t strict,
+                               apr_pool_t *scratch_pool)
 {
-  if (a == b)
-    return TRUE;
+  svn_stream_t *contents_a, *contents_b;
+  representation_t *rep_a = a->data_rep;
+  representation_t *rep_b = b->data_rep;
+  svn_boolean_t a_empty = !rep_a || rep_a->expanded_size == 0;
+  svn_boolean_t b_empty = !rep_b || rep_b->expanded_size == 0;
 
-  if (a == NULL || b == NULL)
-    return FALSE;
+  /* This makes sure that neither rep will be NULL later on */
+  if (a_empty && b_empty)
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
 
-  if (a->item_index != b->item_index)
-    return FALSE;
+  if (a_empty != b_empty)
+    {
+      *equal = FALSE;
+      return SVN_NO_ERROR;
+    }
 
-  if (a->revision != b->revision)
-    return FALSE;
+  /* File text representations always know their checksums - even in a txn. */
+  if (memcmp(rep_a->md5_digest, rep_b->md5_digest, sizeof(rep_a->md5_digest)))
+    {
+      *equal = FALSE;
+      return SVN_NO_ERROR;
+    }
 
-  return memcmp(&a->uniquifier, &b->uniquifier, sizeof(a->uniquifier)) == 0;
+  /* Paranoia. Compare SHA1 checksums because that's the level of
+     confidence we require for e.g. the working copy. */
+  if (rep_a->has_sha1 && rep_b->has_sha1)
+    {
+      *equal = memcmp(rep_a->sha1_digest, rep_b->sha1_digest,
+                      sizeof(rep_a->sha1_digest)) == 0;
+      return SVN_NO_ERROR;
+    }
+
+  /* Old repositories may not have the SHA1 checksum handy.
+     This check becomes expensive.  Skip it unless explicitly required. */
+  if (!strict)
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_fs_fs__get_contents(&contents_a, fs, rep_a, TRUE,
+                                  scratch_pool));
+  SVN_ERR(svn_fs_fs__get_contents(&contents_b, fs, rep_b, TRUE,
+                                  scratch_pool));
+  SVN_ERR(svn_stream_contents_same2(equal, contents_a, contents_b,
+                                   scratch_pool));
+
+  return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
+                          svn_fs_t *fs,
+                          node_revision_t *a,
+                          node_revision_t *b,
+                          svn_boolean_t strict,
+                          apr_pool_t *scratch_pool)
+{
+  representation_t *rep_a = a->prop_rep;
+  representation_t *rep_b = b->prop_rep;
+  apr_hash_t *proplist_a;
+  apr_hash_t *proplist_b;
+
+  /* Mainly for a==b==NULL */
+  if (rep_a == rep_b)
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Committed property lists can be compared quickly */
+  if (   rep_a && rep_b
+      && !svn_fs_fs__id_txn_used(&rep_a->txn_id)
+      && !svn_fs_fs__id_txn_used(&rep_b->txn_id))
+    {
+      /* MD5 must be given. Having the same checksum is good enough for
+         accepting the prop lists as equal. */
+      *equal = memcmp(rep_a->md5_digest, rep_b->md5_digest,
+                      sizeof(rep_a->md5_digest)) == 0;
+      return SVN_NO_ERROR;
+    }
+
+  /* Skip the expensive bits unless we are in strict mode.
+     Simply assume that there is a different. */
+  if (!strict)
+    {
+      *equal = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  /* At least one of the reps has been modified in a txn.
+     Fetch and compare them. */
+  SVN_ERR(svn_fs_fs__get_proplist(&proplist_a, fs, a, scratch_pool));
+  SVN_ERR(svn_fs_fs__get_proplist(&proplist_b, fs, b, scratch_pool));
+
+  *equal = svn_fs__prop_lists_equal(proplist_a, proplist_b, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs_fs__file_checksum(svn_checksum_t **checksum,

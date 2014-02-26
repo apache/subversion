@@ -1603,7 +1603,8 @@ x_props_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
   SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_x__dag_things_different(changed_p, NULL, node1, node2);
+  return svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
+                                        FALSE, pool);
 }
 
 
@@ -1842,6 +1843,7 @@ merge(svn_stringbuf_t *conflict_p,
   */
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
+    svn_boolean_t same;
 
     /* Get node revisions for our id's. */
     SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id, pool));
@@ -1850,16 +1852,15 @@ merge(svn_stringbuf_t *conflict_p,
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
-       different contents.  But merge() isn't concerned with contents;
-       it doesn't do a brute-force comparison on textual contents, so
-       it won't do that here either.  Checking to see if the propkey
-       atoms are `equal' is enough. */
-    if (! svn_fs_x__noderev_same_rep_key(src_nr->prop_rep, anc_nr->prop_rep))
+       different contents. */
+    SVN_ERR(svn_fs_x__prop_rep_equal(&same, fs, src_nr, anc_nr, TRUE, pool));
+    if (! same)
       return conflict_err(conflict_p, target_path);
 
     /* The directory entries got changed in the repository but the directory
        properties did not. */
-    if (! svn_fs_x__noderev_same_rep_key(tgt_nr->prop_rep, anc_nr->prop_rep))
+    SVN_ERR(svn_fs_x__prop_rep_equal(&same, fs, tgt_nr, anc_nr, TRUE, pool));
+    if (! same)
       {
         /* There is an incoming prop change for this directory.
            We will accept it only if the directory changes were mere updates
@@ -3294,7 +3295,8 @@ x_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
   SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_x__dag_things_different(NULL, changed_p, node1, node2);
+  return svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
+                                        FALSE, pool);
 }
 
 

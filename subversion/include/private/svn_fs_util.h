@@ -221,6 +221,15 @@ svn_fs__compatible_version(svn_version_t **compatible_version,
                            apr_hash_t *config,
                            apr_pool_t *pool);
 
+/* Compare the property lists A and B using POOL for temporary allocations.
+   Return true iff both lists contain the same properties with the same
+   values.  A and B may be NULL in which case they will be equal to and
+   empty list. */
+svn_boolean_t
+svn_fs__prop_lists_equal(apr_hash_t *a,
+                         apr_hash_t *b,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
