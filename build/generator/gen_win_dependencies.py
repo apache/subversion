@@ -51,7 +51,7 @@ class SVNCommonLibrary:
   def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               is_src=False, defines=[], forced_includes=[], extra_bin=[]):
+               defines=[], forced_includes=[], extra_bin=[]):
     self.name = name
     if include_dirs:
       self.include_dirs = include_dirs if isinstance(include_dirs, list) \
@@ -64,7 +64,6 @@ class SVNCommonLibrary:
     self.version = version
     self.dll_dir = dll_dir
     self.dll_name = dll_name
-    self.is_src = is_src
 
     self.forced_includes = forced_includes if not forced_includes \
                                            or isinstance(forced_includes, list) \
@@ -692,8 +691,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # We have an install location
       inc_path = os.path.join(self.zlib_path, 'include')
       lib_path = os.path.join(self.zlib_path, 'lib')
-      is_src = False
-      
+
       # Different build options produce different library names :(
       if os.path.exists(os.path.join(lib_path, 'zlibstatic.lib')):
         # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
@@ -705,17 +703,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       # We have a source location
       inc_path = lib_path = self.zlib_path
-      is_src = True
       lib_name = 'zlibstat.lib'
       debug_lib_name = 'zlibstatD.lib'
-      
+
     version_file_path = os.path.join(inc_path, 'zlib.h')
-    
+
     if not os.path.exists(version_file_path):
       sys.stderr.write("ERROR: '%s' not found.\n" % version_file_path);
       sys.stderr.write("Use '--with-zlib' option to configure ZLib location.\n");
       sys.exit(1)
-      
+
     txt = open(version_file_path).read()
     vermatch = re.search(
                 r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"',
@@ -733,8 +730,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     self._libraries['zlib'] = SVNCommonLibrary('zlib', inc_path, lib_path, lib_name,
                                                 self.zlib_version,
-                                                debug_lib_name=debug_lib_name,
-                                                is_src=is_src)
+                                                debug_lib_name=debug_lib_name)
 
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
@@ -1177,7 +1173,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_serf(self, show_warning):
     "Check if serf and its dependencies are available"
 
-    minimal_serf_version = (1, 2, 1)
+    minimal_serf_version = (1, 3, 4)
 
     if not self.serf_path:
       return
@@ -1186,41 +1182,26 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if os.path.isfile(os.path.join(inc_dir, 'serf.h')):
       # Source layout
-      version = self._get_serf_version(inc_dir)
-
-      if version < (1, 3, 0):
-        lib_dir = os.path.join(self.serf_path, 'Release')
-        debug_lib_dir = os.path.join(self.serf_path, 'Debug')
-        is_src = True
-      else:
-        lib_dir = self.serf_path
-        debug_lib_dir = None
-        inc_dir = self.serf_path
-        is_src = False
+      lib_dir = self.serf_path
+      debug_lib_dir = None
+      inc_dir = self.serf_path
     elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-1/serf.h')):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-1')
-      version = self._get_serf_version(inc_dir)
       lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
-      is_src = False
     elif os.path.isfile(os.path.join(self.serf_path, 'include/serf-2/serf.h')):
       # Install layout
       inc_dir = os.path.join(self.serf_path, 'include/serf-2')
-      version = self._get_serf_version(inc_dir)
       lib_dir = os.path.join(self.serf_path, 'lib')
       debug_lib_dir = None
-      is_src = False
     else:
       if show_warning:
         print('WARNING: \'serf.h\' not found')
         print("Use '--with-serf' to configure serf location.");
       return
 
-    if is_src and 'openssl' not in self._libraries:
-      if show_warning:
-        print('openssl not found, serf and ra_serf will not be built')
-      return
+    version = self._get_serf_version(inc_dir)
     serf_version = '.'.join(str(v) for v in version)
 
     if version < minimal_serf_version:
@@ -1242,7 +1223,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
                                                 lib_name, serf_version,
                                                 debug_lib_dir=debug_lib_dir,
-                                                is_src=is_src,
                                                 defines=defines)
 
   def _find_sasl(self, show_warning):
