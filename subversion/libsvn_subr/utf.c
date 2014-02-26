@@ -184,15 +184,9 @@ static APR_INLINE void*
 atomic_swap(void * volatile * mem, void *new_value)
 {
 #if APR_HAS_THREADS
-#if APR_VERSION_AT_LEAST(1,3,0)
   /* Cast is necessary because of APR bug:
      https://issues.apache.org/bugzilla/show_bug.cgi?id=50731 */
    return apr_atomic_xchgptr((volatile void **)mem, new_value);
-#else
-   /* old APRs don't support atomic swaps. Simply return the
-    * input to the caller for further proccessing. */
-   return new_value;
-#endif
 #else
    /* no threads - no sync. necessary */
    void *old_value = (void*)*mem;

@@ -570,9 +570,7 @@ body_done_fn(void *baton)
         */
 
       SVN_ERR(svn_io_file_flush(bcb->file, bcb->scratch_pool));
-#if APR_VERSION_AT_LEAST(1, 3, 0)
       apr_file_buffer_set(bcb->file, NULL, 0);
-#endif
     }
   else if (bcb->collect_bucket)
     bcb->all_data = body_allocate_all(bcb, bcb->result_pool);

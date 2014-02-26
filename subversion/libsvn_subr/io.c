@@ -3578,8 +3578,6 @@ svn_io_file_aligned_seek(apr_file_t *file,
   if (block_size == 0)
     block_size = apr_default_buffer_size;
 
-  /* on old APRs, we are simply stuck with 4k blocks */
-#if APR_VERSION_AT_LEAST(1,3,0)
   file_buffer_size = apr_file_buffer_size_get(file);
 
   /* don't try to set a buffer size for non-buffered files! */
@@ -3600,7 +3598,6 @@ svn_io_file_aligned_seek(apr_file_t *file,
       fill_buffer = TRUE;
     }
   else
-#endif
     {
       aligned_offset = offset - (offset % file_buffer_size);
 
