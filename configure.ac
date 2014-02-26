@@ -96,7 +96,7 @@ dnl   now generating errors instead of silently ignoring
 dnl   them.  Only .7 and later can guarantee repository
 dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\. 2\."]
+APR_VER_REGEXES=["1\.[345]\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -111,7 +111,7 @@ if test `expr $apr_version : 2` -ne 0; then
   AC_SUBST(SVN_APRUTIL_LIBS)
 else
   svn_lib_ver=0
-  APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+  APU_VER_REGEXES=["1\.[345]\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
 fi
 SVN_LT_SOVERSION="-version-info $svn_lib_ver"
