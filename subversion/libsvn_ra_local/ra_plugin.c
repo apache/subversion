@@ -1408,7 +1408,7 @@ svn_ra_local__lock(svn_ra_session_t *session,
   err = svn_repos_fs_lock2(&results, sess->repos, targets, comment,
                            FALSE /* not DAV comment */,
                            0 /* no expiration */, force,
-                           pool);
+                           pool, iterpool);
 
   /* Make sure we handle all locking errors in results hash. */
   for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))
@@ -1461,7 +1461,8 @@ svn_ra_local__unlock(svn_ra_session_t *session,
       svn_hash_sets(targets, abs_path, token);
     }
 
-  err = svn_repos_fs_unlock2(&results, sess->repos, targets, force, pool);
+  err = svn_repos_fs_unlock2(&results, sess->repos, targets, force,
+                             pool, iterpool);
 
   /* Make sure we handle all locking errors in results hash. */
   for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))

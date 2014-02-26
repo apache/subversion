@@ -2775,7 +2775,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   err = svn_repos_fs_lock2(&results, b->repository->repos, targets,
                            comment, FALSE,
                            0, /* No expiration time. */
-                           steal_lock, pool);
+                           steal_lock, pool, subpool);
 
   /* The client expects results in the same order as paths were supplied. */
   for (i = 0; i < path_revs->nelts; ++i)
@@ -2943,7 +2943,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   err = svn_repos_fs_unlock2(&results, b->repository->repos, targets,
-                             break_lock, pool);
+                             break_lock, pool, subpool);
 
   /* Return results in the same order as the paths were supplied. */
   for (i = 0; i < unlock_tokens->nelts; ++i)
