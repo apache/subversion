@@ -17,3 +17,25 @@ functions.
 
 For svnserver connect "lock-many" and "unlock-many" to the repos
 functions.
+
+For ra_local, svnserve and mod_dav_svn connect the server-side
+unlocking after a commit to the repos functions.
+
+
+Some performance measurements: I'm testing commands such as:
+
+   svn lock   wc/*.jpg
+   svn unlock wc/*.jpg
+   svn commit wc         # without --no-unlock
+
+where the commands modify 1,000 locks.  With trunk these commands take
+over 0.5s in a repository that has no other locks, and over 20s in a
+repository that has 99,000 locks spread over other branches.  With the
+new code the commands take less than 0.3s with no other locks and less
+than 0.5s with 99,000 other locks.
+
+Note that the commit improvement applies to all RA layers but the lock
+and unlock improvements do not apply to DAV since the DAV protocol
+uses per-path LOCK and UNLOCK requests.  To get the lock and unlock
+improvements over DAV will require adding some form of multiple-path
+requests to the protocol.
