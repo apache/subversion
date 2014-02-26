@@ -37,7 +37,6 @@
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
-#include "private/svn_string_private.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
@@ -750,7 +749,7 @@ request_body_to_string(svn_string_t **request_str,
   content_length_str = apr_table_get(r->headers_in, "Content-Length");
   if (content_length_str)
     {
-      if (svn__strtoff(&content_length, content_length_str, &endp, 10)
+      if (apr_strtoff(&content_length, content_length_str, &endp, 10)
           || endp == content_length_str || *endp || content_length < 0)
         {
           ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "Invalid Content-Length");
