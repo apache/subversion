@@ -58,18 +58,8 @@
 #include "private/svn_mutex.h"
 #include "private/svn_subr_private.h"
 
-/* Alas! old APR-Utils don't provide thread pools */
 #if APR_HAS_THREADS
-#  if APR_VERSION_AT_LEAST(1,3,0)
 #    include <apr_thread_pool.h>
-#    define HAVE_THREADPOOLS 1
-#    define THREAD_ERROR_MSG _("Can't push task")
-#  else
-#    define HAVE_THREADPOOLS 0
-#    define THREAD_ERROR_MSG _("Can't create thread")
-#  endif
-#else
-#  define HAVE_THREADPOOLS 0
 #endif
 
 #include "winservice.h"
@@ -540,8 +530,6 @@ serve_socket(connection_t *connection,
    There should be at most THREADPOOL_MAX_SIZE such pools. */
 static svn_root_pools__t *connection_pools;
 
-#if HAVE_THREADPOOLS
-
 /* The global thread pool serving all connections. */
 static apr_thread_pool_t *threads;
 
@@ -585,26 +573,6 @@ static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
     
   return NULL;
 }
-
-#else
-
-/* Fully serve the connection given by DATA. */
-static void * APR_THREAD_FUNC serve_thread(apr_thread_t *tid, void *data)
-{
-  struct connection_t *connection = data;
-  apr_pool_t *pool = svn_root_pools__acquire_pool(connection_pools);
-
-  /* serve_socket() logs any error it returns, so ignore it. */
-  svn_error_clear(serve_socket(connection, pool));
-
-  svn_root_pools__release_pool(pool, connection_pools);
-
-  /* destroy the connection object */
-  close_connection(connection);
-
-  return NULL;
-}
-#endif
 
 #endif
 
@@ -667,10 +635,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_status_t status;
 #ifndef WIN32
   apr_proc_t proc;
-#endif
-#if APR_HAS_THREADS && !HAVE_THREADPOOLS
-  apr_threadattr_t *tattr;
-  apr_thread_t *tid;
 #endif
   svn_boolean_t is_multi_threaded;
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
@@ -1224,9 +1188,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
 #if APR_HAS_THREADS
   SVN_ERR(svn_root_pools__create(&connection_pools));
-#endif
 
-#if HAVE_THREADPOOLS
   if (handling_mode == connection_mode_thread)
     {
       /* create the thread pool */
@@ -1295,26 +1257,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 #if APR_HAS_THREADS
           attach_connection(connection);
 
-#if HAVE_THREADPOOLS
           status = apr_thread_pool_push(threads, serve_thread, connection,
                                         0, NULL);
-#else
-          status = apr_threadattr_create(&tattr, connection->pool);
           if (status)
             {
-              return svn_error_wrap_apr(status, _("Can't create threadattr"));
-            }
-          status = apr_threadattr_detach_set(tattr, 1);
-          if (status)
-            {
-              return svn_error_wrap_apr(status, _("Can't set detached state"));
-            }
-          status = apr_thread_create(&tid, tattr, serve_thread, connection,
-                                     connection->pool);
-#endif
-          if (status)
-            {
-              return svn_error_wrap_apr(status, THREAD_ERROR_MSG);
+              return svn_error_wrap_apr(status, _("Can't push task"));
             }
 #endif
           break;
@@ -1357,7 +1304,7 @@ main(int argc, const char *argv[])
       svn_cmdline_handle_exit_error(err, NULL, "svnserve: ");
     }
 
-#if HAVE_THREADPOOLS
+#if APR_HAS_THREADS
   /* Explicitly wait for all threads to exit.  As we found out with similar
      code in our C test framework, the memory pool cleanup below cannot be
      trusted to do the right thing. */
