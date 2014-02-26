@@ -224,15 +224,19 @@ fi
 if [ ${MODULE_PATH:+set} ]; then
     MOD_DAV_SVN="$MODULE_PATH/mod_dav_svn.so"
     MOD_AUTHZ_SVN="$MODULE_PATH/mod_authz_svn.so"
+    MOD_DONTDOTHAT="$MODULE_PATH/mod_dontdothat.so"
 else
     MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
     MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
+    MOD_DONTDOTHAT="$ABS_BUILDDIR/tools/server-side/mod_dontdothat/.libs/mod_dontdothat.so"
 fi
 
 [ -r "$MOD_DAV_SVN" ] \
   || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+[ -r "$MOD_DONTDOTHAT" ] \
+  || fail "dontdothat_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
 for d in "$ABS_BUILDDIR"/subversion/*/.libs; do
   if [ -z "$BUILDDIR_LIBRARY_PATH" ]; then
@@ -403,6 +407,14 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 
 touch $HTTPD_MIME_TYPES
 
+DONTDOTHAT="$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/dontdothat"
+
+cat >  "$DONTDOTHAT" <<__EOF__
+[recursive-actions]
+/ = deny
+
+__EOF__
+
 cat > "$HTTPD_CFG" <<__EOF__
 $LOAD_MOD_MPM
 $LOAD_MOD_SSL
@@ -419,6 +431,7 @@ $LOAD_MOD_AUTHZ_CORE
 $LOAD_MOD_AUTHZ_USER
 $LOAD_MOD_AUTHZ_HOST
 LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
+LoadModule          dontdothat_module "$MOD_DONTDOTHAT"
 
 __EOF__
 
@@ -497,6 +510,19 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /ddt-test-work/repositories>
+  DAV               svn
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  AuthType          Basic
+  AuthName          "Subversion Repository"
+  AuthUserFile      $HTTPD_USERS
+  Require           valid-user
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
+  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  ${SVN_PATH_AUTHZ_LINE}
+  DontDoThatConfigFile "$DONTDOTHAT"
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
