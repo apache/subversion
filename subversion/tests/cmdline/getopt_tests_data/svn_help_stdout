@@ -10,6 +10,7 @@ command, it recurses on the current directory (inclusive) by default.
 
 Available subcommands:
    add
+   auth
    blame (praise, annotate, ann)
    cat
    changelist (cl)
