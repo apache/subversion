@@ -123,7 +123,7 @@ dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 dnl Search for serf
-SVN_LIB_SERF(1,2,1)
+SVN_LIB_SERF(1,3,4)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
