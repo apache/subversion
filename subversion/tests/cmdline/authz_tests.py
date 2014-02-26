@@ -1533,7 +1533,6 @@ def authz_del_from_subdir(sbox):
 
 
 @SkipUnless(svntest.main.is_ra_type_dav) # dontdothat is dav only
-@SkipUnless(svntest.main.is_os_windows) # until the buildbots are configured
 def log_diff_dontdothat(sbox):
   "log --diff on dontdothat"
   sbox.build(create_wc = False)
