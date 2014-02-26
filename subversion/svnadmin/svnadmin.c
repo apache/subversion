@@ -2031,6 +2031,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *fs_path = "/";
   apr_hash_t *locks;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
@@ -2055,26 +2056,32 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       svn_lock_t *lock = svn__apr_hash_index_val(hi);
       int comment_lines = 0;
 
-      cr_date = svn_time_to_human_cstring(lock->creation_date, pool);
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(check_cancel(NULL));
+
+      cr_date = svn_time_to_human_cstring(lock->creation_date, iterpool);
 
       if (lock->expiration_date)
-        exp_date = svn_time_to_human_cstring(lock->expiration_date, pool);
+        exp_date = svn_time_to_human_cstring(lock->expiration_date, iterpool);
 
       if (lock->comment)
         comment_lines = svn_cstring_count_newlines(lock->comment) + 1;
 
-      SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"), path));
-      SVN_ERR(svn_cmdline_printf(pool, _("UUID Token: %s\n"), lock->token));
-      SVN_ERR(svn_cmdline_printf(pool, _("Owner: %s\n"), lock->owner));
-      SVN_ERR(svn_cmdline_printf(pool, _("Created: %s\n"), cr_date));
-      SVN_ERR(svn_cmdline_printf(pool, _("Expires: %s\n"), exp_date));
-      SVN_ERR(svn_cmdline_printf(pool,
+      SVN_ERR(svn_cmdline_printf(iterpool, _("Path: %s\n"), path));
+      SVN_ERR(svn_cmdline_printf(iterpool, _("UUID Token: %s\n"), lock->token));
+      SVN_ERR(svn_cmdline_printf(iterpool, _("Owner: %s\n"), lock->owner));
+      SVN_ERR(svn_cmdline_printf(iterpool, _("Created: %s\n"), cr_date));
+      SVN_ERR(svn_cmdline_printf(iterpool, _("Expires: %s\n"), exp_date));
+      SVN_ERR(svn_cmdline_printf(iterpool,
                                  Q_("Comment (%i line):\n%s\n\n",
                                     "Comment (%i lines):\n%s\n\n",
                                     comment_lines),
                                  comment_lines,
                                  lock->comment ? lock->comment : ""));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
