@@ -1957,7 +1957,7 @@ merge(svn_stringbuf_t *conflict_p,
                                                s_entry->id,
                                                s_entry->kind,
                                                txn_id,
-                                               iterpool));
+                                               pool));
             }
           else
             {
