@@ -1101,6 +1101,7 @@ unlock_body(void *baton, apr_pool_t *pool)
                   apr_size_t len = info->component - info->path;
 
                   if (last_path
+                      && strcmp(last_path, "/")
                       && (strncmp(last_path, info->path, len)
                           || strlen(last_path) != len))
                     {
