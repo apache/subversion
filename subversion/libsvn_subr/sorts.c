@@ -471,10 +471,10 @@ svn_priority_queue__pop(svn_priority_queue__t *queue)
 {
   if (queue->elements->nelts)
     {
-      memcpy(queue->elements->elts,
-             queue->elements->elts + (queue->elements->nelts - 1)
-                                   * queue->elements->elt_size,
-             queue->elements->elt_size);
+      memmove(queue->elements->elts,
+              queue->elements->elts
+              + (queue->elements->nelts - 1) * queue->elements->elt_size,
+              queue->elements->elt_size);
       --queue->elements->nelts;
       heap_bubble_up(queue, 0);
     }
