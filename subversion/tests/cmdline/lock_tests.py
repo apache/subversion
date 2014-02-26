@@ -1683,7 +1683,7 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
   # Make sure the unlock operation fails as pre-unlock hook blocks it.
   expected_unlock_fail_err_re = ".*error text"
   svntest.actions.run_and_verify_svn2(None, None, expected_unlock_fail_err_re,
-                                      1, 'unlock', pi_path)
+                                      0, 'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -1932,31 +1932,61 @@ def lock_hook_messages(sbox):
   svntest.actions.create_failing_hook(repo_dir, "pre-lock", error_msg)
   svntest.actions.create_failing_hook(repo_dir, "pre-unlock", error_msg)
 
-  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
-                                     None, [], svntest.verify.AnyOutput,
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn2(
+                                     None, [], svntest.verify.AnyOutput, 0,
                                      'lock', mu_url)
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
   expected_err = [
-    'svn: E165001: ' + svntest.actions.hook_failure_message('pre-lock'),
+    'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-lock'),
     error_msg + "\n",
   ]
   svntest.verify.compare_and_display_lines(None, 'STDERR',
                                            expected_err, actual_stderr)
 
 
-  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
-                                     None, [], svntest.verify.AnyOutput,
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn2(
+                                     None, [], svntest.verify.AnyOutput, 0,
                                      'unlock', iota_url)
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
   expected_err = [
-    'svn: E165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
+    'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
     error_msg + "\n",
   ]
   svntest.verify.compare_and_display_lines(None, 'STDERR',
                                            expected_err, actual_stderr)
 
+
+@XFail(svntest.main.is_ra_type_dav)
+def failing_post_hooks(sbox):
+  "locking with failing post-lock and post-unlock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  svntest.actions.create_failing_hook(repo_dir, "post-lock", "error text")
+  svntest.actions.create_failing_hook(repo_dir, "post-unlock", "error text")
+
+  pi_path = sbox.ospath('A/D/G/pi')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  expected_fail_err_re = ".*error text"
+  
+  # Failing post-lock doesn't stop lock being created.
+  svntest.actions.run_and_verify_svn2(None, "'pi' locked by user",
+                                      expected_fail_err_re, 1,
+                                      'lock', '-m', '', pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+
+  # Failing post-unlock doesn't stop lock being removed.
+  svntest.actions.run_and_verify_svn2(None, "'pi' unlocked",
+                                      expected_fail_err_re, 1,
+                                      'unlock', pi_path)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -2013,6 +2043,7 @@ test_list = [ None,
               drop_locks_on_parent_deletion,
               copy_with_lock,
               lock_hook_messages,
+              failing_post_hooks,
             ]
 
 if __name__ == '__main__':
