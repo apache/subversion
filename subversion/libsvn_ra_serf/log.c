@@ -475,9 +475,10 @@ create_log_body(serf_bucket_t **body_bkt,
 
   if (log_ctx->move_behavior != svn_move_behavior_no_moves)
     {
+      const char *value = svn_move_behavior_to_word(log_ctx->move_behavior);
       svn_ra_serf__add_tag_buckets(buckets,
                                    "S:move-behavior",
-                                   apr_ltoa(pool, log_ctx->move_behavior),
+                                   value,
                                    alloc);
     }
 

@@ -1674,13 +1674,13 @@ perform_ra_svn_log(svn_error_t **outer_error,
           else
             want_custom_revprops = TRUE;
         }
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)n)",
-                                      (apr_uint64_t) move_behavior));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)w)",
+                                svn_move_behavior_to_word(move_behavior)));
     }
   else
     {
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w()n)", "all-revprops",
-                                      (apr_uint64_t) move_behavior));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!w()w)", "all-revprops",
+                                svn_move_behavior_to_word(move_behavior)));
 
       want_author = TRUE;
       want_date = TRUE;
