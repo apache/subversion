@@ -409,28 +409,35 @@ deltify_etc(const svn_commit_info_t *commit_info,
   /* Maybe unlock the paths. */
   if (deb->lock_tokens)
     {
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_pool_t *subpool = svn_pool_create(scratch_pool);
+      apr_hash_t *targets = apr_hash_make(subpool);
+      apr_hash_t *results;
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(scratch_pool, deb->lock_tokens); hi;
+      for (hi = apr_hash_first(subpool, deb->lock_tokens); hi;
            hi = apr_hash_next(hi))
         {
           const void *relpath = svn__apr_hash_index_key(hi);
           const char *token = svn__apr_hash_index_val(hi);
           const char *fspath;
 
-          svn_pool_clear(iterpool);
-
-          fspath = svn_fspath__join(deb->fspath_base, relpath, iterpool);
-
-          /* We may get errors here if the lock was broken or stolen
-             after the commit succeeded.  This is fine and should be
-             ignored. */
-          svn_error_clear(svn_repos_fs_unlock(deb->repos, fspath, token,
-                                              FALSE, iterpool));
+          fspath = svn_fspath__join(deb->fspath_base, relpath, subpool);
+          svn_hash_sets(targets, fspath, token);
         }
 
-      svn_pool_destroy(iterpool);
+      /* We may get errors here if the lock was broken or stolen
+         after the commit succeeded.  This is fine and should be
+         ignored. */
+      svn_error_clear(svn_repos_fs_unlock2(&results, deb->repos, targets,
+                                           FALSE, subpool, subpool));
+
+      for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+        {
+          svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+          svn_error_clear(result->err);
+        }
+
+      svn_pool_destroy(subpool);
     }
 
   /* But, deltification shouldn't be stopped just because someone's

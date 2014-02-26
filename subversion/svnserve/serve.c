@@ -1353,37 +1353,45 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
                                  apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *iterpool;
-
-  iterpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *targets = apr_hash_make(subpool);
+  apr_hash_t *results;
+  apr_hash_index_t *hi;
+  svn_error_t *err;
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
       svn_ra_svn_item_t *item, *path_item, *token_item;
       const char *path, *token, *full_path;
-      svn_error_t *err;
-      svn_pool_clear(iterpool);
 
       item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
       path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
       token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
 
       path = path_item->u.string->data;
-      token = token_item->u.string->data;
-
       full_path = svn_fspath__join(sb->repository->fs_path->data,
-                                   svn_relpath_canonicalize(path, iterpool),
-                                   iterpool);
-
-      /* The lock may have become defunct after the commit, so ignore such
-         errors. */
-      err = svn_repos_fs_unlock(sb->repository->repos, full_path, token,
-                                FALSE, iterpool);
-      log_error(err, sb);
-      svn_error_clear(err);
+                                   svn_relpath_canonicalize(path, subpool),
+                                   subpool);
+      token = token_item->u.string->data;
+      svn_hash_sets(targets, full_path, token);
     }
 
-  svn_pool_destroy(iterpool);
+
+  /* The lock may have become defunct after the commit, so ignore such
+     errors. */
+  err = svn_repos_fs_unlock2(&results, sb->repository->repos, targets,
+                             FALSE, subpool, subpool);
+  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+
+      log_error(result->err, sb);
+      svn_error_clear(result->err);
+    }
+  log_error(err, sb);
+  svn_error_clear(err);
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
