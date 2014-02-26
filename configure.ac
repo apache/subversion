@@ -140,7 +140,7 @@ fi
 
 
 dnl Find Apache with a recent-enough magic module number
-SVN_FIND_APACHE(20020903)
+SVN_FIND_APACHE(20051115)
 
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
