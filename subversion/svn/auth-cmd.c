@@ -239,7 +239,7 @@ load_cert(serf_ssl_certificate_t **cert,
       
       err = svn_error_wrap_apr(status, _("serf error: %s"),
                                serf_error_string(status));
-      svn_handle_warning2(stderr, err, "svnauth: ");
+      svn_handle_warning2(stderr, err, "svn: ");
       svn_error_clear(err);
 
       *cert = NULL;
