@@ -2971,7 +2971,7 @@ get_logs(const svn_test_opts_t *opts,
                                          "Log with start=%ld,end=%ld,limit=%d "
                                          "returned %ld entries (expected %ld)",
                                          start_arg, end_arg, limit,
-                                         num_logs, max_logs);
+                                         num_logs, num_expected);
             }
         }
     }
