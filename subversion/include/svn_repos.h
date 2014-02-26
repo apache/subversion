@@ -2207,6 +2207,7 @@ svn_repos_fs_lock2(apr_hash_t **results,
                    svn_boolean_t is_dav_comment,
                    apr_time_t expiration_date,
                    svn_boolean_t steal_lock,
+                   apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
 /** Similar to svn_repos_fs_lock2() but locks only a single path.
@@ -2243,7 +2244,8 @@ svn_repos_fs_unlock2(apr_hash_t **results,
                      svn_repos_t *repos,
                      apr_hash_t *targets,
                      svn_boolean_t break_lock,
-                     apr_pool_t *pool);
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_repos_fs_unlock(svn_repos_t *repos,

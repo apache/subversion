@@ -507,22 +507,24 @@ svn_repos_fs_lock2(apr_hash_t **results,
                    svn_boolean_t is_dav_comment,
                    apr_time_t expiration_date,
                    svn_boolean_t steal_lock,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
   apr_hash_t *hooks_env;
-  apr_hash_t *pre_targets = apr_hash_make(pool);
+  apr_hash_t *pre_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   apr_hash_t *pre_results;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  *results = apr_hash_make(pool);
+  *results = apr_hash_make(result_pool);
 
   /* Parse the hooks-env file (if any). */
   SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
 
   SVN_ERR(svn_fs_get_access(&access_ctx, repos->fs));
   if (access_ctx)
@@ -535,18 +537,20 @@ svn_repos_fs_lock2(apr_hash_t **results,
 
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock2() from happening for that path. */
-  for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
       const char *new_token;
       svn_fs_lock_target_t *target;
       const char *path = svn__apr_hash_index_key(hi);
 
+      svn_pool_clear(iterpool);
+
       err = svn_repos__hooks_pre_lock(repos, hooks_env, &new_token, path,
-                                      username, comment, steal_lock, pool);
+                                      username, comment, steal_lock, iterpool);
       if (err)
         {
           svn_fs_lock_result_t *result
-            = apr_palloc(pool, sizeof(svn_fs_lock_result_t));
+            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
           result->lock = NULL;
           result->err = err;
           svn_hash_sets(*results, path, result);
@@ -561,10 +565,10 @@ svn_repos_fs_lock2(apr_hash_t **results,
 
   err = svn_fs_lock2(&pre_results, repos->fs, pre_targets, comment,
                      is_dav_comment, expiration_date, steal_lock,
-                     pool, pool);
+                     iterpool, result_pool);
 
   /* Combine results so the caller can handle all the errors. */
-  for (hi = apr_hash_first(pool, pre_results); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
     svn_hash_sets(*results, svn__apr_hash_index_key(hi),
                   svn__apr_hash_index_val(hi));
 
@@ -573,9 +577,9 @@ svn_repos_fs_lock2(apr_hash_t **results,
     return svn_error_trace(err);
 
   /* Extract paths that were successfully locked for the post-lock. */
-  paths = apr_array_make(pool, apr_hash_count(pre_results),
+  paths = apr_array_make(iterpool, apr_hash_count(pre_results),
                          sizeof(const char *));
-  for (hi = apr_hash_first(pool, pre_results); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
       svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
@@ -584,10 +588,12 @@ svn_repos_fs_lock2(apr_hash_t **results,
         APR_ARRAY_PUSH(paths, const char *) = path;
     }
 
-  err = svn_repos__hooks_post_lock(repos, hooks_env, paths, username, pool);
+  err = svn_repos__hooks_post_lock(repos, hooks_env, paths, username, iterpool);
   if (err)
     err = svn_error_create(SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED, err,
                            "Locking succeeded, but post-lock hook failed");
+
+  svn_pool_destroy(iterpool);
 
   return err;
 }
@@ -614,7 +620,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
 
   err = svn_repos_fs_lock2(&results, repos, targets, comment, is_dav_comment,
                            expiration_date, steal_lock,
-                           pool);
+                           pool, pool);
 
   if (apr_hash_count(results))
     {
@@ -639,22 +645,24 @@ svn_repos_fs_unlock2(apr_hash_t **results,
                      svn_repos_t *repos,
                      apr_hash_t *targets,
                      svn_boolean_t break_lock,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
   apr_hash_t *hooks_env;
-  apr_hash_t *pre_targets = apr_hash_make(pool);
+  apr_hash_t *pre_targets = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
   apr_array_header_t *paths;
   apr_hash_t *pre_results;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  * results = apr_hash_make(pool);
+  *results = apr_hash_make(result_pool);
 
   /* Parse the hooks-env file (if any). */
   SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
 
   SVN_ERR(svn_fs_get_access(&access_ctx, repos->fs));
   if (access_ctx)
@@ -667,17 +675,19 @@ svn_repos_fs_unlock2(apr_hash_t **results,
 
   /* Run pre-unlock hook.  This could throw error, preventing
      svn_fs_unlock2() from happening for that path. */
-  for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
       const char *token = svn__apr_hash_index_val(hi);
 
+      svn_pool_clear(iterpool);
+
       err = svn_repos__hooks_pre_unlock(repos, hooks_env, path, username, token,
-                                        break_lock, pool);
+                                        break_lock, iterpool);
       if (err)
         {
           svn_fs_lock_result_t *result
-            = apr_palloc(pool, sizeof(svn_fs_lock_result_t));
+            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
           result->lock = NULL;
           result->err = err;
           svn_hash_sets(*results, path, result);
@@ -688,10 +698,10 @@ svn_repos_fs_unlock2(apr_hash_t **results,
     }
 
   err = svn_fs_unlock2(&pre_results, repos->fs, pre_targets, break_lock,
-                       pool, pool);
+                       iterpool, result_pool);
 
   /* Combine results for all paths. */
-  for (hi = apr_hash_first(pool, pre_results); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
     svn_hash_sets(*results, svn__apr_hash_index_key(hi),
                   svn__apr_hash_index_val(hi));
 
@@ -699,9 +709,9 @@ svn_repos_fs_unlock2(apr_hash_t **results,
     return svn_error_trace(err);
 
   /* Extract paths that were successfully unlocked for the post-unlock. */
-  paths = apr_array_make(pool, apr_hash_count(pre_results),
+  paths = apr_array_make(iterpool, apr_hash_count(pre_results),
                          sizeof(const char *));
-  for (hi = apr_hash_first(pool, pre_results); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(iterpool, pre_results); hi; hi = apr_hash_next(hi))
     {
       const char *path = svn__apr_hash_index_key(hi);
       svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
@@ -712,9 +722,11 @@ svn_repos_fs_unlock2(apr_hash_t **results,
   
 
   if ((err = svn_repos__hooks_post_unlock(repos, hooks_env, paths,
-                                          username, pool)))
+                                          username, iterpool)))
     err = svn_error_create(SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED, err,
                            _("Unlock succeeded, but post-unlock hook failed"));
+
+  svn_pool_destroy(iterpool);
 
   return err;
 }
@@ -734,7 +746,7 @@ svn_repos_fs_unlock(svn_repos_t *repos,
 
   svn_hash_sets(targets, path, token);
 
-  err = svn_repos_fs_unlock2(&results, repos, targets, break_lock, pool);
+  err = svn_repos_fs_unlock2(&results, repos, targets, break_lock, pool, pool);
 
   if (apr_hash_count(results))
     {
