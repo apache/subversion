@@ -336,6 +336,7 @@ HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_ACCESS_LOG="$HTTPD_ROOT/access_log"
 HTTPD_ERROR_LOG="$HTTPD_ROOT/error_log"
 HTTPD_MIME_TYPES="$HTTPD_ROOT/mime.types"
+HTTPD_DONTDOTHAT="$HTTPD_ROOT/dontdothat"
 if [ -z "$BASE_URL" ]; then
   BASE_URL="http://localhost:$HTTPD_PORT"
 else
@@ -407,9 +408,7 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 
 touch $HTTPD_MIME_TYPES
 
-DONTDOTHAT="$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/dontdothat"
-
-cat >  "$DONTDOTHAT" <<__EOF__
+cat >  "$HTTPD_DONTDOTHAT" <<__EOF__
 [recursive-actions]
 / = deny
 
@@ -522,7 +521,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   ${SVN_PATH_AUTHZ_LINE}
-  DontDoThatConfigFile "$DONTDOTHAT"
+  DontDoThatConfigFile "$HTTPD_DONTDOTHAT"
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
