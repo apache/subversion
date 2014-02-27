@@ -532,27 +532,25 @@ svn_error_t *svn_fs_x__dag_copy(dag_node_t *to_node,
 
 /* Comparison */
 
-/* Find out what is the same between two nodes.
+/* Find out what is the same between two nodes.  If STRICT is FALSE,
+   this function may report false positives, i.e. report changes even
+   if the resulting contents / props are equal.
 
    If PROPS_CHANGED is non-null, set *PROPS_CHANGED to 1 if the two
    nodes have different property lists, or to 0 if same.
 
    If CONTENTS_CHANGED is non-null, set *CONTENTS_CHANGED to 1 if the
-   two nodes have different contents, or to 0 if same.  For files,
-   file contents are compared; for directories, the entries lists are
-   compared.  If one is a file and the other is a directory, the one's
-   contents will be compared to the other's entries list.  (Not
-   terribly useful, I suppose, but that's the caller's business.)
+   two nodes have different contents, or to 0 if same.  NODE1 and NODE2
+   must refer to files from the same filesystem.
 
-   ### todo: This function only compares rep keys at the moment.  This
-   may leave us with a slight chance of a false positive, though I
-   don't really see how that would happen in practice.  Nevertheless,
-   it should probably be fixed.
+   Use POOL for temporary allocations.
  */
 svn_error_t *svn_fs_x__dag_things_different(svn_boolean_t *props_changed,
                                             svn_boolean_t *contents_changed,
                                             dag_node_t *node1,
-                                            dag_node_t *node2);
+                                            dag_node_t *node2,
+                                            svn_boolean_t strict,
+                                            apr_pool_t *pool);
 
 
 /* Set *REV and *PATH to the copyroot revision and path of node NODE, or

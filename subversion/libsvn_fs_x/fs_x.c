@@ -638,17 +638,79 @@ svn_fs_x__file_length(svn_filesize_t *length,
 }
 
 svn_boolean_t
-svn_fs_x__noderev_same_rep_key(representation_t *a,
-                               representation_t *b)
+svn_fs_x__file_text_rep_equal(representation_t *a,
+                              representation_t *b)
 {
-  if (a == b)
+  svn_boolean_t a_empty = a == NULL || a->expanded_size == 0;
+  svn_boolean_t b_empty = b == NULL || b->expanded_size == 0;
+
+  /* This makes sure that neither rep will be NULL later on */
+  if (a_empty && b_empty)
     return TRUE;
 
-  if (a == NULL || b == NULL)
+  if (a_empty != b_empty)
     return FALSE;
 
-  return svn_fs_x__id_part_eq(&a->id, &b->id);
+  /* Same physical representation?  Note that these IDs are always up-to-date
+     instead of e.g. being set lazily. */
+  if (svn_fs_x__id_part_eq(&a->id, &b->id))
+    return TRUE;
+
+  /* Contents are equal if the checksums match.  These are also always known.
+   */
+  return memcmp(a->md5_digest, b->md5_digest, sizeof(a->md5_digest)) == 0
+      && memcmp(a->sha1_digest, b->sha1_digest, sizeof(a->sha1_digest)) == 0;
 }
+
+svn_error_t *
+svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
+                         svn_fs_t *fs,
+                         node_revision_t *a,
+                         node_revision_t *b,
+                         svn_boolean_t strict,
+                         apr_pool_t *scratch_pool)
+{
+  representation_t *rep_a = a->prop_rep;
+  representation_t *rep_b = b->prop_rep;
+  apr_hash_t *proplist_a;
+  apr_hash_t *proplist_b;
+
+  /* Mainly for a==b==NULL */
+  if (rep_a == rep_b)
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Committed property lists can be compared quickly */
+  if (   rep_a && rep_b
+      && svn_fs_x__is_revision(rep_a->id.change_set)
+      && svn_fs_x__is_revision(rep_b->id.change_set))
+    {
+      /* MD5 must be given. Having the same checksum is good enough for
+         accepting the prop lists as equal. */
+      *equal = memcmp(rep_a->md5_digest, rep_b->md5_digest,
+                      sizeof(rep_a->md5_digest)) == 0;
+      return SVN_NO_ERROR;
+    }
+
+  /* Skip the expensive bits unless we are in strict mode.
+     Simply assume that there is a different. */
+  if (!strict)
+    {
+      *equal = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  /* At least one of the reps has been modified in a txn.
+     Fetch and compare them. */
+  SVN_ERR(svn_fs_x__get_proplist(&proplist_a, fs, a, scratch_pool));
+  SVN_ERR(svn_fs_x__get_proplist(&proplist_b, fs, b, scratch_pool));
+
+  *equal = svn_fs__prop_lists_equal(proplist_a, proplist_b, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs_x__file_checksum(svn_checksum_t **checksum,

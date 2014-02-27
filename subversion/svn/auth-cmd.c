@@ -1,5 +1,5 @@
 /*
- * svnauth.c:  Subversion auth creds cache administration tool
+ * auth-cmd.c:  Subversion auth creds cache administration
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -47,194 +47,10 @@
 #include "svn_sorts.h"
 
 #include "private/svn_cmdline_private.h"
-#include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
+#include "private/svn_sorts_private.h"
 
-/* Baton for passing option/argument state to a subcommand function. */
-struct svnauth_opt_state
-{
-  const char *config_dir;                           /* --config-dir */
-  svn_boolean_t version;                            /* --version */
-  svn_boolean_t help;                               /* --help */
-  svn_boolean_t show_passwords;                     /* --show-passwords */
-};
-
-typedef enum svnauth__longopt_t {
-  opt_config_dir = SVN_OPT_FIRST_LONGOPT_ID,
-  opt_show_passwords,
-  opt_version
-} svnauth__longopt_t;
-
-/** Subcommands. **/
-static svn_opt_subcommand_t
-  subcommand_help,
-  subcommand_list,
-  subcommand_delete;
-
-/* Array of available subcommands.
- * The entire list must be terminated with an entry of nulls.
- */
-static const svn_opt_subcommand_desc2_t cmd_table[] =
-{
-  {"help", subcommand_help, {"?", "h"}, N_
-   ("usage: svnauth help [SUBCOMMAND...]\n\n"
-    "Describe the usage of this program or its subcommands.\n"),
-   {0} },
-
-  {"list", subcommand_list, {0}, N_
-   ("usage: svnauth list [PATTERN ...]\n"
-    "\n"
-    "  List cached authentication credentials.\n"
-    "\n"
-    "  If PATTERN is specified, only list credentials with attributes matching\n"
-    "  the pattern. All attributes except passwords can be matched. If more than\n"
-    "  one pattern is specified credentials are shown if their attributes match\n"
-    "  all patterns. Patterns are matched case-sensitively and may contain\n"
-    "  glob wildcards:\n"
-    "    ?      matches any single character\n"
-    "    *      matches a sequence of arbitrary characters\n"
-    "    [abc]  matches any of the characters listed inside the brackets\n"
-    "  Note that wildcards will usually need to be quoted or escaped on the\n"
-    "  command line because many command shells will interfere by trying to\n"
-    "  expand them.\n"
-    "\n"
-    "  If no pattern is specified, all cached credentials are shown.\n"),
-   {opt_config_dir, opt_show_passwords} },
-
-  {"delete", subcommand_delete, {"del", "remove", "rm"}, N_
-   ("usage: svnauth delete PATTERN ...\n"
-    "\n"
-    "  Delete cached authentication credentials matching a pattern.\n"
-    "\n"
-    "  All credential attributes except passwords can be matched. If more than \n"
-    "  one pattern is specified credentials are deleted only if their attributes\n"
-    "  match all patterns. Patterns are matched case-sensitively and may contain\n"
-    "  glob wildcards:\n"
-    "    ?      matches any single character\n"
-    "    *      matches a sequence of arbitrary characters\n"
-    "    [abc]  matches any of the characters listed inside the brackets\n"
-    "  Note that wildcards will usually need to be quoted or escaped on the\n"
-    "  command line because many command shells will interfere by trying to\n"
-    "  expand them.\n"),
-   {opt_config_dir} },
-
-  {NULL}
-};
-
-/* Option codes and descriptions.
- *
- * The entire list must be terminated with an entry of nulls.
- */
-static const apr_getopt_option_t options_table[] =
-  {
-    {"help",          'h', 0, N_("show help on a subcommand")},
-
-    {"config-dir",    opt_config_dir, 1,
-                      N_("use auth cache in config directory ARG")},
-
-    {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
-
-    {"version",       opt_version, 0, N_("show program version information")},
-
-    {NULL}
-  };
-
-/* Parse the remaining command-line arguments from OS, returning them
-   in a new array *ARGS (allocated from POOL) and optionally verifying
-   that we got the expected number thereof.  If MIN_EXPECTED is not
-   negative, return an error if the function would return fewer than
-   MIN_EXPECTED arguments.  If MAX_EXPECTED is not negative, return an
-   error if the function would return more than MAX_EXPECTED
-   arguments.
-
-   As a special case, when MIN_EXPECTED and MAX_EXPECTED are both 0,
-   allow ARGS to be NULL.  */
-static svn_error_t *
-parse_args(apr_array_header_t **args,
-           apr_getopt_t *os,
-           int min_expected,
-           int max_expected,
-           apr_pool_t *pool)
-{
-  int num_args = os ? (os->argc - os->ind) : 0;
-
-  if (min_expected || max_expected)
-    SVN_ERR_ASSERT(args);
-
-  if ((min_expected >= 0) && (num_args < min_expected))
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-  if ((max_expected >= 0) && (num_args > max_expected))
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
-                            _("Too many arguments provided"));
-  if (args)
-    {
-      *args = apr_array_make(pool, num_args, sizeof(const char *));
-
-      if (num_args)
-        while (os->ind < os->argc)
-          APR_ARRAY_PUSH(*args, const char *) =
-            apr_pstrdup(pool, os->argv[os->ind++]);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnauth_opt_state *opt_state = baton;
-  const char *header =
-    _("general usage: svnauth SUBCOMMAND [ARGS & OPTIONS ...]\n"
-      "Subversion authentication credentials management tool.\n"
-      "Type 'svnauth help <subcommand>' for help on a specific subcommand.\n"
-      "Type 'svnauth --version' to see the program version and available\n"
-      "authentication credential caches.\n"
-      "\n"
-      "Available subcommands:\n");
-  const char *footer = NULL;
-
-  if (opt_state && opt_state->version)
-    {
-      const char *config_path;
-
-      SVN_ERR(svn_config_get_user_config_path(&config_path,
-                                              opt_state->config_dir, NULL,
-                                              pool));
-      footer = _("Available authentication credential caches:\n");
-
-      /*
-       * ### There is no API to query available providers at run time.
-       */
-#if (defined(WIN32) && !defined(__MINGW32__))
-      footer = apr_psprintf(pool, _("%s  Wincrypt cache in %s\n"),
-                            footer, svn_dirent_local_style(config_path, pool));
-#elif !defined(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE)
-      footer = apr_psprintf(pool, _("%s  Plaintext cache in %s\n"),
-                            footer, svn_dirent_local_style(config_path, pool));
-#endif
-#ifdef SVN_HAVE_GNOME_KEYRING
-      footer = apr_pstrcat(pool, footer, "  Gnome Keyring\n", SVN_VA_NULL);
-#endif
-#ifdef SVN_HAVE_GPG_AGENT
-      footer = apr_pstrcat(pool, footer, "  GPG-Agent\n", SVN_VA_NULL);
-#endif
-#ifdef SVN_HAVE_KEYCHAIN_SERVICES
-      footer = apr_pstrcat(pool, footer, "  Mac OS X Keychain\n", SVN_VA_NULL);
-#endif
-#ifdef SVN_HAVE_KWALLET
-      footer = apr_pstrcat(pool, footer, "  KWallet (KDE)\n", SVN_VA_NULL);
-#endif
-    }
-
-  SVN_ERR(svn_opt_print_help4(os, "svnauth",
-                              opt_state ? opt_state->version : FALSE,
-                              FALSE, FALSE, footer,
-                              header, cmd_table, options_table, NULL, NULL,
-                              pool));
-
-  return SVN_NO_ERROR;
-}
+#include "cl.h"
 
 /* The separator between credentials . */
 #define SEP_STRING \
@@ -414,7 +230,7 @@ load_cert(serf_ssl_certificate_t **cert,
                                  ascii_cert));
       return SVN_NO_ERROR;
     }
-  SVN_ERR(svn_io_file_flush(pem_file, scratch_pool));
+  SVN_ERR(svn_io_file_flush_to_disk(pem_file, scratch_pool));
 
   status = serf_ssl_load_cert_file(cert, pem_path, result_pool);
   if (status)
@@ -423,7 +239,7 @@ load_cert(serf_ssl_certificate_t **cert,
       
       err = svn_error_wrap_apr(status, _("serf error: %s"),
                                serf_error_string(status));
-      svn_handle_warning2(stderr, err, "svnauth: ");
+      svn_handle_warning2(stderr, err, "svn: ");
       svn_error_clear(err);
 
       *cert = NULL;
@@ -789,253 +605,74 @@ walk_credentials(svn_boolean_t *delete_cred,
 
 
 /* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+svn_error_t *
+svn_cl__auth(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  struct svnauth_opt_state *opt_state = baton;
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *config_path;
   struct walk_credentials_baton_t b;
 
   b.matches = 0;
   b.show_passwords = opt_state->show_passwords;
-  b.list = TRUE;
-  b.delete = FALSE;
-  SVN_ERR(parse_args(&b.patterns, os, 0, -1, pool));
+  b.list = !opt_state->remove;
+  b.delete = opt_state->remove;
+
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&b.patterns, os,
+                                                      opt_state->targets,
+                                                      ctx, FALSE,
+                                                      pool));
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,
                                           opt_state->config_dir, NULL,
                                           pool));
 
-  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b,
-                                    pool));
+  if (b.delete && b.patterns->nelts < 1)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  if (b.matches == 0)
+  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b, pool));
+
+  if (b.list)
     {
-      if (b.patterns->nelts == 0)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("Credentials cache in '%s' is empty\n"),
-                                   svn_dirent_local_style(config_path, pool)));
-      else 
+      if (b.matches == 0)
+        {
+          if (b.patterns->nelts == 0)
+            SVN_ERR(svn_cmdline_printf(pool,
+                      _("Credentials cache in '%s' is empty\n"),
+                      svn_dirent_local_style(config_path, pool)));
+          else 
+            return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
+                                     _("Credentials cache in '%s' contains "
+                                       "no matching credentials"),
+                                     svn_dirent_local_style(config_path, pool));
+        }
+      else
+        {
+          if (b.patterns->nelts == 0)
+            SVN_ERR(svn_cmdline_printf(pool,
+                      _("Credentials cache in '%s' contains %d credentials\n"),
+                      svn_dirent_local_style(config_path, pool), b.matches));
+          else
+            SVN_ERR(svn_cmdline_printf(pool,
+                      _("Credentials cache in '%s' contains %d matching "
+                        "credentials\n"),
+                      svn_dirent_local_style(config_path, pool), b.matches));
+        }
+
+    }
+
+  if (b.delete)
+    {
+      if (b.matches == 0)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
                                  _("Credentials cache in '%s' contains "
                                    "no matching credentials"),
                                  svn_dirent_local_style(config_path, pool));
-    }
-  else
-    {
-      if (b.patterns->nelts == 0)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("Credentials cache in '%s' contains %d "
-                                     "credentials\n"),
-                                   svn_dirent_local_style(config_path, pool),
-                                   b.matches));
       else
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("Credentials cache in '%s' contains %d "
-                                     "matching credentials\n"),
-                                   svn_dirent_local_style(config_path, pool),
-                                   b.matches));
-    }
-  return SVN_NO_ERROR;
-}
-
-/* This implements `svn_opt_subcommand_t'. */
-static svn_error_t *
-subcommand_delete(apr_getopt_t *os, void *baton, apr_pool_t *pool)
-{
-  struct svnauth_opt_state *opt_state = baton;
-  const char *config_path;
-  struct walk_credentials_baton_t b;
-
-  b.matches = 0;
-  b.show_passwords = opt_state->show_passwords;
-  b.list = FALSE;
-  b.delete = TRUE;
-  SVN_ERR(parse_args(&b.patterns, os, 1, -1, pool));
-
-  SVN_ERR(svn_config_get_user_config_path(&config_path,
-                                          opt_state->config_dir, NULL,
-                                          pool));
-
-  SVN_ERR(svn_config_walk_auth_data(config_path, walk_credentials, &b, pool));
-
-  if (b.matches == 0)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
-                             _("Credentials cache in '%s' contains "
-                               "no matching credentials"),
-                             svn_dirent_local_style(config_path, pool));
-  else
-    SVN_ERR(svn_cmdline_printf(pool, _("Deleted %d matching credentials "
-                               "from '%s'\n"), b.matches,
-                               svn_dirent_local_style(config_path, pool)));
-
-  return SVN_NO_ERROR;
-}
-
-
-/*
- * On success, leave *EXIT_CODE untouched and return SVN_NO_ERROR. On error,
- * either return an error to be displayed, or set *EXIT_CODE to non-zero and
- * return SVN_NO_ERROR.
- */
-static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
-  struct svnauth_opt_state opt_state = { 0 };
-  apr_getopt_t *os;
-
-  if (argc <= 1)
-    {
-      SVN_ERR(subcommand_help(NULL, NULL, pool));
-      *exit_code = EXIT_FAILURE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Parse options. */
-  SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
-  os->interleave = 1;
-
-  while (1)
-    {
-      int opt_id;
-      const char *opt_arg;
-      const char *utf8_opt_arg;
-      apr_status_t apr_err;
-
-      /* Parse the next option. */
-      apr_err = apr_getopt_long(os, options_table, &opt_id, &opt_arg);
-      if (APR_STATUS_IS_EOF(apr_err))
-        break;
-      else if (apr_err)
-        {
-          SVN_ERR(subcommand_help(NULL, NULL, pool));
-          *exit_code = EXIT_FAILURE;
-          return SVN_NO_ERROR;
-        }
-
-      switch (opt_id) {
-      case 'h':
-      case '?':
-        opt_state.help = TRUE;
-        break;
-      case opt_config_dir:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
-        break;
-      case opt_show_passwords:
-        opt_state.show_passwords = TRUE;
-        break;
-      case opt_version:
-        opt_state.version = TRUE;
-        break;
-      default:
-        {
-          SVN_ERR(subcommand_help(NULL, NULL, pool));
-          *exit_code = EXIT_FAILURE;
-          return SVN_NO_ERROR;
-        }
-      }
-    }
-
-  if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
-
-  /* If we're not running the `help' subcommand, then look for a
-     subcommand in the first argument. */
-  if (subcommand == NULL)
-    {
-      if (os->ind >= os->argc)
-        {
-          if (opt_state.version)
-            {
-              /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", subcommand_help, {0}, "",
-                  {opt_version,  /* must accept its own option */
-                   'q',  /* --quiet */
-                  } };
-
-              subcommand = &pseudo_cmd;
-            }
-          else
-            {
-              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                        _("subcommand argument required\n")));
-              SVN_ERR(subcommand_help(NULL, NULL, pool));
-              *exit_code = EXIT_FAILURE;
-              return SVN_NO_ERROR;
-            }
-        }
-      else
-        {
-          const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
-          if (subcommand == NULL)
-            {
-              const char *first_arg_utf8;
-              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                              first_arg, pool));
-              svn_error_clear(
-                svn_cmdline_fprintf(stderr, pool,
-                                    _("Unknown subcommand: '%s'\n"),
-                                    first_arg_utf8));
-              SVN_ERR(subcommand_help(NULL, NULL, pool));
-              *exit_code = EXIT_FAILURE;
-              return SVN_NO_ERROR;
-            }
-        }
-    }
-
-  SVN_ERR(svn_config_ensure(opt_state.config_dir, pool));
-
-  /* Run the subcommand. */
-  err = (*subcommand->cmd_func)(os, &opt_state, pool);
-  if (err)
-    {
-      /* For argument-related problems, suggest using the 'help'
-         subcommand. */
-      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
-          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
-        {
-          err = svn_error_quick_wrap(err,
-                                     _("Try 'svnauth help' for more info"));
-        }
-      return err;
+        SVN_ERR(svn_cmdline_printf(pool, _("Deleted %d matching credentials "
+                                   "from '%s'\n"), b.matches,
+                                   svn_dirent_local_style(config_path, pool)));
     }
 
   return SVN_NO_ERROR;
-}
-
-int
-main(int argc, const char *argv[])
-{
-  apr_pool_t *pool;
-  int exit_code = EXIT_SUCCESS;
-  svn_error_t *err;
-
-  /* Initialize the app. */
-  if (svn_cmdline_init("svnauth", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool.  Use a separate mutexless allocator,
-   * given this application is single threaded.
-   */
-  pool = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
-
-  err = sub_main(&exit_code, argc, argv, pool);
-
-  /* Flush stdout and report if it fails. It would be flushed on exit anyway
-     but this makes sure that output is not silently lost if it fails. */
-  err = svn_error_compose_create(err, svn_cmdline_fflush(stdout));
-
-  if (err)
-    {
-      exit_code = EXIT_FAILURE;
-      svn_cmdline_handle_exit_error(err, NULL, "svnauth: ");
-    }
-
-  svn_pool_destroy(pool);
-  return exit_code;
 }

@@ -57,7 +57,7 @@
  || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
  || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
      (patch) <= XML_MICRO_VERSION))
-#endif /* APR_VERSION_AT_LEAST */
+#endif /* XML_VERSION_AT_LEAST */
 
 /* Read/write chunks of this size into the spillbuf.  */
 #define PARSE_CHUNK_SIZE 8000

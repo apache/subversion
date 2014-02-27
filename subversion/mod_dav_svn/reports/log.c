@@ -412,21 +412,8 @@ dav_svn__log_report(const dav_resource *resource,
         }
       else if (strcmp(child->name, "move-behavior") == 0)
         {
-          int move_behavior_param;
-          serr = svn_cstring_atoi(&move_behavior_param,
-                                  dav_xml_get_cdata(child, resource->pool, 1));
-          if (serr)
-            return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
-                                        "Malformed CDATA in element "
-                                        "\"move-behavior\"", resource->pool);
-
-          if (   move_behavior_param < 0
-              || move_behavior_param > svn_move_behavior_auto_moves)
-            return dav_svn__convert_err(serr, HTTP_BAD_REQUEST,
-                                        "Invalid CDATA in element "
-                                        "\"move-behavior\"", resource->pool);
-
-          move_behavior = (svn_move_behavior_t) move_behavior_param;
+          const char *value = dav_xml_get_cdata(child, resource->pool, 1);
+          move_behavior = svn_move_behavior_from_word(value);
         }
       /* else unknown element; skip it */
     }

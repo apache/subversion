@@ -555,13 +555,8 @@ aligned_seek(apr_file_t *file,
    */
   if (buffered)
     {
-#if APR_VERSION_AT_LEAST(1,3,0)
       SVN_TEST_ASSERT(block_start % block_size == 0);
       SVN_TEST_ASSERT(offset - block_start < block_size);
-#else
-      SVN_TEST_ASSERT(block_start % 0x1000 == 0);
-      SVN_TEST_ASSERT(offset - block_start < 0x1000);
-#endif
     }
 
   /* we must be at the desired offset */

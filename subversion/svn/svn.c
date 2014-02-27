@@ -137,7 +137,8 @@ typedef enum svn_cl__longopt_t {
   opt_mergeinfo_log,
   opt_remove_unversioned,
   opt_remove_ignored,
-  opt_no_newline
+  opt_no_newline,
+  opt_show_passwords
 } svn_cl__longopt_t;
 
 
@@ -279,7 +280,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
   {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
-  {"remove",         opt_remove, 0, N_("remove changelist association")},
+  {"remove",         opt_remove, 0, N_("remove changelist association or auth credential")},
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG")},
   {"keep-changelists", opt_keep_changelists, 0,
@@ -391,6 +392,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("remove unversioned items")},
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
   {"no-newline", opt_no_newline, 0, N_("do not output trailing newline")},
+  {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
 
   /* Long-opt Aliases
    *
@@ -444,6 +446,29 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'N', opt_depth, 'q', opt_force, opt_no_ignore, opt_autoprops,
      opt_no_autoprops, opt_parents },
      {{opt_parents, N_("add intermediate parents")}} },
+
+  { "auth", svn_cl__auth, {0}, N_
+   ("Manage cached authentication credentials.\n"
+    "usage: 1. svn auth [PATTERN ...]\n"
+    "usage: 2. svn auth --remove PATTERN [PATTERN ...]\n"
+    "\n"
+    "  With no arguments, list all cached authentication credentials.\n"
+    "  Authentication credentials include usernames, passwords,\n"
+    "  SSL certificates, and SSL client-certificate passphrases.\n"
+    "  If PATTERN is specified, only list credentials with attributes matching one\n"
+    "  or more patterns. With the --remove option, remove cached authentication\n"
+    "  credentials matching one or more patterns.\n"
+    "\n"
+    "  If more than one pattern is specified credentials are considered only they\n"
+    "  match all specified patterns. Patterns are matched case-sensitively and may\n"
+    "  contain glob wildcards:\n"
+    "    ?      matches any single character\n"
+    "    *      matches a sequence of arbitrary characters\n"
+    "    [abc]  matches any of the characters listed inside the brackets\n"
+    "  Note that wildcards will usually need to be quoted or escaped on the\n"
+    "  command line because many command shells will interfere by trying to\n"
+    "  expand them.\n"),
+    { opt_remove, opt_show_passwords } },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
     ("Output the content of specified files or\n"
@@ -2305,6 +2330,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_no_newline:
         opt_state.no_newline = TRUE;
+        break;
+      case opt_show_passwords:
+        opt_state.show_passwords = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

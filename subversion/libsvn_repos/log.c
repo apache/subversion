@@ -805,23 +805,16 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
            ### modifies, NULL otherwise).  -- cmpilato  */
 
         /* If the path was added or replaced, see if it was created via
-           copy.  If so, that will tell us where its previous location
-           was.  If not, there's no previous location to examine.  */
+           copy.  If so, set BASE_REV/BASE_PATH to its previous location.
+           If not, there's no previous location to examine -- leave
+           BASE_REV/BASE_PATH = -1/NULL.  */
         case svn_fs_path_change_add:
         case svn_fs_path_change_replace:
         case svn_fs_path_change_move:
         case svn_fs_path_change_movereplace:
           {
-            const char *copyfrom_path;
-            svn_revnum_t copyfrom_rev;
-
-            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+            SVN_ERR(svn_fs_copied_from(&base_rev, &base_path,
                                        root, changed_path, iterpool));
-            if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
-              {
-                base_path = apr_pstrdup(scratch_pool, copyfrom_path);
-                base_rev = copyfrom_rev;
-              }
             break;
           }
 

@@ -114,13 +114,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
-    # Generate the build_zlib.bat file
-    if self._libraries['zlib'].is_src:
-      data = {'zlib_path': os.path.relpath(self.zlib_path, self.projfilesdir),
-              'zlib_version': self.zlib_version}
-      bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
-      self.write_with_template(bat, 'templates/build_zlib.ezt', data)
-
     # Generate the build_locale.bat file
     if self.enable_nls:
       pofiles = []
@@ -215,9 +208,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # Drop the ra_serf target if we don't have serf
     if 'serf' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
-    # Drop the serf target if we don't build serf ourselves
-    if 'serf' not in self._libraries or not self._libraries['serf'].is_src:
-      install_targets = [x for x in install_targets if x.name != 'serf']
 
     # Drop the swig targets if we don't have swig or language support
     install_targets = [x for x in install_targets
@@ -235,11 +225,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                              or x.name == '__JAVAHL__'
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
-
-    # If we don't build 'ZLib' ourself, remove this target and all the dependencies on it
-    if not self._libraries['zlib'].is_src:
-      install_targets = [x for x in install_targets if x.name != 'zlib']
-      # TODO: Fixup dependencies
 
     # Create DLL targets for libraries
     dll_targets = []
@@ -590,10 +575,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # Make the default target generate the .mo files, too
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
-
-    # Make ZLib a dependency of serf if we build the zlib src
-    if name == 'serf' and self._libraries['zlib'].is_src:
-      depends.extend(self.sections['zlib'].get_targets())
 
     # To set the correct build order of the JavaHL targets, the javahl-javah
     # and libsvnjavahl targets are defined with extra dependencies in build.conf
@@ -979,67 +960,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     template.parse_file(os.path.join('build', 'generator', tname))
     template.generate(fout, data)
     self.write_file_if_changed(fname, fout.getvalue())
-
-  def write_zlib_project_file(self, name):
-    if not self._libraries['zlib'].is_src:
-      return
-    zlib_path = os.path.abspath(self.zlib_path)
-    zlib_sources = map(lambda x : os.path.relpath(x, self.projfilesdir),
-                       glob.glob(os.path.join(zlib_path, '*.c')) +
-                       glob.glob(os.path.join(zlib_path,
-                                              'contrib/masmx86/*.c')) +
-                       glob.glob(os.path.join(zlib_path,
-                                              'contrib/masmx86/*.asm')))
-    zlib_headers = map(lambda x : os.path.relpath(x, self.projfilesdir),
-                       glob.glob(os.path.join(zlib_path, '*.h')))
-
-    self.move_proj_file(self.projfilesdir, name,
-                        (('zlib_path', os.path.relpath(zlib_path,
-                                                       self.projfilesdir)),
-                         ('zlib_sources', zlib_sources),
-                         ('zlib_headers', zlib_headers),
-                         ('zlib_version', self.zlib_version),
-                         ('project_guid', self.makeguid('zlib')),
-                        ))
-
-  def write_serf_project_file(self, name):
-    if 'serf' not in self._libraries:
-      return
-      
-    serf = self._libraries['serf']
-    
-    if not serf.is_src:
-      return # Using an installed library
-
-    serf_path = os.path.abspath(self.serf_path)
-    serf_sources = map(lambda x : os.path.relpath(x, self.serf_path),
-                       glob.glob(os.path.join(serf_path, '*.c'))
-                       + glob.glob(os.path.join(serf_path, 'auth', '*.c'))
-                       + glob.glob(os.path.join(serf_path, 'buckets',
-                                                   '*.c')))
-    serf_headers = map(lambda x : os.path.relpath(x, self.serf_path),
-                       glob.glob(os.path.join(serf_path, '*.h'))
-                       + glob.glob(os.path.join(serf_path, 'auth', '*.h'))
-                       + glob.glob(os.path.join(serf_path, 'buckets', '*.h')))
-
-    apr_static = self.static_apr and 'APR_STATIC=1' or ''
-    openssl_static = self.static_openssl and 'OPENSSL_STATIC=1' or ''
-    self.move_proj_file(self.serf_path, name,
-                        (('serf_sources', serf_sources),
-                         ('serf_headers', serf_headers),
-                         ('zlib_path', os.path.relpath(self.zlib_path,
-                                                       self.serf_path)),
-                         ('openssl_path', os.path.relpath(self.openssl_path,
-                                                          self.serf_path)),
-                         ('apr_path', os.path.relpath(self.apr_path,
-                                                      self.serf_path)),
-                         ('apr_util_path', os.path.relpath(self.apr_util_path,
-                                                           self.serf_path)),
-                         ('project_guid', self.makeguid('serf')),
-                         ('apr_static', apr_static),
-                         ('openssl_static', openssl_static),
-                         ('serf_lib', serf.lib_name),
-                        ))
 
   def move_proj_file(self, path, name, params=()):
     ### Move our slightly templatized pre-built project files into place --

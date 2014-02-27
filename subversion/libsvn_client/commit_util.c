@@ -916,7 +916,7 @@ harvest_status_callback(void *status_baton,
   if (matches_changelists
       && (is_harvest_root || baton->changelists)
       && state_flags
-      && is_added
+      && (is_added || (is_deleted && is_op_root && status->copied))
       && baton->danglers)
     {
       /* If a node is added, its parent must exist in the repository at the

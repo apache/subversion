@@ -884,7 +884,6 @@ sort_reps_range(pack_context_t *context,
         {
           /* next path */
           path = path_order[i]->path;
-          rep_id = path_order[i]->rep_id;
 
           /* Pick roundest non-linear deltified node. */
           if (roundness(path_order[best]->predecessor_count)
@@ -918,6 +917,15 @@ sort_reps_range(pack_context_t *context,
    * access HEAD of the respective path.  Keeping all its dependency chain
    * in one place turns reconstruction into a linear scan of minimal length.
    */
+  for (i = first; i < last; ++i)
+    if (path_order[i])
+      {
+        /* This is the first path we still have to handle. */
+        path = path_order[i]->path;
+        rep_id = path_order[i]->rep_id;
+        break;
+      }
+
   for (i = first; i < last; ++i)
     if (path_order[i])
       {
@@ -984,16 +992,9 @@ sort_reps(pack_context_t *context)
         context->references->elt_size,
         (int (*)(const void *, const void *))compare_references);
 
-  /* Re-order noderevs like this:
-   * (1) Directories are already in front; sort directories section and
-   *     files section separately according to (2)-(4).
-   * (2) Most likely to be referenced by future pack files, in path order.
-   * (3) highest revision rep per path + dependency chain
-   * (4) Remaining reps in path, rev order
-   *
-   * We simply pick & chose from the existing path, rev order.
+  /* Directories are already in front; sort directories section and files
+   * section separately but use the same heuristics (see sub-function).
    */
-
   temp_pool = svn_pool_create(context->info_pool);
   count = context->path_order->nelts;
   temp = apr_pcalloc(temp_pool, count * sizeof(*temp));

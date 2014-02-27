@@ -284,7 +284,9 @@ get_repos_root_url_relpath(const char **repos_relpath,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
     }
-  else if (info->have_base)
+  else if (info->status == svn_wc__db_status_deleted
+           && !info->have_more_work
+           && info->have_base)
     {
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, repos_relpath,
                                        repos_root_url, repos_uuid, NULL, NULL,
@@ -292,6 +294,33 @@ get_repos_root_url_relpath(const char **repos_relpath,
                                        NULL, NULL,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
+    }
+  else if (info->status == svn_wc__db_status_deleted)
+    {
+      const char *work_del_abspath;
+      const char *add_abspath;
+
+      /* Handles working DELETE and the special case where there is just
+         svn_wc__db_status_not_present in WORKING */
+
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, &work_del_abspath, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      /* The parent of what has been deleted must be added */
+      add_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
+
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, repos_relpath,
+                                       repos_root_url, repos_uuid, NULL,
+                                       NULL, NULL, NULL,
+                                       db, add_abspath,
+                                       result_pool, scratch_pool));
+
+      *repos_relpath = svn_relpath_join(*repos_relpath,
+                                        svn_dirent_skip_ancestor(
+                                              add_abspath,
+                                              local_abspath),
+                                        result_pool);
     }
   else
     {
