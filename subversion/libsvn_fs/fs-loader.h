@@ -29,6 +29,7 @@
 #include "svn_fs.h"
 #include "svn_props.h"
 #include "private/svn_mutex.h"
+#include <apr_poll.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -343,7 +344,8 @@ typedef struct root_vtable_t
                                    apr_pool_t *pool);
   svn_error_t *(*props_changed)(int *changed_p, svn_fs_root_t *root1,
                                 const char *path1, svn_fs_root_t *root2,
-                                const char *path2, apr_pool_t *pool);
+                                const char *path2, svn_boolean_t strict,
+                                apr_pool_t *pool);
 
   /* Directories */
   svn_error_t *(*dir_entries)(apr_hash_t **entries_p, svn_fs_root_t *root,
@@ -383,7 +385,8 @@ typedef struct root_vtable_t
                              apr_pool_t *pool);
   svn_error_t *(*contents_changed)(int *changed_p, svn_fs_root_t *root1,
                                    const char *path1, svn_fs_root_t *root2,
-                                   const char *path2, apr_pool_t *pool);
+                                   const char *path2, svn_boolean_t strict,
+                                   apr_pool_t *pool);
   svn_error_t *(*get_file_delta_stream)(svn_txdelta_stream_t **stream_p,
                                         svn_fs_root_t *source_root,
                                         const char *source_path,
