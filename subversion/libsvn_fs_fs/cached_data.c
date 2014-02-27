@@ -2048,9 +2048,10 @@ read_dir_entries(apr_array_header_t *entries,
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), result_pool);
 
       /* In incremental mode, update the hash; otherwise, write to the
-       * final array. */
+       * final array.  Be sure to use hash keys that survive this iteration.
+       */
       if (incremental)
-        apr_hash_set(hash, entry.key, entry.keylen, dirent);
+        apr_hash_set(hash, dirent->name, entry.keylen, dirent);
       else
         APR_ARRAY_PUSH(entries, svn_fs_dirent_t *) = dirent;
     }

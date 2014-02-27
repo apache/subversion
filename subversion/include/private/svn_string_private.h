@@ -131,11 +131,6 @@ svn_membuf__nzero(svn_membuf_t *membuf, apr_size_t size);
 svn_string_t *
 svn_stringbuf__morph_into_string(svn_stringbuf_t *strbuf);
 
-/** Like apr_strtoff but provided here for backward compatibility
- *  with APR 0.9 */
-apr_status_t
-svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base);
-
 /** Like strtoul but with a fixed base of 10 and without overflow checks.
  * This allows the compiler to generate massively faster (4x on 64bit LINUX)
  * code.  Overflow checks may be added on the caller side where you might

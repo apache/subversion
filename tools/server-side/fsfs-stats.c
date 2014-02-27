@@ -355,7 +355,6 @@ get_content(svn_stringbuf_t **content,
   *content = svn_stringbuf_create_ensure(len, pool);
   (*content)->len = len;
 
-#if APR_VERSION_AT_LEAST(1,3,0)
   /* for better efficiency use larger buffers on large reads */
   if (   (len >= large_buffer_size)
       && (apr_file_buffer_size_get(file) < large_buffer_size))
@@ -363,7 +362,6 @@ get_content(svn_stringbuf_t **content,
                         apr_palloc(apr_file_pool_get(file),
                                    large_buffer_size),
                         large_buffer_size);
-#endif
 
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   SVN_ERR(svn_io_file_read_full2(file, (*content)->data, len,

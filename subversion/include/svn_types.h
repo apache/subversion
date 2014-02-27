@@ -1076,6 +1076,25 @@ typedef enum svn_move_behavior_t
   svn_move_behavior_auto_moves
 } svn_move_behavior_t;
 
+/** Return a constant string expressing @a value as an English word,
+ * e.g., "none", "explicit", etc.  The string is not localized,
+ * as it may be used for client<->server communications.
+ *
+ * @since New in 1.9.
+ */
+const char *
+svn_move_behavior_to_word(svn_move_behavior_t value);
+
+/** Return the appropriate move behavior for @a word.  @a word is as
+ * returned from svn_move_behavior_to_word().  If @a word does not
+ * represent a recognized behavior, return #svn_move_behavior_explicit_moves.
+ *
+ * @since New in 1.9.
+ */
+svn_move_behavior_t
+svn_move_behavior_from_word(const char *word);
+
+
 
 
 /** Callback function type for commits.

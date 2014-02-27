@@ -1427,6 +1427,17 @@ def changelist_upgrade_1_6(sbox):
   if paths != expected_paths:
     raise svntest.Failure("changelist not matched")
 
+
+def upgrade_1_7_dir_external(sbox):
+  "upgrade from 1.7 with dir external"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_1_7_dir_external.tar.bz2')
+
+  # This fails for 'make check EXCLUSIVE_WC_LOCKS=1' giving an error:
+  # svn: warning: W200033: sqlite[S5]: database is locked
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1482,6 +1493,7 @@ test_list = [ None,
               iprops_upgrade,
               iprops_upgrade1_6,
               changelist_upgrade_1_6,
+              upgrade_1_7_dir_external,
              ]
 
 

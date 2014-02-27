@@ -1670,11 +1670,37 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
 
 /** Determine if the properties of two path/root combinations are different.
  *
- * Set @a *changed_p to 1 if the properties at @a path1 under @a root1 differ
- * from those at @a path2 under @a root2, or set it to 0 if they are the
- * same.  Both paths must exist under their respective roots, and both
- * roots must be in the same filesystem.
+ * Set @a *changed_p to #TRUE if the properties at @a path1 under @a root1
+ * differ from those at @a path2 under @a root2, or set it to #FALSE if they
+ * are the same.  If @a strict is #FALSE, the function may report false
+ * positives, otherwise a full comparison may be necessary.  Both paths must
+ * exist under their respective roots, and both roots must be in the same
+ * filesystem.
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @note The behavior under @a strict == #FALSE is implementation dependent
+ * in that the false positives reported may differ from release to release
+ * and backend to backend.  It is perfectly legal to report all combinations
+ * as "changed" even for @a path1 == @a path2 and @a root1 == @a root2.
+ * There is also no guarantee that there will be false positives at all.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_fs_props_changed2(svn_boolean_t *changed_p,
+                      svn_fs_root_t *root1,
+                      const char *path1,
+                      svn_fs_root_t *root2,
+                      const char *path2,
+                      svn_boolean_t strict,
+                      apr_pool_t *pool);
+
+
+/** Similar to svn_fs_props_changed2 with @a strict set to #FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p,
                      svn_fs_root_t *root1,
@@ -2227,11 +2253,36 @@ svn_fs_apply_text(svn_stream_t **contents_p,
 
 /** Check if the contents of two root/path combos have changed.
  *
- * Set @a *changed_p to 1 if the contents at @a path1 under @a root1 differ
- * from those at @a path2 under @a root2, or set it to 0 if they are the
- * same.  Both paths must exist under their respective roots, and both
- * roots must be in the same filesystem.
+ * Set @a *changed_p to #TRUE if the file contents at @a path1 under
+ * @a root1 differ from those at @a path2 under @a root2, or set it to
+ * #FALSE if they are the same.  If @a strict is #FALSE, the function may
+ * report false positives, otherwise a full comparison may be necessary.
+ * Both paths must exist under their respective roots, and both roots must
+ * be in the same filesystem.
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @note The behavior under @a strict == #FALSE is implementation dependent
+ * in that the false positives reported may differ from release to release
+ * and backend to backend.  It is perfectly legal to report all combinations
+ * as "changed" even for @a path1 == @a path2 and @a root1 == @a root2.
+ * There is also no guarantee that there will be false positives at all.
+ *
+ * @since New in 1.9.
  */
+svn_error_t *
+svn_fs_contents_changed2(svn_boolean_t *changed_p,
+                         svn_fs_root_t *root1,
+                         const char *path1,
+                         svn_fs_root_t *root2,
+                         const char *path2,
+                         svn_boolean_t strict,
+                         apr_pool_t *pool);
+
+/** Similar to svn_fs_contents_changed2 with @a strict set to #FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p,
                         svn_fs_root_t *root1,
