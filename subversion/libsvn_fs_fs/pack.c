@@ -884,7 +884,6 @@ sort_reps_range(pack_context_t *context,
         {
           /* next path */
           path = path_order[i]->path;
-          rep_id = path_order[i]->rep_id;
 
           /* Pick roundest non-linear deltified node. */
           if (roundness(path_order[best]->predecessor_count)
@@ -918,6 +917,15 @@ sort_reps_range(pack_context_t *context,
    * access HEAD of the respective path.  Keeping all its dependency chain
    * in one place turns reconstruction into a linear scan of minimal length.
    */
+  for (i = first; i < last; ++i)
+    if (path_order[i])
+      {
+        /* This is the first path we still have to handle. */
+        path = path_order[i]->path;
+        rep_id = path_order[i]->rep_id;
+        break;
+      }
+
   for (i = first; i < last; ++i)
     if (path_order[i])
       {
