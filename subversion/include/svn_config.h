@@ -669,44 +669,60 @@ svn_config_ensure(const char *config_dir,
  */
 
 
-/** A hash-key pointing to a realmstring.  Every file containing
- * authentication data should have this key.
+/**
+ * Attributes of authentication credentials.
+ *
+ * The values of these keys are C strings.
+ *
+ * @since New in 1.9.
+ * @note These hash keys were also used in versions < 1.9 but were
+ *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY).
+ *
+ * @defgroup cached_authentication_data_attributes
+ * @{
+ */
+
+/** A hash-key pointing to a realmstring.  This attribute is mandatory.
+ *
+ * @since New in 1.0.
  */
 #define SVN_CONFIG_REALMSTRING_KEY  "svn:realmstring"
 
-/** Hash keys used for attributes of authentication credentials.
-  *
-  * @c SVN_CONFIG_AUTHN_USERNAME_KEY is a key for usernames.
-  *
-  * @c SVN_CONFIG_AUTHN_PASSWORD_KEY is a key for passwords.
-  * The password may be in plaintext or encrypted form, depending on
-  * the authentication provider.
-  *
-  * @c SVN_CONFIG_AUTHN_PASSPHRASE_KEY is a key for passphrases,
-  * such as SSL client ceritifcate passphrases. The passphrase may be in
-  * plaintext or encrypted form, depending on the authentication provider.
-  *
-  * @c SVN_CONFIG_AUTHN_PASSTYPE_KEY records the passphrase type next to
-  * a password or passphrase, so that anyone who is manually editing files
-  * in the auth cache can know which provider owns the credential.
-  * 
-  * @c SVN_CONFIG_AUTHN_ASCII_CERT_KEY is a key for an ASCII-representation
-  * of an SSL certificate using base64 encoding. This is not human-readable!
-  *
-  * @c SVN_CONFIG_AUTHN_FAILURES_KEY is a key for SSL certificate verification
-  * failures encoded as an ASCII integer containing any of the SVN_AUTH_SSL_*
-  * SSL server certificate failure bits defined in svn_auth.h.
-  *
-  * @since New in 1.9.
-  * @note: These hash keys were also used in versions < 1.9 but were
-  *        not part of the public API.
-  */
+/** A hash-key for usernames.
+ * @since New in 1.9.
+ */
 #define SVN_CONFIG_AUTHN_USERNAME_KEY           "username"
+
+/** A hash-key for passwords.
+ * The password may be in plaintext or encrypted form, depending on
+ * the authentication provider.
+ */
 #define SVN_CONFIG_AUTHN_PASSWORD_KEY           "password"
+
+/** A hash-key for passphrases,
+ * such as SSL client ceritifcate passphrases. The passphrase may be in
+ * plaintext or encrypted form, depending on the authentication provider.
+ */
 #define SVN_CONFIG_AUTHN_PASSPHRASE_KEY         "passphrase"
+
+/** A hash-key for the type of a password or passphrase.  The type
+ * indicates which provider owns the credential.
+ */
 #define SVN_CONFIG_AUTHN_PASSTYPE_KEY           "passtype"
+
+/** A hash-key for SSL certificates.   The value is the base64-encoded DER form
+ * certificate.
+ * @note The value is not human readable.
+ */
 #define SVN_CONFIG_AUTHN_ASCII_CERT_KEY         "ascii_cert"
+
+/** A hash-key for recorded SSL certificate verification
+ * failures.  Failures encoded as an ASCII integer containing any of the
+ * SVN_AUTH_SSL_* SSL server certificate failure bits defined in svn_auth.h.
+ */
 #define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
+
+/** @} */
 
 /** Use @a cred_kind and @a realmstring to locate a file within the
  * ~/.subversion/auth/ area.  If the file exists, initialize @a *hash
