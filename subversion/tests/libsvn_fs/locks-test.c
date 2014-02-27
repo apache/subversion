@@ -799,9 +799,10 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   svn_revnum_t newrev;
   svn_fs_access_t *access;
   svn_fs_lock_target_t target;
-  apr_hash_t *paths, *results;
+  apr_hash_t *lock_paths, *unlock_paths, *results;
   svn_fs_lock_result_t *result;
   svn_lock_t *lock;
+  apr_hash_index_t *hi;
 
   SVN_ERR(create_greek_fs(&fs, &newrev, "test-lock-multiple-paths",
                           opts, pool));
@@ -816,18 +817,19 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_copy(root, "/A/mu", txn_root, "/A/BBB/mu", pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
 
-  paths = apr_hash_make(pool);
+  lock_paths = apr_hash_make(pool);
+  unlock_paths = apr_hash_make(pool);
   target.token = NULL;
   target.current_rev = newrev;
-  svn_hash_sets(paths, "/A/B/E/alpha", &target);
-  svn_hash_sets(paths, "/A/B/E/beta", &target);
-  svn_hash_sets(paths, "/A/B/E/zulu", &target);
-  svn_hash_sets(paths, "/A/BB/mu", &target);
-  svn_hash_sets(paths, "/A/BBB/mu", &target);
-  svn_hash_sets(paths, "/A/D/G/pi", &target);
-  svn_hash_sets(paths, "/A/D/G/rho", &target);
-  svn_hash_sets(paths, "/A/mu", &target);
-  svn_hash_sets(paths, "/X/zulu", &target);
+  svn_hash_sets(lock_paths, "/A/B/E/alpha", &target);
+  svn_hash_sets(lock_paths, "/A/B/E/beta", &target);
+  svn_hash_sets(lock_paths, "/A/B/E/zulu", &target);
+  svn_hash_sets(lock_paths, "/A/BB/mu", &target);
+  svn_hash_sets(lock_paths, "/A/BBB/mu", &target);
+  svn_hash_sets(lock_paths, "/A/D/G/pi", &target);
+  svn_hash_sets(lock_paths, "/A/D/G/rho", &target);
+  svn_hash_sets(lock_paths, "/A/mu", &target);
+  svn_hash_sets(lock_paths, "/X/zulu", &target);
 
 #define EXPECT_LOCK(path)                                  \
   result = svn_hash_gets(results, (path));                 \
@@ -842,7 +844,22 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_get_lock(&lock, fs, (path), pool));       \
   SVN_TEST_ASSERT(!lock)
 
-  SVN_ERR(svn_fs_lock2(&results, fs, paths, "comment", 0, 0, 0, pool, pool));
+#define EXPECT_UNLOCK(path)                          \
+  result = svn_hash_gets(results, (path));           \
+  SVN_TEST_ASSERT(result && !result->err);           \
+  SVN_ERR(svn_fs_get_lock(&lock, fs, (path), pool)); \
+  SVN_TEST_ASSERT(!lock)
+
+#define EXPECT_UNLOCK_ERROR(path)                    \
+  result = svn_hash_gets(results, (path));           \
+  SVN_TEST_ASSERT(result && result->err);            \
+  svn_error_clear(result->err);                      \
+  SVN_ERR(svn_fs_get_lock(&lock, fs, (path), pool)); \
+  SVN_TEST_ASSERT(lock)
+
+  /* Lock some paths. */
+  SVN_ERR(svn_fs_lock2(&results, fs, lock_paths, "comment", 0, 0, 0,
+                       pool, pool));
 
   EXPECT_LOCK("/A/B/E/alpha");
   EXPECT_LOCK("/A/B/E/beta");
@@ -854,20 +871,67 @@ lock_multiple_paths(const svn_test_opts_t *opts,
   EXPECT_LOCK("/A/mu");
   EXPECT_ERROR("/X/zulu");
 
-#define EXPECT_NO_ERROR(path)              \
-  result = svn_hash_gets(results, (path)); \
-  SVN_TEST_ASSERT(result && !result->err)
+  /* Unlock without force and wrong tokens. */
+  for (hi = apr_hash_first(pool, lock_paths); hi; hi = apr_hash_next(hi))
+    svn_hash_sets(unlock_paths, svn__apr_hash_index_key(hi), "wrong-token");
+  SVN_ERR(svn_fs_unlock2(&results, fs, unlock_paths, FALSE, pool, pool));
 
-  SVN_ERR(svn_fs_unlock2(&results, fs, paths, TRUE, pool, pool));
-
-  EXPECT_NO_ERROR("/A/B/E/alpha");
-  EXPECT_NO_ERROR("/A/B/E/beta");
+  EXPECT_UNLOCK_ERROR("/A/B/E/alpha");
+  EXPECT_UNLOCK_ERROR("/A/B/E/beta");
   EXPECT_ERROR("/A/B/E/zulu");
-  EXPECT_NO_ERROR("/A/BB/mu");
-  EXPECT_NO_ERROR("/A/BBB/mu");
-  EXPECT_NO_ERROR("/A/D/G/pi");
-  EXPECT_NO_ERROR("/A/D/G/rho");
-  EXPECT_NO_ERROR("/A/mu");
+  EXPECT_UNLOCK_ERROR("/A/BB/mu");
+  EXPECT_UNLOCK_ERROR("/A/BBB/mu");
+  EXPECT_UNLOCK_ERROR("/A/D/G/pi");
+  EXPECT_UNLOCK_ERROR("/A/D/G/rho");
+  EXPECT_UNLOCK_ERROR("/A/mu");
+  EXPECT_ERROR("/X/zulu");
+
+  /* Force unlock. */
+  for (hi = apr_hash_first(pool, lock_paths); hi; hi = apr_hash_next(hi))
+    svn_hash_sets(unlock_paths, svn__apr_hash_index_key(hi), "");
+  SVN_ERR(svn_fs_unlock2(&results, fs, unlock_paths, TRUE, pool, pool));
+
+  EXPECT_UNLOCK("/A/B/E/alpha");
+  EXPECT_UNLOCK("/A/B/E/beta");
+  EXPECT_ERROR("/A/B/E/zulu");
+  EXPECT_UNLOCK("/A/BB/mu");
+  EXPECT_UNLOCK("/A/BBB/mu");
+  EXPECT_UNLOCK("/A/D/G/pi");
+  EXPECT_UNLOCK("/A/D/G/rho");
+  EXPECT_UNLOCK("/A/mu");
+  EXPECT_ERROR("/X/zulu");
+
+  /* Lock again. */
+  SVN_ERR(svn_fs_lock2(&results, fs, lock_paths, "comment", 0, 0, 0,
+                       pool, pool));
+
+  EXPECT_LOCK("/A/B/E/alpha");
+  EXPECT_LOCK("/A/B/E/beta");
+  EXPECT_ERROR("/A/B/E/zulu");
+  EXPECT_LOCK("/A/BB/mu");
+  EXPECT_LOCK("/A/BBB/mu");
+  EXPECT_LOCK("/A/D/G/pi");
+  EXPECT_LOCK("/A/D/G/rho");
+  EXPECT_LOCK("/A/mu");
+  EXPECT_ERROR("/X/zulu");
+
+  /* Unlock without force. */
+  for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))
+    {
+      result = svn__apr_hash_index_val(hi);
+      svn_hash_sets(unlock_paths, svn__apr_hash_index_key(hi),
+                    result->lock ? result->lock->token : "non-existant-token");
+    }
+  SVN_ERR(svn_fs_unlock2(&results, fs, unlock_paths, FALSE, pool, pool));
+
+  EXPECT_UNLOCK("/A/B/E/alpha");
+  EXPECT_UNLOCK("/A/B/E/beta");
+  EXPECT_ERROR("/A/B/E/zulu");
+  EXPECT_UNLOCK("/A/BB/mu");
+  EXPECT_UNLOCK("/A/BBB/mu");
+  EXPECT_UNLOCK("/A/D/G/pi");
+  EXPECT_UNLOCK("/A/D/G/rho");
+  EXPECT_UNLOCK("/A/mu");
   EXPECT_ERROR("/X/zulu");
 
   return SVN_NO_ERROR;
