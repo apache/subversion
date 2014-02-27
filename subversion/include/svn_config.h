@@ -757,7 +757,7 @@ typedef svn_error_t *
  *
  * @note Removing credentials from the config-based disk store will
  * not purge them from any open svn_auth_baton_t instance.  Consider
- * using svn_auth_forget_credentials() -- from the @a cleanup_func,
+ * using svn_auth_forget_credentials() -- from the @a walk_func,
  * even -- for this purpose.
  *
  * @note Removing credentials from the config-based disk store will
