@@ -1167,6 +1167,18 @@ svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
 }
 
 svn_error_t *
+svn_fs_props_changed2(svn_boolean_t *changed_p, svn_fs_root_t *root1,
+                      const char *path1, svn_fs_root_t *root2,
+                      const char *path2, svn_boolean_t strict,
+                      apr_pool_t *pool)
+{
+  return svn_error_trace(root1->vtable->props_changed(changed_p,
+                                                      root1, path1,
+                                                      root2, path2,
+                                                      strict, pool));
+}
+
+svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                      const char *path1, svn_fs_root_t *root2,
                      const char *path2, apr_pool_t *pool)
@@ -1174,7 +1186,7 @@ svn_fs_props_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
   return svn_error_trace(root1->vtable->props_changed(changed_p,
                                                       root1, path1,
                                                       root2, path2,
-                                                      pool));
+                                                      FALSE, pool));
 }
 
 svn_error_t *
@@ -1442,6 +1454,18 @@ svn_fs_apply_text(svn_stream_t **contents_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_contents_changed2(svn_boolean_t *changed_p, svn_fs_root_t *root1,
+                         const char *path1, svn_fs_root_t *root2,
+                         const char *path2, svn_boolean_t strict,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(root1->vtable->contents_changed(changed_p,
+                                                         root1, path1,
+                                                         root2, path2,
+                                                         strict, pool));
+}
+
+svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                         const char *path1, svn_fs_root_t *root2,
                         const char *path2, apr_pool_t *pool)
@@ -1449,7 +1473,7 @@ svn_fs_contents_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
   return svn_error_trace(root1->vtable->contents_changed(changed_p,
                                                          root1, path1,
                                                          root2, path2,
-                                                         pool));
+                                                         FALSE, pool));
 }
 
 svn_error_t *

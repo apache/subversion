@@ -1591,6 +1591,7 @@ x_props_changed(svn_boolean_t *changed_p,
                 const char *path1,
                 svn_fs_root_t *root2,
                 const char *path2,
+                svn_boolean_t strict,
                 apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
@@ -1604,7 +1605,7 @@ x_props_changed(svn_boolean_t *changed_p,
   SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
   SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
   return svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
-                                        FALSE, pool);
+                                        strict, pool);
 }
 
 
@@ -3268,6 +3269,7 @@ x_contents_changed(svn_boolean_t *changed_p,
                    const char *path1,
                    svn_fs_root_t *root2,
                    const char *path2,
+                   svn_boolean_t strict,
                    apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
@@ -3296,7 +3298,7 @@ x_contents_changed(svn_boolean_t *changed_p,
   SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
   SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
   return svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
-                                        FALSE, pool);
+                                        strict, pool);
 }
 
 

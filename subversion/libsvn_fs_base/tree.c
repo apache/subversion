@@ -1441,6 +1441,7 @@ base_props_changed(svn_boolean_t *changed_p,
                    const char *path1,
                    svn_fs_root_t *root2,
                    const char *path2,
+                   svn_boolean_t strict,
                    apr_pool_t *pool)
 {
   struct things_changed_args args;
@@ -1457,7 +1458,7 @@ base_props_changed(svn_boolean_t *changed_p,
   args.path2      = path2;
   args.changed_p  = changed_p;
   args.pool       = pool;
-  args.strict     = FALSE;
+  args.strict     = strict;
 
   return svn_fs_base__retry_txn(root1->fs, txn_body_props_changed, &args,
                                 TRUE, pool);
@@ -4079,6 +4080,7 @@ base_contents_changed(svn_boolean_t *changed_p,
                       const char *path1,
                       svn_fs_root_t *root2,
                       const char *path2,
+                      svn_boolean_t strict,
                       apr_pool_t *pool)
 {
   struct things_changed_args args;
@@ -4110,7 +4112,7 @@ base_contents_changed(svn_boolean_t *changed_p,
   args.path2      = path2;
   args.changed_p  = changed_p;
   args.pool       = pool;
-  args.strict     = FALSE;
+  args.strict     = strict;
 
   return svn_fs_base__retry_txn(root1->fs, txn_body_contents_changed, &args,
                                 TRUE, pool);
