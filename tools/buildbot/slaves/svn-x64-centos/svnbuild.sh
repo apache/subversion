@@ -32,6 +32,8 @@ echo "========= configure"
 #            --with-junit=/usr/share/java/junit.jar
 #            --with-jdk=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64 \
 #            --without-berkeley-db \
+#            --disable-shared \
+#CFLAGS='-fprofile-arcs -ftest-coverage' \
 ./configure --enable-javahl --enable-maintainer-mode \
             --with-neon=/usr \
             --with-serf=/usr/local \
