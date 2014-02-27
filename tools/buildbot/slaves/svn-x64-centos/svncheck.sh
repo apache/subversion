@@ -35,10 +35,7 @@ test -e ../mount-ramdrive && ../mount-ramdrive
 
 echo "========= make"
 case "$2" in
-  ""|ra_dav|ra_neon)
-    make davautocheck FS_TYPE=$1 HTTP_LIBRARY=neon CLEANUP=1 || exit $?
-    ;;
-  ra_serf)
+  ""|ra_serf)
     make davautocheck FS_TYPE=$1 HTTP_LIBRARY=serf CLEANUP=1 || exit $?
     ;;
   ra_svn)
