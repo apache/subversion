@@ -29,8 +29,14 @@ dnl  performed with pkg-config.  If --with-serf=yes was actually passed
 dnl  then we error if we can't actually find serf.
 dnl
 dnl  If a --with-serf=PREFIX option is passed search for a suitable
-dnl  serf installed on the system under that PREFIX.  We will
-dnl  error if we can't find serf.
+dnl  serf installed on the system under that PREFIX.  First we will
+dnl  try to find a pc file for serf under the prefix or directly
+dnl  in the prefix (allowing the path that the serf-?.pc file to be
+dnl  passed to configure if the pc file is in a non-standard location)
+dnl  and then use pkg-config to determine the options to use that library.
+dnl  If pkg-confg can't provide us the options to use that library fall
+dnl  back on trying to use the guess the options based on just the prefix.
+dnl  We will error if we can't find serf.
 dnl
 dnl  If a --with-serf=no option is passed then no search will be
 dnl  conducted.
@@ -58,13 +64,15 @@ AC_DEFUN(SVN_LIB_SERF,
     elif test "$withval" = "no" ; then
       serf_skip=yes 
     else
-      SVN_SERF_PREFIX_CONFIG()
+      serf_required=yes
+      serf_prefix="$withval"
     fi
   ])
 
   if test "$serf_skip" = "no" ; then
-    if test "$serf_found" = "no" ; then
-      SVN_SERF_PKG_CONFIG()
+    SVN_SERF_PKG_CONFIG()
+    if test -n "$serf_prefix" && test "$serf_found" = "no" ; then
+      SVN_SERF_PREFIX_CONFIG()
     fi
   
     AC_MSG_CHECKING([was serf enabled])
@@ -91,7 +99,6 @@ AC_DEFUN(SVN_SERF_PREFIX_CONFIG,
 [
   AC_MSG_NOTICE([serf library configuration via prefix])
   serf_required=yes
-  serf_prefix=$withval
   for serf_major in serf-2 serf-1; do
     if ! test -d $serf_prefix/include/$serf_major; then continue; fi
     save_cppflags="$CPPFLAGS"
@@ -134,17 +141,37 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
   if test -n "$PKG_CONFIG"; then
     for serf_major in serf-2 serf-1; do
       AC_MSG_CHECKING([for $serf_major library])
-      if $PKG_CONFIG $serf_major --exists; then
+      if test -n "$serf_prefix" ; then
+        dnl User provided a prefix so we try to find the pc file under
+        dnl the prefix.  PKG_CONFIG_PATH isn't useful for this because
+        dnl we want to make sure that we get the library in the prefix
+        dnl the user specifies and we want to allow the prefix path to
+        dnl point at the path for the pc file is in (if it's in some
+        dnl other path than $serf_prefx/lib/pkgconfig).
+        if test -e "$serf_prefix/$serf_major.pc" ; then
+          serf_pc_arg="$serf_prefix/$serf_major.pc"
+        elif test -e "$serf_prefix/lib/pkgconfig/$serf_major.pc" ; then
+          serf_pc_arg="$serf_prefix/lib/pkgconfig/$serf_major.pc"
+        else
+          AC_MSG_RESULT([no])
+          continue
+        fi
+      else
+        serf_pc_arg="$serf_major"
+      fi
+      if $PKG_CONFIG $serf_pc_arg --exists; then
         AC_MSG_RESULT([yes])
         AC_MSG_CHECKING([serf library version])
-        SERF_VERSION=`$PKG_CONFIG $serf_major --modversion`
+        SERF_VERSION=`$PKG_CONFIG $serf_pc_arg --modversion`
         AC_MSG_RESULT([$SERF_VERSION])
         AC_MSG_CHECKING([serf version is suitable])
-        if $PKG_CONFIG $serf_major --atleast-version=$serf_check_version; then
+        if $PKG_CONFIG $serf_pc_arg --atleast-version=$serf_check_version; then
           AC_MSG_RESULT([yes])
           serf_found=yes
-          SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_major --cflags | $SED -e 's/-D[^ ]*//g'`]
-          SVN_SERF_LIBS=`$PKG_CONFIG $serf_major --libs` 
+          SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_pc_arg --cflags | $SED -e 's/-D[^ ]*//g'`]
+          SVN_SERF_LIBS=`$PKG_CONFIG $serf_pc_arg --libs-only-l` 
+          dnl don't use --libs-only-L because then we might miss some options
+          LDFLAGS=["$LDFLAGS `$PKG_CONFIG $serf_pc_arg --libs | $SED -e 's/-l[^ ]*//g'`"]
           break
         else
           AC_MSG_RESULT([no])
