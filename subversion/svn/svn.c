@@ -280,7 +280,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
   {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
-  {"remove",         opt_remove, 0, N_("remove changelist association or auth credential")},
+  {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
                     N_("operate only on members of changelist ARG")},
   {"keep-changelists", opt_keep_changelists, 0,
@@ -468,7 +468,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     "  Note that wildcards will usually need to be quoted or escaped on the\n"
     "  command line because many command shells will interfere by trying to\n"
     "  expand them.\n"),
-    { opt_remove, opt_show_passwords } },
+    { opt_remove, opt_show_passwords },
+    { {opt_remove, N_("remove matching authentication credentials")} }
+    
+    },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"}, N_
     ("Output the content of specified files or\n"
