@@ -51,7 +51,7 @@ svn_fs_fs__noderev_deserialize(void *buffer,
 
 /**
  * #svn_txdelta_window_t is not sufficient for caching the data it
- * represents because data read process needs auxilliary information.
+ * represents because data read process needs auxiliary information.
  */
 typedef struct
 {

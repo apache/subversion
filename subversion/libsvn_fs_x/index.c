@@ -101,7 +101,7 @@ typedef struct l2p_page_t
   apr_uint32_t *sub_items;
 } l2p_page_t;
 
-/* All of the log-to-phys proto index file consist of entires of this type.
+/* All of the log-to-phys proto index file consist of entries of this type.
  */
 typedef struct l2p_proto_entry_t
 {
@@ -559,7 +559,7 @@ compare_l2p_entries_by_offset(const l2p_page_entry_t *lhs,
 
 /* Write the log-2-phys index page description for the l2p_page_entry_t
  * array ENTRIES, starting with element START up to but not including END.
- * Write the resulting represenation into BUFFER.  Use POOL for tempoary
+ * Write the resulting representation into BUFFER.  Use POOL for tempoary
  * allocations.
  */
 static svn_error_t *

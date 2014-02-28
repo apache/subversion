@@ -575,7 +575,7 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
          * from the diff header. But there usually are no files which
          * UNIX patch could apply the property diff to, so we use "##"
          * instead of "@@" as the default hunk delimiter for property diffs.
-         * We also supress the diff header. */
+         * We also suppress the diff header. */
         SVN_ERR(svn_diff_mem_string_output_unified2(
                   outstream, diff, FALSE /* no header */, "##", NULL, NULL,
                   encoding, orig, val, iterpool));

@@ -96,7 +96,7 @@ typedef struct l2p_page_t
   apr_uint64_t *offsets;
 } l2p_page_t;
 
-/* All of the log-to-phys proto index file consist of entires of this type.
+/* All of the log-to-phys proto index file consist of entries of this type.
  */
 typedef struct l2p_proto_entry_t
 {

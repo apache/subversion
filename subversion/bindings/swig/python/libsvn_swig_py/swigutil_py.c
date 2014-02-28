@@ -1550,7 +1550,7 @@ static item_baton *make_baton(apr_pool_t *pool,
   /* Note: We steal the caller's reference to 'baton'. Also, to avoid
      memory leaks, we borrow the caller's reference to 'editor'. In this
      case, borrowing the reference to 'editor' is safe because the contents
-     of an item_baton struct are only used by functino calls which operate on
+     of an item_baton struct are only used by function calls which operate on
      the editor itself. */
   newb->editor = editor;
   newb->baton = baton;

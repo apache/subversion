@@ -872,7 +872,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test16,
                    "find_char_backward; len = 0 case"),
     SVN_TEST_PASS2(test17,
-                   "find_char_backward; no occurence case"),
+                   "find_char_backward; no occurrence case"),
     SVN_TEST_PASS2(test18,
                    "check whitespace removal; common case"),
     SVN_TEST_PASS2(test19,

@@ -5,7 +5,7 @@
 2 Condensed list of defines and environment variables
 3 Defines tweaking SVN defaults
 4 Defines enabling or disabling features
-5 Defines controling debug support
+5 Defines controlling debug support
 6 Defines that affect unit tests
 7 Environment variables
 
@@ -291,7 +291,7 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Suggested: not defined (to ensure correct behaviour)
 
 
-5 Defines controling debug support
+5 Defines controlling debug support
 ==================================
 
 5.1 SVN_DBG_QUIET

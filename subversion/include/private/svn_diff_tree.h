@@ -319,7 +319,7 @@ svn_diff__tree_processor_filter_create(const svn_diff_tree_processor_t *processo
                                        apr_pool_t *result_pool);
 
 /**
- * Create a new svn_diff_tree_processor_t instace with all function setup
+ * Create a new svn_diff_tree_processor_t instance with all function setup
  * to call into processor with all adds with copyfrom information transformed
  * to simple node changes.
  *

@@ -622,7 +622,7 @@ svn_fs_x__reps_get(svn_fs_x__rep_extractor_t **extractor,
   result->result = svn_stringbuf_create_empty(pool);
   result->pool = pool;
 
-  /* fill all the bits of the result that we can, i.e. all but bits comming
+  /* fill all the bits of the result that we can, i.e. all but bits coming
    * from base representations */
   get_text(result, container, first, last - first);
   *extractor = result;

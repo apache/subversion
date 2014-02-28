@@ -1551,7 +1551,7 @@ diff_prepare_repos_repos(const char **url1,
 
    Since Subversion 1.8 we also have a variant of svn_wc_diff called
    svn_client__arbitrary_nodes_diff, that allows handling WORKING-WORKING
-   comparisions between nodes in the working copy.
+   comparisons between nodes in the working copy.
 
    So the truth of the matter is, if the caller's arguments can't be
    pigeonholed into one of these use-cases, we currently bail with a

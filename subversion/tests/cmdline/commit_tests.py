@@ -1439,7 +1439,7 @@ def commit_multiple_wc_nested(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
   # Commit should succeed, even though one target is a "child" of the other.
-  svntest.actions.run_and_verify_svn("Ouput on stderr where none expected",
+  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
                                      svntest.verify.AnyOutput, [],
                                      'commit', '-m', 'log',
                                      wc_dir, wc2_dir)

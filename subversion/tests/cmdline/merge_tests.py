@@ -3223,7 +3223,7 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
   # Normally we'd simply update the whole working copy, but since that would
   # defeat the purpose of this test (see the comment below), instead we'll
   # update only "." using --depth empty.  This preserves the intent of the
-  # orginal mixed-rev test for this issue, but allows the merge tracking
+  # original mixed-rev test for this issue, but allows the merge tracking
   # logic to consider r3 as valid for reverse merging.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '--depth', 'empty', wc_dir)
@@ -9563,7 +9563,7 @@ def new_subtrees_should_not_break_merge(sbox):
   wc_status.tweak(wc_rev=9)
 
   # Yet another test for issue #3067.  Merge -rX:Y, where X>Y (reverse merge)
-  # and the merge target has a subtree that came into existance at some rev
+  # and the merge target has a subtree that came into existence at some rev
   # N where X < N < Y.  This merge should simply delete the subtree.
   #
   # For this test merge -r9:2 to A_COPY.  This should revert all the merges
@@ -11818,7 +11818,7 @@ def subtree_source_missing_in_requested_range(sbox):
                                 psi_COPY_path : '/A/D/H/psi:3,8' })
 
   # Now test a reverse merge where part of the requested range postdates
-  # a subtree's existance.  Merge -r12:1 to A_COPY.  This should revert
+  # a subtree's existence.  Merge -r12:1 to A_COPY.  This should revert
   # all of the merges done thus far.  The fact that A/D/H/psi no longer
   # exists after r7 shouldn't break the subtree merge into A_COPY/D/H/psi.
   # A_COPY/D/H/psi should simply have r3 reverse merged.  No paths under

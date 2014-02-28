@@ -275,7 +275,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
              "definition"),
            SVN_PROP_EXTERNALS, parent_directory_display, token0);
 
-      /* The appearence of -r N or -rN forces the type of external.
+      /* The appearance of -r N or -rN forces the type of external.
          If -r is at the beginning of the line or the first token is
          an absolute URL or if the second token is not an absolute
          URL, then the URL supports peg revisions. */

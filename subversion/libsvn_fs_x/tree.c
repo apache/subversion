@@ -528,18 +528,18 @@ dag_node_cache_set(svn_fs_root_t *root,
 }
 
 
-/* Baton for find_descendents_in_cache. */
+/* Baton for find_descendants_in_cache. */
 struct fdic_baton {
   const char *path;
   apr_array_header_t *list;
   apr_pool_t *pool;
 };
 
-/* If the given item is a descendent of BATON->PATH, push
+/* If the given item is a descendant of BATON->PATH, push
  * it onto BATON->LIST (copying into BATON->POOL).  Implements
  * the svn_iter_apr_hash_cb_t prototype. */
 static svn_error_t *
-find_descendents_in_cache(void *baton,
+find_descendants_in_cache(void *baton,
                           const void *key,
                           apr_ssize_t klen,
                           void *val,
@@ -574,16 +574,16 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   locate_cache(&cache, NULL, root, NULL, b.pool);
 
 
-  SVN_ERR(svn_cache__iter(NULL, cache, find_descendents_in_cache,
+  SVN_ERR(svn_cache__iter(NULL, cache, find_descendants_in_cache,
                           &b, b.pool));
 
   iterpool = svn_pool_create(b.pool);
 
   for (i = 0; i < b.list->nelts; i++)
     {
-      const char *descendent = APR_ARRAY_IDX(b.list, i, const char *);
+      const char *descendant = APR_ARRAY_IDX(b.list, i, const char *);
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_cache__set(cache, descendent, NULL, iterpool));
+      SVN_ERR(svn_cache__set(cache, descendant, NULL, iterpool));
     }
 
   svn_pool_destroy(iterpool);

@@ -3618,7 +3618,7 @@ def diff_correct_wc_base_revnum(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', wc_dir)
 
-  # The same again, but specifying the target explicity. This should
+  # The same again, but specifying the target explicitly. This should
   # give the same output.
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '--git', iota_path)

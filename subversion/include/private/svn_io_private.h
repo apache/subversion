@@ -106,7 +106,7 @@ apr_file_t *
 svn_stream__aprfile(svn_stream_t *stream);
 
 /* Creates as *INSTALL_STREAM a stream that once completed can be installed
-   using Windows checkouts much slower then Unix.
+   using Windows checkouts much slower than Unix.
 
    While writing the stream is temporarily stored in TMP_ABSPATH.
  */

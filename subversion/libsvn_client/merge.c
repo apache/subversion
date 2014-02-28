@@ -2419,7 +2419,7 @@ merge_file_deleted(const char *relpath,
    When *SKIP is TRUE, the diff driver avoids work on getting the details
    for the closing callbacks.
 
-   The SKIP and SKIP_DESCENDANTS work independantly.
+   The SKIP and SKIP_DESCENDANTS work independently.
  */
 static svn_error_t *
 merge_dir_opened(void **new_dir_baton,
@@ -3133,7 +3133,7 @@ merge_dir_deleted(const char *relpath,
          descendants we haven't walked?
 
          Note that we aren't interested in changes, as we already verified
-         changes in the paths touched by the merge. And the existance of
+         changes in the paths touched by the merge. And the existence of
          other paths is enough to mark the directory edited */
       err = svn_wc_walk_status(merge_b->ctx->wc_ctx, local_abspath,
                                svn_depth_infinity, TRUE /* get-all */,
