@@ -929,6 +929,10 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
   CFMutableDataRef resource = CFDataCreateMutable(kCFAllocatorDefault, 0);
   CFStringRef errstr = NULL;
 
+  /* failed getting the CFMutableDataRef, shouldn't happen */
+  if (!resource)
+    return NULL;
+
   /* Try to open the plist files to get the data */
   err = svn_stream_open_readonly(&read_stream, server_version, pool, pool);
   if (err)
