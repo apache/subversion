@@ -88,11 +88,8 @@ enum {false, true};
 #include <inttypes.h>
 #else
 #include <apr.h>
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef apr_int16_t int16_t;
-typedef apr_uint16_t uint16_t;
-typedef apr_int32_t int32_t;
+typedef uint8_t bool;
+enum {false, true};
 #endif
 #include <limits.h>
 
