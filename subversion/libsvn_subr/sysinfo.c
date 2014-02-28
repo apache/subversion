@@ -901,6 +901,8 @@ win32_shared_libs(apr_pool_t *pool)
 
 
 #ifdef SVN_HAVE_MACOS_PLIST
+/* implements svn_write_fn_t to copy the data into a CFMutableDataRef that's
+ * in the baton. */
 static svn_error_t *
 write_to_cfmutabledata(void *baton, const char *data, apr_size_t *len)
 {
@@ -955,6 +957,8 @@ system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
       *server = TRUE;
     }
 
+  /* copy the data onto the CFMutableDataRef to allow us to provide it to
+   * the CoreFoundation functions that parse proprerty lists */
   write_stream = svn_stream_create(&resource, pool);
   svn_stream_set_write(write_stream, write_to_cfmutabledata);
   err = svn_stream_copy3(read_stream, write_stream, NULL, NULL, pool);
