@@ -694,6 +694,13 @@ svn_fs_x__prop_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
+  /* Same path in same txn? */
+  if (svn_fs_x__id_eq(a->id, b->id))
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Skip the expensive bits unless we are in strict mode.
      Simply assume that there is a different. */
   if (!strict)

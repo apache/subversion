@@ -1093,6 +1093,13 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
+  /* Same path in same rev or txn? */
+  if (svn_fs_fs__id_eq(a->id, b->id))
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Old repositories may not have the SHA1 checksum handy.
      This check becomes expensive.  Skip it unless explicitly required. */
   if (!strict)
@@ -1143,8 +1150,15 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
+  /* Same path in same txn? */
+  if (svn_fs_fs__id_eq(a->id, b->id))
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Skip the expensive bits unless we are in strict mode.
-     Simply assume that there is a different. */
+     Simply assume that there is a difference. */
   if (!strict)
     {
       *equal = FALSE;
