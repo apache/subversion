@@ -901,64 +901,72 @@ win32_shared_libs(apr_pool_t *pool)
 
 
 #ifdef SVN_HAVE_MACOS_PLIST
+static svn_error_t *
+write_to_cfmutabledata(void *baton, const char *data, apr_size_t *len)
+{
+  CFMutableDataRef *resource = (CFMutableDataRef *) baton;
+
+  CFDataAppendBytes(*resource, (UInt8 *)data, *len);
+
+  return SVN_NO_ERROR;
+}
+
 /* Load the SystemVersion.plist or ServerVersion.plist file into a
    property list. Set SERVER to TRUE if the file read was
    ServerVersion.plist. */
 static CFDictionaryRef
 system_version_plist(svn_boolean_t *server, apr_pool_t *pool)
 {
-  static const UInt8 server_version[] =
+  static const char server_version[] =
     "/System/Library/CoreServices/ServerVersion.plist";
-  static const UInt8 system_version[] =
+  static const char system_version[] =
     "/System/Library/CoreServices/SystemVersion.plist";
-
+  svn_stream_t *read_stream, *write_stream;
+  svn_error_t *err;
   CFPropertyListRef plist = NULL;
-  CFDataRef resource = NULL;
+  CFMutableDataRef resource = CFDataCreateMutable(kCFAllocatorDefault, 0);
   CFStringRef errstr = NULL;
-  CFURLRef url = NULL;
-  SInt32 errcode;
 
-  url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-                                                server_version,
-                                                sizeof(server_version) - 1,
-                                                FALSE);
-  if (!url)
-    return NULL;
-
-  if (!CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
-                                                url, &resource,
-                                                NULL, NULL, &errcode))
+  /* Try to open the plist files to get the data */
+  err = svn_stream_open_readonly(&read_stream, server_version, pool, pool);
+  if (err)
     {
-      CFRelease(url);
-      url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
-                                                    system_version,
-                                                    sizeof(system_version) - 1,
-                                                    FALSE);
-      if (!url)
-        return NULL;
-
-      if (!CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault,
-                                                    url, &resource,
-                                                    NULL, NULL, &errcode))
+      if (!APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          CFRelease(url);
+          svn_error_clear(err);
           return NULL;
         }
       else
         {
-          CFRelease(url);
+          svn_error_clear(err);
+          err = svn_stream_open_readonly(&read_stream, system_version,
+                                         pool, pool);
+          if (err)
+            {
+              svn_error_clear(err);
+              return NULL;
+            }
+
           *server = FALSE;
         }
     }
   else
     {
-      CFRelease(url);
       *server = TRUE;
+    }
+
+  write_stream = svn_stream_create(&resource, pool);
+  svn_stream_set_write(write_stream, write_to_cfmutabledata);
+  err = svn_stream_copy3(read_stream, write_stream, NULL, NULL, pool);
+  if (err) 
+    {
+      svn_error_clear(err);
+      return NULL;
     }
 
   /* ### CFPropertyListCreateFromXMLData is obsolete, but its
          replacement CFPropertyListCreateWithData is only available
-         from Mac OS 1.6 onward. */
+         from Mac OS 10.6 onward. */
   plist = CFPropertyListCreateFromXMLData(kCFAllocatorDefault, resource,
                                           kCFPropertyListImmutable,
                                           &errstr);
