@@ -1362,7 +1362,8 @@ send_path_revision(struct path_revision *path_rev,
   SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
                          sb->iterpool));
 
-  /* Check if the contents changed. */
+  /* Check if the contents *may* have changed. (Allow false positives,
+     for now, as the blame implementation currently depends on them.) */
   /* Special case: In the first revision, we always provide a delta. */
   if (sb->last_root)
     SVN_ERR(svn_fs_contents_changed2(&contents_changed, sb->last_root,
