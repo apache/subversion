@@ -2235,19 +2235,18 @@ do_logs(svn_fs_t *fs,
 
               if (added_mergeinfo || deleted_mergeinfo)
                 {
-                  svn_revnum_t *cur_rev = apr_pcalloc(pool, sizeof(*cur_rev));
+                  svn_revnum_t *cur_rev =
+                    apr_pmemdup(pool, current, sizeof(cur_rev));
                   struct added_deleted_mergeinfo *add_and_del_mergeinfo =
                     apr_palloc(pool, sizeof(*add_and_del_mergeinfo));
 
-                  if (added_mergeinfo)
-                    add_and_del_mergeinfo->added_mergeinfo =
-                      svn_mergeinfo_dup(added_mergeinfo, pool);
+                  /* If we have added or deleted mergeinfo, both are non-null */
+                  SVN_ERR_ASSERT(added_mergeinfo && deleted_mergeinfo);
+                  add_and_del_mergeinfo->added_mergeinfo =
+                    svn_mergeinfo_dup(added_mergeinfo, pool);
+                  add_and_del_mergeinfo->deleted_mergeinfo =
+                    svn_mergeinfo_dup(deleted_mergeinfo, pool);
 
-                  if (deleted_mergeinfo)
-                    add_and_del_mergeinfo->deleted_mergeinfo =
-                      svn_mergeinfo_dup(deleted_mergeinfo, pool);
-
-                  *cur_rev = current;
                   if (! rev_mergeinfo)
                     rev_mergeinfo = svn_hash__make(pool);
                   apr_hash_set(rev_mergeinfo, cur_rev, sizeof(*cur_rev),
