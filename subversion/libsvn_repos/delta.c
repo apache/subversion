@@ -523,9 +523,8 @@ delta_proplists(struct context *c,
       svn_boolean_t changed;
 
       /* Is this deltification worth our time? */
-      SVN_ERR(svn_fs_props_changed2(&changed, c->target_root, target_path,
-                                    c->source_root, source_path, TRUE,
-                                    subpool));
+      SVN_ERR(svn_fs_props_different(&changed, c->target_root, target_path,
+                                     c->source_root, source_path, subpool));
       if (! changed)
         goto cleanup;
 
@@ -605,8 +604,8 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          const char *path2,
                          apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_contents_changed2(changed_p, root1, path1,
-                                                  root2, path2, TRUE, pool));
+  return svn_error_trace(svn_fs_contents_different(changed_p, root1, path1,
+                                                   root2, path2, pool));
 }
 
 
@@ -633,10 +632,10 @@ delta_files(struct context *c,
 
   if (source_path)
     {
-      SVN_ERR(svn_fs_contents_changed2(&changed,
-                                       c->target_root, target_path,
-                                       c->source_root, source_path,
-                                       TRUE, subpool));
+      SVN_ERR(svn_fs_contents_different(&changed,
+                                        c->target_root, target_path,
+                                        c->source_root, source_path,
+                                        subpool));
     }
   else
     {
