@@ -30,7 +30,8 @@
 /* An opaque struct that wraps a libmagic cookie. */
 typedef struct svn_magic__cookie_t svn_magic__cookie_t;
 
-/* This routine initialises libmagic.
+/* This routine initialises libmagic.  CONFIG is a config hash and
+ * may be NULL.
  * Upon success a new *MAGIC_COOKIE is allocated in RESULT_POOL.
  * On failure *MAGIC_COOKIE is set to NULL.
  * All resources used by libmagic are freed by a cleanup handler
@@ -38,6 +39,7 @@ typedef struct svn_magic__cookie_t svn_magic__cookie_t;
  * the pool is cleared! */
 void
 svn_magic__init(svn_magic__cookie_t **magic_cookie,
+                apr_hash_t *config,
                 apr_pool_t *result_pool);
 
 /* Detect the mime-type of the file at LOCAL_ABSPATH using MAGIC_COOKIE.

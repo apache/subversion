@@ -131,6 +131,8 @@ typedef struct svn_config_t svn_config_t;
 /** @deprecated Not used by Subversion since 2003/r847039 (well before 1.0) */
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE         "enable-magic-file"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
