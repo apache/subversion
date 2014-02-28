@@ -1366,9 +1366,9 @@ send_path_revision(struct path_revision *path_rev,
      for now, as the blame implementation currently depends on them.) */
   /* Special case: In the first revision, we always provide a delta. */
   if (sb->last_root)
-    SVN_ERR(svn_fs_contents_changed2(&contents_changed, sb->last_root,
-                                     sb->last_path, root, path_rev->path,
-                                     FALSE, sb->iterpool));
+    SVN_ERR(svn_fs_contents_different(&contents_changed, sb->last_root,
+                                      sb->last_path, root, path_rev->path,
+                                      sb->iterpool));
   else
     contents_changed = TRUE;
 
