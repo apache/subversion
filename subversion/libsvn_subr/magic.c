@@ -63,7 +63,7 @@ close_magic_cookie(void *baton)
 }
 #endif
 
-void
+svn_error_t *
 svn_magic__init(svn_magic__cookie_t **magic_cookie,
                 apr_hash_t *config,
                 apr_pool_t *result_pool)
@@ -83,7 +83,7 @@ svn_magic__init(svn_magic__cookie_t **magic_cookie,
       if (!enable)
         {
           *magic_cookie = NULL;
-          return;
+          return SVN_NO_ERROR;
         }
     }
 
@@ -115,6 +115,8 @@ svn_magic__init(svn_magic__cookie_t **magic_cookie,
 #endif
 
   *magic_cookie = mc;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

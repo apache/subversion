@@ -664,7 +664,7 @@ import(const char *local_abspath,
   const svn_io_dirent2_t *dirent;
 
   import_ctx->autoprops = autoprops;
-  svn_magic__init(&import_ctx->magic_cookie, ctx->config, pool);
+  SVN_ERR(svn_magic__init(&import_ctx->magic_cookie, ctx->config, pool));
 
   /* Get a root dir baton.  We pass the revnum we used for testing our
      assumptions and obtaining inherited properties. */
