@@ -1680,9 +1680,8 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
  *
  * @note The behavior under @a strict == #FALSE is implementation dependent
  * in that the false positives reported may differ from release to release
- * and backend to backend.  It is perfectly legal to report all combinations
- * as "changed" even for @a path1 == @a path2 and @a root1 == @a root2.
- * There is also no guarantee that there will be false positives at all.
+ * and backend to backend.  There is also no guarantee that there will be
+ * false positives at all.
  *
  * @since New in 1.9.
  */
@@ -1697,6 +1696,11 @@ svn_fs_props_changed2(svn_boolean_t *changed_p,
 
 
 /** Similar to svn_fs_props_changed2 with @a strict set to #FALSE.
+ *
+ * @note Prior to Subversion 1.9, this function could return false negatives
+ * as well: If @a root1 and @a root2 were both transaction roots and the
+ * proplists of both paths had been changed in their respective transactions,
+ * @a changed_p would be set to #FALSE in FSFS.
  *
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
@@ -2263,9 +2267,8 @@ svn_fs_apply_text(svn_stream_t **contents_p,
  *
  * @note The behavior under @a strict == #FALSE is implementation dependent
  * in that the false positives reported may differ from release to release
- * and backend to backend.  It is perfectly legal to report all combinations
- * as "changed" even for @a path1 == @a path2 and @a root1 == @a root2.
- * There is also no guarantee that there will be false positives at all.
+ * and backend to backend.  There is also no guarantee that there will be
+ * false positives at all.
  *
  * @since New in 1.9.
  */
