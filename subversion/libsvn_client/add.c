@@ -840,7 +840,7 @@ add(const char *local_abspath,
   svn_magic__cookie_t *magic_cookie;
   apr_array_header_t *ignores = NULL;
 
-  svn_magic__init(&magic_cookie, ctx->config, scratch_pool);
+  SVN_ERR(svn_magic__init(&magic_cookie, ctx->config, scratch_pool));
 
   if (existing_parent_abspath)
     {

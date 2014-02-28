@@ -37,7 +37,7 @@ typedef struct svn_magic__cookie_t svn_magic__cookie_t;
  * All resources used by libmagic are freed by a cleanup handler
  * installed on RESULT_POOL, i.e. *MAGIC_COOKIE becomes invalid when
  * the pool is cleared! */
-void
+svn_error_t *
 svn_magic__init(svn_magic__cookie_t **magic_cookie,
                 apr_hash_t *config,
                 apr_pool_t *result_pool);
