@@ -1990,7 +1990,7 @@ struct check_name_collision_baton
 };
 
 /* Scan the directory and report all entry names that differ only in
-   Unicode character representaiton. */
+   Unicode character representation. */
 static svn_error_t *
 check_name_collision(void *baton, const void *key, apr_ssize_t klen,
                      void *val, apr_pool_t *iterpool)

@@ -107,7 +107,7 @@ class Pool(object):
       # Make sure that the parent object is valid
       self._parent_pool.assert_valid()
 
-      # Refer to self using a weakrefrence so that we don't
+      # Refer to self using a weakreference so that we don't
       # create a reference cycle
       weakself = weakref.ref(self)
 

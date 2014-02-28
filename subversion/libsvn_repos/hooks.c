@@ -319,7 +319,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
 #ifdef WIN32
   /* For WIN32, we need to check with file name extension(s) added.
 
-     As Windows Scripting Host (.wsf) files can accomodate (at least)
+     As Windows Scripting Host (.wsf) files can accommodate (at least)
      JavaScript (.js) and VB Script (.vbs) code, extensions for the
      corresponding file types need not be enumerated explicitly. */
     ".exe", ".cmd", ".bat", ".wsf", /* ### Any other extensions? */

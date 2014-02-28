@@ -174,7 +174,7 @@ dir_change_prop(void *dir_baton,
       /* We have already notified for this directory, so don't do that again */
       SVN_ERR(svn_wc_prop_set4(eb->wc_ctx, db->local_abspath, name, value,
                                svn_depth_empty, FALSE, NULL,
-                               NULL, NULL, /* Cancelation */
+                               NULL, NULL, /* Cancellation */
                                NULL, NULL, /* Notification */
                                scratch_pool));
     }

@@ -1274,7 +1274,7 @@ test_global_relocate(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
-  /* Test relocating to a repos not existant in the db */
+  /* Test relocating to a repos not existent in the db */
   SVN_ERR(svn_wc__db_global_relocate(db, local_abspath, ROOT_THREE, pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,

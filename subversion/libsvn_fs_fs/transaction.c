@@ -1996,7 +1996,7 @@ rep_write_cleanup(void *data)
   err = svn_io_file_trunc(b->file, b->rep_offset, b->pool);
   err = svn_error_compose_create(err, svn_io_file_close(b->file, b->pool));
 
-  /* Remove our lock regardless of any preceeding errors so that the
+  /* Remove our lock regardless of any preceding errors so that the
      being_written flag is always removed and stays consistent with the
      file lock which will be removed no matter what since the pool is
      going away. */
@@ -3539,7 +3539,7 @@ fnv1a_checksum_on_file_range(apr_uint32_t *fnv1_checksum,
   return SVN_NO_ERROR;
 }
 
-/* qsort()-compatible comparision function sorting svn_fs_fs__p2l_entry_t
+/* qsort()-compatible comparison function sorting svn_fs_fs__p2l_entry_t
  * by offset.
  */
 static int

@@ -308,7 +308,7 @@ class TestFactory:
     # An optimized list kept up-to-date by variable additions
     self.sorted_vars_by_pathlen = []
 
-    # Wether we ever used the variables 'wc_dir' and 'url' (tiny tweak)
+    # Whether we ever used the variables 'wc_dir' and 'url' (tiny tweak)
     self.used_wc_dir = False
     self.used_abs_wc_dir = False
     self.used_url = False

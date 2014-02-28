@@ -1022,9 +1022,9 @@ public interface ISVNClient
      * #diffSummarize(String, Revision, String, Revision, Depth,
      * Collection, boolean, DiffSummaryCallback)}, using
      * <code>path</code> for both of that method's targets.
-     * @param startRevision Beginning of range for comparsion of
+     * @param startRevision Beginning of range for comparison of
      * <code>target</code>.
-     * @param endRevision End of range for comparsion of
+     * @param endRevision End of range for comparison of
      * <code>target</code>.
      * @param depth how deep to recurse.
      * @param changelists  if non-null, filter paths using changelists

@@ -869,9 +869,9 @@ base-presence: *
 working-presence: excluded
 base-presence: *
   A new, excluded BASE_NODE is constructed, and the WORKING_NODE is
-  removed. Any BASE_NODE rows which appear to be descendents of this
+  removed. Any BASE_NODE rows which appear to be descendants of this
   (used-to-be-directory) node are removed. There should be no
-  descendents in the WORKING_NODE table.
+  descendants in the WORKING_NODE table.
   
   ### what information do we keep for excluded nodes?
   ### note: at this point, there is no user command to exclude
@@ -945,10 +945,10 @@ base-presence: *
       handled as a separate action (via recursion).
 
     not-present
-      This row in WORKING_NODE is removed, along with descendent
+      This row in WORKING_NODE is removed, along with descendant
       nodes. The directory will not list this node in its (new) set of
       children. Any BASE_NODE row at this path is also removed, along
-      with any descendent nodes.
+      with any descendant nodes.
 
     base-deleted
       No action taken. This node will be removed when it is handled
@@ -958,9 +958,9 @@ base-presence: *
 working-presence: excluded
 base-presence: *
   A new, excluded BASE_NODE is constructed, and the WORKING_NODE is
-  removed. Any BASE_NODE rows which appear to be descendents of this
+  removed. Any BASE_NODE rows which appear to be descendants of this
   (used-to-be-directory) node are removed. There should be no
-  descendents in the WORKING_NODE table.
+  descendants in the WORKING_NODE table.
 
   ### what information do we keep for excluded nodes?
 

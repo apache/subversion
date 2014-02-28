@@ -146,7 +146,7 @@ chdir $target_dirname
 my_system($svn, 'update', '.') == 0
   or my_die "$0: system failed.  Quitting.\n";
 
-print "\nTarget directory sucessfully updated to mirror source directory.\n";
+print "\nTarget directory successfully updated to mirror source directory.\n";
 
 exit 0;
 

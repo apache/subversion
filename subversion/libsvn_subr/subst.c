@@ -127,7 +127,7 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
  *
  * Important API note: This function is the core of the implementation of
  * svn_subst_build_keywords (all versions), and as such must implement the
- * tolerance of NULL and zero inputs that that function's documention
+ * tolerance of NULL and zero inputs that that function's documentation
  * stipulates.
  *
  * The format codes:
