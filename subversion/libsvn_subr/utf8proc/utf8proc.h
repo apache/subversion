@@ -83,9 +83,16 @@ typedef int int32_t;
 #endif
 typedef unsigned char bool;
 enum {false, true};
-#else
+#elif defined(HAVE_STDBOOL_H) && defined(HAVE_INTTYPES_H)
 #include <stdbool.h>
 #include <inttypes.h>
+#else
+#include <apr.h>
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef apr_int16_t int16_t;
+typedef apr_uint16_t uint16_t;
+typedef apr_int32_t int32_t;
 #endif
 #include <limits.h>
 
