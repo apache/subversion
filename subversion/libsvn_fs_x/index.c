@@ -439,10 +439,7 @@ svn_error_t *
 svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
                                        apr_pool_t *pool)
 {
-  l2p_proto_entry_t entry;
-  entry.offset = 0;
-  entry.item_index = 0;
-
+  l2p_proto_entry_t entry = { 0 };
   return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
                                                     pool));
 }
@@ -454,7 +451,7 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                     apr_uint64_t item_index,
                                     apr_pool_t *pool)
 {
-  l2p_proto_entry_t entry;
+  l2p_proto_entry_t entry = { 0 };
 
   /* make sure the conversion to uint64 works */
   SVN_ERR_ASSERT(offset >= -1);
