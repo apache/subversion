@@ -297,7 +297,7 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
   stream->current = 0;
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Create and open a packed number stream reading from FILE_NAME and
  * return it in *STREAM.  Access the file in chunks of BLOCK_SIZE bytes.
