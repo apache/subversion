@@ -325,7 +325,7 @@ initialize_pack_context(pack_context_t *context,
   context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Clean up / free all revision range specific data and files in CONTEXT.
  * Use POOL for temporary allocations.
@@ -350,7 +350,7 @@ reset_pack_context(pack_context_t *context,
   svn_pool_clear(context->info_pool);
   
   return SVN_NO_ERROR;
-};
+}
 
 /* Call this after the last revision range.  It will finalize all index files
  * for CONTEXT and close any open files.  Use POOL for temporary allocations.
@@ -391,7 +391,7 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Efficiently copy SIZE bytes from SOURCE to DEST.  Invoke the CANCEL_FUNC
  * from CONTEXT at regular intervals.  Use POOL for allocations.
