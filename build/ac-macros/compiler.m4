@@ -33,27 +33,27 @@ AC_DEFUN([_SVN_XXFLAGS_ADD_IFELSE],
 [
   _svn_xxflags__save="[$][$3]"
   AC_LANG_PUSH([$1])
-  AC_MSG_CHECKING([if [$][$2] accepts $4])
-  [$3]="$4 [$][$3]"
+  AC_MSG_CHECKING([if [$][$2] accepts $5])
+  [$3]="$5 [$][$3]"
   dnl Compiling is not enough: Solaris cc accepts invalid options at
   dnl compile-time and just warns, assuming they are for the linker,
   dnl but they cause errors at link-time.
-  AC_LINK_IFELSE([AC_LANG_SOURCE([[int main(){return 0;}]])],[
+  AC_LINK_IFELSE([AC_LANG_SOURCE([$4])],[
     AC_MSG_RESULT([yes])
-    $5
+    $6
   ],[
     AC_MSG_RESULT([no])
     [$3]="$_svn_xxflags__save"
-    $6
+    $7
   ])
   AC_LANG_POP([$1])
 ])
 
 AC_DEFUN([SVN_CFLAGS_ADD_IFELSE],
-  [_SVN_XXFLAGS_ADD_IFELSE([C],[CC],[CFLAGS],[$1],[$2],[$3])])
+  [_SVN_XXFLAGS_ADD_IFELSE([C],[CC],[CFLAGS],[[int main(void){return 0;}]],[$1],[$2],[$3])])
 
 AC_DEFUN([SVN_CXXFLAGS_ADD_IFELSE],
-  [_SVN_XXFLAGS_ADD_IFELSE([C++],[CXX],[CXXFLAGS],[$1],[$2],[$3])])
+  [_SVN_XXFLAGS_ADD_IFELSE([C++],[CXX],[CXXFLAGS],[[int main(){}]],[$1],[$2],[$3])])
 
 
 AC_DEFUN([SVN_CC_MODE_SETUP],
