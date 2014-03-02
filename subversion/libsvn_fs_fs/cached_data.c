@@ -2788,7 +2788,7 @@ block_read(void **result,
         = svn_fs_fs__p2l_index_lookup(&entries, fs, revision_file,
                                       revision, offset, scratch_pool);
 
-      /* if the revision got packed in the meantime and we still need need
+      /* if the revision got packed in the meantime and we still need
        * to actually read some item, we retry the whole process */
       if (err &&
           revision_file->is_packed != svn_fs_fs__is_packed_rev(fs, revision))
