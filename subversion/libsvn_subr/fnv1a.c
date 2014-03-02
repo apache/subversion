@@ -157,7 +157,7 @@ svn_fnv1a_32__update(svn_fnv1a_32__context_t *context,
 apr_uint32_t
 svn_fnv1a_32__finalize(svn_fnv1a_32__context_t *context)
 {
-  return htonl(context->hash);
+  return context->hash;
 }
 
 
