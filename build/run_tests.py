@@ -456,7 +456,14 @@ class TestHarness:
     if self.enable_sasl is not None:
       svntest.main.options.enable_sasl = True
     if self.parallel is not None:
-      svntest.main.options.parallel = svntest.main.default_num_threads
+      try:
+        num_parallel = int(self.parallel) 
+      except exceptions.ValueError:
+        num_parallel = svntest.main.default_num_threads
+      if num_parallel > 1:
+        svntest.main.options.parallel = num_parallel
+      else:
+        svntest.main.options.parallel = svntest.main.default_num_threads
     if self.config_file is not None:
       svntest.main.options.config_file = self.config_file
     if self.verbose is not None:
@@ -659,7 +666,7 @@ def main():
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
                             'http-library=', 'server-minor-version=',
                             'fsfs-packing', 'fsfs-sharding=',
-                            'enable-sasl', 'parallel', 'config-file=',
+                            'enable-sasl', 'parallel=', 'config-file=',
                             'log-to-stdout', 'list', 'milestone-filter=',
                             'mode-filter=', 'set-log-level=', 'ssl-cert=',
                             'http-proxy=', 'http-proxy-username=',
@@ -698,7 +705,7 @@ def main():
     elif opt in ['--enable-sasl']:
       enable_sasl = 1
     elif opt in ['--parallel']:
-      parallel = 1
+      parallel = val
     elif opt in ['--config-file']:
       config_file = val
     elif opt in ['--log-to-stdout']:
