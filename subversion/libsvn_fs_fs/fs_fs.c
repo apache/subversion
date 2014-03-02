@@ -1274,9 +1274,9 @@ write_revision_zero(svn_fs_t *fs)
                   "\x80\x80\4\1\x1D"    /* 64k pages, 1 page using 29 bytes */
                   "\0"                  /* offset entry 0 page 1 */
                                         /* len, item & type, rev, checksum */
-                  "\x11\x34\0\xe0\xc6\xac\xa9\x07"
-                  "\x59\x09\0\xc0\xfa\xf8\xc5\x04"
-                  "\1\x0d\0\xf2\x95\xbe\xea\x01"
+                  "\x11\x34\0\xf5\xd6\x8c\x81\x06"
+                  "\x59\x09\0\xc8\xfc\xf6\x81\x04"
+                  "\1\x0d\0\x9d\x9e\xa9\x94\x0f" 
                   "\x95\xff\3\x1b\0\0", /* last entry fills up 64k page */
                   38,
                   fs->pool));
