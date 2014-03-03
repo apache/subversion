@@ -828,10 +828,14 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 #----------------------------------------------------------------------
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
-def recover_fsfs(sbox):
-  "recover a repository (FSFS only)"
-  sbox.build()
+# Helper for two test functions.
+def corrupt_and_recover_db_current(sbox, minor_version=None):
+  """Build up a MINOR_VERSION sandbox and test different recovery scenarios
+  with missing, out-of-date or even corrupt db/current files.  Recovery should
+  behave the same way with all values of MINOR_VERSION, hence this helper
+  containing the common code that allows us to check it."""
+
+  sbox.build(minor_version=minor_version)
   current_path = os.path.join(sbox.repo_dir, 'db', 'current')
 
   # Commit up to r3, so we can test various recovery scenarios.
@@ -905,6 +909,24 @@ def recover_fsfs(sbox):
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_db_current(sbox):
+  "fsfs recover db/current"
+  corrupt_and_recover_db_current(sbox)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_db_current(sbox):
+  "fsfs recover db/current --compatible-version=1.3"
+
+  # Around trunk@1573728, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 repositories with missing or
+  # invalid db/current file:
+  # svnadmin: E160006: No such revision 1
+
+  corrupt_and_recover_db_current(sbox, minor_version=3)
 
 #----------------------------------------------------------------------
 @Issue(2983)
@@ -2312,7 +2334,8 @@ test_list = [ None,
               setrevprop,
               verify_windows_paths_in_repos,
               verify_incremental_fsfs,
-              recover_fsfs,
+              fsfs_recover_db_current,
+              fsfs_recover_old_db_current,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
