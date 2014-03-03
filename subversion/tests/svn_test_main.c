@@ -734,7 +734,7 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err && (apr_err != APR_BADCH))
         {
-          /* Ignore invalid option error to allow passing arbitary options */
+          /* Ignore invalid option error to allow passing arbitrary options */
           fprintf(stderr, "apr_getopt_long failed : [%d] %s\n",
                   apr_err, apr_strerror(apr_err, errmsg, sizeof(errmsg)));
           exit(1);

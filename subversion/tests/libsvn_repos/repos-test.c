@@ -1428,8 +1428,8 @@ in_repo_authz(const svn_test_opts_t *opts,
    * Create an authz file and put it in the repository.
    * Verify it can be read with an relative URL.
    * Verify it can be read with an absolute URL.
-   * Verify non-existant path does not error out when must_exist is FALSE.
-   * Verify non-existant path does error out when must_exist is TRUE.
+   * Verify non-existent path does not error out when must_exist is FALSE.
+   * Verify non-existent path does error out when must_exist is TRUE.
    * Verify that an http:// URL produces an error.
    * Verify that an svn:// URL produces an error.
    */
@@ -1466,11 +1466,11 @@ in_repo_authz(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
-  /* Non-existant path in the repo with must_exist set to FALSE */
+  /* Non-existent path in the repo with must_exist set to FALSE */
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL,
                                 FALSE, pool));
 
-  /* Non-existant path in the repo with must_exist set to TRUE */
+  /* Non-existent path in the repo with must_exist set to TRUE */
   err = svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
@@ -1658,7 +1658,7 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
 
 
 /* Helper for the groups_authz test.  Set *AUTHZ_P to a representation of
-   AUTHZ_CONTENTS in conjuction with GROUPS_CONTENTS, using POOL for
+   AUTHZ_CONTENTS in conjunction with GROUPS_CONTENTS, using POOL for
    temporary allocation.  If DISK is TRUE then write the contents to
    temporary files and use svn_repos_authz_read2() to get the data if FALSE
    write the data to a buffered stream and use svn_repos_authz_parse(). */
@@ -1773,7 +1773,7 @@ groups_authz(const svn_test_opts_t *opts,
    * 2. Verify that access rights written in the global groups file are
    *    discarded and affect nothing in authorization terms.
    * 3. Verify that local groups in the authz file are prohibited in
-   *    conjuction with global groups (and that a configuration error is
+   *    conjunction with global groups (and that a configuration error is
    *    reported in this scenario).
    * 4. Ensure that group cycles in the global groups file are reported.
    *
@@ -1829,7 +1829,7 @@ groups_authz(const svn_test_opts_t *opts,
 
   SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
 
-  /* Local groups cannot be used in conjuction with global groups. */
+  /* Local groups cannot be used in conjunction with global groups. */
   groups_contents =
     "[groups]"                                                               NL
     "slaves = maximus"                                                       NL

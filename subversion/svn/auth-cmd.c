@@ -32,6 +32,15 @@
 
 #ifdef SVN_HAVE_SERF
 #include <serf.h>
+
+/* Don't enable SSL cert pretty-printing on Windows yet because of a
+   known issue in serf. See serf's r2314. Once this fix is part of a
+   serf release, we'll want a SERF_VERSION_AT_LEAST() check here. */
+#ifndef WIN32
+#define SVN_AUTH_PRETTY_PRINT_SSL_CERTS
+#endif
+#else /* !SVN_HAVE_SERF */
+#undef SVN_AUTH_PRETTY_PRINT_SSL_CERTS
 #endif
 
 #include "svn_private_config.h"
@@ -56,7 +65,7 @@
 #define SEP_STRING \
   "------------------------------------------------------------------------\n"
 
-#ifdef SVN_HAVE_SERF
+#ifdef SVN_AUTH_PRETTY_PRINT_SSL_CERTS
 /* Because APR hash order is unstable we use a token map of keys
  * to ensure values are always presented in the same order. */
 typedef enum svnauth__cert_info_keys {
@@ -197,9 +206,7 @@ split_ascii_cert(const char *ascii_cert,
 
   return svn_cstring_join(lines, "\n", result_pool);
 }
-#endif /* SVN_HAVE_SERF */
 
-#ifdef SVN_HAVE_SERF
 static svn_error_t *
 load_cert(serf_ssl_certificate_t **cert,
           const char *ascii_cert,
@@ -250,16 +257,12 @@ load_cert(serf_ssl_certificate_t **cert,
 }
 #endif
 
-/* ### from libsvn_subr/ssl_server_trust_providers.c */
-#define AUTHN_ASCII_CERT_KEY            "ascii_cert"
-#define AUTHN_FAILURES_KEY              "failures"
-
 /* Display the base64-encoded DER certificate ASCII_CERT. */
 static svn_error_t *
 show_ascii_cert(const char *ascii_cert,
                 apr_pool_t *scratch_pool)
 {
-#ifdef SVN_HAVE_SERF
+#ifdef SVN_AUTH_PRETTY_PRINT_SSL_CERTS
   serf_ssl_certificate_t *cert;
   apr_hash_t *cert_info;
 
@@ -297,7 +300,7 @@ show_ascii_cert(const char *ascii_cert,
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              _("Base64-encoded certificate: %s\n"),
                              ascii_cert));
-#endif /* SVN_HAVE_SERF */
+#endif /* SVN_AUTH_PRETTY_PRINT_SSL_CERTS */
 
   return SVN_NO_ERROR;
 }
@@ -343,14 +346,6 @@ show_cert_failures(const char *failure_string,
   return SVN_NO_ERROR;
 }
 
-/* ### from libsvn_subr/simple_providers.c */
-#define AUTHN_USERNAME_KEY            "username"
-#define AUTHN_PASSWORD_KEY            "password"
-#define AUTHN_PASSTYPE_KEY            "passtype"
-
-/* ### from libsvn_subr/ssl_client_cert_pw_providers.c */
-#define AUTHN_PASSPHRASE_KEY            "passphrase"
-
 struct walk_credentials_baton_t
 {
   int matches;
@@ -369,7 +364,7 @@ match_pattern(const char *pattern, const char *value,
   return (apr_fnmatch(p, value, 0) == APR_SUCCESS);
 }
 
-#ifdef SVN_HAVE_SERF
+#ifdef SVN_AUTH_PRETTY_PRINT_SSL_CERTS
 static svn_error_t *
 match_cert_info(svn_boolean_t *match,
                 const char *pattern,
@@ -405,7 +400,7 @@ match_ascii_cert(svn_boolean_t *match,
                  const char *ascii_cert,
                  apr_pool_t *scratch_pool)
 {
-#ifdef SVN_HAVE_SERF
+#ifdef SVN_AUTH_PRETTY_PRINT_SSL_CERTS
   serf_ssl_certificate_t *cert;
   apr_hash_t *cert_info;
 
@@ -476,10 +471,10 @@ match_credential(svn_boolean_t *match,
               item = APR_ARRAY_IDX(cred_items, j, svn_sort__item_t);
               key = item.key;
               value = item.value;
-              if (strcmp(key, AUTHN_PASSWORD_KEY) == 0 ||
-                  strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
+              if (strcmp(key, SVN_CONFIG_AUTHN_PASSWORD_KEY) == 0 ||
+                  strcmp(key, SVN_CONFIG_AUTHN_PASSPHRASE_KEY) == 0)
                 continue; /* don't match secrets */
-              else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
+              else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
                 SVN_ERR(match_ascii_cert(match, pattern, value->data,
                                          iterpool));
               else
@@ -524,7 +519,7 @@ list_credential(const char *cred_kind,
       value = item.value;
       if (strcmp(value->data, realmstring) == 0)
         continue; /* realm string was already shown above */
-      else if (strcmp(key, AUTHN_PASSWORD_KEY) == 0)
+      else if (strcmp(key, SVN_CONFIG_AUTHN_PASSWORD_KEY) == 0)
         {
           if (show_passwords)
             SVN_ERR(svn_cmdline_printf(iterpool,
@@ -532,7 +527,7 @@ list_credential(const char *cred_kind,
           else
             SVN_ERR(svn_cmdline_printf(iterpool, _("Password: [not shown]\n")));
         }
-      else if (strcmp(key, AUTHN_PASSPHRASE_KEY) == 0)
+      else if (strcmp(key, SVN_CONFIG_AUTHN_PASSPHRASE_KEY) == 0)
         {
           if (show_passwords)
             SVN_ERR(svn_cmdline_printf(iterpool,
@@ -541,14 +536,14 @@ list_credential(const char *cred_kind,
             SVN_ERR(svn_cmdline_printf(iterpool,
                                        _("Passphrase: [not shown]\n")));
         }
-      else if (strcmp(key, AUTHN_PASSTYPE_KEY) == 0)
+      else if (strcmp(key, SVN_CONFIG_AUTHN_PASSTYPE_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Password cache: %s\n"),
                                    value->data));
-      else if (strcmp(key, AUTHN_USERNAME_KEY) == 0)
+      else if (strcmp(key, SVN_CONFIG_AUTHN_USERNAME_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
-      else if (strcmp(key, AUTHN_ASCII_CERT_KEY) == 0)
+      else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
         SVN_ERR(show_ascii_cert(value->data, iterpool));
-      else if (strcmp(key, AUTHN_FAILURES_KEY) == 0)
+      else if (strcmp(key, SVN_CONFIG_AUTHN_FAILURES_KEY) == 0)
         SVN_ERR(show_cert_failures(value->data, iterpool));
       else
         SVN_ERR(svn_cmdline_printf(iterpool, "%s: %s\n", key, value->data));

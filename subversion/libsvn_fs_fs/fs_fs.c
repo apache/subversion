@@ -1093,6 +1093,13 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
+  /* Same path in same rev or txn? */
+  if (svn_fs_fs__id_eq(a->id, b->id))
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Old repositories may not have the SHA1 checksum handy.
      This check becomes expensive.  Skip it unless explicitly required. */
   if (!strict)
@@ -1143,8 +1150,15 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
+  /* Same path in same txn? */
+  if (svn_fs_fs__id_eq(a->id, b->id))
+    {
+      *equal = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   /* Skip the expensive bits unless we are in strict mode.
-     Simply assume that there is a different. */
+     Simply assume that there is a difference. */
   if (!strict)
     {
       *equal = FALSE;
@@ -1260,9 +1274,9 @@ write_revision_zero(svn_fs_t *fs)
                   "\x80\x80\4\1\x1D"    /* 64k pages, 1 page using 29 bytes */
                   "\0"                  /* offset entry 0 page 1 */
                                         /* len, item & type, rev, checksum */
-                  "\x11\x34\0\xe0\xc6\xac\xa9\x07"
-                  "\x59\x09\0\xc0\xfa\xf8\xc5\x04"
-                  "\1\x0d\0\xf2\x95\xbe\xea\x01"
+                  "\x11\x34\0\xf5\xd6\x8c\x81\x06"
+                  "\x59\x09\0\xc8\xfc\xf6\x81\x04"
+                  "\1\x0d\0\x9d\x9e\xa9\x94\x0f" 
                   "\x95\xff\3\x1b\0\0", /* last entry fills up 64k page */
                   38,
                   fs->pool));

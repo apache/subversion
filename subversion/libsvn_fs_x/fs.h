@@ -204,7 +204,7 @@ typedef struct pair_cache_key_t
   apr_uint64_t second;
 } pair_cache_key_t;
 
-/* Key type that identifies a represenation / rep header. */
+/* Key type that identifies a representation / rep header. */
 typedef struct representation_cache_key_t
 {
   /* Revision that contains the representation */

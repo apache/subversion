@@ -2342,7 +2342,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
                                "prefix"), url);
 
   /* Find the HOSTNAME portion and the PATH portion of the URL.  The host
-     name is between the "file://" prefix and the next occurence of '/'.  We
+     name is between the "file://" prefix and the next occurrence of '/'.  We
      are considering everything from that '/' until the end of the URL to be
      the absolute path portion of the URL.
      If we got just "file://", treat it the same as "file:///". */

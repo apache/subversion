@@ -177,7 +177,7 @@ can_modify(svn_fs_root_t *txn_root,
   SVN_ERR(svn_fs_node_created_rev(&created_rev, txn_root, fspath,
                                   scratch_pool));
 
-  /* Uncommitted nodes (eg. a descendent of a copy/move destination)
+  /* Uncommitted nodes (eg. a descendant of a copy/move destination)
      have no (committed) revision number. Let the caller go ahead and
      modify these nodes.
 
@@ -195,7 +195,7 @@ can_modify(svn_fs_root_t *txn_root,
      have supplied a valid revision number [that they expect to change].
      The checks further below will determine the out-of-dateness of the
      specified revision.  */
-  /* ### ugh. descendents of copy/move destinations carry along
+  /* ### ugh. descendants of copy/move destinations carry along
      ### their original immutable state and (thus) a valid CREATED_REV.
      ### but they are logically uncommitted, so the caller will pass
      ### SVN_INVALID_REVNUM. (technically, the caller could provide
@@ -203,7 +203,7 @@ can_modify(svn_fs_root_t *txn_root,
      ### API).
      ###
      ### for now, we will assume the caller knows what they are doing
-     ### and an invalid revision implies such a descendent. in the
+     ### and an invalid revision implies such a descendant. in the
      ### future, we could examine the ancestor chain looking for a
      ### copy/move-here node and allow the modification (and the
      ### converse: if no such ancestor, the caller must specify the
@@ -810,7 +810,7 @@ svn_fs__editor_commit(svn_revnum_t *revision,
           /* Copy this into the correct pool (see note above).  */
           *conflict_path = apr_pstrdup(result_pool, inner_conflict_path);
 
-          /* Return sucess. The caller should inspect CONFLICT_PATH to
+          /* Return success. The caller should inspect CONFLICT_PATH to
              determine this particular case.  */
           svn_error_clear(err);
           err = SVN_NO_ERROR;

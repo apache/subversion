@@ -148,7 +148,7 @@ enum run_mode {
 /* Number of client to server connections that may concurrently in the
  * TCP 3-way handshake state, i.e. are in the process of being created.
  *
- * Larger values improve scalability with lots of small requests comming
+ * Larger values improve scalability with lots of small requests coming
  * on over long latency networks.
  * 
  * The OS may actually use a lower limit than specified here.

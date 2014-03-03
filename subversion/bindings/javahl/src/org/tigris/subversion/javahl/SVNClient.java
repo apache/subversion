@@ -47,7 +47,7 @@ public class SVNClient implements SVNClientInterface
     private org.apache.subversion.javahl.SVNClient aSVNClient;
 
     /**
-     * Standard empty contructor, builds just the native peer.
+     * Standard empty constructor, builds just the native peer.
      */
     public SVNClient()
     {

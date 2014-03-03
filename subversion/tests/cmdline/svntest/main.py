@@ -890,7 +890,7 @@ def create_repos(path, minor_version = None):
   exist, create it."""
 
   if not os.path.exists(path):
-    os.makedirs(path) # this creates all the intermediate dirs, if neccessary
+    os.makedirs(path) # this creates all the intermediate dirs, if necessary
 
   opts = ("--bdb-txn-nosync",)
   if minor_version is None or minor_version > options.server_minor_version:

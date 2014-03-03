@@ -415,7 +415,7 @@ struct handler_baton
      provide a sha1, so we may not have to calculate both, but for the time
      being, that's the way it is. */
 
-  /* The calculated checksum of the text source or NULL if the acual
+  /* The calculated checksum of the text source or NULL if the actual
      checksum is not being calculated. The checksum kind is identical to the
      kind of expected_source_checksum. */
   svn_checksum_t *actual_source_checksum;

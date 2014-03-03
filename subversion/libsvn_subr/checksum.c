@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#define APR_WANT_BYTEFUNC
+
 #include <ctype.h>
 
 #include <apr_md5.h>
@@ -462,11 +464,13 @@ svn_checksum(svn_checksum_t **checksum,
         break;
 
       case svn_checksum_fnv1a_32:
-        *(apr_uint32_t *)(*checksum)->digest = svn__fnv1a_32(data, len);
+        *(apr_uint32_t *)(*checksum)->digest
+          = htonl(svn__fnv1a_32(data, len));
         break;
 
       case svn_checksum_fnv1a_32x4:
-        *(apr_uint32_t *)(*checksum)->digest = svn__fnv1a_32x4(data, len);
+        *(apr_uint32_t *)(*checksum)->digest
+          = htonl(svn__fnv1a_32x4(data, len));
         break;
 
       default:
@@ -589,12 +593,12 @@ svn_checksum_final(svn_checksum_t **checksum,
 
       case svn_checksum_fnv1a_32:
         *(apr_uint32_t *)(*checksum)->digest
-          = svn_fnv1a_32__finalize(ctx->apr_ctx);
+          = htonl(svn_fnv1a_32__finalize(ctx->apr_ctx));
         break;
 
       case svn_checksum_fnv1a_32x4:
         *(apr_uint32_t *)(*checksum)->digest
-          = svn_fnv1a_32x4__finalize(ctx->apr_ctx);
+          = htonl(svn_fnv1a_32x4__finalize(ctx->apr_ctx));
         break;
 
       default:

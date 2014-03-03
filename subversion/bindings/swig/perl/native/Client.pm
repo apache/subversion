@@ -760,7 +760,7 @@ object.
 Else, create the directories on disk, and attempt to schedule them for addition.
 In this case returns undef.
 
-If $make_parents is TRUE, create any non-existant parent directories also.
+If $make_parents is TRUE, create any non-existent parent directories also.
 
 If not undef, $revprop_hash is a reference to a hash table holding additional
 custom revision properites (property names mapped to strings) to be set on the
@@ -970,7 +970,7 @@ $path, $status, $pool
 
 $path is the pathname of the file or directory which status is being
 reported.  $status is a svn_wc_status2_t object.  $pool is an apr_pool_t
-object which is cleaned beteween invocations to the callback.
+object which is cleaned between invocations to the callback.
 
 The return of the status_func subroutine can be a svn_error_t object created by
 SVN::Error::create in order to propagate an error up.

@@ -101,7 +101,7 @@ typedef struct l2p_page_t
   apr_uint32_t *sub_items;
 } l2p_page_t;
 
-/* All of the log-to-phys proto index file consist of entires of this type.
+/* All of the log-to-phys proto index file consist of entries of this type.
  */
 typedef struct l2p_proto_entry_t
 {
@@ -299,7 +299,7 @@ packed_stream_read(packed_number_stream_t *stream)
   stream->current = 0;
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Create and open a packed number stream reading from FILE_NAME and
  * return it in *STREAM.  Access the file in chunks of BLOCK_SIZE bytes.
@@ -439,10 +439,7 @@ svn_error_t *
 svn_fs_x__l2p_proto_index_add_revision(apr_file_t *proto_index,
                                        apr_pool_t *pool)
 {
-  l2p_proto_entry_t entry;
-  entry.offset = 0;
-  entry.item_index = 0;
-
+  l2p_proto_entry_t entry = { 0 };
   return svn_error_trace(write_entry_to_proto_index(proto_index, entry,
                                                     pool));
 }
@@ -454,7 +451,7 @@ svn_fs_x__l2p_proto_index_add_entry(apr_file_t *proto_index,
                                     apr_uint64_t item_index,
                                     apr_pool_t *pool)
 {
-  l2p_proto_entry_t entry;
+  l2p_proto_entry_t entry = { 0 };
 
   /* make sure the conversion to uint64 works */
   SVN_ERR_ASSERT(offset >= -1);
@@ -559,7 +556,7 @@ compare_l2p_entries_by_offset(const l2p_page_entry_t *lhs,
 
 /* Write the log-2-phys index page description for the l2p_page_entry_t
  * array ENTRIES, starting with element START up to but not including END.
- * Write the resulting represenation into BUFFER.  Use POOL for tempoary
+ * Write the resulting representation into BUFFER.  Use POOL for tempoary
  * allocations.
  */
 static svn_error_t *

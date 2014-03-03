@@ -441,9 +441,10 @@ create_table(string_sub_table_t *target,
       string->data = apr_pstrmemdup(pool, string->data, string->len);
     }
 
-  data->len += PADDING; /* there a few extra bytes at then of the buffer
-                           that we want to keep */
+  data->len += PADDING; /* add a few extra bytes at the end of the buffer
+                           that we want to keep valid for chunky access */
   assert(data->len < data->blocksize);
+  memset(data->data + data->len - PADDING, 0, PADDING);
 
   target->data = apr_pmemdup(pool, data->data, data->len);
   target->data_size = data->len;
