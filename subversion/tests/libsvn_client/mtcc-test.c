@@ -71,7 +71,7 @@ verify_mtcc_commit(svn_client_mtcc_t *mtcc,
   SVN_TEST_ASSERT(vcb.commit_info->revision == expected_rev);
 
   return SVN_NO_ERROR;
-};
+}
 
 
 /* Constructs a greek tree as revision 1 in the repository at repos_url */
