@@ -676,7 +676,6 @@ svn_config_ensure(const char *config_dir,
  *
  * The values of these keys are C strings.
  *
- * @since New in 1.9.
  * @note These hash keys were also used in versions < 1.9 but were
  *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY).
  *
@@ -698,22 +697,26 @@ svn_config_ensure(const char *config_dir,
 /** A hash-key for passwords.
  * The password may be in plaintext or encrypted form, depending on
  * the authentication provider.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_PASSWORD_KEY           "password"
 
 /** A hash-key for passphrases,
  * such as SSL client ceritifcate passphrases. The passphrase may be in
  * plaintext or encrypted form, depending on the authentication provider.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_PASSPHRASE_KEY         "passphrase"
 
 /** A hash-key for the type of a password or passphrase.  The type
  * indicates which provider owns the credential.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_PASSTYPE_KEY           "passtype"
 
 /** A hash-key for SSL certificates.   The value is the base64-encoded DER form
  * certificate.
+ * @since New in 1.9.
  * @note The value is not human readable.
  */
 #define SVN_CONFIG_AUTHN_ASCII_CERT_KEY         "ascii_cert"
@@ -721,6 +724,7 @@ svn_config_ensure(const char *config_dir,
 /** A hash-key for recorded SSL certificate verification
  * failures.  Failures encoded as an ASCII integer containing any of the
  * SVN_AUTH_SSL_* SSL server certificate failure bits defined in svn_auth.h.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
 
