@@ -104,11 +104,12 @@ struct walk_credentials_baton_t
 
 static svn_boolean_t
 match_pattern(const char *pattern, const char *value,
-              apr_pool_t *scratch_pool)
+              svn_boolean_t caseblind, apr_pool_t *scratch_pool)
 {
   const char *p = apr_psprintf(scratch_pool, "*%s*", pattern);
+  int flags = (caseblind ? APR_FNM_CASE_BLIND : 0);
 
-  return (apr_fnmatch(p, value, 0) == APR_SUCCESS);
+  return (apr_fnmatch(p, value, flags) == APR_SUCCESS);
 }
 
 static svn_error_t *
@@ -129,9 +130,9 @@ match_credential(svn_boolean_t *match,
       const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
       int j;
 
-      *match = match_pattern(pattern, cred_kind, iterpool);
+      *match = match_pattern(pattern, cred_kind, FALSE, iterpool);
       if (!*match)
-        *match = match_pattern(pattern, realmstring, iterpool);
+        *match = match_pattern(pattern, realmstring, FALSE, iterpool);
       if (!*match)
         {
           svn_pool_clear(iterpool);
@@ -149,8 +150,11 @@ match_credential(svn_boolean_t *match,
                 continue; /* don't match secrets */
               else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
                 continue; /* don't match base64 data */
+              else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0 ||
+                       strcmp(key, SVN_CONFIG_AUTHN_FINGERPRINT_KEY) == 0)
+                *match = match_pattern(pattern, value->data, TRUE, iterpool);
               else
-                *match = match_pattern(pattern, value->data, iterpool);
+                *match = match_pattern(pattern, value->data, FALSE, iterpool);
 
               if (*match)
                 break;
