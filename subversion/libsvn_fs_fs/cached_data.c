@@ -462,10 +462,13 @@ get_root_changes_offset(apr_off_t *root_offset,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_off_t offset;
   apr_off_t rev_offset;
   apr_seek_where_t seek_relative;
-  svn_stringbuf_t *trailer = svn_stringbuf_create_ensure(64, pool);
+  svn_stringbuf_t *trailer;
+  char buffer[64];
+  apr_off_t start;
+  apr_off_t end;
+  apr_size_t len;
 
   /* Determine where to seek to in the file.
 
@@ -479,13 +482,13 @@ get_root_changes_offset(apr_off_t *root_offset,
   if (svn_fs_fs__is_packed_rev(fs, rev)
       && ((rev + 1) % ffd->max_files_per_dir != 0))
     {
-      SVN_ERR(svn_fs_fs__get_packed_offset(&offset, fs, rev + 1, pool));
+      SVN_ERR(svn_fs_fs__get_packed_offset(&end, fs, rev + 1, pool));
       seek_relative = APR_SET;
     }
   else
     {
       seek_relative = APR_END;
-      offset = 0;
+      end = 0;
     }
 
   /* Offset of the revision from the start of the pack file, if applicable. */
@@ -496,16 +499,25 @@ get_root_changes_offset(apr_off_t *root_offset,
 
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
-  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &offset, pool));
+  SVN_ERR(svn_io_file_seek(rev_file, seek_relative, &end, pool));
 
-  trailer->len = trailer->blocksize-1;
-  SVN_ERR(aligned_seek(fs, rev_file, NULL, offset - trailer->len, pool));
+  if (end < sizeof(buffer))
+    {
+      len = (apr_size_t)end;
+      start = 0;
+    }
+  else
+    {
+      len = sizeof(buffer);
+      start = end - sizeof(buffer);
+    }
 
   /* Read in this last block, from which we will identify the last line. */
-  SVN_ERR(svn_io_file_read(rev_file, trailer->data, &trailer->len, pool));
-  trailer->data[trailer->len] = 0;
+  SVN_ERR(aligned_seek(fs, rev_file, NULL, start, pool));
+  SVN_ERR(svn_io_file_read_full2(rev_file, buffer, len, NULL, NULL, pool));
 
   /* Parse the last line. */
+  trailer = svn_stringbuf_ncreate(buffer, len, pool);
   SVN_ERR(svn_fs_fs__parse_revision_trailer(root_offset,
                                             changes_offset,
                                             trailer,
