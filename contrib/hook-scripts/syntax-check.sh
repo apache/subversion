@@ -20,7 +20,7 @@
 #
 # --------------------------------------------------------------------
 #
-# This script provides language independant syntax checking
+# This script provides language independent syntax checking
 # functionality intended to be invoked from a subversion pre-commit
 # hook.
 #

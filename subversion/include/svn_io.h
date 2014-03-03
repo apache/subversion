@@ -1246,7 +1246,7 @@ svn_stream_read2(svn_stream_t *stream,
  * @note This function is a wrapper of svn_stream_read_full() now, which name
  * better documents the behavior of this function.
  *
- * @deprecated Provided for backward compatibilty with the 1.8 API
+ * @deprecated Provided for backward compatibility with the 1.8 API
  */
 SVN_DEPRECATED
 svn_error_t *

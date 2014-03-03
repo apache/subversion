@@ -96,7 +96,7 @@ typedef struct l2p_page_t
   apr_uint64_t *offsets;
 } l2p_page_t;
 
-/* All of the log-to-phys proto index file consist of entires of this type.
+/* All of the log-to-phys proto index file consist of entries of this type.
  */
 typedef struct l2p_proto_entry_t
 {
@@ -297,7 +297,7 @@ packed_stream_read(svn_fs_fs__packed_number_stream_t *stream)
   stream->current = 0;
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Create and open a packed number stream reading from FILE_NAME and
  * return it in *STREAM.  Access the file in chunks of BLOCK_SIZE bytes.

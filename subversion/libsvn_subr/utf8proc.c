@@ -23,15 +23,15 @@
 
 
 
-#define UTF8PROC_INLINE
-#include "utf8proc/utf8proc.c"
-
 #include <apr_fnmatch.h>
 
 #include "private/svn_string_private.h"
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
 #define UNUSED(x) ((void)(x))
+
+#define UTF8PROC_INLINE
+#include "utf8proc/utf8proc.c"
 
 
 const char *svn_utf__utf8proc_version(void)

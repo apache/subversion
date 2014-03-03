@@ -1640,7 +1640,7 @@ def revert_obstructing_wc(sbox):
                                         wc_dir, '--set-depth', 'infinity')
 
   # Revert should do nothing (no local changes), and report the obstruction
-  # (reporting the obstruction is nice for debuging, but not really required
+  # (reporting the obstruction is nice for debugging, but not really required
   #  in this specific case, as the node was not modified)
   svntest.actions.run_and_verify_svn(None, "Skipped '.*A' -- .*obstruct.*", [],
                                      'revert', '-R', wc_dir)

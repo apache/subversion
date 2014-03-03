@@ -75,7 +75,7 @@ struct file_merge_baton {
   /* The client configuration hash. */
   apr_hash_t *config;
 
-  /* Wether the merge should be aborted. */
+  /* Whether the merge should be aborted. */
   svn_boolean_t abort_merge;
 
   /* Pool for temporary allocations. */

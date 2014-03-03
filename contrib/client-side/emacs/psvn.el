@@ -1347,7 +1347,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 (setq svn-pre-run-mode-line-process nil))))))
     (error "You can only run one svn process at once!")))
 
-(defun svn-process-sentinel-fixup-path-seperators ()
+(defun svn-process-sentinel-fixup-path-separators ()
     "Convert all path separators to UNIX style.
 \(This is a no-op unless `system-type' is windows-nt\)"
   (when (eq system-type 'windows-nt)
@@ -1371,7 +1371,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (run-hooks 'svn-post-process-svn-output-hook)
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
-                  (svn-process-sentinel-fixup-path-seperators)
+                  (svn-process-sentinel-fixup-path-separators)
                   (svn-parse-status-result)
                   (svn-status-apply-elide-list)
                   (when svn-status-update-previous-process-output
@@ -1423,7 +1423,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                     (svn-status-activate-blame-mode))
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
-                  (svn-process-sentinel-fixup-path-seperators)
+                  (svn-process-sentinel-fixup-path-separators)
                   (svn-status-remove-temp-file-maybe)
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))

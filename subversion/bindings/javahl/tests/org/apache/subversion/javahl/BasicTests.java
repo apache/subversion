@@ -1832,7 +1832,7 @@ public class BasicTests extends SVNTests
         // check the status of the working copy
         thisTest.checkStatus();
 
-        // confirm that the file are realy deleted
+        // confirm that the file are really deleted
         assertFalse("failed to remove text modified file",
                 new File(thisTest.getWorkingCopy(), "A/D/G/rho").exists());
         assertFalse("failed to remove prop modified file",
@@ -1860,7 +1860,7 @@ public class BasicTests extends SVNTests
 
         try
         {
-            // delete non-existant file foo
+            // delete non-existent file foo
             Set<String> paths = new HashSet<String>(1);
             paths.add(file.getAbsolutePath());
             client.remove(paths, true, false, null, null, null);
@@ -3043,7 +3043,7 @@ public class BasicTests extends SVNTests
                         thisTest.getUrl().toString(), diffOutput.getPath(),
                         Depth.infinity, null, true, true, false, false);
 
-            fail("This test should fail becaus the relativeToDir parameter " +
+            fail("This test should fail because the relativeToDir parameter " +
                  "does not work with URLs");
         }
         catch (Exception ignored)

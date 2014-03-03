@@ -35,7 +35,7 @@ import operator
 _re_trail = re.compile('\((?P<txn_body>[a-z_]*), (?P<filename>[a-z_\-./]*), (?P<lineno>[0-9]*), (?P<txn>0|1)\): (?P<ops>.*)')
 _re_table_op = re.compile('\(([a-z]*), ([a-z]*)\)')
 
-_seperator = '------------------------------------------------------------\n'
+_separator = '------------------------------------------------------------\n'
 
 def parse_trails_log(infile):
   trails = []
@@ -79,9 +79,9 @@ def output_summary(trails, outfile):
   median_ops = ops[total_trails / 2]
   average_ops = float(total_ops) / total_trails
 
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Summary\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Total number of trails: %10i\n' % total_trails)
   outfile.write('Total number of ops:    %10i\n' % total_ops)
   outfile.write('max ops/trail:          %10i\n' % max_ops)
@@ -123,9 +123,9 @@ def output_trail_length_frequencies(trails, outfile):
   total_trails = len(ops)
   frequencies = list_frequencies(ops)
 
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Trail length frequencies\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('ops/trail   frequency   percentage\n')
   for (r, f) in frequencies:
     p = float(f) * 100 / total_trails
@@ -164,9 +164,9 @@ def output_trail_frequencies(trails, outfile):
 
   frequencies = list_frequencies(ttrails)
 
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('Trail frequencies\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('frequency   percentage   ops/trail   trail\n')
   for (((txn_body, file, line), trail), f) in frequencies:
     p = float(f) * 100 / total_trails
@@ -183,9 +183,9 @@ def output_txn_body_frequencies(trails, outfile):
   total_trails = len(trails)
   frequencies = list_frequencies(bodies)
 
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('txn_body frequencies\n')
-  outfile.write(_seperator)
+  outfile.write(_separator)
   outfile.write('frequency   percentage   txn_body\n')
   for ((txn_body, file, line), f) in frequencies:
     p = float(f) * 100 / total_trails

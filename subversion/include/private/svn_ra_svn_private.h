@@ -257,7 +257,7 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
                               const char *fmt, ...);
 
 /** Check the receive buffer and socket of @a conn whether there is some
- * unprocessed incomming data without waiting for new data to come in.
+ * unprocessed incoming data without waiting for new data to come in.
  * If data is found, set @a *has_command to TRUE.  If the connection does
  * not contain any more data and has been closed, set @a *terminated to
  * TRUE.

@@ -781,7 +781,7 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
           if (svn_path_is_url(path))
             {
               /* URLs are URI-encoded, so we look for dates with
-                 URI-encoded delimeters.  */
+                 URI-encoded delimiters.  */
               size_t rev_len = strlen(rev_str);
               if (rev_len > 6
                   && rev_str[0] == '%'

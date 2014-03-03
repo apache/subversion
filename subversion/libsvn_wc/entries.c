@@ -633,7 +633,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           /* ### scan_addition may need to be updated to avoid returning
              ### status_copied in this case.  */
         }
-      /* For backwards-compatiblity purposes we treat moves just like
+      /* For backwards-compatibility purposes we treat moves just like
        * regular copies. */
       else if (work_status == svn_wc__db_status_copied ||
                work_status == svn_wc__db_status_moved_here)

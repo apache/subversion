@@ -1278,6 +1278,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### for 'svn add' and 'svn import', it defaults to 'no'."           NL
         "### Automatic properties are defined in the section 'auto-props'."  NL
         "# enable-auto-props = yes"                                          NL
+#ifdef SVN_HAVE_LIBMAGIC
+        "### Set enable-magic-file to 'no' to disable magic file detection"  NL
+        "### of the file type when automatically setting svn:mime-type. It"  NL
+        "### defaults to 'yes' if magic file support is possible."           NL
+        "# enable-magic-file = yes"                                          NL
+#endif
         "### Set interactive-conflicts to 'no' to disable interactive"       NL
         "### conflict resolution prompting.  It defaults to 'yes'."          NL
         "# interactive-conflicts = no"                                       NL
