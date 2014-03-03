@@ -224,7 +224,7 @@ if test "$experimental_libtool" = "yes"; then
   SVN_LIBTOOL="$sh_libtool"
 else
   sh_libtool="$abs_builddir/libtool"
-  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+  SVN_LIBTOOL="\$(SHELL) \"$sh_libtool\""
 fi
 AC_SUBST(SVN_LIBTOOL)
 
