@@ -4787,15 +4787,6 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                             TRUE /* show_deleted */,
                             show_hidden,
                             scratch_pool));
-
-  /*if (db_kind == svn_node_dir)
-    *kind = svn_node_dir;
-  else if (db_kind == svn_node_file || db_kind == svn_node_symlink)
-    *kind = svn_node_file;
-  else
-    *kind = svn_node_none;*/
-
-  return SVN_NO_ERROR;
 }
 
 svn_wc_conflict_description2_t *
