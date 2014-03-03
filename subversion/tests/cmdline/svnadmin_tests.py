@@ -2273,6 +2273,27 @@ def load_ignore_dates(sbox):
                             "  start_time: %s"
                             % (rev, str(rev_time), str(start_time)))
 
+
+@XFail()
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_old_with_propchanges(sbox):
+  "hotcopy --compatible-version=1.3 with propchanges"
+
+  # Around trunk@1573728, running 'svnadmin hotcopy' for the
+  # --compatible-version=1.3 repository with property changes
+  # ended with mismatching db/current in source and destination:
+  # (source: "2 l 1", destination: "2 k 1").
+
+  sbox.build(create_wc=True, minor_version=3)
+  sbox.simple_propset('foo', 'bar', 'A/mu')
+  sbox.simple_commit()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2315,6 +2336,7 @@ test_list = [ None,
               fsfs_recover_old_non_empty,
               fsfs_hotcopy_old_non_empty,
               load_ignore_dates,
+              fsfs_hotcopy_old_with_propchanges,
              ]
 
 if __name__ == '__main__':
