@@ -483,8 +483,7 @@ javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
 clean-javahl:
 	if [ -d $(javahl_test_rootdir) ]; then \
-	  find $(javahl_test_rootdir) -mindepth 1 -maxdepth 1 \
-               -print0 | xargs -0 rm -rf --;   \
+	  rm -rf $(javahl_test_rootdir)/*;     \
 	fi
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
@@ -627,12 +626,11 @@ gcov-reset:
 gcov-clean:
 	rm -f gcov-lcov.dat gcov-lcov.log gcov-genhtml.log
 	rm -rf gcov-report
-	find . -name "*.gcda" -o -name "*.gcno" -print0 | xargs -0 rm -f --
+	find . -name "*.gcda" -o -name "*.gcno" -exec rm -f -- {} \;
 
 check-clean: gcov-clean
 	if [ -d subversion/tests/cmdline/svn-test-work ]; then \
-	  find subversion/tests/cmdline/svn-test-work -mindepth 1 -maxdepth 1 \
-               -print0 | xargs -0 rm -rf --;   \
+	  rm -rf subversion/tests/cmdline/svn-test-work/*;     \
 	fi
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
