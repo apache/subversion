@@ -1372,7 +1372,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
     {
       *relation = root_a->rev == root_b->rev
                 ? svn_fs_node_same
-                : svn_fs_node_common_anchestor;
+                : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
 
@@ -1391,7 +1391,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   if (svn_fs_fs__id_part_eq(&rev_item_a, &rev_item_b))
     *relation = svn_fs_node_same;
   else if (svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
-    *relation = svn_fs_node_common_anchestor;
+    *relation = svn_fs_node_common_ancestor;
   else
     *relation = svn_fs_node_unrelated;
 

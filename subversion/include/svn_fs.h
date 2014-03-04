@@ -798,19 +798,23 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
 typedef enum svn_fs_node_relation_t
 {
   /** The nodes are not related.
-   * Nodes from different repositories are always unrelated. */
+   * Nodes from different repositories are always unrelated.
+   * #svn_fs_compare_ids would return the value -1 in this case.
+   */
   svn_fs_node_unrelated = 0,
 
-  /** They are the same physical node, i.e. there is no intermittent change.
-   * However, due to lazy copying, they may be intermittent parent copies.
+  /** They are the same physical node, i.e. there is no intervening change.
+   * However, due to lazy copying, there may be part of different parent
+   * copies.  #svn_fs_compare_ids would return the value 0 in this case.
    */
   svn_fs_node_same,
 
   /** The nodes have a common ancestor (which may be one of these nodes)
    * but are not the same.
+   * #svn_fs_compare_ids would return the value 1 in this case.
    */
-  svn_fs_node_common_anchestor
-  
+  svn_fs_node_common_ancestor
+
 } svn_fs_node_relation_t;
 
 /** An object representing a node-revision id.  */
@@ -1573,9 +1577,9 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
  * arbitrary revision order and any of them may pertain to a transaction.
  * @a pool is used for temporary allocations.
  *
- * @note The current implementation considers paths from different svn_fs_t
- * as unrelated even if the underlying physical repository is the same.
- * 
+ * @note Paths from different svn_fs_t will be reported as unrelated even
+ * if the underlying physical repository is the same.
+ *
  * @since New in 1.9.
  */
 svn_error_t *

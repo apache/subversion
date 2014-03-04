@@ -1051,7 +1051,7 @@ base_node_relation(svn_fs_node_relation_t *relation,
     {
       case 0:  *relation = svn_fs_node_same;
                break;
-      case 1:  *relation = svn_fs_node_common_anchestor;
+      case 1:  *relation = svn_fs_node_common_ancestor;
                break;
       default: *relation = svn_fs_node_unrelated;
                break;
