@@ -416,11 +416,13 @@ lock_test(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_ra_session_t *session;
-  apr_hash_t *targets = apr_hash_make(pool);
+  apr_hash_t *lock_targets = apr_hash_make(pool);
+  apr_hash_t *unlock_targets = apr_hash_make(pool);
   svn_revnum_t rev = 1;
   svn_fs_lock_result_t *result;
   struct lock_baton_t baton;
   svn_lock_t *lock;
+  apr_hash_index_t *hi;
 
   SVN_ERR(make_and_open_local_repos(&session, "test-repo-lock", opts,
                                     pool));
@@ -429,11 +431,11 @@ lock_test(const svn_test_opts_t *opts,
   baton.results = apr_hash_make(pool);
   baton.pool = pool;
 
-  svn_hash_sets(targets, "A/B/f", &rev);
-  svn_hash_sets(targets, "A/B/g", &rev);
-  svn_hash_sets(targets, "A/B/z", &rev);
-  svn_hash_sets(targets, "A/BB/f", &rev);
-  svn_hash_sets(targets, "X/z", &rev);
+  svn_hash_sets(lock_targets, "A/B/f", &rev);
+  svn_hash_sets(lock_targets, "A/B/g", &rev);
+  svn_hash_sets(lock_targets, "A/B/z", &rev);
+  svn_hash_sets(lock_targets, "A/BB/f", &rev);
+  svn_hash_sets(lock_targets, "X/z", &rev);
 
 #define EXPECT_LOCK(path)                                  \
   result = svn_hash_gets(baton.results, (path));           \
@@ -447,35 +449,76 @@ lock_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_ra_get_lock(session, &lock, (path), pool));  \
   SVN_TEST_ASSERT(!lock)
 
-  SVN_ERR(svn_ra_lock(session, targets, "foo", FALSE, lock_cb, &baton, pool));
+#define EXPECT_UNLOCK(path)                                \
+  result = svn_hash_gets(baton.results, (path));           \
+  SVN_TEST_ASSERT(result && !result->err);                 \
+  SVN_ERR(svn_ra_get_lock(session, &lock, (path), pool));  \
+  SVN_TEST_ASSERT(!lock)
 
-  apr_hash_clear(targets);
+#define EXPECT_UNLOCK_ERROR(path)                          \
+  result = svn_hash_gets(baton.results, (path));           \
+  SVN_TEST_ASSERT(result && result->err);                  \
+  SVN_ERR(svn_ra_get_lock(session, &lock, (path), pool));  \
+  SVN_TEST_ASSERT(lock)
+
+  /* Lock some paths. */
+  SVN_ERR(svn_ra_lock(session, lock_targets, "foo", FALSE, lock_cb, &baton,
+                      pool));
 
   EXPECT_LOCK("A/B/f");
-  svn_hash_sets(targets, "A/B/f", result->lock->token);
   EXPECT_LOCK("A/B/g");
-  svn_hash_sets(targets, "A/B/g", result->lock->token);
   EXPECT_ERROR("A/B/z");
-  svn_hash_sets(targets, "A/B/z", "foo");
   EXPECT_LOCK("A/BB/f");
-  svn_hash_sets(targets, "A/BB/f", result->lock->token);
   EXPECT_ERROR("X/z");
-  svn_hash_sets(targets, "X/z", "foo");
 
-#define EXPECT_NO_ERROR(path)                    \
-  result = svn_hash_gets(baton.results, (path)); \
-  SVN_TEST_ASSERT(result && !result->err)
-
+  /* Unlock without force and wrong lock tokens */
+  for (hi = apr_hash_first(pool, lock_targets); hi; hi = apr_hash_next(hi))
+    svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi), "wrong-token");
   apr_hash_clear(baton.results);
+  SVN_ERR(svn_ra_unlock(session, unlock_targets, FALSE, lock_cb, &baton, pool));
 
-  SVN_ERR(svn_ra_unlock(session, targets, FALSE, lock_cb, &baton, pool));
-
-  apr_hash_clear(targets);
-  EXPECT_NO_ERROR("A/B/f");
-  EXPECT_NO_ERROR("A/B/g");
+  EXPECT_UNLOCK_ERROR("A/B/f");
+  EXPECT_UNLOCK_ERROR("A/B/g");
   EXPECT_ERROR("A/B/z");
-  EXPECT_NO_ERROR("A/BB/f");
+  EXPECT_UNLOCK_ERROR("A/BB/f");
   EXPECT_ERROR("X/z");
+
+  /* Force unlock */
+  for (hi = apr_hash_first(pool, lock_targets); hi; hi = apr_hash_next(hi))
+    svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi), "");
+  apr_hash_clear(baton.results);
+  SVN_ERR(svn_ra_unlock(session, unlock_targets, TRUE, lock_cb, &baton, pool));
+
+  EXPECT_UNLOCK("A/B/f");
+  EXPECT_UNLOCK("A/B/g");
+  EXPECT_ERROR("A/B/z");
+  EXPECT_UNLOCK("A/BB/f");
+  EXPECT_ERROR("X/z");
+
+  /* Lock again. */
+  apr_hash_clear(baton.results);
+  SVN_ERR(svn_ra_lock(session, lock_targets, "foo", FALSE, lock_cb, &baton,
+                      pool));
+
+  EXPECT_LOCK("A/B/f");
+  EXPECT_LOCK("A/B/g");
+  EXPECT_ERROR("A/B/z");
+  EXPECT_LOCK("A/BB/f");
+  EXPECT_ERROR("X/z");
+
+  for (hi = apr_hash_first(pool, baton.results); hi; hi = apr_hash_next(hi))
+    {
+      result = svn__apr_hash_index_val(hi);
+      svn_hash_sets(unlock_targets, svn__apr_hash_index_key(hi),
+                    result->lock ? result->lock->token : "non-existent-token");
+    }
+  apr_hash_clear(baton.results);
+  SVN_ERR(svn_ra_unlock(session, unlock_targets, FALSE, lock_cb, &baton, pool));
+
+  EXPECT_UNLOCK("A/B/f");
+  EXPECT_UNLOCK("A/B/g");
+  EXPECT_ERROR("A/B/z");
+  EXPECT_UNLOCK("A/BB/f");
   EXPECT_ERROR("X/z");
 
   return SVN_NO_ERROR;
