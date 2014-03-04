@@ -1855,7 +1855,7 @@ select_level(svn_membuffer_t *cache,
       /* Large and somewhat important items go into L2. */
       entry_t dummy_entry = { { 0 } };
       dummy_entry.priority = priority;
-      dummy_entry.size = size;
+      dummy_entry.size = (apr_uint32_t) size;
 
       return ensure_data_insertable_l2(cache, &dummy_entry)
            ? &cache->l2
@@ -1902,7 +1902,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * negative value.
        */
       cache->data_used += (apr_uint64_t)size - entry->size;
-      entry->size = size;
+      entry->size = (apr_uint32_t) size;
       entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -1931,7 +1931,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * the serialized item's (future) position within data buffer.
        */
       entry = find_entry(cache, group_index, to_find, TRUE);
-      entry->size = size;
+      entry->size = (apr_uint32_t) size;
       entry->offset = level->current_data;
       entry->priority = priority;
 
@@ -2364,7 +2364,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                   /* Write the new entry.
                    */
                   entry = find_entry(cache, group_index, to_find, TRUE);
-                  entry->size = size;
+                  entry->size = (apr_uint32_t) size;
                   entry->offset = cache->l1.current_data;
                   if (size)
                     memcpy(cache->data + entry->offset, data, size);
