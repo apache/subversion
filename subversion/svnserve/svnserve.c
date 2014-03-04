@@ -534,7 +534,7 @@ static svn_root_pools__t *connection_pools;
 static apr_thread_pool_t *threads;
 
 /* Very simple load determination callback for serve_interruptable:
-   With less than have the threads in THREADS in use, we can afford to
+   With less than half the threads in THREADS in use, we can afford to
    wait in the socket read() function.  Otherwise, poll them round-robin. */
 static svn_boolean_t
 is_busy(connection_t *connection)
