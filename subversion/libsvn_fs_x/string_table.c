@@ -274,7 +274,7 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
                                    const char *string,
                                    apr_size_t len)
 {
-  apr_size_t result = -1;
+  apr_size_t result;
   builder_table_t *table = APR_ARRAY_IDX(builder->tables,
                                          builder->tables->nelts - 1,
                                          builder_table_t *);
