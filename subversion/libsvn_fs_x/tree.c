@@ -838,7 +838,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path, FALSE, pool));
   copyroot_id = svn_fs_x__dag_get_id(copyroot_node);
 
-  if (svn_fs_x__id_compare(copyroot_id, child_id) == -1)
+  if (svn_fs_x__id_compare(copyroot_id, child_id) == svn_fs_node_unrelated)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or

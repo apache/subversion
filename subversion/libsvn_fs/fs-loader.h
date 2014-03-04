@@ -427,8 +427,10 @@ typedef struct history_vtable_t
 
 typedef struct id_vtable_t
 {
-  svn_string_t *(*unparse)(const svn_fs_id_t *id, apr_pool_t *pool);
-  int (*compare)(const svn_fs_id_t *a, const svn_fs_id_t *b);
+  svn_string_t *(*unparse)(const svn_fs_id_t *id,
+                           apr_pool_t *pool);
+  svn_fs_node_relation_t (*compare)(const svn_fs_id_t *a,
+                                    const svn_fs_id_t *b);
 } id_vtable_t;
 
 

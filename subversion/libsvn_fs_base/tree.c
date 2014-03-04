@@ -570,7 +570,8 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
     {
       copy_t *copy;
       SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, child_copy_id, trail, pool));
-      if (svn_fs_base__id_compare(copy->dst_noderev_id, child_id) == -1)
+      if (   svn_fs_base__id_compare(copy->dst_noderev_id, child_id)
+          == svn_fs_node_unrelated)
         {
           *inherit_p = copy_id_inherit_parent;
           return SVN_NO_ERROR;
@@ -1047,15 +1048,7 @@ base_node_relation(svn_fs_node_relation_t *relation,
   SVN_ERR(base_node_id(&id_a, root_a, path_a, pool));
   SVN_ERR(base_node_id(&id_b, root_b, path_b, pool));
 
-  switch (svn_fs_base__id_compare(id_a, id_b))
-    {
-      case 0:  *relation = svn_fs_node_same;
-               break;
-      case 1:  *relation = svn_fs_node_common_ancestor;
-               break;
-      default: *relation = svn_fs_node_unrelated;
-               break;
-    }
+  *relation = svn_fs_base__id_compare(id_a, id_b);
 
   return SVN_NO_ERROR;
 }
@@ -3172,7 +3165,7 @@ txn_body_copy(void *baton,
   if ((to_parent_path->node)
       && (svn_fs_base__id_compare(svn_fs_base__dag_get_id(from_node),
                                   svn_fs_base__dag_get_id
-                                  (to_parent_path->node)) == 0))
+                                  (to_parent_path->node)) == svn_fs_node_same))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
