@@ -811,7 +811,7 @@ free_spare_group(svn_membuffer_t *cache,
 
   /* add to chain of spares */
   group->header.next = cache->first_spare_group;
-  cache->first_spare_group = group - cache->directory;
+  cache->first_spare_group = (apr_uint32_t) (group - cache->directory);
 }
 
 /* Follow the group chain from GROUP in CACHE to its end and return the last
@@ -966,8 +966,8 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   entry_group_t *last_group
     = last_group_in_chain(cache, &cache->directory[group_index]);
   apr_uint32_t last_in_group
-    = (last_group - cache->directory) * GROUP_SIZE
-    + last_group->header.used - 1;
+    = (apr_uint32_t) ((last_group - cache->directory) * GROUP_SIZE
+    + last_group->header.used - 1);
 
   cache_level_t *level = get_cache_level(cache, entry);
 
@@ -1204,9 +1204,11 @@ find_entry(svn_membuffer_t *cache,
               /* chain groups
                */
               new_group->header.chain_length = group->header.chain_length + 1;
-              new_group->header.previous = group - cache->directory;
+              new_group->header.previous = (apr_uint32_t) (group -
+                                                           cache->directory);
               new_group->header.next = NO_INDEX;
-              group->header.next = new_group - cache->directory;
+              group->header.next = (apr_uint32_t) (new_group -
+                                                   cache->directory);
               group = new_group;
             }
         }
