@@ -168,7 +168,7 @@ class WCTestCase(unittest.TestCase):
         path = "%s/branches/0.x/README.txt" % wc_location
         diffstring="""Index: """+path+"""
 ===================================================================
---- """+path+"""\t(revision 0)
+--- """+path+"""\t(nonexistent)
 +++ """+path+"""\t(revision 5)
 @@ -0,0 +1,9 @@
 +This repository is for test purposes only. Any resemblance to any other
