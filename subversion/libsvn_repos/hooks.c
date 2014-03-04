@@ -520,11 +520,9 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
   for (hi = apr_hash_first(pool, lock_tokens); hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
-      const char *path, *token;
+      const char *token = svn__apr_hash_index_key(hi);
+      const char *path = svn__apr_hash_index_val(hi);
 
-      apr_hash_this(hi, (void *)&token, NULL, &val);
-      path = val;
       svn_stringbuf_appendstr(lock_str,
         svn_stringbuf_createf(pool, "%s|%s\n",
                               svn_path_uri_autoescape(path, pool),

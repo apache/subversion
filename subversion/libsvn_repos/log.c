@@ -81,14 +81,11 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      svn_fs_path_change2_t *change;
+      const char *key = svn__apr_hash_index_key(hi);
+      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
       svn_boolean_t readable;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      change = val;
 
       SVN_ERR(authz_read_func(&readable, rev_root, key,
                               authz_read_baton, subpool));
@@ -175,10 +172,7 @@ turn_moves_into_copies(apr_hash_t *changes,
   apr_hash_index_t *hi;
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
-      const char *key;
-      apr_ssize_t klen;
-      svn_log_changed_path2_t *change;
-      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
+      svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
 
       switch (change->action)
         {
@@ -218,8 +212,7 @@ turn_unique_copies_into_moves(apr_hash_t *changes,
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
-      svn_log_changed_path2_t *change;
-      apr_hash_this(hi, NULL, NULL, (void**)&change);
+      svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
 
       if (change->copyfrom_path && change->copyfrom_rev == revision-1)
         APR_ARRAY_PUSH(copy_sources, const char *)
@@ -258,11 +251,9 @@ turn_unique_copies_into_moves(apr_hash_t *changes,
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
-      const char *key;
-      apr_ssize_t klen;
-      svn_log_changed_path2_t *change, *copy_from_change;
+      svn_log_changed_path2_t *change = svn__apr_hash_index_val(hi);
+      svn_log_changed_path2_t *copy_from_change;
 
-      apr_hash_this(hi, (const void **)&key, &klen, (void**)&change);
       if (   change->copyfrom_rev != revision-1
           || !change->copyfrom_path
           || !svn_hash_gets(unique_copy_sources, change->copyfrom_path))
@@ -353,16 +344,13 @@ detect_changed(apr_hash_t **changed,
       /* NOTE:  Much of this loop is going to look quite similar to
          svn_repos_check_revision_access(), but we have to do more things
          here, so we'll live with the duplication. */
-      svn_fs_path_change2_t *change;
-      const char *path;
-      apr_ssize_t path_len;
+      const char *path = svn__apr_hash_index_key(hi);
+      apr_ssize_t path_len = svn__apr_hash_index_klen(hi);
+      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
       char action;
       svn_log_changed_path2_t *item;
 
       svn_pool_clear(subpool);
-
-      /* KEY will be the path, VAL the change. */
-      apr_hash_this(hi, (const void **)&path, &path_len, (void **)&change);
 
       /* Skip path if unreadable. */
       if (authz_read_func)
@@ -774,20 +762,14 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      svn_fs_path_change2_t *change;
-      const char *changed_path, *base_path = NULL;
+      const char *changed_path = svn__apr_hash_index_key(hi);
+      svn_fs_path_change2_t *change = svn__apr_hash_index_val(hi);
+      const char *base_path = NULL;
       svn_revnum_t base_rev = SVN_INVALID_REVNUM;
       svn_fs_root_t *base_root = NULL;
       svn_string_t *prev_mergeinfo_value = NULL, *mergeinfo_value;
 
       svn_pool_clear(iterpool);
-
-      /* KEY will be the path, VAL the change. */
-      apr_hash_this(hi, &key, NULL, &val);
-      changed_path = key;
-      change = val;
 
       /* If there was no mergeinfo change on this item, ignore it. */
       if (change->mergeinfo_mod == svn_tristate_false)
@@ -1133,16 +1115,10 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
   for (hi = apr_hash_first(scratch_pool, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      const char *changed_path;
-      svn_mergeinfo_t added, deleted;
-
-      /* The path is the key, the mergeinfo delta is the value. */
-      apr_hash_this(hi, &key, &klen, &val);
-      changed_path = key;
-      added = val;
+      const char *changed_path = svn__apr_hash_index_key(hi);
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      svn_mergeinfo_t added = svn__apr_hash_index_val(hi);
+      svn_mergeinfo_t deleted;
 
       for (i = 0; i < paths->nelts; i++)
         {
@@ -1150,7 +1126,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
           if (! svn_fspath__skip_ancestor(path, changed_path))
             continue;
           svn_pool_clear(iterpool);
-          deleted = apr_hash_get(deleted_mergeinfo_catalog, key, klen);
+          deleted = apr_hash_get(deleted_mergeinfo_catalog, changed_path, klen);
           SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo,
                                        svn_mergeinfo_dup(deleted, result_pool),
                                        result_pool, iterpool));
@@ -1375,18 +1351,14 @@ send_log(svn_revnum_t rev,
           const char *changed_path = svn__apr_hash_index_key(hi);
           apr_hash_index_t *hi2;
 
-          apr_hash_this(hi, (const void**)&changed_path, NULL, NULL);
-
           /* Look at each path on the log target's mergeinfo. */
           for (hi2 = apr_hash_first(iterpool,
                                     log_target_history_as_mergeinfo);
                hi2;
                hi2 = apr_hash_next(hi2))
             {
-              const char *mergeinfo_path;
-              svn_rangelist_t *rangelist;
-              apr_hash_this(hi2, (const void**)&mergeinfo_path, NULL,
-                                 (void **)&rangelist);
+              const char *mergeinfo_path = svn__apr_hash_index_key(hi2);
+              svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi2);
 
               /* Check whether CHANGED_PATH at revision REV is a child of
                  a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
@@ -1663,8 +1635,9 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
     {
       int i;
       struct rangelist_path *rp = apr_palloc(subpool, sizeof(*rp));
-      apr_hash_this(hi, (void *) &rp->path, NULL,
-                    (void *) &rp->rangelist);
+
+      rp->path = svn__apr_hash_index_key(hi);
+      rp->rangelist = svn__apr_hash_index_val(hi);
       APR_ARRAY_PUSH(rangelist_paths, struct rangelist_path *) = rp;
 
       /* We need to make local copies of the rangelist, since we will be

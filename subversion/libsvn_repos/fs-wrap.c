@@ -75,8 +75,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_hash_this(hi, &key, NULL, NULL);
+      const char *key = svn__apr_hash_index_key(hi);
 
       svn_pool_clear(iterpool);
 
@@ -96,9 +95,8 @@ svn_repos_fs_commit_txn(const char **conflict_p,
       iterpool = svn_pool_create(pool);
       for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
+          const char *key = svn__apr_hash_index_key(hi);
+          svn_string_t *val = svn__apr_hash_index_val(hi);
 
           svn_pool_clear(iterpool);
 
