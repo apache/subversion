@@ -920,7 +920,7 @@ lock_multiple_paths(const svn_test_opts_t *opts,
     {
       result = svn__apr_hash_index_val(hi);
       svn_hash_sets(unlock_paths, svn__apr_hash_index_key(hi),
-                    result->lock ? result->lock->token : "non-existant-token");
+                    result->lock ? result->lock->token : "non-existent-token");
     }
   SVN_ERR(svn_fs_unlock2(&results, fs, unlock_paths, FALSE, pool, pool));
 
