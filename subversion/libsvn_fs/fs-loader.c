@@ -1725,7 +1725,7 @@ svn_fs_unparse_id(const svn_fs_id_t *id, apr_pool_t *pool)
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
-  return (a->vtable->compare(a, b) == svn_fs_node_same);
+  return (a->vtable->compare(a, b) != svn_fs_node_unrelated);
 }
 
 int
