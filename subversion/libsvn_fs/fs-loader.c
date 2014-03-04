@@ -1106,7 +1106,7 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      apr_pool_t *pool)
 {
   /* Different repository types? */
-  if (root_a->vtable != root_b->vtable)
+  if (root_a->fs != root_b->fs)
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
