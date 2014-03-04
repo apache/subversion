@@ -875,10 +875,10 @@ delta_dirs(struct context *c,
      from the target tree. */
   for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
     {
-      const svn_fs_dirent_t *s_entry, *t_entry;
-      const void *key;
-      void *val;
-      apr_ssize_t klen;
+      const void *key = svn__apr_hash_index_key(hi);
+      apr_ssize_t klen = svn__apr_hash_index_klen(hi);
+      const svn_fs_dirent_t *t_entry = svn__apr_hash_index_val(hi);
+      const svn_fs_dirent_t *s_entry;
       const char *t_fullpath;
       const char *e_fullpath;
       const char *s_fullpath;
@@ -887,9 +887,6 @@ delta_dirs(struct context *c,
       /* Clear out our subpool for the next iteration... */
       svn_pool_clear(subpool);
 
-      /* KEY is the entry name in target, VAL the dirent */
-      apr_hash_this(hi, &key, &klen, &val);
-      t_entry = val;
       tgt_kind = t_entry->kind;
       t_fullpath = svn_relpath_join(target_path, t_entry->name, subpool);
       e_fullpath = svn_relpath_join(edit_path, t_entry->name, subpool);
@@ -964,17 +961,13 @@ delta_dirs(struct context *c,
     {
       for (hi = apr_hash_first(pool, s_entries); hi; hi = apr_hash_next(hi))
         {
-          const svn_fs_dirent_t *s_entry;
-          void *val;
+          const svn_fs_dirent_t *s_entry = svn__apr_hash_index_val(hi);
           const char *e_fullpath;
           svn_node_kind_t src_kind;
 
           /* Clear out our subpool for the next iteration... */
           svn_pool_clear(subpool);
 
-          /* KEY is the entry name in source, VAL the dirent */
-          apr_hash_this(hi, NULL, NULL, &val);
-          s_entry = val;
           src_kind = s_entry->kind;
           e_fullpath = svn_relpath_join(edit_path, s_entry->name, subpool);
 

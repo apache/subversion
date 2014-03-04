@@ -202,17 +202,16 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 {
   apr_hash_t *prefixed_mergeinfo, *mergeinfo;
   apr_hash_index_t *hi;
-  void *rangelist;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
   prefixed_mergeinfo = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *path, *merge_source;
+      const char *merge_source = svn__apr_hash_index_key(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *path;
 
-      apr_hash_this(hi, &key, NULL, &rangelist);
-      merge_source = svn_relpath_canonicalize(key, pool);
+      merge_source = svn_relpath_canonicalize(merge_source, pool);
 
       /* The svn:mergeinfo property syntax demands a repos abspath */
       path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
@@ -268,16 +267,10 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source;
-      svn_rangelist_t *rangelist;
+      const char *merge_source = svn__apr_hash_index_key(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton *pb = rb->pb;
       int i;
-      const void *key;
-      void *val;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      merge_source = key;
-      rangelist = val;
 
       /* Possibly renumber revisions in merge source's rangelist. */
       for (i = 0; i < rangelist->nelts; i++)
@@ -838,9 +831,8 @@ remove_node_props(void *baton)
 
   for (hi = apr_hash_first(nb->pool, proplist); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *key = svn__apr_hash_index_key(hi);
 
-      apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR(change_node_prop(rb->txn_root, nb->path, key, NULL,
                                rb->pb->validate_props, nb->pool));
     }
