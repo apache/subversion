@@ -821,10 +821,22 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
           err = launch_resolver(&performed_edit, desc, b, iterpool);
           if (err)
             {
-              if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
-                  err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+              if (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
                 {
                   /* Try the internal merge tool. */
+                  svn_error_clear(err);
+                }
+              else if (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
+                {
+                  char buf[1024];
+                  const char *message;
+
+                  message = svn_err_best_message(err, buf, sizeof(buf));
+                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool,
+                                              "%s\n", message));
+                  SVN_ERR(svn_cmdline_fputs(_("Falling back to internal "
+                                              "merge tool.\n"), stderr,
+                                              iterpool));
                   svn_error_clear(err);
                 }
               else
