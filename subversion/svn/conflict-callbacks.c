@@ -325,22 +325,14 @@ open_editor(svn_boolean_t *performed_edit,
     {
       err = svn_cmdline__edit_file_externally(merged_file, b->editor_cmd,
                                               b->config, pool);
-      if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
+      if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
+                  err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
         {
-          svn_error_t *root_err = svn_error_root_cause(err);
+          char buf[1024];
+          const char *message;
 
-          SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                      root_err->message ? root_err->message :
-                                      _("No editor found.")));
-          svn_error_clear(err);
-        }
-      else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
-        {
-          svn_error_t *root_err = svn_error_root_cause(err);
-
-          SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
-                                      root_err->message ? root_err->message :
-                                      _("Error running editor.")));
+          message = svn_err_best_message(err, buf, sizeof(buf));
+          SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n", message));
           svn_error_clear(err);
         }
       else if (err)
@@ -885,22 +877,16 @@ handle_text_conflict(svn_wc_conflict_result_t *result,
               desc->my_abspath && desc->merged_file)
             {
               svn_error_t *err;
+              char buf[1024];
+              const char *message;
 
               err = launch_resolver(&performed_edit, desc, b, iterpool);
-              if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
+              if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
+                          err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
                 {
+                  message = svn_err_best_message(err, buf, sizeof(buf));
                   SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
-                                              err->message ? err->message :
-                                              _("No merge tool found, "
-                                                "try '(m) merge' instead.\n")));
-                  svn_error_clear(err);
-                }
-              else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
-                {
-                  SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
-                                              err->message ? err->message :
-                                         _("Error running merge tool, "
-                                           "try '(m) merge' instead.")));
+                                              message));
                   svn_error_clear(err);
                 }
               else if (err)
@@ -1232,21 +1218,15 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
           err = svn_cmdline__edit_file_externally(desc->merged_file,
                                                   b->editor_cmd, b->config,
                                                   scratch_pool);
-          if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR))
+          if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
+                      err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
             {
+              char buf[1024];
+              const char *message;
+
+              message = svn_err_best_message(err, buf, sizeof(buf));
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                          err->message ? err->message :
-                                          _("No editor found;"
-                                            " leaving all conflicts.")));
-              svn_error_clear(err);
-              b->external_failed = TRUE;
-            }
-          else if (err && (err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                          err->message ? err->message :
-                                          _("Error running editor;"
-                                            " leaving all conflicts.")));
+                                          message));
               svn_error_clear(err);
               b->external_failed = TRUE;
             }
@@ -1277,21 +1257,15 @@ conflict_func_interactive(svn_wc_conflict_result_t **result,
                                               b->config,
                                               &remains_in_conflict,
                                               scratch_pool);
-          if (err && err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL)
+          if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
+                      err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
             {
+              char buf[1024];
+              const char *message;
+
+              message = svn_err_best_message(err, buf, sizeof(buf));
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                          err->message ? err->message :
-                                          _("No merge tool found;"
-                                            " leaving all conflicts.")));
-              b->external_failed = TRUE;
-              return svn_error_trace(err);
-            }
-          else if (err && err->apr_err == SVN_ERR_EXTERNAL_PROGRAM)
-            {
-              SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
-                                          err->message ? err->message :
-                                          _("Error running merge tool;"
-                                            " leaving all conflicts.")));
+                                          message));
               b->external_failed = TRUE;
               return svn_error_trace(err);
             }
