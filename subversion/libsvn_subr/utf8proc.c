@@ -31,7 +31,11 @@
 #define UNUSED(x) ((void)(x))
 
 #define UTF8PROC_INLINE
+/* Somehow utf8proc thinks it is nice to use strlen as an argument name,
+   while this function is already defined via apr.h */
+#define strlen svn__strlen_var
 #include "utf8proc/utf8proc.c"
+#undef strlen
 
 
 const char *svn_utf__utf8proc_version(void)
