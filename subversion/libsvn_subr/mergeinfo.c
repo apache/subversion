@@ -49,7 +49,7 @@
    of IN1 and IN2 when trying to combine ranges.  If ranges with different
    inheritability are combined (CONSIDER_INHERITANCE must be FALSE for this
    to happen) the result is inheritable.  If both ranges are inheritable the
-   result is inheritable.  Only and if both ranges are non-inheritable is
+   result is inheritable.  And only if both ranges are non-inheritable
    the result is non-inheritable.
 
    Range overlapping detection algorithm from
@@ -270,7 +270,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
     {
       /* We are not considering inheritance so we can merge intersecting
          ranges of different inheritability.  Of course if the ranges
-         don't intersect at all we simply push NEW_RANGE only RANGELIST. */
+         don't intersect at all we simply push NEW_RANGE onto RANGELIST. */
       if (combine_ranges(&combined_range, lastrange, new_range, FALSE))
         {
           *lastrange = combined_range;
@@ -304,7 +304,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
             {
               case svn__no_intersection:
                 /* NEW_RANGE and *LASTRANGE *really* don't intersect so
-                   just push NEW_RANGE only RANGELIST. */
+                   just push NEW_RANGE onto RANGELIST. */
                 APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
                   svn_merge_range_dup(new_range, result_pool);
                 sorted = (svn_sort_compare_ranges(&lastrange,
@@ -866,7 +866,7 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
                   ______________________________________________
                  |                                              |
                  M                 MODIFIED_RANGE               N
-                 |                 (!inhertiable)               |
+                 |                 (!inheritable)               |
                  |______________________________________________|
                                   |              |
                                   O  NEXT_RANGE  P
@@ -877,7 +877,7 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
                   _______________________________________________
                  |                |              |               |
                  M MODIFIED_RANGE O  NEXT_RANGE  P   NEW_RANGE   N
-                 | (!inhertiable) | (inheritable)| (!inheritable)|
+                 | (!inheritable) | (inheritable)| (!inheritable)|
                  |________________|______________|_______________|
               */
               svn_merge_range_t *new_modified_range =
@@ -969,7 +969,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
       if (res == 0)
         {
           /* Only when merging two non-inheritable ranges is the result also
-             non-inheritable.  In all other cases ensure an inheritiable
+             non-inheritable.  In all other cases ensure an inheritable
              result. */
           if (range->inheritable || change->inheritable)
             range->inheritable = TRUE;
@@ -1866,7 +1866,7 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
 
   /* ### TODO(reint): Do we care about the case when a path in one
      ### mergeinfo hash has inheritable mergeinfo, and in the other
-     ### has non-inhertiable mergeinfo?  It seems like that path
+     ### has non-inheritable mergeinfo?  It seems like that path
      ### itself should really be an intersection, while child paths
      ### should not be... */
   for (hi = apr_hash_first(scratch_pool, mergeinfo1);
