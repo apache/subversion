@@ -792,9 +792,9 @@ lock_out_of_date(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 2;
+static int max_threads = 2;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(lock_expiration,
@@ -821,3 +821,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "check out-of-dateness before locking"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

@@ -310,9 +310,9 @@ test_externals_parse_erratic(apr_pool_t *pool)
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
-int svn_test_max_threads = 2;
+static int max_threads = 2;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_node_get_base,
@@ -325,3 +325,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "parse erratic externals definition"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN
