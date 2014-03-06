@@ -172,7 +172,7 @@ dirent_walker(void *baton,
         }
       else if (strcmp(name, "creator-displayname") == 0)
         {
-          dwb->entry->last_author = val->data;
+          dwb->entry->last_author = apr_pstrdup(dwb->result_pool, val->data);
         }
       else if (strcmp(name, SVN_DAV__CREATIONDATE) == 0)
         {
