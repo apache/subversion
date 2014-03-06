@@ -21,6 +21,8 @@
  */
 
 
+#include <stdarg.h>
+
 #include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -350,6 +352,34 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
 }
 
 
+/* Send a notification of type #svn_repos_notify_warning, subtype WARNING,
+   with message WARNING_FMT formatted with the remaining variable arguments.
+   Send it by calling NOTIFY_FUNC (if not null) with NOTIFY_BATON.
+ */
+static void
+notify_warning(apr_pool_t *scratch_pool,
+               svn_repos_notify_func_t notify_func,
+               void *notify_baton,
+               svn_repos_notify_warning_t warning,
+               const char *warning_fmt,
+               ...)
+{
+  va_list va;
+  svn_repos_notify_t *notify;
+
+  if (notify_func == NULL)
+    return;
+
+  notify = svn_repos_notify_create(svn_repos_notify_warning, scratch_pool);
+  notify->warning = warning;
+  va_start(va, warning_fmt);
+  notify->warning_str = apr_pvsprintf(scratch_pool, warning_fmt, va);
+  va_end(va);
+
+  notify_func(notify_baton, notify, scratch_pool);
+}
+
+
 /*----------------------------------------------------------------------*/
 
 /** An editor which dumps node-data in 'dumpfile format' to a file. **/
@@ -608,21 +638,16 @@ verify_mergeinfo_revisions(svn_boolean_t *found_old_mergeinfo,
 
   if (apr_hash_count(old_mergeinfo))
     {
-      svn_repos_notify_t *notify =
-        svn_repos_notify_create(svn_repos_notify_warning, pool);
-
-      notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
-      notify->warning_str = apr_psprintf(
-        pool,
-        _("Mergeinfo referencing revision(s) prior "
-          "to the oldest dumped revision (r%ld). "
-          "Loading this dump may result in invalid "
-          "mergeinfo."),
-        oldest_dumped_rev);
+      notify_warning(pool, notify_func, notify_baton,
+                     svn_repos_notify_warning_found_old_mergeinfo,
+                     _("Mergeinfo referencing revision(s) prior "
+                       "to the oldest dumped revision (r%ld). "
+                       "Loading this dump may result in invalid "
+                       "mergeinfo."),
+                     oldest_dumped_rev);
 
       if (found_old_mergeinfo)
         *found_old_mergeinfo = TRUE;
-      notify_func(notify_baton, notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -718,19 +743,15 @@ verify_mergeinfo_normalization(void *baton, const void *key, apr_ssize_t klen,
   else
     {
       /* Report path collision in mergeinfo */
-      svn_repos_notify_t *notify;
-
       svn_hash_sets(vb->normalized_paths,
                     apr_pstrdup(vb->buffer.pool, normpath),
                     normalized_collision);
 
-      notify = svn_repos_notify_create(svn_repos_notify_warning, iterpool);
-      notify->warning = svn_repos_notify_warning_mergeinfo_collision;
-      notify->warning_str = apr_psprintf(
-          iterpool, _("Duplicate representation of path '%s'"
-                  " in %s property of '%s'"),
-          normpath, SVN_PROP_MERGEINFO, vb->path);
-      vb->notify_func(vb->notify_baton, notify, iterpool);
+      notify_warning(iterpool, vb->notify_func, vb->notify_baton,
+                     svn_repos_notify_warning_mergeinfo_collision,
+                     _("Duplicate representation of path '%s'"
+                       " in %s property of '%s'"),
+                     normpath, SVN_PROP_MERGEINFO, vb->path);
     }
   return SVN_NO_ERROR;
 }
@@ -841,17 +862,12 @@ dump_node(struct edit_baton *eb,
           if (eb->notify_func)
             {
               char errbuf[512]; /* ### svn_strerror() magic number  */
-              svn_repos_notify_t *notify;
-              notify = svn_repos_notify_create(svn_repos_notify_warning, pool);
 
-              notify->warning = svn_repos_notify_warning_invalid_fspath;
-              notify->warning_str = apr_psprintf(
-                     pool,
-                     _("E%06d: While validating fspath '%s': %s"),
-                     err->apr_err, path,
-                     svn_err_best_message(err, errbuf, sizeof(errbuf)));
-
-              eb->notify_func(eb->notify_baton, notify, pool);
+              notify_warning(pool, eb->notify_func, eb->notify_baton,
+                             svn_repos_notify_warning_invalid_fspath,
+                             _("E%06d: While validating fspath '%s': %s"),
+                             err->apr_err, path,
+                             svn_err_best_message(err, errbuf, sizeof(errbuf)));
             }
 
           /* Return the error in addition to notifying about it. */
@@ -1021,21 +1037,16 @@ dump_node(struct edit_baton *eb,
           if (!eb->verify && cmp_rev < eb->oldest_dumped_rev
               && eb->notify_func)
             {
-              svn_repos_notify_t *notify =
-                    svn_repos_notify_create(svn_repos_notify_warning, pool);
-
-              notify->warning = svn_repos_notify_warning_found_old_reference;
-              notify->warning_str = apr_psprintf(
-                     pool,
-                     _("Referencing data in revision %ld,"
-                       " which is older than the oldest"
-                       " dumped revision (r%ld).  Loading this dump"
-                       " into an empty repository"
-                       " will fail."),
-                     cmp_rev, eb->oldest_dumped_rev);
+              notify_warning(pool, eb->notify_func, eb->notify_baton,
+                             svn_repos_notify_warning_found_old_reference,
+                             _("Referencing data in revision %ld,"
+                               " which is older than the oldest"
+                               " dumped revision (r%ld).  Loading this dump"
+                               " into an empty repository"
+                               " will fail."),
+                             cmp_rev, eb->oldest_dumped_rev);
               if (eb->found_old_reference)
                 *eb->found_old_reference = TRUE;
-              eb->notify_func(eb->notify_baton, notify, pool);
             }
 
           SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -1911,28 +1922,24 @@ svn_repos_dump_fs3(svn_repos_t *repos,
 
       if (found_old_reference)
         {
-          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
-
-          notify->warning = svn_repos_notify_warning_found_old_reference;
-          notify->warning_str = _("The range of revisions dumped "
-                                  "contained references to "
-                                  "copy sources outside that "
-                                  "range.");
-          notify_func(notify_baton, notify, subpool);
+          notify_warning(subpool, notify_func, notify_baton,
+                         svn_repos_notify_warning_found_old_reference,
+                         _("The range of revisions dumped "
+                           "contained references to "
+                           "copy sources outside that "
+                           "range."));
         }
 
       /* Ditto if we issued any warnings about old revisions referenced
          in dumped mergeinfo. */
       if (found_old_mergeinfo)
         {
-          notify = svn_repos_notify_create(svn_repos_notify_warning, subpool);
-
-          notify->warning = svn_repos_notify_warning_found_old_mergeinfo;
-          notify->warning_str = _("The range of revisions dumped "
-                                  "contained mergeinfo "
-                                  "which reference revisions outside "
-                                  "that range.");
-          notify_func(notify_baton, notify, subpool);
+          notify_warning(subpool, notify_func, notify_baton,
+                         svn_repos_notify_warning_found_old_mergeinfo,
+                         _("The range of revisions dumped "
+                           "contained mergeinfo "
+                           "which reference revisions outside "
+                           "that range."));
         }
     }
 
@@ -2033,7 +2040,6 @@ check_name_collision(void *baton, const void *key, apr_ssize_t klen,
     {
       struct dir_baton *const db = cb->dir_baton;
       struct edit_baton *const eb = db->edit_baton;
-      svn_repos_notify_t *notify;
       const char* normpath;
 
       svn_hash_sets(cb->normalized, apr_pstrdup(cb->buffer.pool, name),
@@ -2042,11 +2048,9 @@ check_name_collision(void *baton, const void *key, apr_ssize_t klen,
       SVN_ERR(svn_utf__normalize(
                   &normpath, svn_relpath_join(db->path, name, iterpool),
                   SVN_UTF__UNKNOWN_LENGTH, &cb->buffer));
-      notify = svn_repos_notify_create(svn_repos_notify_warning, iterpool);
-      notify->warning = svn_repos_notify_warning_name_collision;
-      notify->warning_str = apr_psprintf(
-          iterpool, _("Duplicate representation of path '%s'"), normpath);
-      eb->notify_func(eb->notify_baton, notify, iterpool);
+      notify_warning(iterpool, eb->notify_func, eb->notify_baton,
+                     svn_repos_notify_warning_name_collision,
+                     _("Duplicate representation of path '%s'"), normpath);
     }
   return SVN_NO_ERROR;
 }
