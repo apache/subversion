@@ -1543,8 +1543,9 @@ AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
 AC_CONFIG_FILES([Makefile])
 
 # Create pkg-config .pc files from .pc.in files
-for pc_in_file in subversion/libsvn_*/*.pc.in; do
-  pc_file="`echo ${pc_in_file} | $SED -e 's/.in$//'`"
+for pc_in_file in ${abs_srcdir}/subversion/libsvn_*/*.pc.in; do
+  pc_file=${pc_in_file#${abs_srcdir}/}
+  pc_file=${pc_file%.in}
   AC_CONFIG_FILES([${pc_file}])
 done
 
