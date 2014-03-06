@@ -2216,8 +2216,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
      forwarding structure for notifications from inside svn_fs_verify(). */
   if (notify_func)
     {
-      notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end,
-                                       pool);
+      notify = svn_repos_notify_create(svn_repos_notify_verify_rev_end, pool);
+
       verify_notify = verify_fs2_notify_func;
       verify_notify_baton = apr_palloc(pool, sizeof(*verify_notify_baton));
       verify_notify_baton->notify_func = notify_func;
@@ -2243,6 +2243,8 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       svn_error_clear(err);
 
       if (!keep_going)
+        /* ### Jump to "We're done" and so send the final notification,
+               for consistency? */
         return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
                                 _("Repository '%s' failed to verify"),
                                 svn_dirent_local_style(svn_repos_path(repos,
@@ -2290,7 +2292,6 @@ svn_repos_verify_fs3(svn_repos_t *repos,
       notify_func(notify_baton, notify, iterpool);
     }
 
-  /* Per-backend verification. */
   svn_pool_destroy(iterpool);
 
   if (found_corruption)
