@@ -328,8 +328,9 @@ typedef struct svn_repos_notify_t
    * For #svn_fs_upgrade_format_bumped, the new format version. */
   svn_revnum_t revision;
 
-  /** For #svn_repos_notify_warning, the warning object. */
+  /** For #svn_repos_notify_warning, the warning message. */
   const char *warning_str;
+  /** For #svn_repos_notify_warning, the warning type. */
   svn_repos_notify_warning_t warning;
 
   /** For #svn_repos_notify_pack_shard_start,
@@ -2659,34 +2660,65 @@ svn_repos_info_format(int *repos_format,
 /**
  * Verify the contents of the file system in @a repos.
  *
- * If @a feedback_stream is not @c NULL, write feedback to it (lines of
- * the form "* Verified revision %ld\n").
+ * Verify the revisions from @a start_rev to @a end_rev inclusive.  If
+ * @a start_rev is #SVN_INVALID_REVNUM, start at revision 0; if @a end_rev
+ * is #SVN_INVALID_REVNUM, end at the head revision.  @a start_rev must be
+ * older than or equal to @a end_rev.  If revision 0 is included in the
+ * range, then also verify "global invariants" of the repository, as
+ * described in svn_fs_verify().
  *
- * If @a start_rev is #SVN_INVALID_REVNUM, then start verifying at
- * revision 0.  If @a end_rev is #SVN_INVALID_REVNUM, then verify
- * through the @c HEAD revision.
- *
- * For every verified revision call @a notify_func with @a rev set to
- * the verified revision and @a warning_text @c NULL. For warnings call @a
- * notify_func with @a warning_text set.
- *
- * For every revision verification failure, if @a notify_func is not @c NULL,
- * call @a notify_func with @a rev set to the corrupt revision and @err set to
- * the corresponding error message.
- *
- * If @a cancel_func is not @c NULL, call it periodically with @a
- * cancel_baton as argument to see if the caller wishes to cancel the
- * verification.
- *
- * If @a keep_going is @c TRUE, the verify process notifies the error message
- * and continues. If @a notify_func is @c NULL, the verification failure is
- * not notified. Finally, return an error if there were any failures during
- * verification, or SVN_NO_ERROR if there were no failures.
+ * When a failure is found, if @a keep_going is @c TRUE then continue
+ * verification from the next revision, otherwise stop.
  *
  * If @a check_normalization is @c TRUE, report any name collisions
  * within the same directory or svn:mergeinfo property where the names
  * differ only in character representation, but are otherwise
  * identical.
+ *
+ * If @a notify_func is not null, then call it with @a notify_baton and
+ * with a notification structure in which the fields are set as follows.
+ * (For a warning or error notification that does not apply to a specific
+ * revision, the revision number is #SVN_INVALID_REVNUM.)
+ *
+ *   For each FS-specific structure warning:
+ *      @c action = svn_repos_notify_verify_rev_structure
+ *      @c revision = the revision or #SVN_INVALID_REVNUM
+ *
+ *   For a FS-specific structure failure:
+ *      @c action = #svn_repos_notify_failure
+ *      @c revision = #SVN_INVALID_REVNUM
+ *      @c err = the corresponding error chain
+ *
+ *   For each revision verification failure:
+ *      @c action = #svn_repos_notify_failure
+ *      @c revision = the revision
+ *      @c err = the corresponding error chain
+ *
+ *   For each revision verification warning:
+ *      @c action = #svn_repos_notify_warning
+ *      @c warning and @c warning_str fields set accordingly
+ *        ### TODO: Set @c revision = the revision?
+ *
+ *   For each successfully verified revision:
+ *      @c action = #svn_repos_notify_verify_rev_end
+ *      @c revision = the revision
+ *
+ *   At the end:
+ *      @c action = svn_repos_notify_verify_end
+ *        ### Do we really need a callback to tell us the function we
+ *            called has reached its end and is about to return?
+ *        ### Not sent, currently, if a FS structure error is found.
+ *
+ * If @a cancel_func is not @c NULL, call it periodically with @a
+ * cancel_baton as argument to see if the caller wishes to cancel the
+ * verification.
+ *
+ * Use @a scratch_pool for temporary allocation.
+ *
+ * Return an error if there were any failures during verification, or
+ * #SVN_NO_ERROR if there were no failures.  A failure means an event that,
+ * if a notification callback were provided, would send a notification
+ * with @c action = #svn_repos_notify_failure.
  *
  * @since New in 1.9.
  */
@@ -2722,7 +2754,10 @@ svn_repos_verify_fs2(svn_repos_t *repos,
 
 /**
  * Similar to svn_repos_verify_fs2(), but with a feedback_stream instead of
- * handling feedback via the notify_func handler
+ * handling feedback via the notify_func handler.
+ *
+ * If @a feedback_stream is not @c NULL, write feedback to it (lines of
+ * the form "* Verified revision %ld\n").
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2739,15 +2774,13 @@ svn_repos_verify_fs(svn_repos_t *repos,
 
 /**
  * Dump the contents of the filesystem within already-open @a repos into
- * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
- * revision up through @a end_rev.  Use @a pool for all allocation.  If
- * non-@c NULL, send feedback to @a feedback_stream.  If @a dumpstream is
+ * writable @a dumpstream.  If @a dumpstream is
  * @c NULL, this is effectively a primitive verify.  It is not complete,
- * however; svn_repos_verify_fs2() and svn_fs_verify().
+ * however; see instead svn_repos_verify_fs3().
  *
- * If @a start_rev is #SVN_INVALID_REVNUM, then start dumping at revision
- * 0.  If @a end_rev is #SVN_INVALID_REVNUM, then dump through the @c HEAD
- * revision.
+ * Begin at revision @a start_rev, and dump every revision up through
+ * @a end_rev.  If @a start_rev is #SVN_INVALID_REVNUM, start at revision
+ * 0.  If @a end_rev is #SVN_INVALID_REVNUM, end at the head revision.
  *
  * If @a incremental is @c TRUE, the first revision dumped will be a diff
  * against the previous revision (usually it looks like a full dump of
@@ -2760,13 +2793,36 @@ svn_repos_verify_fs(svn_repos_t *repos,
  * be done with full plain text.  A dump with @a use_deltas set cannot
  * be loaded by Subversion 1.0.x.
  *
- * If @a notify_func is not @c NULL, then for every dumped revision call
- * @a notify_func with @a rev set to the dumped revision and @a warning_text
- * @c NULL. For warnings call @a notify_func with @a warning_text.
+ * If @a notify_func is not null, then call it with @a notify_baton and
+ * with a notification structure in which the fields are set as follows.
+ * (For a warning or error notification that does not apply to a specific
+ * revision, the revision number is #SVN_INVALID_REVNUM.)
+ *
+ *   For each warning:
+ *      @c action = #svn_repos_notify_warning
+ *      @c warning and @c warning_str fields set accordingly
+ *        ### TODO: Set @c revision = the revision or #SVN_INVALID_REVNUM?
+ *
+ *   For each successfully dumped revision:
+ *      @c action = #svn_repos_notify_dump_rev_end
+ *      @c revision = the revision
+ *
+ *   At the end:
+ *      @c action = svn_repos_notify_verify_end
+ *        ### Do we really need a callback to tell us the function we
+ *            called has reached its end and is about to return?
+ *
+ *   At the end, if there were certain warnings previously:
+ *      @c action = #svn_repos_notify_warning
+ *      @c warning and @c warning_str fields set accordingly,
+ *            reiterating the existence of previous warnings
+ *        ### This is a presentation issue. Caller could do this itself.
  *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
+ *
+ * Use @a scratch_pool for temporary allocation.
  *
  * @since New in 1.7.
  */
@@ -3126,7 +3182,7 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * to operate on the fs.
  *
  * @a start_rev and @a end_rev act as filters, the lower and upper
- * (inclusive) range values of revisions in @a dumpstream which will
+ * (inclusive) range values of revisions which will
  * be loaded.  Either both of these values are #SVN_INVALID_REVNUM (in
  * which case no revision-based filtering occurs at all), or both are
  * valid revisions (where @a start_rev is older than or equivalent to
@@ -3165,7 +3221,7 @@ svn_repos_get_fs_build_parser4(const svn_repos_parse_fns3_t **parser,
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream2().
  * Similar to #svn_repos_parse_fns3_t except that it lacks
- * the delete_node_property and apply_textdelta callbacks.
+ * the magic_header_record callback.
  *
  * @deprecated Provided for backward compatibility with the 1.7 API.
  */
