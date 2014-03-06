@@ -829,9 +829,9 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
 /* ========================================================================== */
 
 
-int svn_test_max_threads = 3;
+static int max_threads = 3;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_elide_mergeinfo_catalog,
@@ -850,3 +850,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_client_suggest_merge_sources"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN
