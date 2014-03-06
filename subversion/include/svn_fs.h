@@ -364,7 +364,7 @@ svn_fs_upgrade(const char *path,
 /**
  * Callback function type for progress notification.
  *
- * @a revision is the number of the revision currently begin processed,
+ * @a revision is the number of the revision currently being processed,
  * #SVN_INVALID_REVNUM if the current stage is not linked to any specific
  * revision. @a baton is the callback baton.
  *
