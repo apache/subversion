@@ -137,29 +137,29 @@ balance(builder_table_t *table,
         builder_string_t **parent,
         builder_string_t *node)
 {
-  unsigned left_hight = node->left ? node->left->depth + 1 : 0;
-  unsigned right_hight = node->right ? node->right->depth + 1 : 0;
+  unsigned left_height = node->left ? node->left->depth + 1 : 0;
+  unsigned right_height = node->right ? node->right->depth + 1 : 0;
 
-  if (left_hight > right_hight + 1)
+  if (left_height > right_height + 1)
     {
       builder_string_t *temp = node->left->right;
       node->left->right = node;
       *parent = node->left;
       node->left = temp;
       
-      --left_hight;
+      --left_height;
     }
-  else if (left_hight + 1 < right_hight)
+  else if (left_height + 1 < right_height)
     {
       builder_string_t *temp = node->right->left;
       *parent = node->right;
       node->right->left = node;
       node->right = temp;
 
-      --right_hight;
+      --right_height;
     }
 
-  node->depth = MAX(left_hight, right_hight);
+  node->depth = MAX(left_height, right_height);
 }
 
 static apr_uint16_t
