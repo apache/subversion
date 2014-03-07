@@ -267,18 +267,14 @@ typedef struct pair_cache_key_t
 
 /* Key type that identifies a txdelta window.
 
-   Note: Cache keys should be 16 bytes for best performance and there
-         should be no padding. */
+   Note: Cache keys should require no padding. */
 typedef struct window_cache_key_t
 {
-  /* Revision that contains the representation.
-     We limit this to 32 bit because it revision numbers are practically
-     limited to 32 bits by the RA layer, ATM, and we want to keep this
-     struct 16 bytes long. */
-  apr_uint32_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
-  /* Window number within that representation */
-  apr_int32_t chunk_index;
+  /* Window number within that representation. */
+  apr_int64_t chunk_index;
 
   /* Item index of the representation */
   apr_uint64_t item_index;
