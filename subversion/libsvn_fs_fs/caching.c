@@ -512,7 +512,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_rep_header,
                        sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "REPHEADER", SVN_VA_NULL),
-                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
+                       SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                        fs,
                        no_handler,
                        fs->pool));
