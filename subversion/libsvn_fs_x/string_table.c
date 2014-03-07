@@ -319,7 +319,7 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
           || table->max_data_size < len)
         table = add_table(builder);
 
-      item->position = (apr_size_t)table->short_strings->nelts;
+      item->position = table->short_strings->nelts;
       APR_ARRAY_PUSH(table->short_strings, builder_string_t *) = item;
 
       if (table->top == NULL)
