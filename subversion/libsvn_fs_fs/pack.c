@@ -617,7 +617,7 @@ compare_dir_entries_format7(const svn_sort__item_t *a,
   if (lhs->kind != rhs->kind)
     return lhs->kind == svn_node_dir ? -1 : 1;
 
-  return 0 - strcmp(lhs->name, rhs->name);
+  return strcmp(lhs->name, rhs->name);
 }
 
 /* Directories entries sorted by revision (decreasing - to max cache hits)
