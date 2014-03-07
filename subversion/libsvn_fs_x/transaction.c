@@ -941,7 +941,8 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, src, pool));
 
   /* This must be a root node. */
-  SVN_ERR_ASSERT(svn_fs_x__id_node_id(noderev->id)->number == 0);
+  SVN_ERR_ASSERT(   svn_fs_x__id_node_id(noderev->id)->number == 0
+                 && svn_fs_x__id_copy_id(noderev->id)->number == 0);
 
   if (svn_fs_x__id_is_txn(noderev->id))
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
