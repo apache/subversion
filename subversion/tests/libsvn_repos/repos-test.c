@@ -2527,6 +2527,65 @@ issue_4060(const svn_test_opts_t *opts,
 }
 
 
+/* Notification receiver for test_dump_bad_mergeinfo(). This does not
+   need to do anything, it just needs to exist.
+ */
+static void
+dump_r0_mergeinfo_notifier(void *baton,
+                           const svn_repos_notify_t *notify,
+                           apr_pool_t *scratch_pool)
+{
+}
+
+/* Regression test for part the 'dump' part of issue #4476 "Mergeinfo
+   containing r0 makes svnsync and svnadmin dump fail". */
+static svn_error_t *
+test_dump_r0_mergeinfo(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev = 0;
+  const svn_string_t *bad_mergeinfo = svn_string_create("/foo:0", pool);
+
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-dump-r0-mergeinfo",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Any commit will do, here  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* Revision 2:  Add bad mergeinfo */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/bar", "svn:mergeinfo", bad_mergeinfo, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* Test that a dump completes without error. In order to exercise the
+     functionality under test -- that is, in order for the dump to try to
+     parse the mergeinfo it is dumping -- the dump must start from a
+     revision greater than 1 and must take a notification callback. */
+  {
+    svn_stringbuf_t *stringbuf = svn_stringbuf_create("", pool);
+    svn_stream_t *stream = svn_stream_from_stringbuf(stringbuf, pool);
+
+    SVN_ERR(svn_repos_dump_fs3(repos, stream, 2, SVN_INVALID_REVNUM,
+                               FALSE, FALSE,
+                               dump_r0_mergeinfo_notifier, NULL,
+                               NULL, NULL,
+                               pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2562,5 +2621,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos_get_file_revsN"),
     SVN_TEST_OPTS_PASS(issue_4060,
                        "test issue 4060"),
+    SVN_TEST_OPTS_PASS(test_dump_r0_mergeinfo,
+                       "test dumping with r0 mergeinfo"),
     SVN_TEST_NULL
   };
