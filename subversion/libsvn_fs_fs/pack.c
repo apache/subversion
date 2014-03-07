@@ -247,14 +247,14 @@ initialize_pack_context(pack_context_t *context,
                         const char *pack_file_dir,
                         const char *shard_dir,
                         svn_revnum_t shard_rev,
-                        apr_size_t max_items,
+                        int max_items,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
-  apr_size_t max_revs = MIN(ffd->max_files_per_dir, (int)max_items);
+  int max_revs = MIN(ffd->max_files_per_dir, max_items);
   
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
@@ -1516,12 +1516,20 @@ pack_log_addressed(svn_fs_t *fs,
                    + 6 * sizeof(void*)
     };
 
-  apr_size_t max_items = max_mem / PER_ITEM_MEM;
+  int max_items;
   apr_array_header_t *max_ids;
   pack_context_t context = { 0 };
   int i;
   apr_size_t item_count = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Prevent integer overflow.  We use apr arrays to process the items so
+   * the maximum number of items is INT_MAX. */
+    {
+      apr_size_t temp = max_mem / PER_ITEM_MEM;
+      SVN_ERR_ASSERT(temp <= INT_MAX);
+      max_items = (int)temp;
+    }
 
   /* set up a pack context */
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
