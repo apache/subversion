@@ -3092,9 +3092,10 @@ typedef struct svn_repos_parse_fns3_t
   /** For a given @a node_baton, remove all properties. */
   svn_error_t *(*remove_node_props)(void *node_baton);
 
-  /** For a given @a node_baton, receive a writable @a stream capable of
-   * receiving the node's fulltext.  After writing the fulltext, call
-   * the stream's close() function.
+  /** For a given @a node_baton, set @a stream to a writable stream
+   * capable of receiving the node's fulltext.  The parser will write
+   * the fulltext to the stream and then close the stream to signal
+   * completion.
    *
    * If a @c NULL is returned instead of a stream, the vtable is
    * indicating that no text is desired, and the parser will not
@@ -3105,8 +3106,9 @@ typedef struct svn_repos_parse_fns3_t
 
   /** For a given @a node_baton, set @a handler and @a handler_baton
    * to a window handler and baton capable of receiving a delta
-   * against the node's previous contents.  A NULL window will be
-   * sent to the handler after all the windows are sent.
+   * against the node's previous contents.  The parser will send all
+   * the windows of data to this handler, and will then send a NULL
+   * window to signal completion.
    *
    * If a @c NULL is returned instead of a handler, the vtable is
    * indicating that no delta is desired, and the parser will not
@@ -3162,6 +3164,12 @@ typedef struct svn_repos_parse_fns3_t
  * This is enough knowledge to make it easy on vtable implementors,
  * but still allow expansion of the format: most headers do not have
  * to be handled explicitly.
+ *
+ * ### [JAF] Wouldn't it be more efficient to support a start/end rev
+ *     range here than only supporting it in receivers such as
+ *     svn_repos_get_fs_build_parser4()? This parser could then skip over
+ *     chunks of the input stream before the oldest required rev, and
+ *     could stop reading entirely after the youngest required rev.
  *
  * @since New in 1.8.
  */
