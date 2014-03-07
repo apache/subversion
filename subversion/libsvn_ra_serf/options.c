@@ -481,14 +481,16 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 svn_error_t *
 svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    const char **corrected_url,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
   options_context_t *opt_ctx;
 
   /* This routine automatically fills in serf_sess->capabilities */
-  SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0], pool));
+  SVN_ERR(create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
+                             scratch_pool));
 
-  SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, pool));
+  SVN_ERR(svn_ra_serf__context_run_one(opt_ctx->handler, scratch_pool));
 
   /* If our caller cares about server redirections, and our response
      carries such a thing, report as much.  We'll disregard ERR --
@@ -496,7 +498,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
      successfully parsing as XML or somesuch. */
   if (corrected_url && (opt_ctx->handler->sline.code == 301))
     {
-      *corrected_url = opt_ctx->handler->location;
+      *corrected_url = apr_pstrdup(result_pool, opt_ctx->handler->location);
       return SVN_NO_ERROR;
     }
 
