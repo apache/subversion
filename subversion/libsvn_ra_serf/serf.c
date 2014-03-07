@@ -489,6 +489,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   apr_uri_t url;
   const char *client_string = NULL;
   svn_error_t *err;
+  apr_pool_t *subpool;
 
   if (corrected_url)
     *corrected_url = NULL;
@@ -584,12 +585,16 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url, pool);
+  subpool = svn_pool_create(pool);
+
+  err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
+                                           pool, subpool);
 
   /* serf should produce a usable error code instead of APR_EGENERAL */
   if (err && err->apr_err == APR_EGENERAL)
     err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                             _("Connection to '%s' failed"), session_URL);
+  svn_pool_clear(subpool);
   SVN_ERR(err);
 
   /* We have set up a useful connection (that doesn't indication a redirect).
@@ -598,7 +603,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
      problems in any proxy.  */
   if ((corrected_url == NULL || *corrected_url == NULL)
       && serf_sess->detect_chunking && !serf_sess->http10)
-    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, pool));
+    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, subpool));
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
