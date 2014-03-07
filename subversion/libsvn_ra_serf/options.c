@@ -596,7 +596,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
-    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool));
+    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool, pool));
 
   /* Try again, now that we've fetched the capabilities. */
   cap_result = svn_hash_gets(serf_sess->capabilities, capability);
