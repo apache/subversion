@@ -1357,7 +1357,8 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
      because the block is unlikely to contain other data. */
   if (   rs->chunk_index == 0
       && SVN_IS_VALID_REVNUM(rs->revision)
-      && svn_fs_fs__use_log_addressing(rs->sfile->fs, rs->revision))
+      && svn_fs_fs__use_log_addressing(rs->sfile->fs, rs->revision)
+      && rs->window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
                          rs->sfile->rfile, pool, pool));
