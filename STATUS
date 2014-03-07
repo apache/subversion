@@ -102,6 +102,24 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1574868
+   Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
+     Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
+     dump fail".
+   Justification:
+     A formatting error in what is essentially client-side metadata, albeit
+     with repository-side interpretation as well, should never prevent
+     dumping the repository. This issue only occurs when svnadmin is trying
+     to warn us of mergeinfo revisions that might be unexpected, so it is
+     not essential.
+   Notes:
+     There is a work-around, at least in theory: a dump starting from
+     revision 0 or 1 does not suffer from this problem.
+   Branch:
+     ^/subversion/branches/1.7.x-r1574868
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
