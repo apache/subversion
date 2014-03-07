@@ -1222,7 +1222,7 @@ recursive_proplist_receiver(void *baton,
          Report iprops anyway */
 
       SVN_ERR(b->wrapped_receiver(b->wrapped_receiver_baton,
-                                  b->anchor ? b->anchor : local_abspath,
+                                  b->anchor ? b->anchor : b->anchor_abspath,
                                   NULL /* prop_hash */,
                                   b->iprops,
                                   scratch_pool));
