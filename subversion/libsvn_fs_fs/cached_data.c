@@ -731,10 +731,9 @@ create_rep_state_body(rep_state_t **rep_state,
       && (   ((*shared_file)->revision / ffd->max_files_per_dir)
           == (rep->revision / ffd->max_files_per_dir));
 
-  representation_cache_key_t key;
+  pair_cache_key_t key;
   key.revision = rep->revision;
-  key.is_packed = rep->revision < ffd->min_unpacked_rev;
-  key.item_index = rep->item_index;
+  key.second = rep->item_index;
 
   /* continue constructing RS and RA */
   rs->size = rep->size;
@@ -2573,7 +2572,7 @@ static svn_error_t *
 read_rep_header(svn_fs_fs__rep_header_t **rep_header,
                 svn_fs_t *fs,
                 svn_stream_t *stream,
-                representation_cache_key_t *key,
+                pair_cache_key_t *key,
                 apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2606,12 +2605,11 @@ block_read_contents(svn_fs_t *fs,
                     svn_fs_fs__p2l_entry_t* entry,
                     apr_pool_t *pool)
 {
-  representation_cache_key_t header_key = { 0 };
+  pair_cache_key_t header_key = { 0 };
   svn_fs_fs__rep_header_t *rep_header;
 
   header_key.revision = (apr_int32_t)entry->item.revision;
-  header_key.is_packed = svn_fs_fs__is_packed_rev(fs, header_key.revision);
-  header_key.item_index = entry->item.number;
+  header_key.second = entry->item.number;
 
   SVN_ERR(read_rep_header(&rep_header, fs, rev_file->stream, &header_key,
                           pool));

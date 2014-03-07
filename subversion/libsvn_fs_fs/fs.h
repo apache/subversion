@@ -264,19 +264,6 @@ typedef struct pair_cache_key_t
   apr_int64_t second;
 } pair_cache_key_t;
 
-/* Key type that identifies a representation / rep header. */
-typedef struct representation_cache_key_t
-{
-  /* Revision that contains the representation */
-  svn_revnum_t revision;
-
-  /* Packed or non-packed representation? */
-  svn_boolean_t is_packed;
-
-  /* Item index of the representation */
-  apr_uint64_t item_index;
-} representation_cache_key_t;
-
 /* Key type that identifies a txdelta window. */
 typedef struct window_cache_key_t
 {
