@@ -218,6 +218,15 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1575270
+   Fix inconsistent output in svn_client_proplist4 when using absolute paths.
+   Notes:
+     A python test is on the way.
+   Justification:
+     It's a regression in 1.8.8 compared to 1.8.5.
+   Votes:
+      +1: brane
+
 Veto-blocked changes:
 =====================
 
