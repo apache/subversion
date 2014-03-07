@@ -137,8 +137,8 @@ balance(builder_table_t *table,
         builder_string_t **parent,
         builder_string_t *node)
 {
-  unsigned left_height = node->left ? node->left->depth + 1 : 0;
-  unsigned right_height = node->right ? node->right->depth + 1 : 0;
+  apr_size_t left_height = node->left ? node->left->depth + 1 : 0;
+  apr_size_t right_height = node->right ? node->right->depth + 1 : 0;
 
   if (left_height > right_height + 1)
     {
