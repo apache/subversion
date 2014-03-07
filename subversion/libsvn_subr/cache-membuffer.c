@@ -1108,8 +1108,15 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t hits_removed = (entry->hit_count + 1) >> 1;
 
-  cache->hit_count -= hits_removed;
-  entry->hit_count -= hits_removed;
+  if (hits_removed)
+    {
+      cache->hit_count -= hits_removed;
+      entry->hit_count -= hits_removed;
+    }
+  else
+    {
+      entry->priority /= 2;
+    }
 }
 
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
