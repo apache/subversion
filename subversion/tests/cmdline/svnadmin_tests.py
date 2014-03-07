@@ -84,6 +84,14 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'rev-prop-atomics.mutex':
           continue
 
+        # Ignore auto-created empty lock files as they may or may not
+        # be present and are neither required by nor do they harm to
+        # the destination repository.
+        if src_file == 'pack-lock':
+          continue
+        if src_file == 'write-lock':
+          continue
+
         src_path = os.path.join(src_dirpath, src_file)
         dst_path = os.path.join(dst_dirpath, src_file)
         if not os.path.isfile(dst_path):
