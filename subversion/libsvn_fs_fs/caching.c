@@ -510,7 +510,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        1, 1000, /* ~8 bytes / entry; 1k entries total */
                        svn_fs_fs__serialize_rep_header,
                        svn_fs_fs__deserialize_rep_header,
-                       sizeof(representation_cache_key_t),
+                       sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "REPHEADER", SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        fs,
