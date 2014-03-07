@@ -55,6 +55,7 @@ extern "C" {
 #define PATH_UUID             "uuid"             /* Contains UUID */
 #define PATH_CURRENT          "current"          /* Youngest revision */
 #define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
@@ -169,6 +170,9 @@ extern "C" {
 
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
+
+/* Minimum format number that providing a separate lock file for pack ops */
+#define SVN_FS_FS__MIN_PACK_LOCK_FORMAT 7
 
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
 #define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
