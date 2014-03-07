@@ -2704,6 +2704,48 @@ def dir_prop_conflict_details(sbox):
   svntest.actions.run_and_verify_info([expected_info], sbox.path('A'))
 
 
+def iprops_list_abspath(sbox):
+  "test listing iprops via abspath"
+
+  sbox.build()
+
+  sbox.simple_propset('im', 'root', '')
+  sbox.simple_commit()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '^/A/D', sbox.ospath(''),
+                                     '--ignore-ancestry')
+
+  sbox.simple_propset('im', 'GammA', 'gamma')
+
+  expected_output = [
+    'Inherited properties on \'%s\',\n' % sbox.ospath('')[:-1],
+    'from \'%s\':\n' % sbox.repo_url,
+    '  im\n',
+    '    root\n',
+    'Properties on \'%s\':\n' % sbox.ospath('gamma'),
+    '  im\n',
+    '    GammA\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'pl', '-R',
+                                     '--show-inherited-props', '-v',
+                                     sbox.ospath(''))
+
+  expected_output = [
+    'Inherited properties on \'%s\',\n' % os.path.abspath(sbox.ospath('')),
+    'from \'%s\':\n' % sbox.repo_url,
+    '  im\n',
+    '    root\n',
+    'Properties on \'%s\':\n' % os.path.abspath(sbox.ospath('gamma')),
+    '  im\n',
+    '    GammA\n'
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'pl', '-R',
+                                     '--show-inherited-props', '-v',
+                                     os.path.abspath(sbox.ospath('')))
+
 ########################################################################
 # Run the tests
 
@@ -2751,6 +2793,7 @@ test_list = [ None,
               peg_rev_base_working,
               xml_unsafe_author,
               dir_prop_conflict_details,
+              iprops_list_abspath,
              ]
 
 if __name__ == '__main__':
