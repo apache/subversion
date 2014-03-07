@@ -101,16 +101,6 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                              struct svn_delta__extra_baton *exb,
                              apr_pool_t *pool);
 
-/**
- * Similar to #svn_txdelta_read_svndiff_window but only returns the window
- * header information, i.e. does not decode the window contents.
- */
-svn_error_t *
-svn_txdelta__read_svndiff_window_sizes(svn_txdelta_window_t **window,
-                                       svn_stream_t *stream,
-                                       int svndiff_version,
-                                       apr_pool_t *pool);
-
 
 #ifdef __cplusplus
 }

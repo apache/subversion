@@ -2440,62 +2440,83 @@ init_rep_state(rep_state_t *rs,
   return SVN_NO_ERROR;
 }
 
-/* Walk through all windows in the representation addressed by RS in FS
- * (excluding the delta bases) and put those not already cached into the
- * window caches.  As a side effect, return the total sum of all expanded
- * window sizes in *FULLTEXT_LEN.  Use POOL for temporary allocations.
+/* Implement svn_cache__partial_getter_func_t for txdelta windows.
+ * Instead of the whole window data, return only the
+ * svn_fs_fs__txdelta_cached_window_t wrapper containing the end-offset.
  */
 static svn_error_t *
-cache_windows(svn_filesize_t *fulltext_len,
-              svn_fs_t *fs,
+get_window_header(void **out,
+                  const void *data,
+                  apr_size_t data_len,
+                  void *baton,
+                  apr_pool_t *result_pool)
+{
+  *out = apr_pmemdup(result_pool, data,
+                     sizeof(svn_fs_fs__txdelta_cached_window_t));
+
+  return SVN_NO_ERROR;
+}
+
+/* Walk through all windows in the representation addressed by RS in FS
+ * (excluding the delta bases) and put those not already cached into the
+ * window caches.  If MAX_OFFSET is not -1, don't read windows that start
+ * at or beyond that offset.  Use POOL for temporary allocations.
+ */
+static svn_error_t *
+cache_windows(svn_fs_t *fs,
               rep_state_t *rs,
+              apr_off_t max_offset,
               apr_pool_t *pool)
 {
-  *fulltext_len = 0;
-
   while (rs->current < rs->size)
     {
-      svn_txdelta_window_t *window;
-      apr_off_t start_offset = rs->start + rs->current;
-      apr_off_t end_offset;
+      svn_fs_fs__txdelta_cached_window_t *cached_window;
       svn_boolean_t found = FALSE;
 
-      /* We don't need to read the data again, if it is already in cache.
+      if (max_offset != -1 && rs->start + rs->current >= max_offset)
+        return SVN_NO_ERROR;
+
+      /* We don't need to read the data again if it is already in cache.
        */
       if (rs->window_cache)
         {
-          window_cache_key_t key = {0};
-          SVN_ERR(svn_cache__has_key(&found, rs->window_cache,
-                                     get_window_key(&key, rs), pool));
+          window_cache_key_t key = { 0 };
+          SVN_ERR(svn_cache__get_partial((void **) &cached_window, &found,
+                                         rs->window_cache,
+                                         get_window_key(&key, rs),
+                                         get_window_header, NULL, pool));
         }
 
-      /* navigate to the current window */
-      SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, pool));
-
-      /* Skip or actually read the window - depending on cache status. */
       if (found)
-        SVN_ERR(svn_txdelta__read_svndiff_window_sizes(&window,
-                                                rs->sfile->rfile->stream,
-                                                rs->ver, pool));
+        {
+          /* Skip this window; we already have it. */
+          rs->current = cached_window->end_offset;
+        }
       else
-        SVN_ERR(svn_txdelta_read_svndiff_window(&window,
-                                                rs->sfile->rfile->stream,
-                                                rs->ver, pool));
+        {
+          /* Read, decode and cache the window. */
+          svn_txdelta_window_t *window;
+          apr_off_t start_offset = rs->start + rs->current;
+          apr_off_t end_offset;
 
-      /* aggregate expanded window size */
-      *fulltext_len += window->tview_len;
+          /* navigate to the current window */
+          SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, pool));
+          SVN_ERR(svn_txdelta_read_svndiff_window(&window,
+                                                  rs->sfile->rfile->stream,
+                                                  rs->ver, pool));
 
-      /* determine on-disk window size */
-      SVN_ERR(get_file_offset(&end_offset, rs, pool));
-      rs->current = end_offset - rs->start;
+          /* determine on-disk window size */
+          SVN_ERR(get_file_offset(&end_offset, rs, pool));
+          rs->current = end_offset - rs->start;
+
+          /* cache the window now */
+          SVN_ERR(set_cached_window(window, rs, pool));
+        }
+
       if (rs->current > rs->size)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                      _("Reading one svndiff window read beyond "
-                                  "the end of the representation"));
-
-      /* cache the window now */
-      if (!found)
-        SVN_ERR(set_cached_window(window, rs, pool));
+                                _("Reading one svndiff window read beyond "
+                                            "the end of the representation"));
 
       rs->chunk_index++;
     }
@@ -2505,7 +2526,8 @@ cache_windows(svn_filesize_t *fulltext_len,
 
 /* Read all txdelta / plain windows following REP_HEADER in FS as described
  * by ENTRY.  Read the data from the already open FILE and the wrapping
- * STREAM object.  Use POOL for allocations.
+ * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
+ * at or beyond that offset.  Use POOL for allocations.
  * If caching is not enabled, this is a no-op.
  */
 static svn_error_t *
@@ -2513,6 +2535,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
                    svn_fs_t *fs,
                    svn_fs_fs__revision_file_t *rev_file,
                    svn_fs_fs__p2l_entry_t* entry,
+                   apr_off_t max_offset,
                    apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2557,8 +2580,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
     }
   else
     {
-      svn_filesize_t fulltext_len;
-      SVN_ERR(cache_windows(&fulltext_len, fs, &rs, pool));
+      SVN_ERR(cache_windows(fs, &rs, max_offset, pool));
     }
 
   return SVN_NO_ERROR;
@@ -2598,12 +2620,14 @@ read_rep_header(svn_fs_fs__rep_header_t **rep_header,
 /* Fetch the representation data (header, txdelta / plain windows)
  * addressed by ENTRY->ITEM in FS and cache it if caches are enabled.
  * Read the data from the already open FILE and the wrapping
- * STREAM object.  Use POOL for allocations.
+ * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
+ * at or beyond that offset.  Use POOL for allocations.
  */
 static svn_error_t *
 block_read_contents(svn_fs_t *fs,
                     svn_fs_fs__revision_file_t *rev_file,
                     svn_fs_fs__p2l_entry_t* entry,
+                    apr_off_t max_offset,
                     apr_pool_t *pool)
 {
   pair_cache_key_t header_key = { 0 };
@@ -2614,7 +2638,8 @@ block_read_contents(svn_fs_t *fs,
 
   SVN_ERR(read_rep_header(&rep_header, fs, rev_file->stream, &header_key,
                           pool));
-  SVN_ERR(block_read_windows(rep_header, fs, rev_file, entry, pool));
+  SVN_ERR(block_read_windows(rep_header, fs, rev_file, entry, max_offset,
+                             pool));
 
   return SVN_NO_ERROR;
 }
@@ -2822,7 +2847,7 @@ block_read(void **result,
       /* read all items from the block */
       for (i = 0; i < entries->nelts; ++i)
         {
-          svn_boolean_t is_result;
+          svn_boolean_t is_result, is_wanted;
           apr_pool_t *pool;
           svn_fs_fs__p2l_entry_t* entry;
 
@@ -2834,10 +2859,10 @@ block_read(void **result,
             continue;
 
           /* the item / container we were looking for? */
-          is_result =    result
-                      && entry->offset == wanted_offset
+          is_wanted =    entry->offset == wanted_offset
                       && entry->item.revision == revision
                       && entry->item.number == item_index;
+          is_result = result && is_wanted;
 
           /* select the pool that we want the item to be allocated in */
           pool = is_result ? result_pool : iterpool;
@@ -2858,6 +2883,9 @@ block_read(void **result,
                   case SVN_FS_FS__ITEM_TYPE_FILE_PROPS:
                   case SVN_FS_FS__ITEM_TYPE_DIR_PROPS:
                     SVN_ERR(block_read_contents(fs, revision_file, entry,
+                                                is_wanted
+                                                  ? -1
+                                                  : block_start + ffd->block_size,
                                                 pool));
                     break;
 
