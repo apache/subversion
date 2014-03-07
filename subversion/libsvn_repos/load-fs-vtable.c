@@ -747,29 +747,27 @@ set_node_property(void *baton,
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
+      svn_string_t prop_val = *value;
       svn_string_t *renumbered_mergeinfo;
-      /* ### Need to cast away const. We cannot change the declaration of
-       * ### this function since it is part of svn_repos_parse_fns2_t. */
-      svn_string_t *prop_val = (svn_string_t *)value;
 
       /* Tolerate mergeinfo with "\r\n" line endings because some
          dumpstream sources might contain as much.  If so normalize
          the line endings to '\n' and make a notification to
          PARSE_BATON->FEEDBACK_STREAM that we have made this
          correction. */
-      if (strstr(prop_val->data, "\r"))
+      if (strstr(prop_val.data, "\r"))
         {
           const char *prop_eol_normalized;
 
-          SVN_ERR(svn_subst_translate_cstring2(prop_val->data,
+          SVN_ERR(svn_subst_translate_cstring2(prop_val.data,
                                                &prop_eol_normalized,
                                                "\n",  /* translate to LF */
                                                FALSE, /* no repair */
                                                NULL,  /* no keywords */
                                                FALSE, /* no expansion */
                                                nb->pool));
-          prop_val->data = prop_eol_normalized;
-          prop_val->len = strlen(prop_eol_normalized);
+          prop_val.data = prop_eol_normalized;
+          prop_val.len = strlen(prop_eol_normalized);
 
           if (pb->notify_func)
             {
@@ -779,7 +777,7 @@ set_node_property(void *baton,
         }
 
       /* Renumber mergeinfo as appropriate. */
-      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, prop_val, rb,
+      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, &prop_val, rb,
                                       nb->pool));
       value = renumbered_mergeinfo;
       if (pb->parent_dir)
