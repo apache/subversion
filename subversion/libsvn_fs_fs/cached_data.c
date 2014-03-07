@@ -1141,7 +1141,7 @@ set_cached_window(svn_txdelta_window_t *window,
  * cache. This will be a no-op and IS_CACHED will be set to FALSE if no
  * cache has been given. If a cache is available IS_CACHED will inform
  * the caller about the success of the lookup. Allocations (of the window
- * in particualar) will be made from POOL.
+ * in particular) will be made from POOL.
  */
 static svn_error_t *
 get_cached_combined_window(svn_stringbuf_t **window_p,
