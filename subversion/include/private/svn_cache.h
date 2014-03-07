@@ -317,14 +317,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
 /**
  * Data in this priority class has a good chance to remain in cache unless
- * there is more data in this class than the cache's capcity.  Use of this
+ * there is more data in this class than the cache's capacity.  Use of this
  * as the default for all information that is costly to fetch from disk.
  */
 #define SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY 1000
 
 /**
  * Data in this priority class will be removed as soon as the cache starts
- * filling up.  Use of this for ephemeral data that can easisly be acquired
+ * filling up.  Use of this for ephemeral data that can easily be acquired
  * again from other sources.
  */
 #define SVN_CACHE__MEMBUFFER_LOW_PRIORITY      100
