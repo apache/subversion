@@ -92,7 +92,6 @@ struct edit_baton
 
   /* The DB handle for managing the working copy state.  */
   svn_wc__db_t *db;
-  svn_wc_context_t *wc_ctx;
 
   /* The overall depth of this edit (a dir baton may override this).
    *
@@ -2402,18 +2401,18 @@ close_edit(void *edit_baton,
   if (eb->root_opened)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc_walk_status(eb->wc_ctx,
-                             eb->target_abspath,
-                             eb->default_depth,
-                             eb->get_all,
-                             eb->no_ignore,
-                             FALSE,
-                             eb->ignores,
-                             eb->status_func,
-                             eb->status_baton,
-                             eb->cancel_func,
-                             eb->cancel_baton,
-                             pool));
+  SVN_ERR(svn_wc__internal_walk_status(eb->db,
+                                       eb->target_abspath,
+                                       eb->default_depth,
+                                       eb->get_all,
+                                       eb->no_ignore,
+                                       FALSE,
+                                       eb->ignores,
+                                       eb->status_func,
+                                       eb->status_baton,
+                                       eb->cancel_func,
+                                       eb->cancel_baton,
+                                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -2456,7 +2455,6 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
   eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
   eb->db                = wc_ctx->db;
-  eb->wc_ctx            = wc_ctx;
   eb->get_all           = get_all;
   eb->no_ignore         = no_ignore;
   eb->status_func       = status_func;
