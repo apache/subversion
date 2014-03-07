@@ -2719,7 +2719,7 @@ def iprops_list_abspath(sbox):
   sbox.simple_propset('im', 'GammA', 'gamma')
 
   expected_output = [
-    'Inherited properties on \'%s\',\n' % sbox.ospath('')[:-1],
+    'Inherited properties on \'%s\',\n' % sbox.ospath(''),
     'from \'%s\':\n' % sbox.repo_url,
     '  im\n',
     '    root\n',
