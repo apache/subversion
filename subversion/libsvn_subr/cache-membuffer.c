@@ -1093,10 +1093,10 @@ get_group_index(svn_membuffer_t **cache,
 
   /* select the cache segment to use. they have all the same group_count.
    * Since key may not be well-distributed, pre-fold it to a smaller but
-   * "denser" ranger.  The divisors are primes larger than the largest
+   * "denser" ranger.  The modulus is a prime larger than the largest
    * counts. */
-  *cache = &segment0[(key[1] % APR_UINT64_C(2809637))
-         & (segment0->segment_count - 1)];
+  *cache = &segment0[(key[1] % APR_UINT64_C(2809637) + (key[0] / 37))
+                     & (segment0->segment_count - 1)];
   return (key[0] % APR_UINT64_C(5030895599)) % segment0->group_count;
 }
 
