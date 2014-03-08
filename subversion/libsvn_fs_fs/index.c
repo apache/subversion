@@ -71,7 +71,7 @@ typedef struct l2p_header_t
   apr_size_t revision_count;
 
   /* (max) number of entries per page */
-  apr_size_t page_size;
+  apr_uint32_t page_size;
 
   /* indexes into PAGE_TABLE that mark the first page of the respective
    * revision.  PAGE_TABLE_INDEX[REVISION_COUNT] points to the end of
@@ -587,6 +587,14 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
   svn_spillbuf_t *buffer
     = svn_spillbuf__create(0x10000, 0x1000000, local_pool);
 
+  /* Paranoia check that makes later casting to int32 safe.
+   * The current implementation is limited to 2G entries per page. */
+  if (ffd->l2p_page_size > APR_INT32_MAX)
+    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+                            _("L2P index page size  %" APR_UINT64_T_FMT
+                              " exceeds current limit of 2G entries"),
+                            ffd->l2p_page_size);
+
   /* start at the beginning of the source file */
   SVN_ERR(svn_io_file_open(&proto_index, proto_file_name,
                            APR_READ | APR_CREATE | APR_BUFFERED,
@@ -617,7 +625,9 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
 
               svn_pool_clear(iterpool);
 
-              entry_count = MIN(entries->nelts - i, ffd->l2p_page_size);
+              entry_count = ffd->l2p_page_size < entries->nelts - i
+                          ? (int)ffd->l2p_page_size
+                          : entries->nelts - i;
               SVN_ERR(encode_l2p_page(entries, i, i + entry_count,
                                       buffer, iterpool));
 
@@ -636,8 +646,18 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
         }
       else
         {
+          int idx;
+
           /* store the mapping in our array */
-          int idx = (apr_size_t)proto_entry.item_index;
+          if (proto_entry.item_index > APR_INT32_MAX)
+            return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+                                    _("Item index %" APR_UINT64_T_FMT
+                                      " too large in l2p proto index for"
+                                      " revision %ld"),
+                                    proto_entry.item_index,
+                                    revision + page_counts->nelts);
+
+          idx = (int)proto_entry.item_index;
           while (idx >= entries->nelts)
             APR_ARRAY_PUSH(entries, apr_uint64_t) = 0;
 
@@ -650,6 +670,14 @@ svn_fs_fs__l2p_index_create(svn_fs_t *fs,
 
   /* create the target file */
   SVN_ERR(index_create(&index_file, file_name, local_pool));
+
+  /* Paranoia check that makes later casting to int32 safe.
+   * The current implementation is limited to 2G pages per index. */
+  if (page_counts->nelts > APR_INT32_MAX)
+    return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+                            _("L2P index page count  %d"
+                              " exceeds current limit of 2G pages"),
+                            page_counts->nelts);
 
   /* write header info */
   SVN_ERR(svn_io_file_write_full(index_file, encoded,
@@ -782,7 +810,7 @@ get_l2p_header_body(l2p_header_t **header,
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->first_revision = (svn_revnum_t)value;
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
-  result->page_size = (apr_size_t)value;
+  result->page_size = (apr_uint32_t)value;
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
   result->revision_count = (int)value;
   SVN_ERR(packed_stream_get(&value, rev_file->l2p_stream));
@@ -851,7 +879,7 @@ typedef struct l2p_page_info_baton_t
   l2p_page_table_entry_t entry;
 
   /* page number within the pages for REVISION (not l2p index global!) */
-  apr_size_t page_no;
+  apr_uint32_t page_no;
 
   /* offset of ITEM_INDEX within that page */
   apr_uint32_t page_offset;
@@ -882,7 +910,7 @@ l2p_page_info_copy(l2p_page_info_baton_t *baton,
   if (baton->item_index < header->page_size)
     {
       /* most revs fit well into a single page */
-      baton->page_offset = (apr_size_t)baton->item_index;
+      baton->page_offset = (apr_uint32_t)baton->item_index;
       baton->page_no = 0;
       baton->entry = page_table[page_table_index[rel_revision]];
     }
@@ -890,29 +918,28 @@ l2p_page_info_copy(l2p_page_info_baton_t *baton,
     {
       const l2p_page_table_entry_t *first_entry;
       const l2p_page_table_entry_t *last_entry;
-      
-      /* all pages are of the same size and full, except for the last one */
-      baton->page_offset = (apr_size_t)(baton->item_index % header->page_size);
-      baton->page_no = (apr_uint32_t)(baton->item_index / header->page_size);
+      apr_uint64_t max_item_index;
 
       /* range of pages for this rev */
       first_entry = page_table + page_table_index[rel_revision];
       last_entry = page_table + page_table_index[rel_revision + 1];
 
-      if (last_entry - first_entry > baton->page_no)
-        {
-          baton->entry = first_entry[baton->page_no];
-        }
-      else
-        {
-          /* limit page index to the valid range */
-          baton->entry = last_entry[-1];
+      /* do we hit a valid index page? */
+      max_item_index =   (apr_uint64_t)header->page_size
+                       * (last_entry - first_entry);
+      if (baton->item_index >= max_item_index)
+        return svn_error_createf(SVN_ERR_FS_ITEM_INDEX_OVERFLOW , NULL,
+                                _("Item index %" APR_UINT64_T_FMT
+                                  " exceeds l2p limit of %" APR_UINT64_T_FMT
+                                  " for revision %ld"),
+                                baton->item_index, max_item_index,
+                                baton->revision);
 
-          /* cause index overflow further down the road */
-          baton->page_offset = header->page_size + 1;
-        }
+      /* all pages are of the same size and full, except for the last one */
+      baton->page_offset = (apr_uint32_t)(baton->item_index % header->page_size);
+      baton->page_no = (apr_uint32_t)(baton->item_index / header->page_size);
     }
-    
+
   baton->first_revision = header->first_revision;
 
   return SVN_NO_ERROR;
