@@ -150,8 +150,9 @@ serialize_representation(svn_temp_serializer__context_t *context,
 /* auxiliary structure representing the content of a directory array */
 typedef struct dir_data_t
 {
-  /* number of entries in the directory */
-  apr_size_t count;
+  /* number of entries in the directory
+   * (it's int because the directory is an APR array) */
+  int count;
 
   /* number of unused dir entry buckets in the index */
   apr_size_t over_provision;
@@ -209,7 +210,7 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   svn_temp_serializer__context_t *context;
 
   /* calculate sizes */
-  apr_size_t count = entries->nelts;
+  int count = entries->nelts;
   apr_size_t over_provision = 2 + count / 4;
   apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_dirent_t*);
   apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
