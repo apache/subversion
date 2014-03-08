@@ -172,6 +172,7 @@ struct export_info_baton
   void *notify_baton;
   const char *origin_abspath;
   svn_boolean_t exported;
+  svn_boolean_t exporting_external;
 };
 
 /* Export a file or directory. Implements svn_wc_status_func4_t */
@@ -268,7 +269,7 @@ export_node(void *baton,
                                                       scratch_pool));
     }
 
-  if (status->file_external)
+  if (status->file_external && !eib->exporting_external)
     return SVN_NO_ERROR;
 
   /* Produce overwrite errors for the export root */
@@ -1364,23 +1365,20 @@ export_directory(const char *from_path_or_url,
   return SVN_NO_ERROR;
 }
 
-
-
-/*** Public Interfaces ***/
-
-svn_error_t *
-svn_client_export5(svn_revnum_t *result_rev,
-                   const char *from_path_or_url,
-                   const char *to_path,
-                   const svn_opt_revision_t *peg_revision,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t overwrite,
-                   svn_boolean_t ignore_externals,
-                   svn_boolean_t ignore_keywords,
-                   svn_depth_t depth,
-                   const char *native_eol,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+static svn_error_t *
+do_export(svn_revnum_t *result_rev,
+          const char *from_path_or_url,
+          const char *to_path,
+          const svn_opt_revision_t *peg_revision,
+          const svn_opt_revision_t *revision,
+          svn_boolean_t overwrite,
+          svn_boolean_t ignore_externals,
+          svn_boolean_t ignore_keywords,
+          svn_depth_t depth,
+          const char *native_eol,
+          svn_boolean_t exporting_external,
+          svn_client_ctx_t *ctx,
+          apr_pool_t *pool)
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
@@ -1511,6 +1509,7 @@ svn_client_export5(svn_revnum_t *result_rev,
       eib.notify_baton = ctx->notify_baton2;
       eib.origin_abspath = from_path_or_url;
       eib.exported = FALSE;
+      eib.exporting_external = exporting_external;
 
       SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, from_path_or_url, depth,
                                  TRUE /* get_all */,
@@ -1558,15 +1557,15 @@ svn_client_export5(svn_revnum_t *result_rev,
                             svn_dirent_dirname(target_abspath, iterpool),
                             iterpool));
 
-              SVN_ERR(svn_client_export5(NULL,
-                                         svn_dirent_join(from_path_or_url,
-                                                         relpath,
-                                                         iterpool),
-                                         target_abspath,
-                                         peg_revision, revision,
-                                         TRUE, ignore_externals,
-                                         ignore_keywords, depth, native_eol,
-                                         ctx, iterpool));
+              SVN_ERR(do_export(NULL,
+                                svn_dirent_join(from_path_or_url,
+                                               relpath,
+                                               iterpool),
+                                target_abspath,
+                                peg_revision, revision,
+                                TRUE, ignore_externals,
+                                ignore_keywords, depth, native_eol,
+                                TRUE, ctx, iterpool));
             }
 
           svn_pool_destroy(iterpool);
@@ -1587,4 +1586,26 @@ svn_client_export5(svn_revnum_t *result_rev,
     *result_rev = edit_revision;
 
   return SVN_NO_ERROR;
+}
+
+
+/*** Public Interfaces ***/
+svn_error_t *
+svn_client_export5(svn_revnum_t *result_rev,
+                   const char *from_path_or_url,
+                   const char *to_path,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t overwrite,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t ignore_keywords,
+                   svn_depth_t depth,
+                   const char *native_eol,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(do_export(result_rev, from_path_or_url, to_path,
+                                   peg_revision, revision, overwrite,
+                                   ignore_externals, ignore_keywords,
+                                   depth, native_eol, FALSE, ctx, pool));
 }
