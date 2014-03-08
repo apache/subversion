@@ -1849,7 +1849,7 @@ shards_spanned(int *spanned,
   int shard_size = ffd->max_files_per_dir ? ffd->max_files_per_dir : 1;
 
   int count = 0;
-  int shard, last_shard = ffd->youngest_rev_cache / shard_size;
+  svn_revnum_t shard, last_shard = ffd->youngest_rev_cache / shard_size;
   while (walk-- && noderev->predecessor_count)
     {
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs,
