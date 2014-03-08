@@ -24,16 +24,6 @@ Candidate changes:
      +1: blair, brane
      -0: philip (see dev thread: false alarm, trades one warning for another)
 
- * r1498000
-   Improve error handling for inherited property requests by using the
-   transition based xml parser in libsvn_ra_serf.
-   Justification:
-     This maintenance work which usually doesn't belong in a patch release
-     makes it possible to properly detect if this request should be restarted
-     on non-chunk-enabled proxies.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1501293, r1501338, r1501360, r1501533
    Fix issue #4390, "parallel nested checkout not possible with wc-ng"
    Justification:
@@ -179,16 +169,6 @@ Candidate changes:
                    overkill. The whole thing can be implemented with simple
                    atomic operations while mutexes may be a limited resource)
 
- * r1571214
-   Avoid adding duplicated rows in an sqlite hint table when calling
-   'svn upgrade' repeatedly on a working copy.
-   Justification:
-     Adding the same information multiple times is not a problem for sqlite,
-     but it adds unnecessary information to wc.db, which will be slightly
-     bigger than necessary in this corner case.
-   Votes:
-     +1: rhuijben, ivan
-
  * r1571747, r1571787, r1571795
    Resolve the 'commit_util.c' (repos_root_url && repos_relpath) assertion.
    Notes:
@@ -201,7 +181,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1572102, 1572200
+ * r1572102, r1572200
    Fix a failed wc upgrade from 1.7 with exclusive wc locking.
    Notes:
      1.8 doesn't support running the regression test with exclusive locking
@@ -209,14 +189,14 @@ Candidate changes:
    Justification:
      Reported by a user, upgrade is expected to work.
    Votes:
-     +1: philip
+     +1: philip, brane
 
  * r1573088
    Add Mavericks to our sysinfo output.
    Justification:
      It's obvious, keeps us consistent with previous version behavior.
    Votes:
-     +1: breser
+     +1: breser, brane
 
  * r1575270, r1575284
    Fix inconsistent output in svn_client_proplist4 when using absolute paths.
@@ -274,3 +254,23 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1498000
+   Improve error handling for inherited property requests by using the
+   transition based xml parser in libsvn_ra_serf.
+   Justification:
+     This maintenance work which usually doesn't belong in a patch release
+     makes it possible to properly detect if this request should be restarted
+     on non-chunk-enabled proxies.
+   Votes:
+     +1: rhuijben, ivan, brane
+
+ * r1571214
+   Avoid adding duplicated rows in an sqlite hint table when calling
+   'svn upgrade' repeatedly on a working copy.
+   Justification:
+     Adding the same information multiple times is not a problem for sqlite,
+     but it adds unnecessary information to wc.db, which will be slightly
+     bigger than necessary in this corner case.
+   Votes:
+     +1: rhuijben, ivan, brane
