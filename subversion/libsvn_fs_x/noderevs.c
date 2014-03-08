@@ -177,7 +177,7 @@ struct svn_fs_x__noderevs_t
 };
 
 svn_fs_x__noderevs_t *
-svn_fs_x__noderevs_create(apr_size_t initial_count,
+svn_fs_x__noderevs_create(int initial_count,
                           apr_pool_t* pool)
 {
   svn_fs_x__noderevs_t *noderevs = apr_palloc(pool, sizeof(*noderevs));
@@ -656,7 +656,7 @@ read_reps(apr_array_header_t **reps_p,
   apr_size_t count
     = svn_packed__int_count(svn_packed__first_int_substream(rep_stream));
   apr_array_header_t *reps
-    = apr_array_make(pool, count, sizeof(binary_representation_t));
+    = apr_array_make(pool, (int)count, sizeof(binary_representation_t));
 
   for (i = 0; i < count; ++i)
     {
