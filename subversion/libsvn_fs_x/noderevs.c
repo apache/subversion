@@ -588,7 +588,7 @@ svn_fs_x__write_noderevs_container(svn_stream_t *stream,
     svn_packed__create_int_substream(ids_stream, TRUE, FALSE);
 
   svn_packed__create_int_substream(noderevs_stream, FALSE, FALSE);
-  for (i = 0; i < 12; ++i)
+  for (i = 0; i < 11; ++i)
     svn_packed__create_int_substream(noderevs_stream, TRUE, FALSE);
 
   /* serialize ids array */
