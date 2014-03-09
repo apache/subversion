@@ -229,17 +229,17 @@ initialize_pack_context(pack_context_t *context,
                         const char *pack_file_dir,
                         const char *shard_dir,
                         svn_revnum_t shard_rev,
-                        apr_size_t max_items,
+                        int max_items,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
-  apr_size_t max_revs = MIN(ffd->max_files_per_dir, (int)max_items);
-  
+  apr_size_t max_revs = MIN(ffd->max_files_per_dir, max_items);
+
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
-  
+
   /* where we will place our various temp files */
   SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
 
@@ -304,7 +304,7 @@ initialize_pack_context(pack_context_t *context,
   context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Clean up / free all revision range specific data and files in CONTEXT.
  * Use POOL for temporary allocations.
@@ -329,7 +329,7 @@ reset_pack_context(pack_context_t *context,
   svn_pool_clear(context->info_pool);
   
   return SVN_NO_ERROR;
-};
+}
 
 /* Call this after the last revision range.  It will finalize all index files
  * for CONTEXT and close any open files.  Use POOL for temporary allocations.
@@ -372,7 +372,7 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Efficiently copy SIZE bytes from SOURCE to DEST.  Invoke the CANCEL_FUNC
  * from CONTEXT at regular intervals.  Use POOL for allocations.
@@ -1985,7 +1985,9 @@ pack_log_addressed(svn_fs_t *fs,
                    + 6 * sizeof(void*)
     };
 
-  apr_size_t max_items = max_mem / PER_ITEM_MEM;
+  int max_items = max_mem / PER_ITEM_MEM > INT_MAX
+                ? INT_MAX
+                : (int)(max_mem / PER_ITEM_MEM);
   apr_array_header_t *max_ids;
   pack_context_t context = { 0 };
   int i;

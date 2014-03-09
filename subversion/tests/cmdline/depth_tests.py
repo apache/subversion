@@ -1026,8 +1026,8 @@ def diff_in_depthy_wc(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'commit', '-m', '', wc)
 
-  from diff_tests import make_diff_header, make_diff_prop_header
-  from diff_tests import make_diff_prop_deleted, make_diff_prop_added
+  from svntest.verify import make_diff_header, make_diff_prop_header, \
+                             make_diff_prop_deleted, make_diff_prop_added
   diff_mu = make_diff_header('A/mu', 'revision 2', 'working copy') + [
     "@@ -1 +1 @@\n",
     "-new text\n",

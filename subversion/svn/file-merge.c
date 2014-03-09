@@ -75,12 +75,12 @@ struct file_merge_baton {
   /* The client configuration hash. */
   apr_hash_t *config;
 
-  /* Wether the merge should be aborted. */
+  /* Whether the merge should be aborted. */
   svn_boolean_t abort_merge;
 
   /* Pool for temporary allocations. */
   apr_pool_t *scratch_pool;
-} file_merge_baton;
+};
 
 /* Copy LEN lines from SOURCE_FILE to the MERGED_FILE, starting at
  * line START. The CURRENT_LINE is the current line in the source file.

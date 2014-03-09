@@ -364,7 +364,7 @@ svn_fs_upgrade(const char *path,
 /**
  * Callback function type for progress notification.
  *
- * @a revision is the number of the revision currently begin processed,
+ * @a revision is the number of the revision currently being processed,
  * #SVN_INVALID_REVNUM if the current stage is not linked to any specific
  * revision. @a baton is the callback baton.
  *
@@ -798,19 +798,23 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
 typedef enum svn_fs_node_relation_t
 {
   /** The nodes are not related.
-   * Nodes from different repositories are always unrelated. */
+   * Nodes from different repositories are always unrelated.
+   * #svn_fs_compare_ids would return the value -1 in this case.
+   */
   svn_fs_node_unrelated = 0,
 
-  /** They are the same physical node, i.e. there is no intermittent change.
-   * However, due to lazy copying, they may be intermittent parent copies.
+  /** They are the same physical node, i.e. there is no intervening change.
+   * However, due to lazy copying, there may be part of different parent
+   * copies.  #svn_fs_compare_ids would return the value 0 in this case.
    */
   svn_fs_node_same,
 
   /** The nodes have a common ancestor (which may be one of these nodes)
    * but are not the same.
+   * #svn_fs_compare_ids would return the value 1 in this case.
    */
-  svn_fs_node_common_anchestor
-  
+  svn_fs_node_common_ancestor
+
 } svn_fs_node_relation_t;
 
 /** An object representing a node-revision id.  */
@@ -819,6 +823,10 @@ typedef struct svn_fs_id_t svn_fs_id_t;
 
 /** Return -1, 0, or 1 if node revisions @a a and @a b are respectively
  * unrelated, equivalent, or otherwise related (part of the same node).
+ *
+ * @note Using FS ID based functions is now discouraged and may be fully
+ * deprecated in future releases.  New code should use #svn_fs_node_relation()
+ * and #svn_fs_node_relation_t instead.
  */
 int
 svn_fs_compare_ids(const svn_fs_id_t *a,
@@ -828,6 +836,10 @@ svn_fs_compare_ids(const svn_fs_id_t *a,
 
 /** Return TRUE if node revisions @a id1 and @a id2 are related (part of the
  * same node), else return FALSE.
+ *
+ * @note Using FS ID based functions is now discouraged and may be fully
+ * deprecated in future releases.  New code should use #svn_fs_node_relation()
+ * and #svn_fs_node_relation_t instead.
  */
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *id1,
@@ -1573,9 +1585,9 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
  * arbitrary revision order and any of them may pertain to a transaction.
  * @a pool is used for temporary allocations.
  *
- * @note The current implementation considers paths from different svn_fs_t
- * as unrelated even if the underlying physical repository is the same.
- * 
+ * @note Paths from different svn_fs_t will be reported as unrelated even
+ * if the underlying physical repository is the same.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -1670,10 +1682,42 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
 
 /** Determine if the properties of two path/root combinations are different.
  *
- * Set @a *changed_p to 1 if the properties at @a path1 under @a root1 differ
- * from those at @a path2 under @a root2, or set it to 0 if they are the
- * same.  Both paths must exist under their respective roots, and both
- * roots must be in the same filesystem.
+ * Set @a *different_p to #TRUE if the properties at @a path1 under @a root1
+ * differ from those at @a path2 under @a root2, or set it to #FALSE if they
+ * are the same.  Both paths must exist under their respective roots, and
+ * both roots must be in the same filesystem.
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_props_different(svn_boolean_t *different_p,
+                       svn_fs_root_t *root1,
+                       const char *path1,
+                       svn_fs_root_t *root2,
+                       const char *path2,
+                       apr_pool_t *pool);
+
+
+/** Determine if the properties of two path/root combinations are different.
+ * In contrast to #svn_fs_props_different, we only perform a quick test and
+ * allow for false positives.
+ *
+ * Set @a *changed_p to #TRUE if the properties at @a path1 under @a root1
+ * differ from those at @a path2 under @a root2, or set it to #FALSE if they
+ * are the same.  Both paths must exist under their respective roots, and
+ * both roots must be in the same filesystem.
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @note The behavior is implementation dependent in that the false
+ * positives reported may differ from release to release and backend to
+ * backend.  There is also no guarantee that there will be false positives
+ * at all.
+ *
+ * @note Prior to Subversion 1.9, this function would return false negatives
+ * as well for FSFS: If @a root1 and @a root2 were both transaction roots
+ * and the proplists of both paths had been changed in their respective
+ * transactions, @a changed_p would be set to #FALSE.
  */
 svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p,
@@ -1773,12 +1817,14 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * If @a adjust_inherited_mergeinfo is @c TRUE, then any inherited
  * mergeinfo returned in @a *catalog is normalized to represent the
- * inherited mergeinfo on the path which inherits it.  If
+ * inherited mergeinfo on the path which inherits it.  This adjusted
+ * mergeinfo is keyed by the path which inherits it.  If
  * @a adjust_inherited_mergeinfo is @c FALSE, then any inherited
  * mergeinfo is the raw explicit mergeinfo from the nearest parent
  * of the path with explicit mergeinfo, unadjusted for the path-wise
  * difference between the path and its parent.  This may include
- * non-inheritable mergeinfo.
+ * non-inheritable mergeinfo.  This unadjusted mergeinfo is keyed by
+ * the path at which it was found.
  *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
@@ -2209,11 +2255,8 @@ svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * ### This is like svn_fs_apply_textdelta(), but takes the text
- * straight.  It is currently used only by the loader, see
- * libsvn_repos/load.c.  It should accept a checksum, of course, which
- * would come from an (optional) header in the dump file.  See
- * http://subversion.tigris.org/issues/show_bug.cgi?id=1102 for more.
+ * @note This is like svn_fs_apply_textdelta(), but takes the text
+ * straight.
  */
 svn_error_t *
 svn_fs_apply_text(svn_stream_t **contents_p,
@@ -2225,10 +2268,36 @@ svn_fs_apply_text(svn_stream_t **contents_p,
 
 /** Check if the contents of two root/path combos have changed.
  *
- * Set @a *changed_p to 1 if the contents at @a path1 under @a root1 differ
- * from those at @a path2 under @a root2, or set it to 0 if they are the
- * same.  Both paths must exist under their respective roots, and both
- * roots must be in the same filesystem.
+ * Set @a *different_p to #TRUE if the file contents at @a path1 under
+ * @a root1 differ from those at @a path2 under @a root2, or set it to
+ * #FALSE if they are the same.  Both paths must exist under their
+ * respective roots, and both roots must be in the same filesystem.
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.9.
+ */
+svn_error_t *
+svn_fs_contents_different(svn_boolean_t *different_p,
+                          svn_fs_root_t *root1,
+                          const char *path1,
+                          svn_fs_root_t *root2,
+                          const char *path2,
+                          apr_pool_t *pool);
+
+/** Check if the contents of two root/path combos have changed.  In
+ * contrast to #svn_fs_contents_different, we only perform a quick test
+ * and allow for false positives.
+ *
+ * Set @a *changed_p to #TRUE if the file contents at @a path1 under
+ * @a root1 differ from those at @a path2 under @a root2, or set it to
+ * #FALSE if they are the same.  Both paths must exist under their
+ * respective roots, and both roots must be in the same filesystem.
+ * Do any necessary temporary allocation in @a pool.
+ *
+ * @note The behavior is implementation dependent in that the false
+ * positives reported may differ from release to release and backend to
+ * backend.  There is also no guarantee that there will be false positives
+ * at all.
  */
 svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p,
@@ -2413,12 +2482,6 @@ svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs,
                 const char *uuid,
                 apr_pool_t *pool);
-
-
-/* Non-historical properties.  */
-
-/* [[Yes, do tell.]] */
-
 
 
 /** @defgroup svn_fs_locks Filesystem locks

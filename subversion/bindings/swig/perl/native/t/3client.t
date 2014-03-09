@@ -1236,7 +1236,7 @@ SKIP: {
   my $result = SVN::Core::auth_set_gnome_keyring_unlock_prompt_func(
                    $ctx->auth(), $callback);
   # TEST
-  is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals paramter');
+  is(${$result}, $callback, 'auth_set_gnome_keyring_unlock_prompt_func result equals parameter');
 }
 
 END {

@@ -55,6 +55,7 @@ extern "C" {
 #define PATH_UUID             "uuid"             /* Contains UUID */
 #define PATH_CURRENT          "current"          /* Youngest revision */
 #define PATH_LOCK_FILE        "write-lock"       /* Revision lock file */
+#define PATH_PACK_LOCK_FILE   "pack-lock"        /* Pack lock file */
 #define PATH_REVS_DIR         "revs"             /* Directory of revisions */
 #define PATH_REVPROPS_DIR     "revprops"         /* Directory of revprops */
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
@@ -172,6 +173,9 @@ extern "C" {
 /* The minimum format number that supports packed revprops. */
 #define SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT 7
 
+/* Minimum format number that providing a separate lock file for pack ops */
+#define SVN_FS_FS__MIN_PACK_LOCK_FORMAT 7
+
 /* Minimum format number that stores mergeinfo-mode flag in changed paths */
 #define SVN_FS_FS__MIN_MERGEINFO_IN_CHANGES_FORMAT 7
 
@@ -255,37 +259,27 @@ typedef struct fs_fs_dag_cache_t fs_fs_dag_cache_t;
 
 /* Key type for all caches that use revision + offset / counter as key.
 
-   NOTE: always initialize this using calloc() or '= {0};'!  This is used
-   as a cache key and the padding bytes on 32 bit archs should be zero for
-   cache effectiveness. */
+   Note: Cache keys should be 16 bytes for best performance and there
+         should be no padding. */
 typedef struct pair_cache_key_t
 {
-  svn_revnum_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
+  /* Sub-address: item index, revprop generation, packed flag, etc. */
   apr_int64_t second;
 } pair_cache_key_t;
 
-/* Key type that identifies a representation / rep header. */
-typedef struct representation_cache_key_t
-{
-  /* Revision that contains the representation */
-  apr_uint32_t revision;
+/* Key type that identifies a txdelta window.
 
-  /* Packed or non-packed representation? */
-  svn_boolean_t is_packed;
-
-  /* Item index of the representation */
-  apr_uint64_t item_index;
-} representation_cache_key_t;
-
-/* Key type that identifies a txdelta window. */
+   Note: Cache keys should require no padding. */
 typedef struct window_cache_key_t
 {
-  /* Revision that contains the representation */
-  apr_uint32_t revision;
+  /* The object's revision.  Use the 64 data type to prevent padding. */
+  apr_int64_t revision;
 
-  /* Window number within that representation */
-  apr_int32_t chunk_index;
+  /* Window number within that representation. */
+  apr_int64_t chunk_index;
 
   /* Item index of the representation */
   apr_uint64_t item_index;

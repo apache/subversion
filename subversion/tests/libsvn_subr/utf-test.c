@@ -227,7 +227,7 @@ test_utf_cstring_to_utf8_ex2(apr_pool_t *pool)
       const char *expected_result;
       const char *from_page;
   } tests[] = {
-      {"ascii text\n", "ascii text\n", "unexistant-page"},
+      {"ascii text\n", "ascii text\n", "unexistent-page"},
       {"Edelwei\xdf", "Edelwei\xc3\x9f", "ISO-8859-1"}
   };
 
@@ -267,7 +267,7 @@ test_utf_cstring_from_utf8_ex2(apr_pool_t *pool)
       const char *expected_result;
       const char *to_page;
   } tests[] = {
-      {"ascii text\n", "ascii text\n", "unexistant-page"},
+      {"ascii text\n", "ascii text\n", "unexistent-page"},
       {"Edelwei\xc3\x9f", "Edelwei\xdf", "ISO-8859-1"}
   };
 
@@ -740,9 +740,9 @@ test_utf_is_normalized(apr_pool_t *pool)
 
 /* The test table.  */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(utf_validate,
@@ -763,3 +763,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf__is_normalized"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

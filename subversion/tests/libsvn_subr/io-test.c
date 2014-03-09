@@ -66,7 +66,7 @@ struct test_file_definition_t
     char* created_path;
   };
 
-struct test_file_definition_t test_file_definitions_template[] =
+static struct test_file_definition_t test_file_definitions_template[] =
   {
     {"empty",                 "",      0},
     {"single_a",              "a",     1},
@@ -555,13 +555,8 @@ aligned_seek(apr_file_t *file,
    */
   if (buffered)
     {
-#if APR_VERSION_AT_LEAST(1,3,0)
       SVN_TEST_ASSERT(block_start % block_size == 0);
       SVN_TEST_ASSERT(offset - block_start < block_size);
-#else
-      SVN_TEST_ASSERT(block_start % 0x1000 == 0);
-      SVN_TEST_ASSERT(offset - block_start < 0x1000);
-#endif
     }
 
   /* we must be at the desired offset */
@@ -688,9 +683,9 @@ aligned_seek_test(apr_pool_t *pool)
 
 /* The test table.  */
 
-int svn_test_max_threads = 3;
+static int max_threads = 3;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_two_file_size_comparison,
@@ -707,3 +702,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test aligned seek"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

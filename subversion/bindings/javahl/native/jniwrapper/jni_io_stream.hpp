@@ -122,14 +122,7 @@ public:
   /**
    * Helper method to read data into a native buffer.
    */
-  jint read(void* data, jint length, jint offset = 0)
-    {
-      ByteArray array(m_env, length);
-      const jint size = read(array);
-      ByteArray::Contents contents(array);
-      ::memcpy(static_cast<char*>(data) + offset, contents.data(), size);
-      return size;
-    }
+  jint read(void* data, jint length);
 
   /**
    * Implements @c InputStream.skip(long)

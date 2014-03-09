@@ -59,7 +59,7 @@ test_empty_string(apr_pool_t *pool)
 
 enum {TEST_CASE_COUNT = 9};
 
-const char *test_cases[TEST_CASE_COUNT] =
+static const char *test_cases[TEST_CASE_COUNT] =
 {
   "a longish string of sorts, longer than 7 anyway",
   "some other string",
@@ -137,9 +137,9 @@ test_string_comparison(apr_pool_t *pool)
 
 /* An array of all test functions */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_empty_string,
@@ -150,3 +150,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "compare strings"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

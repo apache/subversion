@@ -2001,16 +2001,37 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  const svn_diff_tree_processor_t *diff_processor;
+
+  /* --git implies --show-copies-as-adds */
+  if (use_git_diff_format)
+    show_copies_as_adds = TRUE;
+
+  /* --show-copies-as-adds implies --notice-ancestry */
+  if (show_copies_as_adds)
+    ignore_ancestry = FALSE;
+
+  SVN_ERR(svn_wc__wrap_diff_callbacks(&diff_processor,
+                                      callbacks, callback_baton, TRUE,
+                                      result_pool, scratch_pool));
+
+  if (reverse_order)
+    diff_processor = svn_diff__tree_processor_reverse_create(
+                              diff_processor, NULL, result_pool);
+
+  if (! show_copies_as_adds)
+    diff_processor = svn_diff__tree_processor_copy_as_changed_create(
+                              diff_processor, result_pool);
+
   return svn_error_trace(
     svn_wc__get_diff_editor(editor, edit_baton,
                             wc_ctx,
                             anchor_abspath, target,
                             depth,
-                            ignore_ancestry, show_copies_as_adds,
                             use_git_diff_format, use_text_base,
                             reverse_order, server_performs_filtering,
                             changelist_filter,
-                            callbacks, callback_baton,
+                            diff_processor,
                             cancel_func, cancel_baton,
                             result_pool, scratch_pool));
 }
@@ -4766,15 +4787,6 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                             TRUE /* show_deleted */,
                             show_hidden,
                             scratch_pool));
-
-  /*if (db_kind == svn_node_dir)
-    *kind = svn_node_dir;
-  else if (db_kind == svn_node_file || db_kind == svn_node_symlink)
-    *kind = svn_node_file;
-  else
-    *kind = svn_node_none;*/
-
-  return SVN_NO_ERROR;
 }
 
 svn_wc_conflict_description2_t *

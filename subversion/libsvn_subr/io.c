@@ -1769,7 +1769,7 @@ io_unicode_to_utf8_path(const char **result,
      * // for the \\?\UNC\ path prefix, allocating the maximum string
      * length based on the remaining string, plus the trailing null.
      * then transform \\'s back into /'s since the \\?\ form never
-     * allows '/' path seperators, and APR always uses '/'s.
+     * allows '/' path separators, and APR always uses '/'s.
      */
     if (0 == strncmp(buffer, "\\\\?\\", 4))
     {
@@ -3578,8 +3578,6 @@ svn_io_file_aligned_seek(apr_file_t *file,
   if (block_size == 0)
     block_size = apr_default_buffer_size;
 
-  /* on old APRs, we are simply stuck with 4k blocks */
-#if APR_VERSION_AT_LEAST(1,3,0)
   file_buffer_size = apr_file_buffer_size_get(file);
 
   /* don't try to set a buffer size for non-buffered files! */
@@ -3600,7 +3598,6 @@ svn_io_file_aligned_seek(apr_file_t *file,
       fill_buffer = TRUE;
     }
   else
-#endif
     {
       aligned_offset = offset - (offset % file_buffer_size);
 
@@ -3792,7 +3789,7 @@ svn_io_write_atomic(const char *final_path,
                                                          scratch_pool));
 
       return svn_error_createf(err->apr_err, err,
-                               _("Can't write '%s' atomicly"),
+                               _("Can't write '%s' atomically"),
                                svn_dirent_local_style(final_path,
                                                       scratch_pool));
     }

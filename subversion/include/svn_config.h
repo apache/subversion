@@ -131,6 +131,8 @@ typedef struct svn_config_t svn_config_t;
 /** @deprecated Not used by Subversion since 2003/r847039 (well before 1.0) */
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE         "enable-magic-file"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
@@ -669,10 +671,91 @@ svn_config_ensure(const char *config_dir,
  */
 
 
-/** A hash-key pointing to a realmstring.  Every file containing
- * authentication data should have this key.
+/**
+ * Attributes of authentication credentials.
+ *
+ * The values of these keys are C strings.
+ *
+ * @note Some of these hash keys were also used in versions < 1.9 but were
+ *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY which
+ *       has been present since 1.0).
+ *
+ * @defgroup cached_authentication_data_attributes
+ * @{
+ */
+
+/** A hash-key pointing to a realmstring.  This attribute is mandatory.
+ *
+ * @since New in 1.0.
  */
 #define SVN_CONFIG_REALMSTRING_KEY  "svn:realmstring"
+
+/** A hash-key for usernames.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_USERNAME_KEY           "username"
+
+/** A hash-key for passwords.
+ * The password may be in plaintext or encrypted form, depending on
+ * the authentication provider.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_PASSWORD_KEY           "password"
+
+/** A hash-key for passphrases,
+ * such as SSL client ceritifcate passphrases. The passphrase may be in
+ * plaintext or encrypted form, depending on the authentication provider.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_PASSPHRASE_KEY         "passphrase"
+
+/** A hash-key for the type of a password or passphrase.  The type
+ * indicates which provider owns the credential.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_PASSTYPE_KEY           "passtype"
+
+/** A hash-key for SSL certificates.   The value is the base64-encoded DER form
+ * certificate.
+ * @since New in 1.9.
+ * @note The value is not human readable.
+ */
+#define SVN_CONFIG_AUTHN_ASCII_CERT_KEY         "ascii_cert"
+
+/** A hash-key for recorded SSL certificate verification
+ * failures.  Failures encoded as an ASCII integer containing any of the
+ * SVN_AUTH_SSL_* SSL server certificate failure bits defined in svn_auth.h.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
+
+/** A hash-key for a hostname, such as hostnames in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_HOSTNAME_KEY           "hostname"
+
+/** A hash-key for a fingerprint, such as fingerprints in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_FINGERPRINT_KEY        "fingerprint"
+
+/** A hash-key for a valid-from date, such as dates in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_VALID_FROM_KEY         "valid_from"
+
+/** A hash-key for a valid-to date, such as dates in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_VALID_UNTIL_KEY        "valid_until"
+
+/** A hash-key for an issuer distinguished name, such as issuer names
+ * in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_ISSUER_DN_KEY        "issuer_dn"
+
+/** @} */
 
 /** Use @a cred_kind and @a realmstring to locate a file within the
  * ~/.subversion/auth/ area.  If the file exists, initialize @a *hash
@@ -757,7 +840,7 @@ typedef svn_error_t *
  *
  * @note Removing credentials from the config-based disk store will
  * not purge them from any open svn_auth_baton_t instance.  Consider
- * using svn_auth_forget_credentials() -- from the @a cleanup_func,
+ * using svn_auth_forget_credentials() -- from the @a walk_func,
  * even -- for this purpose.
  *
  * @note Removing credentials from the config-based disk store will

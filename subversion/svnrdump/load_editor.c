@@ -277,7 +277,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  inclusive there is one possible valid start revision that
                  won't be found in the PB->REV_MAP mapping of load stream
                  revsions to loaded revisions: The revision immediately
-                 preceeding the oldest revision from the load stream.
+                 preceding the oldest revision from the load stream.
                  This is a valid revision for mergeinfo, but not a valid
                  copy from revision (which PB->REV_MAP also maps for) so it
                  will never be in the mapping.

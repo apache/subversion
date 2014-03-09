@@ -1673,9 +1673,9 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
 
 /* The test table.  */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_parse_single_line_mergeinfo,
@@ -1716,3 +1716,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "removal of prefix paths from catalog keys"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

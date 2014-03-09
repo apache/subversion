@@ -355,7 +355,6 @@ get_content(svn_stringbuf_t **content,
   *content = svn_stringbuf_create_ensure(len, pool);
   (*content)->len = len;
 
-#if APR_VERSION_AT_LEAST(1,3,0)
   /* for better efficiency use larger buffers on large reads */
   if (   (len >= large_buffer_size)
       && (apr_file_buffer_size_get(file) < large_buffer_size))
@@ -363,7 +362,6 @@ get_content(svn_stringbuf_t **content,
                         apr_palloc(apr_file_pool_get(file),
                                    large_buffer_size),
                         large_buffer_size);
-#endif
 
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
   SVN_ERR(svn_io_file_read_full2(file, (*content)->data, len,
@@ -1551,9 +1549,14 @@ read_revisions(fs_t **fs,
   SVN_ERR(fs_open(fs, path, pool));
   ffd = (*fs)->fs->fsap_data;
 
-  /* create data containers and caches */
+  /* create data containers and caches
+   * Note: this assumes that int is at least 32-bits and that we only support
+   * 32-bit wide revision numbers (actually 31-bits due to the signedness
+   * of both the nelts field of the array and our revision numbers). This
+   * means this code will fail on platforms where int is less than 32-bits
+   * and the repository has more revisions than int can hold. */
   (*fs)->revisions = apr_array_make(pool,
-                                    ffd->youngest_rev_cache + 1,
+                                    (int) ffd->youngest_rev_cache + 1,
                                     sizeof(revision_info_t *));
   (*fs)->null_base = apr_pcalloc(pool, sizeof(*(*fs)->null_base));
   initialize_largest_changes(*fs, 64, pool);

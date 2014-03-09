@@ -528,18 +528,18 @@ dag_node_cache_set(svn_fs_root_t *root,
 }
 
 
-/* Baton for find_descendents_in_cache. */
+/* Baton for find_descendants_in_cache. */
 struct fdic_baton {
   const char *path;
   apr_array_header_t *list;
   apr_pool_t *pool;
 };
 
-/* If the given item is a descendent of BATON->PATH, push
+/* If the given item is a descendant of BATON->PATH, push
  * it onto BATON->LIST (copying into BATON->POOL).  Implements
  * the svn_iter_apr_hash_cb_t prototype. */
 static svn_error_t *
-find_descendents_in_cache(void *baton,
+find_descendants_in_cache(void *baton,
                           const void *key,
                           apr_ssize_t klen,
                           void *val,
@@ -574,16 +574,16 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   locate_cache(&cache, NULL, root, NULL, b.pool);
 
 
-  SVN_ERR(svn_cache__iter(NULL, cache, find_descendents_in_cache,
+  SVN_ERR(svn_cache__iter(NULL, cache, find_descendants_in_cache,
                           &b, b.pool));
 
   iterpool = svn_pool_create(b.pool);
 
   for (i = 0; i < b.list->nelts; i++)
     {
-      const char *descendent = APR_ARRAY_IDX(b.list, i, const char *);
+      const char *descendant = APR_ARRAY_IDX(b.list, i, const char *);
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_cache__set(cache, descendent, NULL, iterpool));
+      SVN_ERR(svn_cache__set(cache, descendant, NULL, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -838,7 +838,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path, FALSE, pool));
   copyroot_id = svn_fs_x__dag_get_id(copyroot_node);
 
-  if (svn_fs_x__id_compare(copyroot_id, child_id) == -1)
+  if (svn_fs_x__id_compare(copyroot_id, child_id) == svn_fs_node_unrelated)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -1327,9 +1327,8 @@ x_node_relation(svn_fs_node_relation_t *relation,
   svn_boolean_t b_is_root_dir
     = (path_b[0] == '\0') || ((path_b[0] == '/') && (path_b[1] == '\0'));
 
-  /* Root paths are never related to non-root paths and path from different
-   * repository are always unrelated. */
-  if (a_is_root_dir ^ b_is_root_dir || root_a->fs != root_b->fs)
+  /* Path from different repository are always unrelated. */
+  if (root_a->fs != root_b->fs)
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
@@ -1345,11 +1344,11 @@ x_node_relation(svn_fs_node_relation_t *relation,
 
   /* Are both (!) root paths? Then, they are related and we only test how
    * direct the relation is. */
-  if (a_is_root_dir)
+  if (a_is_root_dir && b_is_root_dir)
     {
       *relation = root_a->rev == root_b->rev
                 ? svn_fs_node_same
-                : svn_fs_node_common_anchestor;
+                : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
 
@@ -1368,7 +1367,7 @@ x_node_relation(svn_fs_node_relation_t *relation,
   if (svn_fs_x__id_part_eq(&noderev_id_a, &noderev_id_b))
     *relation = svn_fs_node_same;
   else if (svn_fs_x__id_part_eq(&node_id_a, &node_id_b))
-    *relation = svn_fs_node_common_anchestor;
+    *relation = svn_fs_node_common_ancestor;
   else
     *relation = svn_fs_node_unrelated;
 
@@ -1591,6 +1590,7 @@ x_props_changed(svn_boolean_t *changed_p,
                 const char *path1,
                 svn_fs_root_t *root2,
                 const char *path2,
+                svn_boolean_t strict,
                 apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
@@ -1603,7 +1603,8 @@ x_props_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
   SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_x__dag_things_different(changed_p, NULL, node1, node2);
+  return svn_fs_x__dag_things_different(changed_p, NULL, node1, node2,
+                                        strict, pool);
 }
 
 
@@ -1842,6 +1843,7 @@ merge(svn_stringbuf_t *conflict_p,
   */
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
+    svn_boolean_t same;
 
     /* Get node revisions for our id's. */
     SVN_ERR(svn_fs_x__get_node_revision(&tgt_nr, fs, target_id, pool));
@@ -1850,16 +1852,15 @@ merge(svn_stringbuf_t *conflict_p,
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
-       different contents.  But merge() isn't concerned with contents;
-       it doesn't do a brute-force comparison on textual contents, so
-       it won't do that here either.  Checking to see if the propkey
-       atoms are `equal' is enough. */
-    if (! svn_fs_x__noderev_same_rep_key(src_nr->prop_rep, anc_nr->prop_rep))
+       different contents. */
+    SVN_ERR(svn_fs_x__prop_rep_equal(&same, fs, src_nr, anc_nr, TRUE, pool));
+    if (! same)
       return conflict_err(conflict_p, target_path);
 
     /* The directory entries got changed in the repository but the directory
        properties did not. */
-    if (! svn_fs_x__noderev_same_rep_key(tgt_nr->prop_rep, anc_nr->prop_rep))
+    SVN_ERR(svn_fs_x__prop_rep_equal(&same, fs, tgt_nr, anc_nr, TRUE, pool));
+    if (! same)
       {
         /* There is an incoming prop change for this directory.
            We will accept it only if the directory changes were mere updates
@@ -1932,7 +1933,7 @@ merge(svn_stringbuf_t *conflict_p,
                                               s_entry->id,
                                               s_entry->kind,
                                               txn_id,
-                                              iterpool));
+                                              pool));
             }
           else
             {
@@ -2226,8 +2227,6 @@ svn_fs_x__commit_txn(const char **conflict_p,
     }
 
  cleanup:
-
-  svn_fs_x__reset_txn_caches(fs);
 
   svn_pool_destroy(iterpool);
   return svn_error_trace(err);
@@ -3269,6 +3268,7 @@ x_contents_changed(svn_boolean_t *changed_p,
                    const char *path1,
                    svn_fs_root_t *root2,
                    const char *path2,
+                   svn_boolean_t strict,
                    apr_pool_t *pool)
 {
   dag_node_t *node1, *node2;
@@ -3296,7 +3296,8 @@ x_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, TRUE, pool));
   SVN_ERR(get_dag(&node2, root2, path2, TRUE, pool));
-  return svn_fs_x__dag_things_different(NULL, changed_p, node1, node2);
+  return svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
+                                        strict, pool);
 }
 
 
@@ -4272,12 +4273,6 @@ make_txn_root(svn_fs_root_t **root_p,
                                       apr_pstrcat(pool, root->txn, ":TXN",
                                                   SVN_VA_NULL),
                                       root->pool));
-
-  /* Initialize transaction-local caches in FS.
-
-     Note that we cannot put those caches in frd because that content
-     fs root object is not available where we would need it. */
-  SVN_ERR(svn_fs_x__initialize_txn_caches(fs, root->txn, root->pool));
 
   root->fsap_data = frd;
 

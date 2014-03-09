@@ -221,6 +221,17 @@ public interface ISVNClient
             throws ClientException;
 
     /**
+     * Reverts set of files or directories to a pristine state.
+     * @param path      A set of paths to revert.
+     * @param depth     the depth to recurse into subdirectories
+     * @param changelists changelists to filter by
+     * @throws ClientException
+     * @since 1.9
+     */
+    void revert(Set<String> paths, Depth depth, Collection<String> changelists)
+            throws ClientException;
+
+    /**
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param depth     the depth to recurse into subdirectories
@@ -1011,9 +1022,9 @@ public interface ISVNClient
      * #diffSummarize(String, Revision, String, Revision, Depth,
      * Collection, boolean, DiffSummaryCallback)}, using
      * <code>path</code> for both of that method's targets.
-     * @param startRevision Beginning of range for comparsion of
+     * @param startRevision Beginning of range for comparison of
      * <code>target</code>.
-     * @param endRevision End of range for comparsion of
+     * @param endRevision End of range for comparison of
      * <code>target</code>.
      * @param depth how deep to recurse.
      * @param changelists  if non-null, filter paths using changelists

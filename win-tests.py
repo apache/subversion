@@ -117,10 +117,6 @@ cp = configparser.ConfigParser()
 cp.read('gen-make.opts')
 gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
                                                    cp.items('options'))
-all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
-          + gen_obj.scripts + gen_obj.bdb_scripts
-client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
-
 opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
@@ -257,9 +253,13 @@ else:
 if not fs_type:
   fs_type = 'fsfs'
 
-# Don't run bdb tests if they want to test fsfs
-if fs_type == 'fsfs':
-  all_tests = gen_obj.test_progs + gen_obj.scripts
+if fs_type == 'bdb':
+  all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
+            + gen_obj.scripts + gen_obj.bdb_scripts
+else:
+  all_tests = gen_obj.test_progs + gen_obj.scripts            
+
+client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
 
 if run_httpd:
   if not httpd_port:

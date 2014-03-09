@@ -1217,6 +1217,14 @@ svn_stream_read_full(svn_stream_t *stream,
                      char *buffer,
                      apr_size_t *len);
 
+
+/** Returns @c TRUE if the generic @c stream supports svn_stream_read2().
+ *
+ * @since New in 1.9.
+ */
+svn_boolean_t
+svn_stream_supports_partial_read(svn_stream_t *stream);
+
 /** Read all currently available upto @a *len into @a buffer. Use
  * svn_stream_read_full() if you want to wait for the buffer to be filled
  * or EOF. If the stream doesn't support limited reads this function will
@@ -1238,7 +1246,7 @@ svn_stream_read2(svn_stream_t *stream,
  * @note This function is a wrapper of svn_stream_read_full() now, which name
  * better documents the behavior of this function.
  *
- * @deprecated Provided for backward compatibilty with the 1.8 API
+ * @deprecated Provided for backward compatibility with the 1.8 API
  */
 SVN_DEPRECATED
 svn_error_t *

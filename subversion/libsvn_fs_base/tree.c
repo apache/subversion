@@ -544,7 +544,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   parent_copy_id = svn_fs_base__id_copy_id(parent_id);
 
   /* Easy out: if this child is already mutable, we have nothing to do. */
-  if (svn_fs_base__key_compare(svn_fs_base__id_txn_id(child_id), txn_id) == 0)
+  if (strcmp(svn_fs_base__id_txn_id(child_id), txn_id) == 0)
     return SVN_NO_ERROR;
 
   /* If the child and its parent are on the same branch, then the
@@ -561,7 +561,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
      target of any copy, and therefore must be on the same branch as
      its parent.  */
   if ((strcmp(child_copy_id, "0") == 0)
-      || (svn_fs_base__key_compare(child_copy_id, parent_copy_id) == 0))
+      || (strcmp(child_copy_id, parent_copy_id) == 0))
     {
       *inherit_p = copy_id_inherit_parent;
       return SVN_NO_ERROR;
@@ -570,7 +570,8 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
     {
       copy_t *copy;
       SVN_ERR(svn_fs_bdb__get_copy(&copy, fs, child_copy_id, trail, pool));
-      if (svn_fs_base__id_compare(copy->dst_noderev_id, child_id) == -1)
+      if (   svn_fs_base__id_compare(copy->dst_noderev_id, child_id)
+          == svn_fs_node_unrelated)
         {
           *inherit_p = copy_id_inherit_parent;
           return SVN_NO_ERROR;
@@ -1047,15 +1048,7 @@ base_node_relation(svn_fs_node_relation_t *relation,
   SVN_ERR(base_node_id(&id_a, root_a, path_a, pool));
   SVN_ERR(base_node_id(&id_b, root_b, path_b, pool));
 
-  switch (svn_fs_base__id_compare(id_a, id_b))
-    {
-      case 0:  *relation = svn_fs_node_same;
-               break;
-      case 1:  *relation = svn_fs_node_common_anchestor;
-               break;
-      default: *relation = svn_fs_node_unrelated;
-               break;
-    }
+  *relation = svn_fs_base__id_compare(id_a, id_b);
 
   return SVN_NO_ERROR;
 }
@@ -1402,6 +1395,7 @@ struct things_changed_args
   svn_fs_root_t *root2;
   const char *path1;
   const char *path2;
+  svn_boolean_t strict;
   apr_pool_t *pool;
 };
 
@@ -1411,11 +1405,26 @@ txn_body_props_changed(void *baton, trail_t *trail)
 {
   struct things_changed_args *args = baton;
   dag_node_t *node1, *node2;
+  apr_hash_t *proplist1, *proplist2;
 
   SVN_ERR(get_dag(&node1, args->root1, args->path1, trail, trail->pool));
   SVN_ERR(get_dag(&node2, args->root2, args->path2, trail, trail->pool));
-  return svn_fs_base__things_different(args->changed_p, NULL,
-                                       node1, node2, trail, trail->pool);
+  SVN_ERR(svn_fs_base__things_different(args->changed_p, NULL,
+                                        node1, node2, trail, trail->pool));
+
+  /* Is there a potential false positive and do we want to correct it? */
+  if (!args->strict || !*args->changed_p)
+    return SVN_NO_ERROR;
+
+  /* Different representations. They might still have equal contents. */
+  SVN_ERR(svn_fs_base__dag_get_proplist(&proplist1, node1,
+                                        trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_get_proplist(&proplist2, node2,
+                                        trail, trail->pool));
+
+  *args->changed_p = !svn_fs__prop_lists_equal(proplist1, proplist2,
+                                               trail->pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1425,6 +1434,7 @@ base_props_changed(svn_boolean_t *changed_p,
                    const char *path1,
                    svn_fs_root_t *root2,
                    const char *path2,
+                   svn_boolean_t strict,
                    apr_pool_t *pool)
 {
   struct things_changed_args args;
@@ -1441,6 +1451,7 @@ base_props_changed(svn_boolean_t *changed_p,
   args.path2      = path2;
   args.changed_p  = changed_p;
   args.pool       = pool;
+  args.strict     = strict;
 
   return svn_fs_base__retry_txn(root1->fs, txn_body_props_changed, &args,
                                 TRUE, pool);
@@ -3154,7 +3165,7 @@ txn_body_copy(void *baton,
   if ((to_parent_path->node)
       && (svn_fs_base__id_compare(svn_fs_base__dag_get_id(from_node),
                                   svn_fs_base__dag_get_id
-                                  (to_parent_path->node)) == 0))
+                                  (to_parent_path->node)) == svn_fs_node_same))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
@@ -3354,8 +3365,8 @@ txn_body_copied_from(void *baton, trail_t *trail)
     return SVN_NO_ERROR;
 
   /* If NODE's copy-ID is the same as that of its predecessor... */
-  if (svn_fs_base__key_compare(svn_fs_base__id_copy_id(node_id),
-                               svn_fs_base__id_copy_id(pred_id)) != 0)
+  if (strcmp(svn_fs_base__id_copy_id(node_id),
+             svn_fs_base__id_copy_id(pred_id)) != 0)
     {
       /* ... then NODE was either the target of a copy operation,
          a copied subtree item.  We examine the actual copy record
@@ -4004,11 +4015,53 @@ txn_body_contents_changed(void *baton, trail_t *trail)
 {
   struct things_changed_args *args = baton;
   dag_node_t *node1, *node2;
+  svn_checksum_t *checksum1, *checksum2;
+  svn_stream_t *stream1, *stream2;
+  svn_boolean_t same;
 
   SVN_ERR(get_dag(&node1, args->root1, args->path1, trail, trail->pool));
   SVN_ERR(get_dag(&node2, args->root2, args->path2, trail, trail->pool));
-  return svn_fs_base__things_different(NULL, args->changed_p,
-                                       node1, node2, trail, trail->pool);
+  SVN_ERR(svn_fs_base__things_different(NULL, args->changed_p,
+                                        node1, node2, trail, trail->pool));
+
+  /* Is there a potential false positive and do we want to correct it? */
+  if (!args->strict || !*args->changed_p)
+    return SVN_NO_ERROR;
+
+  /* Different representations. They might still have equal contents. */
+
+  /* Compare MD5 checksums.  These should be readily accessible. */
+  SVN_ERR(svn_fs_base__dag_file_checksum(&checksum1, svn_checksum_md5,
+                                         node1, trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_file_checksum(&checksum2, svn_checksum_md5,
+                                         node2, trail, trail->pool));
+
+  /* Different MD5 checksums -> different contents */
+  if (!svn_checksum_match(checksum1, checksum2))
+    return SVN_NO_ERROR;
+
+  /* Paranoia. Compare SHA1 checksums because that's the level of
+     confidence we require for e.g. the working copy. */
+  SVN_ERR(svn_fs_base__dag_file_checksum(&checksum1, svn_checksum_sha1,
+                                         node1, trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_file_checksum(&checksum2, svn_checksum_sha1,
+                                         node2, trail, trail->pool));
+
+  /* Different SHA1 checksums -> different contents */
+  if (checksum1 && checksum2)
+    {
+      *args->changed_p = !svn_checksum_match(checksum1, checksum2);
+      return SVN_NO_ERROR;
+    }
+
+  /* SHA1 checksums are not available for very old reps / repositories. */
+  SVN_ERR(svn_fs_base__dag_get_contents(&stream1, node1, trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_get_contents(&stream2, node2, trail, trail->pool));
+  SVN_ERR(svn_stream_contents_same2(&same, stream1, stream2, trail->pool));
+
+  /* Now, it's definitive. */
+  *args->changed_p = !same;
+  return SVN_NO_ERROR;
 }
 
 
@@ -4020,6 +4073,7 @@ base_contents_changed(svn_boolean_t *changed_p,
                       const char *path1,
                       svn_fs_root_t *root2,
                       const char *path2,
+                      svn_boolean_t strict,
                       apr_pool_t *pool)
 {
   struct things_changed_args args;
@@ -4051,6 +4105,7 @@ base_contents_changed(svn_boolean_t *changed_p,
   args.path2      = path2;
   args.changed_p  = changed_p;
   args.pool       = pool;
+  args.strict     = strict;
 
   return svn_fs_base__retry_txn(root1->fs, txn_body_contents_changed, &args,
                                 TRUE, pool);
@@ -4360,8 +4415,7 @@ txn_body_history_prev(void *baton, trail_t *trail)
      (which is either a real predecessor, or is the node itself
      playing the predecessor role to an imaginary mutable successor),
      then we need to report a copy.  */
-  if (svn_fs_base__key_compare(svn_fs_base__id_copy_id(node_id),
-                               end_copy_id) != 0)
+  if (strcmp(svn_fs_base__id_copy_id(node_id), end_copy_id) != 0)
     {
       const char *remainder;
       dag_node_t *dst_node;

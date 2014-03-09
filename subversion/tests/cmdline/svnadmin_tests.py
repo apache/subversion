@@ -84,6 +84,14 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'rev-prop-atomics.mutex':
           continue
 
+        # Ignore auto-created empty lock files as they may or may not
+        # be present and are neither required by nor do they harm to
+        # the destination repository.
+        if src_file == 'pack-lock':
+          continue
+        if src_file == 'write-lock':
+          continue
+
         src_path = os.path.join(src_dirpath, src_file)
         dst_path = os.path.join(dst_dirpath, src_file)
         if not os.path.isfile(dst_path):
@@ -828,10 +836,14 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 #----------------------------------------------------------------------
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
-def recover_fsfs(sbox):
-  "recover a repository (FSFS only)"
-  sbox.build()
+# Helper for two test functions.
+def corrupt_and_recover_db_current(sbox, minor_version=None):
+  """Build up a MINOR_VERSION sandbox and test different recovery scenarios
+  with missing, out-of-date or even corrupt db/current files.  Recovery should
+  behave the same way with all values of MINOR_VERSION, hence this helper
+  containing the common code that allows us to check it."""
+
+  sbox.build(minor_version=minor_version)
   current_path = os.path.join(sbox.repo_dir, 'db', 'current')
 
   # Commit up to r3, so we can test various recovery scenarios.
@@ -905,6 +917,24 @@ def recover_fsfs(sbox):
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_db_current(sbox):
+  "fsfs recover db/current"
+  corrupt_and_recover_db_current(sbox)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_db_current(sbox):
+  "fsfs recover db/current --compatible-version=1.3"
+
+  # Around trunk@1573728, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 repositories with missing or
+  # invalid db/current file:
+  # svnadmin: E160006: No such revision 1
+
+  corrupt_and_recover_db_current(sbox, minor_version=3)
 
 #----------------------------------------------------------------------
 @Issue(2983)
@@ -2273,6 +2303,27 @@ def load_ignore_dates(sbox):
                             "  start_time: %s"
                             % (rev, str(rev_time), str(start_time)))
 
+
+@XFail()
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_old_with_propchanges(sbox):
+  "hotcopy --compatible-version=1.3 with propchanges"
+
+  # Around trunk@1573728, running 'svnadmin hotcopy' for the
+  # --compatible-version=1.3 repository with property changes
+  # ended with mismatching db/current in source and destination:
+  # (source: "2 l 1", destination: "2 k 1").
+
+  sbox.build(create_wc=True, minor_version=3)
+  sbox.simple_propset('foo', 'bar', 'A/mu')
+  sbox.simple_commit()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2291,7 +2342,8 @@ test_list = [ None,
               setrevprop,
               verify_windows_paths_in_repos,
               verify_incremental_fsfs,
-              recover_fsfs,
+              fsfs_recover_db_current,
+              fsfs_recover_old_db_current,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
@@ -2315,6 +2367,7 @@ test_list = [ None,
               fsfs_recover_old_non_empty,
               fsfs_hotcopy_old_non_empty,
               load_ignore_dates,
+              fsfs_hotcopy_old_with_propchanges,
              ]
 
 if __name__ == '__main__':

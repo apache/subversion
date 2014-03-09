@@ -70,9 +70,17 @@ svn_error_t* stream_seek(void* baton, const svn_stream_mark_t* mark)
 
 svn_error_t* stream_read(void* baton, char* buffer, apr_size_t* len)
 {
+  if (0 == *len)
+    return SVN_NO_ERROR;
+
+  jint length = jint(*len);
   InputStream* const self = static_cast<InputStream*>(baton);
   SVN_JAVAHL_CATCH(self->get_env(), SVN_ERR_BASE,
-                   *len = self->read(buffer, jint(*len)));
+                   length = self->read(buffer, length));
+  if (length < 0)
+    *len = 0;
+  else
+    *len = length;
   return SVN_NO_ERROR;
 }
 
@@ -200,8 +208,8 @@ InputStream::get_global_stream(Env env, jobject jstream,
   std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
 
   svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
-  svn_stream_set_read2(stream, NULL /* only full read support */,
-                       global_stream_read);
+  svn_stream_set_read2(stream, global_stream_read,
+                       NULL /* only partial read support */);
   svn_stream_set_skip(stream, global_stream_skip);
   svn_stream_set_close(stream, global_stream_close_input);
   if (has_mark)
@@ -224,8 +232,8 @@ svn_stream_t* InputStream::get_stream(const SVN::Pool& pool)
   const bool has_mark = mark_supported();
 
   svn_stream_t* const stream = svn_stream_create(this, pool.getPool());
-  svn_stream_set_read2(stream, NULL /* only full read support */,
-                       stream_read);
+  svn_stream_set_read2(stream, stream_read,
+                       NULL /* only partial read support */);
   svn_stream_set_skip(stream, stream_skip);
   svn_stream_set_close(stream, stream_close_input);
   if (has_mark)
@@ -236,6 +244,17 @@ svn_stream_t* InputStream::get_stream(const SVN::Pool& pool)
   return stream;
 }
 
+jint InputStream::read(void* data, jint length)
+{
+  ByteArray array(m_env, length);
+  const jint size = read(array);
+  if (size > 0)
+    {
+      ByteArray::Contents contents(array);
+      ::memcpy(static_cast<char*>(data), contents.data(), size);
+    }
+  return size;
+}
 
 // Class Java::OutputStream
 

@@ -1039,19 +1039,6 @@ svn_cstring_atoi(int *n, const char *str)
   return SVN_NO_ERROR;
 }
 
-
-apr_status_t
-svn__strtoff(apr_off_t *offset, const char *buf, char **end, int base)
-{
-#if !APR_VERSION_AT_LEAST(1,0,0)
-  errno = 0;
-  *offset = strtol(buf, end, base);
-  return APR_FROM_OS_ERROR(errno);
-#else
-  return apr_strtoff(offset, buf, end, base);
-#endif
-}
-
 unsigned long
 svn__strtoul(const char* buffer, const char** end)
 {
@@ -1182,7 +1169,7 @@ svn__i64toa(char * dest, apr_int64_t number)
 }
 
 static void
-ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
+ui64toa_sep(apr_uint64_t number, char separator, char *buffer)
 {
   apr_size_t length = svn__ui64toa(buffer, number);
   apr_size_t i;
@@ -1190,7 +1177,7 @@ ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
   for (i = length; i > 3; i -= 3)
     {
       memmove(&buffer[i - 2], &buffer[i - 3], length - i + 3);
-      buffer[i-3] = seperator;
+      buffer[i-3] = separator;
       length++;
     }
 
@@ -1198,25 +1185,25 @@ ui64toa_sep(apr_uint64_t number, char seperator, char *buffer)
 }
 
 char *
-svn__ui64toa_sep(apr_uint64_t number, char seperator, apr_pool_t *pool)
+svn__ui64toa_sep(apr_uint64_t number, char separator, apr_pool_t *pool)
 {
   char buffer[2 * SVN_INT64_BUFFER_SIZE];
-  ui64toa_sep(number, seperator, buffer);
+  ui64toa_sep(number, separator, buffer);
 
   return apr_pstrdup(pool, buffer);
 }
 
 char *
-svn__i64toa_sep(apr_int64_t number, char seperator, apr_pool_t *pool)
+svn__i64toa_sep(apr_int64_t number, char separator, apr_pool_t *pool)
 {
   char buffer[2 * SVN_INT64_BUFFER_SIZE];
   if (number < 0)
     {
       buffer[0] = '-';
-      ui64toa_sep((apr_uint64_t)(-number), seperator, &buffer[1]);
+      ui64toa_sep((apr_uint64_t)(-number), separator, &buffer[1]);
     }
   else
-    ui64toa_sep((apr_uint64_t)(number), seperator, buffer);
+    ui64toa_sep((apr_uint64_t)(number), separator, buffer);
 
   return apr_pstrdup(pool, buffer);
 }

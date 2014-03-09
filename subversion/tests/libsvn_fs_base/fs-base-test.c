@@ -1519,9 +1519,9 @@ key_test(apr_pool_t *pool)
 
 /* The test table.  */
 
-int svn_test_max_threads = 2;
+static int max_threads = 2;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(create_berkeley_filesystem,
@@ -1548,3 +1548,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "testing sequential alphanumeric key generation"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

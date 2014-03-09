@@ -49,7 +49,7 @@
    of IN1 and IN2 when trying to combine ranges.  If ranges with different
    inheritability are combined (CONSIDER_INHERITANCE must be FALSE for this
    to happen) the result is inheritable.  If both ranges are inheritable the
-   result is inheritable.  Only and if both ranges are non-inheritable is
+   result is inheritable.  And only if both ranges are non-inheritable
    the result is non-inheritable.
 
    Range overlapping detection algorithm from
@@ -270,7 +270,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
     {
       /* We are not considering inheritance so we can merge intersecting
          ranges of different inheritability.  Of course if the ranges
-         don't intersect at all we simply push NEW_RANGE only RANGELIST. */
+         don't intersect at all we simply push NEW_RANGE onto RANGELIST. */
       if (combine_ranges(&combined_range, lastrange, new_range, FALSE))
         {
           *lastrange = combined_range;
@@ -304,7 +304,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
             {
               case svn__no_intersection:
                 /* NEW_RANGE and *LASTRANGE *really* don't intersect so
-                   just push NEW_RANGE only RANGELIST. */
+                   just push NEW_RANGE onto RANGELIST. */
                 APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
                   svn_merge_range_dup(new_range, result_pool);
                 sorted = (svn_sort_compare_ranges(&lastrange,
@@ -677,7 +677,11 @@ svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
   return SVN_NO_ERROR;
 }
 
-/* revisionline -> PATHNAME COLON revisionlist */
+/* revisionline -> PATHNAME COLON revisionlist
+ *
+ * Parse one line of mergeinfo starting at INPUT, not reading beyond END,
+ * into HASH. Allocate the new entry in HASH deeply from HASH's pool.
+ */
 static svn_error_t *
 parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
                     apr_pool_t *scratch_pool)
@@ -740,12 +744,16 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
   return SVN_NO_ERROR;
 }
 
-/* top -> revisionline (NEWLINE revisionline)*  */
+/* top -> revisionline (NEWLINE revisionline)*
+ *
+ * Parse mergeinfo starting at INPUT, not reading beyond END, into HASH.
+ * Allocate all the new entries in HASH deeply from HASH's pool.
+ */
 static svn_error_t *
 parse_top(const char **input, const char *end, svn_mergeinfo_t hash,
-          apr_pool_t *pool)
+          apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   while (*input < end)
     {
@@ -858,7 +866,7 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
                   ______________________________________________
                  |                                              |
                  M                 MODIFIED_RANGE               N
-                 |                 (!inhertiable)               |
+                 |                 (!inheritable)               |
                  |______________________________________________|
                                   |              |
                                   O  NEXT_RANGE  P
@@ -869,7 +877,7 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
                   _______________________________________________
                  |                |              |               |
                  M MODIFIED_RANGE O  NEXT_RANGE  P   NEW_RANGE   N
-                 | (!inhertiable) | (inheritable)| (!inheritable)|
+                 | (!inheritable) | (inheritable)| (!inheritable)|
                  |________________|______________|_______________|
               */
               svn_merge_range_t *new_modified_range =
@@ -961,7 +969,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
       if (res == 0)
         {
           /* Only when merging two non-inheritable ranges is the result also
-             non-inheritable.  In all other cases ensure an inheritiable
+             non-inheritable.  In all other cases ensure an inheritable
              result. */
           if (range->inheritable || change->inheritable)
             range->inheritable = TRUE;
@@ -1858,7 +1866,7 @@ svn_mergeinfo_intersect2(svn_mergeinfo_t *mergeinfo,
 
   /* ### TODO(reint): Do we care about the case when a path in one
      ### mergeinfo hash has inheritable mergeinfo, and in the other
-     ### has non-inhertiable mergeinfo?  It seems like that path
+     ### has non-inheritable mergeinfo?  It seems like that path
      ### itself should really be an intersection, while child paths
      ### should not be... */
   for (hi = apr_hash_first(scratch_pool, mergeinfo1);
@@ -2091,28 +2099,24 @@ svn_rangelist_inheritable2(svn_rangelist_t **inheritable_rangelist,
           || !SVN_IS_VALID_REVNUM(end)
           || end < start)
         {
+          /* We want all (non-inheritable or inheritable) ranges removed. */
           int i;
-          /* We want all non-inheritable ranges removed. */
+
           for (i = 0; i < rangelist->nelts; i++)
             {
               svn_merge_range_t *range = APR_ARRAY_IDX(rangelist, i,
                                                        svn_merge_range_t *);
               if (range->inheritable == inheritable)
                 {
-                  svn_merge_range_t *inheritable_range =
-                    apr_palloc(result_pool, sizeof(*inheritable_range));
-                  inheritable_range->start = range->start;
-                  inheritable_range->end = range->end;
-                  inheritable_range->inheritable = TRUE;
-                  APR_ARRAY_PUSH(*inheritable_rangelist,
-                                 svn_merge_range_t *) = range;
+                  APR_ARRAY_PUSH(*inheritable_rangelist, svn_merge_range_t *)
+                    = svn_merge_range_dup(range, result_pool);
                 }
             }
         }
       else
         {
-          /* We want only the non-inheritable ranges bound by START
-             and END removed. */
+          /* We want only the (non-inheritable or inheritable) ranges
+             bound by START and END removed. */
           svn_rangelist_t *ranges_inheritable =
             svn_rangelist__initialize(start, end, inheritable, scratch_pool);
 
@@ -2129,14 +2133,15 @@ svn_rangelist_inheritable2(svn_rangelist_t **inheritable_rangelist,
 
 svn_boolean_t
 svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
-                                       apr_pool_t *pool)
+                                       apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
   svn_boolean_t removed_some_ranges = FALSE;
 
   if (mergeinfo)
     {
-      for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(scratch_pool, mergeinfo); hi;
+           hi = apr_hash_next(hi))
         {
           const char *path = svn__apr_hash_index_key(hi);
           svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
@@ -2235,29 +2240,42 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-svn_rangelist_t *
-svn_rangelist_dup(const svn_rangelist_t *rangelist, apr_pool_t *pool)
+/* Deep-copy an array of pointers to simple objects.
+ *
+ * Return a duplicate in POOL of the array ARRAY of pointers to objects
+ * of size OBJECT_SIZE bytes. Duplicate each object bytewise.
+ */
+static apr_array_header_t *
+ptr_array_dup(const apr_array_header_t *array,
+              size_t object_size,
+              apr_pool_t *pool)
 {
-  svn_rangelist_t *new_rl = apr_array_make(pool, rangelist->nelts,
-                                           sizeof(svn_merge_range_t *));
+  apr_array_header_t *new_array = apr_array_make(pool, array->nelts,
+                                                 sizeof(void *));
 
   /* allocate target range buffer with a single operation */
-  svn_merge_range_t *copy = apr_palloc(pool, sizeof(*copy) * rangelist->nelts);
+  char *copy = apr_palloc(pool, object_size * array->nelts);
 
   /* for efficiency, directly address source and target reference buffers */
-  svn_merge_range_t **source = (svn_merge_range_t **)(rangelist->elts);
-  svn_merge_range_t **target = (svn_merge_range_t **)(new_rl->elts);
+  void **source = (void **)(array->elts);
+  void **target = (void **)(new_array->elts);
   int i;
 
   /* copy ranges iteratively and link them into the target range list */
-  for (i = 0; i < rangelist->nelts; i++)
+  for (i = 0; i < array->nelts; i++)
     {
-      copy[i] = *source[i];
-      target[i] = &copy[i];
+      target[i] = &copy[i * object_size];
+      memcpy(target[i], source[i], object_size);
     }
-  new_rl->nelts = rangelist->nelts;
+  new_array->nelts = array->nelts;
 
-  return new_rl;
+  return new_array;
+}
+
+svn_rangelist_t *
+svn_rangelist_dup(const svn_rangelist_t *rangelist, apr_pool_t *pool)
+{
+  return ptr_array_dup(rangelist, sizeof(svn_merge_range_t), pool);
 }
 
 svn_merge_range_t *

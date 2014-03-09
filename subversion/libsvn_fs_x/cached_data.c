@@ -2033,43 +2033,38 @@ parse_dir_entries(apr_hash_t **entries_p,
 }
 
 /* Return the cache object in FS responsible to storing the directory the
- * NODEREV plus the corresponding *KEY.  If no cache exists, return NULL.
- * PAIR_KEY must point to some key struct, which does not need to be
- * initialized.  We use it to avoid dynamic allocation.
+ * NODEREV plus the corresponding pre-allocated *KEY.
  */
 static svn_cache__t *
 locate_dir_cache(svn_fs_t *fs,
-                 const void **key,
-                 pair_cache_key_t *pair_key,
+                 svn_fs_x__id_part_t *key,
                  node_revision_t *noderev,
                  apr_pool_t *pool)
 {
   fs_x_data_t *ffd = fs->fsap_data;
   if (svn_fs_x__id_is_txn(noderev->id))
     {
-      /* data in txns requires the expensive fs_id-based addressing mode */
-      *key = svn_fs_x__id_unparse(noderev->id, pool)->data;
-      return ffd->txn_dir_cache;
+      /* data in txns must be addressed by ID since the representation has
+         not been created, yet. */
+      *key = *svn_fs_x__id_noderev_id(noderev->id);
     }
   else
     {
       /* committed data can use simple rev,item pairs */
       if (noderev->data_rep)
         {
-          pair_key->revision
-            = svn_fs_x__get_revnum(noderev->data_rep->id.change_set);
-          pair_key->second = noderev->data_rep->id.number;
-          *key = pair_key;
+          *key = noderev->data_rep->id;
         }
       else
         {
           /* no data rep -> empty directory.
-             A NULL key causes a cache miss. */
-          *key = NULL;
+             Use a key that does definitely not clash with non-NULL reps. */
+          key->change_set = SVN_FS_X__INVALID_CHANGE_SET;
+          key->number = SVN_FS_X__ITEM_INDEX_UNUSED;
         }
-
-      return ffd->dir_cache;
     }
+
+  return ffd->dir_cache;
 }
 
 svn_error_t *
@@ -2078,17 +2073,16 @@ svn_fs_x__rep_contents_dir(apr_hash_t **entries_p,
                            node_revision_t *noderev,
                            apr_pool_t *pool)
 {
-  pair_cache_key_t pair_key = { 0 };
-  const void *key;
+  svn_fs_x__id_part_t key;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
   /* find the cache we may use */
-  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev, pool);
+  svn_cache__t *cache = locate_dir_cache(fs, &key, noderev, pool);
   if (cache)
     {
       svn_boolean_t found;
 
-      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key, pool));
+      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, &key, pool));
       if (found)
         return SVN_NO_ERROR;
     }
@@ -2101,7 +2095,7 @@ svn_fs_x__rep_contents_dir(apr_hash_t **entries_p,
 
   /* Update the cache, if we are to use one. */
   if (cache)
-    SVN_ERR(svn_cache__set(cache, key, parsed_entries, pool));
+    SVN_ERR(svn_cache__set(cache, &key, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -2118,17 +2112,15 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
   svn_boolean_t found = FALSE;
 
   /* find the cache we may use */
-  pair_cache_key_t pair_key = { 0 };
-  const void *key;
-  svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
-                                         scratch_pool);
+  svn_fs_x__id_part_t key;
+  svn_cache__t *cache = locate_dir_cache(fs, &key, noderev, scratch_pool);
   if (cache)
     {
       /* Cache lookup. */
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
                                      cache,
-                                     key,
+                                     &key,
                                      svn_fs_x__extract_dir_entry,
                                      (void*)name,
                                      result_pool));
@@ -2144,7 +2136,7 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
       /* read the dir from the file system. It will probably be put it
          into the cache for faster lookup in future calls. */
       SVN_ERR(svn_fs_x__rep_contents_dir(&entries, fs, noderev,
-                                          scratch_pool));
+                                         scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
       entry = svn_hash_gets(entries, name);

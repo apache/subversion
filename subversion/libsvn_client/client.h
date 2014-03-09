@@ -709,24 +709,28 @@ svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
 
 /*** Editor for diff summary ***/
 
-/* Set *CALLBACKS and *CALLBACK_BATON to a set of diff callbacks that will
-   report a diff summary, i.e. only providing information about the changed
-   items without the text deltas.
+/* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
+   to SUMMARIZE_FUNC.
 
-   TARGET is the target path, relative to the anchor, of the diff.
+   P_ROOT_RELPATH will return a pointer to a string that must be set to
+   the root of the operation before the processor is called.
+
+   ORIGINAL_PATH specifies the original path and will be used with
+   **ANCHOR_PATH to create paths as the user originally provided them
+   to the diff function.
 
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
    created callbacks for each changed item.
 */
 svn_error_t *
 svn_client__get_diff_summarize_callbacks(
-                        svn_wc_diff_callbacks4_t **callbacks,
-                        void **callback_baton,
-                        const char *target,
-                        svn_boolean_t reversed,
+                        const svn_diff_tree_processor_t **diff_processor,
+                        const char ***p_root_relpath,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
-                        apr_pool_t *pool);
+                        const char *original_target,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -1147,6 +1151,25 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool);
 
+/* Produce a diff with depth DEPTH between two files or two directories at
+ * LEFT_ABSPATH1 and RIGHT_ABSPATH, using the provided diff callbacks to
+ * show changes in files. The files and directories involved may be part of
+ * a working copy or they may be unversioned. For versioned files, show
+ * property changes, too.
+ *
+ * If ANCHOR_ABSPATH is not null, set it to the anchor of the diff before
+ * the first processor call. (The anchor is LEFT_ABSPATH or an ancestor of it)
+ */
+svn_error_t *
+svn_client__arbitrary_nodes_diff(const char **root_relpath,
+                                 svn_boolean_t *root_is_dir,
+                                 const char *left_abspath,
+                                 const char *right_abspath,
+                                 svn_depth_t depth,
+                                 const svn_diff_tree_processor_t *diff_processor,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

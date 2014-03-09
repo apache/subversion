@@ -20,24 +20,27 @@ use feature qw/switch say/;
 # specific language governing permissions and limitations
 # under the License.
 
+use Carp qw/croak confess carp cluck/;
 use Digest ();
 use Term::ReadKey qw/ReadMode ReadKey/;
 use File::Basename qw/basename dirname/;
 use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
-use POSIX qw/ctermid strftime/;
+use POSIX qw/ctermid strftime isprint isspace/;
 use Text::Wrap qw/wrap/;
 use Tie::File ();
 
 ############### Start of reading values from environment ###############
 
 # Programs we use.
+#
+# TODO: document which are interpreted by sh and which should point to binary.
 my $SVNAUTH = $ENV{SVNAUTH} // 'svnauth'; # optional dependency
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
-my $PAGER = $ENV{PAGER} // 'less -F' // 'cat';
+my $PAGER = $ENV{PAGER} // 'less' // 'cat';
 
 # Mode flags.
 #    svn-role:      YES=1 MAY_COMMIT=1      (plus '--renormalize')
@@ -73,7 +76,7 @@ my ($AVAILID) = $ENV{AVAILID} // do {
 my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
-$ENV{LC_ALL} = "C";  # since we parse 'svn info' output
+$ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
 
 # Globals.
 my %ERRORS = ();
@@ -200,10 +203,17 @@ sub prompt {
   my %args = @_;
   my $getchar = sub {
     my $answer;
-    ReadMode 'cbreak';
-    eval { $answer = (ReadKey 0) };
-    ReadMode 'normal';
-    die $@ if $@;
+    do {
+      ReadMode 'cbreak';
+      $answer = (ReadKey 0);
+      ReadMode 'normal';
+      die if $@ or not defined $answer;
+      # Swallow terminal escape codes (e.g., arrow keys).
+      unless (isprint $answer or isspace $answer) {
+        $answer = (ReadKey -1) while defined $answer;
+        # TODO: provide an indication that the keystroke was sensed and ignored.
+      }
+    } until defined $answer and (isprint $answer or isspace $answer);
     print $answer;
     return $answer;
   };
@@ -217,41 +227,57 @@ sub prompt {
          : ($answer =~ /^y/i) ? 1 : 0;
 }
 
+# Bourne-escape a string.
+# Example:
+#     >>> shell_escape(q[foo'bar]) eq q['foo'\''bar']
+#     True
+sub shell_escape {
+  map {
+    local $_ = $_; # the LHS $_ is mutable; the RHS $_ may not be.
+    s/\x27/'\\\x27'/g;
+    "'$_'"
+  } @_
+}
+
+sub shell_safe_path_or_url($) {
+  local $_ = shift;
+  return m{^[A-Za-z0-9._:+/-]+$} and !/^-|^[+]/;
+}
+  
+# Shell-safety-validating wrapper for File::Temp::tempfile
+sub my_tempfile {
+  my ($fh, $fn) = tempfile();
+  croak "Tempfile name '$fn' not shell-safe; aborting"
+        unless shell_safe_path_or_url $fn;
+  return ($fh, $fn);
+}
+
 
 sub merge {
   my %entry = @_;
-  $MERGED_SOMETHING++;
 
-  my ($logmsg_fh, $logmsg_filename) = tempfile();
-  my ($mergeargs, $pattern);
+  my ($logmsg_fh, $logmsg_filename) = my_tempfile();
+  my (@mergeargs);
 
-  # Include the time so it's easier to find the interesting backups.
-  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
-  die if -s $backupfile;
+  my $shell_escaped_branch = shell_escape($entry{branch})
+    if defined($entry{branch});
 
   if ($entry{branch}) {
-    my $vim_escaped_branch = 
-      join "",
-      map { sprintf '\[%s%s]', $_, ($_ x ($_ eq '\\')) }
-      split //,
-      $entry{branch};
-    $pattern = sprintf '\VBranch: \*\n\? \*\(\.\*\/branches\/\)\?%s',
-                 $vim_escaped_branch;
     if ($SVNvsn >= 1_008_000) {
-      $mergeargs = "$BRANCHES/$entry{branch}";
+      @mergeargs = shell_escape "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Merge $entry{header}:";
     } else {
-      $mergeargs = "--reintegrate $BRANCHES/$entry{branch}";
+      @mergeargs = shell_escape qw/--reintegrate/, "$BRANCHES/$entry{branch}";
       say $logmsg_fh "Reintegrate $entry{header}:";
     }
     say $logmsg_fh "";
   } elsif (@{$entry{revisions}}) {
-    $pattern = '^ *[*] \V' . 'r' . $entry{revisions}->[0];
-    $mergeargs = join " ",
+    @mergeargs = shell_escape(
       ($entry{accept} ? "--accept=$entry{accept}" : ()),
       (map { "-c$_" } @{$entry{revisions}}),
       '--',
-      '^/subversion/trunk';
+      '^/subversion/trunk',
+    );
     say $logmsg_fh
       "Merge $entry{header} from trunk",
       $entry{accept} ? ", with --accept=$entry{accept}" : "",
@@ -270,16 +296,8 @@ set -e
 if $sh[$DEBUG]; then
   set -x
 fi
-$SVN diff > $backupfile
-if ! $sh[$MAY_COMMIT] ; then
-  cp STATUS STATUS.$$
-fi
-$SVNq revert -R .
-if ! $sh[$MAY_COMMIT] ; then
-  mv STATUS.$$ STATUS
-fi
 $SVNq up
-$SVNq merge $mergeargs
+$SVNq merge @mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
   if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
     # This check detects STATUS entries that name non-^/subversion/ revnums.
@@ -294,7 +312,7 @@ if $sh[$MAY_COMMIT]; then
   # Remove the approved entry.  The sentinel guarantees the right number of blank
   # lines is removed, which prevents spurious '--renormalize' commits tomorrow.
   echo "sentinel" >> $STATUS
-  $VIM -e -s -n -N -i NONE -u NONE -c '/$pattern/normal! dap' -c wq $STATUS
+  $VIM -e -s -n -N -i NONE -u NONE -c ':0normal! $entry{parno}\x{7d}kdap' -c wq $STATUS
   $VIM -e -s -n -N -i NONE -u NONE -c '\$d' -c wq $STATUS
   $SVNq commit -F $logmsg_filename
 elif ! $sh[$YES]; then
@@ -312,23 +330,32 @@ reinteg_rev=\`$SVN info $STATUS | sed -ne 's/Last Changed Rev: //p'\`
 if $sh[$MAY_COMMIT]; then
   # Sleep to avoid out-of-order commit notifications
   if $sh[$YES]; then sleep 15; fi
-  $SVNq rm $BRANCHES/$entry{branch} -m "Remove the '$entry{branch}' branch, $reintegrated_word in r\$reinteg_rev."
+  $SVNq rm $BRANCHES/$shell_escaped_branch -m "Remove the '"$shell_escaped_branch"' branch, $reintegrated_word in r\$reinteg_rev."
   if $sh[$YES]; then sleep 1; fi
 elif ! $sh[$YES]; then
-  echo "Would remove $reintegrated_word '$entry{branch}' branch"
+  echo "Would remove $reintegrated_word '"$shell_escaped_branch"' branch"
 fi
 EOF
 
-  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
-  print SHELL $script;
-  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
-  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
-
+  # Include the time so it's easier to find the interesting backups.
+  my $backupfile = strftime "backport_pl.%Y%m%d-%H%M%S.$$.tmp", localtime;
+  die if -s $backupfile;
+  system("$SVN diff > $backupfile") == 0
+    or die "Saving a backup diff ($backupfile) failed ($?): $!";
   if (-z $backupfile) {
     unlink $backupfile;
   } else {
     warn "Local mods saved to '$backupfile'\n";
   }
+
+  # If $MAY_COMMIT, then $script will edit STATUS anyway.
+  revert(verbose => 0, discard_STATUS => $MAY_COMMIT);
+
+  $MERGED_SOMETHING++;
+  open SHELL, '|-', qw#/bin/sh# or die "$! (in '$entry{header}')";
+  print SHELL $script;
+  close SHELL or warn "$0: sh($?): $! (in '$entry{header}')";
+  $ERRORS{$entry{id}} = [\%entry, "sh($?): $!"] if $?;
 
   unlink $logmsg_filename unless $? or $!;
 }
@@ -362,6 +389,7 @@ sub logsummarysummary {
 # TODO: may need to parse other headers too?
 sub parse_entry {
   my $raw = shift;
+  my $parno = shift;
   my @lines = @_;
   my $depends;
   my $accept;
@@ -454,6 +482,7 @@ sub parse_entry {
     accept => $accept,
     raw => $raw,
     digest => digest_entry($raw),
+    parno => $parno, # $. from backport_main()
   );
 }
 
@@ -465,7 +494,7 @@ sub edit_string {
   my $name = shift;
   my %args = @_;
   my $trailing_eol = $args{trailing_eol};
-  my ($fh, $fn) = tempfile;
+  my ($fh, $fn) = my_tempfile();
   print $fh $string;
   $fh->flush or die $!;
   system("$EDITOR -- $fn") == 0
@@ -577,12 +606,9 @@ sub vote {
   system "$SVN diff -- $STATUS";
   printf "[[[\n%s%s]]]\n", $logmsg, ("\n" x ($logmsg !~ /\n\z/));
   if (prompt "Commit these votes? ") {
-    my ($logmsg_fh, $logmsg_filename) = tempfile();
+    my ($logmsg_fh, $logmsg_filename) = my_tempfile();
     print $logmsg_fh $logmsg;
     close $logmsg_fh;
-    warn("Tempfile name '$logmsg_filename' not shell-safe; "
-         ."refraining from commit.\n") and return
-        unless $logmsg_filename =~ /^([A-Z0-9._-]|\x2f)+$/i;
     system("$SVN commit -F $logmsg_filename -- $STATUS") == 0
         or warn("Committing the votes failed($?): $!") and return;
     unlink $logmsg_filename;
@@ -607,13 +633,24 @@ sub check_local_mods_to_STATUS {
 
 sub renormalize_STATUS {
   my $vimscript = <<'EOVIM';
-:"" Strip trailing whitespace.
-:%s/\s*$//
+:"" Strip trailing whitespace before entries and section headers, but not
+:"" inside entries (e.g., multi-paragraph Notes: fields).
+:""
+:"" Since an entry is always followed by another entry, section header, or EOF,
+:"" there is no need to separately strip trailing whitespace from lines following
+:"" entries.
+:%s/\v\s+\n(\s*\n)*\ze(\s*[*]|\w)/\r\r/g
+
 :"" Ensure there is exactly one blank line around each entry and header.
+:""
+:"" First, inject a new empty line above and below each entry and header; then,
+:"" squeeze runs of empty lines together.
 :0/^=/,$ g/^ *[*]/normal! O
 :g/^=/normal! o
 :g/^=/-normal! O
+:
 :%s/\n\n\n\+/\r\r/g
+
 :"" Save.
 :wq
 EOVIM
@@ -628,11 +665,16 @@ EOVIM
 }
 
 sub revert {
-  copy $STATUS, "$STATUS.$$.tmp";
-  system "$SVN revert -q $STATUS";
-  system "$SVN revert -R ./" . ($YES && !$MAY_COMMIT
-                             ? " -q" : "");
-  move "$STATUS.$$.tmp", $STATUS;
+  my %args = @_;
+  die "Bug: \$args{verbose} undefined" unless exists $args{verbose};
+  die "Bug: unknown argument" if grep !/^(?:verbose|discard_STATUS)$/, keys %args;
+
+  copy $STATUS, "$STATUS.$$.tmp"        unless $args{discard_STATUS};
+  system("$SVN revert -q $STATUS") == 0
+    or die "revert failed ($?): $!";
+  system("$SVN revert -R ./" . (" -q" x !$args{verbose})) == 0
+    or die "revert failed ($?): $!";
+  move "$STATUS.$$.tmp", $STATUS        unless $args{discard_STATUS};
   $MERGED_SOMETHING = 0;
 }
 
@@ -640,7 +682,7 @@ sub maybe_revert {
   # This is both a SIGINT handler, and the tail end of main() in normal runs.
   # @_ is 'INT' in the former case and () in the latter.
   delete $SIG{INT} unless @_;
-  revert if !$YES and $MERGED_SOMETHING and prompt 'Revert? ';
+  revert verbose => 1 if !$YES and $MERGED_SOMETHING and prompt 'Revert? ';
   (@_ ? exit : return);
 }
 
@@ -705,9 +747,10 @@ sub handle_entry {
   my $votes = shift;
   my $state = shift;
   my $raw = shift;
+  my $parno = shift;
   my $skip = shift;
-  my %entry = parse_entry $raw, @_;
-  my @vetoes = grep { /^  -1:/ } @{$entry{votes}};
+  my %entry = parse_entry $raw, $parno, @_;
+  my @vetoes = grep /^\s*-1:/, @{$entry{votes}};
 
   my $match = defined($skip) ? ($raw =~ /\Q$skip\E/ or $raw =~ /$skip/msi) : 0
               unless $YES;
@@ -723,7 +766,11 @@ sub handle_entry {
         merge %entry;
 
         my $output = `$SVN status`;
-        my (@conflicts) = ($output =~ m#^(?:C...|.C..|...C)...\s(.*)#mg);
+
+        # Pre-1.6 svn's don't have the 7th column, so fake it.
+        $output =~ s/^(......)/$1 /mg if $SVNvsn < 1_006_000;
+
+        my (@conflicts) = ($output =~ m#^(?:C......|.C.....|......C)\s(.*)#mg);
         if (@conflicts and !$entry{depends}) {
           $ERRORS{$entry{id}} //= [\%entry,
                                    sprintf "Conflicts on %s%s%s",
@@ -736,7 +783,7 @@ sub handle_entry {
           say STDERR "Conflicts merging $entry{header}!";
           say STDERR "";
           say STDERR $output;
-          system "$SVN diff -- @conflicts";
+          system "$SVN diff -- " . join ' ', shell_escape @conflicts;
         } elsif (!@conflicts and $entry{depends}) {
           # Not a warning since svn-role may commit the dependency without
           # also committing the dependent in the same pass.
@@ -745,7 +792,7 @@ sub handle_entry {
         } elsif (@conflicts) {
           say "Conflicts found merging $entry{header}, as expected.";
         }
-        revert;
+        revert verbose => 0;
       }
     }
   } elsif (defined($skip) ? not $match : $state->{$entry{digest}}) {
@@ -795,7 +842,7 @@ sub handle_entry {
               next;
             }
           }
-          revert;
+          revert verbose => 1;
           next PROMPT;
         }
         # NOTREACHED
@@ -803,7 +850,7 @@ sub handle_entry {
       when (/^l/i) {
         if ($entry{branch}) {
             system "$SVN log --stop-on-copy -v -g -r 0:HEAD -- "
-                   ."$BRANCHES/$entry{branch} "
+                   .shell_escape("$BRANCHES/$entry{branch}")." "
                    ."| $PAGER";
         } elsif (@{$entry{revisions}}) {
             system "$SVN log ".(join ' ', map { "-r$_" } @{$entry{revisions}})
@@ -836,6 +883,7 @@ sub handle_entry {
         my $original = $entry{raw};
         $entry{raw} = edit_string $entry{raw}, $entry{header},
                         trailing_eol => 2;
+        # TODO: parse the edited entry (empty lines, logsummary+votes, etc.)
         $votes->{$key} = ['edit', \%entry] # marker for the 2nd pass
             if $original ne $entry{raw};
         last PROMPT;
@@ -870,9 +918,10 @@ sub backport_main {
   my %approved;
   my %votes;
   my $state = read_state;
+  my $renormalize;
 
   if (@ARGV && $ARGV[0] eq '--renormalize') {
-    renormalize_STATUS;
+    $renormalize = 1;
     shift;
   }
 
@@ -884,8 +933,9 @@ sub backport_main {
   open STATUS, "<", $STATUS or (backport_usage, exit 1);
 
   # Because we use the ':normal' command in Vim...
-  die "A vim with the +ex_extra feature is required for \$MAY_COMMIT mode"
-      if $MAY_COMMIT and `${VIM} --version` !~ /[+]ex_extra/;
+  die "A vim with the +ex_extra feature is required for --renormalize and "
+      ."\$MAY_COMMIT modes"
+      if ($renormalize or $MAY_COMMIT) and `${VIM} --version` !~ /[+]ex_extra/;
 
   # ### TODO: need to run 'revert' here
   # ### TODO: both here and in merge(), unlink files that previous merges added
@@ -895,6 +945,7 @@ sub backport_main {
     or die "$0: svn error; point \$SVN to an appropriate binary";
 
   check_local_mods_to_STATUS;
+  renormalize_STATUS if $renormalize;
 
   # Skip most of the file
   $/ = ""; # paragraph mode
@@ -928,7 +979,8 @@ sub backport_main {
       when (/^ *\*/) {
         warn "Too many bullets in $lines[0]" and next
           if grep /^ *\*/, @lines[1..$#lines];
-        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $skip,
+        handle_entry $in_approved, \%approved, \%votes, $state, $lines, $.,
+                     $skip,
                      @lines;
       }
       default {
@@ -959,7 +1011,7 @@ sub nominate_main {
   my ($URL) = `$SVN info` =~ /^URL: (.*)$/m;
   die "Can't retrieve URL of cwd" unless $URL;
 
-  die if $URL !~ m%^[A-Za-z0-9:_.+/][A-Za-z0-9:_.+/-]*$%;
+  die unless shell_safe_path_or_url $URL;
   system "$SVN info -- $URL-r$revnums[0] 2>/dev/null";
   my $branch = ($? == 0) ? basename("$URL-r$revnums[0]") : undef;
 

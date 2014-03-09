@@ -2951,9 +2951,9 @@ two_way_issue_3362_v2(apr_pool_t *pool)
 /* ========================================================================== */
 
 
-int svn_test_max_threads = 4;
+static int max_threads = 4;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(dump_core,
@@ -2992,3 +2992,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "2-way issue #3362 test v2"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

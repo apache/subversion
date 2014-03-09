@@ -912,7 +912,7 @@ delete_txn_tree(svn_fs_t *fs,
   svn_error_t *err;
 
   /* If this sucker isn't mutable, there's nothing to do. */
-  if (svn_fs_base__key_compare(svn_fs_base__id_txn_id(id), txn_id) != 0)
+  if (strcmp(svn_fs_base__id_txn_id(id), txn_id) != 0)
     return SVN_NO_ERROR;
 
   /* See if the thing has dirents that need to be recursed upon.  If

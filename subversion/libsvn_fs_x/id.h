@@ -126,9 +126,9 @@ svn_boolean_t svn_fs_x__id_eq(const svn_fs_id_t *a,
 svn_boolean_t svn_fs_x__id_check_related(const svn_fs_id_t *a,
                                          const svn_fs_id_t *b);
 
-/* Return 0 if A and B are equal, 1 if they are related, -1 otherwise. */
-int svn_fs_x__id_compare(const svn_fs_id_t *a,
-                         const svn_fs_id_t *b);
+/* Return the noderev relationship between A and B. */
+svn_fs_node_relation_t svn_fs_x__id_compare(const svn_fs_id_t *a,
+                                            const svn_fs_id_t *b);
 
 /* Return 0 if A and B are equal, 1 if A is "greater than" B, -1 otherwise. */
 int svn_fs_x__id_part_compare(const svn_fs_x__id_part_t *a,
@@ -142,11 +142,12 @@ svn_fs_id_t *svn_fs_x__id_txn_create_root(svn_fs_x__txn_id_t txnnum,
 svn_fs_id_t *svn_fs_x__id_create_root(const svn_revnum_t revision,
                                       apr_pool_t *pool);
 
-/* Create an ID within a transaction based on NODE_ID, COPY_ID, and
-   TXN_ID, allocated in POOL. */
+/* Create an ID within a transaction based on NODE_ID, COPY_ID, TXN_ID
+   and ITEM number, allocated in POOL. */
 svn_fs_id_t *svn_fs_x__id_txn_create(const svn_fs_x__id_part_t *node_id,
                                      const svn_fs_x__id_part_t *copy_id,
                                      svn_fs_x__txn_id_t txn_id,
+                                     apr_uint64_t item,
                                      apr_pool_t *pool);
 
 /* Create a permanent ID based on NODE_ID, COPY_ID and NODEREV_ID,

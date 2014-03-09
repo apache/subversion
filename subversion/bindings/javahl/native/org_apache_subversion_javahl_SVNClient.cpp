@@ -410,7 +410,7 @@ Java_org_apache_subversion_javahl_SVNClient_remove
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_revert
-(JNIEnv *env, jobject jthis, jstring jpath, jobject jdepth,
+(JNIEnv *env, jobject jthis, jobject jpaths, jobject jdepth,
  jobject jchangelists)
 {
   JNIEntry(SVNClient, revert);
@@ -420,7 +420,9 @@ Java_org_apache_subversion_javahl_SVNClient_revert
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  JNIStringHolder path(jpath);
+
+  SVN_JNI_NULL_PTR_EX(jpaths, "paths", );
+  StringArray paths(jpaths);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -428,7 +430,7 @@ Java_org_apache_subversion_javahl_SVNClient_revert
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->revert(path, EnumMapper::toDepth(jdepth), changelists);
+  cl->revert(paths, EnumMapper::toDepth(jdepth), changelists);
 }
 
 JNIEXPORT void JNICALL

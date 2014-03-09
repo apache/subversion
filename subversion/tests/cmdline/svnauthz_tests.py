@@ -101,11 +101,11 @@ def svnauthz_validate_file_test(sbox):
   svntest.actions.run_and_verify_svnauthz("Invalid authz file", None, None,
                                           1, False, "validate", authz_path)
 
-  # Non-existant authz file
+  # Non-existent authz file
   # exit code 2, operational error since we can't test the file.
   os.close(authz_fd)
   os.remove(authz_path)
-  svntest.actions.run_and_verify_svnauthz("Non-existant authz file", None,
+  svntest.actions.run_and_verify_svnauthz("Non-existent authz file", None,
                                           None, 2, False, "validate",
                                           authz_path)
 
@@ -143,9 +143,9 @@ def svnauthz_validate_repo_test(sbox):
   svntest.actions.run_and_verify_svnauthz("Invalid authz url", None, None,
                                           1, False, "validate", iota_url)
 
-  # Non-existant authz url
+  # Non-existent authz url
   # exit code 2, operational error since we can't test the file.
-  svntest.actions.run_and_verify_svnauthz("Non-existant authz file", None,
+  svntest.actions.run_and_verify_svnauthz("Non-existent authz file", None,
                                           None, 2, False, "validate",
                                           repo_url + "/zilch")
 
@@ -854,7 +854,7 @@ def svnauthz_accessof_txn_test(sbox):
   expected_data = svntest.verify.ExpectedOutput('Exit 3\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
-  # break the authz file with a non-existant group and check for an exit 1.
+  # break the authz file with a non-existent group and check for an exit 1.
   expected_status.tweak('A/authz', status='  ', wc_rev=4)
   svntest.main.file_append(authz_path, "@friends = rw\n")
   if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -863,7 +863,7 @@ def svnauthz_accessof_txn_test(sbox):
   expected_data = svntest.verify.ExpectedOutput('Exit 1\n', match_all=False)
   verify_logfile(logfilepath, expected_data)
 
-  # break the authz file with a non-existant gropu and check for an exit 2.
+  # break the authz file with a non-existent gropu and check for an exit 2.
   expected_output = wc.State(wc_dir, {'A/authz' : Item(verb='Deleting')})
   expected_status.remove('A/authz')
   svntest.main.run_svn(None, 'rm', authz_path)
@@ -897,9 +897,9 @@ def svnauthz_compat_mode_file_test(sbox):
   os.close(authz_fd)
   os.remove(authz_path)
 
-  # Check a non-existant file.
+  # Check a non-existent file.
   svntest.actions.run_and_verify_svnauthz(
-      "svnauthz-validate on non-existant file", None, None, 2, True,
+      "svnauthz-validate on non-existent file", None, None, 2, True,
       authz_path
   )
 
@@ -943,10 +943,10 @@ def svnauthz_compat_mode_repo_test(sbox):
                                           None, None, 1, True,
                                           authz_path)
 
-  # Check a non-existant url.
+  # Check a non-existent url.
   # Exit code really should be 2 since this is an operational error.
   svntest.actions.run_and_verify_svnauthz(
-      "svnauthz-validate on non-existant file", None, None, 2, True,
+      "svnauthz-validate on non-existent file", None, None, 2, True,
       repo_url + "/zilch"
   )
 

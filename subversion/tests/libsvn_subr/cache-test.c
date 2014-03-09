@@ -259,9 +259,9 @@ test_memcache_long_key(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_inprocess_cache_basic,
@@ -274,3 +274,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "basic membuffer svn_cache test"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

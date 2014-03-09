@@ -964,6 +964,59 @@ def export_custom_keywords(sbox):
   if open(export_file).read() != ''.join(alpha_content):
     raise svntest.Failure("wrong keyword expansion")
 
+@Issue(4427)
+def export_file_external(sbox):
+  "export file external from WC and URL"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Set 'svn:externals' property in 'A/C' to 'A/B/E/alpha'(file external),
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  externals_prop = "^/A/B/E/alpha exfile_alpha"
+
+  tmp_f = sbox.get_tempname('prop')
+  svntest.main.file_append(tmp_f, externals_prop)
+  svntest.main.run_svn(None, 'ps', '-F', tmp_f, 'svn:externals', C_path)
+  svntest.main.run_svn(None,'ci', '-m', 'log msg', '--quiet', C_path)
+
+  # Update the working copy to receive file external
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Update the expected disk tree to include the external.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\n"),
+      })
+
+  # Export from URL
+  export_target = sbox.add_wc_path('export_url')
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\r"),
+      })
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk)
+
+  # Export from WC
+  export_target = sbox.add_wc_path('export_wc')
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\r"),
+      })
+  expected_output.wc_dir = export_target
+  expected_output.desc['A'] = Item()
+  expected_output.tweak(contents=None, status='A ')
+  svntest.actions.run_and_verify_export(wc_dir,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -998,6 +1051,7 @@ test_list = [ None,
               export_to_current_dir,
               export_file_overwrite_with_force,
               export_custom_keywords,
+              export_file_external,
              ]
 
 if __name__ == '__main__':

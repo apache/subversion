@@ -131,6 +131,7 @@ construct_realm(svn_ra_serf__session_t *session,
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
 {
+  const char *cn = svn_hash_gets(org, "CN");
   const char *org_unit = svn_hash_gets(org, "OU");
   const char *org_name = svn_hash_gets(org, "O");
   const char *locality = svn_hash_gets(org, "L");
@@ -138,6 +139,12 @@ convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
   const char *country = svn_hash_gets(org, "C");
   const char *email = svn_hash_gets(org, "E");
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(pool);
+
+  if (cn)
+    {
+      svn_stringbuf_appendcstr(buf, cn);
+      svn_stringbuf_appendcstr(buf, ", ");
+    }
 
   if (org_unit)
     {

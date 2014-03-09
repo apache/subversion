@@ -147,11 +147,12 @@ serialize_representation(svn_temp_serializer__context_t *context,
                                 sizeof(*rep));
 }
 
-/* auxilliary structure representing the content of a directory array */
+/* auxiliary structure representing the content of a directory array */
 typedef struct dir_data_t
 {
-  /* number of entries in the directory */
-  apr_size_t count;
+  /* number of entries in the directory
+   * (it's int because the directory is an APR array) */
+  int count;
 
   /* number of unused dir entry buckets in the index */
   apr_size_t over_provision;
@@ -216,13 +217,13 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   svn_temp_serializer__context_t *context;
 
   /* calculate sizes */
-  apr_size_t count = entries->nelts;
+  int count = entries->nelts;
   apr_size_t over_provision = 2 + count / 4;
   apr_size_t entries_len =
     (count + over_provision) * sizeof(svn_fs_fs__dirent_t);
   apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
 
-  /* copy the hash entries to an auxilliary struct of known layout */
+  /* copy the hash entries to an auxiliary struct of known layout */
   dir_data.count = count;
   dir_data.over_provision = over_provision;
   dir_data.operations = 0;
@@ -483,7 +484,7 @@ svn_fs_fs__deserialize_manifest(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Auxilliary structure representing the content of a properties hash.
+/* Auxiliary structure representing the content of a properties hash.
    This structure is much easier to (de-)serialize than an apr_hash.
  */
 typedef struct properties_data_t
@@ -553,7 +554,7 @@ svn_fs_fs__serialize_properties(void **data,
   svn_stringbuf_t *serialized;
   apr_size_t i;
 
-  /* create our auxilliary data structure */
+  /* create our auxiliary data structure */
   properties.count = apr_hash_count(hash);
   properties.keys = apr_palloc(pool, sizeof(const char*) * (properties.count + 1));
   properties.values = apr_palloc(pool, sizeof(const char*) * properties.count);
@@ -594,7 +595,7 @@ svn_fs_fs__deserialize_properties(void **out,
   properties_data_t *properties = (properties_data_t *)data;
   size_t i;
 
-  /* de-serialize our auxilliary data structure */
+  /* de-serialize our auxiliary data structure */
   svn_temp_deserializer__resolve(properties, (void**)&properties->keys);
   svn_temp_deserializer__resolve(properties, (void**)&properties->values);
 

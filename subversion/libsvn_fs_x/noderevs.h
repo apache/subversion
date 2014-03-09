@@ -50,7 +50,7 @@ typedef struct svn_fs_x__noderevs_t svn_fs_x__noderevs_t;
  * INITIAL_COUNT node_revision_t objects.  Allocate the result in POOL.
  */
 svn_fs_x__noderevs_t *
-svn_fs_x__noderevs_create(apr_size_t initial_count,
+svn_fs_x__noderevs_create(int initial_count,
                           apr_pool_t *pool);
 
 /* Add NODEREV to the CONTAINER. Return the index that identifies the new

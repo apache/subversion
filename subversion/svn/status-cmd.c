@@ -365,7 +365,7 @@ svn_cl__status(apr_getopt_t *os,
         SVN_ERR(print_finish_target_xml(repos_rev, iterpool));
     }
 
-  /* If any paths were cached because they were associatied with
+  /* If any paths were cached because they were associated with
      changelists, we can now display them as grouped changelists. */
   if (apr_hash_count(master_cl_hash) > 0)
     {

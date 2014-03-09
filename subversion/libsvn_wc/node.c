@@ -926,9 +926,13 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
   const char *original_repos_uuid;
   svn_revnum_t original_revision;
   svn_wc__db_status_t status;
+  svn_boolean_t have_more_work;
+  svn_boolean_t op_root;
 
   const char *tmp_repos_relpath;
 
+  if (copy_root_abspath)
+    *copy_root_abspath = NULL;
   if (!repos_relpath)
     repos_relpath = &tmp_repos_relpath;
 
@@ -938,8 +942,8 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                                &original_repos_relpath,
                                &original_repos_root_url,
                                &original_repos_uuid, &original_revision,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, is_copy,
+                               NULL, NULL, NULL, NULL, NULL, &op_root, NULL,
+                               NULL, NULL, &have_more_work, is_copy,
                                db, local_abspath, result_pool, scratch_pool));
 
   if (*repos_relpath)
@@ -957,6 +961,7 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
 
   if (original_repos_relpath)
     {
+      /* We an have a copy */
       *repos_relpath = original_repos_relpath;
       if (revision)
         *revision = original_revision;
@@ -967,21 +972,19 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
 
       if (copy_root_abspath == NULL)
         return SVN_NO_ERROR;
+      else if (op_root)
+        {
+          *copy_root_abspath = apr_pstrdup(result_pool, local_abspath);
+          return SVN_NO_ERROR;
+        }
     }
 
   {
     svn_boolean_t scan_working = FALSE;
 
-    if (status == svn_wc__db_status_added)
+    if (status == svn_wc__db_status_added
+        || (status == svn_wc__db_status_deleted && have_more_work))
       scan_working = TRUE;
-    else if (status == svn_wc__db_status_deleted)
-      {
-        svn_boolean_t have_base;
-        /* Is this a BASE or a WORKING delete? */
-        SVN_ERR(svn_wc__db_info_below_working(&have_base, &scan_working,
-                                              &status, db, local_abspath,
-                                              scratch_pool));
-      }
 
     if (scan_working)
       {

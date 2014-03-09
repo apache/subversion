@@ -153,7 +153,7 @@ pack_notify(void *baton,
 static svn_error_t *
 create_packed_filesystem(const char *dir,
                          const svn_test_opts_t *opts,
-                         int num_revs,
+                         svn_revnum_t num_revs,
                          int shard_size,
                          apr_pool_t *pool)
 {
@@ -236,7 +236,7 @@ create_packed_filesystem(const char *dir,
 static svn_error_t *
 prepare_revprop_repo(svn_fs_t **fs,
                      const char *repo_name,
-                     int max_rev,
+                     svn_revnum_t max_rev,
                      int shard_size,
                      const svn_test_opts_t *opts,
                      apr_pool_t *pool)
@@ -1130,9 +1130,9 @@ upgrade_old_txns_to_log_addressing(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 4;
+static int max_threads = 4;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(pack_filesystem,
@@ -1165,3 +1165,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "upgrade txns started before svnadmin upgrade"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

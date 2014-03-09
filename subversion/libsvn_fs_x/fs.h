@@ -204,11 +204,11 @@ typedef struct pair_cache_key_t
   apr_uint64_t second;
 } pair_cache_key_t;
 
-/* Key type that identifies a represenation / rep header. */
+/* Key type that identifies a representation / rep header. */
 typedef struct representation_cache_key_t
 {
   /* Revision that contains the representation */
-  apr_uint32_t revision;
+  svn_revnum_t revision;
 
   /* Packed or non-packed representation? */
   svn_boolean_t is_packed;
@@ -362,13 +362,6 @@ typedef struct fs_x_data_t
 
   /* TRUE while the we hold a lock on the write lock file. */
   svn_boolean_t has_write_lock;
-
-  /* If set, there are or have been more than one concurrent transaction */
-  svn_boolean_t concurrent_transactions;
-
-  /* Temporary cache for changed directories yet to be committed; maps from
-     unparsed FS ID to ###x.  NULL outside transactions. */
-  svn_cache__t *txn_dir_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_x_shared_data_t *shared;

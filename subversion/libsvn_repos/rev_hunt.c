@@ -39,6 +39,7 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 #include "private/svn_fspath.h"
+#include "private/svn_fs_private.h"
 
 
 /* Note:  this binary search assumes that the datestamp properties on
@@ -963,37 +964,6 @@ svn_repos_node_location_segments(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
-/* Get the mergeinfo for PATH in REPOS at REVNUM and store it in MERGEINFO. */
-static svn_error_t *
-get_path_mergeinfo(apr_hash_t **mergeinfo,
-                   svn_fs_t *fs,
-                   const char *path,
-                   svn_revnum_t revnum,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  svn_mergeinfo_catalog_t tmp_catalog;
-  svn_fs_root_t *root;
-  apr_array_header_t *paths = apr_array_make(scratch_pool, 1,
-                                             sizeof(const char *));
-
-  APR_ARRAY_PUSH(paths, const char *) = path;
-
-  SVN_ERR(svn_fs_revision_root(&root, fs, revnum, scratch_pool));
-  /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
-     because we will filter out unreadable revisions in
-     find_interesting_revision(), above */
-  SVN_ERR(svn_fs_get_mergeinfo2(&tmp_catalog, root, paths,
-                                svn_mergeinfo_inherited, FALSE, TRUE,
-                                result_pool, scratch_pool));
-
-  *mergeinfo = svn_hash_gets(tmp_catalog, path);
-  if (!*mergeinfo)
-    *mergeinfo = apr_hash_make(result_pool);
-
-  return SVN_NO_ERROR;
-}
-
 static APR_INLINE svn_boolean_t
 is_path_in_hash(apr_hash_t *duplicate_path_revs,
                 const char *path,
@@ -1031,7 +1001,7 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
 {
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   svn_error_t *err;
-  svn_fs_root_t *root;
+  svn_fs_root_t *root, *prev_root;
   apr_hash_t *changed_paths;
   const char *path = old_path_rev->path;
 
@@ -1056,9 +1026,13 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
      old_path_rev->revnum - 1. */
-  err = get_path_mergeinfo(&curr_mergeinfo, repos->fs, old_path_rev->path,
-                           old_path_rev->revnum, scratch_pool,
-                           scratch_pool);
+  /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
+     because we will filter out unreadable revisions in
+     find_interesting_revision() */
+  err = svn_fs__get_mergeinfo_for_path(&curr_mergeinfo,
+                                       root, old_path_rev->path,
+                                       svn_mergeinfo_inherited, TRUE,
+                                       scratch_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR)
@@ -1076,9 +1050,12 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
         }
     }
 
-  err = get_path_mergeinfo(&prev_mergeinfo, repos->fs, old_path_rev->path,
-                           old_path_rev->revnum - 1, scratch_pool,
-                           scratch_pool);
+  SVN_ERR(svn_fs_revision_root(&prev_root, repos->fs, old_path_rev->revnum - 1,
+                               scratch_pool));
+  err = svn_fs__get_mergeinfo_for_path(&prev_mergeinfo,
+                                       prev_root, old_path_rev->path,
+                                       svn_mergeinfo_inherited, TRUE,
+                                       scratch_pool, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND
               || err->apr_err == SVN_ERR_MERGEINFO_PARSE_ERROR))
     {
@@ -1272,15 +1249,13 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
           for (hi = apr_hash_first(iterpool, old_pr->merged_mergeinfo); hi;
                hi = apr_hash_next(hi))
             {
+              const char *path = svn__apr_hash_index_key(hi);
+              svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
               apr_pool_t *iterpool3;
-              svn_rangelist_t *rangelist;
-              const char *path;
               int j;
 
               svn_pool_clear(iterpool2);
               iterpool3 = svn_pool_create(iterpool2);
-
-              apr_hash_this(hi, (void *) &path, NULL, (void *) &rangelist);
 
               for (j = 0; j < rangelist->nelts; j++)
                 {
@@ -1385,12 +1360,13 @@ send_path_revision(struct path_revision *path_rev,
   SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
                          sb->iterpool));
 
-  /* Check if the contents changed. */
+  /* Check if the contents *may* have changed. (Allow false positives,
+     for now, as the blame implementation currently depends on them.) */
   /* Special case: In the first revision, we always provide a delta. */
   if (sb->last_root)
-    SVN_ERR(svn_fs_contents_changed(&contents_changed, sb->last_root,
-                                    sb->last_path, root, path_rev->path,
-                                    sb->iterpool));
+    SVN_ERR(svn_fs_contents_different(&contents_changed, sb->last_root,
+                                      sb->last_path, root, path_rev->path,
+                                      sb->iterpool));
   else
     contents_changed = TRUE;
 

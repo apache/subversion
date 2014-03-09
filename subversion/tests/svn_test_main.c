@@ -60,6 +60,8 @@
 
 /* Some Subversion test programs may want to parse options in the
    argument list, so we remember it here. */
+extern int test_argc;
+extern const char **test_argv;
 int test_argc;
 const char **test_argv;
 
@@ -82,7 +84,7 @@ static svn_boolean_t allow_segfaults = FALSE;
 
 /* Test option: Limit testing to a given mode (i.e. XFail, Skip,
    Pass, All). */
-enum svn_test_mode_t mode_filter = svn_test_all;
+static enum svn_test_mode_t mode_filter = svn_test_all;
 
 /* Test option: Allow concurrent execution of tests */
 static svn_boolean_t parallel = FALSE;
@@ -228,7 +230,7 @@ svn_test_rand(apr_uint32_t *seed)
 
 /* Determine the array size of test_funcs[], the inelegant way.  :)  */
 static int
-get_array_size(void)
+get_array_size(struct svn_test_descriptor_t *test_funcs)
 {
   int i;
 
@@ -338,6 +340,7 @@ log_results(const char *progname,
 static svn_boolean_t
 do_test_num(const char *progname,
             int test_num,
+            struct svn_test_descriptor_t *test_funcs,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
             const char **header_msg,
@@ -347,7 +350,7 @@ do_test_num(const char *progname,
   svn_error_t *err = NULL;
   const char *msg = NULL;  /* the message this individual test prints out */
   const struct svn_test_descriptor_t *desc;
-  const int array_size = get_array_size();
+  const int array_size = get_array_size(test_funcs);
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
 
   /* Check our array bounds! */
@@ -441,6 +444,9 @@ typedef struct test_params_t
 
   /* Test to execute next. */
   svn_atomic_t test_num;
+
+  /* Test functions array. */
+  struct svn_test_descriptor_t *test_funcs;
 } test_params_t;
 
 /* Thread function similar to do_test_num() but with fewer options.  We do
@@ -465,7 +471,7 @@ test_thread(apr_thread_t *thread, void *data)
     {
       svn_pool_clear(pool);
 
-      desc = &test_funcs[test_num];
+      desc = &params->test_funcs[test_num];
       skip = desc->mode == svn_test_skip;
       xfail = desc->mode == svn_test_xfail;
       wimp = xfail && desc->wip;
@@ -518,6 +524,7 @@ test_thread(apr_thread_t *thread, void *data)
  */
 static svn_boolean_t
 do_tests_concurrently(const char *progname,
+                      struct svn_test_descriptor_t *test_funcs,
                       int array_size,
                       int max_threads,
                       svn_test_opts_t *opts,
@@ -532,6 +539,7 @@ do_tests_concurrently(const char *progname,
   params.opts = opts;
   params.progname = progname;
   params.test_num = 1;
+  params.test_funcs = test_funcs;
   params.test_count = array_size;
 
   /* Start all threads. */
@@ -625,7 +633,8 @@ svn_test_data_path(const char *base_name, apr_pool_t *result_pool)
 
 /* Standard svn test program */
 int
-main(int argc, const char *argv[])
+svn_test_main(int argc, const char *argv[], int max_threads,
+              struct svn_test_descriptor_t *test_funcs)
 {
   const char *prog_name;
   int i;
@@ -639,7 +648,7 @@ main(int argc, const char *argv[])
   svn_error_t *err;
   char errmsg[200];
   /* How many tests are there? */
-  int array_size = get_array_size();
+  int array_size = get_array_size(test_funcs);
 
   svn_test_opts_t opts = { NULL };
 
@@ -732,7 +741,7 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err && (apr_err != APR_BADCH))
         {
-          /* Ignore invalid option error to allow passing arbitary options */
+          /* Ignore invalid option error to allow passing arbitrary options */
           fprintf(stderr, "apr_getopt_long failed : [%d] %s\n",
                   apr_err, apr_strerror(apr_err, errmsg, sizeof(errmsg)));
           exit(1);
@@ -842,8 +851,8 @@ main(int argc, const char *argv[])
                        "------  -----  ----------------\n";
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, TRUE, &opts, &header_msg,
-                              test_pool))
+              if (do_test_num(prog_name, i, test_funcs,
+                              TRUE, &opts, &header_msg, test_pool))
                 got_error = TRUE;
 
               /* Clear the per-function pool */
@@ -863,8 +872,8 @@ main(int argc, const char *argv[])
                     continue;
 
                   ran_a_test = TRUE;
-                  if (do_test_num(prog_name, test_num, FALSE, &opts, NULL,
-                                  test_pool))
+                  if (do_test_num(prog_name, test_num, test_funcs,
+                                  FALSE, &opts, NULL, test_pool))
                     got_error = TRUE;
 
                   /* Clear the per-function pool */
@@ -878,14 +887,15 @@ main(int argc, const char *argv[])
   if (! ran_a_test)
     {
       /* just run all tests */
-      if (svn_test_max_threads < 1)
-        svn_test_max_threads = array_size;
+      if (max_threads < 1)
+        max_threads = array_size;
 
-      if (svn_test_max_threads == 1 || !parallel)
+      if (max_threads == 1 || !parallel)
         {
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, FALSE, &opts, NULL, test_pool))
+              if (do_test_num(prog_name, i, test_funcs,
+                              FALSE, &opts, NULL, test_pool))
                 got_error = TRUE;
 
               /* Clear the per-function pool */
@@ -896,8 +906,8 @@ main(int argc, const char *argv[])
 #if APR_HAS_THREADS
       else
         {
-          got_error = do_tests_concurrently(prog_name, array_size,
-                                            svn_test_max_threads,
+          got_error = do_tests_concurrently(prog_name, test_funcs,
+                                            array_size, max_threads,
                                             &opts, test_pool);
 
           /* Execute all cleanups */

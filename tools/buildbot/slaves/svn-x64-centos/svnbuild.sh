@@ -25,6 +25,22 @@ set -x
 export MAKEFLAGS=-j4
 export PYTHON=/usr/local/python25/bin/python
 
+SVN_VER_MINOR=`awk '/define SVN_VER_MINOR/ { print $3 }' subversion/include/svn_version.h`
+
+if [ $SVN_VER_MINOR -ge 9 ]; then
+  # 1.9 or newer requires APR 1.3.x and Serf 1.3.4
+  # this bubbles out to httpd as well.  So use the right dependencies
+  APR=/home/bt/packages/apr-1.3.9-prefix/bin/apr-1-config
+  APU=/home/bt/packages/apr-1.3.9-prefix/bin/apu-1-config
+  APXS=/home/bt/packages/apr-1.3.9-prefix/bin/apxs
+  SERF=/home/bt/packages/apr-1.3.9-prefix 
+else
+  APR=/usr
+  APU=/usr
+  APXS=/usr/sbin/apxs
+  SERF=/usr/local
+fi
+
 echo "========= autogen.sh"
 ./autogen.sh || exit $?
 
@@ -32,13 +48,15 @@ echo "========= configure"
 #            --with-junit=/usr/share/java/junit.jar
 #            --with-jdk=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86_64 \
 #            --without-berkeley-db \
+#            --disable-shared \
+#CFLAGS='-fprofile-arcs -ftest-coverage' \
 ./configure --enable-javahl --enable-maintainer-mode \
             --with-neon=/usr \
-            --with-serf=/usr/local \
-            --with-apxs=/usr/sbin/apxs \
+            --with-serf=$SERF \
+            --with-apxs=$APXS \
             --with-berkeley-db \
-            --with-apr=/usr \
-            --with-apr-util=/usr \
+            --with-apr=$APR \
+            --with-apr-util=$APU \
             --with-jdk=/opt/java/jdk1.6.0_15 \
 	    --with-junit=/home/bt/junit-4.4.jar \
 	    --with-sqlite=/home/bt/packages/sqlite-amalgamation-dir/sqlite3.c \

@@ -244,6 +244,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t remove_unversioned;/* remove unversioned items */
   svn_boolean_t remove_ignored;    /* remove ignored items */
   svn_boolean_t no_newline;        /* do not output the trailing newline */
+  svn_boolean_t show_passwords;    /* show cached passwords */
 } svn_cl__opt_state_t;
 
 
@@ -257,6 +258,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
+  svn_cl__auth,
   svn_cl__blame,
   svn_cl__cat,
   svn_cl__changelist,

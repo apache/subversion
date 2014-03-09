@@ -1106,7 +1106,7 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      apr_pool_t *pool)
 {
   /* Different repository types? */
-  if (root_a->vtable != root_b->vtable)
+  if (root_a->fs != root_b->fs)
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
@@ -1167,6 +1167,17 @@ svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
 }
 
 svn_error_t *
+svn_fs_props_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
+                       const char *path1, svn_fs_root_t *root2,
+                       const char *path2, apr_pool_t *pool)
+{
+  return svn_error_trace(root1->vtable->props_changed(changed_p,
+                                                      root1, path1,
+                                                      root2, path2,
+                                                      TRUE, pool));
+}
+
+svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                      const char *path1, svn_fs_root_t *root2,
                      const char *path2, apr_pool_t *pool)
@@ -1174,7 +1185,7 @@ svn_fs_props_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
   return svn_error_trace(root1->vtable->props_changed(changed_p,
                                                       root1, path1,
                                                       root2, path2,
-                                                      pool));
+                                                      FALSE, pool));
 }
 
 svn_error_t *
@@ -1220,6 +1231,30 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                                                      inherit,
                                                      include_descendants,
                                                      TRUE, pool, pool));
+}
+
+svn_error_t *
+svn_fs__get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
+                               svn_fs_root_t *root,
+                               const char *path,
+                               svn_mergeinfo_inheritance_t inherit,
+                               svn_boolean_t adjust_inherited_mergeinfo,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *paths
+    = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  svn_mergeinfo_catalog_t catalog;
+
+  APR_ARRAY_PUSH(paths, const char *) = path;
+
+  SVN_ERR(svn_fs_get_mergeinfo2(&catalog, root, paths,
+                                inherit, FALSE /*include_descendants*/,
+                                adjust_inherited_mergeinfo,
+                                result_pool, scratch_pool));
+  *mergeinfo = svn_hash_gets(catalog, path);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1418,6 +1453,17 @@ svn_fs_apply_text(svn_stream_t **contents_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_contents_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
+                          const char *path1, svn_fs_root_t *root2,
+                          const char *path2, apr_pool_t *pool)
+{
+  return svn_error_trace(root1->vtable->contents_changed(changed_p,
+                                                         root1, path1,
+                                                         root2, path2,
+                                                         TRUE, pool));
+}
+
+svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                         const char *path1, svn_fs_root_t *root2,
                         const char *path2, apr_pool_t *pool)
@@ -1425,7 +1471,7 @@ svn_fs_contents_changed(svn_boolean_t *changed_p, svn_fs_root_t *root1,
   return svn_error_trace(root1->vtable->contents_changed(changed_p,
                                                          root1, path1,
                                                          root2, path2,
-                                                         pool));
+                                                         FALSE, pool));
 }
 
 svn_error_t *
@@ -1679,13 +1725,21 @@ svn_fs_unparse_id(const svn_fs_id_t *id, apr_pool_t *pool)
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
-  return (a->vtable->compare(a, b) != -1);
+  return (a->vtable->compare(a, b) != svn_fs_node_unrelated);
 }
 
 int
 svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
-  return a->vtable->compare(a, b);
+  switch (a->vtable->compare(a, b))
+    {
+    case svn_fs_node_same:
+      return 0;
+    case svn_fs_node_common_ancestor:
+      return 1;
+    default:
+      return -1;
+    }
 }
 
 svn_error_t *

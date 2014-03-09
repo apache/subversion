@@ -1332,7 +1332,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #
   #   D) Synch merge the changes in C) from 'trunk' to 'branch' and commit in
   #      rev N+3.  The renamed subtree on 'branch' now has additional explicit
-  #      mergeinfo decribing the synch merge from trunk@N+1 to trunk@N+2.
+  #      mergeinfo describing the synch merge from trunk@N+1 to trunk@N+2.
   #
   #   E) Reintegrate 'branch' to 'trunk'.
   #

@@ -266,7 +266,7 @@ typedef struct base_record_t
 enum {SUB_RECORD_COUNT = 7};
 enum {BASE_RECORD_COUNT = 4};
 
-const sub_record_t sub_records[SUB_RECORD_COUNT] =
+static const sub_record_t sub_records[SUB_RECORD_COUNT] =
 {
   { 6, { "this is quite a longish piece of text", 37} },
   { 5, { "x", 1} },
@@ -277,7 +277,7 @@ const sub_record_t sub_records[SUB_RECORD_COUNT] =
   { 0 }
 };
 
-const base_record_t test_data[BASE_RECORD_COUNT] =
+static const base_record_t test_data[BASE_RECORD_COUNT] =
 {
   { 1, { "maximum", 7},
     0xffffffffffffffffull, 0xffffffffffffffffull, sub_records,
@@ -392,7 +392,7 @@ unpack_subs(svn_packed__int_stream_t *int_stream,
   apr_size_t i;
   for (i = 0; i < count; ++i)
     {
-      records[i].sub_counter = svn_packed__get_int(int_stream);
+      records[i].sub_counter = (int) svn_packed__get_int(int_stream);
       records[i].text.data = svn_packed__get_bytes(text_stream,
                                                    &records[i].text.len);
     }
@@ -431,7 +431,7 @@ unpack(apr_size_t *count,
   
   for (i = 0; i < *count; ++i)
     {
-      data[i].counter = svn_packed__get_int(base_stream);
+      data[i].counter = (int) svn_packed__get_int(base_stream);
       data[i].description.data
         = svn_packed__get_bytes(base_description_stream,
                                 &data[i].description.len);
@@ -443,7 +443,7 @@ unpack(apr_size_t *count,
 
       data[i].large_signed1 = svn_packed__get_int(base_stream);
       data[i].large_signed2 = svn_packed__get_int(base_stream);
-      data[i].prime = svn_packed__get_uint(base_stream);
+      data[i].prime = (unsigned) svn_packed__get_uint(base_stream);
       data[i].right_subs = unpack_subs(right_sub_stream, sub_text_stream,
                       (apr_size_t)svn_packed__get_uint(sub_count_stream),
                       pool);
@@ -548,9 +548,9 @@ test_full_structure(apr_pool_t *pool)
 
 /* An array of all test functions */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_empty_container,
@@ -567,3 +567,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test nested structure"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

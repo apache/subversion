@@ -96,7 +96,7 @@ dnl   now generating errors instead of silently ignoring
 dnl   them.  Only .7 and later can guarantee repository
 dnl   integrity with FSFS.
 
-APR_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\. 2\."]
+APR_VER_REGEXES=["1\.[345]\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -109,11 +109,14 @@ if test `expr $apr_version : 2` -ne 0; then
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
+  SVN_APR_MAJOR_VERSION=2
 else
   svn_lib_ver=0
-  APU_VER_REGEXES=["0\.9\.[7-9] 0\.9\.1[0-9] 1\."]
+  APU_VER_REGEXES=["1\.[345]\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
+  SVN_APR_MAJOR_VERSION=1
 fi
+AC_SUBST(SVN_APR_MAJOR_VERSION)
 SVN_LT_SOVERSION="-version-info $svn_lib_ver"
 AC_SUBST(SVN_LT_SOVERSION)
 AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
@@ -123,7 +126,7 @@ dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 dnl Search for serf
-SVN_LIB_SERF(1,2,1)
+SVN_LIB_SERF(1,3,4)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
@@ -140,7 +143,7 @@ fi
 
 
 dnl Find Apache with a recent-enough magic module number
-SVN_FIND_APACHE(20020903)
+SVN_FIND_APACHE(20051115)
 
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
@@ -224,7 +227,7 @@ if test "$experimental_libtool" = "yes"; then
   SVN_LIBTOOL="$sh_libtool"
 else
   sh_libtool="$abs_builddir/libtool"
-  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+  SVN_LIBTOOL="\$(SHELL) \"$sh_libtool\""
 fi
 AC_SUBST(SVN_LIBTOOL)
 
@@ -1044,6 +1047,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
         SVN_CFLAGS_ADD_IFELSE([-Wno-string-plus-int])
+        SVN_CFLAGS_ADD_IFELSE([-Wmissing-variable-declarations])
 
         CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
@@ -1485,6 +1489,8 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 
+AC_CHECK_HEADERS([stdbool.h inttypes.h])
+
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there
 if test "$CC" = "clang"; then
@@ -1535,6 +1541,13 @@ AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
                    [SED="$SED"
                     SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
+
+# Create pkg-config .pc files from .pc.in files
+for pc_in_file in "${abs_srcdir}"/subversion/libsvn_*/*.pc.in; do
+  pc_file=${pc_in_file#${abs_srcdir}/}
+  pc_file=${pc_file%.in}
+  AC_CONFIG_FILES([${pc_file}])
+done
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)

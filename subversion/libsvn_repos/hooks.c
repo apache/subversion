@@ -319,7 +319,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
 #ifdef WIN32
   /* For WIN32, we need to check with file name extension(s) added.
 
-     As Windows Scripting Host (.wsf) files can accomodate (at least)
+     As Windows Scripting Host (.wsf) files can accommodate (at least)
      JavaScript (.js) and VB Script (.vbs) code, extensions for the
      corresponding file types need not be enumerated explicitly. */
     ".exe", ".cmd", ".bat", ".wsf", /* ### Any other extensions? */
@@ -364,7 +364,7 @@ struct parse_hooks_env_option_baton {
    * options apply. */
   const char *section;
   apr_hash_t *hooks_env;
-} parse_hooks_env_option_baton;
+};
 
 /* An implementation of svn_config_enumerator2_t.
  * Set environment variable NAME to value VALUE in the environment for
@@ -394,7 +394,7 @@ parse_hooks_env_option(const char *name, const char *value,
 struct parse_hooks_env_section_baton {
   svn_config_t *cfg;
   apr_hash_t *hooks_env;
-} parse_hooks_env_section_baton;
+};
 
 /* An implementation of svn_config_section_enumerator2_t. */
 static svn_boolean_t
@@ -520,11 +520,9 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
   for (hi = apr_hash_first(pool, lock_tokens); hi;
        hi = apr_hash_next(hi))
     {
-      void *val;
-      const char *path, *token;
+      const char *token = svn__apr_hash_index_key(hi);
+      const char *path = svn__apr_hash_index_val(hi);
 
-      apr_hash_this(hi, (void *)&token, NULL, &val);
-      path = val;
       svn_stringbuf_appendstr(lock_str,
         svn_stringbuf_createf(pool, "%s|%s\n",
                               svn_path_uri_autoescape(path, pool),

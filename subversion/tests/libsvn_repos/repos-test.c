@@ -1428,8 +1428,8 @@ in_repo_authz(const svn_test_opts_t *opts,
    * Create an authz file and put it in the repository.
    * Verify it can be read with an relative URL.
    * Verify it can be read with an absolute URL.
-   * Verify non-existant path does not error out when must_exist is FALSE.
-   * Verify non-existant path does error out when must_exist is TRUE.
+   * Verify non-existent path does not error out when must_exist is FALSE.
+   * Verify non-existent path does error out when must_exist is TRUE.
    * Verify that an http:// URL produces an error.
    * Verify that an svn:// URL produces an error.
    */
@@ -1466,11 +1466,11 @@ in_repo_authz(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, authz_url, NULL, TRUE, pool));
   SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
 
-  /* Non-existant path in the repo with must_exist set to FALSE */
+  /* Non-existent path in the repo with must_exist set to FALSE */
   SVN_ERR(svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL,
                                 FALSE, pool));
 
-  /* Non-existant path in the repo with must_exist set to TRUE */
+  /* Non-existent path in the repo with must_exist set to TRUE */
   err = svn_repos_authz_read2(&authz_cfg, noent_authz_url, NULL, TRUE, pool);
   if (!err || err->apr_err != SVN_ERR_ILLEGAL_TARGET)
     return svn_error_createf(SVN_ERR_TEST_FAILED, err,
@@ -1658,7 +1658,7 @@ in_repo_groups_authz(const svn_test_opts_t *opts,
 
 
 /* Helper for the groups_authz test.  Set *AUTHZ_P to a representation of
-   AUTHZ_CONTENTS in conjuction with GROUPS_CONTENTS, using POOL for
+   AUTHZ_CONTENTS in conjunction with GROUPS_CONTENTS, using POOL for
    temporary allocation.  If DISK is TRUE then write the contents to
    temporary files and use svn_repos_authz_read2() to get the data if FALSE
    write the data to a buffered stream and use svn_repos_authz_parse(). */
@@ -1773,7 +1773,7 @@ groups_authz(const svn_test_opts_t *opts,
    * 2. Verify that access rights written in the global groups file are
    *    discarded and affect nothing in authorization terms.
    * 3. Verify that local groups in the authz file are prohibited in
-   *    conjuction with global groups (and that a configuration error is
+   *    conjunction with global groups (and that a configuration error is
    *    reported in this scenario).
    * 4. Ensure that group cycles in the global groups file are reported.
    *
@@ -1829,7 +1829,7 @@ groups_authz(const svn_test_opts_t *opts,
 
   SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
 
-  /* Local groups cannot be used in conjuction with global groups. */
+  /* Local groups cannot be used in conjunction with global groups. */
   groups_contents =
     "[groups]"                                                               NL
     "slaves = maximus"                                                       NL
@@ -2889,7 +2889,7 @@ log_receiver(void *baton,
              svn_log_entry_t *log_entry,
              apr_pool_t *pool)
 {
-  int *count = baton;
+  svn_revnum_t *count = baton;
   (*count)++;
   return SVN_NO_ERROR;
 }
@@ -2947,13 +2947,18 @@ get_logs(const svn_test_opts_t *opts,
           svn_revnum_t end_arg   = end ? end : SVN_INVALID_REVNUM;
           svn_revnum_t eff_start = start ? start : youngest_rev;
           svn_revnum_t eff_end   = end ? end : youngest_rev;
-          int limit, max_logs =
+          int limit;
+          svn_revnum_t max_logs =
             MAX(eff_start, eff_end) + 1 - MIN(eff_start, eff_end);
-          int num_logs;
+          svn_revnum_t num_logs;
 
+          /* this may look like it can get in an infinite loop if max_logs
+           * ended up being larger than the size limit can represent.  It
+           * can't because a negative limit will end up failing to match
+           * the existed number of logs. */
           for (limit = 0; limit <= max_logs; limit++)
             {
-              int num_expected = limit ? limit : max_logs;
+              svn_revnum_t num_expected = limit ? limit : max_logs;
 
               svn_pool_clear(subpool);
               num_logs = 0;
@@ -2964,9 +2969,9 @@ get_logs(const svn_test_opts_t *opts,
               if (num_logs != num_expected)
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "Log with start=%ld,end=%ld,limit=%d "
-                                         "returned %d entries (expected %d)",
+                                         "returned %ld entries (expected %ld)",
                                          start_arg, end_arg, limit,
-                                         num_logs, max_logs);
+                                         num_logs, num_expected);
             }
         }
     }
@@ -3549,11 +3554,70 @@ test_repos_fs_type(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Notification receiver for test_dump_bad_mergeinfo(). This does not
+   need to do anything, it just needs to exist.
+ */
+static void
+dump_r0_mergeinfo_notifier(void *baton,
+                           const svn_repos_notify_t *notify,
+                           apr_pool_t *scratch_pool)
+{
+}
+
+/* Regression test for part the 'dump' part of issue #4476 "Mergeinfo
+   containing r0 makes svnsync and svnadmin dump fail". */
+static svn_error_t *
+test_dump_r0_mergeinfo(const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev = 0;
+  const svn_string_t *bad_mergeinfo = svn_string_create("/foo:0", pool);
+
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-dump-r0-mergeinfo",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Any commit will do, here  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/bar", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* Revision 2:  Add bad mergeinfo */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(txn_root, "/bar", "svn:mergeinfo", bad_mergeinfo, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* Test that a dump completes without error. In order to exercise the
+     functionality under test -- that is, in order for the dump to try to
+     parse the mergeinfo it is dumping -- the dump must start from a
+     revision greater than 1 and must take a notification callback. */
+  {
+    svn_stringbuf_t *stringbuf = svn_stringbuf_create_empty(pool);
+    svn_stream_t *stream = svn_stream_from_stringbuf(stringbuf, pool);
+
+    SVN_ERR(svn_repos_dump_fs3(repos, stream, 2, SVN_INVALID_REVNUM,
+                               FALSE, FALSE,
+                               dump_r0_mergeinfo_notifier, NULL,
+                               NULL, NULL,
+                               pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
-int svn_test_max_threads = 4;
+static int max_threads = 4;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(dir_deltas,
@@ -3602,5 +3666,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos__config_pool_*"),
     SVN_TEST_OPTS_PASS(test_repos_fs_type,
                        "test test_repos_fs_type"),
+    SVN_TEST_OPTS_PASS(test_dump_r0_mergeinfo,
+                       "test dumping with r0 mergeinfo"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

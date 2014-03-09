@@ -203,9 +203,9 @@ memcache_get(void **value_p,
         }
       else
         {
-          svn_string_t *value = apr_pcalloc(result_pool, sizeof(*value));
+          svn_stringbuf_t *value = svn_stringbuf_create_empty(result_pool);
           value->data = data;
-          value->len = data_len;
+          value->len = value->blocksize = data_len;
           *value_p = value;
         }
     }

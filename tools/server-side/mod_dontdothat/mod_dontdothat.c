@@ -40,7 +40,7 @@
 #include "svn_path.h"
 #include "private/svn_fspath.h"
 
-module AP_MODULE_DECLARE_DATA dontdothat_module;
+extern module AP_MODULE_DECLARE_DATA dontdothat_module;
 
 typedef struct dontdothat_config_rec {
   const char *config_file;

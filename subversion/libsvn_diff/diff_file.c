@@ -1815,7 +1815,7 @@ static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
 };
 
 svn_error_t *
-svn_diff_file_output_unified3(svn_stream_t *output_stream,
+svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               svn_diff_t *diff,
                               const char *original_path,
                               const char *modified_path,
@@ -1824,6 +1824,8 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               const char *header_encoding,
                               const char *relative_to_dir,
                               svn_boolean_t show_c_function,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *pool)
 {
   if (svn_diff_contains_diffs(diff))
@@ -1918,8 +1920,9 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                                              original_header, modified_header,
                                              pool));
 
-      SVN_ERR(svn_diff_output(diff, &baton,
-                              &svn_diff__file_output_unified_vtable));
+      SVN_ERR(svn_diff_output2(diff, &baton,
+                               &svn_diff__file_output_unified_vtable,
+                               cancel_func, cancel_baton));
       SVN_ERR(output_unified_flush_hunk(&baton));
 
       for (i = 0; i < 2; i++)
@@ -2191,7 +2194,25 @@ static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
   output_conflict
 };
 
+static svn_error_t *
+output_conflict_with_context_marker(svn_diff3__file_output_baton_t *btn,
+                                    const char *label,
+                                    apr_off_t start,
+                                    apr_off_t length)
+{
+  if (length == 1)
+    SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                              "%s (%" APR_OFF_T_FMT ")",
+                              label, start + 1));
+  else
+    SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                              "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")",
+                              label, start + 1, length));
 
+  SVN_ERR(output_marker_eol(btn));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
@@ -2215,34 +2236,19 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
   btn->output_stream = btn->real_output_stream;
 
   /* Output the conflict itself. */
-  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
-                            (modified_length == 1
-                             ? "%s (%" APR_OFF_T_FMT ")"
-                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
-                            btn->conflict_modified,
-                            modified_start + 1, modified_length));
-  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_modified,
+                                              modified_start, modified_length));
   SVN_ERR(output_hunk(btn, 1/*modified*/, modified_start, modified_length));
 
-  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
-                            (original_length == 1
-                             ? "%s (%" APR_OFF_T_FMT ")"
-                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
-                            btn->conflict_original,
-                            original_start + 1, original_length));
-  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_original,
+                                              original_start, original_length));
   SVN_ERR(output_hunk(btn, 0/*original*/, original_start, original_length));
 
   SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
                             "%s%s", btn->conflict_separator, btn->marker_eol));
   SVN_ERR(output_hunk(btn, 2/*latest*/, latest_start, latest_length));
-  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
-                            (latest_length == 1
-                             ? "%s (%" APR_OFF_T_FMT ")"
-                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
-                            btn->conflict_latest,
-                            latest_start + 1, latest_length));
-  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_latest,
+                                              latest_start, latest_length));
 
   /* Go into print-trailing-context mode instead. */
   make_trailing_context_printer(btn);

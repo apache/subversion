@@ -88,7 +88,7 @@ def usage_and_exit():
   sys.exit(1)
 
 class RepositoryZombieLockRemover:
-  """Remove all locks on non-existant files in repository@HEAD"""
+  """Remove all locks on non-existent files in repository@HEAD"""
   def __init__(self, repos_path, repos_subpath=""):
     self.repos_path = repos_path  # path to repository on disk
     self.repos_subpath = repos_subpath  # if only cleaning part of the repo
@@ -108,7 +108,7 @@ class RepositoryZombieLockRemover:
     svn.core.svn_pool_destroy(self.pool)
     svn.core.apr_terminate()
 
-  def unlock_nonexistant_files(self, lock, callback_pool):
+  def unlock_nonexistent_files(self, lock, callback_pool):
     """check if the file still exists in HEAD, removing the lock if not"""
     if svn.fs.svn_fs_check_path(self.rev_root, lock.path, callback_pool) \
            == svn.core.svn_node_none:
@@ -118,7 +118,7 @@ class RepositoryZombieLockRemover:
 
   def run(self):
     """iterate over every locked file in repo_path/repo_subpath,
-       calling unlock_nonexistant_files for each"""
+       calling unlock_nonexistent_files for each"""
 
     print "Removing all zombie locks from repository at %s\n" \
           "This may take several minutes..." % self.repos_path
@@ -135,7 +135,7 @@ class RepositoryZombieLockRemover:
     if hasattr(svn.fs, 'svn_fs_get_locks2'):
       svn.fs.svn_fs_get_locks2(self.fs_ptr, self.repos_subpath,
                                svn.core.svn_depth_infinity,
-                               self.unlock_nonexistant_files, self.pool)
+                               self.unlock_nonexistent_files, self.pool)
     else:
       if self.fs_type == svn.fs.SVN_FS_TYPE_BDB:
         self.locks = []
@@ -146,11 +146,11 @@ class RepositoryZombieLockRemover:
         subpool = svn.core.svn_pool_create(self.pool)
         for lock in self.locks:
           svn.core.svn_pool_clear(subpool)
-          self.unlock_nonexistant_files(lock, subpool)
+          self.unlock_nonexistent_files(lock, subpool)
         svn.core.svn_pool_destroy(subpool)
       else:
         svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
-                                self.unlock_nonexistant_files, self.pool)
+                                self.unlock_nonexistent_files, self.pool)
     print "Done."
 
 

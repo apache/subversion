@@ -202,17 +202,16 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
 {
   apr_hash_t *prefixed_mergeinfo, *mergeinfo;
   apr_hash_index_t *hi;
-  void *rangelist;
 
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mergeinfo_orig->data, pool));
   prefixed_mergeinfo = apr_hash_make(pool);
   for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *path, *merge_source;
+      const char *merge_source = svn__apr_hash_index_key(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
+      const char *path;
 
-      apr_hash_this(hi, &key, NULL, &rangelist);
-      merge_source = svn_relpath_canonicalize(key, pool);
+      merge_source = svn_relpath_canonicalize(merge_source, pool);
 
       /* The svn:mergeinfo property syntax demands a repos abspath */
       path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
@@ -268,16 +267,10 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 
   for (hi = apr_hash_first(subpool, mergeinfo); hi; hi = apr_hash_next(hi))
     {
-      const char *merge_source;
-      svn_rangelist_t *rangelist;
+      const char *merge_source = svn__apr_hash_index_key(hi);
+      svn_rangelist_t *rangelist = svn__apr_hash_index_val(hi);
       struct parse_baton *pb = rb->pb;
       int i;
-      const void *key;
-      void *val;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      merge_source = key;
-      rangelist = val;
 
       /* Possibly renumber revisions in merge source's rangelist. */
       for (i = 0; i < rangelist->nelts; i++)
@@ -296,7 +289,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  inclusive there is one possible valid start revision that
                  won't be found in the PB->REV_MAP mapping of load stream
                  revsions to loaded revisions: The revision immediately
-                 preceeding the oldest revision from the load stream.
+                 preceding the oldest revision from the load stream.
                  This is a valid revision for mergeinfo, but not a valid
                  copy from revision (which PB->REV_MAP also maps for) so it
                  will never be in the mapping.
@@ -754,29 +747,27 @@ set_node_property(void *baton,
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
+      svn_string_t prop_val = *value;
       svn_string_t *renumbered_mergeinfo;
-      /* ### Need to cast away const. We cannot change the declaration of
-       * ### this function since it is part of svn_repos_parse_fns2_t. */
-      svn_string_t *prop_val = (svn_string_t *)value;
 
       /* Tolerate mergeinfo with "\r\n" line endings because some
          dumpstream sources might contain as much.  If so normalize
          the line endings to '\n' and make a notification to
          PARSE_BATON->FEEDBACK_STREAM that we have made this
          correction. */
-      if (strstr(prop_val->data, "\r"))
+      if (strstr(prop_val.data, "\r"))
         {
           const char *prop_eol_normalized;
 
-          SVN_ERR(svn_subst_translate_cstring2(prop_val->data,
+          SVN_ERR(svn_subst_translate_cstring2(prop_val.data,
                                                &prop_eol_normalized,
                                                "\n",  /* translate to LF */
                                                FALSE, /* no repair */
                                                NULL,  /* no keywords */
                                                FALSE, /* no expansion */
                                                nb->pool));
-          prop_val->data = prop_eol_normalized;
-          prop_val->len = strlen(prop_eol_normalized);
+          prop_val.data = prop_eol_normalized;
+          prop_val.len = strlen(prop_eol_normalized);
 
           if (pb->notify_func)
             {
@@ -786,7 +777,7 @@ set_node_property(void *baton,
         }
 
       /* Renumber mergeinfo as appropriate. */
-      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, prop_val, rb,
+      SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, &prop_val, rb,
                                       nb->pool));
       value = renumbered_mergeinfo;
       if (pb->parent_dir)
@@ -838,9 +829,8 @@ remove_node_props(void *baton)
 
   for (hi = apr_hash_first(nb->pool, proplist); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
+      const char *key = svn__apr_hash_index_key(hi);
 
-      apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR(change_node_prop(rb->txn_root, nb->path, key, NULL,
                                rb->pb->validate_props, nb->pool));
     }

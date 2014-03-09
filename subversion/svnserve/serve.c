@@ -2184,7 +2184,8 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char *revprop_word;
   svn_ra_svn_item_t *elt;
   int i;
-  apr_uint64_t limit, include_merged_revs_param, move_behavior_param;
+  apr_uint64_t limit, include_merged_revs_param;
+  const char *move_behavior_param;
   svn_move_behavior_t move_behavior;
   log_baton_t lb;
   authz_baton_t ab;
@@ -2192,7 +2193,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   ab.server = b;
   ab.conn = conn;
 
-  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?n", &paths,
+  SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?w", &paths,
                                   &start_rev, &end_rev, &send_changed_paths,
                                   &strict_node, &limit,
                                   &include_merged_revs_param,
@@ -2229,17 +2230,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              _("Unknown revprop word '%s' in log command"),
                              revprop_word);
 
-  if (move_behavior_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    move_behavior = svn_move_behavior_no_moves;
-  else if (move_behavior_param <= svn_move_behavior_auto_moves)
-    move_behavior = (svn_move_behavior_t) move_behavior_param;
-  else
-    return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                             apr_psprintf(pool,
-                                          _("Invalid move_behavior value"
-                                            " %%%s in log command"),
-                                          APR_UINT64_T_FMT),
-                             move_behavior_param);
+  move_behavior = svn_move_behavior_from_word(move_behavior_param);
 
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
@@ -3842,6 +3833,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
                     apr_pool_t *pool)
 {
   svn_boolean_t terminate = FALSE;
+  svn_error_t *err = NULL;
   const svn_ra_svn_cmd_entry_t *command;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -3855,7 +3847,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
     {
       /* This is not the first call for CONNECTION. */
       if (connection->baton->repository->repos == NULL)
-        SVN_ERR(reopen_repos(connection, pool));
+        err = reopen_repos(connection, pool);
     }
   else
     {
@@ -3884,12 +3876,16 @@ serve_interruptable(svn_boolean_t *terminate_p,
                                   connection->pool);
 
       /* Construct server baton and open the repository for the first time. */
-      SVN_ERR(construct_server_baton(&connection->baton, connection->conn,
-                                     connection->params, pool));
+      err = construct_server_baton(&connection->baton, connection->conn,
+                                   connection->params, pool);
     }
 
+  /* If we can't access the repo for some reason, end this connection. */
+  if (err)
+    terminate = TRUE;
+
   /* Process incoming commands. */
-  while (!terminate)
+  while (!terminate && !err)
     {
       svn_pool_clear(iterpool);
       if (is_busy && is_busy(connection))
@@ -3899,13 +3895,13 @@ serve_interruptable(svn_boolean_t *terminate_p,
           /* If the server is busy, execute just one command and only if
            * there is one currently waiting in our receive buffers.
            */
-          SVN_ERR(svn_ra_svn__has_command(&has_command, &terminate,
-                                          connection->conn, iterpool));
-          if (has_command)
-            SVN_ERR(svn_ra_svn__handle_command(&terminate, cmd_hash,
-                                              connection->baton,
-                                              connection->conn,
-                                              FALSE, iterpool));
+          err = svn_ra_svn__has_command(&has_command, &terminate,
+                                        connection->conn, iterpool);
+          if (!err && has_command)
+            err = svn_ra_svn__handle_command(&terminate, cmd_hash,
+                                             connection->baton,
+                                             connection->conn,
+                                             FALSE, iterpool);
 
           break;
         }
@@ -3916,10 +3912,10 @@ serve_interruptable(svn_boolean_t *terminate_p,
            * busy() callback test to return TRUE while there are still some
            * resources left.
            */
-          SVN_ERR(svn_ra_svn__handle_command(&terminate, cmd_hash,
-                                             connection->baton,
-                                             connection->conn,
-                                             FALSE, iterpool));
+          err = svn_ra_svn__handle_command(&terminate, cmd_hash,
+                                           connection->baton,
+                                           connection->conn,
+                                           FALSE, iterpool);
         }
     }
 
@@ -3928,7 +3924,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
   if (terminate_p)
     *terminate_p = terminate;
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(err);
 }
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn,

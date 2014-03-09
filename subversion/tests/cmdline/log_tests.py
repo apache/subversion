@@ -35,7 +35,7 @@ from svntest.main import server_has_mergeinfo
 from svntest.main import server_has_auto_move
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.mergetrees import set_up_branch
-from diff_tests import make_diff_header, make_no_diff_deleted_header
+from svntest.verify import make_diff_header, make_no_diff_deleted_header
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -718,6 +718,13 @@ def compare_diff_output(expected_diffs, output):
   if diffs.issubset(expected_diffs) and diffs.issuperset(expected_diffs):
     return
 
+  print("=============== DIFFS NOT EQUAL ===================")
+  print("Expected")
+  for line in expected_diffs:
+    print(line)
+  print("Actual:")
+  for line in output:
+    print(line)
   raise svntest.Failure("Diffs not equal")
 
 
@@ -2173,7 +2180,7 @@ def log_diff(sbox):
                    "\ No newline at end of file\n",
                  ]
            ]
-  r8diff = [ make_diff_header('A2/D/G/rho', 'revision 0', 'revision 8')
+  r8diff = [ make_diff_header('A2/D/G/rho', 'nonexistent', 'revision 8')
               + [ "@@ -0,0 +1 @@\n",
                   "+88\n",
                   "\ No newline at end of file\n",
@@ -2221,7 +2228,7 @@ def log_diff_moved(sbox):
   mu_at_1 = sbox.repo_url + '/A/mu@1'
   mu3_at_3 = sbox.repo_url + '/A/mu3@3'
 
-  r1diff = [make_diff_header('mu', 'revision 0', 'revision 1')
+  r1diff = [make_diff_header('mu', 'nonexistent', 'revision 1')
             + ["@@ -0,0 +1 @@\n",
                "+This is the file 'mu'.\n"]]
 

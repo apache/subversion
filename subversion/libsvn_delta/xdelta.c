@@ -45,7 +45,7 @@
  */
 #define MATCH_BLOCKSIZE 64
 
-/* Size of the checksum presense FLAGS array in BLOCKS_T.  With standard
+/* Size of the checksum presence FLAGS array in BLOCKS_T.  With standard
    MATCH_BLOCKSIZE and SVN_DELTA_WINDOW_SIZE, 32k entries is about 20x
    the number of checksums that actually occur, i.e. we expect a >95%
    probability that non-matching checksums get already detected by checking
@@ -408,7 +408,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
 
   /* Initialize our rolling checksum.  */
   rolling = init_adler32(b + lo);
-  while (lo < bsize)
+  while (lo < upper)
     {
       apr_size_t matchlen;
       apr_size_t apos;

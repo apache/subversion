@@ -44,12 +44,12 @@
 enum {NUMBER_COUNT = 11};
 
 /* the actual values in the order we add them to the queue */
-const int numbers[NUMBER_COUNT]
+static const int numbers[NUMBER_COUNT]
   = { 8395, 0, -1, 3885, 1,  -435, 99993, 10, 0, 1,  8395 };
 
 /* test_update will modify in-queue data and expects the queue to return
    the values in the following order: */
-const int expected_modified[NUMBER_COUNT]
+static const int expected_modified[NUMBER_COUNT]
   = { -431, 0, 1, 3,  5, 10, 16, 3889, 8395, 8403,  99997 };
 
 /* standard compare function for integers */
@@ -221,9 +221,9 @@ test_update(apr_pool_t *pool)
 
 /* An array of all test functions */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_empty_queue,
@@ -236,3 +236,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "updating the head of the queue"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

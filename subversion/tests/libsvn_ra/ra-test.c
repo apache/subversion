@@ -278,8 +278,8 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-tunel_callback_test(const svn_test_opts_t *opts,
-                    apr_pool_t *pool)
+tunnel_callback_test(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   apr_pool_t *connection_pool;
   svn_repos_t *repos;
@@ -328,16 +328,18 @@ tunel_callback_test(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(location_segments_test,
                        "test svn_ra_get_location_segments"),
     SVN_TEST_OPTS_PASS(check_tunnel_callback_test,
                        "test ra_svn tunnel callback check"),
-    SVN_TEST_OPTS_PASS(tunel_callback_test,
+    SVN_TEST_OPTS_PASS(tunnel_callback_test,
                        "test ra_svn tunnel creation callbacks"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

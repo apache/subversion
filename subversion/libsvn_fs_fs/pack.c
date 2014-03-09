@@ -225,7 +225,7 @@ typedef struct pack_context_t
    * each revision range. */
   apr_array_header_t *rev_offsets;
 
-  /* temp file receiving all items referenced by REPS_INFOS.
+  /* temp file receiving all items referenced by REPS.
    * Will be filled in phase 2 and be cleared after each revision range.*/
   apr_file_t *reps_file;
 
@@ -247,14 +247,14 @@ initialize_pack_context(pack_context_t *context,
                         const char *pack_file_dir,
                         const char *shard_dir,
                         svn_revnum_t shard_rev,
-                        apr_size_t max_items,
+                        int max_items,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *temp_dir;
-  apr_size_t max_revs = MIN(ffd->max_files_per_dir, (int)max_items);
+  int max_revs = MIN(ffd->max_files_per_dir, max_items);
   
   SVN_ERR_ASSERT(ffd->format >= SVN_FS_FS__MIN_LOG_ADDRESSING_FORMAT);
   SVN_ERR_ASSERT(shard_rev % ffd->max_files_per_dir == 0);
@@ -325,7 +325,7 @@ initialize_pack_context(pack_context_t *context,
   context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Clean up / free all revision range specific data and files in CONTEXT.
  * Use POOL for temporary allocations.
@@ -350,7 +350,7 @@ reset_pack_context(pack_context_t *context,
   svn_pool_clear(context->info_pool);
   
   return SVN_NO_ERROR;
-};
+}
 
 /* Call this after the last revision range.  It will finalize all index files
  * for CONTEXT and close any open files.  Use POOL for temporary allocations.
@@ -391,7 +391,7 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
-};
+}
 
 /* Efficiently copy SIZE bytes from SOURCE to DEST.  Invoke the CANCEL_FUNC
  * from CONTEXT at regular intervals.  Use POOL for allocations.
@@ -491,7 +491,7 @@ copy_item_to_temp(pack_context_t *context,
   return SVN_NO_ERROR;
 }
 
-/* Return the offset within CONTEXT->REPS_INFOS that corresponds to item
+/* Return the offset within CONTEXT->REPS that corresponds to item
  * ITEM_INDEX in  REVISION.
  */
 static int
@@ -617,7 +617,7 @@ compare_dir_entries_format7(const svn_sort__item_t *a,
   if (lhs->kind != rhs->kind)
     return lhs->kind == svn_node_dir ? -1 : 1;
 
-  return 0 - strcmp(lhs->name, rhs->name);
+  return strcmp(lhs->name, rhs->name);
 }
 
 /* Directories entries sorted by revision (decreasing - to max cache hits)
@@ -884,7 +884,6 @@ sort_reps_range(pack_context_t *context,
         {
           /* next path */
           path = path_order[i]->path;
-          rep_id = path_order[i]->rep_id;
 
           /* Pick roundest non-linear deltified node. */
           if (roundness(path_order[best]->predecessor_count)
@@ -918,6 +917,15 @@ sort_reps_range(pack_context_t *context,
    * access HEAD of the respective path.  Keeping all its dependency chain
    * in one place turns reconstruction into a linear scan of minimal length.
    */
+  for (i = first; i < last; ++i)
+    if (path_order[i])
+      {
+        /* This is the first path we still have to handle. */
+        path = path_order[i]->path;
+        rep_id = path_order[i]->rep_id;
+        break;
+      }
+
   for (i = first; i < last; ++i)
     if (path_order[i])
       {
@@ -984,16 +992,9 @@ sort_reps(pack_context_t *context)
         context->references->elt_size,
         (int (*)(const void *, const void *))compare_references);
 
-  /* Re-order noderevs like this:
-   * (1) Directories are already in front; sort directories section and
-   *     files section separately according to (2)-(4).
-   * (2) Most likely to be referenced by future pack files, in path order.
-   * (3) highest revision rep per path + dependency chain
-   * (4) Remaining reps in path, rev order
-   *
-   * We simply pick & chose from the existing path, rev order.
+  /* Directories are already in front; sort directories section and files
+   * section separately but use the same heuristics (see sub-function).
    */
-
   temp_pool = svn_pool_create(context->info_pool);
   count = context->path_order->nelts;
   temp = apr_pcalloc(temp_pool, count * sizeof(*temp));
@@ -1515,12 +1516,20 @@ pack_log_addressed(svn_fs_t *fs,
                    + 6 * sizeof(void*)
     };
 
-  apr_size_t max_items = max_mem / PER_ITEM_MEM;
+  int max_items;
   apr_array_header_t *max_ids;
   pack_context_t context = { 0 };
   int i;
   apr_size_t item_count = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Prevent integer overflow.  We use apr arrays to process the items so
+   * the maximum number of items is INT_MAX. */
+    {
+      apr_size_t temp = max_mem / PER_ITEM_MEM;
+      SVN_ERR_ASSERT(temp <= INT_MAX);
+      max_items = (int)temp;
+    }
 
   /* set up a pack context */
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
@@ -1768,105 +1777,96 @@ pack_rev_shard(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* In the file system at FS_PATH, pack the SHARD in REVS_DIR and
- * REVPROPS_DIR containing exactly MAX_FILES_PER_DIR revisions, using POOL
- * for allocations.  REVPROPS_DIR will be NULL if revprop packing is not
- * supported.  COMPRESSION_LEVEL and MAX_PACK_SIZE will be ignored in that
- * case.
- *
- * CANCEL_FUNC and CANCEL_BATON are what you think they are; similarly
- * NOTIFY_FUNC and NOTIFY_BATON.
- *
- * If for some reason we detect a partial packing already performed, we
- * remove the pack file and start again.
+/* Baton struct used by pack_body(), pack_shard() and synced_pack_shard().
+   These calls are nested and for every level additional fields will be
+   available. */
+struct pack_baton
+{
+  /* Valid when entering pack_body(). */
+  svn_fs_t *fs;
+  svn_fs_pack_notify_t notify_func;
+  void *notify_baton;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
+  /* Additional entries valid when entering pack_shard(). */
+  const char *revs_dir;
+  const char *revsprops_dir;
+  apr_int64_t shard;
+
+  /* Additional entries valid when entering synced_pack_shard(). */
+  const char *rev_shard_path;
+};
+
+
+/* Part of the pack process that requires global (write) synchronization.
+ * We pack the revision properties of the shard described by BATON and
+ * In the file system at FS_PATH, pack the SHARD in REVS_DIR and replace
+ * the non-packed revprop & rev shard folder(s) with the packed ones.
+ * The packed rev folder has been created prior to calling this function.
  */
 static svn_error_t *
-pack_shard(const char *revs_dir,
-           const char *revsprops_dir,
-           svn_fs_t *fs,
-           apr_int64_t shard,
-           int max_files_per_dir,
-           apr_off_t max_pack_size,
-           int compression_level,
-           svn_fs_pack_notify_t notify_func,
-           void *notify_baton,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           apr_pool_t *pool)
+synced_pack_shard(void *baton,
+                  apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
-  const char *rev_shard_path, *rev_pack_file_dir;
+  struct pack_baton *pb = baton;
+  fs_fs_data_t *ffd = pb->fs->fsap_data;
   const char *revprops_shard_path, *revprops_pack_file_dir;
 
-  /* Notify caller we're starting to pack this shard. */
-  if (notify_func)
-    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_start,
-                        pool));
-
-  /* Some useful paths. */
-  rev_pack_file_dir = svn_dirent_join(revs_dir,
-                  apr_psprintf(pool,
-                               "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
-                               shard),
-                  pool);
-  rev_shard_path = svn_dirent_join(revs_dir,
-                           apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
-                           pool);
-
-  /* pack the revision content */
-  SVN_ERR(pack_rev_shard(fs, rev_pack_file_dir, rev_shard_path,
-                         shard, max_files_per_dir, DEFAULT_MAX_MEM,
-                         cancel_func, cancel_baton, pool));
-
   /* if enabled, pack the revprops in an equivalent way */
-  if (revsprops_dir)
+  if (pb->revsprops_dir)
     {
-      revprops_pack_file_dir = svn_dirent_join(revsprops_dir,
+      revprops_pack_file_dir = svn_dirent_join(pb->revsprops_dir,
                    apr_psprintf(pool,
                                 "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
-                                shard),
+                                pb->shard),
                    pool);
-      revprops_shard_path = svn_dirent_join(revsprops_dir,
-                           apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
-                           pool);
+      revprops_shard_path = svn_dirent_join(pb->revsprops_dir,
+                    apr_psprintf(pool, "%" APR_INT64_T_FMT, pb->shard),
+                    pool);
 
       SVN_ERR(svn_fs_fs__pack_revprops_shard(revprops_pack_file_dir,
                                              revprops_shard_path,
-                                             shard, max_files_per_dir,
-                                             (int)(0.9 * max_pack_size),
-                                             compression_level,
-                                             cancel_func, cancel_baton,
+                                             pb->shard,
+                                             ffd->max_files_per_dir,
+                                             (int)(0.9*ffd->revprop_pack_size),
+                                             ffd->compress_packed_revprops
+                                               ? SVN__COMPRESSION_ZLIB_DEFAULT
+                                               : SVN__COMPRESSION_NONE,
+                                             pb->cancel_func,
+                                             pb->cancel_baton,
                                              pool));
     }
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard. */
-  SVN_ERR(svn_fs_fs__write_min_unpacked_rev(fs,
-                          (svn_revnum_t)((shard + 1) * max_files_per_dir),
-                          pool));
-  ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
+  SVN_ERR(svn_fs_fs__write_min_unpacked_rev(pb->fs,
+                    (svn_revnum_t)((pb->shard + 1) * ffd->max_files_per_dir),
+                    pool));
+  ffd->min_unpacked_rev
+    = (svn_revnum_t)((pb->shard + 1) * ffd->max_files_per_dir);
 
   /* Finally, remove the existing shard directories.
    * For revprops, clean up older obsolete shards as well as they might
    * have been left over from an interrupted FS upgrade. */
-  SVN_ERR(svn_io_remove_dir2(rev_shard_path, TRUE,
-                             cancel_func, cancel_baton, pool));
-  if (revsprops_dir)
+  SVN_ERR(svn_io_remove_dir2(pb->rev_shard_path, TRUE,
+                             pb->cancel_func, pb->cancel_baton, pool));
+  if (pb->revsprops_dir)
     {
       svn_node_kind_t kind = svn_node_dir;
-      apr_int64_t to_cleanup = shard;
+      apr_int64_t to_cleanup = pb->shard;
       do
         {
           SVN_ERR(svn_fs_fs__delete_revprops_shard(revprops_shard_path,
                                                    to_cleanup,
-                                                   max_files_per_dir,
-                                                   cancel_func,
-                                                   cancel_baton,
+                                                   ffd->max_files_per_dir,
+                                                   pb->cancel_func,
+                                                   pb->cancel_baton,
                                                    pool));
 
           /* If the previous shard exists, clean it up as well.
              Don't try to clean up shard 0 as it we can't tell quickly
              whether it actually needs cleaning up. */
-          revprops_shard_path = svn_dirent_join(revsprops_dir,
+          revprops_shard_path = svn_dirent_join(pb->revsprops_dir,
                       apr_psprintf(pool, "%" APR_INT64_T_FMT, --to_cleanup),
                       pool);
           SVN_ERR(svn_io_check_path(revprops_shard_path, &kind, pool));
@@ -1874,23 +1874,60 @@ pack_shard(const char *revs_dir,
       while (kind == svn_node_dir && to_cleanup > 0);
     }
 
-  /* Notify caller we're starting to pack this shard. */
-  if (notify_func)
-    SVN_ERR(notify_func(notify_baton, shard, svn_fs_pack_notify_end,
-                        pool));
-
   return SVN_NO_ERROR;
 }
 
-struct pack_baton
+/* Pack the shard described by BATON.
+ *
+ * If for some reason we detect a partial packing already performed,
+ * we remove the pack file and start again.
+ */
+static svn_error_t *
+pack_shard(struct pack_baton *baton,
+           apr_pool_t *pool)
 {
-  svn_fs_t *fs;
-  svn_fs_pack_notify_t notify_func;
-  void *notify_baton;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-};
+  fs_fs_data_t *ffd = baton->fs->fsap_data;
+  const char *rev_pack_file_dir;
 
+  /* Notify caller we're starting to pack this shard. */
+  if (baton->notify_func)
+    SVN_ERR(baton->notify_func(baton->notify_baton, baton->shard,
+                               svn_fs_pack_notify_start, pool));
+
+  /* Some useful paths. */
+  rev_pack_file_dir = svn_dirent_join(baton->revs_dir,
+                  apr_psprintf(pool,
+                               "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
+                               baton->shard),
+                  pool);
+  baton->rev_shard_path = svn_dirent_join(baton->revs_dir,
+                                          apr_psprintf(pool,
+                                                       "%" APR_INT64_T_FMT,
+                                                       baton->shard),
+                                          pool);
+
+  /* pack the revision content */
+  SVN_ERR(pack_rev_shard(baton->fs, rev_pack_file_dir, baton->rev_shard_path,
+                         baton->shard, ffd->max_files_per_dir,
+                         DEFAULT_MAX_MEM, baton->cancel_func,
+                         baton->cancel_baton, pool));
+
+  /* For newer repo formats, we only acquired the pack lock so far.
+     Before modifying the repo state by switching over to the packed
+     data, we need to acquire the global (write) lock. */
+  if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
+    SVN_ERR(svn_fs_fs__with_write_lock(baton->fs, synced_pack_shard, baton,
+                                       pool));
+  else
+    SVN_ERR(synced_pack_shard(baton, pool));
+
+  /* Notify caller we're starting to pack this shard. */
+  if (baton->notify_func)
+    SVN_ERR(baton->notify_func(baton->notify_baton, baton->shard,
+                               svn_fs_pack_notify_end, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* The work-horse for svn_fs_fs__pack, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
@@ -1913,11 +1950,8 @@ pack_body(void *baton,
   struct pack_baton *pb = baton;
   fs_fs_data_t *ffd = pb->fs->fsap_data;
   apr_int64_t completed_shards;
-  apr_int64_t i;
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
-  const char *rev_data_path;
-  const char *revprops_data_path = NULL;
 
   /* If the repository isn't a new enough format, we don't support packing.
      Return a friendly error to that effect. */
@@ -1940,29 +1974,22 @@ pack_body(void *baton,
   if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
     return SVN_NO_ERROR;
 
-  rev_data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
+  pb->revs_dir = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, pool);
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
-    revprops_data_path = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
-                                         pool);
+    pb->revsprops_dir = svn_dirent_join(pb->fs->path, PATH_REVPROPS_DIR,
+                                        pool);
 
   iterpool = svn_pool_create(pool);
-  for (i = ffd->min_unpacked_rev / ffd->max_files_per_dir;
-       i < completed_shards;
-       i++)
+  for (pb->shard = ffd->min_unpacked_rev / ffd->max_files_per_dir;
+       pb->shard < completed_shards;
+       pb->shard++)
     {
       svn_pool_clear(iterpool);
 
       if (pb->cancel_func)
         SVN_ERR(pb->cancel_func(pb->cancel_baton));
 
-      SVN_ERR(pack_shard(rev_data_path, revprops_data_path,
-                         pb->fs, i, ffd->max_files_per_dir,
-                         ffd->revprop_pack_size,
-                         ffd->compress_packed_revprops
-                           ? SVN__COMPRESSION_ZLIB_DEFAULT
-                           : SVN__COMPRESSION_NONE,
-                         pb->notify_func, pb->notify_baton,
-                         pb->cancel_func, pb->cancel_baton, iterpool));
+      SVN_ERR(pack_shard(pb, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1978,10 +2005,33 @@ svn_fs_fs__pack(svn_fs_t *fs,
                 apr_pool_t *pool)
 {
   struct pack_baton pb = { 0 };
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_error_t *err;
+
   pb.fs = fs;
   pb.notify_func = notify_func;
   pb.notify_baton = notify_baton;
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
-  return svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
+
+  if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
+    {
+      /* Newer repositories provide a pack operation specific lock.
+         Acquire it to prevent concurrent packs. */
+      apr_pool_t *subpool = svn_pool_create(pool);
+      const char *lock_path = svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE,
+                                              subpool);
+      err = svn_fs_fs__get_lock_on_filesystem(lock_path, subpool);
+      if (!err)
+        err = pack_body(&pb, subpool);
+
+      svn_pool_destroy(subpool);
+    }
+  else
+    {
+      /* Use the global write lock for older repos. */
+      err = svn_fs_fs__with_write_lock(fs, pack_body, &pb, pool);
+    }
+
+  return svn_error_trace(err);
 }

@@ -576,8 +576,8 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* Is this deltification worth our time? */
-      SVN_ERR(svn_fs_props_changed(&changed, b->t_root, t_path, s_root,
-                                   s_path, pool));
+      SVN_ERR(svn_fs_props_different(&changed, b->t_root, t_path, s_root,
+                                     s_path, pool));
       if (! changed)
         return SVN_NO_ERROR;
 
@@ -603,10 +603,9 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* So source, i.e. all new.  Transmit all target props. */
       for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
         {
-          const void *key;
-          void *val;
+          const char *key = svn__apr_hash_index_key(hi);
+          svn_string_t *val = svn__apr_hash_index_val(hi);
 
-          apr_hash_this(hi, &key, NULL, &val);
           SVN_ERR(change_fn(b, object, key, val, pool));
         }
     }
