@@ -254,13 +254,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1571214
-   Avoid adding duplicated rows in an sqlite hint table when calling
-   'svn upgrade' repeatedly on a working copy.
-   Justification:
-     Adding the same information multiple times is not a problem for sqlite,
-     but it adds unnecessary information to wc.db, which will be slightly
-     bigger than necessary in this corner case.
-   Votes:
-     +1: rhuijben, ivan, brane
