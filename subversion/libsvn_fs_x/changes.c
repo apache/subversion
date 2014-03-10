@@ -392,7 +392,7 @@ svn_fs_x__read_changes_container(svn_fs_x__changes_t **changes_p,
 
   /* read offsets array */
   count = svn_packed__int_count(offsets_stream);
-  changes->offsets = apr_array_make(result_pool, count, sizeof(int));
+  changes->offsets = apr_array_make(result_pool, (int)count, sizeof(int));
   for (i = 0; i < count; ++i)
     APR_ARRAY_PUSH(changes->offsets, int)
       = (int)svn_packed__get_uint(offsets_stream);
@@ -401,7 +401,7 @@ svn_fs_x__read_changes_container(svn_fs_x__changes_t **changes_p,
   count
     = svn_packed__int_count(svn_packed__first_int_substream(changes_stream));
   changes->changes
-    = apr_array_make(result_pool, count, sizeof(binary_change_t));
+    = apr_array_make(result_pool, (int)count, sizeof(binary_change_t));
   for (i = 0; i < count; ++i)
     {
       binary_change_t change;
