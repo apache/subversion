@@ -32,7 +32,6 @@
 #include <apr_general.h>
 #include <apr_uri.h>
 
-#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
@@ -54,6 +53,8 @@
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
+
+#include "svn_private_config.h"
 
 /** Externals **/
 

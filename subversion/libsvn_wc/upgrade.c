@@ -23,7 +23,6 @@
 
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -39,6 +38,7 @@
 #include "wc-queries.h"  /* for STMT_*  */
 #include "workqueue.h"
 
+#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_token.h"

@@ -25,7 +25,6 @@
 #include <apr_file_io.h>
 #include <apr_signal.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
@@ -49,6 +48,8 @@
 #include "private/svn_opt_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
+
+#include "svn_private_config.h"
 
 
 /*** Code. ***/

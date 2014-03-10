@@ -25,7 +25,6 @@
 
 #include <serf.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_base64.h"
@@ -36,6 +35,7 @@
 #include "private/svn_dav_protocol.h"
 #include "private/svn_fspath.h"
 #include "private/svn_string_private.h"
+#include "svn_private_config.h"
 
 #include "ra_serf.h"
 

@@ -51,7 +51,6 @@
 #include <fcntl.h>
 #endif
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
@@ -62,6 +61,7 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
+#include "svn_private_config.h"
 #include "svn_ctype.h"
 
 #include "private/svn_atomic.h"

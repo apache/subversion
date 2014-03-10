@@ -26,7 +26,6 @@
 
 #include "svn_test.h"
 
-#include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_pools.h"

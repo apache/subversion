@@ -24,7 +24,6 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
-#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_io.h"
 #include "svn_dirent_uri.h"

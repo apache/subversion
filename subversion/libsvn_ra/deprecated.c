@@ -26,7 +26,6 @@
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_path.h"
@@ -36,6 +35,9 @@
 
 #include "ra_loader.h"
 #include "deprecated.h"
+
+#include "svn_private_config.h"
+
 
 
 

@@ -27,7 +27,6 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
@@ -46,6 +45,8 @@
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_sorts_private.h"
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
