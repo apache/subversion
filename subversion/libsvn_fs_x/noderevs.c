@@ -115,11 +115,11 @@ typedef struct binary_noderev_t
 
   /* If this node-rev is a copy, this is the string index+1 of the path
      from which that copy way made. 0, otherwise. */
-  int copyfrom_path;
+  apr_size_t copyfrom_path;
 
   /* String index+1 of the root of the parent tree from whence this node-
    * rev was copied. */
-  int copyroot_path;
+  apr_size_t copyroot_path;
 
   /* Index+1 of the representation key for this node's properties.
      May be 0 if there are no properties.  */
@@ -131,7 +131,7 @@ typedef struct binary_noderev_t
 
   /* String index+1 of the path at which this node first came into
      existence.  */
-  int created_path;
+  apr_size_t created_path;
 
   /* Number of nodes with svn:mergeinfo properties that are
      descendants of this node (including it itself) */
@@ -776,15 +776,15 @@ svn_fs_x__read_noderevs_container(svn_fs_x__noderevs_t **container,
       noderev.predecessor_id = (int)svn_packed__get_uint(noderevs_stream);
       noderev.predecessor_count = (int)svn_packed__get_uint(noderevs_stream);
 
-      noderev.copyfrom_path = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.copyfrom_path = (apr_size_t)svn_packed__get_uint(noderevs_stream);
       noderev.copyfrom_rev = (svn_revnum_t)svn_packed__get_int(noderevs_stream);
-      noderev.copyroot_path = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.copyroot_path = (apr_size_t)svn_packed__get_uint(noderevs_stream);
       noderev.copyroot_rev = (svn_revnum_t)svn_packed__get_int(noderevs_stream);
 
       noderev.prop_rep = (int)svn_packed__get_uint(noderevs_stream);
       noderev.data_rep = (int)svn_packed__get_uint(noderevs_stream);
 
-      noderev.created_path = (int)svn_packed__get_uint(noderevs_stream);
+      noderev.created_path = (apr_size_t)svn_packed__get_uint(noderevs_stream);
       noderev.mergeinfo_count = svn_packed__get_uint(noderevs_stream);
 
       APR_ARRAY_PUSH(noderevs->noderevs, binary_noderev_t) = noderev;
