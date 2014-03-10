@@ -1017,6 +1017,61 @@ def export_file_external(sbox):
                                         expected_output,
                                         expected_disk)
 
+@Issue(4427)
+def export_file_externals2(sbox):
+  "exporting file externals"
+  
+  sbox.build()
+  sbox.simple_mkdir('DIR', 'DIR2')
+  
+  sbox.simple_propset('svn:externals', '^/iota file', 'DIR')
+  sbox.simple_propset('svn:externals', '^/DIR TheDir', 'DIR2')
+  sbox.simple_commit()
+  sbox.simple_update()
+  
+  tmp = sbox.add_wc_path('tmp')
+  os.mkdir(tmp)
+  
+  expected_output = svntest.wc.State(tmp, {
+    'file'          : Item(status='A '),
+  })
+  expected_disk = svntest.wc.State('', {
+    'file': Item(contents="This is the file 'iota'.\n")
+  })
+  # Fails in 1.8.8 and r1575909.
+  # Direct export of file external was just skipped
+  svntest.actions.run_and_verify_export(sbox.ospath('DIR/file'),
+                                        tmp,
+                                        expected_output,
+                                        expected_disk)
+  
+  expected_output = svntest.wc.State(tmp, {
+    'DIR/file'           : Item(status='A '),
+  })
+  expected_disk = svntest.wc.State('', {
+    'file': Item(contents="This is the file 'iota'.\n")
+  })
+  # Fails in 1.8.8 (doesn't export file), passes in r1575909
+  svntest.actions.run_and_verify_export(sbox.ospath('DIR'),
+                                        os.path.join(tmp, 'DIR'),
+                                        expected_output,
+                                        expected_disk)
+                                        
+  expected_output = svntest.wc.State(tmp, {
+    'DIR2/TheDir/file' : Item(status='A '),
+  })
+  expected_disk = svntest.wc.State('', {
+    'TheDir'      : Item(),
+    'TheDir/file' : Item(contents="This is the file 'iota'.\n")
+  })
+  # Fails in 1.8.8 (doesn't export anything),
+  # Fails in r1575909 (exports file twice; once as file; once as external)
+  svntest.actions.run_and_verify_export(sbox.ospath('DIR2'),
+                                        os.path.join(tmp, 'DIR2'),
+                                        expected_output,
+                                        expected_disk)
+
+
 ########################################################################
 # Run the tests
 
@@ -1052,6 +1107,7 @@ test_list = [ None,
               export_file_overwrite_with_force,
               export_custom_keywords,
               export_file_external,
+              export_file_externals2
              ]
 
 if __name__ == '__main__':
