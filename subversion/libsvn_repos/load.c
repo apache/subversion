@@ -317,15 +317,6 @@ parse_text_block(svn_stream_t *stream,
       SVN_ERR(parse_fns->set_fulltext(&text_stream, record_baton));
     }
 
-  /* If there are no contents to read, just write an empty buffer
-     through our callback. */
-  if (content_length == 0)
-    {
-      wlen = 0;
-      if (text_stream)
-        SVN_ERR(svn_stream_write(text_stream, "", &wlen));
-    }
-
   /* Regardless of whether or not we have a sink for our data, we
      need to read it. */
   while (content_length)
