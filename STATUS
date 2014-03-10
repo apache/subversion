@@ -205,8 +205,7 @@ Candidate changes:
    Justification:
      It's a regression in 1.8.8 compared to 1.8.5.
    Votes:
-      +1: brane
-      +1: rhuijben (via IRC)
+      +1: brane, rhuijben
 
  * r1574868
    Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
@@ -225,6 +224,18 @@ Candidate changes:
      ^/subversion/branches/1.8.x-r1574868
    Votes:
      +1: julianfoad
+
+ * r1575525, r1575915
+   Resolve issue #4427: File externals can't be exported.
+   Justification:
+     File externals 'are just files', so why should they be discriminated
+     by export?
+   Notes:
+     r1575525 resolves the most important issues, but in some cases still
+     doesn't allow exporting file externals. r1575915 simplifies the fix and
+     resolves a few remaining issues.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
