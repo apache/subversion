@@ -30,7 +30,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
-#include "svn_private_config.h"
 #include "client.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -43,6 +42,7 @@
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
 
+#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
 

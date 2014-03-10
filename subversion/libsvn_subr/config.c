@@ -31,13 +31,12 @@
 
 #include <apr_general.h>
 #include <apr_lib.h>
-
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "config_impl.h"
 
+#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_subr_private.h"
 

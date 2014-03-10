@@ -30,8 +30,6 @@
 #include <string.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
-
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_ra.h"
@@ -47,6 +45,8 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
+
+#include "svn_private_config.h"
 
 struct capture_baton_t {
   svn_commit_callback2_t original_callback;

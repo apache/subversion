@@ -33,10 +33,10 @@
 #include <serf.h>
 #include <serf_bucket_types.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_dirent_uri.h"

@@ -29,7 +29,6 @@
 #include <apr_uri.h>
 #include <serf.h>
 
-#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
@@ -48,6 +47,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_fspath.h"
 #include "private/svn_subr_private.h"
+#include "svn_private_config.h"
 
 #include "ra_serf.h"
 

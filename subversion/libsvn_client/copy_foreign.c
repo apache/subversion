@@ -26,8 +26,6 @@
 /*** Includes. ***/
 
 #include <string.h>
-
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_delta.h"
@@ -45,6 +43,7 @@
 #include "client.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+#include "svn_private_config.h"
 
 struct edit_baton_t
 {

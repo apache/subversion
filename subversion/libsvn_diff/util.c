@@ -25,7 +25,6 @@
 #include <apr.h>
 #include <apr_general.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -40,6 +39,8 @@
 
 #include "private/svn_diff_private.h"
 #include "diff.h"
+
+#include "svn_private_config.h"
 
 
 svn_boolean_t

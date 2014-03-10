@@ -39,7 +39,6 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_version.h"
-
 #include "private/svn_repos_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dav_protocol.h"
