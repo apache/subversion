@@ -223,6 +223,11 @@ svn_test__create_repos(svn_repos_t **repos_p,
   apr_hash_t *fs_config = make_fs_config(opts->fs_type,
                                          opts->server_minor_version, pool);
 
+  /* Apply the same defaults svnadmin would set when not passing
+     additional arguments. */
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC, "0");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE, "1");
+
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
      failure for postmortem analysis, but also that tests can be
