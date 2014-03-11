@@ -160,7 +160,7 @@ svn_fs_x__id_part_eq(const svn_fs_x__id_part_t *lhs,
 const svn_fs_x__id_part_t *
 svn_fs_x__id_node_id(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return &id->node_id;
 }
@@ -169,7 +169,7 @@ svn_fs_x__id_node_id(const svn_fs_id_t *fs_id)
 const svn_fs_x__id_part_t *
 svn_fs_x__id_copy_id(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return &id->copy_id;
 }
@@ -178,7 +178,7 @@ svn_fs_x__id_copy_id(const svn_fs_id_t *fs_id)
 svn_fs_x__txn_id_t
 svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return svn_fs_x__get_txn_id(id->noderev_id.change_set);
 }
@@ -187,7 +187,7 @@ svn_fs_x__id_txn_id(const svn_fs_id_t *fs_id)
 const svn_fs_x__id_part_t *
 svn_fs_x__id_noderev_id(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return &id->noderev_id;
 }
@@ -195,7 +195,7 @@ svn_fs_x__id_noderev_id(const svn_fs_id_t *fs_id)
 svn_revnum_t
 svn_fs_x__id_rev(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return svn_fs_x__get_revnum(id->noderev_id.change_set);
 }
@@ -204,7 +204,7 @@ svn_fs_x__id_rev(const svn_fs_id_t *fs_id)
 apr_uint64_t
 svn_fs_x__id_item(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return id->noderev_id.number;
 }
@@ -212,7 +212,7 @@ svn_fs_x__id_item(const svn_fs_id_t *fs_id)
 svn_boolean_t
 svn_fs_x__id_is_txn(const svn_fs_id_t *fs_id)
 {
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   return svn_fs_x__is_txn(id->noderev_id.change_set);
 }
@@ -222,7 +222,7 @@ svn_fs_x__id_unparse(const svn_fs_id_t *fs_id,
                      apr_pool_t *pool)
 {
   char string[6 * SVN_INT64_BUFFER_SIZE + 10];
-  fs_x__id_t *id = (fs_x__id_t *)fs_id;
+  const fs_x__id_t *id = (const fs_x__id_t *)fs_id;
 
   char *p = part_unparse(string, &id->node_id);
   *(p++) = '.';
@@ -240,8 +240,8 @@ svn_boolean_t
 svn_fs_x__id_eq(const svn_fs_id_t *a,
                 const svn_fs_id_t *b)
 {
-  fs_x__id_t *id_a = (fs_x__id_t *)a;
-  fs_x__id_t *id_b = (fs_x__id_t *)b;
+  const fs_x__id_t *id_a = (const fs_x__id_t *)a;
+  const fs_x__id_t *id_b = (const fs_x__id_t *)b;
 
   if (a == b)
     return TRUE;
@@ -255,8 +255,8 @@ svn_boolean_t
 svn_fs_x__id_check_related(const svn_fs_id_t *a,
                            const svn_fs_id_t *b)
 {
-  fs_x__id_t *id_a = (fs_x__id_t *)a;
-  fs_x__id_t *id_b = (fs_x__id_t *)b;
+  const fs_x__id_t *id_a = (const fs_x__id_t *)a;
+  const fs_x__id_t *id_b = (const fs_x__id_t *)b;
 
   if (a == b)
     return TRUE;
@@ -384,7 +384,7 @@ svn_fs_x__id_create(const svn_fs_x__id_part_t *node_id,
 svn_fs_id_t *
 svn_fs_x__id_copy(const svn_fs_id_t *source, apr_pool_t *pool)
 {
-  fs_x__id_t *id = (fs_x__id_t *)source;
+  const fs_x__id_t *id = (const fs_x__id_t *)source;
   fs_x__id_t *new_id = apr_pmemdup(pool, id, sizeof(*id));
 
   new_id->generic_id.fsap_data = new_id;

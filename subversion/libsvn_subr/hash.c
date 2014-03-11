@@ -622,7 +622,7 @@ hashfunc_compatible(const char *char_key, apr_ssize_t *klen)
 #if SVN_UNALIGNED_ACCESS_IS_OK
     for (p = key, i = *klen; i >= 4; i-=4, p+=4)
       {
-        apr_uint32_t chunk = *(apr_uint32_t *)p;
+        apr_uint32_t chunk = *(const apr_uint32_t *)p;
 
         /* the ">> 17" part gives upper bits in the chunk a chance to make
            some impact as well */

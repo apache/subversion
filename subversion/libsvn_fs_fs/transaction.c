@@ -1765,7 +1765,7 @@ fnv1a_checksum_finalize(apr_uint32_t *digest,
 
   SVN_ERR(svn_checksum_final(&checksum, context, scratch_pool));
   SVN_ERR_ASSERT(checksum->kind == svn_checksum_fnv1a_32x4);
-  *digest = ntohl(*(apr_uint32_t *)(checksum->digest));
+  *digest = ntohl(*(const apr_uint32_t *)(checksum->digest));
 
   return SVN_NO_ERROR;
 }
