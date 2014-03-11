@@ -1261,7 +1261,7 @@ def wc_delete(sbox):
 
   expected_err = ".*svn: E155035: .*excluded by server*"
   svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'rm', sbox.ospath('A/B/E'))
+                                     'rm', sbox.ospath('A/B/E'), '--force')
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'rm', sbox.ospath('A'))
 
