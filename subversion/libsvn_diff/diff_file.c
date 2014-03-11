@@ -1248,7 +1248,7 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
   opt_parsing_error_baton.pool = pool;
 
   argv[0] = "";
-  memcpy((void *) (argv + 1), args->elts, sizeof(char*) * args->nelts);
+  memcpy(argv + 1, args->elts, sizeof(char*) * args->nelts);
   argv[args->nelts + 1] = NULL;
 
   apr_getopt_init(&os, pool, args->nelts + 1, argv);
