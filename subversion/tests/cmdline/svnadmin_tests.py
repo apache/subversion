@@ -2324,6 +2324,79 @@ def fsfs_hotcopy_old_with_propchanges(sbox):
 
   check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
 
+
+@SkipUnless(svntest.main.fs_has_pack)
+def verify_packed(sbox):
+  "verify packed with small shards"
+  sbox.build()
+
+  # Configure two files per shard to trigger packing.
+  if svntest.main.is_fs_type_fsx():
+    format = "1\nlayout sharded 2\n"
+  elif svntest.main.is_fs_type_fsfs and \
+       svntest.main.options.server_minor_version >= 9:
+    format = "7\nlayout sharded 2\naddressing logical 0\n"
+  elif svntest.main.is_fs_type_fsfs and \
+       svntest.main.options.server_minor_version < 9:
+    format = "6\nlayout sharded 2\n"
+  else:
+    raise svntest.Failure
+
+  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
+  format_file.write(format)
+  format_file.close()
+
+  # Play with our greek tree.  These changesets fall into two
+  # separate shards with r2 and r3 being in shard 1 ...
+  sbox.simple_append('iota', "Line.\n")
+  sbox.simple_append('A/D/gamma', "Another line.\n")
+  sbox.simple_commit(message='r2')
+  sbox.simple_propset('foo', 'bar', 'iota')
+  sbox.simple_propset('foo', 'baz', 'A/mu')
+  sbox.simple_commit(message='r3')
+
+  # ...and r4 and r5 being in shard 2.
+  sbox.simple_rm('A/C')
+  sbox.simple_copy('A/B/E', 'A/B/E1')
+  sbox.simple_move('A/mu', 'A/B/mu')
+  sbox.simple_commit(message='r4')
+  sbox.simple_propdel('foo', 'A/B/mu')
+  sbox.simple_commit(message='r5')
+
+  if svntest.main.is_fs_type_fsfs and svntest.main.options.fsfs_packing:
+    # With --fsfs-packing, everything is already packed and we
+    # can skip this part.
+    pass
+  else:
+    expected_output = ["Packing revisions in shard 0...done.\n",
+                       "Packing revisions in shard 1...done.\n",
+                       "Packing revisions in shard 2...done.\n"]
+    svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
+                                            "pack", sbox.repo_dir)
+
+  if svntest.main.is_fs_log_addressing():
+    expected_output = ["* Verifying metadata at revision 0 ...\n",
+                       "* Verifying metadata at revision 2 ...\n",
+                       "* Verifying metadata at revision 4 ...\n",
+                       "* Verifying repository metadata ...\n",
+                       "* Verified revision 0.\n",
+                       "* Verified revision 1.\n",
+                       "* Verified revision 2.\n",
+                       "* Verified revision 3.\n",
+                       "* Verified revision 4.\n",
+                       "* Verified revision 5.\n"]
+  else:
+    expected_output = ["* Verifying repository metadata ...\n",
+                       "* Verified revision 0.\n",
+                       "* Verified revision 1.\n",
+                       "* Verified revision 2.\n",
+                       "* Verified revision 3.\n",
+                       "* Verified revision 4.\n",
+                       "* Verified revision 5.\n"]
+
+  svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
+                                          "verify", sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2368,6 +2441,7 @@ test_list = [ None,
               fsfs_hotcopy_old_non_empty,
               load_ignore_dates,
               fsfs_hotcopy_old_with_propchanges,
+              verify_packed,
              ]
 
 if __name__ == '__main__':
