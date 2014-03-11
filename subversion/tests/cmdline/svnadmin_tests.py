@@ -652,7 +652,7 @@ def verify_windows_paths_in_repos(sbox):
   if svntest.main.is_fs_log_addressing():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verifying metadata at revision 0 ...\n",
+      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
                  "* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
@@ -660,14 +660,14 @@ def verify_windows_paths_in_repos(sbox):
   elif svntest.main.fs_has_rep_sharing():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verifying repository metadata ...\n",
+      'STDOUT', ["* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
   else:
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verified revision 0.\n",
+      'STDOUT', ["* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
 
