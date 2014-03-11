@@ -2017,7 +2017,12 @@ svn_fs_fs__pack(svn_fs_t *fs,
   if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
     {
       /* Newer repositories provide a pack operation specific lock.
-         Acquire it to prevent concurrent packs. */
+         Acquire it to prevent concurrent packs.
+
+         Since the file lock's lifetime is bound to a pool, we create a
+         separate subpool here to release the lock immediately after the
+         operation finished.
+       */
       apr_pool_t *subpool = svn_pool_create(pool);
       const char *lock_path = svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE,
                                               subpool);
