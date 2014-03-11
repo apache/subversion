@@ -166,7 +166,7 @@ static apr_uint16_t
 match_length(const svn_string_t *lhs,
              const svn_string_t *rhs)
 {
-  apr_size_t len = MIN(rhs->len, rhs->len);
+  apr_size_t len = MIN(lhs->len, rhs->len);
   return (apr_uint16_t)svn_cstring__match_length(lhs->data, rhs->data, len);
 }
 
