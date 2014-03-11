@@ -840,7 +840,7 @@ ev2_apply_textdelta(void *file_baton,
 
   target = svn_stream_lazyopen_create(open_delta_target,
                                       &change->contents_abspath,
-                                      FALSE, fb->eb->edit_pool);
+                                      TRUE, fb->eb->edit_pool);
 
   svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
