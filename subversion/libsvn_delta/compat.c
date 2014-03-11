@@ -791,6 +791,26 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return svn_error_trace(err);
 }
 
+/* Lazy-open handler for getting a read-only stream of the delta base. */
+static svn_error_t *
+open_delta_base(svn_stream_t **stream, void *baton,
+                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char *const delta_base = baton;
+  return svn_stream_open_readonly(stream, delta_base,
+                                  result_pool, scratch_pool);
+}
+
+/* Lazy-open handler for opening a stream for the delta result. */
+static svn_error_t *
+open_delta_target(svn_stream_t **stream, void *baton,
+                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char **delta_target = baton;
+  return svn_stream_open_unique(stream, delta_target, NULL,
+                                svn_io_file_del_on_pool_cleanup,
+                                result_pool, scratch_pool);
+}
 
 static svn_error_t *
 ev2_apply_textdelta(void *file_baton,
@@ -804,8 +824,6 @@ ev2_apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct change_node *change;
   svn_stream_t *target;
-  /* ### fix this. for now, we know this has a "short" lifetime.  */
-  apr_pool_t *scratch_pool = handler_pool;
 
   change = locate_change(fb->eb, fb->path);
   SVN_ERR_ASSERT(change->contents_abspath == NULL);
@@ -816,12 +834,13 @@ ev2_apply_textdelta(void *file_baton,
   if (! fb->delta_base)
     hb->source = svn_stream_empty(handler_pool);
   else
-    SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
-                                     scratch_pool));
+    hb->source = svn_stream_lazyopen_create(open_delta_base,
+                                            (char*)fb->delta_base,
+                                            FALSE, handler_pool);
 
-  SVN_ERR(svn_stream_open_unique(&target, &change->contents_abspath, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 fb->eb->edit_pool, scratch_pool));
+  target = svn_stream_lazyopen_create(open_delta_target,
+                                      &change->contents_abspath,
+                                      FALSE, fb->eb->edit_pool);
 
   svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
