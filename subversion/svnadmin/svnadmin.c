@@ -544,7 +544,7 @@ struct svnadmin_opt_state
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
-  const char *parent_dir;
+  const char *parent_dir;                           /* --parent-dir */
   svn_stringbuf_t *filedata;                        /* --file */
 
   const char *config_dir;    /* Overriding Configuration Directory */
