@@ -237,15 +237,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1576377
-   Create BDB tests while running the C tests in the same way 'svnadmin create'
-   does to avoid using much more diskspace than needed.
-   Justification:
-     This allows me (rhuijben) to run the tests without specifically creating
-     a larger ramdisk than for all other test modes.
-   Votes:
-     +1: rhuijben
-
 Veto-blocked changes:
 =====================
 
