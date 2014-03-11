@@ -1132,11 +1132,16 @@ one_child_status(const struct walk_status_baton *wb,
    * look up the kinds in the conflict ... just show all. */
   if (! conflicted)
     {
-      /* Selected node, but not found */
-      if (dirent == NULL)
-        return SVN_NO_ERROR;
+      /* We have a node, but its not visible in the WC. It can be a marker
+         node (not present, (server) excluded), *or* it can be the explictly
+         passed target of the status walk operation that doesn't exist.
 
-      if (depth == svn_depth_files && dirent->kind == svn_node_dir)
+         We only report the node when the caller explicitly as
+      */
+      if (dirent == NULL && strcmp(wb->target_abspath, local_abspath) != 0)
+        return SVN_NO_ERROR; /* Marker node */
+
+      if (depth == svn_depth_files && dirent && dirent->kind == svn_node_dir)
         return SVN_NO_ERROR;
 
       if (svn_wc_is_adm_dir(svn_dirent_basename(local_abspath, NULL),

@@ -2945,7 +2945,6 @@ def last_changed_of_copied_subdir(sbox):
              }
   svntest.actions.run_and_verify_info([expected], E_copied)
 
-@XFail()
 def commit_unversioned(sbox):
   "verify behavior on unversioned targets"
   
