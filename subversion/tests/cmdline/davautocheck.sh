@@ -248,12 +248,10 @@ done
 
 case "`uname`" in
   Darwin*)
-    LDD='otool -L'
     DYLD_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$DYLD_LIBRARY_PATH"
     export DYLD_LIBRARY_PATH
     ;;
   *)
-    LDD='ldd'
     LD_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$LD_LIBRARY_PATH"
     export LD_LIBRARY_PATH
     ;;
@@ -609,8 +607,6 @@ fi
 say "starting the tests..."
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-$LDD "$CLIENT_CMD" | grep 'not found' >/dev/null \
-  && fail "Subversion client couldn't be fully linked at run-time"
 
 if [ "$HTTP_LIBRARY" = "" ]; then
   say "Using default dav library"
