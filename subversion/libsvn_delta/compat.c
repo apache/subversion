@@ -188,6 +188,7 @@ struct change_node
 
   apr_hash_t *props;  /* new/final set of props to apply  */
 
+  svn_boolean_t contents_changed; /* the file contents changed */
   const char *contents_abspath;  /* file containing new fulltext  */
   svn_checksum_t *checksum;  /* checksum of new fulltext  */
 
@@ -347,17 +348,26 @@ process_actions(struct ev2_edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
-  if (change->contents_abspath != NULL)
+  if (change->contents_changed)
     {
       /* We can only set text on files. */
       /* ### validate we aren't overwriting KIND?  */
       kind = svn_node_file;
 
-      /* ### the checksum might be in CHANGE->CHECKSUM  */
-      SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
-                                    svn_checksum_sha1, scratch_pool));
-      SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
-                                       scratch_pool, scratch_pool));
+      if (change->contents_abspath)
+        {
+          /* ### the checksum might be in CHANGE->CHECKSUM  */
+          SVN_ERR(svn_io_file_checksum2(&checksum, change->contents_abspath,
+                                        svn_checksum_sha1, scratch_pool));
+          SVN_ERR(svn_stream_open_readonly(&contents, change->contents_abspath,
+                                           scratch_pool, scratch_pool));
+        }
+      else
+        {
+          contents = svn_stream_empty(scratch_pool);
+          checksum = svn_checksum_empty_checksum(svn_checksum_sha1,
+                                                 scratch_pool);
+        }
     }
 
   if (change->props != NULL)
@@ -399,7 +409,7 @@ process_actions(struct ev2_edit_baton *eb,
           else
             {
               /* If this file was added, but apply_txdelta() was not
-                 called (ie. no CONTENTS_ABSPATH), then we're adding
+                 called (i.e., CONTENTS_CHANGED is FALSE), then we're adding
                  an empty file.  */
               if (change->contents_abspath == NULL)
                 {
@@ -789,6 +799,26 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   return svn_error_trace(err);
 }
 
+/* Lazy-open handler for getting a read-only stream of the delta base. */
+static svn_error_t *
+open_delta_base(svn_stream_t **stream, void *baton,
+                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char *const delta_base = baton;
+  return svn_stream_open_readonly(stream, delta_base,
+                                  result_pool, scratch_pool);
+}
+
+/* Lazy-open handler for opening a stream for the delta result. */
+static svn_error_t *
+open_delta_target(svn_stream_t **stream, void *baton,
+                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char **delta_target = baton;
+  return svn_stream_open_unique(stream, delta_target, NULL,
+                                svn_io_file_del_on_pool_cleanup,
+                                result_pool, scratch_pool);
+}
 
 static svn_error_t *
 ev2_apply_textdelta(void *file_baton,
@@ -802,10 +832,9 @@ ev2_apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct change_node *change;
   svn_stream_t *target;
-  /* ### fix this. for now, we know this has a "short" lifetime.  */
-  apr_pool_t *scratch_pool = handler_pool;
 
   change = locate_change(fb->eb, fb->path);
+  SVN_ERR_ASSERT(!change->contents_changed);
   SVN_ERR_ASSERT(change->contents_abspath == NULL);
   SVN_ERR_ASSERT(!SVN_IS_VALID_REVNUM(change->changing)
                  || change->changing == fb->base_revision);
@@ -814,12 +843,14 @@ ev2_apply_textdelta(void *file_baton,
   if (! fb->delta_base)
     hb->source = svn_stream_empty(handler_pool);
   else
-    SVN_ERR(svn_stream_open_readonly(&hb->source, fb->delta_base, handler_pool,
-                                     scratch_pool));
+    hb->source = svn_stream_lazyopen_create(open_delta_base,
+                                            (char*)fb->delta_base,
+                                            FALSE, handler_pool);
 
-  SVN_ERR(svn_stream_open_unique(&target, &change->contents_abspath, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 fb->eb->edit_pool, scratch_pool));
+  change->contents_changed = TRUE;
+  target = svn_stream_lazyopen_create(open_delta_target,
+                                      &change->contents_abspath,
+                                      FALSE, fb->eb->edit_pool);
 
   svn_txdelta_apply(hb->source, target,
                     NULL, NULL,
@@ -1106,6 +1137,7 @@ add_file_cb(void *baton,
   change->kind = svn_node_file;
   change->deleting = replaces_rev;
   change->props = svn_prop_hash_dup(props, eb->edit_pool);
+  change->contents_changed = TRUE;
   change->contents_abspath = tmp_filename;
   change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
 
@@ -1223,6 +1255,7 @@ alter_file_cb(void *baton,
     change->props = svn_prop_hash_dup(props, eb->edit_pool);
   if (contents != NULL)
     {
+      change->contents_changed = TRUE;
       change->contents_abspath = tmp_filename;
       change->checksum = svn_checksum_dup(md5_checksum, eb->edit_pool);
     }
@@ -1673,7 +1706,7 @@ apply_change(void **dir_baton,
   else
     SVN_ERR(drive_ev1_props(eb, relpath, change, file_baton, scratch_pool));
 
-  if (change->contents_abspath)
+  if (change->contents_changed && change->contents_abspath)
     {
       svn_txdelta_window_handler_t handler;
       void *handler_baton;
