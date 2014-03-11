@@ -386,10 +386,6 @@ assemble_status(svn_wc_status3_t **status,
   enum svn_wc_status_kind prop_status = svn_wc_status_none;
 
 
-  if (!info)
-    SVN_ERR(svn_wc__db_read_single_info(&info, db, local_abspath,
-                                        result_pool, scratch_pool));
-
   if (!info->repos_relpath || !parent_repos_relpath)
     switched_p = FALSE;
   else
@@ -2771,23 +2767,17 @@ internal_status(svn_wc_status3_t **status,
                 apr_pool_t *scratch_pool)
 {
   const svn_io_dirent2_t *dirent;
-  svn_node_kind_t node_kind;
   const char *parent_repos_relpath;
   const char *parent_repos_root_url;
   const char *parent_repos_uuid;
-  svn_wc__db_status_t node_status;
-  svn_boolean_t conflicted;
+  const struct svn_wc__db_info_t *info;
   svn_boolean_t is_root = FALSE;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             db, local_abspath,
-                             scratch_pool, scratch_pool);
+  err = svn_wc__db_read_single_info(&info, db, local_abspath,
+                                    scratch_pool, scratch_pool);
 
   if (err)
     {
@@ -2795,10 +2785,7 @@ internal_status(svn_wc_status3_t **status,
         return svn_error_trace(err);
 
       svn_error_clear(err);
-      node_kind = svn_node_unknown;
-      /* Ensure conflicted is always set, but don't hide tree conflicts
-         on 'hidden' nodes. */
-      conflicted = FALSE;
+      info = NULL;
 
       SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
                                   scratch_pool, scratch_pool));
@@ -2807,18 +2794,15 @@ internal_status(svn_wc_status3_t **status,
     SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,
                                           scratch_pool, scratch_pool));
 
-  if (node_kind != svn_node_unknown
-      && (node_status == svn_wc__db_status_not_present
-          || node_status == svn_wc__db_status_server_excluded
-          || node_status == svn_wc__db_status_excluded))
-    {
-      node_kind = svn_node_unknown;
-    }
-
-  if (node_kind == svn_node_unknown)
+  if (!info
+      || info->kind == svn_node_unknown
+      || info->status == svn_wc__db_status_not_present
+      || info->status == svn_wc__db_status_server_excluded
+      || info->status == svn_wc__db_status_excluded)
     return svn_error_trace(assemble_unversioned(status,
                                                 db, local_abspath,
-                                                dirent, conflicted,
+                                                dirent,
+                                                info ? info->conflicted : FALSE,
                                                 FALSE /* is_ignored */,
                                                 result_pool, scratch_pool));
 
@@ -2827,30 +2811,22 @@ internal_status(svn_wc_status3_t **status,
   else
     SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
 
+  /* Even though passing parent_repos_* is not required, assemble_status needs
+     these values to determine if a node is switched */
   if (!is_root)
     {
-      svn_wc__db_status_t parent_status;
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
                                                       scratch_pool);
 
-      err = svn_wc__db_read_info(&parent_status, NULL, NULL,
-                                 &parent_repos_relpath, &parent_repos_root_url,
-                                 &parent_repos_uuid, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
-                                 db, parent_abspath,
-                                 result_pool, scratch_pool);
-
-      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                  || SVN_WC__ERR_IS_NOT_CURRENT_WC(err)))
-        {
-          svn_error_clear(err);
-          parent_repos_root_url = NULL;
-          parent_repos_relpath = NULL;
-          parent_repos_uuid = NULL;
-        }
-      else SVN_ERR(err);
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
+                                   &parent_repos_relpath,
+                                   &parent_repos_root_url,
+                                   &parent_repos_uuid, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, parent_abspath,
+                                   result_pool, scratch_pool));
     }
   else
     {
@@ -2863,7 +2839,7 @@ internal_status(svn_wc_status3_t **status,
                                          parent_repos_root_url,
                                          parent_repos_relpath,
                                          parent_repos_uuid,
-                                         NULL,
+                                         info,
                                          dirent,
                                          TRUE /* get_all */,
                                          FALSE,
