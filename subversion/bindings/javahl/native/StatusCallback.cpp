@@ -54,20 +54,6 @@ StatusCallback::callback(void *baton,
                          const svn_client_status_t *status,
                          apr_pool_t *pool)
 {
-  if (!status->versioned
-      && !status->conflicted
-      && status->node_status == svn_wc_status_none
-      && status->repos_node_status == svn_wc_status_none)
-    {
-      /* Node does not exist in the WC, nor on disk, nor in the repository,
-         and it isn't even a tree conflict...
-
-         For legacy reasons the current JavaHL api doesn't want to know about
-         it even though it explicitly asked for the information. We probably
-         want to move this to the deprecated wrapper in a future iteration. */
-      return SVN_NO_ERROR;
-    }
-
   if (baton)
     return static_cast<StatusCallback *>(baton)->doStatus(
             local_abspath, status, pool);
