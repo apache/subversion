@@ -75,11 +75,10 @@ make_fs_config(const char *fs_type,
                apr_pool_t *pool)
 {
   apr_hash_t *fs_config = apr_hash_make(pool);
-  apr_hash_set(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-               APR_HASH_KEY_STRING, "1");
-  apr_hash_set(fs_config, SVN_FS_CONFIG_FS_TYPE,
-               APR_HASH_KEY_STRING,
-               fs_type);
+
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, fs_type);
   if (server_minor_version)
     {
       svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION,
@@ -222,11 +221,6 @@ svn_test__create_repos(svn_repos_t **repos_p,
   svn_boolean_t must_reopen;
   apr_hash_t *fs_config = make_fs_config(opts->fs_type,
                                          opts->server_minor_version, pool);
-
-  /* Apply the same defaults svnadmin would set when not passing
-     additional arguments. */
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC, "0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE, "1");
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
