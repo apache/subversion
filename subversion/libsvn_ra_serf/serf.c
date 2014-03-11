@@ -585,6 +585,14 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
+  /* This subpool not only avoids having a lot of temporary state in the long
+     living session pool, but it also works around a bug in serf
+     <= r2319 / 1.3.4 where serf doesn't report the request as failed/cancelled
+     when the authorization request handler fails to handle the request.
+
+     In this specific case the serf connection is cleaned up by the pool
+     handlers before our handler is cleaned up (via subpools). Using a
+     subpool here cleans up our handler before the connection is cleaned. */
   subpool = svn_pool_create(pool);
 
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
