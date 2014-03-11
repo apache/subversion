@@ -254,76 +254,6 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                                  sha1_checksum, scratch_pool);
 }
 
-
-static svn_error_t *
-check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
-                              const char *target_abspath,
-                              svn_depth_t depth,
-                              apr_pool_t *scratch_pool)
-{
-  svn_node_kind_t kind;
-
-  SVN_ERR_ASSERT(depth != svn_depth_infinity);
-
-  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, target_abspath,
-                            TRUE, FALSE, scratch_pool));
-
-
-  /* ### TODO(sd): This check is slightly too strict.  It should be
-     ### possible to:
-     ###
-     ###   * delete a directory containing only files when
-     ###     depth==svn_depth_files;
-     ###
-     ###   * delete a directory containing only files and empty
-     ###     subdirs when depth==svn_depth_immediates.
-     ###
-     ### But for now, we insist on svn_depth_infinity if you're
-     ### going to delete a directory, because we're lazy and
-     ### trying to get depthy commits working in the first place.
-     ###
-     ### This would be fairly easy to fix, though: just, well,
-     ### check the above conditions!
-     ###
-     ### GJS: I think there may be some confusion here. there is
-     ###      the depth of the commit, and the depth of a checked-out
-     ###      directory in the working copy. Delete, by its nature, will
-     ###      always delete all of its children, so it seems a bit
-     ###      strange to worry about what is in the working copy.
-  */
-  if (kind == svn_node_dir)
-    {
-      svn_wc_schedule_t schedule;
-
-      /* ### Looking at schedule is probably enough, no need for
-         pristine compare etc. */
-      SVN_ERR(svn_wc__node_get_schedule(&schedule, NULL,
-                                        wc_ctx, target_abspath,
-                                        scratch_pool));
-
-      if (schedule == svn_wc_schedule_delete
-          || schedule == svn_wc_schedule_replace)
-        {
-          const apr_array_header_t *children;
-
-          SVN_ERR(svn_wc__node_get_children(&children, wc_ctx,
-                                            target_abspath, TRUE,
-                                            scratch_pool, scratch_pool));
-
-          if (children->nelts > 0)
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                     _("Cannot delete the directory '%s' "
-                                       "in a non-recursive commit "
-                                       "because it has children"),
-                                     svn_dirent_local_style(target_abspath,
-                                                            scratch_pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Given a list of committables described by their common base abspath
    BASE_ABSPATH and a list of relative dirents TARGET_RELPATHS determine
    which absolute paths must be locked to commit all these targets and
@@ -673,26 +603,6 @@ svn_client_commit6(const apr_array_header_t *targets,
   notify_prefix = svn_dirent_get_longest_ancestor(current_abspath,
                                                   base_abspath,
                                                   pool);
-
-  /* If a non-recursive commit is desired, do not allow a deleted directory
-     as one of the targets. */
-  if (depth != svn_depth_infinity && ! commit_as_operations)
-    for (i = 0; i < rel_targets->nelts; i++)
-      {
-        const char *relpath = APR_ARRAY_IDX(rel_targets, i, const char *);
-        const char *target_abspath;
-
-        svn_pool_clear(iterpool);
-
-        target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
-
-        cmt_err = svn_error_trace(
-          check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
-                                        depth, iterpool));
-
-        if (cmt_err)
-          goto cleanup;
-      }
 
   /* Crawl the working copy for commit items. */
   {
