@@ -576,7 +576,7 @@ davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 # run make check.
 davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@# Takes MODULE_PATH, USE_HTTPV1 and SVN_PATH_AUTHZ in the environment.
-	@APXS=$(APXS) $(SHELL) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
+	@APXS=$(APXS) MAKE=$(MAKE) $(SHELL) $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
@@ -585,7 +585,7 @@ svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
 svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
-	@env PYTHON=$(PYTHON) THREADED=$(THREADED) \
+	@env PYTHON=$(PYTHON) THREADED=$(THREADED) MAKE=$(MAKE) \
 	  $(SHELL) $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:

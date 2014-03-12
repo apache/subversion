@@ -604,6 +604,8 @@ else
   TIME_CMD=""
 fi
 
+MAKE=${MAKE:-make}
+
 say "starting the tests..."
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
@@ -619,7 +621,7 @@ else
 fi
 
 if [ $# = 0 ]; then
-  $TIME_CMD make check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
+  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
