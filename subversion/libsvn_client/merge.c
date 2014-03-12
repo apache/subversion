@@ -11464,7 +11464,7 @@ find_reintegrate_merge(merge_source_t **source_p,
           SVN_ERR(svn_mergeinfo__catalog_to_formatted_string(
             &source_mergeinfo_cat_string,
             final_unmerged_catalog,
-            "  ", "    Missing ranges: ", scratch_pool));
+            "  ", _("    Missing ranges: "), scratch_pool));
           return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
                                    NULL,
                                    _("Reintegrate can only be used if "
