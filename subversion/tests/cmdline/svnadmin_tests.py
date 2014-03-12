@@ -84,6 +84,14 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'rev-prop-atomics.mutex':
           continue
 
+        # Ignore auto-created empty lock files as they may or may not
+        # be present and are neither required by nor do they harm to
+        # the destination repository.
+        if src_file == 'pack-lock':
+          continue
+        if src_file == 'write-lock':
+          continue
+
         src_path = os.path.join(src_dirpath, src_file)
         dst_path = os.path.join(dst_dirpath, src_file)
         if not os.path.isfile(dst_path):
@@ -644,7 +652,7 @@ def verify_windows_paths_in_repos(sbox):
   if svntest.main.is_fs_log_addressing():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verifying metadata at revision 0 ...\n",
+      'STDOUT', ["* Verifying metadata at revision 0 ...\n",
                  "* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
@@ -652,14 +660,14 @@ def verify_windows_paths_in_repos(sbox):
   elif svntest.main.fs_has_rep_sharing():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verifying repository metadata ...\n",
+      'STDOUT', ["* Verifying repository metadata ...\n",
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
   else:
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
-      'STDERR', ["* Verified revision 0.\n",
+      'STDOUT', ["* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
 
@@ -828,10 +836,14 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 #----------------------------------------------------------------------
 
-@SkipUnless(svntest.main.is_fs_type_fsfs)
-def recover_fsfs(sbox):
-  "recover a repository (FSFS only)"
-  sbox.build()
+# Helper for two test functions.
+def corrupt_and_recover_db_current(sbox, minor_version=None):
+  """Build up a MINOR_VERSION sandbox and test different recovery scenarios
+  with missing, out-of-date or even corrupt db/current files.  Recovery should
+  behave the same way with all values of MINOR_VERSION, hence this helper
+  containing the common code that allows us to check it."""
+
+  sbox.build(minor_version=minor_version)
   current_path = os.path.join(sbox.repo_dir, 'db', 'current')
 
   # Commit up to r3, so we can test various recovery scenarios.
@@ -905,6 +917,24 @@ def recover_fsfs(sbox):
   svntest.verify.compare_and_display_lines(
     "Contents of db/current is unexpected.",
     'db/current', expected_current_contents, actual_current_contents)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_db_current(sbox):
+  "fsfs recover db/current"
+  corrupt_and_recover_db_current(sbox)
+
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_recover_old_db_current(sbox):
+  "fsfs recover db/current --compatible-version=1.3"
+
+  # Around trunk@1573728, 'svnadmin recover' wrongly errored out
+  # for the --compatible-version=1.3 repositories with missing or
+  # invalid db/current file:
+  # svnadmin: E160006: No such revision 1
+
+  corrupt_and_recover_db_current(sbox, minor_version=3)
 
 #----------------------------------------------------------------------
 @Issue(2983)
@@ -2273,6 +2303,100 @@ def load_ignore_dates(sbox):
                             "  start_time: %s"
                             % (rev, str(rev_time), str(start_time)))
 
+
+@XFail()
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def fsfs_hotcopy_old_with_propchanges(sbox):
+  "hotcopy --compatible-version=1.3 with propchanges"
+
+  # Around trunk@1573728, running 'svnadmin hotcopy' for the
+  # --compatible-version=1.3 repository with property changes
+  # ended with mismatching db/current in source and destination:
+  # (source: "2 l 1", destination: "2 k 1").
+
+  sbox.build(create_wc=True, minor_version=3)
+  sbox.simple_propset('foo', 'bar', 'A/mu')
+  sbox.simple_commit()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  svntest.actions.run_and_verify_svnadmin(None, None, [], "hotcopy",
+                                          sbox.repo_dir, backup_dir)
+
+  check_hotcopy_fsfs(sbox.repo_dir, backup_dir)
+
+
+@SkipUnless(svntest.main.fs_has_pack)
+def verify_packed(sbox):
+  "verify packed with small shards"
+  sbox.build()
+
+  # Configure two files per shard to trigger packing.
+  if svntest.main.is_fs_type_fsx():
+    format = "1\nlayout sharded 2\n"
+  elif svntest.main.is_fs_type_fsfs and \
+       svntest.main.options.server_minor_version >= 9:
+    format = "7\nlayout sharded 2\naddressing logical 0\n"
+  elif svntest.main.is_fs_type_fsfs and \
+       svntest.main.options.server_minor_version < 9:
+    format = "6\nlayout sharded 2\n"
+  else:
+    raise svntest.Failure
+
+  format_file = open(os.path.join(sbox.repo_dir, 'db', 'format'), 'wb')
+  format_file.write(format)
+  format_file.close()
+
+  # Play with our greek tree.  These changesets fall into two
+  # separate shards with r2 and r3 being in shard 1 ...
+  sbox.simple_append('iota', "Line.\n")
+  sbox.simple_append('A/D/gamma', "Another line.\n")
+  sbox.simple_commit(message='r2')
+  sbox.simple_propset('foo', 'bar', 'iota')
+  sbox.simple_propset('foo', 'baz', 'A/mu')
+  sbox.simple_commit(message='r3')
+
+  # ...and r4 and r5 being in shard 2.
+  sbox.simple_rm('A/C')
+  sbox.simple_copy('A/B/E', 'A/B/E1')
+  sbox.simple_move('A/mu', 'A/B/mu')
+  sbox.simple_commit(message='r4')
+  sbox.simple_propdel('foo', 'A/B/mu')
+  sbox.simple_commit(message='r5')
+
+  if svntest.main.is_fs_type_fsfs and svntest.main.options.fsfs_packing:
+    # With --fsfs-packing, everything is already packed and we
+    # can skip this part.
+    pass
+  else:
+    expected_output = ["Packing revisions in shard 0...done.\n",
+                       "Packing revisions in shard 1...done.\n",
+                       "Packing revisions in shard 2...done.\n"]
+    svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
+                                            "pack", sbox.repo_dir)
+
+  if svntest.main.is_fs_log_addressing():
+    expected_output = ["* Verifying metadata at revision 0 ...\n",
+                       "* Verifying metadata at revision 2 ...\n",
+                       "* Verifying metadata at revision 4 ...\n",
+                       "* Verifying repository metadata ...\n",
+                       "* Verified revision 0.\n",
+                       "* Verified revision 1.\n",
+                       "* Verified revision 2.\n",
+                       "* Verified revision 3.\n",
+                       "* Verified revision 4.\n",
+                       "* Verified revision 5.\n"]
+  else:
+    expected_output = ["* Verifying repository metadata ...\n",
+                       "* Verified revision 0.\n",
+                       "* Verified revision 1.\n",
+                       "* Verified revision 2.\n",
+                       "* Verified revision 3.\n",
+                       "* Verified revision 4.\n",
+                       "* Verified revision 5.\n"]
+
+  svntest.actions.run_and_verify_svnadmin(None, expected_output, [],
+                                          "verify", sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2291,7 +2415,8 @@ test_list = [ None,
               setrevprop,
               verify_windows_paths_in_repos,
               verify_incremental_fsfs,
-              recover_fsfs,
+              fsfs_recover_db_current,
+              fsfs_recover_old_db_current,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
@@ -2315,6 +2440,8 @@ test_list = [ None,
               fsfs_recover_old_non_empty,
               fsfs_hotcopy_old_non_empty,
               load_ignore_dates,
+              fsfs_hotcopy_old_with_propchanges,
+              verify_packed,
              ]
 
 if __name__ == '__main__':

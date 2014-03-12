@@ -137,36 +137,36 @@ balance(builder_table_t *table,
         builder_string_t **parent,
         builder_string_t *node)
 {
-  unsigned left_hight = node->left ? node->left->depth + 1 : 0;
-  unsigned right_hight = node->right ? node->right->depth + 1 : 0;
+  apr_size_t left_height = node->left ? node->left->depth + 1 : 0;
+  apr_size_t right_height = node->right ? node->right->depth + 1 : 0;
 
-  if (left_hight > right_hight + 1)
+  if (left_height > right_height + 1)
     {
       builder_string_t *temp = node->left->right;
       node->left->right = node;
       *parent = node->left;
       node->left = temp;
       
-      --left_hight;
+      --left_height;
     }
-  else if (left_hight + 1 < right_hight)
+  else if (left_height + 1 < right_height)
     {
       builder_string_t *temp = node->right->left;
       *parent = node->right;
       node->right->left = node;
       node->right = temp;
 
-      --right_hight;
+      --right_height;
     }
 
-  node->depth = MAX(left_hight, right_hight);
+  node->depth = MAX(left_height, right_height);
 }
 
 static apr_uint16_t
 match_length(const svn_string_t *lhs,
              const svn_string_t *rhs)
 {
-  apr_size_t len = MIN(rhs->len, rhs->len);
+  apr_size_t len = MIN(lhs->len, rhs->len);
   return (apr_uint16_t)svn_cstring__match_length(lhs->data, rhs->data, len);
 }
 
@@ -274,7 +274,7 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
                                    const char *string,
                                    apr_size_t len)
 {
-  apr_size_t result = -1;
+  apr_size_t result;
   builder_table_t *table = APR_ARRAY_IDX(builder->tables,
                                          builder->tables->nelts - 1,
                                          builder_table_t *);
@@ -319,7 +319,7 @@ svn_fs_x__string_table_builder_add(string_table_builder_t *builder,
           || table->max_data_size < len)
         table = add_table(builder);
 
-      item->position = (apr_size_t)table->short_strings->nelts;
+      item->position = table->short_strings->nelts;
       APR_ARRAY_PUSH(table->short_strings, builder_string_t *) = item;
 
       if (table->top == NULL)

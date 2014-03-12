@@ -82,7 +82,7 @@ del_lines_res = [
                  re.compile(r"\* Gnome Keyring"),
                  re.compile(r"\* GPG-Agent"),
                  re.compile(r"\* Mac OS X Keychain"),
-                 re.compile(r"\* Kwallet \(KDE\)"),
+                 re.compile(r"\* KWallet \(KDE\)"),
                 ]
 
 # This is a list of lines to search and replace text on.

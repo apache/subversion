@@ -319,9 +319,9 @@ reject_mismatching_text(const svn_test_opts_t *opts,
 }
 
 
-int svn_test_max_threads = -1;
+static int max_threads = -1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(pristine_write_read,
@@ -332,3 +332,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "reject_mismatching_text"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

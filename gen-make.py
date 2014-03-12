@@ -193,9 +193,6 @@ def _usage_exit(err=None):
   print("  --enable-nls")
   print("           add support for gettext localization")
   print("")
-  print("  --enable-bdb-in-apr-util")
-  print("           configure APR-Util to use Berkeley DB")
-  print("")
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
@@ -262,17 +259,10 @@ if __name__ == '__main__':
                             'enable-purify',
                             'enable-quantify',
                             'enable-nls',
-                            'enable-bdb-in-apr-util',
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
                             'disable-gmock',
-                            # Keep distributions that help by adding a path
-                            # working. On unix this would be filtered by
-                            # configure, but on Windows gen-make.py is used
-                            # directly.
-                            'with-neon=',
-                            'without-neon',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")

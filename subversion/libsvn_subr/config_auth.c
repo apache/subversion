@@ -23,7 +23,6 @@
 
 
 
-#include "svn_private_config.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_io.h"
@@ -31,6 +30,8 @@
 #include "config_impl.h"
 
 #include "auth.h"
+
+#include "svn_private_config.h"
 
 #include "private/svn_auth_private.h"
 

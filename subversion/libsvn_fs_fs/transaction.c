@@ -1765,7 +1765,7 @@ fnv1a_checksum_finalize(apr_uint32_t *digest,
 
   SVN_ERR(svn_checksum_final(&checksum, context, scratch_pool));
   SVN_ERR_ASSERT(checksum->kind == svn_checksum_fnv1a_32x4);
-  *digest = ntohl(*(apr_uint32_t *)(checksum->digest));
+  *digest = ntohl(*(const apr_uint32_t *)(checksum->digest));
 
   return SVN_NO_ERROR;
 }
@@ -1849,7 +1849,7 @@ shards_spanned(int *spanned,
   int shard_size = ffd->max_files_per_dir ? ffd->max_files_per_dir : 1;
 
   int count = 0;
-  int shard, last_shard = ffd->youngest_rev_cache / shard_size;
+  svn_revnum_t shard, last_shard = ffd->youngest_rev_cache / shard_size;
   while (walk-- && noderev->predecessor_count)
     {
       SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs,

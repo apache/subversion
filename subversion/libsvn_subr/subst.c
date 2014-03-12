@@ -33,7 +33,6 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_types.h"
@@ -47,6 +46,8 @@
 #include "svn_subst.h"
 #include "svn_pools.h"
 #include "private/svn_io_private.h"
+
+#include "svn_private_config.h"
 
 #include "private/svn_string_private.h"
 #include "private/svn_eol_private.h"
@@ -1854,7 +1855,7 @@ read_handler_special(void *baton, char *buffer, apr_size_t *len)
     return svn_stream_read_full(btn->read_stream, buffer, len);
   else
     return svn_error_createf(APR_ENOENT, NULL,
-                             "Can't read special file: File '%s' not found",
+                             _("Can't read special file: File '%s' not found"),
                              svn_dirent_local_style(btn->path, btn->pool));
 }
 

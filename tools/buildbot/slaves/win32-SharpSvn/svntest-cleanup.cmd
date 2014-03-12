@@ -28,7 +28,7 @@ PUSHD ..\deps
 ECHO Checking dependencies in %CD%
 
 IF NOT EXIST "imports\" (
-    svn co --username guest --password "" http://sharpsvn.open.collab.net/svn/sharpsvn/trunk/imports imports
+    svn co --username guest --password "" https://ctf.open.collab.net/svn/repos/sharpsvn/trunk/imports imports
 )
 IF NOT EXIST build\imports.done (
     svn up imports

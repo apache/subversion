@@ -109,11 +109,14 @@ if test `expr $apr_version : 2` -ne 0; then
   AC_SUBST(SVN_APRUTIL_INCLUDES)
   AC_SUBST(SVN_APRUTIL_CONFIG, ["$apu_config"])
   AC_SUBST(SVN_APRUTIL_LIBS)
+  SVN_APR_MAJOR_VERSION=2
 else
   svn_lib_ver=0
   APU_VER_REGEXES=["1\.[345]\."]
   SVN_LIB_APRUTIL($APU_VER_REGEXES)
+  SVN_APR_MAJOR_VERSION=1
 fi
+AC_SUBST(SVN_APR_MAJOR_VERSION)
 SVN_LT_SOVERSION="-version-info $svn_lib_ver"
 AC_SUBST(SVN_LT_SOVERSION)
 AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
@@ -224,7 +227,7 @@ if test "$experimental_libtool" = "yes"; then
   SVN_LIBTOOL="$sh_libtool"
 else
   sh_libtool="$abs_builddir/libtool"
-  SVN_LIBTOOL="\$(SHELL) $sh_libtool"
+  SVN_LIBTOOL="\$(SHELL) \"$sh_libtool\""
 fi
 AC_SUBST(SVN_LIBTOOL)
 
@@ -1538,6 +1541,13 @@ AC_CONFIG_COMMANDS([svn_private_config.h.tmp],
                    [SED="$SED"
                     SVN_DB_HEADER="$SVN_DB_HEADER"])
 AC_CONFIG_FILES([Makefile])
+
+# Create pkg-config .pc files from .pc.in files
+for pc_in_file in "${abs_srcdir}"/subversion/libsvn_*/*.pc.in; do
+  pc_file=${pc_in_file#${abs_srcdir}/}
+  pc_file=${pc_file%.in}
+  AC_CONFIG_FILES([${pc_file}])
+done
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)

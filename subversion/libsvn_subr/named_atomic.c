@@ -428,7 +428,7 @@ svn_atomic_namespace__create(svn_atomic_namespace__t **ns,
                            result_pool));
 
   /* Make sure the last user of our lock file will actually remove it.
-   * Please note that only the last file handle begin closed will actually
+   * Please note that only the last file handle being closed will actually
    * remove the underlying file (see docstring for apr_file_remove).
    */
   apr_pool_cleanup_register(result_pool, &new_ns->mutex,

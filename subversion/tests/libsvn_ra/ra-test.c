@@ -563,9 +563,9 @@ lock_test(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(location_segments_test,
@@ -578,3 +578,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "lock multiple paths"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

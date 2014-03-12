@@ -32,7 +32,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_delta.h"
@@ -52,6 +51,8 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_magic.h"
+
+#include "svn_private_config.h"
 
 /* Import context baton.
 

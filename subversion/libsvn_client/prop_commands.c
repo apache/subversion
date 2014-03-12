@@ -30,7 +30,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_client.h"
 #include "client.h"
@@ -41,6 +40,7 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 
+#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_client_private.h"
@@ -1222,7 +1222,7 @@ recursive_proplist_receiver(void *baton,
          Report iprops anyway */
 
       SVN_ERR(b->wrapped_receiver(b->wrapped_receiver_baton,
-                                  b->anchor ? b->anchor : local_abspath,
+                                  b->anchor ? b->anchor : b->anchor_abspath,
                                   NULL /* prop_hash */,
                                   b->iprops,
                                   scratch_pool));

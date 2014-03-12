@@ -41,8 +41,8 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -860,7 +860,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   SVN_ERR(get_dag(&copyroot_node, copyroot_root, copyroot_path, FALSE, pool));
   copyroot_id = svn_fs_fs__dag_get_id(copyroot_node);
 
-  if (svn_fs_fs__id_compare(copyroot_id, child_id) == -1)
+  if (svn_fs_fs__id_compare(copyroot_id, child_id) == svn_fs_node_unrelated)
     return SVN_NO_ERROR;
 
   /* Determine if we are looking at the child via its original path or
@@ -1350,9 +1350,8 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   svn_boolean_t b_is_root_dir
     = (path_b[0] == '\0') || ((path_b[0] == '/') && (path_b[1] == '\0'));
 
-  /* Root paths are never related to non-root paths and path from different
-   * repository are always unrelated. */
-  if (a_is_root_dir ^ b_is_root_dir || root_a->fs != root_b->fs)
+  /* Path from different repository are always unrelated. */
+  if (root_a->fs != root_b->fs)
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
@@ -1368,11 +1367,11 @@ fs_node_relation(svn_fs_node_relation_t *relation,
 
   /* Are both (!) root paths? Then, they are related and we only test how
    * direct the relation is. */
-  if (a_is_root_dir)
+  if (a_is_root_dir && b_is_root_dir)
     {
       *relation = root_a->rev == root_b->rev
                 ? svn_fs_node_same
-                : svn_fs_node_common_anchestor;
+                : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
 
@@ -1391,7 +1390,7 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   if (svn_fs_fs__id_part_eq(&rev_item_a, &rev_item_b))
     *relation = svn_fs_node_same;
   else if (svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
-    *relation = svn_fs_node_common_anchestor;
+    *relation = svn_fs_node_common_ancestor;
   else
     *relation = svn_fs_node_unrelated;
 

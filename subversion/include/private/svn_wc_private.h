@@ -773,20 +773,6 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
   } while (0)
 
 
-/**
- * Calculates the schedule and copied status of a node as that would
- * have been stored in an svn_wc_entry_t instance.
- *
- * If not @c NULL, @a schedule and @a copied are set to their calculated
- * values.
- */
-svn_error_t *
-svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
-                          svn_boolean_t *copied,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
-
 /** A callback invoked by svn_wc__prop_list_recursive().
  * It is equivalent to svn_proplist_receiver_t declared in svn_client.h,
  * but kept private within the svn_wc__ namespace because it is used within

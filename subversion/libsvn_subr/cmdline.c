@@ -43,7 +43,6 @@
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_ctype.h"
 #include "svn_dso.h"
@@ -66,6 +65,8 @@
 #include "private/svn_utf_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
+
+#include "svn_private_config.h"
 
 #include "win32_crashrpt.h"
 

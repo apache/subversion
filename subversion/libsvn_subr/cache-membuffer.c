@@ -811,7 +811,7 @@ free_spare_group(svn_membuffer_t *cache,
 
   /* add to chain of spares */
   group->header.next = cache->first_spare_group;
-  cache->first_spare_group = group - cache->directory;
+  cache->first_spare_group = (apr_uint32_t) (group - cache->directory);
 }
 
 /* Follow the group chain from GROUP in CACHE to its end and return the last
@@ -966,8 +966,8 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   entry_group_t *last_group
     = last_group_in_chain(cache, &cache->directory[group_index]);
   apr_uint32_t last_in_group
-    = (last_group - cache->directory) * GROUP_SIZE
-    + last_group->header.used - 1;
+    = (apr_uint32_t) ((last_group - cache->directory) * GROUP_SIZE
+    + last_group->header.used - 1);
 
   cache_level_t *level = get_cache_level(cache, entry);
 
@@ -1093,10 +1093,10 @@ get_group_index(svn_membuffer_t **cache,
 
   /* select the cache segment to use. they have all the same group_count.
    * Since key may not be well-distributed, pre-fold it to a smaller but
-   * "denser" ranger.  The divisors are primes larger than the largest
+   * "denser" ranger.  The modulus is a prime larger than the largest
    * counts. */
-  *cache = &segment0[(key[1] % APR_UINT64_C(2809637))
-         & (segment0->segment_count - 1)];
+  *cache = &segment0[(key[1] % APR_UINT64_C(2809637) + (key[0] / 37))
+                     & (segment0->segment_count - 1)];
   return (key[0] % APR_UINT64_C(5030895599)) % segment0->group_count;
 }
 
@@ -1108,8 +1108,15 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 {
   apr_uint32_t hits_removed = (entry->hit_count + 1) >> 1;
 
-  cache->hit_count -= hits_removed;
-  entry->hit_count -= hits_removed;
+  if (hits_removed)
+    {
+      cache->hit_count -= hits_removed;
+      entry->hit_count -= hits_removed;
+    }
+  else
+    {
+      entry->priority /= 2;
+    }
 }
 
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
@@ -1204,9 +1211,11 @@ find_entry(svn_membuffer_t *cache,
               /* chain groups
                */
               new_group->header.chain_length = group->header.chain_length + 1;
-              new_group->header.previous = group - cache->directory;
+              new_group->header.previous = (apr_uint32_t) (group -
+                                                           cache->directory);
               new_group->header.next = NO_INDEX;
-              group->header.next = new_group - cache->directory;
+              group->header.next = (apr_uint32_t) (new_group -
+                                                   cache->directory);
               group = new_group;
             }
         }
@@ -1853,7 +1862,7 @@ select_level(svn_membuffer_t *cache,
       /* Large and somewhat important items go into L2. */
       entry_t dummy_entry = { { 0 } };
       dummy_entry.priority = priority;
-      dummy_entry.size = size;
+      dummy_entry.size = (apr_uint32_t) size;
 
       return ensure_data_insertable_l2(cache, &dummy_entry)
            ? &cache->l2
@@ -1900,7 +1909,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * negative value.
        */
       cache->data_used += (apr_uint64_t)size - entry->size;
-      entry->size = size;
+      entry->size = (apr_uint32_t) size;
       entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -1929,7 +1938,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * the serialized item's (future) position within data buffer.
        */
       entry = find_entry(cache, group_index, to_find, TRUE);
-      entry->size = size;
+      entry->size = (apr_uint32_t) size;
       entry->offset = level->current_data;
       entry->priority = priority;
 
@@ -2362,7 +2371,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                   /* Write the new entry.
                    */
                   entry = find_entry(cache, group_index, to_find, TRUE);
-                  entry->size = size;
+                  entry->size = (apr_uint32_t) size;
                   entry->offset = cache->l1.current_data;
                   if (size)
                     memcpy(cache->data + entry->offset, data, size);

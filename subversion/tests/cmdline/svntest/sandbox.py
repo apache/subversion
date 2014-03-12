@@ -186,7 +186,11 @@ class Sandbox:
        of this sbox, or relative to OS-style path WC_DIR if supplied."""
     if wc_dir is None:
       wc_dir = self.wc_dir
-    return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
+
+    if relpath == '':
+      return wc_dir
+    else:
+      return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
 
   def ospaths(self, relpaths, wc_dir=None):
     """Return a list of RELPATHS but with each path converted to an OS-style

@@ -79,6 +79,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: speed up serialization into cache buffer format (r1505056)
     * fsfs: checkpoint after each rev during hotcopy (r1560723)
     * fsfs: avoid caching intermediate fulltexts (r1565100)
+    * fsfs: reduce lock contention on txn-list-lock (r1569549)
     * svnadmin: don't display warnings as errors (r1556297)
     * ra_serf: avoid caching properties in the update editor (r1557538)
     * ra_serf: decrease latency of requests to get directory contents by
@@ -126,6 +127,19 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * membuffer: reduce memory usage by using shorter lived pools (r1564217)
     * svnadmin load: add '--ignore-dates' option (r1564789)
     * update: reduce sessions used with '--parents' option (r1565920)
+    * fix L1->L2 promotion/eviction heuristics for high hit counts (r1568599)
+    * diff: report properties on deleted nodes (r1569320, r1570055)
+    * diff: switch to diff processor APIs instead of old style callbacks, step
+      towards resolving long standing bugs and feature requests (r1569551 et al)
+    * diff: use the proper revision in headers for addition and deletion
+      of files (r1570053)
+    * svnadmin lslocks: add cancellation (r1571992)
+    * svn --version: list available authentication credential caches (r1572106)
+    * improved detection of changes between two nodes, this should reduce the
+      number of out of date errors clients see (r1572336)
+    * alow the use of libmagic to be configured via subversion configuration
+      file or SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE env variable (r1572916)
+    * store human readable info about SSL certs in auth store (r1573625)
 
   - Client-side bugfixes:
     * export: fix problem exporting symlinks on windows (r1476093)
@@ -171,6 +185,16 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * wc: reduce dependence on unspecified SQLite behavior (r1567080 et al)
     * delete/move: explicitly specify node to delete rather than querying
       wc db multiple times to determine on the fly (r1567204 et al)
+    * diff: fix diff of directory failing without permissions to read ancester
+      directory on server (r1569265, 1569290)
+    * diff: improve resolving peg revisions (r1570205 et al)
+    * diff: fix bug in calculating header paths (r1570584)
+    * wc: prevent duplicated rows in sqlite_stat1 table (r1571214)
+    * commit: fix assertion from commit of deep descendant of deleted node
+      (r1571747, r1571787, r1571795)
+    * upgrade: fix error upgrading wc with externals when exclusive locking is
+      enabled (1572200)
+    * ra_serf: add SSL certificate issuers common name to output (r1573728)
 
   - Server-side bugfixes:
     * svnserve: don't ignore socket initialization errors (r1544253)
@@ -199,11 +223,17 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: fix a problem verifying pre-1.4 repos used with 1.8 (r1561419)
     * fsfs: don't write uniquifiers for old repo formats (r1561426)
     * fsfs: fix hotcopy for pre-1.4 repositories (r1561427)
+    * fix 64-bit underflows in update hit counters (r1567996 et al)
+    * svnserve: fix potential integer overflow in Cyrus SASL support (r1570434)
+    * svnserve: fix memcached caching causes segfault (issue #4470)
+    * bdb: fix potential integer overflow and underflow (r1570701)
+    * bdb: prevent silent propogation of some corruption (r1570778)
 
   - Client-side and server-side bugfixes:
     * use less memory when retrieving extension from filename (r1548480)
     * use more optimal code path with old txdelta v1 data (r1485480)
     * windows: allow opening SQLite databases on long paths (r1564338)
+    * fix an out-of-bounds read in the delta combiner (r1569415)
 
   - Other tool improvements and bugfixes:
     * windows: add build-svn-deps-win.pl tool to build dependencies (r1467715)
@@ -226,6 +256,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       programs (r1544194)
     * bash_completion: support for youngest command (r1546975)
     * which-error.py: allow which-error.py to be run from symlink (r1547977)
+    * bash-completion: add svnlook filesize command and options to svn cat,
+      info, and mergeinfo commands (r1569021)
 
  Developer-visible changes:
   - General:
@@ -264,6 +296,25 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * allow building with APR-2 (r1560586)
     * remove support for ASM Zlib from Windows build system (r1560864)
     * gen-make.py: new -D option (r1567046)
+    * svn-populate-node-origins-index: fix build with Visual Studio
+      (r1568180 et al)
+    * improve how we fetch the version of Windows (r1568798, 1568806)
+    * move common code in python tests to library files to avoid side effects of
+      having tests depending on each other (r1570654)
+    * disable compiling on platforms where int is shorter than 32-bits and add
+      the SVN_ALLOW_SHORT_INTS compile definition to override (r1570882)
+    * disable building *.sbr files with Visual C++ 2010 or later (r1571020)
+    * require serf 1.3.4 (r1572261)
+    * require APR and APR-Util 1.3.x (r1572261)
+    * add mod_dontdothat to davautocheck.sh (r1572312)
+    * require Apache httpd 2.2.x (r1572339)
+    * support pkg-config for serf when using a prefix (r1572762)
+    * don't depend on stdbool.h and inttypes.h for utf8proc (r1573069 et al)
+    * correctly disable some compiler flags at configure time if they aren't
+      available with the selected compiler (r1573106, r1573209)
+    * avoid non-portable find extensions so the build works on Solaris (r1573780)
+    * Allow PARALLEL value to specify the number of threads to run tests with,
+      PARALLEL=1 means to use the default (r1573320)
 
   - API changes:
     * New RA callbacks for managing ra_svn tunnels:
@@ -331,6 +382,17 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * New error code SVN_ERR_XML_UNEXPECTED_ELEMENT (r1498938)
     * Extend stream API to also support incomplete reads (r1561688 et al)
     * New api svn_wc_add_from_disk3() (r1563361)
+    * New api svn_client_revert3() to allow clearing changelists (r1568635)
+    * svn_rangelist_inheritable2(): don't change inheritabilty of remaining
+      ranges (r1569731)
+    * svn_rangelist_inheritable2() and svn_mergeinfo_inheritable2(): fix a
+      pool lifetime issue (r1569764)
+    * New apis to support cancelation during unified diff output (r1570149)
+    * APIs related to retrieving logs are now documented to be unlimited when
+      a negative value is passed for the limit (r1570330, 1570335)
+    * New apis: svn_fs_props_different() and svn_fs_contents_different()
+      (r1572363, r1573111)
+    * Expose SVN_CONFIG_AUTHN_* macros in public API (r1572640)
 
   - Bindings:
     * javahl: add support for the RA layer (r1494650 et al)
@@ -376,8 +438,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: expose inheritiable property names (r1560338)
     * javahl: fix bug in parsing single revision merginfo data (r1563140)
     * javahl: create JVM crashlogs from svn malfunctions (r1563927, r1564252)
-    * javahl: avoid problems when building without NLS support (r1566578)
+    * javahl: avoid problems when building without NLS support (r1566578 et al)
     * javahl: expose --alow-mixed-revisions merge option (r1567602)
+    * javahl: support incomplete reads from streams (r1569631)
+    * javahl: allow revert API to take a set of paths (r1571461)
 
 
 Version 1.8.8

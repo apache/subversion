@@ -7403,7 +7403,7 @@ db_op_set_base_depth(svn_wc__db_wcroot_t *wcroot,
 
   if (affected_rows == 0)
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             "The node '%s' is not a committed directory",
+                             _("The node '%s' is not a committed directory"),
                              path_for_error_message(wcroot, local_relpath,
                                                     scratch_pool));
 
@@ -8691,7 +8691,7 @@ read_info(svn_wc__db_status_t *status,
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
     err = svn_error_quick_wrap(err,
                                apr_psprintf(scratch_pool,
-                                            "Error reading node '%s'",
+                                            _("Error reading node '%s'"),
                                             local_relpath));
 
   SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt_info)));

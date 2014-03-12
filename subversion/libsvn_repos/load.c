@@ -21,26 +21,18 @@
  */
 
 
-#include "svn_private_config.h"
+#include <apr.h>
+
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_path.h"
-#include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
-#include "svn_mergeinfo.h"
-#include "svn_checksum.h"
-#include "svn_subst.h"
 #include "svn_ctype.h"
 
-#include <apr_lib.h>
-
 #include "private/svn_dep_compat.h"
-#include "private/svn_mergeinfo_private.h"
 
 /*----------------------------------------------------------------------*/
 
@@ -291,7 +283,8 @@ parse_property_block(svn_stream_t *stream,
 }
 
 
-/* Read CONTENT_LENGTH bytes from STREAM, and use
+/* Read CONTENT_LENGTH bytes from STREAM. If IS_DELTA is true, use
+   PARSE_FNS->apply_textdelta to push a text delta, otherwise use
    PARSE_FNS->set_fulltext to push those bytes as replace fulltext for
    a node.  Use BUFFER/BUFLEN to push the fulltext in "chunks".
 
@@ -322,15 +315,6 @@ parse_text_block(svn_stream_t *stream,
     {
       /* Get a stream to which we can push the data. */
       SVN_ERR(parse_fns->set_fulltext(&text_stream, record_baton));
-    }
-
-  /* If there are no contents to read, just write an empty buffer
-     through our callback. */
-  if (content_length == 0)
-    {
-      wlen = 0;
-      if (text_stream)
-        SVN_ERR(svn_stream_write(text_stream, "", &wlen));
     }
 
   /* Regardless of whether or not we have a sink for our data, we

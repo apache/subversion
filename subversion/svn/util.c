@@ -41,7 +41,6 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ctype.h"
@@ -59,6 +58,7 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_private_config.h"
 #include "cl.h"
 
 #include "private/svn_token.h"
@@ -164,9 +164,9 @@ svn_cl__merge_file_externally(const char *base_path,
      * is OK to continue with the merge.
      * Any other exit code means there was a real problem. */
     if (exitcode != 0 && exitcode != 1)
-      return svn_error_createf
-        (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-         _("The external merge tool exited with exit code %d"), exitcode);
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+        _("The external merge tool '%s' exited with exit code %d."),
+        merge_tool, exitcode);
     else if (remains_in_conflict)
       *remains_in_conflict = exitcode == 1;
   }

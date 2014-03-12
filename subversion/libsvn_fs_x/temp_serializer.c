@@ -639,10 +639,10 @@ svn_fs_x__deserialize_properties(void **out,
   for (i = 0; i < properties->count; ++i)
     {
       apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
-      svn_temp_deserializer__resolve((void*)properties->keys,
+      svn_temp_deserializer__resolve(properties->keys,
                                      (void**)&properties->keys[i]);
 
-      deserialize_svn_string((void*)properties->values,
+      deserialize_svn_string(properties->values,
                              (svn_string_t **)&properties->values[i]);
 
       apr_hash_set(hash,
@@ -948,12 +948,12 @@ svn_fs_x__replace_dir_entry(void **data,
 
   /* resolve the reference to the entries array */
   entries = (svn_fs_dirent_t **)
-    svn_temp_deserializer__ptr((const char *)hash_data,
+    svn_temp_deserializer__ptr(hash_data,
                                (const void *const *)&hash_data->entries);
 
   /* resolve the reference to the lengths array */
   lengths = (apr_uint32_t *)
-    svn_temp_deserializer__ptr((const char *)hash_data,
+    svn_temp_deserializer__ptr(hash_data,
                                (const void *const *)&hash_data->lengths);
 
   /* binary search for the desired entry by name */
@@ -1022,7 +1022,7 @@ svn_fs_x__replace_dir_entry(void **data,
 
   hash_data = (hash_data_t *)*data;
   lengths = (apr_uint32_t *)
-    svn_temp_deserializer__ptr((const char *)hash_data,
+    svn_temp_deserializer__ptr(hash_data,
                                (const void *const *)&hash_data->lengths);
   lengths[pos] = length;
 
@@ -1184,7 +1184,7 @@ svn_fs_x__deserialize_changes(void **out,
   /* de-serialize each entry and add it to the array */
   for (i = 0; i < changes->count; ++i)
     {
-      deserialize_change((void*)changes->changes,
+      deserialize_change(changes->changes,
                          (change_t **)&changes->changes[i],
                          pool);
       APR_ARRAY_PUSH(array, change_t *) = changes->changes[i];
@@ -1330,7 +1330,7 @@ svn_fs_x__deserialize_mergeinfo(void **out,
       for (k = 0; k < merges->range_counts[i]; ++k, ++n)
         APR_ARRAY_PUSH(ranges, svn_merge_range_t*) = &merges->ranges[n];
 
-      svn_temp_deserializer__resolve((void*)merges->keys,
+      svn_temp_deserializer__resolve(merges->keys,
                                      (void**)&merges->keys[i]);
       apr_hash_set(mergeinfo, merges->keys[i], merges->key_lengths[i], ranges);
     }

@@ -24,7 +24,6 @@
 
 #include <apr_hash.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -32,6 +31,7 @@
 #include "private/svn_fs_private.h"
 
 #include "fs-loader.h"
+
 
 
 svn_error_t *

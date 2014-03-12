@@ -872,23 +872,6 @@ svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
 
 
 svn_error_t *
-svn_txdelta__read_svndiff_window_sizes(svn_txdelta_window_t **window,
-                                       svn_stream_t *stream,
-                                       int svndiff_version,
-                                       apr_pool_t *pool)
-{
-  apr_size_t inslen, newlen;
-
-  *window = apr_pcalloc(pool, sizeof(**window));
-  SVN_ERR(read_window_header(stream, &(*window)->sview_offset,
-                             &(*window)->sview_len, &(*window)->tview_len,
-                             &inslen, &newlen));
-
-  return svn_error_trace(svn_stream_skip(stream, inslen + newlen));
-}
-
-
-svn_error_t *
 svn_txdelta_skip_svndiff_window(apr_file_t *file,
                                 int svndiff_version,
                                 apr_pool_t *pool)

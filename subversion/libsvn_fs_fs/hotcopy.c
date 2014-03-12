@@ -382,12 +382,6 @@ hotcopy_update_current(svn_revnum_t *dst_youngest,
   /* If necessary, get new current next_node and next_copy IDs. */
   if (dst_ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT)
     {
-      /* Make sure NEW_YOUNGEST is a valid revision in DST_FS.
-         Because a crash in hotcopy requires at least a full recovery run,
-         it is safe to temporarily reset the max IDs to 0. */
-      SVN_ERR(svn_fs_fs__write_current(dst_fs, new_youngest, next_node_id,
-                                      next_copy_id, scratch_pool));
-
       SVN_ERR(svn_fs_fs__find_max_ids(dst_fs, new_youngest,
                                       &next_node_id, &next_copy_id,
                                       scratch_pool));
