@@ -321,10 +321,8 @@ public class BasicTests extends SVNTests
         {
             Status st = statusCallback.getStatusArray()[0];
             if (st.isConflicted()
-                || st.getTextStatus() != Status.Kind.none
-                || st.getPropStatus() != Status.Kind.none
-                || st.getRepositoryTextStatus() != Status.Kind.none
-                || st.getRepositoryPropStatus() != Status.Kind.none)
+                || st.getNodeStatus() != Status.Kind.none
+                || st.getRepositoryNodeStatus() != Status.Kind.none)
                 fail("File foo.c should not return a status.");
         }
 
