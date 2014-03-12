@@ -90,8 +90,8 @@ svn_config__win_config_path(const char **folder,
                                folder_ucs2))
     return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
                           (system_path
-                           ? "Can't determine the system config path"
-                           : "Can't determine the user's config path"));
+                           ? _("Can't determine the system config path")
+                           : _("Can't determine the user's config path")));
 
   SVN_ERR(svn_utf__win32_utf16_to_utf8(&folder_utf8, folder_ucs2,
                                        NULL, scratch_pool));
@@ -134,7 +134,7 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
         }
       if (err != ERROR_SUCCESS)
         return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                "Can't enumerate registry values");
+                                _("Can't enumerate registry values"));
 
       /* Ignore option names that start with '#', see
          http://subversion.tigris.org/issues/show_bug.cgi?id=671 */
@@ -151,7 +151,7 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
             }
           if (err != ERROR_SUCCESS)
             return svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                    "Can't read registry value data");
+                                    _("Can't read registry value data"));
 
           svn_config_set(cfg, section, option->data, value->data);
         }
@@ -188,7 +188,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   else
     {
       return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                               "Unrecognised registry path '%s'",
+                               _("Unrecognised registry path '%s'"),
                                svn_dirent_local_style(file, pool));
     }
 
@@ -200,11 +200,11 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
       const int is_enoent = APR_STATUS_IS_ENOENT(APR_FROM_OS_ERROR(err));
       if (!is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 "Can't open registry key '%s'",
+                                 _("Can't open registry key '%s'"),
                                  svn_dirent_local_style(file, pool));
       else if (must_exist && is_enoent)
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                                 "Can't find registry key '%s'",
+                                 _("Can't find registry key '%s'"),
                                  svn_dirent_local_style(file, pool));
       else
         return SVN_NO_ERROR;
@@ -242,7 +242,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
       if (err != ERROR_SUCCESS)
         {
           svn_err =  svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                      "Can't enumerate registry keys");
+                                      _("Can't enumerate registry keys"));
           goto cleanup;
         }
 
@@ -252,7 +252,7 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
       if (err != ERROR_SUCCESS)
         {
           svn_err =  svn_error_create(SVN_ERR_MALFORMED_FILE, NULL,
-                                      "Can't open existing subkey");
+                                      _("Can't open existing subkey"));
           goto cleanup;
         }
 
