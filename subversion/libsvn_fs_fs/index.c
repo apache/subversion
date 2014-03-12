@@ -938,6 +938,7 @@ l2p_page_info_copy(l2p_page_info_baton_t *baton,
       /* all pages are of the same size and full, except for the last one */
       baton->page_offset = (apr_uint32_t)(baton->item_index % header->page_size);
       baton->page_no = (apr_uint32_t)(baton->item_index / header->page_size);
+      baton->entry = first_entry[baton->page_no];
     }
 
   baton->first_revision = header->first_revision;
