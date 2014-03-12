@@ -631,7 +631,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "ZZL"JAVA_PACKAGE"/types/Depth;"
+                             "ZZZL"JAVA_PACKAGE"/types/Lock;"
                              "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
@@ -657,27 +660,16 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jMovedFromAbspath = NULL;
   jstring jMovedToAbspath = NULL;
 
-  enum svn_wc_status_kind text_status = status->node_status;
-
-  /* Avoid using values that might come from prop changes */
-  if (text_status == svn_wc_status_modified
-      || text_status == svn_wc_status_conflicted)
-    text_status = status->text_status;
-
-  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
-
-  if (repos_text_status == svn_wc_status_modified
-      || repos_text_status == svn_wc_status_conflicted)
-    repos_text_status = status->repos_text_status;
-
-  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
-  jobject jTextType = EnumMapper::mapStatusKind(text_status);
+  jobject jNodeType = EnumMapper::mapStatusKind(status->node_status);
+  jobject jTextType = EnumMapper::mapStatusKind(status->text_status);
   jobject jPropType = EnumMapper::mapStatusKind(status->prop_status);
-  jobject jRepositoryTextType = EnumMapper::mapStatusKind(repos_text_status);
-  jobject jRepositoryPropType = EnumMapper::mapStatusKind(
-                                                  status->repos_prop_status);
-  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jobject jRpNodeType = EnumMapper::mapStatusKind(status->repos_node_status);
+  jobject jRpTextType = EnumMapper::mapStatusKind(status->repos_text_status);
+  jobject jRpPropType = EnumMapper::mapStatusKind(status->repos_prop_status);
+  jobject jDepth = EnumMapper::mapDepth(status->depth);
   jboolean jIsLocked = (status->wc_is_locked == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
   jboolean jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
   jboolean jIsFileExternal = (status->file_external == 1) ? JNI_TRUE
                                                           : JNI_FALSE;
@@ -743,9 +735,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
 
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
                                jLastChangedRevision, jLastChangedDate,
-                               jLastCommitAuthor, jTextType, jPropType,
-                               jRepositoryTextType, jRepositoryPropType,
-                               jIsLocked, jIsCopied, jIsConflicted,
+                               jLastCommitAuthor,
+                               jNodeType, jTextType, jPropType,
+                               jRpNodeType, jRpTextType, jRpPropType,
+                               jIsLocked, jIsCopied, jDepth, jIsConflicted,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
