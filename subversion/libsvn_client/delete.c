@@ -346,14 +346,14 @@ delete_urls_multi_repos(const apr_array_header_t *uris,
          RA error code otherwise for 1.6 compatibility.)  */
       if (!repos_relpath || !*repos_relpath)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 "URL '%s' not within a repository", uri);
+                                 _("URL '%s' not within a repository"), uri);
 
       /* Now, test to see if the thing actually exists in HEAD. */
       SVN_ERR(svn_ra_check_path(repos_deletables->ra_session, repos_relpath,
                                 SVN_INVALID_REVNUM, &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL '%s' does not exist", uri);
+                                 _("URL '%s' does not exist"), uri);
     }
 
   /* Now we iterate over the DELETABLES hash, issuing a commit for
