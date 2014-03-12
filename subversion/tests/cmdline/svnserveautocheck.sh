@@ -98,6 +98,8 @@ else
   TIME_CMD=""
 fi
 
+MAKE=${MAKE:-make}
+
 SVNSERVE_PORT=$(random_port)
 while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
   SVNSERVE_PORT=$(random_port)
@@ -119,7 +121,7 @@ fi
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 if [ $# = 0 ]; then
-  $TIME_CMD make check "BASE_URL=$BASE_URL"
+  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL"
   r=$?
 else
   cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
