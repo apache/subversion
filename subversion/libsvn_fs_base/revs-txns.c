@@ -25,7 +25,6 @@
 #include <apr_tables.h>
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_fs.h"
@@ -47,6 +46,7 @@
 #include "bdb/changes-table.h"
 #include "../libsvn_fs/fs-loader.h"
 
+#include "svn_private_config.h"
 #include "private/svn_fs_util.h"
 
 

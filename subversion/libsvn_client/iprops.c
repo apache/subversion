@@ -27,7 +27,6 @@
 
 /*** Includes. ***/
 
-#include "svn_private_config.h"
 #include "svn_error.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
@@ -37,6 +36,7 @@
 #include "svn_path.h"
 
 #include "client.h"
+#include "svn_private_config.h"
 
 #include "private/svn_wc_private.h"
 

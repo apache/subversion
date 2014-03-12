@@ -903,9 +903,9 @@ changes_bad_sequences(const svn_test_opts_t *opts,
 
 /* The test table.  */
 
-int svn_test_max_threads = 4;
+static int max_threads = 4;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(changes_add,
@@ -922,3 +922,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "verify that bad change sequences raise errors"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

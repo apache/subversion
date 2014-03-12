@@ -108,7 +108,7 @@ add_file_or_directory(const char *file_or_directory,
 
   SVN_ERR(maybe_close_textdelta(eb));
 
-  *added_baton = (void *)eb;
+  *added_baton = eb;
 
   if (! copyfrom_path)
     SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
@@ -135,7 +135,7 @@ open_file_or_directory(const char *file_or_directory,
 {
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
-  *opened_baton = (void *)eb;
+  *opened_baton = eb;
   return dav_svn__brigade_printf(eb->bb, eb->output,
                                  "<S:open-%s name=\"%s\" rev=\"%ld\"/>"
                                  DEBUG_CR,

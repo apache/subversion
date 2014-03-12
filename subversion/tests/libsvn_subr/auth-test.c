@@ -315,9 +315,9 @@ test_auth_clear(apr_pool_t *pool)
 
 /* The test table.  */
 
-int svn_test_max_threads = 1;
+static int max_threads = 1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_platform_specific_auth_providers,
@@ -326,3 +326,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_auth_clear()"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

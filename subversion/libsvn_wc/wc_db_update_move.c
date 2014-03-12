@@ -78,7 +78,6 @@
 
 #include <assert.h>
 
-#include "svn_private_config.h"
 #include "svn_checksum.h"
 #include "svn_dirent_uri.h"
 #include "svn_error.h"

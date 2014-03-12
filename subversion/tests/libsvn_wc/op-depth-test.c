@@ -27,7 +27,6 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
-#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_hash.h"
 #include "svn_io.h"
@@ -9574,9 +9573,9 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
-int svn_test_max_threads = 2;
+static int max_threads = 2;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_wc_wc_copies,
@@ -9762,3 +9761,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "movedhere extract retract"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

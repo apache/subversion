@@ -19,7 +19,6 @@
  * ====================================================================
  */
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_cmdline.h"
 #include "svn_config.h"
@@ -41,6 +40,8 @@
 #include "private/svn_cmdline_private.h"
 
 #include "sync.h"
+
+#include "svn_private_config.h"
 
 #include <apr_signal.h>
 #include <apr_uuid.h>

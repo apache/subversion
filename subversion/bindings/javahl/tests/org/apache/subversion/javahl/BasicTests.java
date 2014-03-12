@@ -315,8 +315,16 @@ public class BasicTests extends SVNTests
         MyStatusCallback statusCallback = new MyStatusCallback();
         client.status(fileToSVNPath(fileC, false), Depth.unknown, false, true,
                     false, false, null, statusCallback);
-        if (statusCallback.getStatusArray().length > 0)
-            fail("File foo.c should not return a status.");
+        if (statusCallback.getStatusArray().length > 1)
+            fail("File foo.c should not return more than one status.");
+        if (statusCallback.getStatusArray().length == 1)
+        {
+            Status st = statusCallback.getStatusArray()[0];
+            if (st.isConflicted()
+                || st.getNodeStatus() != Status.Kind.none
+                || st.getRepositoryNodeStatus() != Status.Kind.none)
+                fail("File foo.c should not return a status.");
+        }
 
     }
 

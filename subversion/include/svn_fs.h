@@ -364,7 +364,7 @@ svn_fs_upgrade(const char *path,
 /**
  * Callback function type for progress notification.
  *
- * @a revision is the number of the revision currently begin processed,
+ * @a revision is the number of the revision currently being processed,
  * #SVN_INVALID_REVNUM if the current stage is not linked to any specific
  * revision. @a baton is the callback baton.
  *
@@ -798,19 +798,23 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
 typedef enum svn_fs_node_relation_t
 {
   /** The nodes are not related.
-   * Nodes from different repositories are always unrelated. */
+   * Nodes from different repositories are always unrelated.
+   * #svn_fs_compare_ids would return the value -1 in this case.
+   */
   svn_fs_node_unrelated = 0,
 
-  /** They are the same physical node, i.e. there is no intermittent change.
-   * However, due to lazy copying, they may be intermittent parent copies.
+  /** They are the same physical node, i.e. there is no intervening change.
+   * However, due to lazy copying, there may be part of different parent
+   * copies.  #svn_fs_compare_ids would return the value 0 in this case.
    */
   svn_fs_node_same,
 
   /** The nodes have a common ancestor (which may be one of these nodes)
    * but are not the same.
+   * #svn_fs_compare_ids would return the value 1 in this case.
    */
-  svn_fs_node_common_anchestor
-  
+  svn_fs_node_common_ancestor
+
 } svn_fs_node_relation_t;
 
 /** An object representing a node-revision id.  */
@@ -819,6 +823,10 @@ typedef struct svn_fs_id_t svn_fs_id_t;
 
 /** Return -1, 0, or 1 if node revisions @a a and @a b are respectively
  * unrelated, equivalent, or otherwise related (part of the same node).
+ *
+ * @note Using FS ID based functions is now discouraged and may be fully
+ * deprecated in future releases.  New code should use #svn_fs_node_relation()
+ * and #svn_fs_node_relation_t instead.
  */
 int
 svn_fs_compare_ids(const svn_fs_id_t *a,
@@ -828,6 +836,10 @@ svn_fs_compare_ids(const svn_fs_id_t *a,
 
 /** Return TRUE if node revisions @a id1 and @a id2 are related (part of the
  * same node), else return FALSE.
+ *
+ * @note Using FS ID based functions is now discouraged and may be fully
+ * deprecated in future releases.  New code should use #svn_fs_node_relation()
+ * and #svn_fs_node_relation_t instead.
  */
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *id1,
@@ -1573,9 +1585,9 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
  * arbitrary revision order and any of them may pertain to a transaction.
  * @a pool is used for temporary allocations.
  *
- * @note The current implementation considers paths from different svn_fs_t
- * as unrelated even if the underlying physical repository is the same.
- * 
+ * @note Paths from different svn_fs_t will be reported as unrelated even
+ * if the underlying physical repository is the same.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -2243,11 +2255,8 @@ svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * ### This is like svn_fs_apply_textdelta(), but takes the text
- * straight.  It is currently used only by the loader, see
- * libsvn_repos/load.c.  It should accept a checksum, of course, which
- * would come from an (optional) header in the dump file.  See
- * http://subversion.tigris.org/issues/show_bug.cgi?id=1102 for more.
+ * @note This is like svn_fs_apply_textdelta(), but takes the text
+ * straight.
  */
 svn_error_t *
 svn_fs_apply_text(svn_stream_t **contents_p,
@@ -2473,12 +2482,6 @@ svn_error_t *
 svn_fs_set_uuid(svn_fs_t *fs,
                 const char *uuid,
                 apr_pool_t *pool);
-
-
-/* Non-historical properties.  */
-
-/* [[Yes, do tell.]] */
-
 
 
 /** @defgroup svn_fs_locks Filesystem locks

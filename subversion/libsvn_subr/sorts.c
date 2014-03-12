@@ -28,8 +28,6 @@
 #include <apr_tables.h>
 #include <stdlib.h>       /* for qsort()   */
 #include <assert.h>
-
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
@@ -371,7 +369,7 @@ heap_is_less(svn_priority_queue__t *queue,
   /* nelts is never negative */
   assert(lhs < (apr_size_t)queue->elements->nelts);
   assert(rhs < (apr_size_t)queue->elements->nelts);
-  return queue->compare_func((void *)lhs_value, (void *)rhs_value) < 0;
+  return queue->compare_func(lhs_value, rhs_value) < 0;
 }
 
 /* Exchange elements number LHS and RHS in QUEUE.

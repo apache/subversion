@@ -142,7 +142,7 @@ get_loadmodule_config() {
   fi
 
   # maybe it's built-in?
-  "$HTTPD" -l | grep -q "$1\\.c" && return
+  "$HTTPD" -l | grep "$1\\.c" >/dev/null && return
 
   return 1
 }
@@ -248,12 +248,10 @@ done
 
 case "`uname`" in
   Darwin*)
-    LDD='otool -L'
     DYLD_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$DYLD_LIBRARY_PATH"
     export DYLD_LIBRARY_PATH
     ;;
   *)
-    LDD='ldd'
     LD_LIBRARY_PATH="$BUILDDIR_LIBRARY_PATH:$LD_LIBRARY_PATH"
     export LD_LIBRARY_PATH
     ;;
@@ -609,16 +607,14 @@ fi
 say "starting the tests..."
 
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-$LDD "$CLIENT_CMD" | grep -q 'not found' \
-  && fail "Subversion client couldn't be fully linked at run-time"
 
 if [ "$HTTP_LIBRARY" = "" ]; then
   say "Using default dav library"
-  "$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
+  "$CLIENT_CMD" --version | egrep '^[*] ra_(neon|serf)' >/dev/null \
     || fail "Subversion client couldn't find and/or load ra_dav library"
 else
   say "Requesting dav library '$HTTP_LIBRARY'"
-  "$CLIENT_CMD" --version | egrep -q "^[*] ra_$HTTP_LIBRARY" \
+  "$CLIENT_CMD" --version | egrep "^[*] ra_$HTTP_LIBRARY" >/dev/null \
     || fail "Subversion client couldn't find and/or load ra_dav library '$HTTP_LIBRARY'"
 fi
 

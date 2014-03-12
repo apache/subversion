@@ -31,7 +31,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include "svn_private_config.h"
 #include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
@@ -41,6 +40,8 @@
 #include "cl.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
+
+#include "svn_private_config.h"
 
 
 /* Baton for notify and friends. */
@@ -301,20 +302,20 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->err && n->err->message)
         {
-          if ((err = svn_cmdline_printf(pool, "Removed external '%s': %s\n",
+          if ((err = svn_cmdline_printf(pool, _("Removed external '%s': %s\n"),
               path_local, n->err->message)))
             goto print_error;
         }
       else
         {
-          if ((err = svn_cmdline_printf(pool, "Removed external '%s'\n",
+          if ((err = svn_cmdline_printf(pool, _("Removed external '%s'\n"),
                                         path_local)))
             goto print_error;
         }
       break;
 
     case svn_wc_notify_left_local_modifications:
-      if ((err = svn_cmdline_printf(pool, "Left local modifications as '%s'\n",
+      if ((err = svn_cmdline_printf(pool, _("Left local modifications as '%s'\n"),
                                         path_local)))
         goto print_error;
       break;

@@ -639,9 +639,9 @@ test_access_baton_like_locking(apr_pool_t *pool)
 }
 
 
-int svn_test_max_threads = -1;
+static int max_threads = -1;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_entries_alloc,
@@ -652,3 +652,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "access baton like locks must work with wc-ng"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

@@ -469,7 +469,7 @@ expected_streamed_checksum(apr_file_t *file,
 
   SVN_ERR(svn_checksum_final(&checksum, context, pool));
   SVN_ERR(expected_checksum(file, entry,
-                            ntohl(*(apr_uint32_t *)checksum->digest),
+                            ntohl(*(const apr_uint32_t *)checksum->digest),
                             pool));
 
   return SVN_NO_ERROR;

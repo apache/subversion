@@ -1268,9 +1268,9 @@ mixed_to_crlf_unexpand_author_date_rev_url(apr_pool_t *pool)
 
 /* The test table.  */
 
-int svn_test_max_threads = 7;
+static int max_threads = 7;
 
-struct svn_test_descriptor_t test_funcs[] =
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
   /* The no-op conversion. */
@@ -1364,3 +1364,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "mixed_to_crlf; unexpand author, date, rev, url"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

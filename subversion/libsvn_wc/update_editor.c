@@ -32,7 +32,6 @@
 #include <apr_tables.h>
 #include <apr_strings.h>
 
-#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -41,6 +40,7 @@
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_private_config.h"
 #include "svn_time.h"
 
 #include "wc.h"
@@ -3914,13 +3914,13 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
   const char *merge_left;
   svn_boolean_t delete_left = FALSE;
   const char *path_ext = "";
-  const char *new_text_base_tmp_abspath;
+  const char *new_pristine_abspath;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
 
   *work_items = NULL;
 
-  SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
+  SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
                                        db, wri_abspath, new_checksum,
                                        scratch_pool, scratch_pool));
 
@@ -3973,7 +3973,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                                  &merge_outcome,
                                  db,
                                  merge_left,
-                                 new_text_base_tmp_abspath,
+                                 new_pristine_abspath,
                                  local_abspath,
                                  wri_abspath,
                                  oldrev_str, newrev_str, mine_str,

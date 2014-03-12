@@ -25,7 +25,6 @@
 #include <apr_file_io.h>
 #include <apr_signal.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
@@ -49,6 +48,8 @@
 #include "private/svn_opt_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
+
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -543,7 +544,7 @@ struct svnadmin_opt_state
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
-  const char *parent_dir;
+  const char *parent_dir;                           /* --parent-dir */
   svn_stringbuf_t *filedata;                        /* --file */
 
   const char *config_dir;    /* Overriding Configuration Directory */

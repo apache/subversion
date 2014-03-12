@@ -27,7 +27,6 @@
 #include <expat.h>
 #include <serf.h>
 
-#include "svn_private_config.h"
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -38,6 +37,7 @@
 #include "svn_delta.h"
 #include "svn_path.h"
 
+#include "svn_private_config.h"
 #include "private/svn_string_private.h"
 
 #include "ra_serf.h"

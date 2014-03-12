@@ -676,9 +676,9 @@ svn_config_ensure(const char *config_dir,
  *
  * The values of these keys are C strings.
  *
- * @since New in 1.9.
- * @note These hash keys were also used in versions < 1.9 but were
- *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY).
+ * @note Some of these hash keys were also used in versions < 1.9 but were
+ *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY which
+ *       has been present since 1.0).
  *
  * @defgroup cached_authentication_data_attributes
  * @{
@@ -698,22 +698,26 @@ svn_config_ensure(const char *config_dir,
 /** A hash-key for passwords.
  * The password may be in plaintext or encrypted form, depending on
  * the authentication provider.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_PASSWORD_KEY           "password"
 
 /** A hash-key for passphrases,
  * such as SSL client ceritifcate passphrases. The passphrase may be in
  * plaintext or encrypted form, depending on the authentication provider.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_PASSPHRASE_KEY         "passphrase"
 
 /** A hash-key for the type of a password or passphrase.  The type
  * indicates which provider owns the credential.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_PASSTYPE_KEY           "passtype"
 
 /** A hash-key for SSL certificates.   The value is the base64-encoded DER form
  * certificate.
+ * @since New in 1.9.
  * @note The value is not human readable.
  */
 #define SVN_CONFIG_AUTHN_ASCII_CERT_KEY         "ascii_cert"
@@ -721,8 +725,35 @@ svn_config_ensure(const char *config_dir,
 /** A hash-key for recorded SSL certificate verification
  * failures.  Failures encoded as an ASCII integer containing any of the
  * SVN_AUTH_SSL_* SSL server certificate failure bits defined in svn_auth.h.
+ * @since New in 1.9.
  */
 #define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
+
+/** A hash-key for a hostname, such as hostnames in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_HOSTNAME_KEY           "hostname"
+
+/** A hash-key for a fingerprint, such as fingerprints in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_FINGERPRINT_KEY        "fingerprint"
+
+/** A hash-key for a valid-from date, such as dates in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_VALID_FROM_KEY         "valid_from"
+
+/** A hash-key for a valid-to date, such as dates in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_VALID_UNTIL_KEY        "valid_until"
+
+/** A hash-key for an issuer distinguished name, such as issuer names
+ * in SSL certificates.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_ISSUER_DN_KEY        "issuer_dn"
 
 /** @} */
 

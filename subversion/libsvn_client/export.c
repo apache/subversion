@@ -29,8 +29,6 @@
 
 #include <apr_file_io.h>
 #include <apr_md5.h>
-
-#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -44,6 +42,7 @@
 #include "svn_props.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_delta_private.h"
 #include "private/svn_wc_private.h"
@@ -268,7 +267,9 @@ export_node(void *baton,
                                                       scratch_pool));
     }
 
-  if (status->file_external)
+  /* Skip file externals if they are a descendant of the export,
+     BUT NOT if we are explictly exporting the file external. */
+  if (status->file_external && strcmp(eib->origin_abspath, local_abspath) != 0)
     return SVN_NO_ERROR;
 
   /* Produce overwrite errors for the export root */
@@ -1588,3 +1589,4 @@ svn_client_export5(svn_revnum_t *result_rev,
 
   return SVN_NO_ERROR;
 }
+

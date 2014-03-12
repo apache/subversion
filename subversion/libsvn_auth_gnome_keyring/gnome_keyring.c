@@ -32,7 +32,6 @@
 #include <glib.h>
 #include <gnome-keyring.h>
 
-#include "svn_private_config.h"
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -40,6 +39,8 @@
 #include "svn_pools.h"
 
 #include "private/svn_auth_private.h"
+
+#include "svn_private_config.h"
 
 
 

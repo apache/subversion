@@ -28,7 +28,6 @@
 
 #include <apr_md5.h>
 
-#include "svn_private_config.h"
 #include "svn_wc.h"
 #include "svn_subst.h"
 #include "svn_pools.h"
@@ -47,6 +46,8 @@
 #include "props.h"
 #include "translate.h"
 #include "workqueue.h"
+
+#include "svn_private_config.h"
 
 /* baton for traversal_info_update */
 struct traversal_info_update_baton
@@ -4787,15 +4788,6 @@ svn_wc_read_kind(svn_node_kind_t *kind,
                             TRUE /* show_deleted */,
                             show_hidden,
                             scratch_pool));
-
-  /*if (db_kind == svn_node_dir)
-    *kind = svn_node_dir;
-  else if (db_kind == svn_node_file || db_kind == svn_node_symlink)
-    *kind = svn_node_file;
-  else
-    *kind = svn_node_none;*/
-
-  return SVN_NO_ERROR;
 }
 
 svn_wc_conflict_description2_t *

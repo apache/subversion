@@ -161,7 +161,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.static_openssl = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
-    self.configure_apr_util = None
     self.sasl_path = None
     self.cpp_defines = []
 
@@ -210,8 +209,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.instrument_apr_pools = 1
       elif opt == '--enable-nls':
         self.enable_nls = 1
-      elif opt == '--enable-bdb-in-apr-util':
-        self.configure_apr_util = 1
       elif opt == '--disable-shared':
         self.disable_shared = 1
       elif opt == '--with-static-apr':

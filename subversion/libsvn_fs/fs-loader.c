@@ -1106,7 +1106,7 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      apr_pool_t *pool)
 {
   /* Different repository types? */
-  if (root_a->vtable != root_b->vtable)
+  if (root_a->fs != root_b->fs)
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
@@ -1809,13 +1809,21 @@ svn_fs_unparse_id(const svn_fs_id_t *id, apr_pool_t *pool)
 svn_boolean_t
 svn_fs_check_related(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
-  return (a->vtable->compare(a, b) != -1);
+  return (a->vtable->compare(a, b) != svn_fs_node_unrelated);
 }
 
 int
 svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b)
 {
-  return a->vtable->compare(a, b);
+  switch (a->vtable->compare(a, b))
+    {
+    case svn_fs_node_same:
+      return 0;
+    case svn_fs_node_common_ancestor:
+      return 1;
+    default:
+      return -1;
+    }
 }
 
 svn_error_t *

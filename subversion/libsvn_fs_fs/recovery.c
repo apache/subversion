@@ -276,6 +276,51 @@ recover_find_max_ids(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Part of the recovery procedure.  Given an open non-packed revision file
+   REV_FILE for REV, locate the trailer that specifies the offset to the root
+   node-id and store this offset in *ROOT_OFFSET.  Do temporary allocations in
+   POOL. */
+static svn_error_t *
+recover_get_root_offset(apr_off_t *root_offset,
+                        svn_revnum_t rev,
+                        svn_fs_fs__revision_file_t *rev_file,
+                        apr_pool_t *pool)
+{
+  char buffer[64];
+  svn_stringbuf_t *trailer;
+  apr_off_t start;
+  apr_off_t end;
+  apr_size_t len;
+
+  SVN_ERR_ASSERT(!rev_file->is_packed);
+
+  /* We will assume that the last line containing the two offsets (to the root
+     node-id and to the changed path information) will never be longer than 64
+     characters. */
+  end = 0;
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_END, &end, pool));
+
+  if (end < sizeof(buffer))
+    {
+      len = (apr_size_t)end;
+      start = 0;
+    }
+  else
+    {
+      len = sizeof(buffer);
+      start = end - sizeof(buffer);
+    }
+
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &start, pool));
+  SVN_ERR(svn_io_file_read_full2(rev_file->file, buffer, len,
+                                 NULL, NULL, pool));
+
+  trailer = svn_stringbuf_ncreate(buffer, len, pool);
+  SVN_ERR(svn_fs_fs__parse_revision_trailer(root_offset, NULL, trailer, rev));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__find_max_ids(svn_fs_t *fs,
                         svn_revnum_t youngest,
@@ -286,16 +331,12 @@ svn_fs_fs__find_max_ids(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_off_t root_offset;
   svn_fs_fs__revision_file_t *rev_file;
-  svn_fs_id_t *root_id;
 
   /* call this function for old repo formats only */
   SVN_ERR_ASSERT(ffd->format < SVN_FS_FS__MIN_NO_GLOBAL_IDS_FORMAT);
 
-  SVN_ERR(svn_fs_fs__rev_get_root(&root_id, fs, youngest, pool));
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, youngest, pool));
-  SVN_ERR(svn_fs_fs__item_offset(&root_offset, fs, rev_file, youngest, NULL,
-                                 svn_fs_fs__id_item(root_id), pool));
-
+  SVN_ERR(recover_get_root_offset(&root_offset, youngest, rev_file, pool));
   SVN_ERR(recover_find_max_ids(fs, youngest, rev_file, root_offset,
                                max_node_id, max_copy_id, pool));
   SVN_ERR(svn_fs_fs__close_revision_file(rev_file));

@@ -213,7 +213,16 @@ public class BasicTests extends SVNTests
 
         Status s = client.singleStatus(fileToSVNPath(fileC, false), false);
         if (s != null)
-            fail("File foo.c should not return a status.");
+        {
+            if (s.hasTreeConflict()
+                || s.getTextStatus() != Status.Kind.none
+                || s.getPropStatus() != Status.Kind.none
+                || s.getRepositoryTextStatus() != Status.Kind.none
+                || s.getRepositoryPropStatus() != Status.Kind.none)
+            {
+                fail("File foo.c should not return a status.");
+            }
+        }
 
     }
 

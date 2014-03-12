@@ -31,8 +31,6 @@
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
-
-#include "svn_private_config.h"
 #include "svn_types.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
@@ -62,6 +60,8 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+
+#include "svn_private_config.h"
 
 
 /*-----------------------------------------------------------------------*/
@@ -11464,7 +11464,7 @@ find_reintegrate_merge(merge_source_t **source_p,
           SVN_ERR(svn_mergeinfo__catalog_to_formatted_string(
             &source_mergeinfo_cat_string,
             final_unmerged_catalog,
-            "  ", "    Missing ranges: ", scratch_pool));
+            "  ", _("    Missing ranges: "), scratch_pool));
           return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
                                    NULL,
                                    _("Reintegrate can only be used if "

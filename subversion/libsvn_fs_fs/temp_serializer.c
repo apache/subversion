@@ -22,7 +22,6 @@
 
 #include <apr_pools.h>
 
-#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
@@ -150,8 +149,9 @@ serialize_representation(svn_temp_serializer__context_t *context,
 /* auxiliary structure representing the content of a directory array */
 typedef struct dir_data_t
 {
-  /* number of entries in the directory */
-  apr_size_t count;
+  /* number of entries in the directory
+   * (it's int because the directory is an APR array) */
+  int count;
 
   /* number of unused dir entry buckets in the index */
   apr_size_t over_provision;
@@ -209,7 +209,7 @@ serialize_dir(apr_array_header_t *entries, apr_pool_t *pool)
   svn_temp_serializer__context_t *context;
 
   /* calculate sizes */
-  apr_size_t count = entries->nelts;
+  int count = entries->nelts;
   apr_size_t over_provision = 2 + count / 4;
   apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_dirent_t*);
   apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
@@ -589,10 +589,10 @@ svn_fs_fs__deserialize_properties(void **out,
   for (i = 0; i < properties->count; ++i)
     {
       apr_size_t len = properties->keys[i+1] - properties->keys[i] - 1;
-      svn_temp_deserializer__resolve((void*)properties->keys,
+      svn_temp_deserializer__resolve(properties->keys,
                                      (void**)&properties->keys[i]);
 
-      deserialize_svn_string((void*)properties->values,
+      deserialize_svn_string(properties->values,
                              (svn_string_t **)&properties->values[i]);
 
       apr_hash_set(hash,
@@ -916,12 +916,12 @@ svn_fs_fs__replace_dir_entry(void **data,
 
   /* resolve the reference to the entries array */
   entries = (svn_fs_dirent_t **)
-    svn_temp_deserializer__ptr((const char *)dir_data,
+    svn_temp_deserializer__ptr(dir_data,
                                (const void *const *)&dir_data->entries);
 
   /* resolve the reference to the lengths array */
   lengths = (apr_uint32_t *)
-    svn_temp_deserializer__ptr((const char *)dir_data,
+    svn_temp_deserializer__ptr(dir_data,
                                (const void *const *)&dir_data->lengths);
 
   /* binary search for the desired entry by name */
@@ -990,7 +990,7 @@ svn_fs_fs__replace_dir_entry(void **data,
 
   dir_data = (dir_data_t *)*data;
   lengths = (apr_uint32_t *)
-    svn_temp_deserializer__ptr((const char *)dir_data,
+    svn_temp_deserializer__ptr(dir_data,
                                (const void *const *)&dir_data->lengths);
   lengths[pos] = length;
 
@@ -1148,7 +1148,7 @@ svn_fs_fs__deserialize_changes(void **out,
   /* de-serialize each entry and add it to the array */
   for (i = 0; i < changes->count; ++i)
     {
-      deserialize_change((void*)changes->changes,
+      deserialize_change(changes->changes,
                          (change_t **)&changes->changes[i]);
       APR_ARRAY_PUSH(array, change_t *) = changes->changes[i];
     }
@@ -1293,7 +1293,7 @@ svn_fs_fs__deserialize_mergeinfo(void **out,
       for (k = 0; k < merges->range_counts[i]; ++k, ++n)
         APR_ARRAY_PUSH(ranges, svn_merge_range_t*) = &merges->ranges[n];
 
-      svn_temp_deserializer__resolve((void*)merges->keys,
+      svn_temp_deserializer__resolve(merges->keys,
                                      (void**)&merges->keys[i]);
       apr_hash_set(mergeinfo, merges->keys[i], merges->key_lengths[i], ranges);
     }
