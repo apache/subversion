@@ -580,7 +580,7 @@ if [ $? -ne 0 ]; then
   HTTP_FETCH_OUTPUT='-s -k -o'
 fi
 $HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
-diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
+diff "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
   || fail "HTTPD doesn't operate according to the generated configuration"
 rm "$HTTPD_CFG-copy"
 
