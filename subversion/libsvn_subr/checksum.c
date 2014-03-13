@@ -100,7 +100,7 @@ svn__digest_to_cstring_display(const unsigned char digest[],
 {
   static const char *hex = "0123456789abcdef";
   char *str = apr_palloc(pool, (digest_size * 2) + 1);
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < digest_size; i++)
     {
