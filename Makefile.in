@@ -684,7 +684,7 @@ doc-clean:
 	rm -rf $(abs_builddir)/doc/doxygen
 	rm -rf $(abs_builddir)/doc/javadoc
 
-# Converting from the .rnc XML shcemas to various other schema formats.
+# Converting from the .rnc XML schemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
               $(SCHEMA_DIR)/list.dtd $(SCHEMA_DIR)/log.dtd \
               $(SCHEMA_DIR)/status.dtd $(SCHEMA_DIR)/props.dtd
@@ -697,7 +697,7 @@ SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd $(SCHEMA_DIR)/info.xsd \
               $(SCHEMA_DIR)/list.xsd $(SCHEMA_DIR)/log.xsd \
               $(SCHEMA_DIR)/status.xsd $(SCHEMA_DIR)/props.xsd
 
-schema: schema-rng schema-dtd schema-xsd
+schema: mkdir-init schema-rng schema-dtd schema-xsd
 
 schema-rng: $(SCHEMAS_RNG)
 schema-dtd: $(SCHEMAS_DTD)
