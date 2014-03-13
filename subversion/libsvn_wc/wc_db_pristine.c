@@ -256,28 +256,6 @@ pristine_get_tempdir(svn_wc__db_wcroot_t *wcroot,
                               PRISTINE_TEMPDIR_RELPATH, SVN_VA_NULL);
 }
 
-svn_error_t *
-svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
-                                svn_wc__db_t *db,
-                                const char *wri_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(temp_dir_abspath != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  *temp_dir_abspath = pristine_get_tempdir(wcroot, result_pool, scratch_pool);
-  return SVN_NO_ERROR;
-}
-
-
 /* Install the pristine text described by BATON into the pristine store of
  * SDB.  If it is already stored then just delete the new file
  * BATON->tempfile_abspath.
@@ -388,11 +366,18 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
   const char *temp_dir_abspath;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, wri_abspath,
-                                          scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  temp_dir_abspath = pristine_get_tempdir(wcroot, scratch_pool, scratch_pool);
+
   SVN_ERR(svn_stream_open_unique(stream,
                                  temp_base_abspath,
                                  temp_dir_abspath,

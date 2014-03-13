@@ -953,21 +953,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-
-/* Set *TEMP_DIR_ABSPATH to a directory in which the caller should create
-   a uniquely named file for later installation as a pristine text file.
-
-   The directory is guaranteed to be one that svn_wc__db_pristine_install()
-   can use: specifically, one from which it can atomically move the file.
-
-   Allocate *TEMP_DIR_ABSPATH in RESULT_POOL. */
-svn_error_t *
-svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
-                                svn_wc__db_t *db,
-                                const char *wri_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
 /* Open a writable stream to a temporary text base, ready for installing
    into the pristine store.  Set *STREAM to the opened stream and
    *TEMP_BASE_ABSPATH to the path to the temporary file.  The temporary
