@@ -237,6 +237,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1577151
+   Make 'svn merge' honor the 'preserved-conflict-file-exts' setting.
+   Justification:
+     While really a behavior change that doesn't belong in a patch release
+     I'm guessing nobody knew that we didn't implement this flag in this
+     scenario.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
