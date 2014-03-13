@@ -566,7 +566,19 @@ read_config(fs_fs_data_t *ffd,
       ffd->l2p_page_size = 0x2000;
       ffd->p2l_page_size = 0x1000;
     }
-  
+
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+    {
+      SVN_ERR(svn_config_get_bool(ffd->config, &ffd->pack_after_commit,
+                                  CONFIG_SECTION_DEBUG,
+                                  CONFIG_OPTION_PACK_AFTER_COMMIT,
+                                  FALSE));
+    }
+  else
+    {
+      ffd->pack_after_commit = FALSE;
+    }
+
   return SVN_NO_ERROR;
 }
 
