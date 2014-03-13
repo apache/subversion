@@ -42,6 +42,7 @@
 #include "private/svn_fs_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_sorts_private.h"
 
 
 
@@ -227,12 +228,10 @@ turn_unique_copies_into_moves(apr_hash_t *changes,
     return;
 
   /* identify copy-from paths that have been mentioned exactly once */
-
-  sources = (const char **)copy_sources->elts;
-  qsort(sources, copy_sources->nelts, copy_sources->elt_size,
-        (int (*)(const void *, const void *))svn_sort_compare_paths);
+  svn_sort__array(copy_sources, svn_sort_compare_paths);
 
   unique_copy_sources = apr_hash_make(pool);
+  sources = (const char **)copy_sources->elts;
   for (i = 0; i < copy_sources->nelts; ++i)
     if (   (i == 0 || strcmp(sources[i-1], sources[i]))
         && (i == copy_sources->nelts-1 || strcmp(sources[i+1], sources[i])))
@@ -1665,8 +1664,7 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 
       /* First, sort the list such that the start revision of the first
          revision arrays are sorted. */
-      qsort(rangelist_paths->elts, rangelist_paths->nelts,
-            rangelist_paths->elt_size, compare_rangelist_paths);
+      svn_sort__array(rangelist_paths, compare_rangelist_paths);
 
       /* Next, find the number of revision ranges which start with the same
          revision. */
@@ -1863,8 +1861,7 @@ handle_merged_revisions(svn_revnum_t rev,
                                           TRUE, pool));
 
   SVN_ERR_ASSERT(combined_list != NULL);
-  qsort(combined_list->elts, combined_list->nelts,
-        combined_list->elt_size, compare_path_list_range);
+  svn_sort__array(combined_list, compare_path_list_range);
 
   /* Because the combined_lists are ordered youngest to oldest,
      iterate over them in reverse. */

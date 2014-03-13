@@ -40,11 +40,11 @@
 #include "svn_hash.h"
 
 #include <assert.h>
-#include <stdlib.h>  /* for qsort() */
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
 
 /*** Uncomment this to turn on commit driver debugging. ***/
 /*
@@ -1405,8 +1405,7 @@ svn_client__condense_commit_items(const char **base_url,
   SVN_ERR_ASSERT(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
-  qsort(ci->elts, ci->nelts,
-        ci->elt_size, svn_client__sort_commit_item_urls);
+  svn_sort__array(ci, svn_client__sort_commit_item_urls);
 
   /* Loop through the URLs, finding the longest usable ancestor common
      to all of them, and making sure there are no duplicate URLs.  */

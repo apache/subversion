@@ -455,8 +455,7 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
           /* Some of the above cases might have put *RANGELIST out of
              order, so re-sort.*/
           if (!sorted)
-            qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
-                  svn_sort_compare_ranges);
+            svn_sort__array(rangelist, svn_sort_compare_ranges);
         }
     }
 
@@ -720,8 +719,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
    */
   if (! is_rangelist_normalized(rangelist))
     {
-      qsort(rangelist->elts, rangelist->nelts, rangelist->elt_size,
-            svn_sort_compare_ranges);
+      svn_sort__array(rangelist, svn_sort_compare_ranges);
 
       SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
     }
@@ -1996,7 +1994,7 @@ svn_mergeinfo_sort(svn_mergeinfo_t input, apr_pool_t *pool)
     {
       apr_array_header_t *rl = svn__apr_hash_index_val(hi);
 
-      qsort(rl->elts, rl->nelts, rl->elt_size, svn_sort_compare_ranges);
+      svn_sort__array(rl, svn_sort_compare_ranges);
     }
   return SVN_NO_ERROR;
 }

@@ -72,6 +72,14 @@ svn_sort__hash(apr_hash_t *ht,
                                       const svn_sort__item_t *),
                apr_pool_t *pool);
 
+/* Sort APR array @a array using ordering defined by @a comparison_func.
+ * @a comparison_func is defined as for the C stdlib function qsort().
+ */
+void
+svn_sort__array(apr_array_header_t *array,
+                int (*comparison_func)(const void *,
+                                       const void *));
+
 /* Return the lowest index at which the element @a *key should be inserted into
  * the array @a array, according to the ordering defined by @a compare_func.
  * The array must already be sorted in the ordering defined by @a compare_func.
