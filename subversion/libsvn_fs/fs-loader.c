@@ -1583,54 +1583,115 @@ svn_fs_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_fs_lock2(apr_hash_t **results,
+             svn_fs_t *fs,
+             apr_hash_t *targets,
+             const char *comment,
+             svn_boolean_t is_dav_comment,
+             apr_time_t expiration_date,
+             svn_boolean_t steal_lock,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_hash_t *ok_targets = apr_hash_make(scratch_pool), *ok_results;
+  svn_error_t *err;
+
+  *results = apr_hash_make(result_pool);
+
+  /* Enforce that the comment be xml-escapable. */
+  if (comment)
+    if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+      return svn_error_create(SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+                              _("Lock comment contains illegal characters"));
+
+  if (expiration_date < 0)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+              _("Negative expiration date passed to svn_fs_lock"));
+
+  /* Enforce that the token be an XML-safe URI. */
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+
+      err = SVN_NO_ERROR;
+      if (target->token)
+        {
+          const char *c;
+
+
+          if (strncmp(target->token, "opaquelocktoken:", 16))
+            err = svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                    _("Lock token URI '%s' has bad scheme; "
+                                      "expected '%s'"),
+                                    target->token, "opaquelocktoken");
+
+          if (!err)
+            for (c = target->token; *c && !err; c++)
+              if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
+                err = svn_error_createf(
+                        SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                        _("Lock token '%s' is not ASCII or is a "
+                          "control character at byte %u"),
+                        target->token,
+                        (unsigned)(c - target->token));
+
+          /* strlen(token) == c - token. */
+          if (!err && !svn_xml_is_xml_safe(target->token, c - target->token))
+            err = svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                    _("Lock token URI '%s' is not XML-safe"),
+                                    target->token);
+        }
+
+      if (err)
+        {
+          svn_fs_lock_result_t *result
+            = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
+
+          result->err = err;
+          result->lock = NULL;
+          svn_hash_sets(*results, svn__apr_hash_index_key(hi), result);
+        }
+      else
+        svn_hash_sets(ok_targets, svn__apr_hash_index_key(hi), target);
+    }
+
+  err = fs->vtable->lock(&ok_results, fs, ok_targets, comment,
+                         is_dav_comment, expiration_date,
+                         steal_lock, result_pool, scratch_pool);
+
+  for (hi = apr_hash_first(scratch_pool, ok_results);
+       hi; hi = apr_hash_next(hi))
+    svn_hash_sets(*results, svn__apr_hash_index_key(hi),
+                  svn__apr_hash_index_val(hi));
+
+  return svn_error_trace(err);
+}
+
+svn_error_t *
 svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
             const char *token, const char *comment,
             svn_boolean_t is_dav_comment, apr_time_t expiration_date,
             svn_revnum_t current_rev, svn_boolean_t steal_lock,
             apr_pool_t *pool)
 {
-  /* Enforce that the comment be xml-escapable. */
-  if (comment)
-    {
-      if (! svn_xml_is_xml_safe(comment, strlen(comment)))
-        return svn_error_create
-          (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment contains illegal characters"));
-    }
+  apr_hash_t *targets = apr_hash_make(pool), *results;
+  svn_fs_lock_target_t target; 
+  svn_fs_lock_result_t *result;
 
-  /* Enforce that the token be an XML-safe URI. */
-  if (token)
-    {
-      const char *c;
+  target.token = token;
+  target.current_rev = current_rev;
+  svn_hash_sets(targets, path, &target);
 
-      if (strncmp(token, "opaquelocktoken:", 16))
-        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                 _("Lock token URI '%s' has bad scheme; "
-                                   "expected '%s'"),
-                                 token, "opaquelocktoken");
+  SVN_ERR(svn_fs_lock2(&results, fs, targets, comment, is_dav_comment,
+                       expiration_date, steal_lock, pool, pool));
 
-      for (c = token; *c; c++)
-        if (! svn_ctype_isascii(*c) || svn_ctype_iscntrl(*c))
-          return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                   _("Lock token '%s' is not ASCII or is a "
-                                     "control character at byte %u"),
-                                   token, (unsigned)(c - token));
-
-      /* strlen(token) == c - token. */
-      if (! svn_xml_is_xml_safe(token, c - token))
-        return svn_error_createf(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                 _("Lock token URI '%s' is not XML-safe"),
-                                 token);
-    }
-
-  if (expiration_date < 0)
-        return svn_error_create
-          (SVN_ERR_INCORRECT_PARAMS, NULL,
-           _("Negative expiration date passed to svn_fs_lock"));
-
-  return svn_error_trace(fs->vtable->lock(lock, fs, path, token, comment,
-                                          is_dav_comment, expiration_date,
-                                          current_rev, steal_lock, pool));
+  SVN_ERR_ASSERT(apr_hash_count(results));
+  result = svn__apr_hash_index_val(apr_hash_first(pool, results));
+  if (result->lock)
+    *lock = result->lock;
+  
+  return result->err;
 }
 
 svn_error_t *
@@ -1640,11 +1701,34 @@ svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_fs_unlock2(apr_hash_t **results,
+               svn_fs_t *fs,
+               apr_hash_t *targets,
+               svn_boolean_t break_lock,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(fs->vtable->unlock(results, fs, targets, break_lock,
+                                            result_pool, scratch_pool));
+}
+
+svn_error_t *
 svn_fs_unlock(svn_fs_t *fs, const char *path, const char *token,
               svn_boolean_t break_lock, apr_pool_t *pool)
 {
-  return svn_error_trace(fs->vtable->unlock(fs, path, token, break_lock,
-                                            pool));
+  apr_hash_t *targets = apr_hash_make(pool), *results;
+  svn_fs_lock_result_t *result;
+
+  if (!token)
+    token = "";
+  svn_hash_sets(targets, path, token);
+
+  SVN_ERR(svn_fs_unlock2(&results, fs, targets, break_lock, pool, pool));
+
+  SVN_ERR_ASSERT(apr_hash_count(results));
+  result = svn__apr_hash_index_val(apr_hash_first(pool, results));
+
+  return result->err;
 }
 
 svn_error_t *

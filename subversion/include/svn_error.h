@@ -428,17 +428,22 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
  * SVN_ERR_FS_OUT_OF_DATE and SVN_ERR_FS_NOT_FOUND are in here because it's a
  * non-fatal error that can be thrown when attempting to lock an item.
  *
+ * SVN_ERR_REPOS_HOOK_FAILURE refers to the pre-lock hook.
+ *
  * @since New in 1.2.
  */
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
   (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||        \
    err->apr_err == SVN_ERR_FS_NOT_FOUND           ||        \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE         ||        \
-   err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
+   err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN      ||        \
+   err->apr_err == SVN_ERR_REPOS_HOOK_FAILURE)
 
 /**
  * Return TRUE if @a err is an error specifically related to unlocking
  * a path in the repository, FALSE otherwise.
+ *
+ * SVN_ERR_REPOS_HOOK_FAILURE refers to the pre-unlock hook.
  *
  * @since New in 1.2.
  */
@@ -448,7 +453,8 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH ||        \
    err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||               \
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
-   err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+   err->apr_err == SVN_ERR_FS_LOCK_EXPIRED ||               \
+   err->apr_err == SVN_ERR_REPOS_HOOK_FAILURE)
 
 /** Evaluates to @c TRUE iff @a apr_err (of type apr_status_t) is in the given
  * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START

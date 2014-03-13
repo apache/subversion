@@ -91,6 +91,8 @@ txn_body_lock(void *baton, trail_t *trail)
   svn_lock_t *existing_lock;
   svn_lock_t *lock;
 
+  *args->lock_p = NULL;
+
   SVN_ERR(svn_fs_base__get_path_kind(&kind, args->path, trail, trail->pool));
 
   /* Until we implement directory locks someday, we only allow locks
@@ -215,31 +217,47 @@ txn_body_lock(void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_base__lock(svn_lock_t **lock,
+svn_fs_base__lock(apr_hash_t **results,
                   svn_fs_t *fs,
-                  const char *path,
-                  const char *token,
+                  apr_hash_t *targets,
                   const char *comment,
                   svn_boolean_t is_dav_comment,
                   apr_time_t expiration_date,
-                  svn_revnum_t current_rev,
                   svn_boolean_t steal_lock,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
-  struct lock_args args;
+  apr_hash_index_t *hi;
+
+  *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  args.lock_p = lock;
-  args.path = svn_fs__canonicalize_abspath(path, pool);
-  args.token = token;
-  args.comment = comment;
-  args.is_dav_comment = is_dav_comment;
-  args.steal_lock = steal_lock;
-  args.expiration_date = expiration_date;
-  args.current_rev = current_rev;
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      struct lock_args args;
+      const char *path = svn__apr_hash_index_key(hi);
+      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      svn_lock_t *lock;
+      svn_fs_lock_result_t *result = apr_palloc(result_pool,
+                                                sizeof(svn_fs_lock_result_t));
 
-  return svn_fs_base__retry_txn(fs, txn_body_lock, &args, FALSE, pool);
+      args.lock_p = &lock;
+      args.path = svn_fs__canonicalize_abspath(path, result_pool);
+      args.token = target->token;
+      args.comment = comment;
+      args.is_dav_comment = is_dav_comment;
+      args.steal_lock = steal_lock;
+      args.expiration_date = expiration_date;
+      args.current_rev = target->current_rev;
+      
+      result->err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, FALSE,
+                                           scratch_pool);
+      result->lock = lock;
+      svn_hash_sets(*results, args.path, result);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -307,20 +325,37 @@ txn_body_unlock(void *baton, trail_t *trail)
 
 
 svn_error_t *
-svn_fs_base__unlock(svn_fs_t *fs,
-                    const char *path,
-                    const char *token,
+svn_fs_base__unlock(apr_hash_t **results,
+                    svn_fs_t *fs,
+                    apr_hash_t *targets,
                     svn_boolean_t break_lock,
-                    apr_pool_t *pool)
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  struct unlock_args args;
+  apr_hash_index_t *hi;
+
+  *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  args.path = svn_fs__canonicalize_abspath(path, pool);
-  args.token = token;
-  args.break_lock = break_lock;
-  return svn_fs_base__retry_txn(fs, txn_body_unlock, &args, TRUE, pool);
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      struct unlock_args args;
+      const char *path = svn__apr_hash_index_key(hi);
+      const char *token = svn__apr_hash_index_val(hi);
+      svn_fs_lock_result_t *result = apr_palloc(result_pool,
+                                                sizeof(svn_fs_lock_result_t));
+
+      args.path = svn_fs__canonicalize_abspath(path, result_pool);
+      args.token = token;
+      args.break_lock = break_lock;
+      result->err = svn_fs_base__retry_txn(fs, txn_body_unlock, &args, TRUE,
+                                           scratch_pool);
+      result->lock = NULL;
+      svn_hash_sets(*results, args.path, result);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

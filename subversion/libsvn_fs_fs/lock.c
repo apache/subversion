@@ -20,7 +20,6 @@
  * ====================================================================
  */
 
-
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -42,6 +41,7 @@
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
 
 /* Names of hash keys used to store a lock for writing to disk. */
@@ -340,8 +340,6 @@ read_digest_file(apr_hash_t **children_p,
 /* Write LOCK in FS to the actual OS filesystem.
 
    Use PERMS_REFERENCE for the permissions of any digest files.
-
-   Note: this takes an FS_PATH because it's called from the hotcopy logic.
  */
 static svn_error_t *
 set_lock(const char *fs_path,
@@ -349,128 +347,109 @@ set_lock(const char *fs_path,
          const char *perms_reference,
          apr_pool_t *pool)
 {
-  svn_stringbuf_t *this_path = svn_stringbuf_create(lock->path, pool);
-  const char *lock_digest_path = NULL;
-  apr_pool_t *subpool;
+  const char *digest_path;
+  apr_hash_t *children;
 
-  SVN_ERR_ASSERT(lock);
+  SVN_ERR(digest_path_from_path(&digest_path, fs_path, lock->path, pool));
 
-  /* Iterate in reverse, creating the lock for LOCK->path, and then
-     just adding entries for its parent, until we reach a parent
-     that's already listed in *its* parent. */
-  subpool = svn_pool_create(pool);
-  while (1729)
-    {
-      const char *digest_path, *digest_file;
-      apr_hash_t *this_children;
-      svn_lock_t *this_lock;
+  /* We could get away without reading the file as children should
+     always come back empty. */
+  SVN_ERR(read_digest_file(&children, NULL, fs_path, digest_path, pool));
 
-      svn_pool_clear(subpool);
+  SVN_ERR(write_digest_file(children, lock, fs_path, digest_path, 
+                            perms_reference, pool));
 
-      /* Calculate the DIGEST_PATH for the currently FS path, and then
-         get its DIGEST_FILE basename. */
-      SVN_ERR(digest_path_from_path(&digest_path, fs_path, this_path->data,
-                                    subpool));
-      digest_file = svn_dirent_basename(digest_path, subpool);
-
-      SVN_ERR(read_digest_file(&this_children, &this_lock, fs_path,
-                               digest_path, subpool));
-
-      /* We're either writing a new lock (first time through only) or
-         a new entry (every time but the first). */
-      if (lock)
-        {
-          this_lock = lock;
-          lock = NULL;
-          lock_digest_path = apr_pstrdup(pool, digest_file);
-        }
-      else
-        {
-          /* If we already have an entry for this path, we're done. */
-          if (svn_hash_gets(this_children, lock_digest_path))
-            break;
-          svn_hash_sets(this_children, lock_digest_path, (void *)1);
-        }
-      SVN_ERR(write_digest_file(this_children, this_lock, fs_path,
-                                digest_path, perms_reference, subpool));
-
-      /* Prep for next iteration, or bail if we're done. */
-      if (svn_fspath__is_root(this_path->data, this_path->len))
-        break;
-      svn_stringbuf_set(this_path,
-                        svn_fspath__dirname(this_path->data, subpool));
-    }
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
-/* Delete LOCK from FS in the actual OS filesystem. */
 static svn_error_t *
-delete_lock(svn_fs_t *fs,
-            svn_lock_t *lock,
+delete_lock(const char *fs_path,
+            const char *path,
             apr_pool_t *pool)
 {
-  svn_stringbuf_t *this_path = svn_stringbuf_create(lock->path, pool);
-  const char *child_to_kill = NULL;
-  apr_pool_t *subpool;
+  const char *digest_path;
 
-  SVN_ERR_ASSERT(lock);
+  SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, pool));
 
-  /* Iterate in reverse, deleting the lock for LOCK->path, and then
-     deleting its entry as it appears in each of its parents. */
-  subpool = svn_pool_create(pool);
-  while (1729)
-    {
-      const char *digest_path, *digest_file;
-      apr_hash_t *this_children;
-      svn_lock_t *this_lock;
+  SVN_ERR(svn_io_remove_file2(digest_path, TRUE, pool));
 
-      svn_pool_clear(subpool);
-
-      /* Calculate the DIGEST_PATH for the currently FS path, and then
-         get its DIGEST_FILE basename. */
-      SVN_ERR(digest_path_from_path(&digest_path, fs->path, this_path->data,
-                                    subpool));
-      digest_file = svn_dirent_basename(digest_path, subpool);
-
-      SVN_ERR(read_digest_file(&this_children, &this_lock, fs->path,
-                               digest_path, subpool));
-
-      /* Delete the lock (first time through only). */
-      if (lock)
-        {
-          this_lock = NULL;
-          lock = NULL;
-          child_to_kill = apr_pstrdup(pool, digest_file);
-        }
-
-      if (child_to_kill)
-        svn_hash_sets(this_children, child_to_kill, NULL);
-
-      if (! (this_lock || apr_hash_count(this_children) != 0))
-        {
-          /* Special case:  no goodz, no file.  And remember to nix
-             the entry for it in its parent. */
-          SVN_ERR(svn_io_remove_file2(digest_path, FALSE, subpool));
-        }
-      else
-        {
-          const char *rev_0_path = svn_fs_fs__path_rev_absolute(fs, 0, pool);
-          SVN_ERR(write_digest_file(this_children, this_lock, fs->path,
-                                    digest_path, rev_0_path, subpool));
-        }
-
-      /* Prep for next iteration, or bail if we're done. */
-      if (svn_fspath__is_root(this_path->data, this_path->len))
-        break;
-      svn_stringbuf_set(this_path,
-                        svn_fspath__dirname(this_path->data, subpool));
-    }
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+add_to_digest(const char *fs_path,
+              apr_array_header_t *paths,
+              const char *index_path,
+              const char *perms_reference,
+              apr_pool_t *pool)
+{
+  const char *index_digest_path;
+  apr_hash_t *children;
+  svn_lock_t *lock;
+  int i, original_count;
+
+  SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path, pool));
+
+  SVN_ERR(read_digest_file(&children, &lock, fs_path, index_digest_path, pool));
+
+  original_count = apr_hash_count(children);
+
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      const char *digest_path, *digest_file;
+
+      SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, pool));
+      digest_file = svn_dirent_basename(digest_path, NULL);
+      svn_hash_sets(children, digest_file, (void *)1);
+    }
+
+  if (apr_hash_count(children) != original_count)
+    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
+                              perms_reference, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+delete_from_digest(const char *fs_path,
+                   apr_array_header_t *paths,
+                   const char *index_path,
+                   const char *perms_reference,
+                   apr_pool_t *pool)
+{
+  const char *index_digest_path;
+  apr_hash_t *children;
+  svn_lock_t *lock;
+  int i;
+
+  SVN_ERR(digest_path_from_path(&index_digest_path, fs_path, index_path, pool));
+
+  SVN_ERR(read_digest_file(&children, &lock, fs_path, index_digest_path, pool));
+
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      const char *digest_path, *digest_file;
+
+      SVN_ERR(digest_path_from_path(&digest_path, fs_path, path, pool));
+      digest_file = svn_dirent_basename(digest_path, NULL);
+      svn_hash_sets(children, digest_file, NULL);
+    }
+
+  if (apr_hash_count(children) || lock)
+    SVN_ERR(write_digest_file(children, lock, fs_path, index_digest_path, 
+                              perms_reference, pool));
+  else
+    SVN_ERR(svn_io_remove_file2(index_digest_path, TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+unlock_single(svn_fs_t *fs,
+              svn_lock_t *lock,
+              apr_pool_t *pool);
 
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
@@ -506,7 +485,7 @@ get_lock(svn_lock_t **lock_p,
       /* Only remove the lock if we have the write lock.
          Read operations shouldn't change the filesystem. */
       if (have_write_lock)
-        SVN_ERR(delete_lock(fs, lock, pool));
+        SVN_ERR(unlock_single(fs, lock, pool));
       return SVN_FS__ERR_LOCK_EXPIRED(fs, lock->token);
     }
 
@@ -581,7 +560,7 @@ locks_walker(void *baton,
           /* Only remove the lock if we have the write lock.
              Read operations shouldn't change the filesystem. */
           if (have_write_lock)
-            SVN_ERR(delete_lock(wlb->fs, lock, pool));
+            SVN_ERR(unlock_single(wlb->fs, lock, pool));
         }
     }
 
@@ -738,68 +717,59 @@ svn_fs_fs__allow_locked_operation(const char *path,
 
 /* Baton used for lock_body below. */
 struct lock_baton {
-  svn_lock_t **lock_p;
   svn_fs_t *fs;
-  const char *path;
-  const char *token;
+  apr_array_header_t *targets;
+  apr_array_header_t *infos;
   const char *comment;
   svn_boolean_t is_dav_comment;
   apr_time_t expiration_date;
-  svn_revnum_t current_rev;
   svn_boolean_t steal_lock;
-  apr_pool_t *pool;
+  apr_pool_t *result_pool;
 };
 
-
-/* This implements the svn_fs_fs__with_write_lock() 'body' callback
-   type, and assumes that the write lock is held.
-   BATON is a 'struct lock_baton *'. */
 static svn_error_t *
-lock_body(void *baton, apr_pool_t *pool)
+check_lock(svn_error_t **fs_err,
+           const char *path,
+           const svn_fs_lock_target_t *target,
+           struct lock_baton *lb,
+           svn_fs_root_t *root,
+           apr_pool_t *pool)
 {
-  struct lock_baton *lb = baton;
   svn_node_kind_t kind;
   svn_lock_t *existing_lock;
-  svn_lock_t *lock;
-  svn_fs_root_t *root;
-  svn_revnum_t youngest;
-  const char *rev_0_path;
 
-  /* Until we implement directory locks someday, we only allow locks
-     on files or non-existent paths. */
-  /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
-     library dependencies, which are not portable. */
-  SVN_ERR(lb->fs->vtable->youngest_rev(&youngest, lb->fs, pool));
-  SVN_ERR(lb->fs->vtable->revision_root(&root, lb->fs, youngest, pool));
-  SVN_ERR(svn_fs_fs__check_path(&kind, root, lb->path, pool));
+  *fs_err = SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_fs__check_path(&kind, root, path, pool));
   if (kind == svn_node_dir)
-    return SVN_FS__ERR_NOT_FILE(lb->fs, lb->path);
+    {
+      *fs_err = SVN_FS__ERR_NOT_FILE(lb->fs, path);
+      return SVN_NO_ERROR;
+    }
 
   /* While our locking implementation easily supports the locking of
      nonexistent paths, we deliberately choose not to allow such madness. */
   if (kind == svn_node_none)
     {
-      if (SVN_IS_VALID_REVNUM(lb->current_rev))
-        return svn_error_createf(
+      if (SVN_IS_VALID_REVNUM(target->current_rev))
+        *fs_err = svn_error_createf(
           SVN_ERR_FS_OUT_OF_DATE, NULL,
           _("Path '%s' doesn't exist in HEAD revision"),
-          lb->path);
+          path);
       else
-        return svn_error_createf(
+        *fs_err = svn_error_createf(
           SVN_ERR_FS_NOT_FOUND, NULL,
           _("Path '%s' doesn't exist in HEAD revision"),
-          lb->path);
+          path);
+
+      return SVN_NO_ERROR;
     }
 
-  /* We need to have a username attached to the fs. */
-  if (!lb->fs->access_ctx || !lb->fs->access_ctx->username)
-    return SVN_FS__ERR_NO_USER(lb->fs);
-
   /* Is the caller attempting to lock an out-of-date working file? */
-  if (SVN_IS_VALID_REVNUM(lb->current_rev))
+  if (SVN_IS_VALID_REVNUM(target->current_rev))
     {
       svn_revnum_t created_rev;
-      SVN_ERR(svn_fs_fs__node_created_rev(&created_rev, root, lb->path,
+      SVN_ERR(svn_fs_fs__node_created_rev(&created_rev, root, path,
                                           pool));
 
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
@@ -807,14 +777,22 @@ lock_body(void *baton, apr_pool_t *pool)
          working copy, but somebody else has deleted the thing
          from HEAD.  That counts as being 'out of date'. */
       if (! SVN_IS_VALID_REVNUM(created_rev))
-        return svn_error_createf
-          (SVN_ERR_FS_OUT_OF_DATE, NULL,
-           _("Path '%s' doesn't exist in HEAD revision"), lb->path);
+        {
+          *fs_err = svn_error_createf
+            (SVN_ERR_FS_OUT_OF_DATE, NULL,
+             _("Path '%s' doesn't exist in HEAD revision"), path);
 
-      if (lb->current_rev < created_rev)
-        return svn_error_createf
-          (SVN_ERR_FS_OUT_OF_DATE, NULL,
-           _("Lock failed: newer version of '%s' exists"), lb->path);
+          return SVN_NO_ERROR;
+        }
+
+      if (target->current_rev < created_rev)
+        {
+          *fs_err = svn_error_createf
+            (SVN_ERR_FS_OUT_OF_DATE, NULL,
+             _("Lock failed: newer version of '%s' exists"), path);
+
+          return SVN_NO_ERROR;
+        }
     }
 
   /* If the caller provided a TOKEN, we *really* need to see
@@ -833,117 +811,429 @@ lock_body(void *baton, apr_pool_t *pool)
      acceptable to ignore; it means that the path is now free and
      clear for locking, because the fsfs funcs just cleared out both
      of the tables for us.   */
-  SVN_ERR(get_lock_helper(lb->fs, &existing_lock, lb->path, TRUE, pool));
+  SVN_ERR(get_lock_helper(lb->fs, &existing_lock, path, TRUE, pool));
   if (existing_lock)
     {
       if (! lb->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return SVN_FS__ERR_PATH_ALREADY_LOCKED(lb->fs, existing_lock);
-        }
-      else
-        {
-          /* STEAL_LOCK was passed, so fs_username is "stealing" the
-             lock from lock->owner.  Destroy the existing lock. */
-          SVN_ERR(delete_lock(lb->fs, existing_lock, pool));
+          *fs_err = SVN_FS__ERR_PATH_ALREADY_LOCKED(lb->fs, existing_lock);
+          return SVN_NO_ERROR;
         }
     }
-
-  /* Create our new lock, and add it to the tables.
-     Ensure that the lock is created in the correct pool. */
-  lock = svn_lock_create(lb->pool);
-  if (lb->token)
-    lock->token = apr_pstrdup(lb->pool, lb->token);
-  else
-    SVN_ERR(svn_fs_fs__generate_lock_token(&(lock->token), lb->fs,
-                                           lb->pool));
-  lock->path = apr_pstrdup(lb->pool, lb->path);
-  lock->owner = apr_pstrdup(lb->pool, lb->fs->access_ctx->username);
-  lock->comment = apr_pstrdup(lb->pool, lb->comment);
-  lock->is_dav_comment = lb->is_dav_comment;
-  lock->creation_date = apr_time_now();
-  lock->expiration_date = lb->expiration_date;
-
-  rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
-  SVN_ERR(set_lock(lb->fs->path, lock, rev_0_path, pool));
-  *lb->lock_p = lock;
 
   return SVN_NO_ERROR;
 }
 
-/* Baton used for unlock_body below. */
-struct unlock_baton {
-  svn_fs_t *fs;
+struct lock_info_t {
   const char *path;
-  const char *token;
-  svn_boolean_t break_lock;
+  const char *component;
+  svn_lock_t *lock;
+  svn_error_t *fs_err;
 };
 
 /* This implements the svn_fs_fs__with_write_lock() 'body' callback
    type, and assumes that the write lock is held.
-   BATON is a 'struct unlock_baton *'. */
+   BATON is a 'struct lock_baton *'. */
+static svn_error_t *
+lock_body(void *baton, apr_pool_t *pool)
+{
+  struct lock_baton *lb = baton;
+  svn_fs_root_t *root;
+  svn_revnum_t youngest;
+  const char *rev_0_path;
+  int i, outstanding = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  lb->infos = apr_array_make(lb->result_pool, lb->targets->nelts,
+                             sizeof(struct lock_info_t));
+
+  /* Until we implement directory locks someday, we only allow locks
+     on files or non-existent paths. */
+  /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
+     library dependencies, which are not portable. */
+  SVN_ERR(lb->fs->vtable->youngest_rev(&youngest, lb->fs, pool));
+  SVN_ERR(lb->fs->vtable->revision_root(&root, lb->fs, youngest, pool));
+
+  for (i = 0; i < lb->targets->nelts; ++i)
+    {
+      const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
+                                                    svn_sort__item_t);
+      const svn_fs_lock_target_t *target = item->value;
+      struct lock_info_t info;
+
+      svn_pool_clear(iterpool);
+
+      info.path = item->key;
+      SVN_ERR(check_lock(&info.fs_err, info.path, target, lb, root, iterpool));
+      info.lock = NULL;
+      info.component = NULL;
+      APR_ARRAY_PUSH(lb->infos, struct lock_info_t) = info;
+      if (!info.fs_err)
+        ++outstanding;
+    }
+
+  rev_0_path = svn_fs_fs__path_rev_absolute(lb->fs, 0, pool);
+
+  /* Given the paths:
+
+       /foo/bar/f
+       /foo/bar/g
+       /zig/x
+
+     we loop through repeatedly.  The first pass sees '/' on all paths
+     and writes the '/' index.  The second pass sees '/foo' twice and
+     writes that index followed by '/zig' and that index. The third
+     pass sees '/foo/bar' twice and writes that index, and then writes
+     the lock for '/zig/x'.  The fourth pass writes the locks for
+     '/foo/bar/f' and '/foo/bar/g'.
+
+     Writing indices before locks is correct: if interrupted it leaves
+     indices without locks rather than locks without indices.  An
+     index without a lock is consistent in that it always shows up as
+     unlocked in svn_fs_fs__allow_locked_operation.  A lock without an
+     index is inconsistent, svn_fs_fs__allow_locked_operation will
+     show locked on the file but unlocked on the parent. */
+
+    
+  while (outstanding)
+    {
+      const char *last_path = NULL;
+      apr_array_header_t *paths;
+
+      svn_pool_clear(iterpool);
+      paths = apr_array_make(iterpool, 1, sizeof(const char *));
+
+      for (i = 0; i < lb->infos->nelts; ++i)
+        {
+          struct lock_info_t *info = &APR_ARRAY_IDX(lb->infos, i,
+                                                    struct lock_info_t);
+          const svn_sort__item_t *item = &APR_ARRAY_IDX(lb->targets, i,
+                                                        svn_sort__item_t);
+          const svn_fs_lock_target_t *target = item->value;
+
+          if (!info->fs_err && !info->lock)
+            {
+              if (!info->component)
+                {
+                  info->component = info->path;
+                  APR_ARRAY_PUSH(paths, const char *) = info->path;
+                  last_path = "/";
+                }
+              else
+                {
+                  info->component = strchr(info->component + 1, '/');
+                  if (!info->component)
+                    {
+                      /* The component is a path to lock, this cannot
+                         match a previous path that need to be indexed. */
+                      if (paths->nelts)
+                        {
+                          SVN_ERR(add_to_digest(lb->fs->path, paths, last_path,
+                                                rev_0_path, iterpool));
+                          apr_array_clear(paths);
+                          last_path = NULL;
+                        }
+
+                      info->lock = svn_lock_create(lb->result_pool);
+                      if (target->token)
+                        info->lock->token = target->token;
+                      else
+                        SVN_ERR(svn_fs_fs__generate_lock_token(
+                                  &(info->lock->token), lb->fs,
+                                  lb->result_pool));
+                      info->lock->path = info->path;
+                      info->lock->owner = lb->fs->access_ctx->username;
+                      info->lock->comment = lb->comment;
+                      info->lock->is_dav_comment = lb->is_dav_comment;
+                      info->lock->creation_date = apr_time_now();
+                      info->lock->expiration_date = lb->expiration_date;
+
+                      info->fs_err = set_lock(lb->fs->path, info->lock,
+                                              rev_0_path, iterpool);
+                      --outstanding;
+                    }
+                  else
+                    {
+                      /* The component is a path to an index. */
+                      apr_size_t len = info->component - info->path;
+
+                      if (last_path
+                          && (strncmp(last_path, info->path, len)
+                              || strlen(last_path) != len))
+                        {
+                          /* No match to the previous paths to index. */
+                          SVN_ERR(add_to_digest(lb->fs->path, paths, last_path,
+                                                rev_0_path, iterpool));
+                          apr_array_clear(paths);
+                          last_path = NULL;
+                        }
+                      APR_ARRAY_PUSH(paths, const char *) = info->path;
+                      if (!last_path)
+                        last_path = apr_pstrndup(iterpool, info->path, len);
+                    }
+                }
+            }
+
+          if (last_path && i == lb->infos->nelts - 1)
+            SVN_ERR(add_to_digest(lb->fs->path, paths, last_path,
+                                  rev_0_path, iterpool));
+        }
+    }
+      
+  return SVN_NO_ERROR;
+}
+
+struct unlock_baton {
+  svn_fs_t *fs;
+  apr_array_header_t *targets;
+  apr_array_header_t *infos;
+  svn_boolean_t skip_check;
+  svn_boolean_t break_lock;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+check_unlock(svn_error_t **fs_err,
+             const char *path,
+             const char *token,
+             struct unlock_baton *ub,
+             svn_fs_root_t *root,
+             apr_pool_t *pool)
+{
+  svn_lock_t *lock;
+
+  *fs_err = get_lock(&lock, ub->fs, path, TRUE, TRUE, pool);
+  if (!*fs_err && !ub->break_lock)
+    {
+      if (strcmp(token, lock->token) != 0)
+        *fs_err = SVN_FS__ERR_NO_SUCH_LOCK(ub->fs, path);
+      else if (strcmp(ub->fs->access_ctx->username, lock->owner) != 0)
+        *fs_err = SVN_FS__ERR_LOCK_OWNER_MISMATCH(ub->fs,
+                                                  ub->fs->access_ctx->username,
+                                                  lock->owner);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+struct unlock_info_t {
+  const char *path;
+  const char *component;
+  svn_error_t *fs_err;
+  int components;
+};
+
 static svn_error_t *
 unlock_body(void *baton, apr_pool_t *pool)
 {
   struct unlock_baton *ub = baton;
-  svn_lock_t *lock;
+  svn_fs_root_t *root;
+  svn_revnum_t youngest;
+  const char *rev_0_path;
+  int i, max_components = 0, outstanding = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
-  SVN_ERR(get_lock(&lock, ub->fs, ub->path, TRUE, TRUE, pool));
+  ub->infos = apr_array_make(ub->result_pool, ub->targets->nelts,
+                             sizeof(struct unlock_info_t));
 
-  /* Unless breaking the lock, we do some checks. */
-  if (! ub->break_lock)
+  SVN_ERR(ub->fs->vtable->youngest_rev(&youngest, ub->fs, pool));
+  SVN_ERR(ub->fs->vtable->revision_root(&root, ub->fs, youngest, pool));
+
+  for (i = 0; i < ub->targets->nelts; ++i)
     {
-      /* Sanity check:  the incoming token should match lock->token. */
-      if (strcmp(ub->token, lock->token) != 0)
-        return SVN_FS__ERR_NO_SUCH_LOCK(ub->fs, lock->path);
+      const svn_sort__item_t *item = &APR_ARRAY_IDX(ub->targets, i,
+                                                    svn_sort__item_t);
+      const char *token = item->value;
+      struct unlock_info_t info;
 
-      /* There better be a username attached to the fs. */
-      if (! (ub->fs->access_ctx && ub->fs->access_ctx->username))
-        return SVN_FS__ERR_NO_USER(ub->fs);
+      svn_pool_clear(iterpool);
 
-      /* And that username better be the same as the lock's owner. */
-      if (strcmp(ub->fs->access_ctx->username, lock->owner) != 0)
-        return SVN_FS__ERR_LOCK_OWNER_MISMATCH(
-           ub->fs, ub->fs->access_ctx->username, lock->owner);
+      info.path = item->key;
+      if (!ub->skip_check)
+        SVN_ERR(check_unlock(&info.fs_err, info.path, token, ub, root,
+                             iterpool));
+      if (!info.fs_err)
+        {
+          const char *s;
+
+          info.components = 1;
+          info.component = info.path;
+          while((s = strchr(info.component + 1, '/')))
+            {
+              info.component = s;
+              ++info.components;
+            }
+
+          if (info.components > max_components)
+            max_components = info.components;
+
+          ++outstanding;
+        }
+      APR_ARRAY_PUSH(ub->infos, struct unlock_info_t) = info;
     }
 
-  /* Remove lock and lock token files. */
-  return delete_lock(ub->fs, lock, pool);
+  rev_0_path = svn_fs_fs__path_rev_absolute(ub->fs, 0, pool);
+
+  for (i = max_components; i >= 0; --i)
+    {
+      const char *last_path = NULL;
+      apr_array_header_t *paths;
+      int j;
+
+      svn_pool_clear(iterpool);
+      paths = apr_array_make(pool, 1, sizeof(const char *));
+
+      for (j = 0; j < ub->infos->nelts; ++j)
+        {
+          struct unlock_info_t *info = &APR_ARRAY_IDX(ub->infos, j,
+                                                      struct unlock_info_t);
+
+          if (!info->fs_err && info->path)
+            {
+
+              if (info->components == i)
+                {
+                  SVN_ERR(delete_lock(ub->fs->path, info->path, iterpool));
+                }
+              else if (info->components > i)
+                {
+                  apr_size_t len = info->component - info->path;
+
+                  if (last_path
+                      && strcmp(last_path, "/")
+                      && (strncmp(last_path, info->path, len)
+                          || strlen(last_path) != len))
+                    {
+                      SVN_ERR(delete_from_digest(ub->fs->path, paths, last_path,
+                                                 rev_0_path, iterpool));
+                      apr_array_clear(paths);
+                      last_path = NULL;
+                    }
+                  APR_ARRAY_PUSH(paths, const char *) = info->path;
+                  if (!last_path)
+                    {
+                      if (info->component > info->path)
+                        last_path = apr_pstrndup(pool, info->path, len);
+                      else
+                        last_path = "/";
+                    }
+
+                  if (info->component > info->path)
+                    {
+                      --info->component;
+                      while(info->component[0] != '/')
+                        --info->component;
+                    }
+                }
+            }
+
+          if (last_path && j == ub->infos->nelts - 1)
+            SVN_ERR(delete_from_digest(ub->fs->path, paths, last_path,
+                                       rev_0_path, iterpool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+unlock_single(svn_fs_t *fs,
+              svn_lock_t *lock,
+              apr_pool_t *pool)
+{
+  struct unlock_baton ub;
+  svn_sort__item_t item;
+  apr_array_header_t *targets = apr_array_make(pool, 1,
+                                               sizeof(svn_sort__item_t));
+  item.key = lock->path;
+  item.klen = strlen(item.key);
+  item.value = (char*)lock->token;
+  APR_ARRAY_PUSH(targets, svn_sort__item_t) = item;
+
+  ub.fs = fs;
+  ub.targets = targets;
+  ub.skip_check = TRUE;
+  ub.result_pool = pool;
+
+  SVN_ERR(unlock_body(&ub, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
 /*** Public API implementations ***/
 
 svn_error_t *
-svn_fs_fs__lock(svn_lock_t **lock_p,
+svn_fs_fs__lock(apr_hash_t **results,
                 svn_fs_t *fs,
-                const char *path,
-                const char *token,
+                apr_hash_t *targets,
                 const char *comment,
                 svn_boolean_t is_dav_comment,
                 apr_time_t expiration_date,
-                svn_revnum_t current_rev,
                 svn_boolean_t steal_lock,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   struct lock_baton lb;
+  apr_array_header_t *sorted_targets;
+  apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
+  svn_error_t *err;
+  int i;
+
+  *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  path = svn_fs__canonicalize_abspath(path, pool);
 
-  lb.lock_p = lock_p;
+  /* We need to have a username attached to the fs. */
+  if (!fs->access_ctx || !fs->access_ctx->username)
+    return SVN_FS__ERR_NO_USER(fs);
+
+  /* The FS locking API allows both cannonical and non-cannonical
+     paths which means that the same cannonical path could be
+     represented more than once in the TARGETS hash.  We just keep
+     one, choosing one with a token if possible. */
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      const svn_fs_lock_target_t *target = svn__apr_hash_index_val(hi);
+      const svn_fs_lock_target_t *other;
+
+      path = svn_fspath__canonicalize(path, result_pool);
+      other = svn_hash_gets(cannonical_targets, path);
+
+      if (!other || (!other->token && target->token))
+        svn_hash_sets(cannonical_targets, path, target);
+    }
+
+  sorted_targets = svn_sort__hash(cannonical_targets,
+                                  svn_sort_compare_items_as_paths,
+                                  scratch_pool);
+
   lb.fs = fs;
-  lb.path = path;
-  lb.token = token;
+  lb.targets = sorted_targets;
   lb.comment = comment;
   lb.is_dav_comment = is_dav_comment;
   lb.expiration_date = expiration_date;
-  lb.current_rev = current_rev;
   lb.steal_lock = steal_lock;
-  lb.pool = pool;
+  lb.result_pool = result_pool;
 
-  return svn_fs_fs__with_write_lock(fs, lock_body, &lb, pool);
+  err = svn_fs_fs__with_write_lock(fs, lock_body, &lb, scratch_pool);
+  for (i = 0; i < lb.infos->nelts; ++i)
+    {
+      struct lock_info_t *info = &APR_ARRAY_IDX(lb.infos, i,
+                                                struct lock_info_t);
+      svn_fs_lock_result_t *result
+        = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
+
+      result->lock = info->lock;
+      result->err = info->fs_err;
+
+      svn_hash_sets(*results, info->path, result);
+    }
+
+  return err;
 }
 
 
@@ -963,25 +1253,67 @@ svn_fs_fs__generate_lock_token(const char **token,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
-svn_fs_fs__unlock(svn_fs_t *fs,
-                  const char *path,
-                  const char *token,
+svn_fs_fs__unlock(apr_hash_t **results,
+                  svn_fs_t *fs,
+                  apr_hash_t *targets,
                   svn_boolean_t break_lock,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   struct unlock_baton ub;
+  apr_array_header_t *sorted_targets;
+  apr_hash_t *cannonical_targets = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
+  svn_error_t *err;
+  int i;
+
+  *results = apr_hash_make(result_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  path = svn_fs__canonicalize_abspath(path, pool);
+
+  /* We need to have a username attached to the fs. */
+  if (!fs->access_ctx || !fs->access_ctx->username)
+    return SVN_FS__ERR_NO_USER(fs);
+
+  for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      const char *token = svn__apr_hash_index_val(hi);
+      const char *other;
+
+      path = svn_fspath__canonicalize(path, result_pool);
+      other = svn_hash_gets(cannonical_targets, path);
+
+      if (!other)
+        svn_hash_sets(cannonical_targets, path, token);
+    }
+
+  sorted_targets = svn_sort__hash(cannonical_targets,
+                                  svn_sort_compare_items_as_paths,
+                                  scratch_pool);
 
   ub.fs = fs;
-  ub.path = path;
-  ub.token = token;
+  ub.targets = sorted_targets;
+  ub.skip_check = FALSE;
   ub.break_lock = break_lock;
+  ub.result_pool = result_pool;
 
-  return svn_fs_fs__with_write_lock(fs, unlock_body, &ub, pool);
+  err = svn_fs_fs__with_write_lock(fs, unlock_body, &ub, scratch_pool);
+  for (i = 0; i < ub.infos->nelts; ++i)
+    {
+      struct unlock_info_t *info = &APR_ARRAY_IDX(ub.infos, i,
+                                                  struct unlock_info_t);
+      svn_fs_lock_result_t *result
+        = apr_palloc(result_pool, sizeof(svn_fs_lock_result_t));
+
+      result->lock = NULL;
+      result->err = info->fs_err;
+
+      svn_hash_sets(*results, info->path, result);
+    }
+
+  return err;
 }
 
 

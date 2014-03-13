@@ -807,18 +807,16 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] USER         (the user who created the lock)"                       NL
 "#"                                                                          NL
-"# The paths that were just locked are passed to the hook via STDIN (as"     NL
-"# of Subversion 1.2, only one path is passed per invocation, but the"       NL
-"# plan is to pass all locked paths at once, so the hook program"            NL
-"# should be written accordingly)."                                          NL
+"# The paths that were just locked are passed to the hook via STDIN."        NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
 "#"                                                                          NL
-"# Because the lock has already been created and cannot be undone,"          NL
+"# Because the locks have already been created and cannot be undone,"        NL
 "# the exit code of the hook program is ignored.  The hook program"          NL
-"# can use the 'svnlook' utility to help it examine the"                     NL
-"# newly-created lock."                                                      NL
+"# can use the 'svnlook' utility to examine the paths in the repository"     NL
+"# but since the hook is invoked asyncronously the newly-created locks"      NL
+"# may no longer be present."                                                NL
 "#"                                                                          NL
 "# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
 "# invoke other programs to do the real work, though it may do the"          NL
@@ -870,10 +868,7 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] USER         (the user who destroyed the lock)"                     NL
 "#"                                                                          NL
-"# The paths that were just unlocked are passed to the hook via STDIN"       NL
-"# (as of Subversion 1.2, only one path is passed per invocation, but"       NL
-"# the plan is to pass all unlocked paths at once, so the hook program"      NL
-"# should be written accordingly)."                                          NL
+"# The paths that were just unlocked are passed to the hook via STDIN."      NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
