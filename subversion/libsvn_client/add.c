@@ -48,6 +48,7 @@
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_magic.h"
 
 #include "svn_private_config.h"
@@ -1169,8 +1170,8 @@ mkdir_urls(const apr_array_header_t *urls,
             }
         }
     }
-  qsort(targets->elts, targets->nelts, targets->elt_size,
-        svn_sort_compare_paths);
+
+  svn_sort__array(targets, svn_sort_compare_paths);
 
   /* ### This reparent may be problematic in limited-authz-to-common-parent
      ### scenarios (compare issue #3242).  See also issue #3649. */

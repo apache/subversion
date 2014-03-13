@@ -38,6 +38,7 @@
 
 #include "private/svn_eol_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_sorts_private.h"
 
 /* Helper macro for readability */
 #define starts_with(str, start)  \
@@ -1333,8 +1334,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
        * offset. But just in case they weren't parsed in this order for
        * some reason, we sort them so that our caller can assume that hunks
        * are sorted as if parsed from a usual patch. */
-      qsort((*patch)->hunks->elts, (*patch)->hunks->nelts,
-            (*patch)->hunks->elt_size, compare_hunks);
+      svn_sort__array((*patch)->hunks, compare_hunks);
     }
 
   return SVN_NO_ERROR;

@@ -46,6 +46,7 @@
 #include "svn_private_config.h"
 #include "private/svn_io_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_sorts_private.h"
 
 /* Thoughts on Reversion.
 
@@ -198,9 +199,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
    * that still exist on disk (e.g. unversioned files within the copied tree).
    * So sort the children list such that longest paths come first and try to
    * remove each child directory in order. */
-  qsort(copied_children->elts, copied_children->nelts,
-        sizeof(svn_wc__db_revert_list_copied_child_info_t *),
-        compare_revert_list_copied_children);
+  svn_sort__array(copied_children, compare_revert_list_copied_children);
   for (i = 0; i < copied_children->nelts; i++)
     {
       child_info = APR_ARRAY_IDX(

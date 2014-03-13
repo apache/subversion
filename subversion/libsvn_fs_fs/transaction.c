@@ -3242,8 +3242,7 @@ verify_locks(svn_fs_t *fs,
                                  sizeof(const char *));
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     APR_ARRAY_PUSH(changed_paths, const char *) = svn__apr_hash_index_key(hi);
-  qsort(changed_paths->elts, changed_paths->nelts,
-        changed_paths->elt_size, svn_sort_compare_paths);
+  svn_sort__array(changed_paths, svn_sort_compare_paths);
 
   /* Now, traverse the array of changed paths, verify locks.  Note
      that if we need to do a recursive verification a path, we'll skip
@@ -3376,8 +3375,7 @@ verify_moves(svn_fs_t *fs,
   /* correct the deletions that refer to moved paths and make them refer to
      the paths in OLD_REV */
 
-  qsort(moves->elts, moves->nelts, moves->elt_size,
-        svn_sort_compare_paths);
+  svn_sort__array(moves, svn_sort_compare_paths);
 
   for (i = 0; i < deletions->nelts; ++i)
     {
@@ -3402,8 +3400,7 @@ verify_moves(svn_fs_t *fs,
         }
     }
 
-  qsort(deletions->elts, deletions->nelts, deletions->elt_size,
-        svn_sort_compare_paths);
+  svn_sort__array(deletions, svn_sort_compare_paths);
 
   /* The _same_ source paths must never occur more than once in any move 
      since our base revision. */

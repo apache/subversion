@@ -337,8 +337,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   /* Figure out the youngest and oldest revs (amongst the set of
      requested revisions + the peg revision) so we can avoid
      unnecessary log parsing. */
-  qsort(location_revisions->elts, location_revisions->nelts,
-        location_revisions->elt_size, compare_revisions);
+  svn_sort__array(location_revisions, compare_revisions);
   oldest_requested = APR_ARRAY_IDX(location_revisions, 0, svn_revnum_t);
   youngest_requested = APR_ARRAY_IDX(location_revisions,
                                      location_revisions->nelts - 1,

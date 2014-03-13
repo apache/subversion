@@ -134,6 +134,14 @@ svn_sort_compare_ranges(const void *a, const void *b)
   return item1->start < item2->start ? -1 : 1;
 }
 
+void
+svn_sort__array(apr_array_header_t *array,
+                int (*comparison_func)(const void *,
+                                       const void *))
+{
+  qsort(array->elts, array->nelts, array->elt_size, comparison_func);
+}
+
 apr_array_header_t *
 svn_sort__hash(apr_hash_t *ht,
                int (*comparison_func)(const svn_sort__item_t *,
@@ -172,7 +180,7 @@ svn_sort__hash(apr_hash_t *ht,
 
   /* quicksort the array if it isn't already sorted.  */
   if (!sorted)
-    qsort(ary->elts, ary->nelts, ary->elt_size,
+    svn_sort__array(ary,
           (int (*)(const void *, const void *))comparison_func);
 
   return ary;

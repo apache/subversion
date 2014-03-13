@@ -42,6 +42,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /* This is the baton that we pass svn_ra_open3(), and is associated with
@@ -641,8 +642,7 @@ svn_client__repos_location_segments(apr_array_header_t **segments,
                                      pool);
   SVN_ERR(svn_error_compose_create(
             err, svn_ra_reparent(ra_session, old_session_url, pool)));
-  qsort((*segments)->elts, (*segments)->nelts,
-        (*segments)->elt_size, compare_segments);
+  svn_sort__array(*segments, compare_segments);
   return SVN_NO_ERROR;
 }
 

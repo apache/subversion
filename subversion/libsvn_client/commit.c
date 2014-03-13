@@ -45,6 +45,7 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_ra_private.h"
+#include "private/svn_sorts_private.h"
 
 #include "svn_private_config.h"
 
@@ -351,8 +352,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
           SVN_ERR(svn_dirent_condense_targets(&common, &wc_targets, wc_targets,
                                               FALSE, iterpool, iterpool));
 
-          qsort(wc_targets->elts, wc_targets->nelts, wc_targets->elt_size,
-                svn_sort_compare_paths);
+          svn_sort__array(wc_targets, svn_sort_compare_paths);
 
           if (wc_targets->nelts == 0
               || !svn_path_is_empty(APR_ARRAY_IDX(wc_targets, 0, const char*))

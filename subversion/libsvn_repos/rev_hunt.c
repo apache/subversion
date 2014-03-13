@@ -39,6 +39,7 @@
 #include "repos.h"
 #include "private/svn_fspath.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /* Note:  this binary search assumes that the datestamp properties on
@@ -1302,8 +1303,7 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
   while (new_merged_path_revs->nelts > 0);
 
   /* Sort MERGED_PATH_REVISIONS in increasing order by REVNUM. */
-  qsort(merged_path_revisions->elts, merged_path_revisions->nelts,
-        sizeof(struct path_revision *), compare_path_revisions);
+  svn_sort__array(merged_path_revisions, compare_path_revisions);
 
   /* Copy to the output array. */
   *merged_path_revisions_out = apr_array_copy(result_pool,

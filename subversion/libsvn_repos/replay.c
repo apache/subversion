@@ -39,6 +39,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_delta_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /*** Backstory ***/
@@ -1546,7 +1547,7 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
   /* Sort the paths.  Although not strictly required by the API, this has
      the pleasant side effect of maintaining a consistent ordering of
      dumpfile contents. */
-  qsort(paths->elts, paths->nelts, paths->elt_size, svn_sort_compare_paths);
+  svn_sort__array(paths, svn_sort_compare_paths);
 
   /* Now actually handle the various paths. */
   iterpool = svn_pool_create(scratch_pool);

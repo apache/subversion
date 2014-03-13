@@ -45,6 +45,7 @@
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_sorts_private.h"
 
 #ifdef _WIN32
 typedef apr_status_t (__stdcall *open_fn_t)(apr_file_t **, apr_pool_t *);
@@ -1277,8 +1278,7 @@ do_filter(apr_getopt_t *os,
 
           APR_ARRAY_PUSH(keys, svn_revnum_t) = *revnum;
         }
-      qsort(keys->elts, keys->nelts,
-            keys->elt_size, svn_sort_compare_revisions);
+      svn_sort__array(keys, svn_sort_compare_revisions);
       for (i = 0; i < keys->nelts; i++)
         {
           svn_revnum_t this_key;
@@ -1321,7 +1321,7 @@ do_filter(apr_getopt_t *os,
 
           APR_ARRAY_PUSH(keys, const char *) = path;
         }
-      qsort(keys->elts, keys->nelts, keys->elt_size, svn_sort_compare_paths);
+      svn_sort__array(keys, svn_sort_compare_paths);
       for (i = 0; i < keys->nelts; i++)
         {
           svn_pool_clear(subpool);
