@@ -690,10 +690,7 @@ if test "$enable_nls" = "yes"; then
   AC_PATH_PROG(MSGMERGE, msgmerge, none)
   AC_PATH_PROG(XGETTEXT, xgettext, none)
   if test "$MSGFMT" != "none"; then
-    AC_SEARCH_LIBS(bindtextdomain, [intl],
-                   [
-                    SVN_INTL_LIBS="-lintl"
-                   ],
+    AC_SEARCH_LIBS(bindtextdomain, [intl], [],
                    [
                     enable_nls="no"
                    ])
@@ -705,7 +702,9 @@ if test "$enable_nls" = "yes"; then
       AC_SEARCH_LIBS(bindtextdomain, [intl],
                      [
                       enable_nls="yes"
-                      SVN_INTL_LIBS="-lintl -liconv"
+                      # This is here so that -liconv ends up in LIBS
+                      # if it worked with -liconv.
+                      AC_CHECK_LIB(iconv, libiconv_open)
                      ], 
                      [
                       AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
@@ -721,6 +720,7 @@ if test "$enable_nls" = "yes"; then
   fi
 fi
 
+dnl Currently SVN_INTL_LIBS is always empty.
 AC_SUBST(SVN_INTL_LIBS)
 
 AH_BOTTOM([
