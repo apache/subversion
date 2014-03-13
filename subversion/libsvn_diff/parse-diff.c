@@ -1206,7 +1206,7 @@ static struct transition transitions[] =
 };
 
 svn_error_t *
-svn_diff_parse_next_patch(svn_patch_t **patch,
+svn_diff_parse_next_patch(svn_patch_t **patch_p,
                           svn_patch_file_t *patch_file,
                           svn_boolean_t reverse,
                           svn_boolean_t ignore_whitespace,
@@ -1217,16 +1217,17 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   svn_boolean_t eof;
   svn_boolean_t line_after_tree_header_read = FALSE;
   apr_pool_t *iterpool;
+  svn_patch_t *patch;
   enum parse_state state = state_start;
 
   if (apr_file_eof(patch_file->apr_file) == APR_EOF)
     {
       /* No more patches here. */
-      *patch = NULL;
+      *patch_p = NULL;
       return SVN_NO_ERROR;
     }
 
-  *patch = apr_pcalloc(result_pool, sizeof(**patch));
+  patch = apr_pcalloc(result_pool, sizeof(*patch));
 
   pos = patch_file->next_patch_offset;
   SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &pos, scratch_pool));
@@ -1259,7 +1260,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           if (starts_with(line->data, transitions[i].expected_input)
               && state == transitions[i].required_state)
             {
-              SVN_ERR(transitions[i].fn(&state, line->data, *patch,
+              SVN_ERR(transitions[i].fn(&state, line->data, patch,
                                         result_pool, iterpool));
               valid_header_line = TRUE;
               break;
@@ -1304,22 +1305,22 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     }
   while (! eof);
 
-  (*patch)->reverse = reverse;
+  patch->reverse = reverse;
   if (reverse)
     {
       const char *temp;
-      temp = (*patch)->old_filename;
-      (*patch)->old_filename = (*patch)->new_filename;
-      (*patch)->new_filename = temp;
+      temp = patch->old_filename;
+      patch->old_filename = patch->new_filename;
+      patch->new_filename = temp;
     }
 
-  if ((*patch)->old_filename == NULL || (*patch)->new_filename == NULL)
+  if (patch->old_filename == NULL || patch->new_filename == NULL)
     {
       /* Something went wrong, just discard the result. */
-      *patch = NULL;
+      patch = NULL;
     }
   else
-    SVN_ERR(parse_hunks(*patch, patch_file->apr_file, ignore_whitespace,
+    SVN_ERR(parse_hunks(patch, patch_file->apr_file, ignore_whitespace,
                         result_pool, iterpool));
 
   svn_pool_destroy(iterpool);
@@ -1328,15 +1329,16 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR,
                            &patch_file->next_patch_offset, scratch_pool));
 
-  if (*patch)
+  if (patch)
     {
       /* Usually, hunks appear in the patch sorted by their original line
        * offset. But just in case they weren't parsed in this order for
        * some reason, we sort them so that our caller can assume that hunks
        * are sorted as if parsed from a usual patch. */
-      svn_sort__array((*patch)->hunks, compare_hunks);
+      svn_sort__array(patch->hunks, compare_hunks);
     }
 
+  *patch_p = patch;
   return SVN_NO_ERROR;
 }
 
