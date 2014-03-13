@@ -286,6 +286,16 @@ public class Info implements java.io.Serializable
     }
 
     /**
+     * Returns the last date the item was changed measured in the
+     * number of microseconds since 00:00:00 January 1, 1970 UTC.
+     * @return the last time the item was changed.
+     */
+    public long getLastChangedDateMicros()
+    {
+        return lastChangedDate;
+    }
+
+    /**
      * return the author of the last change
      */
     public String getLastChangedAuthor()
