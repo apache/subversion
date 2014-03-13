@@ -690,7 +690,10 @@ if test "$enable_nls" = "yes"; then
   AC_PATH_PROG(MSGMERGE, msgmerge, none)
   AC_PATH_PROG(XGETTEXT, xgettext, none)
   if test "$MSGFMT" != "none"; then
-    AC_SEARCH_LIBS(bindtextdomain, [intl], [],
+    AC_SEARCH_LIBS(bindtextdomain, [intl],
+                   [
+                    SVN_INTL_LIBS="-lintl"
+                   ],
                    [
                     enable_nls="no"
                    ])
@@ -702,9 +705,7 @@ if test "$enable_nls" = "yes"; then
       AC_SEARCH_LIBS(bindtextdomain, [intl],
                      [
                       enable_nls="yes"
-                      # This is here so that -liconv ends up in LIBS
-                      # if it worked with -liconv.
-                      AC_CHECK_LIB(iconv, libiconv_open)
+                      SVN_INTL_LIBS="-lintl -liconv"
                      ], 
                      [
                       AC_MSG_WARN([bindtextdomain() not found.  Disabling NLS.])
@@ -719,6 +720,8 @@ if test "$enable_nls" = "yes"; then
     fi
   fi
 fi
+
+AC_SUBST(SVN_INTL_LIBS)
 
 AH_BOTTOM([
 /* Indicate to translators that string X should be translated.  Do not look
