@@ -867,9 +867,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     nondeplibs = target.msvc_libs[:]
 
-    if isinstance(target, gen_base.TargetExe):
-      nondeplibs.append('setargv.obj')
-
     # When nls is enabled, all our projects use it directly via the _() macro,
     # even though only libsvn_subr references it in build.conf
     if self.enable_nls:
