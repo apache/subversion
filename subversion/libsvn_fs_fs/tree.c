@@ -2174,6 +2174,7 @@ svn_fs_fs__commit_txn(const char **conflict_p,
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *conflict = svn_stringbuf_create_empty(pool);
   svn_fs_t *fs = txn->fs;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Limit memory usage when the repository has a high commit rate and
      needs to run the following while loop multiple times.  The memory
@@ -2256,7 +2257,15 @@ svn_fs_fs__commit_txn(const char **conflict_p,
   svn_fs_fs__reset_txn_caches(fs);
 
   svn_pool_destroy(iterpool);
-  return svn_error_trace(err);
+
+  SVN_ERR(err);
+
+  if (ffd->pack_after_commit)
+    {
+      SVN_ERR(svn_fs_fs__pack(fs, NULL, NULL, NULL, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
