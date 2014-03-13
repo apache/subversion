@@ -615,9 +615,6 @@ DIR=`pwd`
         if lib_dep == 'apriconv':
           # apriconv is part of apr-util, skip it
           continue
-        if lib_dep == 'intl' and not self.enable_nls:
-          # If NLS is not enabled, don't link this
-          continue
         external_lib = self.sections[lib_dep].options.get('external-lib')
         if external_lib:
           ### Some of Subversion's internal libraries can appear as external
