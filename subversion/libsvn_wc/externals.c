@@ -431,7 +431,7 @@ struct edit_baton
   const svn_checksum_t *original_checksum;
 
   /* What we are installing now */
-  const char *new_pristine_abspath;
+  svn_wc__db_install_data_t *install_data;
   svn_checksum_t *new_sha1_checksum;
   svn_checksum_t *new_md5_checksum;
 
@@ -580,7 +580,7 @@ apply_textdelta(void *file_baton,
     src_stream = svn_stream_empty(pool);
 
   SVN_ERR(svn_wc__db_pristine_prepare_install(&dest_stream,
-                                              &eb->new_pristine_abspath,
+                                              &eb->install_data,
                                               &eb->new_sha1_checksum,
                                               &eb->new_md5_checksum,
                                               eb->db, eb->wri_abspath,
@@ -657,11 +657,11 @@ close_file(void *file_baton,
      behavior to the pristine store. */
   if (eb->new_sha1_checksum)
     {
-      SVN_ERR(svn_wc__db_pristine_install(eb->db, eb->new_pristine_abspath,
+      SVN_ERR(svn_wc__db_pristine_install(eb->install_data,
                                           eb->new_sha1_checksum,
                                           eb->new_md5_checksum, pool));
 
-      eb->new_pristine_abspath = NULL;
+      eb->install_data = NULL;
     }
 
   /* Merge the changes */

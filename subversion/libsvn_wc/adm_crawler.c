@@ -1000,7 +1000,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_checksum_t *verify_checksum;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
   svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
-  const char *new_pristine_tmp_abspath;
+  svn_wc__db_install_data_t *install_data = NULL;
   svn_error_t *err;
   svn_stream_t *base_stream;  /* delta source */
   svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
@@ -1039,7 +1039,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
       svn_stream_t *new_pristine_stream;
 
       SVN_ERR(svn_wc__db_pristine_prepare_install(&new_pristine_stream,
-                                                  &new_pristine_tmp_abspath,
+                                                  &install_data,
                                                   &local_sha1_checksum, NULL,
                                                   db, local_abspath,
                                                   scratch_pool, scratch_pool));
@@ -1146,7 +1146,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                                    result_pool);
   if (new_text_base_sha1_checksum)
     {
-      SVN_ERR(svn_wc__db_pristine_install(db, new_pristine_tmp_abspath,
+      SVN_ERR(svn_wc__db_pristine_install(install_data,
                                           local_sha1_checksum,
                                           local_md5_checksum,
                                           scratch_pool));

@@ -2308,3 +2308,49 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_stream__install_get_info(apr_finfo_t *finfo,
+                             svn_stream_t *install_stream,
+                             apr_int32_t wanted,
+                             apr_pool_t *scratch_pool)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+#ifdef WIN32
+  /* On WIN32 the file is still open, so we can obtain the information
+     from the handle without race conditions */
+  apr_status_t status;
+
+  status = apr_file_info_get(finfo, wanted, ib->baton_apr.file);
+
+  if (status)
+    return svn_error_wrap_apr(status, NULL);
+#else
+  SVN_ERR(svn_io_stat(finfo, ib->tmp_path, wanted, scratch_pool));
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_stream__install_delete(svn_stream_t *install_stream,
+                           apr_pool_t *scratch_pool)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  SVN_ERR(svn_stream_close(install_stream));
+
+#ifdef WIN32
+  /* ### TODO: Optimize windows case */
+  {
+    apr_file_t *file = svn_stream__aprfile(install_stream);
+
+    if (file)
+      SVN_ERR(svn_io_file_close(file, scratch_pool));
+  }
+#endif
+
+  return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
+                                             scratch_pool));
+}
