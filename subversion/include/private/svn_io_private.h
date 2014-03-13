@@ -128,6 +128,20 @@ svn_stream__install_stream(svn_stream_t *install_stream,
                            svn_boolean_t make_parents,
                            apr_pool_t *scratch_pool);
 
+/* Deletes the install stream (when installing is not necessary after all) */
+svn_error_t *
+svn_stream__install_delete(svn_stream_t *install_stream,
+                           apr_pool_t *scratch_pool);
+
+/* Optimized apr_file_stat / apr_file_info_get operating on a closed
+   install stream */
+svn_error_t *
+svn_stream__install_get_info(apr_finfo_t *finfo,
+                             svn_stream_t *install_stream,
+                             apr_int32_t wanted,
+                             apr_pool_t *scratch_pool);
+
+
 #if defined(WIN32)
 
 /* ### Move to something like io.h or subr.h, to avoid making it

@@ -401,7 +401,7 @@ struct handler_baton
   struct file_baton *fb;
 
   /* Where we are assembling the new file. */
-  const char *new_text_base_tmp_abspath;
+  svn_wc__db_install_data_t *install_data;
 
     /* The expected source checksum of the text source or NULL if no base
      checksum is available (MD5 if the server provides a checksum, SHA1 if
@@ -954,7 +954,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
-  svn_wc__db_t *db = fb->edit_baton->db;
   svn_error_t *err;
 
   /* Apply this window.  We may be done at that point.  */
@@ -994,10 +993,10 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* We failed to apply the delta; clean up the temporary file if it
          already created by lazy_open_target(). */
-      if (hb->new_text_base_tmp_abspath)
+      if (hb->install_data)
         {
-          svn_error_clear(svn_io_remove_file2(hb->new_text_base_tmp_abspath,
-                                              TRUE, hb->pool));
+          svn_error_clear(svn_wc__db_pristine_install_abort(hb->install_data,
+                                                            hb->pool));
         }
     }
   else
@@ -1011,7 +1010,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* Store the new pristine text in the pristine store now.  Later, in a
          single transaction we will update the BASE_NODE to include a
          reference to this pristine text's checksum. */
-      SVN_ERR(svn_wc__db_pristine_install(db, hb->new_text_base_tmp_abspath,
+      SVN_ERR(svn_wc__db_pristine_install(hb->install_data,
                                           fb->new_text_base_sha1_checksum,
                                           fb->new_text_base_md5_checksum,
                                           hb->pool));
@@ -3626,7 +3625,7 @@ lazy_open_target(svn_stream_t **stream,
   struct handler_baton *hb = baton;
 
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
-                                              &hb->new_text_base_tmp_abspath,
+                                              &hb->install_data,
                                               &hb->new_text_base_sha1_checksum,
                                               NULL,
                                               hb->fb->edit_baton->db,
@@ -3749,7 +3748,7 @@ apply_textdelta(void *file_baton,
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
                     hb->new_text_base_md5_digest,
-                    hb->new_text_base_tmp_abspath /* error_info */,
+                    fb->local_abspath /* error_info */,
                     handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -5219,6 +5218,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   apr_time_t changed_date;
   const char *changed_author;
   svn_stream_t *tmp_base_contents;
+  svn_wc__db_install_data_t *install_data;
   svn_error_t *err;
   apr_pool_t *pool = scratch_pool;
 
@@ -5340,12 +5340,33 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its
      NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
-  SVN_ERR(svn_wc__db_pristine_prepare_install(&tmp_base_contents,
-                                              &tmp_text_base_abspath,
-                                              &new_text_base_sha1_checksum,
-                                              &new_text_base_md5_checksum,
-                                              wc_ctx->db, local_abspath,
-                                              scratch_pool, scratch_pool));
+  if (copyfrom_url)
+    {
+      SVN_ERR(svn_wc__db_pristine_prepare_install(&tmp_base_contents,
+                                                  &install_data,
+                                                  &new_text_base_sha1_checksum,
+                                                  &new_text_base_md5_checksum,
+                                                  wc_ctx->db, local_abspath,
+                                                  scratch_pool, scratch_pool));
+    }
+  else
+    {
+      const char *tmp_dir_abspath;
+
+      /* We are not installing a PRISTINE file, but we use the same code to
+         create whatever we want to install */
+
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir_abspath,
+                                             db, dir_abspath,
+                                             scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_abspath,
+                                     tmp_dir_abspath, svn_io_file_del_none,
+                                     scratch_pool, scratch_pool));
+
+      new_text_base_sha1_checksum = NULL;
+      new_text_base_md5_checksum = NULL;
+    }
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton, pool));
 
@@ -5370,7 +5391,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      text base.  */
   if (copyfrom_url != NULL)
     {
-      SVN_ERR(svn_wc__db_pristine_install(db, tmp_text_base_abspath,
+      SVN_ERR(svn_wc__db_pristine_install(install_data,
                                           new_text_base_sha1_checksum,
                                           new_text_base_md5_checksum, pool));
     }
@@ -5436,9 +5457,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
         all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
       }
   }
-
-  /* ### ideally, we would have a single DB operation, and queue the work
-     ### items on that. for now, we'll queue them with the second call.  */
 
   SVN_ERR(svn_wc__db_op_copy_file(db, local_abspath,
                                   new_base_props,

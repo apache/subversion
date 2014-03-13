@@ -953,10 +953,14 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Baton for svn_wc__db_pristine_install */
+typedef struct svn_wc__db_install_data_t
+               svn_wc__db_install_data_t;
+
 /* Open a writable stream to a temporary text base, ready for installing
-   into the pristine store.  Set *STREAM to the opened stream and
-   *TEMP_BASE_ABSPATH to the path to the temporary file.  The temporary
-   file will have an arbitrary unique name.
+   into the pristine store.  Set *STREAM to the opened stream.  The temporary
+   file will have an arbitrary unique name. Return as *INSTALL_DATA a baton
+   for eiter installing or removing the file
 
    Arrange that, on stream closure, *MD5_CHECKSUM and *SHA1_CHECKSUM will be
    set to the MD-5 and SHA-1 checksums respectively of that file.
@@ -966,7 +970,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
  */
 svn_error_t *
 svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
-                                    const char **temp_base_abspath,
+                                    svn_wc__db_install_data_t **install_data,
                                     svn_checksum_t **sha1_checksum,
                                     svn_checksum_t **md5_checksum,
                                     svn_wc__db_t *db,
@@ -974,16 +978,20 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/* Install the file TEMPFILE_ABSPATH (which is sitting in a directory given by
-   svn_wc__db_pristine_get_tempdir()) into the pristine data store, to be
-   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM, and whose
-   MD-5 checksum is MD5_CHECKSUM. */
+/* Install the file created via svn_wc__db_pristine_prepare_install() into
+   the pristine data store, to be identified by the SHA-1 checksum of its
+   contents, SHA1_CHECKSUM, and whose MD-5 checksum is MD5_CHECKSUM. */
 svn_error_t *
-svn_wc__db_pristine_install(svn_wc__db_t *db,
-                            const char *tempfile_abspath,
+svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
                             const svn_checksum_t *sha1_checksum,
                             const svn_checksum_t *md5_checksum,
                             apr_pool_t *scratch_pool);
+
+/* Removes the temporary data created by svn_wc__db_pristine_prepare_install
+   when the pristine won't be installed. */
+svn_error_t *
+svn_wc__db_pristine_install_abort(svn_wc__db_install_data_t *install_data,
+                                  apr_pool_t *scratch_pool);
 
 
 /* Set *MD5_CHECKSUM to the MD-5 checksum of a pristine text

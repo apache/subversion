@@ -78,7 +78,7 @@ pristine_write_read(const svn_test_opts_t *opts,
   svn_wc__db_t *db;
   const char *wc_abspath;
 
-  const char *pristine_tmp_abspath;
+  svn_wc__db_install_data_t *install_data;
   svn_stream_t *pristine_stream;
   apr_size_t sz;
 
@@ -92,7 +92,7 @@ pristine_write_read(const svn_test_opts_t *opts,
   /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
    * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
   SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
-                                              &pristine_tmp_abspath,
+                                              &install_data,
                                               &data_sha1, &data_md5,
                                               db, wc_abspath,
                                               pool, pool));
@@ -111,7 +111,7 @@ pristine_write_read(const svn_test_opts_t *opts,
   }
 
   /* Install the new pristine file, referenced by its checksum. */
-  SVN_ERR(svn_wc__db_pristine_install(db, pristine_tmp_abspath,
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
                                       data_sha1, data_md5, pool));
 
   /* Ensure it is now found in the store. */
@@ -177,7 +177,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
 {
   svn_wc__db_t *db;
   const char *wc_abspath;
-  const char *pristine_tmp_abspath;
+  svn_wc__db_install_data_t *install_data;
   svn_stream_t *pristine_stream;
   svn_stream_t *contents;
   apr_size_t sz;
@@ -189,7 +189,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
                               "pristine_delete_while_open", opts, pool));
 
   SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
-                                              &pristine_tmp_abspath,
+                                              &install_data,
                                               &data_sha1, &data_md5,
                                               db, wc_abspath,
                                               pool, pool));
@@ -197,7 +197,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
   sz = strlen(data);
   SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
   SVN_ERR(svn_stream_close(pristine_stream));
-  SVN_ERR(svn_wc__db_pristine_install(db, pristine_tmp_abspath,
+  SVN_ERR(svn_wc__db_pristine_install(install_data,
                                       data_sha1, data_md5, pool));
 
   /* Open it for reading */
@@ -257,12 +257,12 @@ reject_mismatching_text(const svn_test_opts_t *opts,
 
   /* Install a pristine text. */
   {
-    const char *pristine_abspath;
+    svn_wc__db_install_data_t *install_data;
     svn_stream_t *pristine_stream;
     apr_size_t sz;
 
     SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
-                                                &pristine_abspath,
+                                                &install_data,
                                                 &data_sha1, &data_md5,
                                                 db, wc_abspath,
                                                 pool, pool));
@@ -271,7 +271,7 @@ reject_mismatching_text(const svn_test_opts_t *opts,
     SVN_ERR(svn_stream_write(pristine_stream, data, &sz));
     SVN_ERR(svn_stream_close(pristine_stream));
 
-    SVN_ERR(svn_wc__db_pristine_install(db, pristine_abspath,
+    SVN_ERR(svn_wc__db_pristine_install(install_data,
                                         data_sha1, data_md5,
                                         pool));
   }
@@ -279,12 +279,12 @@ reject_mismatching_text(const svn_test_opts_t *opts,
   /* Try to install the wrong pristine text against the same checksum.
    * Should fail. */
   {
-    const char *pristine_abspath;
+    svn_wc__db_install_data_t *install_data;
     svn_stream_t *pristine_stream;
     apr_size_t sz;
 
     SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_stream,
-                                                &pristine_abspath,
+                                                &install_data,
                                                 &data_sha1, &data_md5,
                                                 db, wc_abspath,
                                                 pool, pool));
@@ -293,7 +293,7 @@ reject_mismatching_text(const svn_test_opts_t *opts,
     SVN_ERR(svn_stream_write(pristine_stream, data2, &sz));
     SVN_ERR(svn_stream_close(pristine_stream));
 
-    SVN_ERR(svn_wc__db_pristine_install(db, pristine_abspath,
+    SVN_ERR(svn_wc__db_pristine_install(install_data,
                                         data_sha1, data_md5,
                                         pool));
   }
