@@ -1353,37 +1353,45 @@ static svn_error_t *unlock_paths(const apr_array_header_t *lock_tokens,
                                  apr_pool_t *pool)
 {
   int i;
-  apr_pool_t *iterpool;
-
-  iterpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *targets = apr_hash_make(subpool);
+  apr_hash_t *results;
+  apr_hash_index_t *hi;
+  svn_error_t *err;
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
       svn_ra_svn_item_t *item, *path_item, *token_item;
       const char *path, *token, *full_path;
-      svn_error_t *err;
-      svn_pool_clear(iterpool);
 
       item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
       path_item = &APR_ARRAY_IDX(item->u.list, 0, svn_ra_svn_item_t);
       token_item = &APR_ARRAY_IDX(item->u.list, 1, svn_ra_svn_item_t);
 
       path = path_item->u.string->data;
-      token = token_item->u.string->data;
-
       full_path = svn_fspath__join(sb->repository->fs_path->data,
-                                   svn_relpath_canonicalize(path, iterpool),
-                                   iterpool);
-
-      /* The lock may have become defunct after the commit, so ignore such
-         errors. */
-      err = svn_repos_fs_unlock(sb->repository->repos, full_path, token,
-                                FALSE, iterpool);
-      log_error(err, sb);
-      svn_error_clear(err);
+                                   svn_relpath_canonicalize(path, subpool),
+                                   subpool);
+      token = token_item->u.string->data;
+      svn_hash_sets(targets, full_path, token);
     }
 
-  svn_pool_destroy(iterpool);
+
+  /* The lock may have become defunct after the commit, so ignore such
+     errors. */
+  err = svn_repos_fs_unlock2(&results, sb->repository->repos, targets,
+                             FALSE, subpool, subpool);
+  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+
+      log_error(result->err, sb);
+      svn_error_clear(result->err);
+    }
+  log_error(err, sb);
+  svn_error_clear(err);
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -2693,12 +2701,11 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_boolean_t steal_lock;
   int i;
   apr_pool_t *subpool;
-  const char *path;
-  const char *full_path;
-  svn_revnum_t current_rev;
-  apr_array_header_t *log_paths;
-  svn_lock_t *l;
-  svn_error_t *err = SVN_NO_ERROR, *write_err;
+  svn_error_t *err, *write_err = SVN_NO_ERROR;
+  apr_hash_t *targets = apr_hash_make(pool);
+  apr_hash_t *authz_results = apr_hash_make(pool);
+  apr_hash_t *results;
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "(?c)bl", &comment, &steal_lock,
                                   &path_revs));
@@ -2712,11 +2719,14 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, TRUE));
 
   /* Loop through the lock requests. */
-  log_paths = apr_array_make(pool, path_revs->nelts, sizeof(full_path));
   for (i = 0; i < path_revs->nelts; ++i)
     {
+      const char *path, *full_path;
+      svn_revnum_t current_rev;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
                                                svn_ra_svn_item_t);
+      svn_fs_lock_target_t *target
+        = apr_palloc(pool, sizeof(svn_fs_lock_target_t));
 
       svn_pool_clear(subpool);
 
@@ -2724,56 +2734,106 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock requests should be list of lists");
 
-      SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, pool, "c(?r)", &path,
+      SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?r)", &path,
                                       &current_rev));
 
-      /* Allocate the full_path out of pool so it will survive for use
-       * by operational logging, after this loop. */
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
-      APR_ARRAY_PUSH(log_paths, const char *) = full_path;
+      target->token = NULL;
+      target->current_rev = current_rev;
 
-      if (! lookup_access(pool, b, svn_authz_write, full_path, TRUE))
+      /* We could check for duplicate paths and reject the request? */
+      svn_hash_sets(targets, full_path, target);
+    }
+
+  SVN_ERR(log_command(b, conn, subpool, "%s",
+                      svn_log__lock(targets, steal_lock, subpool)));
+
+  /* From here on we need to make sure any errors in authz_results, or
+     results, are cleared before returning from this function. */
+  for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      const char *full_path = svn__apr_hash_index_key(hi);
+
+      svn_pool_clear(subpool);
+
+      if (! lookup_access(subpool, b, svn_authz_write, full_path, TRUE))
         {
-          err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL, NULL,
-                                     b);
-          break;
-        }
+          svn_fs_lock_result_t *result
+            = apr_palloc(pool, sizeof(svn_fs_lock_result_t));
 
-      err = svn_repos_fs_lock(&l, b->repository->repos, full_path,
-                              NULL, comment, FALSE,
-                              0, /* No expiration time. */
-                              current_rev,
-                              steal_lock, subpool);
-
-      if (err)
-        {
-          if (SVN_ERR_IS_LOCK_ERROR(err))
-            {
-              write_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
-              svn_error_clear(err);
-              err = NULL;
-              SVN_ERR(write_err);
-            }
-          else
-            break;
+          result->lock = NULL;
+          result->err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
+                                             NULL, NULL, b);
+          svn_hash_sets(authz_results, full_path, result);
+          svn_hash_sets(targets, full_path, NULL);
         }
+    }
+
+  err = svn_repos_fs_lock2(&results, b->repository->repos, targets,
+                           comment, FALSE,
+                           0, /* No expiration time. */
+                           steal_lock, pool, subpool);
+
+  /* The client expects results in the same order as paths were supplied. */
+  for (i = 0; i < path_revs->nelts; ++i)
+    {
+      const char *path, *full_path;
+      svn_revnum_t current_rev;
+      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
+                                               svn_ra_svn_item_t);
+      svn_fs_lock_result_t *result;
+
+      svn_pool_clear(subpool);
+
+      write_err = svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?r)", &path,
+                                          &current_rev);
+      if (write_err)
+        break;
+      
+      full_path = svn_fspath__join(b->repository->fs_path->data,
+                                   svn_relpath_canonicalize(path, subpool),
+                                   subpool);
+
+      result = svn_hash_gets(results, full_path);
+      if (!result)
+        result = svn_hash_gets(authz_results, full_path);
+      if (!result)
+        /* No result?  Should we return some sort of placeholder error? */
+        break;
+
+      if (result->err)
+        write_err = svn_ra_svn__write_cmd_failure(conn, subpool,
+                                                  result->err);
       else
         {
-          SVN_ERR(svn_ra_svn__write_tuple(conn, subpool, "w!", "success"));
-          SVN_ERR(write_lock(conn, subpool, l));
-          SVN_ERR(svn_ra_svn__write_tuple(conn, subpool, "!"));
+          write_err = svn_ra_svn__write_tuple(conn, subpool,
+                                              "w!", "success");
+          if (!write_err)
+            write_err = write_lock(conn, subpool, result->lock);
+          if (!write_err)
+            write_err = svn_ra_svn__write_tuple(conn, subpool, "!");
         }
+      if (write_err)
+        break;
+    }
+
+  for (hi = apr_hash_first(subpool, authz_results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+      svn_error_clear(result->err);
+    }
+  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+      svn_error_clear(result->err);
     }
 
   svn_pool_destroy(subpool);
 
-  SVN_ERR(log_command(b, conn, pool, "%s",
-                      svn_log__lock(log_paths, steal_lock, pool)));
-
-  /* NOTE: err might contain a fatal locking error from the loop above. */
-  write_err = svn_ra_svn__write_word(conn, pool, "done");
+  if (!write_err)
+    write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (!write_err)
     SVN_CMD_ERR(err);
   svn_error_clear(err);
@@ -2818,11 +2878,11 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_array_header_t *unlock_tokens;
   int i;
   apr_pool_t *subpool;
-  const char *path;
-  const char *full_path;
-  apr_array_header_t *log_paths;
-  const char *token;
   svn_error_t *err = SVN_NO_ERROR, *write_err;
+  apr_hash_t *targets = apr_hash_make(pool);
+  apr_hash_t *authz_results = apr_hash_make(pool);
+  apr_hash_t *results;
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, pool, "bl", &break_lock,
                                   &unlock_tokens));
@@ -2833,11 +2893,11 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   subpool = svn_pool_create(pool);
 
   /* Loop through the unlock requests. */
-  log_paths = apr_array_make(pool, unlock_tokens->nelts, sizeof(full_path));
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
                                                svn_ra_svn_item_t);
+      const char *path, *full_path, *token;
 
       svn_pool_clear(subpool);
 
@@ -2847,50 +2907,97 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       SVN_ERR(svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?c)", &path,
                                       &token));
+      if (!token)
+        token = "";
 
-      /* Allocate the full_path out of pool so it will survive for use
-       * by operational logging, after this loop. */
       full_path = svn_fspath__join(b->repository->fs_path->data,
                                    svn_relpath_canonicalize(path, subpool),
                                    pool);
-      APR_ARRAY_PUSH(log_paths, const char *) = full_path;
+      svn_hash_sets(targets, full_path, token);
+    }
+
+  SVN_ERR(log_command(b, conn, subpool, "%s",
+                      svn_log__unlock(targets, break_lock, subpool)));
+
+  /* From here on we need to make sure any errors in authz_results, or
+     results, are cleared before returning from this function. */
+  for (hi = apr_hash_first(pool, targets); hi; hi = apr_hash_next(hi))
+    {
+      const char *full_path = svn__apr_hash_index_key(hi);
+
+      svn_pool_clear(subpool);
 
       if (! lookup_access(subpool, b, svn_authz_write, full_path,
                           ! break_lock))
-        return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
-                                error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
-                                                     NULL, NULL, b),
-                                NULL);
-
-      err = svn_repos_fs_unlock(b->repository->repos, full_path, token,
-                                break_lock, subpool);
-      if (err)
         {
-          if (SVN_ERR_IS_UNLOCK_ERROR(err))
-            {
-              write_err = svn_ra_svn__write_cmd_failure(conn, pool, err);
-              svn_error_clear(err);
-              err = NULL;
-              SVN_ERR(write_err);
-            }
-          else
-            break;
+          svn_fs_lock_result_t *result
+            = apr_palloc(pool, sizeof(svn_fs_lock_result_t));
+
+          result->lock = NULL;
+          result->err = error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED,
+                                             NULL, NULL, b);
+          svn_hash_sets(authz_results, full_path, result);
+          svn_hash_sets(targets, full_path, NULL);
         }
+    }
+
+  err = svn_repos_fs_unlock2(&results, b->repository->repos, targets,
+                             break_lock, pool, subpool);
+
+  /* Return results in the same order as the paths were supplied. */
+  for (i = 0; i < unlock_tokens->nelts; ++i)
+    {
+      const char *path, *token, *full_path;
+      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
+                                               svn_ra_svn_item_t);
+      svn_fs_lock_result_t *result;
+
+      svn_pool_clear(subpool);
+
+      write_err = svn_ra_svn__parse_tuple(item->u.list, subpool, "c(?c)", &path,
+                                          &token);
+      if (write_err)
+        break;
+
+      full_path = svn_fspath__join(b->repository->fs_path->data,
+                                   svn_relpath_canonicalize(path, subpool),
+                                   pool);
+
+      result = svn_hash_gets(results, full_path);
+      if (!result)
+        result = svn_hash_gets(authz_results, full_path);
+      if (!result)
+        /* No result?  Should we return some sort of placeholder error? */
+        break;
+
+      if (result->err)
+        write_err = svn_ra_svn__write_cmd_failure(conn, pool, result->err);
       else
-        SVN_ERR(svn_ra_svn__write_tuple(conn, subpool, "w(c)", "success",
-                                        path));
+        write_err = svn_ra_svn__write_tuple(conn, subpool, "w(c)", "success",
+                                            path);
+      if (write_err)
+        break;
+    }
+
+  for (hi = apr_hash_first(subpool, authz_results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+      svn_error_clear(result->err);
+    }
+  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+      svn_error_clear(result->err);
     }
 
   svn_pool_destroy(subpool);
 
-  SVN_ERR(log_command(b, conn, pool, "%s",
-                      svn_log__unlock(log_paths, break_lock, pool)));
-
-  /* NOTE: err might contain a fatal unlocking error from the loop above. */
-  write_err = svn_ra_svn__write_word(conn, pool, "done");
+  if (!write_err)
+    write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (! write_err)
     SVN_CMD_ERR(err);
   svn_error_clear(err);
+  SVN_ERR(write_err);
   SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;

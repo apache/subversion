@@ -409,28 +409,35 @@ deltify_etc(const svn_commit_info_t *commit_info,
   /* Maybe unlock the paths. */
   if (deb->lock_tokens)
     {
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      apr_pool_t *subpool = svn_pool_create(scratch_pool);
+      apr_hash_t *targets = apr_hash_make(subpool);
+      apr_hash_t *results;
       apr_hash_index_t *hi;
 
-      for (hi = apr_hash_first(scratch_pool, deb->lock_tokens); hi;
+      for (hi = apr_hash_first(subpool, deb->lock_tokens); hi;
            hi = apr_hash_next(hi))
         {
           const void *relpath = svn__apr_hash_index_key(hi);
           const char *token = svn__apr_hash_index_val(hi);
           const char *fspath;
 
-          svn_pool_clear(iterpool);
-
-          fspath = svn_fspath__join(deb->fspath_base, relpath, iterpool);
-
-          /* We may get errors here if the lock was broken or stolen
-             after the commit succeeded.  This is fine and should be
-             ignored. */
-          svn_error_clear(svn_repos_fs_unlock(deb->repos, fspath, token,
-                                              FALSE, iterpool));
+          fspath = svn_fspath__join(deb->fspath_base, relpath, subpool);
+          svn_hash_sets(targets, fspath, token);
         }
 
-      svn_pool_destroy(iterpool);
+      /* We may get errors here if the lock was broken or stolen
+         after the commit succeeded.  This is fine and should be
+         ignored. */
+      svn_error_clear(svn_repos_fs_unlock2(&results, deb->repos, targets,
+                                           FALSE, subpool, subpool));
+
+      for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+        {
+          svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+          svn_error_clear(result->err);
+        }
+
+      svn_pool_destroy(subpool);
     }
 
   /* But, deltification shouldn't be stopped just because someone's
@@ -1374,7 +1381,6 @@ svn_ra_local__get_location_segments(svn_ra_session_t *session,
                                           NULL, NULL, pool);
 }
 
-
 static svn_error_t *
 svn_ra_local__lock(svn_ra_session_t *session,
                    apr_hash_t *path_revs,
@@ -1385,51 +1391,53 @@ svn_ra_local__lock(svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_index_t *hi;
+  svn_error_t *err, *err_cb = SVN_NO_ERROR;
 
   /* A username is absolutely required to lock a path. */
   SVN_ERR(get_username(session, pool));
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
-      svn_lock_t *lock;
-      const void *key;
-      const char *path;
-      void *val;
-      svn_revnum_t *revnum;
-      const char *abs_path;
-      svn_error_t *err, *callback_err = NULL;
+      const char *abs_path = svn_fspath__join(sess->fs_path->data,
+                                              svn__apr_hash_index_key(hi),
+                                              pool);
+      svn_fs_lock_target_t *target = apr_palloc(pool,
+                                                sizeof(svn_fs_lock_target_t));
+      target->token = NULL;
+      target->current_rev = *(svn_revnum_t *)svn__apr_hash_index_val(hi);
+
+      svn_hash_sets(targets, abs_path, target);
+    }
+
+  err = svn_repos_fs_lock2(&results, sess->repos, targets, comment,
+                           FALSE /* not DAV comment */,
+                           0 /* no expiration */, force,
+                           pool, iterpool);
+
+  /* Make sure we handle all locking errors in results hash. */
+  for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      revnum = val;
 
-      abs_path = svn_fspath__join(sess->fs_path->data, path, iterpool);
-
-      /* This wrapper will call pre- and post-lock hooks. */
-      err = svn_repos_fs_lock(&lock, sess->repos, abs_path, NULL, comment,
-                              FALSE /* not DAV comment */,
-                              0 /* no expiration */, *revnum, force,
-                              iterpool);
-
-      if (err && !SVN_ERR_IS_LOCK_ERROR(err))
-        return err;
-
-      if (lock_func)
-        callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
-                                 err, iterpool);
-
-      svn_error_clear(err);
-
-      if (callback_err)
-        return callback_err;
+      path = svn_fspath__skip_ancestor(sess->fs_path->data, path);
+      if (!err_cb)
+        err_cb = lock_func(lock_baton, path, TRUE, result->lock, result->err,
+                           iterpool);
+      svn_error_clear(result->err);
     }
 
   svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
+  if (err && err_cb)
+    svn_error_compose(err, err_cb);
+  else if (!err)
+    err = err_cb;
+  return svn_error_trace(err);
 }
 
 
@@ -1442,51 +1450,48 @@ svn_ra_local__unlock(svn_ra_session_t *session,
                      apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *targets = apr_hash_make(pool), *results;
+  apr_hash_index_t *hi;
+  svn_error_t *err, *err_cb = SVN_NO_ERROR;
 
   /* A username is absolutely required to unlock a path. */
   SVN_ERR(get_username(session, pool));
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *path;
-      void *val;
-      const char *abs_path, *token;
-      svn_error_t *err, *callback_err = NULL;
+      const char *abs_path = svn_fspath__join(sess->fs_path->data,
+                                              svn__apr_hash_index_key(hi),
+                                              pool);
+      const char *token = svn__apr_hash_index_val(hi);
+
+      svn_hash_sets(targets, abs_path, token);
+    }
+
+  err = svn_repos_fs_unlock2(&results, sess->repos, targets, force,
+                             pool, iterpool);
+
+  /* Make sure we handle all locking errors in results hash. */
+  for (hi = apr_hash_first(pool, results); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      /* Since we can't store NULL values in a hash, we turn "" to
-         NULL here. */
-      if (strcmp(val, "") != 0)
-        token = val;
-      else
-        token = NULL;
 
-      abs_path = svn_fspath__join(sess->fs_path->data, path, iterpool);
-
-      /* This wrapper will call pre- and post-unlock hooks. */
-      err = svn_repos_fs_unlock(sess->repos, abs_path, token, force,
-                                iterpool);
-
-      if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
-        return err;
-
-      if (lock_func)
-        callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
-
-      svn_error_clear(err);
-
-      if (callback_err)
-        return callback_err;
+      path = svn_fspath__skip_ancestor(sess->fs_path->data, path);
+      if (lock_func && !err_cb)
+        err_cb = lock_func(lock_baton, path, FALSE, NULL, result->err,
+                           iterpool);
+      svn_error_clear(result->err);
     }
 
   svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
+  if (err && err_cb)
+    svn_error_compose(err, err_cb);
+  else if (!err)
+    err = err_cb;
+  return svn_error_trace(err);
 }
 
 

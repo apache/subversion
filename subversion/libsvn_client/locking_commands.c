@@ -100,7 +100,7 @@ store_locks_callback(void *baton,
 
       if (do_lock)
         {
-          if (!ra_err)
+          if (!ra_err && lock)
             {
               SVN_ERR(svn_wc_add_lock2(lb->ctx->wc_ctx, local_abspath, lock,
                                        lb->pool));
@@ -112,12 +112,14 @@ store_locks_callback(void *baton,
       else /* unlocking */
         {
           /* Remove our wc lock token either a) if we got no error, or b) if
-             we got any error except for owner mismatch.  Note that the only
-             errors that are handed to this callback will be locking-related
-             errors. */
+             we got any error except for owner mismatch or hook failure (the
+             hook would be pre-unlock rather than post-unlock). Note that the
+             only errors that are handed to this callback will be
+             locking-related errors. */
 
           if (!ra_err ||
-              (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH)))
+              (ra_err && (ra_err->apr_err != SVN_ERR_FS_LOCK_OWNER_MISMATCH
+                          && ra_err->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)))
             {
               SVN_ERR(svn_wc_remove_lock2(lb->ctx->wc_ctx, local_abspath,
                                           lb->pool));

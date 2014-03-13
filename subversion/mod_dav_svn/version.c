@@ -1364,27 +1364,33 @@ release_locks(apr_hash_t *locks,
               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  const void *key;
-  void *val;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *targets = apr_hash_make(subpool);
+  apr_hash_t *results;
   svn_error_t *err;
 
-  for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, locks); hi; hi = apr_hash_next(hi))
     {
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
+      const char *path = svn__apr_hash_index_key(hi);
+      const char *token = svn__apr_hash_index_val(hi);
 
-      /* The lock may be stolen or broken sometime between
-         svn_fs_commit_txn() and this post-commit cleanup.  So ignore
-         any errors from this command; just free as many locks as we can. */
-      err = svn_repos_fs_unlock(repos, key, val, FALSE, subpool);
-
-      if (err) /* If we got an error, just log it and move along. */
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, err->apr_err, r,
-                        "%s", err->message);
-
-      svn_error_clear(err);
+      svn_hash_sets(targets, path, token);
     }
+
+  err = svn_repos_fs_unlock2(&results, repos, targets, FALSE, subpool, subpool);
+
+  for (hi = apr_hash_first(subpool, results); hi; hi = apr_hash_next(hi))
+    {
+      svn_fs_lock_result_t *result = svn__apr_hash_index_val(hi);
+      if (result->err)
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, result->err->apr_err, r,
+                      "%s", result->err->message);
+      svn_error_clear(result->err);
+    }
+  if (err) /* If we got an error, just log it and move along. */
+    ap_log_rerror(APLOG_MARK, APLOG_ERR, err->apr_err, r,
+                  "%s", err->message);
+  svn_error_clear(err);
 
   svn_pool_destroy(subpool);
 
