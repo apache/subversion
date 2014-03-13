@@ -246,6 +246,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1577294
+   Make interactive conflict resolver behave as designed.
+   Justification:
+     This was intended to be the behavior form the start.  A typo in a
+     refactoring broke it.  This fix helps users avoid accidentally choosing
+     'mark resolved' and committing conflict markers.
+   Votes:
+     +1: breser
+
 Veto-blocked changes:
 =====================
 
