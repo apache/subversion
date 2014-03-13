@@ -29,13 +29,15 @@
 #   | the bot's health after making changes to this file.          |
 #   |______________________________________________________________|
 
-ENABLE_PERL_BINDINGS ?= yes
+PERL ?= yes
+ENABLE_PERL_BINDINGS = $(PERL)
 THREADING ?= yes
 ifeq ($(THREADING),yes)
-ENABLE_JAVA_BINDINGS ?= yes
+JAVA ?= yes
 else
-ENABLE_JAVA_BINDINGS ?= no
+JAVA ?= no
 endif
+ENABLE_JAVA_BINDINGS = $(JAVA)
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
 PARALLEL ?= 1
 CLEANUP ?= 1
