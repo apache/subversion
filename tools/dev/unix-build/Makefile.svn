@@ -1163,7 +1163,7 @@ $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 		--disable-java \
 		--disable-csharp \
 		$(THREADS_FLAG)
-	which gsed && \
+	-which gsed && \
 		sed -e 's/sed /gsed /g' < $(GETTEXT_SRCDIR)/build-aux/moopp \
 		> $(GETTEXT_SRCDIR)/build-aux/moopp.fixed && \
 		mv $(GETTEXT_SRCDIR)/build-aux/moopp.fixed \
