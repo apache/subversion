@@ -1038,11 +1038,11 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
     {
       svn_stream_t *new_pristine_stream;
 
-      SVN_ERR(svn_wc__open_writable_base(&new_pristine_stream,
-                                         &new_pristine_tmp_abspath,
-                                         NULL, &local_sha1_checksum,
-                                         db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_pristine_prepare_install(&new_pristine_stream,
+                                                  &new_pristine_tmp_abspath,
+                                                  NULL, &local_sha1_checksum,
+                                                  db, local_abspath,
+                                                  scratch_pool, scratch_pool));
       local_stream = copying_stream(local_stream, new_pristine_stream,
                                     scratch_pool);
     }

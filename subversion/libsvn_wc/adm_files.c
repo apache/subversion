@@ -295,38 +295,6 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
 }
 
 
-svn_error_t *
-svn_wc__open_writable_base(svn_stream_t **stream,
-                           const char **temp_base_abspath,
-                           svn_checksum_t **md5_checksum,
-                           svn_checksum_t **sha1_checksum,
-                           svn_wc__db_t *db,
-                           const char *wri_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  const char *temp_dir_abspath;
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, wri_abspath,
-                                          scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_open_unique(stream,
-                                 temp_base_abspath,
-                                 temp_dir_abspath,
-                                 svn_io_file_del_none,
-                                 result_pool, scratch_pool));
-  if (md5_checksum)
-    *stream = svn_stream_checksummed2(*stream, NULL, md5_checksum,
-                                      svn_checksum_md5, FALSE, result_pool);
-  if (sha1_checksum)
-    *stream = svn_stream_checksummed2(*stream, NULL, sha1_checksum,
-                                      svn_checksum_sha1, FALSE, result_pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** Checking for and creating administrative subdirs. ***/
 
 
