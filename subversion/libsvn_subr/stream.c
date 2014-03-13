@@ -2005,7 +2005,12 @@ typedef struct _FILE_RENAME_INFO {
   WCHAR  FileName[1];
 } FILE_RENAME_INFO, *PFILE_RENAME_INFO;
 
+typedef struct _FILE_DISPOSITION_INFO {
+  BOOL DeleteFile;
+} FILE_DISPOSITION_INFO, *PFILE_DISPOSITION_INFO;
+
 #define FileRenameInfo 3
+#define FileDispositionInfo 4
 
 typedef BOOL (WINAPI *SetFileInformationByHandle_t)(HANDLE hFile,
                                                     int FileInformationClass,
@@ -2340,13 +2345,37 @@ svn_stream__install_delete(svn_stream_t *install_stream,
   struct install_baton_t *ib = install_stream->baton;
 
 #ifdef WIN32
-  /* ### TODO: Optimize windows case */
-  {
-    apr_file_t *file = svn_stream__aprfile(install_stream);
+  BOOL done;
 
-    if (file)
-      SVN_ERR(svn_io_file_close(file, scratch_pool));
-  }
+#if _WIN32_WINNT < 0x600
+
+  SVN_ERR(svn_atomic__init_once(&SetFileInformationByHandle_a,
+                                find_SetFileInformationByHandle,
+                                NULL, scratch_pool));
+
+  if (!SetFileInformationByHandle_p)
+    done = FALSE;
+  else
+#endif /* WIN32 < Windows Vista */
+    {
+      FILE_DISPOSITION_INFO disposition_info;
+      HANDLE hFile;
+
+      apr_os_file_get(&hFile, ib->baton_apr.file);
+
+      disposition_info.DeleteFile = TRUE;
+
+      /* Mark the file as delete on close to avoid having to reopen
+         the file as part of the delete handling. */
+      done = SetFileInformationByHandle(hFile, FileDispositionInfo,
+                                        &disposition_info,
+                                        sizeof(disposition_info));
+    }
+
+   SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+
+   if (done)
+     return SVN_NO_ERROR; /* File is already gone */
 #endif
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
