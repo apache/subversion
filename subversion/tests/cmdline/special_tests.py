@@ -1231,7 +1231,9 @@ def multiline_special(sbox):
 
   sbox.simple_append('iota', 'A second line.\n')
   sbox.simple_commit();
-  svntest.main.run_svnmucc('propset', 'svn:special', '*',
+  tmp = sbox.get_tempname()
+  svntest.main.file_write(tmp, '*', 'w+')
+  svntest.main.run_svnmucc('propsetf', 'svn:special', tmp,
                            sbox.repo_url + '/iota',
                            '-m', 'set svn:special')
 
