@@ -1221,6 +1221,31 @@ def incoming_symlink_changes(sbox):
                                         None, None, None, None, None,
                                         True)
 
+#----------------------------------------------------------------------
+@XFail()
+@Issue(4479)
+def multiline_special(sbox):
+  "multiline file with svn:special"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('iota', 'A second line.\n')
+  sbox.simple_commit();
+  svntest.main.run_svnmucc('propset', 'svn:special', '*',
+                           sbox.repo_url + '/iota',
+                           '-m', 'set svn:special')
+
+  sbox.simple_update(revision=1);
+  sbox.simple_update();
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak()
+  expected_disk.tweak('iota',
+                      contents="This is the file 'iota'.\nA second line.\n",
+                      props={'svn:special' : '*'})
+  svntest.actions.verify_disk(wc_dir, expected_disk.old_tree(), True)
+
 ########################################################################
 # Run the tests
 
@@ -1252,6 +1277,7 @@ test_list = [ None,
               externals_as_symlink_targets,
               cat_added_symlink,
               incoming_symlink_changes,
+              multiline_special,
              ]
 
 if __name__ == '__main__':
