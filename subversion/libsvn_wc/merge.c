@@ -732,10 +732,10 @@ merge_file_trivial(svn_skel_t **work_items,
                                                    scratch_pool,
                                                    scratch_pool));
 
-                  SVN_ERR(svn_wc__db_pristine_get_tempdir(&tmp_dir, db,
-                                                          target_abspath,
-                                                          scratch_pool,
-                                                          scratch_pool));
+                  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir, db,
+                                                         target_abspath,
+                                                         scratch_pool,
+                                                         scratch_pool));
 
                   SVN_ERR(svn_stream_open_unique(&tmp_dst, &right_abspath,
                                                  tmp_dir, svn_io_file_del_none,
