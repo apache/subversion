@@ -26,10 +26,11 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 
 #include "wc.h"
-#include "adm_files.h"
 #include "conflicts.h"
+#include "props.h"
 #include "translate.h"
 #include "workqueue.h"
 
@@ -725,16 +726,20 @@ merge_file_trivial(svn_skel_t **work_items,
                 {
                   svn_stream_t *tmp_src;
                   svn_stream_t *tmp_dst;
+                  const char *tmp_dir;
 
                   SVN_ERR(svn_stream_open_readonly(&tmp_src, right_abspath,
                                                    scratch_pool,
                                                    scratch_pool));
 
-                  SVN_ERR(svn_wc__open_writable_base(&tmp_dst, &right_abspath,
-                                                     NULL, NULL,
-                                                     db, target_abspath,
-                                                     scratch_pool,
-                                                     scratch_pool));
+                  SVN_ERR(svn_wc__db_pristine_get_tempdir(&tmp_dir, db,
+                                                          target_abspath,
+                                                          scratch_pool,
+                                                          scratch_pool));
+
+                  SVN_ERR(svn_stream_open_unique(&tmp_dst, &right_abspath,
+                                                 tmp_dir, svn_io_file_del_none,
+                                                 scratch_pool, scratch_pool));
 
                   SVN_ERR(svn_stream_copy3(tmp_src, tmp_dst,
                                            cancel_func, cancel_baton,
