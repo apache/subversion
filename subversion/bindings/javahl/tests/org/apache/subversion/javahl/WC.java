@@ -128,6 +128,16 @@ public class WC extends TestCase
     }
 
     /**
+     * Set the depth of the item at a path
+     * @param path      the path, where the status is set
+     * @param depth     the new depth
+     */
+    public void setItemDepth(String path, Depth depth)
+    {
+        items.get(path).depth = depth;
+    }
+
+    /**
      * Set the revision number of the item at a path
      * @param path      the path, where the revision number is set
      * @param revision  the new revision number
@@ -463,6 +473,9 @@ public class WC extends TestCase
                          item.isSwitched, status.isSwitched());
             assertEquals("wrong prop status in working copy: " + path,
                          item.propStatus, status.getPropStatus());
+            if (item.depth != null)
+                assertEquals("wrong ambient depth in working copy: " + path,
+                             item.depth, status.getDepth());
             if (item.myContent != null)
             {
                 assertEquals("state says file, working copy not: " + path,
@@ -561,6 +574,11 @@ public class WC extends TestCase
         Status.Kind propStatus = Status.Kind.none;
 
         /**
+         * the ambient depth of the item.
+         */
+        Depth depth = null;
+
+        /**
          * the expected revision number. -1 means do not check.
          */
         long workingCopyRev = -1;
@@ -633,6 +651,7 @@ public class WC extends TestCase
             myContent = source.myContent;
             textStatus = source.textStatus;
             propStatus = source.propStatus;
+            depth = source.depth;
             owner.items.put(myPath, this);
         }
 

@@ -213,7 +213,16 @@ public class BasicTests extends SVNTests
 
         Status s = client.singleStatus(fileToSVNPath(fileC, false), false);
         if (s != null)
-            fail("File foo.c should not return a status.");
+        {
+            if (s.hasTreeConflict()
+                || s.getTextStatus() != Status.Kind.none
+                || s.getPropStatus() != Status.Kind.none
+                || s.getRepositoryTextStatus() != Status.Kind.none
+                || s.getRepositoryPropStatus() != Status.Kind.none)
+            {
+                fail("File foo.c should not return a status.");
+            }
+        }
 
     }
 
@@ -1630,7 +1639,7 @@ public class BasicTests extends SVNTests
         // check the status of the working copy
         thisTest.checkStatus();
 
-        // confirm that the file are realy deleted
+        // confirm that the file are really deleted
         assertFalse("failed to remove text modified file",
                 new File(thisTest.getWorkingCopy(), "A/D/G/rho").exists());
         assertFalse("failed to remove prop modified file",
@@ -1656,7 +1665,7 @@ public class BasicTests extends SVNTests
 
         try
         {
-            // delete non-existant file foo
+            // delete non-existent file foo
             client.remove(new String[] {file.getAbsolutePath()}, null, true);
             fail("missing exception");
         }
@@ -2644,7 +2653,7 @@ public class BasicTests extends SVNTests
                         thisTest.getUrl(), diffOutput.getPath(),
                         Depth.infinity, null, true, true, false);
 
-            fail("This test should fail becaus the relativeToDir parameter " +
+            fail("This test should fail because the relativeToDir parameter " +
                  "does not work with URLs");
         }
         catch (Exception ignored)

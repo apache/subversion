@@ -53,7 +53,7 @@ public class SVNClient implements ISVNClient
     }
 
     /**
-     * Standard empty contructor, builds just the native peer.
+     * Standard empty constructor, builds just the native peer.
      */
     public SVNClient()
     {

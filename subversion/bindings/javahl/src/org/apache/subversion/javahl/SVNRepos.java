@@ -47,7 +47,7 @@ public class SVNRepos implements ISVNRepos
     }
 
     /**
-     * Standard empty contructor, builds just the native peer.
+     * Standard empty constructor, builds just the native peer.
      */
     public SVNRepos()
     {

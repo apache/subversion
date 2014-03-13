@@ -214,7 +214,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 #ifdef WIN32
   {
     WCHAR ucs2_path[MAX_PATH];
-    char *utf8_path;
+    const char *utf8_path;
     const char *internal_path;
     apr_pool_t *pool;
     apr_status_t apr_err;

@@ -43,7 +43,7 @@ import java.util.Set;
 import java.io.OutputStream;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 
 public class RemoteSession extends JNIObject implements ISVNRemote
 {
@@ -102,7 +102,7 @@ public class RemoteSession extends JNIObject implements ISVNRemote
 
     public long getRevisionByDate(Date date) throws ClientException
     {
-        long timestamp = NANOSECONDS.convert(date.getTime(), MILLISECONDS);
+        long timestamp = MICROSECONDS.convert(date.getTime(), MILLISECONDS);
         return getRevisionByTimestamp(timestamp);
     }
 
