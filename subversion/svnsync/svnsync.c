@@ -936,7 +936,8 @@ open_source_session(svn_ra_session_t **from_session,
   /* ### TODO: Should we validate that FROM_URL_STR->data matches any
      provided FROM_URL here?  */
   if (! from_url)
-    from_url = from_url_str->data;
+    SVN_ERR(svn_opt__arg_canonicalize_url(&from_url, from_url_str->data,
+                                          pool));
 
   /* Open the session to copy the revision data. */
   SVN_ERR(svn_ra_open4(from_session, NULL, from_url, from_uuid_str->data,
