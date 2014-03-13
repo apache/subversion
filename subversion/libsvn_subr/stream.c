@@ -2339,8 +2339,6 @@ svn_stream__install_delete(svn_stream_t *install_stream,
 {
   struct install_baton_t *ib = install_stream->baton;
 
-  SVN_ERR(svn_stream_close(install_stream));
-
 #ifdef WIN32
   /* ### TODO: Optimize windows case */
   {
