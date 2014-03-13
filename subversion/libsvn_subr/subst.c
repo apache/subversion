@@ -1713,23 +1713,23 @@ create_special_file_from_stream(svn_stream_t *source, const char *dst,
     }
 
   /* If nothing else worked, write out the internal representation to
-     a file that can be edited by the user.
-
-     ### this only writes the first line!
-  */
+     a file that can be edited by the user. */
   if (create_using_internal_representation)
     {
-      apr_file_t *new_file;
-      SVN_ERR(svn_io_open_unique_file3(&new_file, &dst_tmp,
-                                       svn_dirent_dirname(dst, pool),
-                                       svn_io_file_del_none,
-                                       pool, pool));
+      svn_stream_t *new_stream;
+      apr_size_t len;
 
-      SVN_ERR(svn_io_file_write_full(new_file,
-                                     contents->data, contents->len, NULL,
-                                     pool));
+      SVN_ERR(svn_stream_open_unique(&new_stream, &dst_tmp,
+                                     svn_dirent_dirname(dst, pool),
+                                     svn_io_file_del_none,
+                                     pool, pool));
 
-      SVN_ERR(svn_io_file_close(new_file, pool));
+      if (!eof)
+        svn_stringbuf_appendcstr(contents, "\n");
+      len = contents->len;
+      SVN_ERR(svn_stream_write(new_stream, contents->data, &len));
+      SVN_ERR(svn_stream_copy3(svn_stream_disown(source, pool), new_stream,
+                               NULL, NULL, pool));
     }
 
   /* Do the atomic rename from our temporary location. */

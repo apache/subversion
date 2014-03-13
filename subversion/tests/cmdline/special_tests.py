@@ -1222,7 +1222,6 @@ def incoming_symlink_changes(sbox):
                                         True)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(4479)
 def multiline_special(sbox):
   "multiline file with svn:special"
