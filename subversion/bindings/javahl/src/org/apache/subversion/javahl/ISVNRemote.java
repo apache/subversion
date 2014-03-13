@@ -110,7 +110,7 @@ public interface ISVNRemote
 
     /**
      * Get the latest revision number at the given time, expressed as
-     * the number of milliseconds since the epoch, from the session's
+     * the number of microseconds since the epoch, from the session's
      * repository.
      * @throws ClientException
      */
