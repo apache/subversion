@@ -579,11 +579,12 @@ apply_textdelta(void *file_baton,
   else
     src_stream = svn_stream_empty(pool);
 
-  SVN_ERR(svn_wc__open_writable_base(&dest_stream, &eb->new_pristine_abspath,
-                                     &eb->new_md5_checksum,
-                                     &eb->new_sha1_checksum,
-                                     eb->db, eb->wri_abspath,
-                                     eb->pool, pool));
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&dest_stream,
+                                              &eb->new_pristine_abspath,
+                                              &eb->new_md5_checksum,
+                                              &eb->new_sha1_checksum,
+                                              eb->db, eb->wri_abspath,
+                                              eb->pool, pool));
 
   svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
                     handler, handler_baton);

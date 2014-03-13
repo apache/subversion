@@ -3616,12 +3616,6 @@ lazy_open_source(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-struct lazy_target_baton {
-  struct file_baton *fb;
-  struct handler_baton *hb;
-  struct edit_baton *eb;
-};
-
 /* Implements svn_stream_lazyopen_func_t. */
 static svn_error_t *
 lazy_open_target(svn_stream_t **stream,
@@ -3629,13 +3623,15 @@ lazy_open_target(svn_stream_t **stream,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  struct lazy_target_baton *tb = baton;
+  struct handler_baton *hb = baton;
 
-  SVN_ERR(svn_wc__open_writable_base(stream, &tb->hb->new_text_base_tmp_abspath,
-                                     NULL, &tb->hb->new_text_base_sha1_checksum,
-                                     tb->fb->edit_baton->db,
-                                     tb->eb->wcroot_abspath,
-                                     result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
+                                              &hb->new_text_base_tmp_abspath,
+                                              NULL,
+                                              &hb->new_text_base_sha1_checksum,
+                                              hb->fb->edit_baton->db,
+                                              hb->fb->dir_baton->local_abspath,
+                                              result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3655,7 +3651,6 @@ apply_textdelta(void *file_baton,
   const svn_checksum_t *recorded_base_checksum;
   svn_checksum_t *expected_base_checksum;
   svn_stream_t *source;
-  struct lazy_target_baton *tb;
   svn_stream_t *target;
 
   if (fb->skip_this)
@@ -3749,11 +3744,7 @@ apply_textdelta(void *file_baton,
       hb->source_checksum_stream = source;
     }
 
-  tb = apr_palloc(handler_pool, sizeof(struct lazy_target_baton));
-  tb->hb = hb;
-  tb->fb = fb;
-  tb->eb = eb;
-  target = svn_stream_lazyopen_create(lazy_open_target, tb, TRUE, handler_pool);
+  target = svn_stream_lazyopen_create(lazy_open_target, hb, TRUE, handler_pool);
 
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source, target,
@@ -5227,6 +5218,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
+  svn_stream_t *tmp_base_contents;
   svn_error_t *err;
   apr_pool_t *pool = scratch_pool;
 
@@ -5348,18 +5340,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its
      NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
-  {
-    svn_stream_t *tmp_base_contents;
-
-    SVN_ERR(svn_wc__open_writable_base(&tmp_base_contents,
-                                       &tmp_text_base_abspath,
-                                       &new_text_base_md5_checksum,
-                                       &new_text_base_sha1_checksum,
-                                       wc_ctx->db, local_abspath,
-                                       pool, pool));
-    SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
-                             cancel_func, cancel_baton, pool));
-  }
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&tmp_base_contents,
+                                              &tmp_text_base_abspath,
+                                              &new_text_base_md5_checksum,
+                                              &new_text_base_sha1_checksum,
+                                              wc_ctx->db, local_abspath,
+                                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
+                           cancel_func, cancel_baton, pool));
 
   /* If the caller gave us a new working file, copy it to a safe (temporary)
      location and set SOURCE_ABSPATH to that path. We'll then translate/copy
