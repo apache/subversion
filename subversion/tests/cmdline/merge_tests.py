@@ -18700,6 +18700,135 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
   # Commit the merge.
   #sbox.simple_commit()
 
+def conflict_naming(sbox):
+  "verify conflict file naming"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_append('file.txt', 'This is the initial content\n')
+  sbox.simple_add('file.txt')
+  sbox.simple_commit()
+
+  sbox.simple_append('file.txt', 'This is the new content\n', truncate=True)
+  sbox.simple_commit()
+
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Update - no preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+    'file.txt' : Item(status='C ')
+  })
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='2')
+  })
+
+  expected_disk.add({
+    'file.txt.r3'       : Item(contents="This is the new content\n"),
+    'file.txt.r2'       : Item(contents="This is the initial content\n"),
+    'file.txt'          : Item(contents="<<<<<<< .mine\n" \
+                               "This is conflicting content\n" \
+                               "=======\n" \
+                               "This is the initial content\n" \
+                               ">>>>>>> .r2\n"),
+    'file.txt.mine'     : Item(contents="This is conflicting content\n"),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, None,
+                                        wc_dir, '-r', '2')
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_update('', revision=3)
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Update - preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {
+    'file.txt' : Item(status='C ')
+  })
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='2')
+  })
+
+  expected_disk.add({
+    'file.txt.r3.txt'   : Item(contents="This is the new content\n"),
+    'file.txt.r2.txt'   : Item(contents="This is the initial content\n"),
+    'file.txt'          : Item(contents="<<<<<<< .mine.txt\n" \
+                               "This is conflicting content\n" \
+                               "=======\n" \
+                               "This is the initial content\n" \
+                               ">>>>>>> .r2.txt\n"),
+    'file.txt.mine.txt' : Item(contents="This is conflicting content\n"),
+  })
+  svntest.actions.run_and_verify_update(
+                      wc_dir,
+                      expected_output, expected_disk, expected_status,
+                      None, None, None, None, None, None,
+                      wc_dir, '-r', '2',
+                      '--config-option',
+                      'config:miscellany:preserved-conflict-file-exts=' +
+                      'c txt h')
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_update('', revision=3)
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Merge - no preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='3')
+  })
+  expected_disk.add({
+    'file.txt.merge-left.r3' : Item(contents="This is the new content\n"),
+    'file.txt.merge-right.r2': Item(contents="This is the initial content\n"),
+    'file.txt'               : Item(contents="<<<<<<< .working\n" \
+                                    "This is conflicting content\n" \
+                                    "=======\n" \
+                                    "This is the initial content\n" \
+                                    ">>>>>>> .merge-right.r2\n"),
+    'file.txt.working'       : Item(contents="This is conflicting content\n"),
+  })
+
+  svntest.actions.run_and_verify_svn(wc_dir, None, [],
+                                     'merge', '-c-3', '^/', sbox.ospath(''))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
+  sbox.simple_revert('file.txt')
+  sbox.simple_append('file.txt', 'This is conflicting content\n', truncate=True)
+
+  # Merge - preserve ext
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.add({
+    'file.txt' : Item(status='C ', wc_rev='3')
+  })
+  expected_disk.add({
+    'file.txt.merge-left.r3.txt' : Item(contents="This is the new content\n"),
+    'file.txt.merge-right.r2.txt': Item(contents="This is the initial content\n"),
+    'file.txt'                   : Item(contents="<<<<<<< .working.txt\n" \
+                                        "This is conflicting content\n" \
+                                        "=======\n" \
+                                        "This is the initial content\n" \
+                                        ">>>>>>> .merge-right.r2.txt\n"),
+    'file.txt.working.txt'       : Item(contents="This is conflicting content\n"),
+  })
+
+  svntest.actions.run_and_verify_svn(
+                           wc_dir, None, [],
+                           'merge', '-c-3', '^/', sbox.ospath(''),
+                           '--config-option',
+                           'config:miscellany:preserved-conflict-file-exts=' +
+                           'c txt h')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -18845,6 +18974,7 @@ test_list = [ None,
               single_editor_drive_merge_notifications,
               conflicted_split_merge_with_resolve,
               merge_to_empty_target_merge_to_infinite_target,
+              conflict_naming,
              ]
 
 if __name__ == '__main__':

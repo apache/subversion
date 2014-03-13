@@ -321,6 +321,10 @@ typedef struct merge_cmd_baton_t {
   const char *diff3_cmd;
   const apr_array_header_t *merge_options;
 
+  /* Array of file extension patterns to preserve as extensions in
+     generated conflict files. */
+  const apr_array_header_t *ext_patterns;
+
   /* RA sessions used throughout a merge operation.  Opened/re-parented
      as needed.
 
@@ -2022,17 +2026,36 @@ merge_file_changed(const char *relpath,
     {
       svn_boolean_t has_local_mods;
       enum svn_wc_merge_outcome_t content_outcome;
+      const char *target_label;
+      const char *left_label;
+      const char *right_label;
+      const char *path_ext = "";
+
+      if (merge_b->ext_patterns && merge_b->ext_patterns->nelts)
+        {
+          svn_path_splitext(NULL, &path_ext, local_abspath, scratch_pool);
+          if (! (*path_ext
+                 && svn_cstring_match_glob_list(path_ext,
+                                                merge_b->ext_patterns)))
+            {
+              path_ext = "";
+            }
+        }
 
       /* xgettext: the '.working', '.merge-left.r%ld' and
          '.merge-right.r%ld' strings are used to tag onto a file
          name in case of a merge conflict */
-      const char *target_label = _(".working");
-      const char *left_label = apr_psprintf(scratch_pool,
-                                            _(".merge-left.r%ld"),
-                                            left_source->revision);
-      const char *right_label = apr_psprintf(scratch_pool,
-                                             _(".merge-right.r%ld"),
-                                             right_source->revision);
+
+      target_label = apr_psprintf(scratch_pool, _(".working%s%s"),
+                                  *path_ext ? "." : "", path_ext);
+      left_label = apr_psprintf(scratch_pool,
+                                _(".merge-left.r%ld%s%s"),
+                                left_source->revision,
+                                *path_ext ? "." : "", path_ext);
+      right_label = apr_psprintf(scratch_pool,
+                                 _(".merge-right.r%ld%s%s"),
+                                 right_source->revision,
+                                 *path_ext ? "." : "", path_ext);
 
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, ctx->wc_ctx,
                                       local_abspath, FALSE, scratch_pool));
@@ -9654,6 +9677,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton_t merge_cmd_baton = { 0 };
   svn_config_t *cfg;
   const char *diff3_cmd;
+  const char *preserved_exts_str;
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
   svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
@@ -9714,6 +9738,11 @@ do_merge(apr_hash_t **modified_subtrees,
   if (diff3_cmd != NULL)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, scratch_pool));
 
+    /* See which files the user wants to preserve the extension of when
+     conflict files are made. */
+  svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
+
   /* Build the merge context baton (or at least the parts of it that
      don't need to be reset for each merge source).  */
   merge_cmd_baton.force_delete = force_delete;
@@ -9729,6 +9758,11 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.pool = iterpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
+  merge_cmd_baton.ext_patterns = *preserved_exts_str
+                          ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ",
+                                              FALSE, scratch_pool)
+                          : NULL;
+
   merge_cmd_baton.use_sleep = use_sleep;
 
   /* Do we already know the specific subtrees with mergeinfo we want
