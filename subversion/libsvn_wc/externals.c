@@ -581,8 +581,8 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(svn_wc__db_pristine_prepare_install(&dest_stream,
                                               &eb->new_pristine_abspath,
-                                              &eb->new_md5_checksum,
                                               &eb->new_sha1_checksum,
+                                              &eb->new_md5_checksum,
                                               eb->db, eb->wri_abspath,
                                               eb->pool, pool));
 

@@ -3627,8 +3627,8 @@ lazy_open_target(svn_stream_t **stream,
 
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
                                               &hb->new_text_base_tmp_abspath,
-                                              NULL,
                                               &hb->new_text_base_sha1_checksum,
+                                              NULL,
                                               hb->fb->edit_baton->db,
                                               hb->fb->dir_baton->local_abspath,
                                               result_pool, scratch_pool));
@@ -5342,8 +5342,8 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
   SVN_ERR(svn_wc__db_pristine_prepare_install(&tmp_base_contents,
                                               &tmp_text_base_abspath,
-                                              &new_text_base_md5_checksum,
                                               &new_text_base_sha1_checksum,
+                                              &new_text_base_md5_checksum,
                                               wc_ctx->db, local_abspath,
                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
