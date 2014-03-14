@@ -1988,6 +1988,46 @@ def failing_post_hooks(sbox):
                                       'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+def break_delete_add(sbox):
+  "break a lock, delete and add the file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock',
+                                     '-m', 'some lock comment',
+                                     sbox.ospath('A/mu'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, ".*unlocked", [],
+                                     'unlock', '--force',
+                                     sbox.repo_url + '/A/mu')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     '-m', 'delete file',
+                                     sbox.repo_url + '/A/mu')
+
+  # Update removes the locked file and should remove the lock token.
+  sbox.simple_update()
+
+  # Lock token not visible on newly added file.
+  sbox.simple_append('A/mu', 'another mu')
+  sbox.simple_add('A/mu')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', status='A ', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  ### XFAIL Broken lock token now visible in status.
+  sbox.simple_commit()
+  expected_status.tweak('A/mu', status='  ', wc_rev=3)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2044,6 +2084,7 @@ test_list = [ None,
               copy_with_lock,
               lock_hook_messages,
               failing_post_hooks,
+              break_delete_add,
             ]
 
 if __name__ == '__main__':
