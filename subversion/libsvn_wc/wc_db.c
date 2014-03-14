@@ -6946,7 +6946,7 @@ svn_wc__db_revert_list_read(svn_boolean_t *reverted,
 static svn_error_t *
 revert_list_read_copied_children(svn_wc__db_wcroot_t *wcroot,
                                  const char *local_relpath,
-                                 const apr_array_header_t **children_p,
+                                 apr_array_header_t **children_p,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -6989,7 +6989,7 @@ revert_list_read_copied_children(svn_wc__db_wcroot_t *wcroot,
 
 
 svn_error_t *
-svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
+svn_wc__db_revert_list_read_copied_children(apr_array_header_t **children,
                                             svn_wc__db_t *db,
                                             const char *local_abspath,
                                             apr_pool_t *result_pool,
