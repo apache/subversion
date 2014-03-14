@@ -1674,7 +1674,7 @@ typedef struct svn_wc__db_revert_list_copied_child_info_t {
  * Allocate *COPIED_CHILDREN and its elements in RESULT_POOL.
  * The elements are of type svn_wc__db_revert_list_copied_child_info_t. */
 svn_error_t *
-svn_wc__db_revert_list_read_copied_children(const apr_array_header_t **children,
+svn_wc__db_revert_list_read_copied_children(apr_array_header_t **children,
                                             svn_wc__db_t *db,
                                             const char *local_abspath,
                                             apr_pool_t *result_pool,

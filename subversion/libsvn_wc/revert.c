@@ -155,7 +155,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
                                   void *cancel_baton,
                                   apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *copied_children;
+  apr_array_header_t *copied_children;
   svn_wc__db_revert_list_copied_child_info_t *child_info;
   int i;
   svn_node_kind_t on_disk;
