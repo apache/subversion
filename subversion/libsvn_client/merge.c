@@ -3116,66 +3116,69 @@ merge_dir_deleted(const char *relpath,
                             scratch_pool, scratch_pool));
 
   if (merge_b->force_delete)
-    same = TRUE;
+    {
+      /* In this legacy mode we just assume that a directory delete
+         matches any directory. db->delete_state is NULL */
+      same = TRUE;
+    }
   else
     {
       /* Compare the properties */
       SVN_ERR(properties_same_p(&same, left_props, working_props,
                                 scratch_pool));
-    }
+      delb = db->delete_state;
+      assert(delb != NULL);
 
-  delb = db->delete_state;
-  assert(delb != NULL);
-
-  if (! same)
-    {
-      delb->found_edit = TRUE;
-    }
-  else
-    {
-      store_path(delb->compared_abspaths, local_abspath);
-    }
-
-  if (delb->del_root != db)
-    return SVN_NO_ERROR;
-
-  if (delb->found_edit)
-    same = FALSE;
-  else if (merge_b->force_delete)
-    same = TRUE;
-  else
-    {
-      apr_array_header_t *ignores;
-      svn_error_t *err;
-      same = TRUE;
-
-      SVN_ERR(svn_wc_get_default_ignores(&ignores, merge_b->ctx->config,
-                                         scratch_pool));
-
-      /* None of the descendants was modified, but maybe there are
-         descendants we haven't walked?
-
-         Note that we aren't interested in changes, as we already verified
-         changes in the paths touched by the merge. And the existence of
-         other paths is enough to mark the directory edited */
-      err = svn_wc_walk_status(merge_b->ctx->wc_ctx, local_abspath,
-                               svn_depth_infinity, TRUE /* get-all */,
-                               FALSE /* no-ignore */,
-                               TRUE /* ignore-text-mods */, ignores,
-                               verify_touched_by_del_check, delb,
-                               merge_b->ctx->cancel_func,
-                               merge_b->ctx->cancel_baton,
-                               scratch_pool);
-
-      if (err)
+      if (! same)
         {
-          if (err->apr_err != SVN_ERR_CEASE_INVOCATION)
-            return svn_error_trace(err);
-
-          svn_error_clear(err);
+          delb->found_edit = TRUE;
+        }
+      else
+        {
+          store_path(delb->compared_abspaths, local_abspath);
         }
 
-      same = ! delb->found_edit;
+      if (delb->del_root != db)
+        return SVN_NO_ERROR;
+
+      if (delb->found_edit)
+        same = FALSE;
+      else if (merge_b->force_delete)
+        same = TRUE;
+      else
+        {
+          apr_array_header_t *ignores;
+          svn_error_t *err;
+          same = TRUE;
+
+          SVN_ERR(svn_wc_get_default_ignores(&ignores, merge_b->ctx->config,
+                                             scratch_pool));
+
+          /* None of the descendants was modified, but maybe there are
+             descendants we haven't walked?
+
+             Note that we aren't interested in changes, as we already verified
+             changes in the paths touched by the merge. And the existence of
+             other paths is enough to mark the directory edited */
+          err = svn_wc_walk_status(merge_b->ctx->wc_ctx, local_abspath,
+                                   svn_depth_infinity, TRUE /* get-all */,
+                                   FALSE /* no-ignore */,
+                                   TRUE /* ignore-text-mods */, ignores,
+                                   verify_touched_by_del_check, delb,
+                                   merge_b->ctx->cancel_func,
+                                   merge_b->ctx->cancel_baton,
+                                   scratch_pool);
+
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_CEASE_INVOCATION)
+                return svn_error_trace(err);
+
+              svn_error_clear(err);
+            }
+
+          same = ! delb->found_edit;
+        }
     }
 
   if (same && !merge_b->dry_run)
