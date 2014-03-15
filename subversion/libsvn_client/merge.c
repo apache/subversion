@@ -3085,7 +3085,6 @@ merge_dir_deleted(const char *relpath,
   struct merge_dir_baton_t *db = dir_baton;
   const char *local_abspath = svn_dirent_join(merge_b->target->abspath,
                                               relpath, scratch_pool);
-  struct dir_delete_baton_t *delb;
   svn_boolean_t same;
   apr_hash_t *working_props;
 
@@ -3123,6 +3122,8 @@ merge_dir_deleted(const char *relpath,
     }
   else
     {
+      struct dir_delete_baton_t *delb;
+
       /* Compare the properties */
       SVN_ERR(properties_same_p(&same, left_props, working_props,
                                 scratch_pool));
