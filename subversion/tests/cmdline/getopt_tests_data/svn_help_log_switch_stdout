@@ -190,7 +190,7 @@ Valid options:
   --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
   --ignore-ancestry        : allow switching to a node with no common ancestor
-  --force                  : force operation to run
+  --force                  : handle unversioned obstructions as changes
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'working', 'base', 'mine-conflict',
                              'theirs-conflict', 'mine-full', 'theirs-full',
