@@ -19143,6 +19143,30 @@ def merge_to_empty_target_merge_to_infinite_target(sbox):
   # Commit the merge.
   #sbox.simple_commit()
 
+def merge_dir_delete_force(sbox):
+  "merge a directory delete with --force"
+
+  sbox.build()
+
+  sbox.simple_rm('A/D/G')
+  sbox.simple_commit() # r2
+
+  sbox.simple_update(revision=1)
+
+  # Just merging r2 on r1 succeeds
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'merge', '-c2', '^/', sbox.wc_dir,
+                                     '--ignore-ancestry')
+
+  # Bring working copy to r1 again
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'revert', '-R', sbox.wc_dir)
+
+  # But when using --force this same merge caused a segfault in 1.8.0-1.8.8
+  svntest.actions.run_and_verify_svn(sbox.wc_dir, None, [],
+                                     'merge', '-c2', '^/', sbox.wc_dir,
+                                     '--ignore-ancestry', '--force')
+
 ########################################################################
 # Run the tests
 
@@ -19288,6 +19312,7 @@ test_list = [ None,
               single_editor_drive_merge_notifications,
               conflicted_split_merge_with_resolve,
               merge_to_empty_target_merge_to_infinite_target,
+              merge_dir_delete_force,
              ]
 
 if __name__ == '__main__':
