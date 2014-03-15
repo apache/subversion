@@ -1142,7 +1142,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
      opt_allow_mixed_revisions, 'v'},
-    { { opt_force, N_("force deletions even if the contents doesn't match") } }
+    { { opt_force, N_("force deletions even if deleted contents don't match") } }
   },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
