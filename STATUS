@@ -255,6 +255,21 @@ Candidate changes:
    Votes:
      +1: breser
 
+ * r1577812, r1577813
+   Resolve a segfault when 'svn merge --force' merges a directory delete
+   Justification:
+     Even though this merge flag is not recommended, it shouldn't cause a
+     segfault.
+   Notes:
+     r1577812 contains the actual fix and a regression test. r1577813 is
+     a minor improvement. A branch is necessary because a comment right above
+     the fix contained a typo that was fixed on trunk in a huge commit of many
+     typo fixes.
+   Branch:
+     ^/subversion/branches/1.8.x-r1577812
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
