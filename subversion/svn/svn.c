@@ -1141,7 +1141,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 "  repositories.\n"),
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
-     opt_allow_mixed_revisions, 'v'} },
+     opt_allow_mixed_revisions, 'v'},
+    { { opt_force, N_("force deletions even if the contents doesn't match") } }
+  },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
@@ -1608,7 +1610,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
       opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept},
     {{opt_ignore_ancestry,
-      N_("allow switching to a node with no common ancestor")}}
+     N_("allow switching to a node with no common ancestor")},
+     {opt_force,
+      N_("handle unversioned obstructions as changes")}}
   },
 
   { "unlock", svn_cl__unlock, {0}, N_
@@ -1666,7 +1670,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
-     opt_parents} },
+     opt_parents},
+    { {opt_force,
+       N_("handle unversioned obstructions as changes")} } },
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
