@@ -136,12 +136,6 @@ svn_fs_fs__write_format(svn_fs_t *fs,
                         svn_boolean_t overwrite,
                         apr_pool_t *pool);
 
-/* Get a lock on empty file LOCK_FILENAME, creating it in POOL;
-   releasing the lock upon POOL cleanup. */
-svn_error_t *
-svn_fs_fs__get_lock_on_filesystem(const char *lock_filename,
-                                  apr_pool_t *pool);
-
 /* Obtain a write lock on the filesystem FS in a subpool of POOL, call
    BODY with BATON and that subpool, destroy the subpool (releasing the write
    lock) and return what BODY returned. */
@@ -151,6 +145,16 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                                                 apr_pool_t *pool),
                            void *baton,
                            apr_pool_t *pool);
+
+/* Obtain a pack operation lock on the filesystem FS in a subpool of POOL,
+   call BODY with BATON and that subpool, destroy the subpool (releasing the
+   write lock) and return what BODY returned. */
+svn_error_t *
+svn_fs_fs__with_pack_lock(svn_fs_t *fs,
+                          svn_error_t *(*body)(void *baton,
+                                               apr_pool_t *pool),
+                          void *baton,
+                          apr_pool_t *pool);
 
 /* Run BODY (with BATON and POOL) while the txn-current file
    of FS is locked. */
