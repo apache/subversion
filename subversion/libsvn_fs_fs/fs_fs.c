@@ -643,11 +643,11 @@ write_config(svn_fs_t *fs,
 "###"                                                                        NL
 "### The following parameter enables deltification for directories. It can"  NL
 "### be switched on and off at will, but for best space-saving results"      NL
-"### should be enabled consistently over the life of the repository."        NL
+"### should be enabled consistently over the lifetime of the repository."    NL
 "### Repositories containing large directories will benefit greatly."        NL
-"### In rarely read repositories, the I/O overhead may be significant as"    NL
-"### cache hit rates will most likely be low"                                NL
-"### directory deltification is disabled by default."                        NL
+"### In rarely accessed repositories, the I/O overhead may be significant"   NL
+"### as caches will most likely be low."                                     NL
+"### directory deltification is enabled by default."                         NL
 "# " CONFIG_OPTION_ENABLE_DIR_DELTIFICATION " = true"                        NL
 "###"                                                                        NL
 "### The following parameter enables deltification for properties on files"  NL
@@ -655,7 +655,7 @@ write_config(svn_fs_t *fs,
 "### some disk space if you merge frequently or frequently change node"      NL
 "### properties.  You should not activate this if rep-sharing has been"      NL
 "### disabled because this may result in a net increase in repository size." NL
-"### property deltification is disabled by default."                         NL
+"### property deltification is enabled by default."                          NL
 "# " CONFIG_OPTION_ENABLE_PROPS_DELTIFICATION " = true"                      NL
 "###"                                                                        NL
 "### During commit, the server may need to walk the whole change history of" NL
@@ -703,7 +703,7 @@ write_config(svn_fs_t *fs,
 "### of large incompressible ones (artwork) may benefit from compression"    NL
 "### levels lowered to e.g. 1."                                              NL
 "### Valid values are 0 to 9 with 9 providing the highest compression ratio" NL
-"### and 0 disabling it altogether"                                          NL
+"### and 0 disabling it altogether."                                         NL
 "### The default value is 5."                                                NL
 "# " CONFIG_OPTION_COMPRESSION_LEVEL " = 5"                                  NL
 ""                                                                           NL
@@ -729,7 +729,7 @@ write_config(svn_fs_t *fs,
 "### even more so writing, become significantly more CPU intensive.  With"   NL
 "### revprop caching enabled, the overhead can be offset by reduced I/O"     NL
 "### unless you often modify revprops after packing."                        NL
-"### Compressing packed revprops is disabled by default."                    NL
+"### Compressing packed revprops is enabled by default."                     NL
 "# " CONFIG_OPTION_COMPRESS_PACKED_REVPROPS " = true"                        NL
 ""                                                                           NL
 "[" CONFIG_SECTION_IO "]"                                                    NL
@@ -739,12 +739,12 @@ write_config(svn_fs_t *fs,
 "###"                                                                        NL
 "### When a specific piece of information needs to be read from disk,  a"    NL
 "### data block is being read at once and its contents are being cached."    NL
-"### If the repository is being stored on a RAID,  the block size should"    NL
-"### be either 50% or 100% of RAID block size / granularity.  Also,  your"   NL
-"### file system (clusters) should be properly aligned and sized.  In that"  NL
+"### If the repository is being stored on a RAID, the block size should be"  NL
+"### either 50% or 100% of RAID block size / granularity.  Also, your file"  NL
+"### system blocks/clusters should be properly aligned and sized.  In that"  NL
 "### setup, each access will hit only one disk (minimizes I/O load) but"     NL
 "### uses all the data provided by the disk in a single access."             NL
-"### For SSD-based storage systems,  slightly lower values around 16 kB"     NL
+"### For SSD-based storage systems, slightly lower values around 16 kB"      NL
 "### may improve latency while still maximizing throughput."                 NL
 "### Can be changed at any time but must be a power of 2."                   NL
 "### block-size is 64 kBytes by default."                                    NL
@@ -757,7 +757,7 @@ write_config(svn_fs_t *fs,
 "### space."                                                                 NL
 "### Changing this parameter only affects larger revisions with thousands"   NL
 "### of changed paths.  A smaller value means that more pages need to be"    NL
-"### allocated for such revisions,  increasing the size of the page table"   NL
+"### allocated for such revisions, increasing the size of the page table"    NL
 "### meaning it takes longer to read that table (once).  Access to each"     NL
 "### page is then faster because less data has to read.  So, if you have"    NL
 "### several extremely large revisions (approaching 1 mio changes),  think"  NL
@@ -769,16 +769,16 @@ write_config(svn_fs_t *fs,
 "###"                                                                        NL
 "### The phys-to-log index maps positions within the rev or pack file to"    NL
 "### to data items,  i.e. describes what piece of information is being"      NL
-"### stored at that particular offset.  The index describes the rev file"    NL
+"### stored at any particular offset.  The index describes the rev file"     NL
 "### in chunks (pages) and keeps a global list of all those pages.  Large"   NL
 "### pages mean a shorter page table but a larger per-page description of"   NL
 "### data items in it.  The latency sweetspot depends on the change size"    NL
-"### distribution but is relatively wide."                                   NL
+"### distribution but covers a relatively wide range."                       NL
 "### If the repository contains very large files,  i.e. individual changes"  NL
 "### of tens of MB each,  increasing the page size will shorten the index"   NL
 "### file at the expense of a slightly increased latency in sections with"   NL
 "### smaller changes."                                                       NL
-"### For practical reasons,  this should match block-size.  Differing"       NL
+"### For practical reasons, this should match the block-size.  Differing"    NL
 "### values are perfectly legal but may result in some processing overhead." NL
 "### Must be a power of 2."                                                  NL
 "### p2l-page-size is 64 kBytes by default."                                 NL
