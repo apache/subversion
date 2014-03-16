@@ -111,12 +111,18 @@ path_lock(svn_fs_t *fs, apr_pool_t *pool)
   return svn_dirent_join(fs->path, PATH_LOCK_FILE, pool);
 }
 
+static APR_INLINE const char *
+path_pack_lock(svn_fs_t *fs, apr_pool_t *pool)
+{
+  return svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE, pool);
+}
+
 
 
 /* Get a lock on empty file LOCK_FILENAME, creating it in POOL. */
-svn_error_t *
-svn_fs_fs__get_lock_on_filesystem(const char *lock_filename,
-                                  apr_pool_t *pool)
+static svn_error_t *
+get_lock_on_filesystem(const char *lock_filename,
+                       apr_pool_t *pool)
 {
   svn_error_t *err = svn_io_file_lock2(lock_filename, TRUE, FALSE, pool);
 
@@ -160,8 +166,7 @@ with_some_lock_file(svn_fs_t *fs,
                     apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_error_t *err = svn_fs_fs__get_lock_on_filesystem(lock_filename,
-                                                       subpool);
+  svn_error_t *err = get_lock_on_filesystem(lock_filename, subpool);
 
   if (!err)
     {
@@ -205,6 +210,25 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
                        with_some_lock_file(fs, body, baton,
                                            path_lock(fs, pool),
                                            TRUE,
+                                           pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__with_pack_lock(svn_fs_t *fs,
+                          svn_error_t *(*body)(void *baton,
+                                               apr_pool_t *pool),
+                          void *baton,
+                          apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+
+  SVN_MUTEX__WITH_LOCK(ffsd->fs_pack_lock,
+                       with_some_lock_file(fs, body, baton,
+                                           path_pack_lock(fs, pool),
+                                           FALSE,
                                            pool));
 
   return SVN_NO_ERROR;

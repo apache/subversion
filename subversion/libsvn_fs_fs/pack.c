@@ -2023,14 +2023,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
          separate subpool here to release the lock immediately after the
          operation finished.
        */
-      apr_pool_t *subpool = svn_pool_create(pool);
-      const char *lock_path = svn_dirent_join(fs->path, PATH_PACK_LOCK_FILE,
-                                              subpool);
-      err = svn_fs_fs__get_lock_on_filesystem(lock_path, subpool);
-      if (!err)
-        err = pack_body(&pb, subpool);
-
-      svn_pool_destroy(subpool);
+      err = svn_fs_fs__with_pack_lock(fs, pack_body, &pb, pool);
     }
   else
     {

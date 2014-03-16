@@ -242,6 +242,10 @@ typedef struct fs_fs_shared_data_t
      repository write lock. */
   svn_mutex__t *fs_write_lock;
 
+  /* A lock for intra-process synchronization when grabbing the
+     repository pack operation lock. */
+  svn_mutex__t *fs_pack_lock;
+
   /* A lock for intra-process synchronization when locking the
      txn-current file. */
   svn_mutex__t *txn_current_lock;
