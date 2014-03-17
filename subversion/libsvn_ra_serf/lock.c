@@ -564,7 +564,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
           err = svn_ra_serf__get_lock(ra_session, &existing_lock, path,
                                       iterpool);
 
-          if (!err && existing_lock->token)
+          if (!err && existing_lock)
             {
               svn_hash_sets(path_tokens, path,
                             apr_pstrdup(scratch_pool, existing_lock->token));
