@@ -270,7 +270,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1578273, r1578311
+ * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
    with a NULL svn_lock_t *, as documented.
    Justification:
@@ -279,8 +279,8 @@ Candidate changes:
      check the result we reported mostly empty svn_lock_t instances in more
      cases. Even on directories!
    Notes:
-     A branch is needed, because the serf lock handling code was split to
-     multiple files on trunk.
+     A branch is needed, because the serf lock handling code was refactored and
+     split to multiple files on trunk.
    Branch:
      ^/subversion/branches/1.8.x-r1578311
    Votes:
