@@ -270,6 +270,16 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1578273
+   Stop svn_ra_get_locks() on ra_serf reporting non locks as svn_lock_t.
+   Justification:
+     Many clients use the existance of an svn_lock_t on a node via info/status
+     as a boolean to note that there is a lock. But because we didn't properly
+     check the result we reported svn_lock_t instances in more cases: even on
+     directories.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
