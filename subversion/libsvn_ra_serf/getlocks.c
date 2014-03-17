@@ -116,6 +116,7 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
   if (leaving_state == LOCK)
     {
       const char *path = svn_hash_gets(attrs, "path");
+      const char *token = svn_hash_gets(attrs, "token");
       svn_boolean_t save_lock = FALSE;
 
       /* Filter out unwanted paths.  Since Subversion only allows
@@ -128,6 +129,12 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
          c) we've asked for depth=files or depth=immediates, and this
             lock is on an immediate child of our query path.
       */
+      if (! token)
+        {
+          /* A lock without a token is not a lock; just an answer that there
+             is no lock on the node. */
+          save_lock = FALSE;
+        }
       if (strcmp(lock_ctx->path, path) == 0
           || lock_ctx->requested_depth == svn_depth_infinity)
         {
@@ -154,7 +161,7 @@ getlocks_closed(svn_ra_serf__xml_estate_t *xes,
              them may have not been sent, so the value will be NULL.  */
 
           lock.path = path;
-          lock.token = svn_hash_gets(attrs, "token");
+          lock.token = token;
           lock.owner = svn_hash_gets(attrs, "owner");
           lock.comment = svn_hash_gets(attrs, "comment");
 
