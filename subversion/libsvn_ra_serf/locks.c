@@ -580,7 +580,7 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
         {
           SVN_ERR(svn_ra_serf__get_lock(ra_session, &existing_lock, path,
                                         iterpool));
-          token = existing_lock->token;
+          token = existing_lock ? existing_lock->token : NULL;
           if (!token)
             {
               err = svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
