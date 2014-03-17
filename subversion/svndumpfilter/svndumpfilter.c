@@ -623,6 +623,11 @@ new_node_record(void **node_baton,
       if (! nb->rb->writing_begun)
         SVN_ERR(output_revision(nb->rb));
 
+      /* A node record is required to begin with 'Node-path'. */
+      SVN_ERR(svn_stream_printf(nb->rb->pb->out_stream,
+                                pool, "%s: %s\n",
+                                SVN_REPOS_DUMPFILE_NODE_PATH, node_path));
+
       for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
         {
           const char *key = svn__apr_hash_index_key(hi);
@@ -638,7 +643,8 @@ new_node_record(void **node_baton,
 
           if ((!strcmp(key, SVN_REPOS_DUMPFILE_CONTENT_LENGTH))
               || (!strcmp(key, SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH))
-              || (!strcmp(key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH)))
+              || (!strcmp(key, SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH))
+              || (!strcmp(key, SVN_REPOS_DUMPFILE_NODE_PATH)))
             continue;
 
           /* Rewrite Node-Copyfrom-Rev if we are renumbering revisions.
