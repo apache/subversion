@@ -1558,8 +1558,14 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root,
                                    full_path, TRUE, pool));
   hex_digest = svn_checksum_to_cstring_display(checksum, pool);
+
+  /* Fetch the file's explicit and/or inherited properties if
+     requested.  Although the wants-iprops boolean was added to the
+     protocol in 1.8 a standard 1.8 client never requests iprops. */
   if (want_props || wants_inherited_props)
-    SVN_CMD_ERR(get_props(&props, &inherited_props, &ab, root, full_path,
+    SVN_CMD_ERR(get_props(want_props ? &props : NULL,
+                          wants_inherited_props ? &inherited_props : NULL,
+                          &ab, root, full_path,
                           pool));
   if (want_contents)
     SVN_CMD_ERR(svn_fs_file_contents(&contents, root, full_path, pool));
@@ -1705,10 +1711,13 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the root of the appropriate revision. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, pool));
 
-  /* Fetch the directory's explicit and/or inherited properties
-     if requested. */
+  /* Fetch the directory's explicit and/or inherited properties if
+     requested.  Although the wants-iprops boolean was added to the
+     protocol in 1.8 a standard 1.8 client never requests iprops. */
   if (want_props || wants_inherited_props)
-    SVN_CMD_ERR(get_props(&props, &inherited_props, &ab, root, full_path,
+    SVN_CMD_ERR(get_props(want_props ? &props : NULL,
+                          wants_inherited_props ? &inherited_props : NULL,
+                          &ab, root, full_path,
                           pool));
 
   /* Begin response ... */
