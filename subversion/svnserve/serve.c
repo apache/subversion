@@ -1536,6 +1536,9 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   &want_props, &want_contents,
                                   &wants_inherited_props));
 
+  if (wants_inherited_props == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    wants_inherited_props = FALSE;
+
   full_path = svn_fspath__join(b->repository->fs_path->data,
                                svn_relpath_canonicalize(path, pool), pool);
 
@@ -1649,6 +1652,9 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   &want_props, &want_contents,
                                   &dirent_fields_list,
                                   &wants_inherited_props));
+
+  if (wants_inherited_props == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    wants_inherited_props = FALSE;
 
   if (! dirent_fields_list)
     {
