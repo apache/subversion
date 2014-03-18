@@ -286,6 +286,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1578670
+   Fix the order of node record headers written by svndumpfilter.
+   Justification:
+     Makes output match the rules documented in notes/dump-load-format.txt.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
