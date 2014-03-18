@@ -186,7 +186,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
 
   /* sasl uses unsigned int for the length of strings, we use apr_size_t
    * which may not be the same size.  Deal with potential integer overflow */
-  if (in->len > UINT_MAX)
+  if (in && in->len > UINT_MAX)
     return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                              _("Initial token is too long"));
 
