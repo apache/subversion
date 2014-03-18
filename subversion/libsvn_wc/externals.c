@@ -768,7 +768,6 @@ close_file(void *file_baton,
       {
         svn_node_kind_t disk_kind;
         svn_boolean_t install_pristine = FALSE;
-        const char *install_from = NULL;
 
         SVN_ERR(svn_io_check_path(eb->local_abspath, &disk_kind, pool));
 
@@ -833,7 +832,7 @@ close_file(void *file_baton,
           {
             SVN_ERR(svn_wc__wq_build_file_install(&work_item, eb->db,
                                             eb->local_abspath,
-                                            install_from,
+                                            NULL,
                                             eb->use_commit_times, TRUE,
                                             pool, pool));
 
