@@ -298,7 +298,7 @@ Candidate changes:
    Justification:
      Performance regression from 1.7, reported by a user.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
 Veto-blocked changes:
 =====================
