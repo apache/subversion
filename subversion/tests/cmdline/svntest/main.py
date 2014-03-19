@@ -944,7 +944,14 @@ def create_repos(path, minor_version = None):
     # fsfs.conf file
     if options.config_file is not None and \
        (not minor_version or minor_version >= 6):
-      shutil.copy(options.config_file, get_fsfs_conf_file_path(path))
+      config_file = open(options.config_file, 'r')
+      fsfsconf = open(get_fsfs_conf_file_path(path), 'w')
+      for line in config_file.readlines():
+        fsfsconf.write(line)
+        if options.memcached_server and line == '[memcached-servers]\n':
+            fsfsconf.write('key = %s\n' % options.memcached_server)
+      config_file.close()
+      fsfsconf.close()
 
     # format file
     if options.fsfs_sharding is not None:
@@ -1472,6 +1479,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-proxy-password=' + options.http_proxy_password)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
+    if options.memcached_server:
+      args.append('--memcached-server' + options.memcached_server)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1825,6 +1834,8 @@ def _create_parser():
                     help='Use the svn tools installed in this path')
   parser.add_option('--exclusive-wc-locks', action='store_true',
                     help='Use sqlite exclusive locking for working copies')
+  parser.add_option('--memcached-server', action='store',
+                    help='Use memcached server at specified URL (FSFS only)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
