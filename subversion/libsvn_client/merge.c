@@ -3121,8 +3121,6 @@ merge_dir_deleted(const char *relpath,
 
       if (delb->found_edit)
         same = FALSE;
-      else if (merge_b->force_delete)
-        same = TRUE;
       else
         {
           apr_array_header_t *ignores;
