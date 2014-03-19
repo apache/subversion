@@ -314,16 +314,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1572102, r1572200
-   Fix a failed wc upgrade from 1.7 with exclusive wc locking.
-   Notes:
-     1.8 doesn't support running the regression test with exclusive locking
-     so the regression test always passes.
-   Justification:
-     Reported by a user, upgrade is expected to work.
-   Votes:
-     +1: philip, brane, rhuijben
-
  * r1573088
    Add Mavericks to our sysinfo output.
    Justification:
