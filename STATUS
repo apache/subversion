@@ -313,10 +313,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1573088
-   Add Mavericks to our sysinfo output.
-   Justification:
-     It's obvious, keeps us consistent with previous version behavior.
-   Votes:
-     +1: breser, brane, rhuijben
