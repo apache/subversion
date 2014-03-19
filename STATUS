@@ -181,15 +181,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1575270, r1575284
-   Fix inconsistent output in svn_client_proplist4 when using absolute paths.
-   Notes:
-     r1575284 is the test that exposes this bug.
-   Justification:
-     It's a regression in 1.8.8 compared to 1.8.5.
-   Votes:
-      +1: brane, rhuijben
-
  * r1574868
    Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
      Part of issue #4476 "Mergeinfo containing r0 makes svnsync and svnadmin
@@ -314,3 +305,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1575270, r1575284
+   Fix inconsistent output in svn_client_proplist4 when using absolute paths.
+   Notes:
+     r1575284 is the test that exposes this bug.
+   Justification:
+     It's a regression in 1.8.8 compared to 1.8.5.
+   Votes:
+      +1: brane, rhuijben, philip
