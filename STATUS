@@ -238,7 +238,7 @@ Candidate changes:
    Votes:
      +1: breser
 
- * r1577812, r1577813
+ * r1577812, r1577813, r1579429
    Resolve a segfault when 'svn merge --force' merges a directory delete
    Justification:
      Even though this merge flag is not recommended, it shouldn't cause a
@@ -251,7 +251,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1577812
    Votes:
-     +1: rhuijben
+     +1: (without r1579429) rhuijben
+     +1: philip
 
  * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
