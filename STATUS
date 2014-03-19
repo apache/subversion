@@ -179,7 +179,7 @@ Candidate changes:
      for these users. Probably because they didn's see that the node they
      deleted wasn't added to the repository yet.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1574868
    Don't let invalid mergeinfo stop 'svnadmin dump' from producing a dump.
