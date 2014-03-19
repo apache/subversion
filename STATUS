@@ -268,7 +268,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1578311
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1578670, r1578820, r1579274
    Fix the order of node record headers written by svndumpfilter.
