@@ -248,7 +248,6 @@ organize_lock_targets(apr_array_header_t **lock_paths,
   apr_hash_t *rel_fs_paths = NULL;
   apr_hash_t *wc_info = apr_hash_make(scratch_pool);
   svn_boolean_t url_mode;
-  int i;
 
   *lock_paths = NULL;
 
@@ -260,6 +259,7 @@ organize_lock_targets(apr_array_header_t **lock_paths,
   if (url_mode)
     {
       apr_array_header_t *rel_targets;
+      int i;
       svn_revnum_t *invalid_revnum =
         apr_palloc(result_pool, sizeof(*invalid_revnum));
 
@@ -425,12 +425,7 @@ organize_lock_targets(apr_array_header_t **lock_paths,
           if (do_lock) /* Lock. */
             {
               svn_revnum_t *revnum;
-              struct wc_lock_item_t *wli;
               revnum = apr_palloc(result_pool, sizeof(* revnum));
-
-              wli = svn_hash_gets(wc_info, local_abspath);
-
-              SVN_ERR_ASSERT(wli != NULL);
 
               *revnum = wli->revision;
 
@@ -439,15 +434,10 @@ organize_lock_targets(apr_array_header_t **lock_paths,
           else /* Unlock. */
             {
               const char *lock_token;
-              struct wc_lock_item_t *wli;
 
               /* If not forcing the unlock, get the lock token. */
               if (! force)
                 {
-                  wli = svn_hash_gets(wc_info, local_abspath);
-
-                  SVN_ERR_ASSERT(wli != NULL);
-
                   if (! wli->lock_token)
                     return svn_error_createf(
                                SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
