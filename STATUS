@@ -197,7 +197,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1574868
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1575525, r1575915
    Resolve issue #4427: File externals can't be exported.
