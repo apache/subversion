@@ -14041,7 +14041,7 @@ wclock_obtain_cb(svn_wc__db_wcroot_t *wcroot,
   err = svn_sqlite__insert(NULL, stmt);
   if (err)
     return svn_error_createf(SVN_ERR_WC_LOCKED, err,
-                             _("Working copy '%s' locked"),
+                             _("Failed to lock working copy '%s'."),
                              path_for_error_message(wcroot,
                                                     local_relpath,
                                                     scratch_pool));
