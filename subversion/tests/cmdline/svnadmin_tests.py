@@ -1629,9 +1629,9 @@ def test_lslocks_and_rmlocks(sbox):
   if exit_code or errput or output:
     raise svntest.Failure("Error: 'lslocks' failed")
 
-  expected_output = UnorderedOutput(
-    ["'A/B/lambda' locked by user 'jrandom'.\n",
-     "'iota' locked by user 'jrandom'.\n"])
+  expected_output = svntest.verify.UnorderedRegexListOutput(
+    ["'.*lambda' locked by user 'jrandom'.\n",
+     "'.*iota' locked by user 'jrandom'.\n"])
 
   # Lock iota and A/B/lambda using svn client
   svntest.actions.run_and_verify_svn(None, expected_output,

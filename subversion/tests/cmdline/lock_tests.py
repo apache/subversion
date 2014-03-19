@@ -1719,8 +1719,8 @@ def lock_multi_wc(sbox):
   wc2_name = os.path.basename(sbox2.wc_dir)
 
   expected_output = svntest.verify.UnorderedOutput([
-    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc_name, 'iota'),
-    '\'%s\' locked by user \'jrandom\'.\n' % os.path.join(wc2_name, 'A', 'mu'),
+    '\'%s\' locked by user \'jrandom\'.\n' % sbox.ospath('iota'),
+    '\'%s\' locked by user \'jrandom\'.\n' % sbox2.ospath('A/mu'),
   ])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
@@ -1728,8 +1728,8 @@ def lock_multi_wc(sbox):
                                              sbox2.ospath('A/mu'))
 
   expected_output = svntest.verify.UnorderedOutput([
-    '\'%s\' unlocked.\n' % os.path.join(wc_name, 'iota'),
-    '\'%s\' unlocked.\n' % os.path.join(wc2_name, 'A', 'mu'),
+    '\'%s\' unlocked.\n' % sbox.ospath('iota'),
+    '\'%s\' unlocked.\n' % sbox2.ospath('A/mu'),
   ])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'unlock', sbox.ospath('iota'),
@@ -1821,7 +1821,7 @@ def commit_stolen_lock(sbox):
   sbox.simple_append('A/mu', 'zig-zag')
   sbox.simple_lock('A/mu')
 
-  expected_output = '\'mu\' locked by user \'jrandom\'.'
+  expected_output = '\'.*mu\' locked by user \'jrandom\'.'
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'lock', '--force',
                                      sbox.repo_url + '/A/mu')
