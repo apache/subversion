@@ -2081,6 +2081,51 @@ def dav_lock_timeout(sbox):
   expected_status.tweak('iota', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def create_dav_lock_timeout(sbox):
+  "create generic DAV lock with timeout"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
+              '<D:lockinfo xmlns:D="DAV:">' \
+              '  <D:lockscope><D:exclusive/></D:lockscope>' \
+              '  <D:locktype><D:write/></D:locktype>' \
+              '  <D:owner>' \
+              '       <D:href>http://a/test</D:href>' \
+              '  </D:owner>' \
+              '</D:lockinfo>'
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Timeout': 'Second-86400'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
+
+  r = h.getresponse()
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock should have an expiration date
+  expiration_date = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Expires']
+
 ########################################################################
 # Run the tests
 
@@ -2139,6 +2184,7 @@ test_list = [ None,
               failing_post_hooks,
               break_delete_add,
               dav_lock_timeout,
+              create_dav_lock_timeout,
             ]
 
 if __name__ == '__main__':
