@@ -148,11 +148,22 @@ locks_closed(svn_ra_serf__xml_estate_t *xes,
 
   if (leaving_state == TIMEOUT)
     {
-      if (strcmp(cdata->data, "Infinite") == 0)
+      /* This function just parses the result of our own lock request,
+         so on a normal server we will only encounter 'Infinite' here. */
+      if (strcasecmp(cdata->data, "Infinite") == 0)
         lock_ctx->lock->expiration_date = 0;
+      else if (strncasecmp(cdata->data, "Second-", 7) == 0)
+        {
+          unsigned n;
+          SVN_ERR(svn_cstring_atoui(&n, cdata->data+7));
+
+          lock_ctx->lock->expiration_date = apr_time_now() +
+                                            apr_time_from_sec(n);
+        }
       else
-        SVN_ERR(svn_time_from_cstring(&lock_ctx->lock->creation_date,
-                                      cdata->data, lock_ctx->pool));
+         return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                  _("Invalid LOCK timeout value '%s'"),
+                                  cdata->data);
     }
   else if (leaving_state == HREF)
     {

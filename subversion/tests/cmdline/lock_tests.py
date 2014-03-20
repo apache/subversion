@@ -2028,6 +2028,56 @@ def break_delete_add(sbox):
   expected_status.tweak('A/mu', status='  ', wc_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def dav_lock_timeout(sbox):
+  "unlock a lock with timeout"
+
+  import httplib
+  from urlparse import urlparse
+  import base64
+
+  sbox.build()
+  loc = urlparse(sbox.repo_url)
+
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+
+  lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
+              '<D:lockinfo xmlns:D="DAV:">' \
+              '  <D:lockscope><D:exclusive/></D:lockscope>' \
+              '  <D:locktype><D:write/></D:locktype>' \
+              '  <D:owner>' \
+              '       <D:href>http://a/test</D:href>' \
+              '  </D:owner>' \
+              '</D:lockinfo>'
+
+  lock_headers = {
+    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Timeout': 'Second-86400'
+  }
+
+  # Enabling the following line makes this test easier to debug
+  h.set_debuglevel(9)
+
+  h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
+
+  r = h.getresponse()
+
+  # Verify that there is a lock, by trying to obtain one
+  svntest.actions.run_and_verify_svn2(None, None, ".*locked by user", 0,
+                                      'lock', '-m', '', sbox.ospath('iota'))
+
+  # Before this patch this used to fail with a parse error of the timeout
+  svntest.actions.run_and_verify_svn2(None, None, ".*Unlock.*iota' failed", 0,
+                                     'unlock', sbox.repo_url + '/iota')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.ospath('iota'), '--force')
+
+
+
 ########################################################################
 # Run the tests
 
@@ -2085,6 +2135,7 @@ test_list = [ None,
               lock_hook_messages,
               failing_post_hooks,
               break_delete_add,
+              dav_lock_timeout,
             ]
 
 if __name__ == '__main__':
