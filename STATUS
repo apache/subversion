@@ -242,8 +242,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1577812
    Votes:
-     +1: (without r1579429) rhuijben
-     +1: philip
+     +1: philip, rhuijben
 
  * r1578273, r1578311, r1578326
    Make svn_ra_get_locks() and svn_ra_get_lock() report not locked nodes
