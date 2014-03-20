@@ -2039,6 +2039,8 @@ def dav_lock_timeout(sbox):
   wc_dir = sbox.wc_dir
 
   svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
+  # Lock should have an expiration date
+  expiration_date = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Expires']
 
   # Verify that there is a lock, by trying to obtain one
   svntest.actions.run_and_verify_svn2(None, None, ".*locked by user", 0,
