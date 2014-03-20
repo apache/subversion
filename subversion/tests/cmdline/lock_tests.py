@@ -2028,55 +2028,58 @@ def break_delete_add(sbox):
   expected_status.tweak('A/mu', status='  ', wc_rev=3)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@SkipUnless(svntest.main.is_ra_type_dav)
 def dav_lock_timeout(sbox):
   "unlock a lock with timeout"
 
-  import httplib
-  from urlparse import urlparse
-  import base64
+  # Locks with timeouts are only created by generic DAV clients but a
+  # Subversion client may need to view or unlock one over any RA
+  # layer.
 
   sbox.build()
-  loc = urlparse(sbox.repo_url)
+  wc_dir = sbox.wc_dir
 
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    h = httplib.HTTPSConnection(loc.hostname, loc.port)
-
-  lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
-              '<D:lockinfo xmlns:D="DAV:">' \
-              '  <D:lockscope><D:exclusive/></D:lockscope>' \
-              '  <D:locktype><D:write/></D:locktype>' \
-              '  <D:owner>' \
-              '       <D:href>http://a/test</D:href>' \
-              '  </D:owner>' \
-              '</D:lockinfo>'
-
-  lock_headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
-    'Timeout': 'Second-86400'
-  }
-
-  # Enabling the following line makes this test easier to debug
-  h.set_debuglevel(9)
-
-  h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
-
-  r = h.getresponse()
+  svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
 
   # Verify that there is a lock, by trying to obtain one
   svntest.actions.run_and_verify_svn2(None, None, ".*locked by user", 0,
                                       'lock', '-m', '', sbox.ospath('iota'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Before this patch this used to fail with a parse error of the timeout
-  svntest.actions.run_and_verify_svn2(None, None, ".*Unlock.*iota' failed", 0,
+  # This used to fail over serf with a parse error of the timeout.
+  expected_err = "svn: warning: W160039:"
+  svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                      'unlock', sbox.repo_url + '/iota')
 
+  # Force unlock via working copy, this also used to fail over serf.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'unlock', sbox.ospath('iota'), '--force')
+  expected_status.tweak('iota', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+  # Lock again
+  svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+  # Force unlock via URL, this also used to fail over serf
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/iota',
+                                     '--force')
+  expected_status.tweak('iota', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock again
+  svntest.main.run_lock_helper(sbox.repo_dir, 'iota',  'some_user', 999)
+  expected_status.tweak('iota', writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Force lock via working copy, this also used to fail over serf.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'lock', sbox.ospath('iota'), '--force')
+  expected_status.tweak('iota', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
