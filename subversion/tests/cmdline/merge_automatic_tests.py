@@ -1202,6 +1202,137 @@ def effective_sync_results_in_reintegrate(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
                                      sbox.repo_url + '/branch', A_path)
 
+@Issue(4481)
+@XFail()
+def reintegrate_subtree_not_updated(sbox):
+  "reintegrate subtree not updated"
+
+  sbox.build()
+
+  # Create change on branch 'D_1', 
+  sbox.simple_copy('A/D', 'D_1')
+  sbox.simple_commit()
+  sbox.simple_append('D_1/G/pi', "D_1/G pi edit\n")
+  sbox.simple_append('D_1/H/chi', "D_1/H chi edit\n")
+  sbox.simple_commit()
+
+  # Merge back to 'D' with two subtree merges
+  expected_output = [
+    "--- Merging r2 through r3 into '"
+    + sbox.ospath('A/D/G') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/G/pi') + "\n",
+    "--- Recording mergeinfo for merge of r2 through r3 into '"
+    + sbox.ospath('A/D/G') + "':\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_1/G',
+                                     sbox.ospath('A/D/G'))
+  expected_output = [
+    "--- Merging r2 through r3 into '"
+    + sbox.ospath('A/D/H') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/H/chi') + "\n",
+    "--- Recording mergeinfo for merge of r2 through r3 into '"
+    + sbox.ospath('A/D/H') + "':\n",
+    " U   "
+    + sbox.ospath('A/D/H') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_1/H',
+                                     sbox.ospath('A/D/H'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create branch 'D_2'
+  sbox.simple_copy('A/D', 'D_2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create change on 'D_2'
+  sbox.simple_append('D_2/G/pi', "D_2/G pi edit\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create change on 'D'
+  sbox.simple_append('A/D/G/rho', "D/G rho edit\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Sync merge to 'D_2' doesn't record mergeinfo on 'D_2/H' subtree.
+  expected_output = [
+    "--- Merging r5 through r7 into '"
+    + sbox.ospath('D_2') + "':\n",
+    "U    "
+    + sbox.ospath('D_2/G/rho') + "\n",
+    "--- Recording mergeinfo for merge of r5 through r7 into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n",
+    "--- Recording mergeinfo for merge of r5 through r7 into '"
+    + sbox.ospath('D_2/G') + "':\n",
+    " U   "
+    + sbox.ospath('D_2/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/A/D',
+                                     sbox.ospath('D_2'))
+
+  # This extra merge just records mergeinfo on H, but it is enough to make
+  # the final XFAIL merge run, i.e. it resolves the error related to missing
+  # merge on G!
+  # svntest.actions.run_and_verify_svn(None, None, [],
+  #                                   'merge',
+  #                                   sbox.repo_url + '/A/D/H',
+  #                                   sbox.ospath('D_2/H'))
+
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate 'D_2' to 'D'
+  expected_output = [
+    "--- Merging differences between repository URLs into '"
+    + sbox.ospath('A/D') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/G/pi') + "\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '"
+    + sbox.ospath('A/D') + "':\n",
+    " U   "
+    + sbox.ospath('A/D') + "\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_2',
+                                     sbox.ospath('A/D'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Sync merge to 'D_2' keeping branch going.
+
+  ### XFAIL merge doesn't run, there is a error about missing mergeinfo
+  ###      A/D/G
+  ###        Missing ranges: /A/D/G:7
+  expected_output = [
+    "--- Merging r7 through r8 into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n",
+    "--- Recording mergeinfo for merge of r7 through r8 into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/A/D',
+                                     sbox.ospath('D_2'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
 ########################################################################
 # Run the tests
 
@@ -1230,6 +1361,7 @@ test_list = [ None,
               merge_replacement,
               auto_merge_handles_replacements_in_merge_source,
               effective_sync_results_in_reintegrate,
+              reintegrate_subtree_not_updated,
              ]
 
 if __name__ == '__main__':
