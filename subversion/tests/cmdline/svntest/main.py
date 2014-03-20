@@ -155,6 +155,7 @@ svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
 svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
+lock_helper_binary = os.path.abspath('lock-helper' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
 wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
@@ -746,6 +747,11 @@ def run_svnauthz_validate(*varargs):
   """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
   stderr as list of lines (including line terminators)."""
   return run_command(svnauthz_validate_binary, 1, False, *varargs)
+
+def run_lock_helper(repo, path, user, seconds):
+  """Run lock-helper to lock path in repo by username for seconds"""
+
+  return run_command(lock_helper_binary, 1, False, repo, path, user, seconds)
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
