@@ -36,6 +36,7 @@ abs_builddir="$7"
 svn_libdir="$8"
 apr_config="$9"
 apu_config="${10}"
+cpp="${11}"
 
 cp_relpath="subversion/bindings/ctypes-python"
 output="$cp_relpath/svn_all.py"
@@ -57,7 +58,6 @@ apu_cppflags="`$apu_config --includes`"  # no --cppflags
 apu_include_dir="`$apu_config --includedir`"
 apu_ldflags="`$apu_config --ldflags --link-ld`"
 
-cpp="`$apr_config --cpp`"
 ### end
 
 cppflags="$apr_cppflags $apu_cppflags -I$svn_includes"

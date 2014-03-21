@@ -1397,6 +1397,29 @@ def move_many_update_add(sbox):
                                         wc_dir, '--accept', 'mine-conflict')
 
 
+def move_to_from_external(sbox):
+  "move to and from an external"
+
+  sbox.build()
+  sbox.simple_propset('svn:externals', '^/A/D/G GG', '')
+  sbox.simple_update()
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'move',
+                                     sbox.ospath('GG/tau'),
+                                     sbox.ospath('tau'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'move',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('GG/tau'))
+                                     
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'Commit both',
+                                     sbox.ospath(''),
+                                     sbox.ospath('GG'))
+  
+
 #######################################################################
 # Run the tests
 
@@ -1410,6 +1433,7 @@ test_list = [ None,
               move_missing,
               move_many_update_delete,
               move_many_update_add,
+              move_to_from_external,
             ]
 
 if __name__ == '__main__':

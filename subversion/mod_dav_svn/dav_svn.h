@@ -52,8 +52,11 @@ extern "C" {
 /* a pool-key for the shared dav_svn_root used by autoversioning  */
 #define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
 
-/* Option values for SVNAllowBulkUpdates */
+/* Option values for SVNAllowBulkUpdates.  Note that
+   it's important that CONF_BULKUPD_DEFAULT is 0 to make
+   dav_svn_merge_dir_config do the right thing. */
 typedef enum dav_svn__bulk_upd_conf {
+    CONF_BULKUPD_DEFAULT,
     CONF_BULKUPD_ON,
     CONF_BULKUPD_OFF,
     CONF_BULKUPD_PREFER
@@ -899,6 +902,12 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
                           const dav_resource *relative,
                           const char *uri,
                           apr_pool_t *pool);
+
+/* Test the request R to determine if we should return the list of
+ * repositories at the parent path.  Only true if SVNListParentPath directive
+ * is 'on' and the request is for our configured root path. */
+svn_boolean_t
+dav_svn__is_parentpath_list(request_rec *r);
 
 
 int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);

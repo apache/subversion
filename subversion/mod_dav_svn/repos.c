@@ -1969,26 +1969,31 @@ get_resource(request_rec *r,
 
   /* Special case: detect and build the SVNParentPath as a unique type
      of private resource, iff the SVNListParentPath directive is 'on'. */
-  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+  if (dav_svn__is_parentpath_list(r))
     {
-      char *uri = apr_pstrdup(r->pool, r->uri);
-      char *parentpath = apr_pstrdup(r->pool, root_path);
-      apr_size_t uri_len = strlen(uri);
-      apr_size_t parentpath_len = strlen(parentpath);
-
-      if (uri[uri_len-1] == '/')
-        uri[uri_len-1] = '\0';
-
-      if (parentpath[parentpath_len-1] == '/')
-        parentpath[parentpath_len-1] = '\0';
-
-      if (strcmp(parentpath, uri) == 0)
+      /* Only allow GET and HEAD on the parentpath resource
+       * httpd uses the same method_number for HEAD as GET */
+      if (r->method_number != M_GET)
         {
-          err = get_parentpath_resource(r, resource);
-          if (err)
-            return err;
-          return NULL;
+          int status;
+
+          /* Marshall the error back to the client by generating by
+           * way of the dav_svn__error_response_tag trick. */
+          err = dav_svn__new_error(r->pool, HTTP_METHOD_NOT_ALLOWED,
+                                   SVN_ERR_APMOD_MALFORMED_URI,
+                                   "The URI does not contain the name "
+                                   "of a repository.");
+          /* can't use r->allowed since the default handler isn't called */
+          apr_table_setn(r->headers_out, "Allow", "GET,HEAD");
+          status = dav_svn__error_response_tag(r, err);
+
+          return dav_push_error(r->pool, status, err->error_id, NULL, err);
         }
+
+      err = get_parentpath_resource(r, resource);
+      if (err)
+        return err;
+      return NULL;
     }
 
   /* This does all the work of interpreting/splitting the request uri. */
@@ -2455,9 +2460,12 @@ get_parent_resource(const dav_resource *resource,
       parent->info = parentinfo;
 
       parentinfo->uri_path =
-        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
-                                             TRUE, resource->pool),
-                             resource->pool);
+        svn_stringbuf_create(
+               get_parent_path(
+                   svn_urlpath__canonicalize(resource->info->uri_path->data,
+                                            resource->pool),
+                   TRUE, resource->pool),
+               resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;
