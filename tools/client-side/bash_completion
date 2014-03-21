@@ -1388,7 +1388,8 @@ _svnsync ()
 	copy-revprops|initialize|init|synchronize|sync)
 		cmdOpts="--non-interactive --no-auth-cache --trust-server-cert \
 		         --source-username --source-password --sync-username \
-		         --sync-password --config-dir --config-option -q --quiet"
+		         --sync-password --config-dir --config-option \
+		         -q --quiet -M --memory-cache-size"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds"
