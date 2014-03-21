@@ -112,7 +112,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "mirror of the source repository.\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
         svnsync_opt_allow_non_empty, svnsync_opt_disable_locking,
-        svnsync_opt_steal_lock } },
+        svnsync_opt_steal_lock, 'M' } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
          "\n"
@@ -125,7 +125,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "if untrusted users/administrators may have write access to the\n"
          "DEST_URL repository.\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
-        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage:\n"
          "\n"
@@ -146,7 +146,7 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "\n"
          "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
-        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
     { "info", info_cmd, { 0 },
       N_("usage: svnsync info DEST_URL\n"
          "\n"
@@ -237,6 +237,10 @@ static const apr_getopt_option_t svnsync_options[] =
                           "and is not being concurrently accessed by another\n"
                           "                             "
                           "svnsync instance.")},
+    {"memory-cache-size", 'M', 1,
+                       N_("size of the extra in-memory cache in MB used to"
+                          "                             "
+                          "minimize operations for local 'file' scheme.\n")},
     {"version",        svnsync_opt_version, 0,
                        N_("show program version information")},
     {"help",           'h', 0,
@@ -2066,6 +2070,21 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                           SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                           _("Invalid revision range '%s' provided"), opt_arg);
               }
+            break;
+
+          case 'M':
+            if (!config_options)
+              config_options =
+                    apr_array_make(pool, 1,
+                                   sizeof(svn_cmdline__config_argument_t*));
+
+            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+            SVN_ERR(svn_cmdline__parse_config_option(
+                      config_options,
+                      apr_psprintf(pool,
+                                   "config:miscellany:memory-cache-size=%s",
+                                   opt_arg),
+                      pool));
             break;
 
           case '?':
