@@ -228,6 +228,45 @@ sbox_wc_copy(svn_test__sandbox_t *b, const char *from_path, const char *to_path)
 }
 
 svn_error_t *
+sbox_wc_copy_url(svn_test__sandbox_t *b, const char *from_url,
+                 svn_revnum_t revision, const char *to_path)
+{
+  apr_pool_t *scratch_pool = b->pool;
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t rev = { svn_opt_revision_unspecified, {0} };
+  svn_client_copy_source_t* src;
+  apr_array_header_t *sources = apr_array_make(
+                                        scratch_pool, 1,
+                                        sizeof(svn_client_copy_source_t *));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
+  ctx->wc_ctx = b->wc_ctx;
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      rev.kind = svn_opt_revision_number;
+      rev.value.number = revision;
+    }
+
+  src = apr_pcalloc(scratch_pool, sizeof(*src));
+
+  src->path = from_url;
+  src->revision = &rev;
+  src->peg_revision = &rev;
+
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = src;
+
+  SVN_ERR(svn_client_copy6(sources, sbox_wc_path(b, to_path),
+                           FALSE, FALSE, FALSE, NULL, NULL, NULL,
+                           ctx, scratch_pool));
+
+  ctx->wc_ctx = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
 {
   const char *abspath = sbox_wc_path(b, path);
@@ -443,6 +482,24 @@ sbox_wc_propset(svn_test__sandbox_t *b,
   return svn_client_propset_local(name, pval, paths, svn_depth_empty,
                                   TRUE /* skip_checks */,
                                   NULL, ctx, b->pool);
+}
+
+svn_error_t *
+sbox_wc_relocate(svn_test__sandbox_t *b,
+                 const char *new_repos_url)
+{
+  apr_pool_t *scratch_pool = b->pool;
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
+  ctx->wc_ctx = b->wc_ctx;
+
+  SVN_ERR(svn_client_relocate2(b->wc_abspath, b->repos_url,
+                               new_repos_url, FALSE, ctx,scratch_pool));
+
+  b->repos_url = apr_pstrdup(b->pool, new_repos_url);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

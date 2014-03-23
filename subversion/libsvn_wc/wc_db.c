@@ -4155,8 +4155,9 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                   svn_wc__db_status_t *status,
                   svn_node_kind_t *kind,
                   svn_boolean_t *op_root,
-                  svn_wc__db_wcroot_t *wcroot,
+                  svn_wc__db_wcroot_t *src_wcroot,
                   const char *local_relpath,
+                  svn_wc__db_wcroot_t *dst_wcroot,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
@@ -4173,7 +4174,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     NULL /* have_base */,
                     NULL /* have_more_work */,
                     NULL /* have_work */,
-                    wcroot, local_relpath, result_pool, scratch_pool));
+                    src_wcroot, local_relpath, result_pool, scratch_pool));
 
   if (op_root)
     *op_root = is_op_root;
@@ -4188,7 +4189,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                        scratch_pool);
       SVN_ERR(get_info_for_copy(copyfrom_id, copyfrom_relpath, copyfrom_rev,
                                 NULL, NULL, NULL,
-                                wcroot, parent_relpath,
+                                src_wcroot, parent_relpath, dst_wcroot,
                                 scratch_pool, scratch_pool));
       if (*copyfrom_relpath)
         *copyfrom_relpath = svn_relpath_join(*copyfrom_relpath, base_name,
@@ -4197,7 +4198,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
   else if (node_status == svn_wc__db_status_added)
     {
       SVN_ERR(scan_addition(&node_status, NULL, NULL, NULL, NULL, NULL, NULL,
-                            NULL, NULL, NULL, wcroot, local_relpath,
+                            NULL, NULL, NULL, src_wcroot, local_relpath,
                             scratch_pool, scratch_pool));
     }
   else if (node_status == svn_wc__db_status_deleted && is_op_root)
@@ -4206,7 +4207,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
 
       SVN_ERR(scan_deletion_txn(&base_del_relpath, NULL,
                                 &work_del_relpath,
-                                NULL, wcroot, local_relpath,
+                                NULL, src_wcroot, local_relpath,
                                 scratch_pool, scratch_pool));
       if (work_del_relpath)
         {
@@ -4219,7 +4220,8 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           SVN_ERR(scan_addition(NULL, &op_root_relpath,
                                 NULL, NULL, /* repos_* */
                                 copyfrom_relpath, copyfrom_id, copyfrom_rev,
-                                NULL, NULL, NULL, wcroot, parent_del_relpath,
+                                NULL, NULL, NULL,
+                                src_wcroot, parent_del_relpath,
                                 scratch_pool, scratch_pool));
           *copyfrom_relpath
             = svn_relpath_join(*copyfrom_relpath,
@@ -4234,7 +4236,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                     copyfrom_id, NULL, NULL,
                                                     NULL, NULL, NULL, NULL,
                                                     NULL, NULL, NULL, NULL,
-                                                    wcroot, local_relpath,
+                                                    src_wcroot, local_relpath,
                                                     result_pool,
                                                     scratch_pool));
         }
@@ -4255,6 +4257,24 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
 
   if (status)
     *status = node_status;
+
+  if (src_wcroot != dst_wcroot && copyfrom_relpath)
+    {
+      const char *repos_root_url;
+      const char *repos_uuid;
+
+      /* Pass the right repos-id for the destination db. We can't just use
+         the id of the source database, as this value can change after
+         relocation (and perhaps also when we start storing multiple
+         working copies in a single db)! */
+
+      SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
+                                          src_wcroot->sdb, *copyfrom_id,
+                                          scratch_pool));
+
+      SVN_ERR(create_repos_id(copyfrom_id, repos_root_url, repos_uuid,
+                              dst_wcroot->sdb, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4415,8 +4435,9 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   const apr_array_header_t *children;
 
   SVN_ERR(get_info_for_copy(&copyfrom_id, &copyfrom_relpath, &copyfrom_rev,
-                            &status, &kind, &op_root, src_wcroot,
-                            src_relpath, scratch_pool, scratch_pool));
+                            &status, &kind, &op_root,
+                            src_wcroot, src_relpath, dst_wcroot,
+                            scratch_pool, scratch_pool));
 
   SVN_ERR(op_depth_for_copy(&dst_op_depth, &dst_np_op_depth,
                             &dst_parent_op_depth,
@@ -4641,21 +4662,6 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
     }
   else
     {
-      if (copyfrom_relpath)
-        {
-          const char *repos_root_url;
-          const char *repos_uuid;
-
-          /* Pass the right repos-id for the destination db! */
-
-          SVN_ERR(svn_wc__db_fetch_repos_info(&repos_root_url, &repos_uuid,
-                                              src_wcroot->sdb, copyfrom_id,
-                                              scratch_pool));
-
-          SVN_ERR(create_repos_id(&copyfrom_id, repos_root_url, repos_uuid,
-                                  dst_wcroot->sdb, scratch_pool));
-        }
-
       SVN_ERR(cross_db_copy(src_wcroot, src_relpath, dst_wcroot,
                             dst_relpath, dst_presence, dst_op_depth,
                             dst_np_op_depth, kind,
