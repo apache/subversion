@@ -622,6 +622,20 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   /* if enabled, cache text deltas and their combinations */
   if (cache_txdeltas)
     {
+      SVN_ERR(create_cache(&(ffd->raw_window_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use inprocess cache */
+                           svn_fs_fs__serialize_raw_window,
+                           svn_fs_fs__deserialize_raw_window,
+                           sizeof(window_cache_key_t),
+                           apr_pstrcat(pool, prefix, "RAW_WINDOW",
+                                       SVN_VA_NULL),
+                           SVN_CACHE__MEMBUFFER_LOW_PRIORITY,
+                           fs,
+                           no_handler,
+                           fs->pool));
+
       SVN_ERR(create_cache(&(ffd->txdelta_window_cache),
                            NULL,
                            membuffer,

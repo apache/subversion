@@ -788,9 +788,12 @@ read_one_byte(unsigned char *byte, svn_stream_t *stream)
   return SVN_NO_ERROR;
 }
 
-/* Read and decode one integer from STREAM into *SIZE. */
+/* Read and decode one integer from STREAM into *SIZE. 
+   Increment *BYTE_COUNTER by the number of chars we have read. */
 static svn_error_t *
-read_one_size(apr_size_t *size, svn_stream_t *stream)
+read_one_size(apr_size_t *size,
+              apr_size_t *byte_counter,
+              svn_stream_t *stream)
 {
   unsigned char c;
 
@@ -798,6 +801,7 @@ read_one_size(apr_size_t *size, svn_stream_t *stream)
   while (1)
     {
       SVN_ERR(read_one_byte(&c, stream));
+      ++*byte_counter;
       *size = (*size << 7) | (c & 0x7f);
       if (!(c & 0x80))
         break;
@@ -809,25 +813,28 @@ read_one_size(apr_size_t *size, svn_stream_t *stream)
 static svn_error_t *
 read_window_header(svn_stream_t *stream, svn_filesize_t *sview_offset,
                    apr_size_t *sview_len, apr_size_t *tview_len,
-                   apr_size_t *inslen, apr_size_t *newlen)
+                   apr_size_t *inslen, apr_size_t *newlen,
+                   apr_size_t *header_len)
 {
   unsigned char c;
 
   /* Read the source view offset by hand, since it's not an apr_size_t. */
+  *header_len = 0;
   *sview_offset = 0;
   while (1)
     {
       SVN_ERR(read_one_byte(&c, stream));
+      ++*header_len;
       *sview_offset = (*sview_offset << 7) | (c & 0x7f);
       if (!(c & 0x80))
         break;
     }
 
   /* Read the four size fields. */
-  SVN_ERR(read_one_size(sview_len, stream));
-  SVN_ERR(read_one_size(tview_len, stream));
-  SVN_ERR(read_one_size(inslen, stream));
-  SVN_ERR(read_one_size(newlen, stream));
+  SVN_ERR(read_one_size(sview_len, header_len, stream));
+  SVN_ERR(read_one_size(tview_len, header_len, stream));
+  SVN_ERR(read_one_size(inslen, header_len, stream));
+  SVN_ERR(read_one_size(newlen, header_len, stream));
 
   if (*tview_len > SVN_DELTA_WINDOW_SIZE ||
       *sview_len > SVN_DELTA_WINDOW_SIZE ||
@@ -854,11 +861,11 @@ svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
                                 apr_pool_t *pool)
 {
   svn_filesize_t sview_offset;
-  apr_size_t sview_len, tview_len, inslen, newlen, len;
+  apr_size_t sview_len, tview_len, inslen, newlen, len, header_len;
   unsigned char *buf;
 
   SVN_ERR(read_window_header(stream, &sview_offset, &sview_len, &tview_len,
-                             &inslen, &newlen));
+                             &inslen, &newlen, &header_len));
   len = inslen + newlen;
   buf = apr_palloc(pool, len);
   SVN_ERR(svn_stream_read_full(stream, (char*)buf, &len));
@@ -878,14 +885,28 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
 {
   svn_stream_t *stream = svn_stream_from_aprfile2(file, TRUE, pool);
   svn_filesize_t sview_offset;
-  apr_size_t sview_len, tview_len, inslen, newlen;
+  apr_size_t sview_len, tview_len, inslen, newlen, header_len;
   apr_off_t offset;
 
   SVN_ERR(read_window_header(stream, &sview_offset, &sview_len, &tview_len,
-                             &inslen, &newlen));
+                             &inslen, &newlen, &header_len));
 
   offset = inslen + newlen;
   return svn_io_file_seek(file, APR_CUR, &offset, pool);
 }
 
+svn_error_t *
+svn_txdelta__read_raw_window_len(apr_size_t *window_len,
+                                 svn_stream_t *stream,
+                                 apr_pool_t *pool)
+{
+  svn_filesize_t sview_offset;
+  apr_size_t sview_len, tview_len, inslen, newlen, header_len;
+
+  SVN_ERR(read_window_header(stream, &sview_offset, &sview_len, &tview_len,
+                             &inslen, &newlen, &header_len));
+
+  *window_len = inslen + newlen + header_len;
+  return SVN_NO_ERROR;
+}
 

@@ -341,6 +341,55 @@ svn_fs_fs__noderev_deserialize(void *buffer,
   svn_temp_deserializer__resolve(noderev, (void **)&noderev->created_path);
 }
 
+svn_error_t *
+svn_fs_fs__serialize_raw_window(void **buffer,
+                                apr_size_t *buffer_size,
+                                void *item,
+                                apr_pool_t *pool)
+{
+  svn_fs_fs__raw_cached_window_t *window = item;
+  svn_stringbuf_t *serialized;
+
+  /* initialize the serialization process and allocate a buffer large
+   * enough to do prevent re-allocations. */
+  svn_temp_serializer__context_t *context =
+      svn_temp_serializer__init(window,
+                                sizeof(*window),
+                                sizeof(*window) + window->window.len + 16,
+                                pool);
+
+  /* serialize the sub-structure(s) */
+  svn_temp_serializer__add_leaf(context,
+                                (const void * const *)&window->window.data,
+                                window->window.len + 1);
+
+  /* return the serialized result */
+  serialized = svn_temp_serializer__get(context);
+
+  *buffer = serialized->data;
+  *buffer_size = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_raw_window(void **item,
+                                  void *buffer,
+                                  apr_size_t buffer_size,
+                                  apr_pool_t *pool)
+{
+  svn_fs_fs__raw_cached_window_t *window =
+      (svn_fs_fs__raw_cached_window_t *)buffer;
+
+  /* pointer reference fixup */
+  svn_temp_deserializer__resolve(window, (void **)&window->window.data);
+
+  /* done */
+  *item = buffer;
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Utility function to serialize COUNT svn_txdelta_op_t objects
  * at OPS in the given serialization CONTEXT.
