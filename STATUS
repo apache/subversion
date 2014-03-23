@@ -120,7 +120,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1580626
+ * r1580626, r1580650
    Fix 'svn copy URL WC' after the working copy is relocated
    Justification:
      Without this patch (which is a followup of 1560690 backported in 1.7.16),
