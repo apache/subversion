@@ -9569,6 +9569,78 @@ movedhere_extract_retract(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+repo_wc_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  const char *repos_dir;
+  const char *new_repos_dir;
+  const char *new_repos_url;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "repo_wc_copy",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  SVN_ERR(sbox_wc_copy_url(&b,
+                           svn_path_url_add_component2(b.repos_url, "A/B",
+                                                       pool),
+                           -1, "AA"));
+
+  {
+    nodes_row_t nodes[] = {
+
+      {1, "AA/lambda",   "normal", 1, "A/B/lambda"},
+      {1, "AA",          "normal", 1, "A/B"},
+      {1, "AA/E/beta",   "normal", 1, "A/B/E/beta"},
+      {1, "AA/E/alpha",  "normal", 1, "A/B/E/alpha"},
+      {1, "AA/F",        "normal", 1, "A/B/F"},
+      {1, "AA/E",        "normal", 1, "A/B/E"},
+
+      { 0 },
+    };
+    SVN_ERR(check_db_rows(&b, "AA", nodes));
+  }
+
+  SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dir, b.repos_url,
+                                           pool));
+  new_repos_dir = apr_pstrcat(pool, repos_dir, "-2", SVN_VA_NULL);
+  new_repos_url = apr_pstrcat(pool, b.repos_url, "-2", SVN_VA_NULL);
+
+  svn_test_add_dir_cleanup(new_repos_dir);
+
+  SVN_ERR(svn_io_remove_dir2(new_repos_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_copy_dir_recursively(repos_dir,
+                                      svn_dirent_dirname(new_repos_dir, pool),
+                                      svn_dirent_basename(new_repos_dir, pool),
+                                      FALSE, NULL, NULL, pool));
+
+  SVN_ERR(sbox_wc_relocate(&b, new_repos_url));
+
+  /* This produced an invalid copy in Subversion <= 1.8.8.
+     Status would show all descendants as incomplete */
+  SVN_ERR(sbox_wc_copy_url(&b,
+                           svn_path_url_add_component2(b.repos_url, "A/B",
+                                                       pool),
+                           -1, "BB"));
+
+  {
+    nodes_row_t nodes[] = {
+
+      {1, "BB/lambda",   "normal", 1, "A/B/lambda"},
+      {1, "BB",          "normal", 1, "A/B"},
+      {1, "BB/E/beta",   "normal", 1, "A/B/E/beta"},
+      {1, "BB/E/alpha",  "normal", 1, "A/B/E/alpha"},
+      {1, "BB/F",        "normal", 1, "A/B/F"},
+      {1, "BB/E",        "normal", 1, "A/B/E"},
+
+      { 0 },
+    };
+    SVN_ERR(check_db_rows(&b, "BB", nodes));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -9759,6 +9831,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "simple move bump"),
     SVN_TEST_OPTS_PASS(movedhere_extract_retract,
                        "movedhere extract retract"),
+    SVN_TEST_OPTS_PASS(repo_wc_copy,
+                       "repo_wc_copy"),
     SVN_TEST_NULL
   };
 
