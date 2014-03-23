@@ -101,6 +101,12 @@ svn_delta__delta_from_editor(const svn_delta_editor_t **deditor,
                              struct svn_delta__extra_baton *exb,
                              apr_pool_t *pool);
 
+/** Read the txdelta window header from @a stream and return the total
+    length of the unparsed window data in @a *window_len. */
+svn_error_t *
+svn_txdelta__read_raw_window_len(apr_size_t *window_len,
+                                 svn_stream_t *stream,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

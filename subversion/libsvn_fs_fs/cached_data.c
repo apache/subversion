@@ -601,6 +601,8 @@ typedef struct rep_state_t
                     /* shared lazy-open rev/pack file structure */
   shared_file_t *sfile;
                     /* The txdelta window cache to use or NULL. */
+  svn_cache__t *raw_window_cache;
+                    /* Caches raw (unparsed) windows. May be NULL. */
   svn_cache__t *window_cache;
                     /* Caches un-deltified windows. May be NULL. */
   svn_cache__t *combined_cache;
@@ -739,6 +741,7 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->size = rep->size;
   rs->revision = rep->revision;
   rs->item_index = rep->item_index;
+  rs->raw_window_cache = ffd->raw_window_cache;
   rs->window_cache = ffd->txdelta_window_cache;
   rs->combined_cache = ffd->combined_window_cache;
   rs->ver = -1;
@@ -1061,6 +1064,43 @@ get_window_key(window_cache_key_t *key, rep_state_t *rs)
   return key;
 }
 
+/* Implement svn_cache__partial_getter_func_t for raw txdelta windows.
+ * Parse the raw data and return a svn_fs_fs__txdelta_cached_window_t.
+ */
+static svn_error_t *
+parse_raw_window(void **out,
+                 const void *data,
+                 apr_size_t data_len,
+                 void *baton,
+                 apr_pool_t *result_pool)
+{
+  svn_string_t raw_window;
+  svn_stream_t *stream;
+
+  /* unparsed and parsed window */
+  const svn_fs_fs__raw_cached_window_t *window
+    = (const svn_fs_fs__raw_cached_window_t *)data;
+  svn_fs_fs__txdelta_cached_window_t *result
+    = apr_pcalloc(result_pool, sizeof(*result));
+
+  /* create a read stream taking the raw window as input */
+  raw_window.data = svn_temp_deserializer__ptr(window,
+                                (const void * const *)&window->window.data);
+  raw_window.len = window->window.len;
+  stream = svn_stream_from_string(&raw_window, result_pool);
+
+  /* parse it */
+  SVN_ERR(svn_txdelta_read_svndiff_window(&result->window, stream, 1,
+                                          result_pool));
+
+  /* complete the window and return it */
+  result->end_offset = window->end_offset;
+  *out = result;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Read the WINDOW_P number CHUNK_INDEX for the representation given in
  * rep state RS from the current FSFS session's cache.  This will be a
  * no-op and IS_CACHED will be set to FALSE if no cache has been given.
@@ -1095,6 +1135,19 @@ get_cached_window(svn_txdelta_window_t **window_p,
                              &key,
                              pool));
 
+      /* If we did not find a parsed txdelta window, we might have a raw
+         version of it in our cache.  If so, read, parse and re-cache it. */
+      if (!*is_cached && rs->raw_window_cache)
+        {
+          SVN_ERR(svn_cache__get_partial((void **) &cached_window, is_cached,
+                                         rs->raw_window_cache, &key,
+                                         parse_raw_window, NULL, pool));
+          if (*is_cached)
+            SVN_ERR(svn_cache__set(rs->window_cache, &key, cached_window,
+                                   pool));
+        }
+
+      /* Return cached information. */
       if (*is_cached)
         {
           /* found it. Pass it back to the caller. */
@@ -1358,7 +1411,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   if (   rs->chunk_index == 0
       && SVN_IS_VALID_REVNUM(rs->revision)
       && svn_fs_fs__use_log_addressing(rs->sfile->fs, rs->revision)
-      && rs->window_cache)
+      && rs->raw_window_cache)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, rs->revision, rs->item_index,
                          rs->sfile->rfile, pool, pool));
@@ -2435,6 +2488,7 @@ init_rep_state(rep_state_t *rs,
   rs->size = entry->size - rep_header->header_size - 7;
   rs->ver = 1;
   rs->chunk_index = 0;
+  rs->raw_window_cache = ffd->raw_window_cache;
   rs->window_cache = ffd->txdelta_window_cache;
   rs->combined_cache = ffd->combined_window_cache;
 
@@ -2442,18 +2496,35 @@ init_rep_state(rep_state_t *rs,
 }
 
 /* Implement svn_cache__partial_getter_func_t for txdelta windows.
- * Instead of the whole window data, return only the
- * svn_fs_fs__txdelta_cached_window_t wrapper containing the end-offset.
+ * Instead of the whole window data, return only END_OFFSET member.
  */
 static svn_error_t *
-get_window_header(void **out,
-                  const void *data,
-                  apr_size_t data_len,
-                  void *baton,
-                  apr_pool_t *result_pool)
+get_txdelta_window_end(void **out,
+                       const void *data,
+                       apr_size_t data_len,
+                       void *baton,
+                       apr_pool_t *result_pool)
 {
-  *out = apr_pmemdup(result_pool, data,
-                     sizeof(svn_fs_fs__txdelta_cached_window_t));
+  const svn_fs_fs__txdelta_cached_window_t *window
+    = (const svn_fs_fs__txdelta_cached_window_t *)data;
+  *(apr_off_t*)out = window->end_offset;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_cache__partial_getter_func_t for raw windows.
+ * Instead of the whole window data, return only END_OFFSET member.
+ */
+static svn_error_t *
+get_raw_window_end(void **out,
+                   const void *data,
+                   apr_size_t data_len,
+                   void *baton,
+                   apr_pool_t *result_pool)
+{
+  const svn_fs_fs__raw_cached_window_t *window
+    = (const svn_fs_fs__raw_cached_window_t *)data;
+  *(apr_off_t*)out = window->end_offset;
 
   return SVN_NO_ERROR;
 }
@@ -2462,6 +2533,9 @@ get_window_header(void **out,
  * (excluding the delta bases) and put those not already cached into the
  * window caches.  If MAX_OFFSET is not -1, don't read windows that start
  * at or beyond that offset.  Use POOL for temporary allocations.
+ *
+ * This function requires RS->RAW_WINDOW_CACHE and RS->WINDOW_CACHE to
+ * be non-NULL. 
  */
 static svn_error_t *
 cache_windows(svn_fs_t *fs,
@@ -2469,49 +2543,71 @@ cache_windows(svn_fs_t *fs,
               apr_off_t max_offset,
               apr_pool_t *pool)
 {
+  apr_pool_t *iterpool = svn_pool_create(pool);
   while (rs->current < rs->size)
     {
-      svn_fs_fs__txdelta_cached_window_t *cached_window;
+      apr_off_t end_offset;
       svn_boolean_t found = FALSE;
+      window_cache_key_t key = { 0 };
+
+      svn_pool_clear(iterpool);
 
       if (max_offset != -1 && rs->start + rs->current >= max_offset)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(iterpool);
+          return SVN_NO_ERROR;
+        }
 
       /* We don't need to read the data again if it is already in cache.
+       * It might be cached as either raw or parsed window.
        */
-      if (rs->window_cache)
-        {
-          window_cache_key_t key = { 0 };
-          SVN_ERR(svn_cache__get_partial((void **) &cached_window, &found,
-                                         rs->window_cache,
-                                         get_window_key(&key, rs),
-                                         get_window_header, NULL, pool));
-        }
+      SVN_ERR(svn_cache__get_partial((void **) &end_offset, &found,
+                                     rs->raw_window_cache,
+                                     get_window_key(&key, rs),
+                                     get_raw_window_end, NULL,
+                                     iterpool));
+      if (! found)
+        SVN_ERR(svn_cache__get_partial((void **) &end_offset, &found,
+                                       rs->window_cache, &key,
+                                       get_txdelta_window_end, NULL,
+                                       iterpool));
 
       if (found)
         {
-          /* Skip this window; we already have it. */
-          rs->current = cached_window->end_offset;
+          rs->current = end_offset;
         }
       else
         {
           /* Read, decode and cache the window. */
-          svn_txdelta_window_t *window;
+          svn_fs_fs__raw_cached_window_t window;
           apr_off_t start_offset = rs->start + rs->current;
-          apr_off_t end_offset;
+          apr_size_t window_len;
+          char *buf;
 
           /* navigate to the current window */
-          SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, pool));
-          SVN_ERR(svn_txdelta_read_svndiff_window(&window,
-                                                  rs->sfile->rfile->stream,
-                                                  rs->ver, pool));
+          SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, iterpool));
+          SVN_ERR(svn_txdelta__read_raw_window_len(&window_len,
+                                                   rs->sfile->rfile->stream,
+                                                   iterpool));
 
-          /* determine on-disk window size */
-          SVN_ERR(get_file_offset(&end_offset, rs, pool));
-          rs->current = end_offset - rs->start;
+          /* Read the raw window. */
+          buf = apr_palloc(iterpool, window_len + 1);
+          SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, iterpool));
+          SVN_ERR(svn_io_file_read_full2(rs->sfile->rfile->file, buf,
+                                         window_len, NULL, NULL, iterpool));
+          buf[window_len] = 0;
+
+          /* update relative offset in representation */
+          rs->current += window_len;
+
+          /* Construct the cachable raw window object. */
+          window.end_offset = rs->current;
+          window.window.len = window_len;
+          window.window.data = buf;
 
           /* cache the window now */
-          SVN_ERR(set_cached_window(window, rs, pool));
+          SVN_ERR(svn_cache__set(rs->raw_window_cache, &key, &window,
+                                 iterpool));
         }
 
       if (rs->current > rs->size)
@@ -2522,6 +2618,7 @@ cache_windows(svn_fs_t *fs,
       rs->chunk_index++;
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -2545,7 +2642,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
   window_cache_key_t key = { 0 };
 
   if (   (rep_header->type != svn_fs_fs__rep_plain
-          && !ffd->txdelta_window_cache)
+          && (!ffd->txdelta_window_cache || !ffd->raw_window_cache))
       || (rep_header->type == svn_fs_fs__rep_plain
           && !ffd->combined_window_cache))
     return SVN_NO_ERROR;
