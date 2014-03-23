@@ -1355,8 +1355,6 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
                           entry_t *to_fit_in)
 {
   entry_t *entry;
-  apr_uint64_t average_hit_value;
-  apr_uint64_t threshold;
 
   /* accumulated size of the entries that have been removed to make
    * room for the new one.
@@ -1369,19 +1367,21 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
   apr_size_t moved_count = 0;
 
   /* accumulated "worth" of items dropped so far */
-  apr_size_t drop_hits = 0;
+  apr_uint64_t drop_hits = 0;
+
+  /* estimated "worth" of the new entry */
+  apr_uint64_t drop_hits_limit = (to_fit_in->hit_count + 1)
+                               * (apr_uint64_t)to_fit_in->priority;
 
   /* This loop will eventually terminate because every cache entry
    * would get dropped eventually:
-   * - hit counts become 0 after the got kept for 32 full scans
-   * - larger elements get dropped as soon as their hit count is 0
-   * - smaller and smaller elements get removed as the average
-   *   entry size drops (average drops by a factor of 8 per scan)
-   * - after no more than 43 full scans, all elements would be removed
    *
-   * Since size is < 4th of the cache size and about 50% of all
-   * entries get removed by a scan, it is very unlikely that more
-   * than a fractional scan will be necessary.
+   * - the incoming entry is small enough to fit into L2
+   * - every iteration either frees parts of L2 or counts the moved size
+   * - eventually, we either moved too many items with too much total size
+   *   to accept the new entry, or made enough room in L2 for the new entry
+   *
+   * Low-prio items get rejected even sooner.
    */
   while (1)
     {
@@ -1396,17 +1396,18 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
       if (end >= to_fit_in->size + cache->l2.current_data)
         return TRUE;
 
-      /* Don't be too eager to cache data.  If a lot of data has been 
-       * moved around, the current item has probably a relatively low
-       * priority.  So, give up after some time.
+      /* Don't be too eager to cache data.  If a lot of data has been moved
+       * around, the current item has probably a relatively low priority.
+       * We must also limit the effort spent here (if even in case of faulty
+       * heuristics).  Therefore, give up after some time.
        */
-      if (moved_size > 8 * to_fit_in->size && moved_count > 3)
+      if (moved_size > 4 * to_fit_in->size && moved_count > 7)
         return FALSE;
 
-      /* if the net worth (in hits) of items removed is already larger
-       * than what we want to insert, reject TO_FIT_IN because it still
-       * does not fit in. */
-      if (drop_hits > to_fit_in->hit_count)
+      /* if the net worth (in weighted hits) of items removed is already
+       * larger than what we want to insert, reject TO_FIT_IN because it
+       * still does not fit in. */
+      if (drop_hits > drop_hits_limit)
         return FALSE;
 
       /* try to enlarge the insertion window
@@ -1426,60 +1427,35 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
           svn_boolean_t keep;
           entry = get_entry(cache, cache->l2.next);
 
-          /* Reject insertion for entries with low priority, if the current
-           * entry has seen recent hits. */
-          if (   entry->hit_count
-              && to_fit_in->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
-            return FALSE;
-
-          /* Keep entries that are very small. Those are likely to be data
-           * headers or similar management structures. So, they are probably
-           * important while not occupying much space.
-           * But keep them only as long as they are a minority.
-           */
-          if (   (apr_uint64_t)entry->size * cache->used_entries
-               < cache->data_used / 8)
+          if (to_fit_in->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
             {
-              keep = TRUE;
+              /* Low prio items can only be accepted only if the current
+               * entry is of even lower prio and has fewer hits.
+               */
+              if (   entry->priority > to_fit_in->priority
+                  || entry->hit_count > to_fit_in->hit_count)
+                return FALSE;
             }
-          else if (   entry->priority < SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY
-                   && to_fit_in->priority > entry->priority)
+
+          if (entry->priority <= SVN_CACHE__MEMBUFFER_LOW_PRIORITY)
             {
-              /* Be quick to evict low-priority entries if the one to insert
-               * is of higher priority.
+              /* Be quick to remove low-prio entries - even if the incoming
+               * one is low-prio as well.  This makes room for more important
+               * data and replaces existing data with newly read information.
                */
               keep = FALSE;
             }
-          else if (to_fit_in->priority != entry->priority)
-            {
-              /* Not the same priority but the lower prio side is not a
-               * clear loser either (already checked those cases above).
-               * Keep the current entry if it has seen more hits recently
-               * or is smaller than the one to insert - both relative to
-               * their respective priority.
-               */
-              keep = (apr_uint64_t)to_fit_in->hit_count * to_fit_in->priority
-                   < (apr_uint64_t)entry->hit_count * entry->priority
-                  || (apr_uint64_t)to_fit_in->size * to_fit_in->priority
-                   < (apr_uint64_t)entry->size * entry->priority;
-            }
-          else if (cache->hit_count > cache->used_entries)
-            {
-              /* Roll the dice and determine a threshold somewhere
-               * from 0 up to 2 times the average hit count.
-               */
-              average_hit_value = cache->hit_count / cache->used_entries;
-              threshold = (average_hit_value+1) * (rand() % 4096) / 2048;
-
-              keep = entry->hit_count > threshold;
-            }
           else
             {
-              /* general hit count is low. Keep everything that got hit
-               * at all and assign some 50% survival chance to everything
-               * else.
+              /* If the existing data is the same prio as the incoming data,
+               * drop the existing entry if it had seen fewer (probably 0)
+               * hits than the entry coming in from L1.  In case of different
+               * priorities, keep the current entry of it has higher prio.
+               * The new entry may still find room by ousting other entries.
                */
-              keep = rand() & 1;
+              keep = to_fit_in->priority == entry->priority
+                   ? entry->hit_count >= to_fit_in->hit_count
+                   : entry->priority > to_fit_in->priority;
             }
 
           /* keepers or destroyers? */
@@ -1493,11 +1469,15 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
             }
           else
             {
-              /* Drop the entry from the end of the insertion window, if it
-               * has been hit less than the threshold. Otherwise, keep it and
-               * move the insertion window one entry further.
+              /* Drop the entry from the end of the insertion window.
+               * Count the "hit importance" such that we are not sacrificing
+               * too much of the high-hit contents.  However, don't count
+               * low-priority hits because higher prio entries will often
+               * provide the same data but in a further stage of processing. 
                */
-              drop_hits += entry->hit_count;
+              if (entry->priority > SVN_CACHE__MEMBUFFER_LOW_PRIORITY)
+                drop_hits += entry->hit_count * (apr_uint64_t)entry->priority;
+
               drop_entry(cache, entry);
             }
         }
