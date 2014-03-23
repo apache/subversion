@@ -3408,7 +3408,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       *copyfrom_rev = revision;
     }
 
-  if (src_wcroot != dst_wcroot && copyfrom_relpath)
+  if (src_wcroot != dst_wcroot && *copyfrom_relpath)
     {
       const char *repos_root_url;
       const char *repos_uuid;
