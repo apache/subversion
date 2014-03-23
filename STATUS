@@ -120,6 +120,17 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1580626
+   Fix 'svn copy URL WC' after the working copy is relocated
+   Justification:
+     Without this patch (which is a followup of 1560690 backported in 1.7.16),
+     descendants of copies in a relocated working copy are marked as incomplete
+     (and these nodes are all created at their own op-depth)
+   Branch:
+     ^/subversion/branches/1.7.x-r1580626
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
