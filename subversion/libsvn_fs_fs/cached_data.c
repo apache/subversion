@@ -1938,8 +1938,9 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   svn_fs_fs__rep_header_t *rep_header;
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  /* Try a shortcut: if the target is stored as a delta against the
-     source, then just use that delta. */
+  /* Try a shortcut: if the target is stored as a delta against the source,
+     then just use that delta.  However, prefer using the fulltext cache
+     whenever that is available. */
   if (target->data_rep && (source || ! ffd->fulltext_cache))
     {
       /* Read target's base rep if any. */
