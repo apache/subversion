@@ -2835,14 +2835,15 @@ svn_membuffer_get_segment_info(svn_membuffer_t *segment,
 
   if (include_histogram)
     for (i = 0; i < segment->group_count; ++i)
-      {
-        entry_group_t *chain_end
-          = last_group_in_chain(segment, &segment->directory[i]);
-        apr_size_t use
-          = MIN(chain_end->header.used,
-                sizeof(info->histogram) / sizeof(info->histogram[0]) - 1);
-        info->histogram[use]++;
-      }
+      if (is_group_initialized(segment, i))
+        {
+          entry_group_t *chain_end
+            = last_group_in_chain(segment, &segment->directory[i]);
+          apr_size_t use
+            = MIN(chain_end->header.used,
+                  sizeof(info->histogram) / sizeof(info->histogram[0]) - 1);
+          info->histogram[use]++;
+        }
 
   return SVN_NO_ERROR;
 }
