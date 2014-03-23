@@ -55,6 +55,14 @@
 #pragma warning(disable: 4221) /* nonstandard extension used */
 #endif
 
+/* This macro is not available in 1.8.x, but let's just use it here */
+#ifndef SVN_VA_NULL
+struct svn_null_pointer_constant_stdarg_sentinel_t;
+
+/** Null pointer constant used as a sentinel in variable argument lists. */
+#define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
+#endif
+
 /* Compare strings, like strcmp but either or both may be NULL which
  * compares equal to NULL and not equal to any non-NULL string. */
 static int
