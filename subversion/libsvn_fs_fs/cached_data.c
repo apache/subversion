@@ -1883,10 +1883,11 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   svn_stream_t *source_stream, *target_stream;
   rep_state_t *rep_state;
   svn_fs_fs__rep_header_t *rep_header;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Try a shortcut: if the target is stored as a delta against the
      source, then just use that delta. */
-  if (target->data_rep)
+  if (target->data_rep && (source || ! ffd->fulltext_cache))
     {
       /* Read target's base rep if any. */
       SVN_ERR(create_rep_state(&rep_state, &rep_header, NULL,
