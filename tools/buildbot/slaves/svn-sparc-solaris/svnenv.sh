@@ -17,5 +17,7 @@
 #  specific language governing permissions and limitations
 #  under the License.
 
-export GREP=/usr/bin/grep
-export PATH=/opt/csw/gnu:/usr/bin:/usr/ccs/bin:/opt/csw/bin:/export/home/wandisco/buildbot/install/bin
+GREP=/usr/bin/grep
+export GREP
+PATH=/opt/csw/gnu:/usr/bin:/usr/ccs/bin:/opt/csw/bin:/export/home/wandisco/buildbot/install/bin
+export PATH
