@@ -91,6 +91,10 @@ struct parse_baton
   /* The oldest revision loaded from the dump stream, or
      SVN_INVALID_REVNUM if none have been loaded. */
   svn_revnum_t oldest_dumpstream_rev;
+
+  /* An hash containing specific revision properties to skip while
+     loading. */
+  apr_hash_t *skip_revprops;
 };
 
 /**
@@ -858,11 +862,13 @@ set_revision_property(void *baton,
 
   if (rb->rev > 0)
     {
-      svn_hash_sets(rb->revprop_table,
-                    apr_pstrdup(rb->pool, name),
-                    svn_string_dup(value, rb->pool));
+      if (! svn_hash_gets(rb->pb->skip_revprops, name))
+        svn_hash_sets(rb->revprop_table,
+                      apr_pstrdup(rb->pool, name),
+                      svn_string_dup(value, rb->pool));
     }
-  else if (rb->rev_offset == -1)
+  else if (rb->rev_offset == -1
+           && ! svn_hash_gets(rb->pb->skip_revprops, name))
     {
       /* Special case: set revision 0 properties directly (which is
          safe because the commit_editor hasn't been created yet), but
@@ -1131,16 +1137,22 @@ close_revision(void *baton)
 
   if (SVN_IS_VALID_REVNUM(committed_rev))
     {
-      SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
-                                       rb->datestamp, rb->pool));
-      SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
-                                      SVN_PROP_REVISION_DATE,
-                                      NULL, rb->datestamp, rb->pool));
-      SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
-                                       rb->author, rb->pool));
-      SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
-                                      SVN_PROP_REVISION_AUTHOR,
-                                      NULL, rb->author, rb->pool));
+      if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_DATE))
+        {
+          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
+                                           rb->datestamp, rb->pool));
+          SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
+                                          SVN_PROP_REVISION_DATE,
+                                          NULL, rb->datestamp, rb->pool));
+        }
+      if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_AUTHOR))
+        {
+          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
+                                           rb->author, rb->pool));
+          SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
+                                          SVN_PROP_REVISION_AUTHOR,
+                                          NULL, rb->author, rb->pool));
+        }
     }
 
   svn_pool_destroy(rb->pool);
@@ -1153,6 +1165,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
                            svn_ra_session_t *session,
                            svn_ra_session_t *aux_session,
                            svn_boolean_t quiet,
+                           apr_hash_t *skip_revprops,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool)
@@ -1196,6 +1209,7 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->rev_map = apr_hash_make(pool);
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
+  parse_baton->skip_revprops = skip_revprops;
 
   err = svn_repos_parse_dumpstream3(stream, parser, parse_baton, FALSE,
                                     cancel_func, cancel_baton, pool);

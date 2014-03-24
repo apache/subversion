@@ -80,6 +80,7 @@ enum svn_svnrdump__longopt_t
     opt_auth_password,
     opt_auth_nocache,
     opt_non_interactive,
+    opt_skip_revprop,
     opt_force_interactive,
     opt_incremental,
     opt_trust_server_cert,
@@ -106,7 +107,7 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
   { "load", load_cmd, { 0 },
     N_("usage: svnrdump load URL\n\n"
        "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"),
-    { 'q', SVN_SVNRDUMP__BASE_OPTIONS } },
+    { 'q', opt_skip_revprop, SVN_SVNRDUMP__BASE_OPTIONS } },
   { "help", 0, { "?", "h" },
     N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
        "Describe the usage of this program or its subcommands.\n"),
@@ -122,6 +123,8 @@ static const apr_getopt_option_t svnrdump__options[] =
                       N_("no progress (only errors) to stderr")},
     {"incremental",   opt_incremental, 0,
                       N_("dump incrementally")},
+    {"skip-revprop",  opt_skip_revprop, 1,
+                      N_("skip revision property (E.g. svn:date, svn:author)")},
     {"config-dir",    opt_config_dir, 1,
                       N_("read user configuration files from directory ARG")},
     {"username",      opt_auth_username, 1,
@@ -182,6 +185,7 @@ typedef struct opt_baton_t {
   svn_opt_revision_t end_revision;
   svn_boolean_t quiet;
   svn_boolean_t incremental;
+  apr_hash_t *skip_revprops;
 } opt_baton_t;
 
 /* Print dumpstream-formatted information about REVISION.
@@ -608,6 +612,7 @@ load_revisions(svn_ra_session_t *session,
                svn_ra_session_t *aux_session,
                const char *url,
                svn_boolean_t quiet,
+               apr_hash_t *skip_revprops,
                apr_pool_t *pool)
 {
   apr_file_t *stdin_file;
@@ -617,7 +622,8 @@ load_revisions(svn_ra_session_t *session,
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
   SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session,
-                                     quiet, check_cancel, NULL, pool));
+                                     quiet, skip_revprops,
+                                     check_cancel, NULL, pool));
 
   SVN_ERR(svn_stream_close(stdin_stream));
 
@@ -701,7 +707,7 @@ load_cmd(apr_getopt_t *os,
   SVN_ERR(svn_client_open_ra_session2(&aux_session, opt_baton->url, NULL,
                                       opt_baton->ctx, pool, pool));
   return load_revisions(opt_baton->session, aux_session, opt_baton->url,
-                        opt_baton->quiet, pool);
+                        opt_baton->quiet, opt_baton->skip_revprops, pool);
 }
 
 /* Handle the "help" subcommand.  Implements `svn_opt_subcommand_t'.  */
@@ -844,6 +850,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   opt_baton->start_revision.kind = svn_opt_revision_unspecified;
   opt_baton->end_revision.kind = svn_opt_revision_unspecified;
   opt_baton->url = NULL;
+  opt_baton->skip_revprops = apr_hash_make(pool);
 
   SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
@@ -947,6 +954,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case opt_incremental:
           opt_baton->incremental = TRUE;
+          break;
+        case opt_skip_revprop:
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+          svn_hash_sets(opt_baton->skip_revprops, opt_arg, opt_arg);
           break;
         case opt_trust_server_cert:
           trust_server_cert = TRUE;
