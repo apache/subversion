@@ -1280,6 +1280,11 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
   if (sleep_env_var && apr_strnatcasecmp(sleep_env_var, "yes") == 0)
     return; /* Allow skipping for testing */
 
+  now = apr_time_now();
+
+  /* Calculate 0.02 seconds after the next second wallclock tick. */
+  then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 50);
+
   /* Worst case is waiting one second, so we can use that time to determine
      if we can sleep shorter than that */
   if (path)
@@ -1314,12 +1319,12 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
 
           return;
         }
+
+      now = apr_time_now(); /* Extract the time used for the path stat */
+
+      if (now >= then)
+        return; /* Passing negative values may suspend indefinitely (Windows) */
     }
-
-  now = apr_time_now();
-
-  /* Calculate 0.02 seconds after the next second wallclock tick. */
-  then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 50);
 
   apr_sleep(then - now);
 }
