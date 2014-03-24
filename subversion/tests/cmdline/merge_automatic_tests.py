@@ -1302,7 +1302,6 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-return
   # merge to 'D_2'. This merge previously failed with this error:
   #
   # svn: E195016: Reintegrate can only be used if revisions 5 through 9 were
