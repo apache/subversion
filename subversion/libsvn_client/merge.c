@@ -10783,7 +10783,7 @@ log_find_operative_revs(void *baton,
    UNMERGED_CATALOG represents the history (as mergeinfo) from
    TARGET_LOC that is not represented in SOURCE_LOC's
    explicit/inherited mergeinfo as represented by MERGED_CATALOG.
-   MERGEINFO_CATALOG may be empty if the source has no explicit or inherited
+   MERGED_CATALOG may be empty if the source has no explicit or inherited
    mergeinfo.
 
    Check that all of the unmerged revisions in UNMERGED_CATALOG's
@@ -11486,7 +11486,7 @@ find_reintegrate_merge(merge_source_t **source_p,
          prefix. */
       svn_mergeinfo_catalog_t final_unmerged_catalog = apr_hash_make(scratch_pool);
 
-      SVN_ERR(find_unsynced_ranges(source_loc, yc_ancestor,
+      SVN_ERR(find_unsynced_ranges(source_loc, &target->loc,
                                    unmerged_to_source_mergeinfo_catalog,
                                    merged_to_source_mergeinfo_catalog,
                                    final_unmerged_catalog,

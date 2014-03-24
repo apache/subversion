@@ -1203,13 +1203,12 @@ def effective_sync_results_in_reintegrate(sbox):
                                      sbox.repo_url + '/branch', A_path)
 
 @Issue(4481)
-@XFail()
 def reintegrate_subtree_not_updated(sbox):
   "reintegrate subtree not updated"
 
   sbox.build()
 
-  # Create change on branch 'D_1', 
+  # Create change on branch 'D_1'
   sbox.simple_copy('A/D', 'D_1')
   sbox.simple_commit()
   sbox.simple_append('D_1/G/pi', "D_1/G pi edit\n")
@@ -1261,7 +1260,7 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-  # Sync merge to 'D_2' doesn't record mergeinfo on 'D_2/H' subtree.
+  # Sync merge to 'D_2' (doesn't record mergeinfo on 'D_2/H' subtree)
   expected_output = [
     "--- Merging r5 through r7 into '"
     + sbox.ospath('D_2') + "':\n",
@@ -1279,15 +1278,6 @@ def reintegrate_subtree_not_updated(sbox):
                                      'merge',
                                      sbox.repo_url + '/A/D',
                                      sbox.ospath('D_2'))
-
-  # This extra merge just records mergeinfo on H, but it is enough to make
-  # the final XFAIL merge run, i.e. it resolves the error related to missing
-  # merge on G!
-  # svntest.actions.run_and_verify_svn(None, None, [],
-  #                                   'merge',
-  #                                   sbox.repo_url + '/A/D/H',
-  #                                   sbox.ospath('D_2/H'))
-
   sbox.simple_commit()
   sbox.simple_update()
 
@@ -1312,20 +1302,26 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-  # Sync merge to 'D_2' keeping branch going.
-
-  ### XFAIL merge doesn't run, there is a error about missing mergeinfo
-  ###      A/D/G
-  ###        Missing ranges: /A/D/G:7
+return
+  # merge to 'D_2'. This merge previously failed with this error:
+  #
+  # svn: E195016: Reintegrate can only be used if revisions 5 through 9 were
+  # previously merged from [URL]/D_2 to the reintegrate source, but this is
+  # not the case:
+  #   A/D/G
+  #       Missing ranges: /A/D/G:7
+  #
   expected_output = [
-    "--- Merging r7 through r8 into '"
+    "--- Merging differences between repository URLs into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2/G') + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '"
     + sbox.ospath('D_2') + "':\n",
     " U   "
     + sbox.ospath('D_2') + "\n",
-    "--- Recording mergeinfo for merge of r7 through r8 into '"
-    + sbox.ospath('D_2') + "':\n",
-    " U   "
-    + sbox.ospath('D_2') + "\n"]
+    " G   "
+    + sbox.ospath('D_2/G') + "\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge',
                                      sbox.repo_url + '/A/D',
