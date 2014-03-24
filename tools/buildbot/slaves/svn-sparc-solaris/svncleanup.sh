@@ -22,3 +22,5 @@ set -x
 
 echo "============ make extraclean"
 test -f Makefile && make extraclean || exit $?
+
+exit 0
