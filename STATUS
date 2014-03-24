@@ -280,6 +280,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1580832
+   svnrdump: resolve segfault on 'svnrdump load' deleting an 'svn:*' property
+   Justification:
+     Simple fix for a segfault
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
