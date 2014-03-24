@@ -1036,7 +1036,7 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
                  but we can still get the information we want.
                  The created-rev of the repository root must, by definition,
                  be rev. */
-              *dirent = apr_pcalloc(pool, sizeof(*dirent));
+              *dirent = apr_pcalloc(pool, sizeof(**dirent));
               (*dirent)->kind = kind;
               (*dirent)->size = SVN_INVALID_FILESIZE;
 
