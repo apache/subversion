@@ -42,9 +42,9 @@ known="${known} svnsync_tests.py 24: copy and reencode non-UTF-8 svn:. props"
 known="${known})"
 
 # No FAIL other than the known ones.
-egrep -v "$known" tests.log | grep ^FAIL && exit 1
+egrep -v "$known" tests.log | grep '^FAIL' && exit 1
 
 # Over 1,000 PASS.
-grep ^PASS tests.log | wc -l | grep [1-9][0-9][0-9][0-9] >/dev/null || echo $?
+grep '^PASS' tests.log | wc -l | grep [1-9][0-9][0-9][0-9] >/dev/null || echo $?
 
 exit 0
