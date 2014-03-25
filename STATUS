@@ -260,7 +260,7 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1580626, r1580650
+ * r1580626, r1580650, r1581430
    Fix 'svn copy URL WC' after the working copy is relocated
    Justification:
      Without this patch (which is a followup of 1560690 backported in 1.8.8),
@@ -301,7 +301,7 @@ Candidate changes:
    Justification:
      Significantly reduce server memory footprint on high load.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
