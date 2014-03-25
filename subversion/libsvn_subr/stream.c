@@ -2275,7 +2275,13 @@ svn_stream__install_stream(svn_stream_t *install_stream,
               if (!SetFileInformationByHandle(hFile, FileRenameInfo,
                                               rename_info, rename_size))
                 {
-                  err = svn_error_wrap_apr(apr_get_os_error(), NULL);
+                  err = svn_error_wrap_apr(
+                                apr_get_os_error(),
+                                _("Can't move '%s' to '%s'"),
+                                svn_dirent_local_style(ib->tmp_path,
+                                                       scratch_pool),
+                                svn_dirent_local_style(final_abspath,
+                                                       scratch_pool));
                 }
             }
         }
