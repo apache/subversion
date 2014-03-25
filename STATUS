@@ -249,15 +249,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * r1578853, r1578875
-   Fix svnserve to only send inherited properties when necessary.
-   Justification:
-     Performance regression from 1.7, reported by a user.
-   Branch:
-     ^/subversion/branches/1.8.x-r1578853
-   Votes:
-     +1: philip, rhuijben
-
  * r1579588
    ra_serf: Fix 'svn unlock' interop with generic DAV clients that use timeout
    Justification:
@@ -340,3 +331,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1578853, r1578875
+   Fix svnserve to only send inherited properties when necessary.
+   Justification:
+     Performance regression from 1.7, reported by a user.
+   Branch:
+     ^/subversion/branches/1.8.x-r1578853
+   Votes:
+     +1: philip, rhuijben, ivan
