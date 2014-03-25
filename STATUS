@@ -293,7 +293,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1581305
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1581296
    Reduce buffer size used for parsing config files. There no reason to waste 
