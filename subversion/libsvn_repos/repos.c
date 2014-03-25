@@ -1301,15 +1301,16 @@ svn_repos_create(svn_repos_t **repos_p,
                  const char *unused_2,
                  apr_hash_t *config,
                  apr_hash_t *fs_config,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
   svn_repos_t *repos;
   svn_error_t *err;
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
   const char *root_path;
   const char *local_abspath;
 
   /* Allocate a repository object, filling in the format we will create. */
-  repos = create_svn_repos_t(path, pool);
+  repos = create_svn_repos_t(path, result_pool);
   repos->format = SVN_REPOS__FORMAT_NUMBER;
 
   /* Discover the type of the filesystem we are about to create. */
@@ -1319,48 +1320,56 @@ svn_repos_create(svn_repos_t **repos_p,
     repos->format = SVN_REPOS__FORMAT_NUMBER_LEGACY;
 
   /* Don't create a repository inside another repository. */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  root_path = svn_repos_find_root_path(local_abspath, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+  root_path = svn_repos_find_root_path(local_abspath, scratch_pool);
   if (root_path != NULL)
     {
       if (strcmp(root_path, local_abspath) == 0)
         return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
                                  _("'%s' is an existing repository"),
-                                 svn_dirent_local_style(root_path, pool));
+                                 svn_dirent_local_style(root_path,
+                                                        scratch_pool));
       else
         return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
                                  _("'%s' is a subdirectory of an existing "
                                    "repository " "rooted at '%s'"),
-                                 svn_dirent_local_style(local_abspath, pool),
-                                 svn_dirent_local_style(root_path, pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool),
+                                 svn_dirent_local_style(root_path,
+                                                        scratch_pool));
     }
 
   /* Create the various files and subdirectories for the repository. */
-  SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),
+  SVN_ERR_W(create_repos_structure(repos, path, fs_config, scratch_pool),
             _("Repository creation failed"));
 
   /* Lock if needed. */
-  SVN_ERR(lock_repos(repos, FALSE, FALSE, pool));
+  SVN_ERR(lock_repos(repos, FALSE, FALSE, scratch_pool));
 
   /* Create an environment for the filesystem. */
-  if ((err = svn_fs_create(&repos->fs, repos->db_path, fs_config, pool)))
+  if ((err = svn_fs_create(&repos->fs, repos->db_path, fs_config,
+                           result_pool)))
     {
       /* If there was an error making the filesytem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
        * so we can't accidentally remove a directory that previously existed.
        */
+      svn_pool_destroy(scratch_pool); /* Release lock to allow deleting dir */
 
       return svn_error_trace(
                    svn_error_compose_create(
                         err,
-                        svn_io_remove_dir2(path, FALSE, NULL, NULL, pool)));
+                        svn_io_remove_dir2(path, FALSE, NULL, NULL,
+                                           result_pool)));
     }
 
   /* This repository is ready.  Stamp it with a format number. */
   SVN_ERR(svn_io_write_version_file
-          (svn_dirent_join(path, SVN_REPOS__FORMAT, pool),
-           repos->format, pool));
+          (svn_dirent_join(path, SVN_REPOS__FORMAT, scratch_pool),
+           repos->format, scratch_pool));
+
+  svn_pool_destroy(scratch_pool); /* Release lock */
 
   *repos_p = repos;
   return SVN_NO_ERROR;
