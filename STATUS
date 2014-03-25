@@ -209,7 +209,7 @@ Candidate changes:
      refactoring broke it.  This fix helps users avoid accidentally choosing
      'mark resolved' and committing conflict markers.
    Votes:
-     +1: breser
+     +1: breser, ivan
 
  * r1577812, r1577813, r1579429
    Resolve a segfault when 'svn merge --force' merges a directory delete
