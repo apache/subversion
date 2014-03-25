@@ -330,15 +330,26 @@ sbox_wc_commit_ex(svn_test__sandbox_t *b,
                   svn_depth_t depth)
 {
   svn_client_ctx_t *ctx;
-  SVN_ERR(svn_client_create_context2(&ctx, NULL, b->pool));
+  apr_pool_t *scratch_pool = svn_pool_create(b->pool);
+  svn_error_t *err;
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, scratch_pool));
   ctx->wc_ctx = b->wc_ctx;
-  return svn_client_commit6(targets, depth,
-                            FALSE /* keep_locks */,
-                            FALSE /* keep_changelist */,
-                            TRUE  /* commit_as_operations */,
-                            TRUE  /* include_file_externals */,
-                            FALSE /* include_dir_externals */,
-                            NULL, NULL, NULL, NULL, ctx, b->pool);
+
+  /* A successfull commit doesn't close the ra session, but leaves that
+     to the caller. This leaves the BDB handle open, which might cause
+     problems in further test code. (op_depth_tests.c's repo_wc_copy) */
+  err = svn_client_commit6(targets, depth,
+                           FALSE /* keep_locks */,
+                           FALSE /* keep_changelist */,
+                           TRUE  /* commit_as_operations */,
+                           TRUE  /* include_file_externals */,
+                           FALSE /* include_dir_externals */,
+                           NULL, NULL, NULL, NULL, ctx, scratch_pool);
+
+  svn_pool_destroy(scratch_pool);
+
+  return svn_error_trace(err);
 }
 
 svn_error_t *
