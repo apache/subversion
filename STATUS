@@ -304,6 +304,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1581296
+   Reduce buffer size used for parsing config files. There no reason to waste 
+   100kb of memory -- 16kb is enough to avoid I/O overhead.
+   Justification:
+     Significantly reduce server memory footprint on high load.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
