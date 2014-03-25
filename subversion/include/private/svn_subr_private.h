@@ -174,7 +174,8 @@ svn_spillbuf__process(svn_boolean_t *exhausted,
 typedef struct svn_spillbuf_reader_t svn_spillbuf_reader_t;
 
 
-/* Create a spill-buffer and a reader for it.  */
+/* Create a spill-buffer and a reader for it, using the same arguments as
+   svn_spillbuf__create().  */
 svn_spillbuf_reader_t *
 svn_spillbuf__reader_create(apr_size_t blocksize,
                             apr_size_t maxsize,
@@ -211,10 +212,10 @@ svn_spillbuf__reader_write(svn_spillbuf_reader_t *reader,
                            apr_pool_t *scratch_pool);
 
 
-/* Return a stream built on top of a spillbuf, using the same arguments as
-   svn_spillbuf__create().  This stream can be used for reading and writing,
-   but implements the same basic sematics of a spillbuf for the underlying
-   storage. */
+/* Return a stream built on top of a spillbuf.
+
+   This stream can be used for reading and writing, but implements the
+   same basic semantics of a spillbuf for the underlying storage. */
 svn_stream_t *
 svn_stream__from_spillbuf(svn_spillbuf_t *buf,
                           apr_pool_t *result_pool);
