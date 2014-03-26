@@ -982,7 +982,12 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
             {
               /* Abort the edit and use non-blocking I/O to write the error. */
               if (editor)
-                svn_error_clear(editor->abort_edit(edit_baton, subpool));
+                {
+                  err = svn_error_compose_create(
+                          err,
+                          svn_error_trace(editor->abort_edit(edit_baton,
+                                                             subpool)));
+                }
               svn_ra_svn__set_block_handler(conn, blocked_write, &state);
             }
           write_err = svn_ra_svn__write_cmd_failure(
@@ -991,7 +996,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
           if (!write_err)
             write_err = svn_ra_svn__flush(conn, subpool);
           svn_ra_svn__set_block_handler(conn, NULL, NULL);
-          svn_error_clear(err);
+          svn_error_clear(err); /* We just sent this error */
           SVN_ERR(write_err);
           break;
         }
