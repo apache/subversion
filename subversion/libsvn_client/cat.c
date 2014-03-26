@@ -207,8 +207,6 @@ svn_client_cat3(apr_hash_t **props,
     }
   else
     {
-      peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
-                                                            path_or_url);
       revision = svn_cl__rev_default_to_peg(revision, peg_revision);
     }
 
