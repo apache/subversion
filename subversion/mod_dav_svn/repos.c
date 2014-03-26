@@ -894,7 +894,7 @@ prep_version(dav_resource_combined *comb)
   comb->res.uri = dav_svn__build_uri(comb->priv.repos,
                                      DAV_SVN__BUILD_URI_BASELINE,
                                      comb->priv.root.rev, NULL,
-                                     0 /* add_href */,
+                                     FALSE /* add_href */,
                                      pool);
 
   return NULL;
@@ -4403,7 +4403,7 @@ dav_svn__working_to_regular_resource(dav_resource *resource)
       /* if rev was specific, create baseline-collection URL */
       path = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_BC,
                                 priv->root.rev, priv->repos_path,
-                                0, resource->pool);
+                                FALSE /* add_href */, resource->pool);
     }
   path = svn_path_uri_encode(path, resource->pool);
   priv->uri_path = svn_stringbuf_create(path, resource->pool);
