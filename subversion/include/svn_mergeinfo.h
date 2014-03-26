@@ -102,7 +102,7 @@ extern "C" {
  * both acceptable).
  */
 
-/* Suffix for SVN_PROP_MERGEINFO revision ranges indicating a given
+/** Suffix for SVN_PROP_MERGEINFO revision ranges indicating a given
    range is non-inheritable. */
 #define SVN_MERGEINFO_NONINHERITABLE_STR "*"
 
@@ -113,34 +113,40 @@ extern "C" {
  *
  * (a) Strings (@c svn_string_t *) containing "unparsed mergeinfo".
  *
- * (b) @c svn_rangelist_t, called a "rangelist".  An array of non-
- *     overlapping merge ranges (@c svn_merge_range_t *), sorted as said by
- *     @c svn_sort_compare_ranges().  An empty range list is represented by
- *     an empty array.  Unless specifically noted otherwise, all APIs require
- *     rangelists that describe only forward ranges, i.e. the range's start
- *     revision is less than its end revision.
+ * (b) @c svn_rangelist_t, called a "rangelist".
  *
- * (c) @c svn_mergeinfo_t, called "mergeinfo".  A hash mapping merge
- *     source paths (@c const char *, starting with slashes) to
- *     non-empty rangelist arrays.  A @c NULL hash is used to represent
- *     no mergeinfo and an empty hash is used to represent empty
- *     mergeinfo.
+ * (c) @c svn_mergeinfo_t, called "mergeinfo".
  *
- * (d) @c svn_mergeinfo_catalog_t, called a "mergeinfo catalog".  A hash
- *     mapping paths (@c const char *) to @c svn_mergeinfo_t.
+ * (d) @c svn_mergeinfo_catalog_t, called a "mergeinfo catalog".
  *
  * Both @c svn_mergeinfo_t and @c svn_mergeinfo_catalog_t are just
  * typedefs for @c apr_hash_t *; there is no static type-checking, and
  * you still use standard @c apr_hash_t functions to interact with
  * them.
- *
- * Note that while the keys of mergeinfos are always absolute from the
- * repository root, the keys of a catalog may be relative to something
- * else, such as an RA session root.
  */
 
+/** An array of non-overlapping merge ranges (@c svn_merge_range_t *),
+ * sorted as said by @c svn_sort_compare_ranges().  An empty range list is
+ * represented by an empty array.
+ *
+ * Unless specifically noted otherwise, all APIs require rangelists that
+ * describe only forward ranges, i.e. the range's start revision is less
+ * than its end revision. */
 typedef apr_array_header_t svn_rangelist_t;
+
+/** A hash mapping merge source paths to non-empty rangelist arrays.
+ *
+ * The keys are (@c const char *) absolute paths from the repository root,
+ * starting with slashes. A @c NULL hash represents no mergeinfo and an
+ * empty hash represents empty mergeinfo. */
 typedef apr_hash_t *svn_mergeinfo_t;
+
+/** A hash mapping paths (@c const char *) to @c svn_mergeinfo_t.
+ *
+ * @note While the keys of #svn_mergeinfo_t are always absolute from the
+ * repository root, the keys of a catalog may be relative to something
+ * else, such as an RA session root.
+ * */
 typedef apr_hash_t *svn_mergeinfo_catalog_t;
 
 /** Parse the mergeinfo from @a input into @a *mergeinfo.  If no

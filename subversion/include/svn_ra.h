@@ -1847,8 +1847,8 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * @c FALSE reporting by switching  @a end with @a start.
  *
  * @note Prior to Subversion 1.9, this function may accept delta handlers
- * from @handler even for empty text deltas.  Starting with 1.9, the
- * delta handler / baton return arguments passed to @handler will be
+ * from @a handler even for empty text deltas.  Starting with 1.9, the
+ * delta handler / baton return arguments passed to @a handler will be
  * #NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *

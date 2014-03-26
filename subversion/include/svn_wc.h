@@ -1831,7 +1831,7 @@ typedef struct svn_wc_conflict_description3_t
   /** merged version; may contain conflict markers */
   const char *merged_file;
 
-  /* For property conflicts, the path to the property reject file. */
+  /** For property conflicts, the path to the property reject file. */
   const char *prop_reject_abspath;
 
   /** The operation that exposed the conflict.
@@ -2065,9 +2065,9 @@ svn_wc_conflict_description3_t *
 svn_wc_conflict_description_create_text3(const char *local_abspath,
                                          apr_pool_t *result_pool);
 
-/* Similar to #svn_wc_conflict_description_create_text3, but returns
+/** Similar to svn_wc_conflict_description_create_text3(), but returns
  * an svn_wc_conflict_description2_t *.
- * 
+ *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
@@ -2109,9 +2109,9 @@ svn_wc_conflict_description_create_prop3(const char *local_abspath,
                                          const char *property_name,
                                          apr_pool_t *result_pool);
 
-/* Similar to #svn_wc_conflict_description_create_prop3, but returns
+/** Similar to svn_wc_conflict_description_create_prop3(), but returns
  * an svn_wc_conflict_description2_t *.
- * 
+ *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
@@ -2161,9 +2161,9 @@ svn_wc_conflict_description_create_tree3(
   const svn_wc_conflict_version_t *src_right_version,
   apr_pool_t *result_pool);
 
-/* Similar to #svn_wc_conflict_description_create_tree3, but returns
+/** Similar to svn_wc_conflict_description_create_tree3(), but returns
  * an svn_wc_conflict_description2_t *.
- * 
+ *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
@@ -2327,7 +2327,7 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func3_t)(
   apr_pool_t *scratch_pool);
 
 
-/* Similar to #svn_wc_conflict_resolver_func3_t, but expects an
+/** Similar to #svn_wc_conflict_resolver_func3_t, but expects an
  * svn_wc_conflict_description2_t description.
  *
  * @since New in 1.7.

@@ -2512,7 +2512,7 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * expiration error (depending on the API).
  */
 
-/* The @a targets hash passed to svn_fs_lock2() has <tt>const char
+/** The @a targets hash passed to svn_fs_lock2() has <tt>const char
    *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values. */
 typedef struct svn_fs_lock_target_t
 {
@@ -2521,7 +2521,7 @@ typedef struct svn_fs_lock_target_t
 
 } svn_fs_lock_target_t;
 
-/* The @a results hash returned by svn_fs_lock2() and svn_fs_unlock2()
+/** The @a results hash returned by svn_fs_lock2() and svn_fs_unlock2()
    has <tt>const char *</tt> keys and <tt>svn_fs_lock_result_t *</tt>
    values. */
 typedef struct svn_fs_lock_result_t
@@ -2549,7 +2549,7 @@ typedef struct svn_fs_lock_result_t
  * generic DAV client; only mod_dav_svn's autoversioning feature needs
  * to use it.  If in doubt, pass 0.
  *
- * The paths to be locked are passed as the <tt>const char *<tt> keys
+ * The paths to be locked are passed as the <tt>const char *</tt> keys
  * of the @a targets hash.  The hash values are
  * <tt>svn_fs_lock_target_t *</tt> and provide the token and
  * current_rev for each path.  The token is a lock token such as can
@@ -2595,7 +2595,7 @@ svn_fs_lock2(apr_hash_t **results,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool);
 
-/* Similar to svn_fs_lock2() but locks only a single @a path and
+/** Similar to svn_fs_lock2() but locks only a single @a path and
  * returns the lock in @a *lock, allocated in @a pool, or an error.
  *
  * @since New in 1.2.
@@ -2653,11 +2653,11 @@ svn_fs_generate_lock_token(const char **token,
  * passed (it is not possible to pass @c NULL as a hash value
  * directly), #svn_fs_lock_target_t->current_rev is ignored.
  *
- * @note #svn_err_fs_lock_result_t is used to allow @c SVN_NO_ERROR to
+ * @note #svn_fs_lock_result_t is used to allow @c SVN_NO_ERROR to
  * be returned (it is not possible to return @c SVN_NO_ERROR as a hash
- * value directly), #svn_err_fs_lock_result_t->lock is always NULL.
+ * value directly), #svn_fs_lock_result_t->lock is always NULL.
  *
- * Use @a pool for temporary allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
  */
