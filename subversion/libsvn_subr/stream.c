@@ -964,7 +964,7 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
       *data_available = (n > 0);
       return SVN_NO_ERROR;
     }
-  else if (APR_STATUS_IS_EOF(status))
+  else if (APR_STATUS_IS_EOF(status) || APR_STATUS_IS_TIMEUP(status))
     {
       *data_available = FALSE;
       return SVN_NO_ERROR;
@@ -972,7 +972,10 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
   else
     {
       return svn_error_create(SVN_ERR_STREAM_NOT_SUPPORTED,
-                              svn_error_create(status, NULL, NULL),
+                              svn_error_wrap_apr(
+                                  status,
+                                  _("Polling for available data on filestream "
+                                    "failed")),
                               NULL);
     }
 }
