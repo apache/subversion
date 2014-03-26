@@ -124,7 +124,7 @@ static const apr_getopt_option_t svnrdump__options[] =
     {"incremental",   opt_incremental, 0,
                       N_("dump incrementally")},
     {"skip-revprop",  opt_skip_revprop, 1,
-                      N_("skip revision property (E.g. svn:date, svn:author)")},
+                      N_("skip revision property ARG (e.g., \"svn:author\")")},
     {"config-dir",    opt_config_dir, 1,
                       N_("read user configuration files from directory ARG")},
     {"username",      opt_auth_username, 1,
