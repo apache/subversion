@@ -1016,7 +1016,7 @@ typedef struct svn_client_ctx_t
 
   /** Total number of bytes transferred over network.
    *
-   * @Since New in 1.9. */
+   * @since New in 1.9. */
   apr_off_t progress;
 
   /** Check-tunnel callback
@@ -4147,7 +4147,7 @@ svn_client_cleanup2(const char *dir_abspath,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool);
 
-/* Like svn_client_cleanup2(), but no support for not breaking locks and
+/** Like svn_client_cleanup2(), but no support for not breaking locks and
  * cleaning up externals and using a potentially non absolute path.
  *
  * @deprecated Provided for limited backwards compatibility with the 1.8 API.

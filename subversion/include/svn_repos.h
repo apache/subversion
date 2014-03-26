@@ -1868,7 +1868,7 @@ svn_repos_get_logs5(svn_repos_t *repos,
 
 /**
  * Same as svn_repos_get_logs5(), but with @a move_behavior being set to
- * #svn_fs_move_behavior_no_moves.
+ * #svn_move_behavior_no_moves.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.8 API.
@@ -2038,8 +2038,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * switching @a start with @a end.
  *
  * @note Prior to Subversion 1.9, this function may accept delta handlers
- * from @handler even for empty text deltas.  Starting with 1.9, the
- * delta handler / baton return arguments passed to @handler will be
+ * from @a handler even for empty text deltas.  Starting with 1.9, the
+ * delta handler / baton return arguments passed to @a handler will be
  * #NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *

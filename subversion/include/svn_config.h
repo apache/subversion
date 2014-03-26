@@ -680,7 +680,7 @@ svn_config_ensure(const char *config_dir,
  *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY which
  *       has been present since 1.0).
  *
- * @defgroup cached_authentication_data_attributes
+ * @defgroup cached_authentication_data_attributes Cached authentication data attributes
  * @{
  */
 
