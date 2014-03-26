@@ -2513,7 +2513,10 @@ svn_fs_set_uuid(svn_fs_t *fs,
  */
 
 /** The @a targets hash passed to svn_fs_lock2() has <tt>const char
-   *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values. */
+ * *</tt> keys and <tt>svn_fs_lock_target_t *</tt> values.
+ *
+ * @since New in 1.9.
+ */
 typedef struct svn_fs_lock_target_t
 {
   const char *token;
@@ -2522,8 +2525,11 @@ typedef struct svn_fs_lock_target_t
 } svn_fs_lock_target_t;
 
 /** The @a results hash returned by svn_fs_lock2() and svn_fs_unlock2()
-   has <tt>const char *</tt> keys and <tt>svn_fs_lock_result_t *</tt>
-   values. */
+ * has <tt>const char *</tt> keys and <tt>svn_fs_lock_result_t *</tt>
+ * values.
+ *
+ * @since New in 1.9.
+ */
 typedef struct svn_fs_lock_result_t
 {
   svn_lock_t *lock;

@@ -2238,13 +2238,20 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * post-unlock hooks before and after the unlocking action.  Use @a
  * pool for any necessary allocations.
  *
- * If the pre-unlock hook or svn_fs_unlock() fails, throw the original
- * error to caller.  If an error occurs when running the post-unlock
- * hook, return the original error wrapped with
- * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
- * error, it knows that the unlock succeeded anyway.
+ * The pre-unlock hook is run for every path in @a targets. Those
+ * entries in @a targets for which the pre-unlock is successful are
+ * passed to svn_fs_unlock2 and the post-unlock is run for those that
+ * are successfully unlocked.
  *
- * @since New in 1.2.
+ * @a results contains the result of of running the pre-unlock and
+ * svn_fs_unlock2 if the pre-unlock was successful. If an error occurs
+ * when running the post-unlock hook, return the original error
+ * wrapped with SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller
+ * sees this error, it knows that some unlocks succeeded.  In all
+ * cases the caller must handle all error in @a results to avoid
+ * leaks.
+ *
+ * @since New in 1.9.
  */
 svn_error_t *
 svn_repos_fs_unlock2(apr_hash_t **results,
@@ -2254,6 +2261,10 @@ svn_repos_fs_unlock2(apr_hash_t **results,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/* Similar to svn_repos_fs_unlock2 but only unlocks a single path.
+ *
+ * @since New in 1.2.
+ */
 svn_error_t *
 svn_repos_fs_unlock(svn_repos_t *repos,
                     const char *path,
