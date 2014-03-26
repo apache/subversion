@@ -5767,9 +5767,6 @@ svn_client_ls(apr_hash_t **dirents,
  * @param[in] expand_keywords  When true, keywords (when set) are expanded.
  * @param[in] ctx   The standard client context, used for possible
  *                  authentication.
- * @param[in] pool  Used for any temporary allocation.
- *
- * @todo Add an expansion/translation flag?
  *
  * @return A pointer to an #svn_error_t of the type (this list is not
  *         exhaustive): <br>
@@ -5799,6 +5796,7 @@ svn_client_cat3(apr_hash_t **props,
  * Similar to svn_client_cat3() except without the option of directly
  * reading the properties, and with @a expand_keywords always TRUE.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.8 API.
  */
 SVN_DEPRECATED
