@@ -303,6 +303,13 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
+ * r1555403
+   Update copyright years in NOTICE and subversion/libsvn_subr/version.c.
+   Justification:
+     We're not in 2013 any more.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
