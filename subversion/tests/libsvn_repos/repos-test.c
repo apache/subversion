@@ -3327,7 +3327,6 @@ test_config_pool(const svn_test_opts_t *opts,
   svn_config_t *cfg;
   apr_hash_t *sections1, *sections2;
   int i;
-  svn_boolean_t bvalue;
   svn_fs_txn_t *txn;
   svn_fs_root_t *root, *rev_root;
   svn_revnum_t rev;
@@ -3514,20 +3513,6 @@ test_config_pool(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(err && APR_STATUS_IS_ENOENT(err->apr_err));
   svn_error_clear(err);
   svn_pool_clear(subpool);
-
-  /* as long as we keep a reference to a config, clearing the config pool
-     should not invalidate that reference */
-  SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
-                                     svn_dirent_join(wrk_dir,
-                                                     "config-pool-test1.cfg",
-                                                     pool),
-                                     TRUE, TRUE, NULL, pool));
-  svn_pool_clear(config_pool_pool);
-  for (i = 0; i < 64000; ++i)
-    apr_pcalloc(config_pool_pool, 80);
-
-  SVN_ERR(svn_config_get_bool(cfg, &bvalue, "booleans", "true3", FALSE));
-  SVN_TEST_ASSERT(bvalue);
 
   return SVN_NO_ERROR;
 }

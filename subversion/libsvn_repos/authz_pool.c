@@ -130,11 +130,10 @@ svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
   svn_object_pool__t *object_pool;
 
   /* there is no setter as we don't need to update existing authz */
-  SVN_ERR(svn_object_pool__create(&object_pool, getter, NULL,
-                                  4, APR_UINT32_MAX, TRUE, thread_safe,
+  SVN_ERR(svn_object_pool__create(&object_pool, getter, NULL, thread_safe,
                                   pool));
 
-  result = apr_pcalloc(svn_object_pool__pool(object_pool), sizeof(*result));
+  result = apr_pcalloc(pool, sizeof(*result));
   result->object_pool = object_pool;
   result->config_pool = config_pool;
 
@@ -152,7 +151,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                           apr_pool_t *pool)
 {
   apr_pool_t *authz_ref_pool
-    = svn_pool_create(svn_object_pool__pool(authz_pool->object_pool));
+    = svn_object_pool__new_wrapper_pool(authz_pool->object_pool);
   authz_object_t *authz_ref
     = apr_pcalloc(authz_ref_pool, sizeof(*authz_ref));
   svn_boolean_t have_all_keys;

@@ -162,11 +162,11 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
  */
 typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
 
-/* Create a new configuration pool object with a minimum lifetime determined
- * by POOL and return it in *CONFIG_POOL.  References to any configuration
- * in the *CONFIG_POOL will keep the latter alive beyond POOL cleanup.
+/* Create a new configuration pool object with a lifetime determined by
+ * POOL and return it in *CONFIG_POOL.
+ * 
  * The THREAD_SAFE flag indicates whether the pool actually needs to be
- * thread-safe.
+ * thread-safe and POOL must be also be thread-safe if this flag is set.
  */
 svn_error_t *
 svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
@@ -188,7 +188,9 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * instead of creating a new repo instance.  Note that this might not
  * return the latest content.
  *
- * POOL determines the minimum lifetime of *CFG.
+ * POOL determines the minimum lifetime of *CFG (may remain cached after
+ * release) but must not exceed the lifetime of the pool provided to
+ * #svn_repos__config_pool_create.
  */
 svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
@@ -215,14 +217,13 @@ svn_repos__config_pool_get(svn_config_t **cfg,
  */
 typedef struct svn_repos__authz_pool_t svn_repos__authz_pool_t;
 
-/* Create a new authorization pool object with a minimum lifetime determined
- * by POOL and return it in *AUTHZ_POOL.  CONFIG_POOL will be the common
- * source for the configuration data underlying the authz objects.
+/* Create a new authorization pool object with a lifetime determined by
+ * POOL and return it in *AUTHZ_POOL.  CONFIG_POOL will be the common
+ * source for the configuration data underlying the authz objects and must
+ * remain valid at least until POOL cleanup.
+ *
  * The THREAD_SAFE flag indicates whether the pool actually needs to be
- * thread-safe.
- * 
- * References to any authorization object in the *AUTHZ_POOL will keep the
- * latter alive beyond POOL cleanup.
+ * thread-safe and POOL must be also be thread-safe if this flag is set.
  */
 svn_error_t *
 svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
@@ -244,7 +245,9 @@ svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
  * instead of creating a new repo instance.  Note that this might not
  * return the latest content.
  *
- * POOL determines the minimum lifetime of *AUTHZ_P.
+ * POOL determines the minimum lifetime of *AUTHZ_P (may remain cached
+ * after release) but must not exceed the lifetime of the pool provided to
+ * svn_repos__authz_pool_create.
  */
 svn_error_t *
 svn_repos__authz_pool_get(svn_authz_t **authz_p,
