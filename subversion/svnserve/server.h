@@ -175,9 +175,6 @@ typedef struct connection_t
   /* memory pool for objects with connection lifetime */
   apr_pool_t *pool;
 
-  /* source and ultimate destiny for POOL */
-  svn_root_pools__t *root_pools;
-  
   /* Number of threads using the pool.
      The pool passed to apr_thread_create can only be released when both
 
