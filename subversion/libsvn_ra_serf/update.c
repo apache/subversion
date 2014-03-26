@@ -84,12 +84,19 @@ typedef enum report_state_e {
   PROP,
 
   FETCH_FILE,
+  FETCH_PROPS,
   TXDELTA,
 
   CHECKED_IN,
   CHECKED_IN_HREF,
 
   MD5_CHECKSUM
+#if 0
+,
+  VERSION_NAME,
+  CREATIONDATE,
+  CREATOR_DISPLAYNAME
+#endif
 } report_state_e;
 
 
@@ -193,8 +200,16 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
 
   { OPEN_FILE, S_, "prop", PROP,
     FALSE, { NULL }, FALSE },
+#if 0
+  { OPEN_DIR, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+#endif
   { ADD_FILE, S_, "prop", PROP,
     FALSE, { NULL }, FALSE },
+#if 0
+  { ADD_DIR, S_, "prop", PROP,
+    FALSE, { NULL }, FALSE },
+#endif
 
   { OPEN_FILE, S_, "txdelta", TXDELTA,
     FALSE, { "?base-checksum" }, TRUE },
@@ -214,6 +229,20 @@ static const svn_ra_serf__xml_transition_t update_ttable[] = {
   { PROP, V_, "md5-checksum", MD5_CHECKSUM,
     TRUE, { NULL }, TRUE },
 
+  /* These are only reported for <= 1.6.x mod_dav_svn */
+  { OPEN_DIR, S_, "fetch-props", FETCH_PROPS,
+    FALSE, { NULL }, FALSE },
+  { OPEN_FILE, S_, "fetch-props", FETCH_PROPS,
+    FALSE, { NULL }, FALSE },
+
+#if 0
+  { PROP, D_, "version-name", VERSION_NAME,
+    TRUE, { NULL }, TRUE },
+  { PROP, D_, "creationdate", CREATIONDATE,
+    TRUE, { NULL }, TRUE },
+  { PROP, D_, "creator-displayname", CREATOR_DISPLAYNAME,
+    TRUE, { NULL }, TRUE },
+#endif
   { 0 }
 };
 
@@ -1765,6 +1794,15 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
             }
         }
         break;
+
+      case FETCH_PROPS:
+        {
+          if (ctx->cur_file)
+            ctx->cur_file->fetch_props = TRUE;
+          else if (ctx->cur_dir)
+            ctx->cur_dir->fetch_props = TRUE;
+        }
+        break;
     }
 
   return SVN_NO_ERROR;
@@ -2038,6 +2076,23 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
             }
         }
         break;
+#if 0
+      case VERSION_NAME:
+        {
+          SVN_DBG(("Version: %s", cdata ? cdata->data : NULL));
+        }
+        break;
+      case CREATIONDATE:
+        {
+          SVN_DBG(("Date: %s", cdata ? cdata->data : NULL));
+        }
+        break;
+      case CREATOR_DISPLAYNAME:
+        {
+          SVN_DBG(("Author: %s", cdata ? cdata->data : NULL));
+        }
+        break;
+#endif
     }
 
   return SVN_NO_ERROR;
