@@ -610,7 +610,11 @@ svn_ra_svn__write_cmd_get_dated_rev(svn_ra_svn_conn_t *conn,
 /** Send a "change-rev-prop2" command over connection @a conn.
  * Use @a pool for allocations.
  *
- * @see #svn_ra_change_rev_prop2 for a description.
+ * If @a dont_care is false then check that the old value matches
+ * @a old_value. If @a dont_care is true then do not check the old
+ * value; in this case @a old_value must be NULL.
+ *
+ * @see #svn_ra_change_rev_prop2 for the rest of the description.
  */
 svn_error_t *
 svn_ra_svn__write_cmd_change_rev_prop2(svn_ra_svn_conn_t *conn,
