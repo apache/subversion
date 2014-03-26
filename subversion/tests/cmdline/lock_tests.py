@@ -2128,6 +2128,56 @@ def create_dav_lock_timeout(sbox):
   # Lock should have an expiration date
   expiration_date = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Expires']
 
+def non_root_locks(sbox):
+  "locks for working copies not at repos root"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.repo_url, sbox.repo_url + '/X',
+                                     '-m', 'copy greek tree')
+
+  sbox.simple_switch(sbox.repo_url + '/X')  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Lock a file
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock', sbox.ospath('A/D/G/pi'),
+                                     '-m', '')
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Updates don't break the lock
+  sbox.simple_update('A/D')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  sbox.simple_update('')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Break the lock
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/X/A/D/G/pi')
+
+  # Subdir update reports the break
+  sbox.simple_update('A/D')
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Relock and break
+  svntest.actions.run_and_verify_svn(None, ".*locked by user", [],
+                                     'lock', sbox.ospath('A/D/G/pi'),
+                                     '-m', '')
+  expected_status.tweak('A/D/G/pi', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'unlock', sbox.repo_url + '/X/A/D/G/pi')
+
+  # Root update reports the break
+  sbox.simple_update('')
+  expected_status.tweak('A/D/G/pi', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2187,6 +2237,7 @@ test_list = [ None,
               break_delete_add,
               dav_lock_timeout,
               create_dav_lock_timeout,
+              non_root_locks,
             ]
 
 if __name__ == '__main__':
