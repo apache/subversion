@@ -997,8 +997,9 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
     SVN_TEST_OPTS_PASS(test_suggest_mergesources,
                        "test svn_client_suggest_merge_sources"),
-    SVN_TEST_OPTS_XFAIL(test_remote_only_status,
-                        "test svn_client_status6 with ignore_local_mods"),
+    SVN_TEST_OPTS_WIMP(test_remote_only_status,
+                       "test svn_client_status6 with ignore_local_mods",
+                       "status editor does not ignore local mods yet"),
     SVN_TEST_NULL
   };
 
