@@ -395,11 +395,13 @@ static svn_error_t *ra_svn_close_edit(void *edit_baton, apr_pool_t *pool)
   SVN_ERR_ASSERT(!eb->got_status);
   eb->got_status = TRUE;
   SVN_ERR(svn_ra_svn__write_cmd_close_edit(eb->conn, pool));
-  err = svn_ra_svn__read_cmd_response(eb->conn, pool, "");
+  err = svn_error_trace(svn_ra_svn__read_cmd_response(eb->conn, pool, ""));
   if (err)
     {
-      svn_error_clear(svn_ra_svn__write_cmd_abort_edit(eb->conn, pool));
-      return err;
+      return svn_error_compose_create(
+                    err,
+                    svn_error_trace(
+                        svn_ra_svn__write_cmd_abort_edit(eb->conn, pool)));
     }
   if (eb->callback)
     SVN_ERR(eb->callback(eb->callback_baton));
