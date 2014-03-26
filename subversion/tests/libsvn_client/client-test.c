@@ -826,6 +826,155 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+
+/* FIXME: temporary */
+static char
+status_to_char(enum svn_wc_status_kind status)
+{
+
+  switch (status)
+    {
+    case svn_wc_status_none:        return '.';
+    case svn_wc_status_unversioned: return '?';
+    case svn_wc_status_normal:      return '-';
+    case svn_wc_status_added:       return 'A';
+    case svn_wc_status_missing:     return '!';
+    case svn_wc_status_incomplete:  return ':';
+    case svn_wc_status_deleted:     return 'D';
+    case svn_wc_status_replaced:    return 'R';
+    case svn_wc_status_modified:    return 'M';
+    case svn_wc_status_merged:      return 'G';
+    case svn_wc_status_conflicted:  return 'C';
+    case svn_wc_status_obstructed:  return '~';
+    case svn_wc_status_ignored:     return 'I';
+    case svn_wc_status_external:    return 'X';
+    default:                        return '*';
+    }
+}
+
+/* FIXME: temporary */
+static int
+compare_status_paths(const void *a, const void *b)
+{
+  const svn_client_status_t *const *const sta = a;
+  const svn_client_status_t *const *const stb = b;
+  return svn_path_compare_paths((*sta)->local_abspath, (*stb)->local_abspath);
+}
+
+static svn_error_t *
+remote_only_status_receiver(void *baton, const char *path,
+                            const svn_client_status_t *status,
+                            apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *results = baton;
+  APR_ARRAY_PUSH(results, const svn_client_status_t *) =
+    svn_client_status_dup(status, results->pool);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  const char *repos_url;
+  const char *wc_path;
+  const char *zeta_path;
+  svn_client_ctx_t *ctx;
+  svn_client_mtcc_t *mtcc;
+  apr_array_header_t *results;
+  svn_opt_revision_t rev;
+  svn_revnum_t result_rev;
+  svn_stream_t *contents = svn_stream_from_string(
+      svn_string_create("modified\n", pool), pool);
+  svn_stream_mark_t *start;
+  int i;
+
+  SVN_ERR(svn_stream_mark(contents, &start, pool));
+
+  /* Create a filesytem and repository containing the Greek tree. */
+  SVN_ERR(create_greek_repos(&repos_url, "test-remote-only-status", opts, pool));
+
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+
+  /* Make some modifications in the repository, creating revision 2. */
+  SVN_ERR(svn_client_mtcc_create(&mtcc, repos_url, -1, ctx, pool, pool));
+  SVN_ERR(svn_stream_seek(contents, start));
+  SVN_ERR(svn_client_mtcc_add_update_file("iota",
+                                          contents, NULL, NULL, NULL,
+                                          mtcc, pool));
+  SVN_ERR(svn_stream_seek(contents, start));
+  SVN_ERR(svn_client_mtcc_add_update_file("A/B/lambda",
+                                          contents, NULL, NULL, NULL,
+                                          mtcc, pool));
+  SVN_ERR(svn_client_mtcc_commit(NULL, NULL, NULL, mtcc, pool));
+
+  /* Check out a sparse root @r1 of the repository */
+  wc_path = svn_test_data_path("test-remote-only-status-wc", pool);
+  /*svn_test_add_dir_cleanup(wc_path);*/
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+
+  rev.kind = svn_opt_revision_number;
+  rev.value.number = 1;
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path,
+                               &rev, &rev, svn_depth_immediates,
+                               FALSE, FALSE, ctx, pool));
+
+  /* Add a local file; this is a double-check to make sure that
+     remote-only status ignores local changes. */
+  zeta_path = svn_dirent_join(wc_path, "zeta", pool);
+  SVN_ERR(svn_io_file_create_empty(zeta_path, pool));
+  SVN_ERR(svn_client_add5(zeta_path, svn_depth_unknown,
+                          FALSE, FALSE, FALSE, FALSE,
+                          ctx, pool));
+
+  /* Now run the remote-only status. */
+  results = apr_array_make(pool, 3, sizeof(const svn_client_status_t *));
+  rev.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client_status6(
+              &result_rev, ctx, wc_path, &rev, svn_depth_unknown,
+              TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, NULL,
+              remote_only_status_receiver, results, pool));
+
+  SVN_TEST_ASSERT(result_rev == 2);
+
+  qsort(results->elts, results->nelts, results->elt_size,
+        compare_status_paths);
+  for (i = 0; i < results->nelts; ++i)
+    {
+      const svn_client_status_t *st =
+        APR_ARRAY_IDX(results, i, const svn_client_status_t *);
+
+      const char *relpath =
+        svn_dirent_skip_ancestor(wc_path, st->local_abspath);
+      if (!relpath)
+        relpath = st->local_abspath;
+
+      /* FIXME: temporary */
+      printf("%c%c%c %2ld  %c%c%c %2ld  %s\n",
+             status_to_char(st->node_status),
+             status_to_char(st->text_status),
+             status_to_char(st->prop_status),
+             (long)st->revision,
+
+             status_to_char(st->repos_node_status),
+             status_to_char(st->repos_text_status),
+             status_to_char(st->repos_prop_status),
+             (long)st->ood_changed_rev,
+
+             (*relpath ? relpath : "."));
+
+      SVN_TEST_ASSERT(st->revision == 1);
+      SVN_TEST_ASSERT(st->ood_changed_rev == 2);
+      SVN_TEST_ASSERT(st->node_status == svn_wc_status_normal);
+      /* FIXME:                          svn_wc_status_none? */
+      if (0 == strcmp(relpath, "iota"))
+        SVN_TEST_ASSERT(st->repos_node_status == svn_wc_status_modified);
+      else
+        SVN_TEST_ASSERT(st->repos_node_status == svn_wc_status_none);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -848,6 +997,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_youngest_common_ancestor, "test youngest_common_ancestor"),
     SVN_TEST_OPTS_PASS(test_suggest_mergesources,
                        "test svn_client_suggest_merge_sources"),
+    SVN_TEST_OPTS_XFAIL(test_remote_only_status,
+                        "test svn_client_status6 with ignore_local_mods"),
     SVN_TEST_NULL
   };
 

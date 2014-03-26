@@ -107,6 +107,10 @@ struct edit_baton
   /* Do we want all statuses (instead of just the interesting ones) ? */
   svn_boolean_t get_all;
 
+  /* Ignore all local modifications; only check for differences
+     between the BASE tree and the repository. */
+  svn_boolean_t ignore_local_mods;
+
   /* Ignore the svn:ignores. */
   svn_boolean_t no_ignore;
 
@@ -335,6 +339,7 @@ static svn_error_t *
 internal_status(svn_wc_status3_t **status,
                 svn_wc__db_t *db,
                 const char *local_abspath,
+                svn_boolean_t ignore_local_mods,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 
@@ -1502,6 +1507,7 @@ tweak_statushash(void *baton,
                  void *this_dir_baton,
                  svn_boolean_t is_dir_baton,
                  svn_wc__db_t *db,
+                 svn_boolean_t ignore_local_mods,
                  const char *local_abspath,
                  enum svn_wc_status_kind repos_node_status,
                  enum svn_wc_status_kind repos_text_status,
@@ -1541,8 +1547,8 @@ tweak_statushash(void *baton,
         return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
-      SVN_ERR(internal_status(&statstruct, db, local_abspath, pool,
-                              scratch_pool));
+      SVN_ERR(internal_status(&statstruct, db, local_abspath,
+                              ignore_local_mods, pool, scratch_pool));
       statstruct->repos_lock = repos_lock;
       svn_hash_sets(statushash, apr_pstrdup(pool, local_abspath), statstruct);
     }
@@ -2001,7 +2007,7 @@ delete_entry(const char *path,
      statushash immediately.  No need to wait until close_file or
      close_dir, because there's no risk of having to honor the 'added'
      flag.  We already know this item exists in the working copy. */
-  SVN_ERR(tweak_statushash(db, db, TRUE, eb->db,
+  SVN_ERR(tweak_statushash(db, db, TRUE, eb->db, eb->ignore_local_mods,
                            local_abspath,
                            svn_wc_status_deleted, 0, 0, revision, NULL, pool));
 
@@ -2009,7 +2015,8 @@ delete_entry(const char *path,
      is the root node and we're not supposed to report on the root
      node).  */
   if (db->parent_baton && (! *eb->target_basename))
-    SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE,eb->db,
+    SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE,
+                             eb->db, eb->ignore_local_mods,
                              db->local_abspath,
                              svn_wc_status_modified, svn_wc_status_modified,
                              0, SVN_INVALID_REVNUM, NULL, pool));
@@ -2133,7 +2140,9 @@ close_directory(void *dir_baton,
         {
           /* ### When we add directory locking, we need to find a
              ### directory lock here. */
-          SVN_ERR(tweak_statushash(pb, db, TRUE, eb->db, db->local_abspath,
+          SVN_ERR(tweak_statushash(pb, db, TRUE,
+                                   eb->db,  eb->ignore_local_mods,
+                                   db->local_abspath,
                                    repos_node_status, repos_text_status,
                                    repos_prop_status, SVN_INVALID_REVNUM, NULL,
                                    scratch_pool));
@@ -2385,6 +2394,7 @@ close_file(void *file_baton,
     }
 
   return tweak_statushash(fb, NULL, FALSE, fb->edit_baton->db,
+                          fb->edit_baton->ignore_local_mods,
                           fb->local_abspath, repos_node_status,
                           repos_text_status, repos_prop_status,
                           SVN_INVALID_REVNUM, repos_lock, pool);
@@ -2433,6 +2443,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
                           const char *target_basename,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
+                          svn_boolean_t ignore_local_mods,
                           svn_boolean_t no_ignore,
                           svn_boolean_t depth_as_sticky,
                           svn_boolean_t server_performs_filtering,
@@ -2458,6 +2469,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
   eb->target_revision   = edit_revision;
   eb->db                = wc_ctx->db;
   eb->get_all           = get_all;
+  eb->ignore_local_mods = ignore_local_mods;
   eb->no_ignore         = no_ignore;
   eb->status_func       = status_func;
   eb->status_baton      = status_baton;
@@ -2472,7 +2484,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
 
   eb->wb.db               = wc_ctx->db;
   eb->wb.target_abspath   = eb->target_abspath;
-  eb->wb.ignore_text_mods = FALSE;
+  eb->wb.ignore_text_mods = ignore_local_mods;
   eb->wb.repos_locks      = NULL;
   eb->wb.repos_root       = NULL;
 
@@ -2497,7 +2509,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
   /* The edit baton's status structure maps to PATH, and the editor
      have to be aware of whether that is the anchor or the target. */
   SVN_ERR(internal_status(&(eb->anchor_status), wc_ctx->db, anchor_abspath,
-                         result_pool, scratch_pool));
+                          FALSE, result_pool, scratch_pool));
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2768,6 +2780,7 @@ static svn_error_t *
 internal_status(svn_wc_status3_t **status,
                 svn_wc__db_t *db,
                 const char *local_abspath,
+                svn_boolean_t ignore_local_mods,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
@@ -2784,20 +2797,31 @@ internal_status(svn_wc_status3_t **status,
   err = svn_wc__db_read_single_info(&info, db, local_abspath,
                                     scratch_pool, scratch_pool);
 
-  if (err)
+  if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_trace(err);
+
+
+  /* FIXME: Must do something quite a bit smarter here.  This is just
+     a stopgap to avoid crashing when ignore_local_mods is set. */
+  if (ignore_local_mods)
     {
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_trace(err);
-
-      svn_error_clear(err);
+      dirent = NULL;
       info = NULL;
-
-      SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
-                                  scratch_pool, scratch_pool));
     }
   else
-    SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,
-                                          scratch_pool, scratch_pool));
+    {
+      if (err)
+        {
+          svn_error_clear(err);
+          info = NULL;
+
+          SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
+                                      scratch_pool, scratch_pool));
+        }
+      else
+        SVN_ERR(stat_wc_dirent_case_sensitive(&dirent, db, local_abspath,
+                                              scratch_pool, scratch_pool));
+    }
 
   if (!info
       || info->kind == svn_node_unknown
@@ -2861,8 +2885,8 @@ svn_wc_status3(svn_wc_status3_t **status,
                apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-    internal_status(status, wc_ctx->db, local_abspath, result_pool,
-                    scratch_pool));
+      internal_status(status, wc_ctx->db, local_abspath, FALSE,
+                      result_pool, scratch_pool));
 }
 
 svn_wc_status3_t *
