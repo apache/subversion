@@ -90,16 +90,8 @@ typedef svn_error_t * (* svn_object_pool__setter_t)(void **target,
  * one (or both) may be NULL and the default implementation assumes that
  * wrapper == object and updating is a no-op.
  *
- * Unused objects won't be cleaned up immediately to speed up repeated
- * lookup / release sequences.  The implementation will try to keep the
- * number of unused objects between MIN_UNUSED and MAX_UNUSED.  However,
- * there is no guarantee that it will remain in that range.
- *
- * If SHARE_OBJECTS is TRUE, #svn_object_pool__lookup will return multiple
- * references to the same object for the same key.  Otherwise, all used
- * references for the same key will be to independent instances.  If
- * THREAD_SAFE is not set, neither the object pool nor the object references
- * returned from it may be accessed from multiple threads.
+ * If THREAD_SAFE is not set, neither the object pool nor the object
+ * references returned from it may be accessed from multiple threads.
  *
  * It is not legal to call any API on the object pool after POOL got
  * cleared or destroyed.  However, existing object references handed out
@@ -110,24 +102,20 @@ svn_error_t *
 svn_object_pool__create(svn_object_pool__t **object_pool,
                         svn_object_pool__getter_t getter,
                         svn_object_pool__setter_t setter,
-                        apr_size_t min_unused,
-                        apr_size_t max_unused,
-                        svn_boolean_t share_objects,
                         svn_boolean_t thread_safe,
                         apr_pool_t *pool);
 
 /* Return the root pool containing the OBJECT_POOL and all sub-structures.
  */
 apr_pool_t *
-svn_object_pool__pool(svn_object_pool__t *object_pool);
+svn_object_pool__new_wrapper_pool(svn_object_pool__t *object_pool);
 
 /* Return the mutex used to serialize all OBJECT_POOL access.
  */
 svn_mutex__t *
 svn_object_pool__mutex(svn_object_pool__t *object_pool);
 
-/* Return the total number of object instances in OBJECT_POOL, including
- * unused ones.
+/* Return the number of object instances (used or unused) in OBJECT_POOL.
  */
 unsigned
 svn_object_pool__count(svn_object_pool__t *object_pool);

@@ -57,9 +57,6 @@ typedef struct object_ref_t
 
   /* Number of references to this data struct */
   volatile svn_atomic_t ref_count;
-
-  /* next struct in the hash bucket (same KEY) */
-  struct object_ref_t *next;
 } object_ref_t;
 
 
@@ -70,11 +67,6 @@ struct svn_object_pool__t
   /* serialization object for all non-atomic data in this struct */
   svn_mutex__t *mutex;
 
-  /* set to TRUE when pool passed to svn_object_pool__create() gets cleaned
-   * up.  When set, the last object reference released must also destroy
-   * this object pool object. */
-  volatile svn_atomic_t ready_for_cleanup;
-
   /* object_ref_t.KEY -> object_ref_t* mapping.
    *
    * In shared object mode, there is at most one such entry per key and it
@@ -83,172 +75,68 @@ struct svn_object_pool__t
    * instances for the key. */
   apr_hash_t *objects;
 
-  /* if TRUE, we operate in shared mode and in exclusive mode otherwise.
-   * This must not change over the lifetime. */
-  svn_boolean_t share_objects;
+  /* same as objects->count but allows for non-sync'ed access */
+  volatile svn_atomic_t object_count;
 
-  /* number of entries in CONFIGS with a reference count > 0 */
-  volatile svn_atomic_t used_count;
+  /* Number of entries in OBJECTS with a reference count 0.
+     Due to races, this may be *temporarily* off by one or more.
+     Hence we must not strictly depend on it. */
   volatile svn_atomic_t unused_count;
 
-  /* try to keep UNUSED_COUNT within this range */
-  apr_size_t min_unused;
-  apr_size_t max_unused;
-
   /* the root pool owning this structure */
-  apr_pool_t *root_pool;
-
-  /* this pool determines the minimum lifetime of this container.
-   * We use this to unregister cleanup routines (see below). */
-  apr_pool_t *owning_pool;
+  apr_pool_t *pool;
   
-  /* allocate the OBJECTS index here */
-  apr_pool_t *objects_hash_pool;
-
   /* extractor and updater for the user object wrappers */
   svn_object_pool__getter_t getter;
   svn_object_pool__setter_t setter;
 };
 
 
-/* Destructor function for the whole OBJECT_POOL.
- */
-static apr_status_t
-destroy_object_pool(svn_object_pool__t *object_pool)
-{
-  svn_mutex__lock(object_pool->mutex);
-
-  /* there should be no outstanding references to any object in this pool */
-  assert(svn_atomic_read(&object_pool->used_count) == 0);
-
-  /* make future attempts to access this pool cause definitive segfaults */
-  object_pool->objects = NULL;
-
-  /* This is the actual point of destruction. */
-  /* Destroying the pool will also release the lock. */
-  svn_pool_destroy(object_pool->root_pool);
-
-  return APR_SUCCESS;
-}
-
-/* Forward-declaration */
-static apr_status_t
-root_object_pool_cleanup(void *baton);
-
-/* Pool cleanup function for the whole object pool.  Actual destruction
- * will be deferred until no configurations are left in use.
+/* Pool cleanup function for the whole object pool.
  */
 static apr_status_t
 object_pool_cleanup(void *baton)
 {
   svn_object_pool__t *object_pool = baton;
 
-  /* disable the alternative cleanup */
-  apr_pool_cleanup_kill(object_pool->root_pool, baton,
-                        root_object_pool_cleanup);
-
-  /* from now on, anyone is allowed to destroy the OBJECT_POOL */
-  svn_atomic_set(&object_pool->ready_for_cleanup, TRUE);
-
-  /* are there no more external references and can we grab the cleanup flag? */
-  if (   svn_atomic_read(&object_pool->used_count) == 0
-      && svn_atomic_cas(&object_pool->ready_for_cleanup, FALSE, TRUE) == TRUE)
-    {
-      /* Attempts to get a configuration from a pool whose cleanup has
-       * already started is illegal.
-       * So, used_count must not increase again.
-       */
-      destroy_object_pool(object_pool);
-    }
+  /* all entries must have been released up by now */
+  SVN_ERR_ASSERT_NO_RETURN(   object_pool->object_count
+                           == object_pool->unused_count);
 
   return APR_SUCCESS;
 }
 
-/* This will be called when the root pool gets destroyed before the actual
- * owner pool.  This may happen if the owner pool is the global root pool. 
- * In that case, all the relevant cleanup has either already been done or
- * is default-scheduled.
- */
-static apr_status_t
-root_object_pool_cleanup(void *baton)
-{
-  svn_object_pool__t *object_pool = baton;
- 
-  /* disable the full-fledged cleanup code */
-  apr_pool_cleanup_kill(object_pool->owning_pool, baton,
-                        object_pool_cleanup);
-  
-  return APR_SUCCESS;
-}
-
-/* Re-allocate OBJECTS in OBJECT_POOL and remove all unused objects to
- * minimize memory consumption.
+/* Remove entries from OBJECTS in OBJECT_POOL that have a ref-count of 0.
  *
  * Requires external serialization on OBJECT_POOL.
  */
 static void
 remove_unused_objects(svn_object_pool__t *object_pool)
 {
-  apr_pool_t *new_pool = svn_pool_create(object_pool->root_pool);
-  apr_hash_t *new_hash = svn_hash__make(new_pool);
+  apr_pool_t *subpool = svn_pool_create(object_pool->pool);
 
   /* process all hash buckets */
   apr_hash_index_t *hi;
-  for (hi = apr_hash_first(object_pool->objects_hash_pool,
-                           object_pool->objects);
+  for (hi = apr_hash_first(subpool, object_pool->objects);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
-      object_ref_t *previous = NULL;
       object_ref_t *object_ref = svn__apr_hash_index_val(hi);
-      object_ref_t *next;
 
-      /* follow the chain of object_ref_ts in this bucket */
-      for (; object_ref; object_ref = next)
+      /* note that we won't hand out new references while access
+         to the hash is serialized */
+      if (svn_atomic_read(&object_ref->ref_count) == 0)
         {
-          next = object_ref->next;
-          if (object_ref->ref_count == 0)
-            {
-              svn_atomic_dec(&object_pool->unused_count);
-              svn_pool_destroy(object_ref->pool);
-            }
-          else
-            {
-              object_ref->next = previous;
-              apr_hash_set(new_hash, object_ref->key.data,
-                           object_ref->key.size, object_ref);
-              previous = object_ref;
-            }
+          apr_hash_set(object_pool->objects, object_ref->key.data,
+                       object_ref->key.size, NULL);
+          svn_atomic_dec(&object_pool->object_count);
+          svn_atomic_dec(&object_pool->unused_count);
+
+          svn_pool_destroy(object_ref->pool);
         }
-
     }
 
-  /* swap out the old container for the new one */
-  svn_pool_destroy(object_pool->objects_hash_pool);
-  object_pool->objects = new_hash;
-  object_pool->objects_hash_pool = new_pool;
-}
-
-/* If ERR is not SVN_NO_ERROR, handle it and terminate the application.
- *
- * Please make this generic if necessary instead of duplicating this code.
- */
-static void
-exit_on_error(const char *file, int line, svn_error_t *err)
-{
-  if (err)
-    {
-      char buffer[1024];
-
-      /* The svn_error_clear() is to make static analyzers happy.
-         svn_error__malfunction() will never return */
-      svn_error_clear(
-            svn_error__malfunction(FALSE /* can_return */, file, line,
-                                   svn_err_best_message(err, buffer,
-                                                        sizeof(buffer))
-                                   ));
-      abort(); /* Only reached by broken malfunction handlers */
-    }
+  svn_pool_destroy(subpool);
 }
 
 /* Cleanup function called when an object_ref_t gets released.
@@ -259,64 +147,17 @@ object_ref_cleanup(void *baton)
   object_ref_t *object = baton;
   svn_object_pool__t *object_pool = object->object_pool;
 
-  /* if we don't share objects and we are not allowed to hold on to
-   * unused object, delete them immediately. */
-  if (!object_pool->share_objects && object_pool->max_unused == 0)
-    {
-       /* there must only be the one references we are releasing right now */
-      assert(object->ref_count == 1);
-      svn_pool_destroy(object->pool);
+  /* If we released the last reference to object, there is one more
+     unused entry.
 
-      /* see below for a more info on this final cleanup check */
-      if (   svn_atomic_dec(&object_pool->used_count) == 0
-          && svn_atomic_cas(&object_pool->ready_for_cleanup, FALSE, TRUE)
-             == TRUE)
-        {
-          destroy_object_pool(object_pool);
-        }
-
-     return APR_SUCCESS;
-    }
-
-  /* begin critical section */
-  exit_on_error(__FILE__, __LINE__,
-                svn_error_trace(svn_mutex__lock(object_pool->mutex)));
-
-  /* put back into "available" container */
-  if (!object_pool->share_objects)
-    {
-      svn_membuf_t *key = &object->key;
-
-      object->next = apr_hash_get(object_pool->objects, key->data, key->size);
-      apr_hash_set(object_pool->objects, key->data, key->size, object);
-    }
-
-  /* Release unused configurations if there are relatively frequent. */
-  if (   object_pool->unused_count > object_pool->max_unused
-      ||   object_pool->used_count * 2 + object_pool->min_unused
-         < object_pool->unused_count)
-    {
-      remove_unused_objects(object_pool);
-    }
-
-  /* end critical section */
-  exit_on_error(__FILE__, __LINE__,
-                svn_error_trace(svn_mutex__unlock(object_pool->mutex, NULL)));
-
-  /* Maintain reference counters and handle object cleanup */
+     Note that unused_count does not need to be always exact but only
+     needs to become exact *eventually* (we use it to check whether we
+     should remove unused objects every now and then).  I.e. it must
+     never drift off / get stuck but always reflect the true value once
+     all threads left the racy sections.
+   */
   if (svn_atomic_dec(&object->ref_count) == 0)
-    {
-      svn_atomic_inc(&object_pool->unused_count);
-      if (   svn_atomic_dec(&object_pool->used_count) == 0
-          && svn_atomic_cas(&object_pool->ready_for_cleanup, FALSE, TRUE)
-             == TRUE)
-        {
-          /* There cannot be any future references to a config in this pool.
-           * So, we are the last one and need to finally clean it up.
-           */
-          destroy_object_pool(object_pool);
-        }
-    }
+    svn_atomic_inc(&object_pool->unused_count);
 
   return APR_SUCCESS;
 }
@@ -330,20 +171,10 @@ static void
 add_object_ref(object_ref_t *object_ref,
               apr_pool_t *pool)
 {
-  /* in exclusive mode, we only keep unused items in our hash */
-  if (!object_ref->object_pool->share_objects)
-    {
-      apr_hash_set(object_ref->object_pool->objects, object_ref->key.data,
-                   object_ref->key.size, object_ref->next);
-      object_ref->next = NULL;
-    }
-
-  /* update ref counter and global usage counters */
+  /* Update ref counter. 
+     Note that this is racy with object_ref_cleanup; see comment there. */
   if (svn_atomic_inc(&object_ref->ref_count) == 0)
-    {
-      svn_atomic_inc(&object_ref->object_pool->used_count);
-      svn_atomic_dec(&object_ref->object_pool->unused_count);
-    }
+    svn_atomic_dec(&object_ref->object_pool->unused_count);
 
   /* make sure the reference gets released automatically */
   apr_pool_cleanup_register(pool, object_ref, object_ref_cleanup,
@@ -392,7 +223,7 @@ insert(void **object,
 {
   object_ref_t *object_ref
     = apr_hash_get(object_pool->objects, key->data, key->size);
-  if (object_ref && object_pool->share_objects)
+  if (object_ref)
     {
       /* entry already exists (e.g. race condition) */
       svn_error_t *err = object_pool->setter(&object_ref->wrapper,
@@ -406,8 +237,14 @@ insert(void **object,
            * available ones.
            */
           apr_hash_set(object_pool->objects, key->data, key->size, NULL);
+          svn_atomic_dec(&object_pool->object_count);
 
-          /* cleanup the new data as well because it's now safe to use
+          /* for the unlikely case that the object got created _and_
+           * already released since we last checked: */
+          if (svn_atomic_read(&object_ref->ref_count) == 0)
+            svn_atomic_dec(&object_pool->unused_count);
+
+          /* cleanup the new data as well because it's not safe to use
            * either.
            */
           svn_pool_destroy(wrapper_pool);
@@ -428,8 +265,6 @@ insert(void **object,
       object_ref->object_pool = object_pool;
       object_ref->wrapper = wrapper;
       object_ref->pool = wrapper_pool;
-      object_ref->next = apr_hash_get(object_pool->objects, key->data,
-                                      key->size);
 
       svn_membuf__create(&object_ref->key, key->size, wrapper_pool);
       object_ref->key.size = key->size;
@@ -437,6 +272,7 @@ insert(void **object,
 
       apr_hash_set(object_pool->objects, object_ref->key.data,
                    object_ref->key.size, object_ref);
+      svn_atomic_inc(&object_pool->object_count);
 
       /* the new entry is *not* in use yet.
        * add_object_ref will update counters again. 
@@ -447,6 +283,11 @@ insert(void **object,
   /* return a reference to the object we just added */
   *object = object_pool->getter(object_ref->wrapper, baton, result_pool);
   add_object_ref(object_ref, result_pool);
+
+  /* limit memory usage */
+  if (svn_atomic_read(&object_pool->unused_count) * 2
+      > apr_hash_count(object_pool->objects) + 2)
+    remove_unused_objects(object_pool);
 
   return SVN_NO_ERROR;
 }
@@ -479,43 +320,21 @@ svn_error_t *
 svn_object_pool__create(svn_object_pool__t **object_pool,
                         svn_object_pool__getter_t getter,
                         svn_object_pool__setter_t setter,
-                        apr_size_t min_unused,
-                        apr_size_t max_unused,
-                        svn_boolean_t share_objects,
                         svn_boolean_t thread_safe,
                         apr_pool_t *pool)
 {
   svn_object_pool__t *result;
 
-  /* our allocator may need to be thread-safe */
-  apr_pool_t *root_pool
-    = apr_allocator_owner_get(svn_pool_create_allocator(thread_safe));
-
-  /* paranoia limiter code */
-  if (max_unused > APR_UINT32_MAX)
-    max_unused = APR_UINT32_MAX;
-  if (min_unused > APR_UINT32_MAX)
-    min_unused = APR_UINT32_MAX;
-
-  if (max_unused < min_unused)
-    max_unused = min_unused;
-
   /* construct the object pool in our private ROOT_POOL to survive POOL
    * cleanup and to prevent threading issues with the allocator
    */
-  result = apr_pcalloc(root_pool, sizeof(*result));
-  SVN_ERR(svn_mutex__init(&result->mutex, thread_safe, root_pool));
+  result = apr_pcalloc(pool, sizeof(*result));
+  SVN_ERR(svn_mutex__init(&result->mutex, thread_safe, pool));
 
-  result->root_pool = root_pool;
-  result->owning_pool = pool;
-  result->objects_hash_pool = svn_pool_create(root_pool);
-  result->objects = svn_hash__make(result->objects_hash_pool);
-  result->ready_for_cleanup = FALSE;
-  result->share_objects = share_objects;
+  result->pool = pool;
+  result->objects = svn_hash__make(result->pool);
   result->getter = getter ? getter : default_getter;
   result->setter = setter ? setter : default_setter;
-  result->min_unused = min_unused;
-  result->max_unused = max_unused;
 
   /* make sure we clean up nicely.
    * We need two cleanup functions of which exactly one will be run
@@ -526,17 +345,15 @@ svn_object_pool__create(svn_object_pool__t **object_pool,
    */
   apr_pool_cleanup_register(pool, result, object_pool_cleanup,
                             apr_pool_cleanup_null);
-  apr_pool_cleanup_register(root_pool, result, root_object_pool_cleanup,
-                            apr_pool_cleanup_null);
   
   *object_pool = result;
   return SVN_NO_ERROR;
 }
 
 apr_pool_t *
-svn_object_pool__pool(svn_object_pool__t *object_pool)
+svn_object_pool__new_wrapper_pool(svn_object_pool__t *object_pool)
 {
-  return object_pool->root_pool;
+  return svn_pool_create(object_pool->pool);
 }
 
 svn_mutex__t *
@@ -548,7 +365,7 @@ svn_object_pool__mutex(svn_object_pool__t *object_pool)
 unsigned
 svn_object_pool__count(svn_object_pool__t *object_pool)
 {
-  return object_pool->used_count + object_pool->unused_count;
+  return svn_atomic_read(&object_pool->object_count);
 }
 
 svn_error_t *

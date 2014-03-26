@@ -212,7 +212,7 @@ auto_parse(svn_config_t **cfg,
     return SVN_NO_ERROR;
 
   /* create a pool for the new config object and parse the data into it  */
-  cfg_pool = svn_pool_create(svn_object_pool__pool(config_pool->object_pool));
+  cfg_pool = svn_object_pool__new_wrapper_pool(config_pool->object_pool);
 
   config_object = apr_pcalloc(cfg_pool, sizeof(*config_object));
 
@@ -439,19 +439,16 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
 {
   svn_repos__config_pool_t *result;
   svn_object_pool__t *object_pool;
-  apr_pool_t *root_pool;
 
   SVN_ERR(svn_object_pool__create(&object_pool, getter, setter,
-                                  4, APR_UINT32_MAX, TRUE, thread_safe,
-                                  pool));
-  root_pool = svn_object_pool__pool(object_pool);
+                                  thread_safe, pool));
 
   /* construct the config pool in our private ROOT_POOL to survive POOL
    * cleanup and to prevent threading issues with the allocator */
-  result = apr_pcalloc(root_pool, sizeof(*result));
+  result = apr_pcalloc(pool, sizeof(*result));
 
   result->object_pool = object_pool;
-  result->in_repo_hash_pool = svn_pool_create(root_pool);
+  result->in_repo_hash_pool = svn_pool_create(pool);
   result->in_repo_configs = svn_hash__make(result->in_repo_hash_pool);
 
   *config_pool = result;
