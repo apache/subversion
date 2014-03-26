@@ -3374,26 +3374,13 @@ repos_path_valid(const char *path)
   return TRUE;
 }
 
-/* APR pool cleanup callback that resets the REPOS pointer in ARG. */
-static apr_status_t
-reset_repos(void *arg)
-{
-  repository_t *repository = arg;
-  repository->repos = NULL;
-
-  return APR_SUCCESS;
-}
-
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, repos_url,
- * and fs_path fields of REPOSITORY.  REPOSITORY->REPO will be allocated
- * SCRATCH_POOL because repositories may be closed and re-opened during
- * the lifetime of a connection.   All other parts in REPOSITORY must
- * be allocated in RESULT_POOL.  VHOST and READ_ONLY flags are the same
- * as in the server baton.
+ * and fs_path fields of REPOSITORY.  VHOST and READ_ONLY flags are the
+ * same as in the server baton.
  *
- * CONFIG_POOL, AUTHZ_POOL and REPOS_POOL shall be used to load any
- * object of the respective type.
+ * CONFIG_POOL and AUTHZ_POOL shall be used to load any object of the
+ * respective type.
  */
 static svn_error_t *
 find_repos(const char *url,
@@ -3404,9 +3391,8 @@ find_repos(const char *url,
            repository_t *repository,
            svn_repos__config_pool_t *config_pool,
            svn_repos__authz_pool_t *authz_pool,
-           svn_repos__repos_pool_t *repos_pool,
-           apr_pool_t *result_pool,
-           apr_pool_t *scratch_pool)
+           apr_hash_t *fs_config,
+           apr_pool_t *pool)
 {
   const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
@@ -3423,8 +3409,8 @@ find_repos(const char *url,
       if (path == NULL)
         path = "";
     }
-  path = svn_relpath_canonicalize(path, result_pool);
-  path = svn_path_uri_decode(path, result_pool);
+  path = svn_relpath_canonicalize(path, pool);
+  path = svn_path_uri_decode(path, pool);
 
   /* Ensure that it isn't possible to escape the root by disallowing
      '..' segments. */
@@ -3433,61 +3419,55 @@ find_repos(const char *url,
                             "Couldn't determine repository path");
 
   /* Join the server-configured root with the client path. */
-  full_path = svn_dirent_join(svn_dirent_canonicalize(root, result_pool),
-                              path, result_pool);
+  full_path = svn_dirent_join(svn_dirent_canonicalize(root, pool),
+                              path, pool);
 
   /* Search for a repository in the full path. */
-  repository->repos_root = svn_repos_find_root_path(full_path, result_pool);
+  repository->repos_root = svn_repos_find_root_path(full_path, pool);
   if (!repository->repos_root)
     return svn_error_createf(SVN_ERR_RA_SVN_REPOS_NOT_FOUND, NULL,
                              "No repository found in '%s'", url);
 
   /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos__repos_pool_get(&repository->repos, repos_pool,
-                                    repository->repos_root, "",
-                                    scratch_pool));
+  SVN_ERR(svn_repos_open2(&repository->repos, repository->repos_root,
+                          fs_config, pool));
   SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
                                                  repository->capabilities));
   repository->fs = svn_repos_fs(repository->repos);
   fs_path = full_path + strlen(repository->repos_root);
   repository->fs_path = svn_stringbuf_create(*fs_path ? fs_path : "/",
-                                             result_pool);
-  url_buf = svn_stringbuf_create(url, result_pool);
+                                             pool);
+  url_buf = svn_stringbuf_create(url, pool);
   svn_path_remove_components(url_buf,
                         svn_path_component_count(repository->fs_path->data));
   repository->repos_url = url_buf->data;
   repository->authz_repos_name = svn_dirent_is_child(root,
                                                      repository->repos_root,
-                                                     result_pool);
+                                                     pool);
   if (repository->authz_repos_name == NULL)
     repository->repos_name = svn_dirent_basename(repository->repos_root,
-                                                 result_pool);
+                                                 pool);
   else
     repository->repos_name = repository->authz_repos_name;
   repository->repos_name = svn_path_uri_encode(repository->repos_name,
-                                               result_pool);
-
-  /* Reset the REPOS pointer as soon as the REPOS will be returned to the
-     REPOS_POOL. */
-  apr_pool_cleanup_register(scratch_pool, repository, reset_repos,
-                            apr_pool_cleanup_null);
+                                               pool);
 
   /* If the svnserve configuration has not been loaded then load it from the
    * repository. */
   if (NULL == cfg)
     {
-      repository->base = svn_repos_conf_dir(repository->repos, result_pool);
+      repository->base = svn_repos_conf_dir(repository->repos, pool);
 
       SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
                                          svn_repos_svnserve_conf
-                                            (repository->repos, result_pool), 
+                                            (repository->repos, pool),
                                          FALSE, FALSE, repository->repos,
-                                         result_pool));
+                                         pool));
     }
 
-  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
+  SVN_ERR(load_pwdb_config(repository, cfg, config_pool, pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            authz_pool, result_pool));
+                            authz_pool, pool));
 
 #ifdef SVN_HAVE_SASL
     {
@@ -3509,10 +3489,10 @@ find_repos(const char *url,
 #endif
 
   /* Use the repository UUID as the default realm. */
-  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, result_pool));
+  SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, pool));
   svn_config_get(cfg, &repository->realm, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_REALM, repository->realm);
-  repository->realm = apr_pstrdup(result_pool, repository->realm);
+  repository->realm = apr_pstrdup(pool, repository->realm);
 
   /* Make sure it's possible for the client to authenticate.  Note
      that this doesn't take into account any authz configuration read
@@ -3524,9 +3504,9 @@ find_repos(const char *url,
   svn_config_get(cfg, &hooks_env, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_HOOKS_ENV, NULL);
   if (hooks_env)
-    hooks_env = svn_dirent_internal_style(hooks_env, scratch_pool);
+    hooks_env = svn_dirent_internal_style(hooks_env, pool);
 
-  repository->hooks_env = apr_pstrdup(result_pool, hooks_env);
+  repository->hooks_env = apr_pstrdup(pool, hooks_env);
 
   return SVN_NO_ERROR;
 }
@@ -3815,8 +3795,8 @@ construct_server_baton(server_baton_t **baton,
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
-                                       params->authz_pool, params->repos_pool, 
-                                       conn_pool, scratch_pool),
+                                       params->authz_pool, params->fs_config, 
+                                       conn_pool),
                             b);
   if (!err)
     {
@@ -3886,7 +3866,7 @@ construct_server_baton(server_baton_t **baton,
                                           scratch_pool),
                       ra_client_string, client_string));
 
-  warn_baton = apr_pcalloc(scratch_pool, sizeof(*warn_baton));
+  warn_baton = apr_pcalloc(conn_pool, sizeof(*warn_baton));
   warn_baton->server = b;
   warn_baton->conn = conn;
   svn_fs_set_warning_func(b->repository->fs, fs_warning_func, warn_baton);
@@ -3909,45 +3889,6 @@ construct_server_baton(server_baton_t **baton,
   return SVN_NO_ERROR;
 }
 
-/* Open a svn_repos object in CONNECTION for the same repository and with
-   the same settings as last time.  The repository object remains valid
-   until POOL gets cleaned up at which point the respective pointer in
-   CONNECTION reset.  The repository in CONNECTION must have been opened
-   at some point in the past using construct_server_baton.
- */
-static svn_error_t *
-reopen_repos(connection_t *connection,
-             apr_pool_t *pool)
-{
-  fs_warning_baton_t *warn_baton = apr_pcalloc(pool, sizeof(*warn_baton));
-  repository_t *repository = connection->baton->repository;
-
-  /* Open the repository and fill in b with the resulting information. */
-  SVN_ERR(svn_repos__repos_pool_get(&repository->repos,
-                                    connection->params->repos_pool,
-                                    repository->repos_root, repository->uuid,
-                                    pool));
-  repository->fs = svn_repos_fs(repository->repos);
-
-  /* Reset the REPOS pointer as soon as the REPOS will be returned to the
-     REPOS_POOL. */
-  apr_pool_cleanup_register(pool, repository, reset_repos,
-                            apr_pool_cleanup_null);
-
-  /* Configure svn_repos object */
-  SVN_ERR(svn_repos_remember_client_capabilities(repository->repos,
-                                                 repository->capabilities));
-  SVN_ERR(svn_repos_hooks_setenv(repository->repos, repository->hooks_env,
-                                 pool));
-  
-  warn_baton->server = connection->baton;
-  warn_baton->conn = connection->conn;
-  svn_fs_set_warning_func(connection->baton->repository->fs,
-                          fs_warning_func, &warn_baton);
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 serve_interruptable(svn_boolean_t *terminate_p,
                     connection_t *connection,
@@ -3964,14 +3905,8 @@ serve_interruptable(svn_boolean_t *terminate_p,
   for (command = main_commands; command->cmdname; command++)
     svn_hash_sets(cmd_hash, command->cmdname, command);
 
-  /* Auto-initialize connection & open repository */
-  if (connection->conn)
-    {
-      /* This is not the first call for CONNECTION. */
-      if (connection->baton->repository->repos == NULL)
-        err = reopen_repos(connection, pool);
-    }
-  else
+  /* Auto-initialize connection */
+  if (! connection->conn)
     {
       apr_status_t ar;
 

@@ -638,7 +638,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 #endif
   svn_boolean_t is_multi_threaded;
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
-  apr_hash_t *fs_config = NULL;
   svn_boolean_t cache_fulltexts = TRUE;
   svn_boolean_t cache_txdeltas = TRUE;
   svn_boolean_t cache_revprops = FALSE;
@@ -680,7 +679,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.logger = NULL;
   params.config_pool = NULL;
   params.authz_pool = NULL;
-  params.repos_pool = NULL;
+  params.fs_config = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
@@ -921,12 +920,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* construct object pools */
   is_multi_threaded = handling_mode == connection_mode_thread;
-  fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
+  params.fs_config = apr_hash_make(pool);
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS,
                 cache_txdeltas ? "1" :"0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                 cache_fulltexts ? "1" :"0");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
 
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
@@ -934,10 +933,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                         pool));
   SVN_ERR(svn_repos__authz_pool_create(&params.authz_pool,
                                        params.config_pool,
-                                       is_multi_threaded,
-                                       pool));
-  SVN_ERR(svn_repos__repos_pool_create(&params.repos_pool,
-                                       fs_config,
                                        is_multi_threaded,
                                        pool));
 

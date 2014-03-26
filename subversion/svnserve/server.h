@@ -128,8 +128,9 @@ typedef struct serve_params_t {
   /* all authz data should be opened through this factory */
   svn_repos__authz_pool_t *authz_pool;
 
-  /* all repositories should be opened through this factory */
-  svn_repos__repos_pool_t *repos_pool;
+  /* The FS configuration to be applied to all repositories.
+     It mainly contains things like cache settings. */
+  apr_hash_t *fs_config;
 
   /* Username case normalization style. */
   enum username_case_type username_case;
