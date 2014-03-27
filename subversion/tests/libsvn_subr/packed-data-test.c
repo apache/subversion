@@ -176,13 +176,13 @@ test_int_stream(apr_pool_t *pool)
   enum { COUNT = 7 };
   const apr_int64_t values[COUNT] =
   {
-     0x7fffffffffffffffll,
-    -0x8000000000000000ll,
-     0,
-     0x7fffffffffffffffll,
-    -0x7fffffffffffffffll,
-     0x1234567890abcdefll,
-    -0x0fedcba987654321ll,
+     APR_INT64_MAX, /* extreme value */
+     APR_INT64_MIN, /* other extreme, creating maximum delta to predecessor */
+     0,             /* delta to predecessor > APR_INT64_MAX */
+     APR_INT64_MAX, /* max value, again */
+    -APR_INT64_MAX, /* _almost_ min value, almost max delta */
+     APR_INT64_C(0x1234567890abcdef),  /* some arbitrary value */
+    -APR_INT64_C(0x0fedcba987654321),  /* arbitrary value, different sign */
   };
 
   SVN_ERR(verify_int_stream(values, COUNT, FALSE, pool));
