@@ -233,7 +233,7 @@ svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const char *mech, const char *mech_arg)
 {
-  return svn_ra_svn__write_tuple(conn, pool, "w(?c)", mech, mech_arg);
+  return svn_error_trace(svn_ra_svn__write_tuple(conn, pool, "w(?c)", mech, mech_arg));
 }
 
 static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
@@ -2005,7 +2005,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
 
   /* Read the response. This is so the server would have a chance to
    * report an error. */
-  return svn_ra_svn__read_cmd_response(conn, pool, "");
+  return svn_error_trace(svn_ra_svn__read_cmd_response(conn, pool, ""));
 }
 
 static svn_error_t *
@@ -2694,7 +2694,7 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
   SVN_ERR(svn_ra_svn_drive_editor2(sess->conn, pool, editor, edit_baton,
                                    NULL, TRUE));
 
-  return svn_ra_svn__read_cmd_response(sess->conn, pool, "");
+  return svn_error_trace(svn_ra_svn__read_cmd_response(sess->conn, pool, ""));
 }
 
 
@@ -2763,7 +2763,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
     }
   svn_pool_destroy(iterpool);
 
-  return svn_ra_svn__read_cmd_response(sess->conn, pool, "");
+  return svn_error_trace(svn_ra_svn__read_cmd_response(sess->conn, pool, ""));
 }
 
 
@@ -2829,7 +2829,8 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
                                  N_("'get-deleted-rev' not implemented")));
 
-  return svn_ra_svn__read_cmd_response(conn, pool, "r", revision_deleted);
+  return svn_error_trace(svn_ra_svn__read_cmd_response(conn, pool, "r",
+                                                       revision_deleted));
 }
 
 static svn_error_t *

@@ -1546,7 +1546,7 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
     }
   else if (strcmp(status, "failure") == 0)
     {
-      return svn_ra_svn__handle_failure_status(params, pool);
+      return svn_error_trace(svn_ra_svn__handle_failure_status(params, pool));
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
