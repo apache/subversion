@@ -147,7 +147,23 @@ static const apr_getopt_option_t cl_options[] =
 static svn_boolean_t skip_cleanup = FALSE;
 
 /* All cleanup actions are registered as cleanups on this pool. */
+#if !defined(thread_local) && APR_HAS_THREADS
+
+#  if __STDC_VERSION__ >= 201112 && !defined __STDC_NO_THREADS__
+#    define thread_local _Thread_local
+#  elif defined(WIN32) && defined(_MSC_VER)
+#    define thread_local __declspec(thread)
+#  elif defined(__GNUC__)
+#    define thread_local __thread
+#  endif
+#endif
+
+#ifdef thread_local
+#define HAVE_PER_THREAD_CLEANUP
+static thread_local apr_pool_t * cleanup_pool = NULL;
+#else
 static apr_pool_t *cleanup_pool = NULL;
+#endif
 
 /* Used by test_thread to serialize access to stdout. */
 static svn_mutex__t *log_mutex = NULL;
@@ -174,6 +190,7 @@ cleanup_rmtree(void *data)
     }
   return APR_SUCCESS;
 }
+
 
 
 void
@@ -461,15 +478,24 @@ test_thread(apr_thread_t *thread, void *data)
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
   test_params_t *params = data;
   svn_atomic_t test_num;
-
-  apr_pool_t *pool
+  apr_pool_t *pool;
+  apr_pool_t *thread_root
     = apr_allocator_owner_get(svn_pool_create_allocator(FALSE));
+
+#ifdef HAVE_PER_THREAD_CLEANUP
+  cleanup_pool = svn_pool_create(thread_root);
+#endif
+
+  pool = svn_pool_create(thread_root);
 
   for (test_num = svn_atomic_inc(&params->test_num);
        test_num <= params->test_count;
        test_num = svn_atomic_inc(&params->test_num))
     {
       svn_pool_clear(pool);
+#ifdef HAVE_PER_THREAD_CLEANUP
+      svn_pool_clear(cleanup_pool); /* after clearing pool*/
+#endif
 
       desc = &params->test_funcs[test_num];
       skip = desc->mode == svn_test_skip;
@@ -494,8 +520,10 @@ test_thread(apr_thread_t *thread, void *data)
       svn_error_clear(svn_mutex__unlock(log_mutex, NULL));
     }
 
-  /* release all test memory */
-  svn_pool_destroy(pool);
+  svn_pool_clear(pool); /* Make sure this is cleared before cleanup_pool*/
+
+  /* Release all test memory. Possibly includes cleanup_pool */
+  svn_pool_destroy(thread_root);
 
   /* End thread explicitly to prevent APR_INCOMPLETE return codes in
      apr_thread_join(). */
