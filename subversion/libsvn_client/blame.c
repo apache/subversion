@@ -281,6 +281,8 @@ add_file_blame(const char *last_file,
                struct blame_chain *chain,
                struct rev *rev,
                const svn_diff_file_options_t *diff_options,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   if (!last_file)
@@ -299,7 +301,8 @@ add_file_blame(const char *last_file,
       /* We have a previous file.  Get the diff and adjust blame info. */
       SVN_ERR(svn_diff_file_diff_2(&diff, last_file, cur_file,
                                    diff_options, pool));
-      SVN_ERR(svn_diff_output(diff, &diff_baton, &output_fns));
+      SVN_ERR(svn_diff_output2(diff, &diff_baton, &output_fns,
+                               cancel_func, cancel_baton));
     }
 
   return SVN_NO_ERROR;
@@ -331,7 +334,9 @@ update_blame(void *baton)
   /* Process this file. */
   SVN_ERR(add_file_blame(frb->last_filename,
                          dbaton->filename, chain, dbaton->rev,
-                         frb->diff_options, frb->currpool));
+                         frb->diff_options,
+                         frb->ctx->cancel_func, frb->ctx->cancel_baton,
+                         frb->currpool));
 
   /* If we are including merged revisions, and the current revision is not a
      merged one, we need to add its blame info to the chain for the original
@@ -342,7 +347,9 @@ update_blame(void *baton)
 
       SVN_ERR(add_file_blame(frb->last_original_filename,
                              dbaton->filename, frb->chain, dbaton->rev,
-                             frb->diff_options, frb->currpool));
+                             frb->diff_options,
+                             frb->ctx->cancel_func, frb->ctx->cancel_baton,
+                             frb->currpool));
 
       /* This filename could be around for a while, potentially, so
          use the longer lifetime pool, and switch it with the previous one*/
@@ -792,7 +799,8 @@ svn_client_blame5(const char *target,
                                    ctx->cancel_baton, pool));
 
           SVN_ERR(add_file_blame(frb.last_filename, temppath, frb.chain, NULL,
-                                 frb.diff_options, pool));
+                                 frb.diff_options,
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
 
           frb.last_filename = temppath;
         }
