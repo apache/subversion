@@ -2185,8 +2185,7 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  */
 
 /** Like svn_fs_lock2(), but invoke the @a repos's pre- and
- * post-lock hooks before and after the locking action.  Use @a pool
- * for any necessary allocations.
+ * post-lock hooks before and after the locking action.
  *
  * The pre-lock is run for every path in @a targets. Those entries in
  * @a targets for which the pre-lock is successful are passed to
@@ -2203,6 +2202,9 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * The pre-lock hook may cause a different token to be used for the
  * lock, instead of @a token; see the pre-lock-hook documentation for
  * more.
+ *
+ * Allocate @a *results in @a result_pool. Use @a scratch_pool for
+ * temporary allocations.
  *
  * @since New in 1.9.
  */
@@ -2235,8 +2237,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
 
 
 /** Like svn_fs_unlock(), but invoke the @a repos's pre- and
- * post-unlock hooks before and after the unlocking action.  Use @a
- * pool for any necessary allocations.
+ * post-unlock hooks before and after the unlocking action.
  *
  * The pre-unlock hook is run for every path in @a targets. Those
  * entries in @a targets for which the pre-unlock is successful are
@@ -2250,6 +2251,9 @@ svn_repos_fs_lock(svn_lock_t **lock,
  * sees this error, it knows that some unlocks succeeded.  In all
  * cases the caller must handle all error in @a results to avoid
  * leaks.
+ *
+ * Allocate @a *results in @a result_pool. Use @a scratch_pool for
+ * temporary allocations.
  *
  * @since New in 1.9.
  */
