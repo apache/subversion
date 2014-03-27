@@ -284,7 +284,7 @@ Candidate changes:
      Valid merges were broken (and gave a confusing error message).
    Votes:
      +1: julianfoad (without r1579684)
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * r1581296
    Reduce buffer size used for parsing config files. There no reason to waste 
