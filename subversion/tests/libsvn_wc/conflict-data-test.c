@@ -107,7 +107,7 @@ compare_conflict(const svn_wc_conflict_description3_t *actual,
   ASSERT_STR_EQ(actual->base_abspath,   expected->base_abspath);
   ASSERT_STR_EQ(actual->their_abspath,  expected->their_abspath);
   ASSERT_STR_EQ(actual->my_abspath,     expected->my_abspath);
-  ASSERT_STR_EQ(actual->merged_file,    expected->merged_file);
+  ASSERT_STR_EQ(actual->merged_abspath, expected->merged_abspath);
   ASSERT_INT_EQ(actual->operation,      expected->operation);
   SVN_ERR(compare_version(actual->src_left_version,
                           expected->src_left_version));

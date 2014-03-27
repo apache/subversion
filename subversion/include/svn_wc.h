@@ -1806,18 +1806,16 @@ typedef struct svn_wc_conflict_description3_t
    * @a base_abspath, @a their_abspath and @a my_abspath are absolute
    * paths.
    *
-   * ### Is @a merged_file relative to some directory, or absolute?
-   *
-   * All four files will be in repository-normal form -- LF
-   * line endings and contracted keywords.  (If any of these files are
-   * not available, they default to NULL.)
+   * All four files will be in repository-normal form -- Standardized LF
+   * and contracted keywords.  (If any of these files are not available
+   * they default to NULL.)
    *
    * On the other hand, if this is a property-conflict, then these
    * paths represent temporary files that contain the three different
    * property-values in conflict.  The fourth path (@c merged_file)
    * may or may not be NULL;  if set, it represents libsvn_wc's
-   * attempt to merge the property values together.  (Remember that
-   * property values are technically binary values, and thus can't
+   * attempt to merge the property values together.  (Remember that files
+   * and property values are technically binary values, and thus can't
    * always be merged.)
    */
   const char *base_abspath;  /* common ancestor of the two files being merged */
@@ -1829,7 +1827,7 @@ typedef struct svn_wc_conflict_description3_t
   const char *my_abspath;
 
   /** merged version; may contain conflict markers */
-  const char *merged_file;
+  const char *merged_abspath;
 
   /** For property conflicts, the path to the property reject file. */
   const char *prop_reject_abspath;

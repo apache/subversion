@@ -1473,7 +1473,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
         {
           svn_stringbuf_t *merged_stringbuf;
 
-          if (!cdesc->merged_file && !result->merged_file)
+          if (!cdesc->merged_abspath && !result->merged_file)
             return svn_error_create
                 (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                  NULL, _("Conflict callback violated API:"
@@ -1482,7 +1482,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
           SVN_ERR(svn_stringbuf_from_file2(&merged_stringbuf,
                                            result->merged_file ?
                                                 result->merged_file :
-                                                cdesc->merged_file,
+                                                cdesc->merged_abspath,
                                            scratch_pool));
           new_value = svn_stringbuf__morph_into_string(merged_stringbuf);
           *conflict_remains = FALSE;
@@ -1809,7 +1809,7 @@ resolve_text_conflict(svn_skel_t **work_items,
                                     merged-file first: */
                                 result->merged_file
                                   ? result->merged_file
-                                  : cdesc->merged_file,
+                                  : cdesc->merged_abspath,
                                 result_pool, scratch_pool));
     }
 
@@ -1825,7 +1825,7 @@ resolve_text_conflict(svn_skel_t **work_items,
                                              /* ### Sure this is an abspath? */
                                              result->merged_file
                                                ? result->merged_file
-                                               : cdesc->merged_file,
+                                               : cdesc->merged_abspath,
                                              cdesc->my_abspath,
                                              result_pool, scratch_pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
@@ -1873,7 +1873,7 @@ read_text_conflict_desc(svn_wc_conflict_description3_t **desc,
                                               db, local_abspath,
                                               conflict_skel,
                                               result_pool, scratch_pool));
-  (*desc)->merged_file = apr_pstrdup(result_pool, local_abspath);
+  (*desc)->merged_abspath = apr_pstrdup(result_pool, local_abspath);
 
   return SVN_NO_ERROR;
 }
