@@ -20,6 +20,8 @@
 set -x
 . ../svnenv.sh
 
+cd ../obj
+
 echo "============ make extraclean"
 test -f Makefile && make extraclean || exit $?
 
