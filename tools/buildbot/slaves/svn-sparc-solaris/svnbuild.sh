@@ -34,7 +34,7 @@ echo "============ configure"
   --with-apxs=/export/home/wandisco/buildbot/install/bin/apxs \
   --with-sqlite=/export/home/wandisco/buildbot/sqlite-amalgamation-3071501/sqlite3.c \
   --enable-optimize \
-  --disable-static \
+  --disable-shared \
   || exit $?
 
 echo "============ make"
