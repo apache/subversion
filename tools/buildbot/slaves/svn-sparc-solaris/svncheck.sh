@@ -20,6 +20,8 @@
 set -x
 . ../svnenv.sh
 
+cd ../obj
+
 echo "============ make svnserveautocheck"
 make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1
 
@@ -40,6 +42,9 @@ known="${known} prop_tests.py 41: svn:author with XML unsafe chars"
 known="${known}|"
 known="${known} svnsync_tests.py 24: copy and reencode non-UTF-8 svn:. props"
 known="${known})"
+
+# tests.log must exist
+test -f tests.log && exit 1
 
 # No FAIL other than the known ones.
 egrep -v "$known" tests.log | grep '^FAIL' && exit 1
