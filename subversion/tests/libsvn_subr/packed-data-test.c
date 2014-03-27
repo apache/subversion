@@ -280,20 +280,26 @@ static const sub_record_t sub_records[SUB_RECORD_COUNT] =
 static const base_record_t test_data[BASE_RECORD_COUNT] =
 {
   { 1, { "maximum", 7},
-    0xffffffffffffffffull, 0xffffffffffffffffull, sub_records,
-    0x7fffffffffffffffll,  0x7fffffffffffffffll, 9967, sub_records + 1,
+    APR_UINT64_MAX, APR_UINT64_MAX, sub_records,
+    APR_INT64_MAX,  APR_INT64_MAX, 9967, sub_records + 1,
     { "\0\1\2\3\4\5\6\7\x8\x9\xa", 11} },
+
   { 2, { "minimum", 7},
     0, 0, sub_records + 6,
-    -0x8000000000000000ll, -0x8000000000000000ll, 6029, sub_records + 5,
+    APR_INT64_MIN, APR_INT64_MIN, 6029, sub_records + 5,
     { "X\0\0Y", 4} },
+
   { 3, { "mean", 4},
-    0x8000000000000000ull, 0x8000000000000000ull, sub_records + 2,
+    APR_UINT64_C(0x8000000000000000), APR_UINT64_C(0x8000000000000000),
+                                      sub_records + 2,
     0, 0, 653, sub_records + 3,
     { "\xff\0\1\2\3\4\5\6\7\x8\x9\xa", 12} },
+
   { 4, { "random", 6},
-    0x1234567890abcdefull, 0xfedcba987654321ull, sub_records + 4,
-    0x1234567890abcdll, -0xedcba987654321ll, 7309, sub_records + 1,
+    APR_UINT64_C(0x1234567890abcdef), APR_UINT64_C(0xfedcba987654321),
+                                      sub_records + 4,
+    APR_INT64_C(0x1234567890abcd), APR_INT64_C(-0xedcba987654321), 7309,
+                                   sub_records + 1,
     { "\x80\x7f\0\1\6", 5} }
 };
 
