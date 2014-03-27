@@ -117,14 +117,14 @@ test_uint_stream(apr_pool_t *pool)
   enum { COUNT = 8 };
   const apr_uint64_t values[COUNT] =
   {
-    0xffffffffffffffffull,
+    APR_UINT64_MAX,
     0,
-    0xffffffffffffffffull,
-    0x8000000000000000ull,
+    APR_UINT64_MAX,
+    APR_UINT64_C(0x8000000000000000),
     0,
-    0x7fffffffffffffffull,
-    0x1234567890abcdefull,
-    0x0fedcba987654321ull,
+    APR_UINT64_C(0x7fffffffffffffff),
+    APR_UINT64_C(0x1234567890abcdef),
+    APR_UINT64_C(0x0fedcba987654321),
   };
 
   SVN_ERR(verify_uint_stream(values, COUNT, FALSE, pool));
