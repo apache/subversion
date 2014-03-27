@@ -153,8 +153,14 @@ static svn_boolean_t skip_cleanup = FALSE;
 #    define thread_local _Thread_local
 #  elif defined(WIN32) && defined(_MSC_VER)
 #    define thread_local __declspec(thread)
-#  elif defined(__GNUC__)
+#  elif defined(__thread)
+     /* ### Might work somewhere? */
 #    define thread_local __thread
+#  else
+     /* gcc defines __thread in some versions, but not all.
+        ### Who knows how to check for this?
+        ### stackoverflow recommends __GNUC__ but that breaks on
+        ### openbsd. */
 #  endif
 #endif
 
