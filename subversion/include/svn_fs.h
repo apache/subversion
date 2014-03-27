@@ -2502,7 +2502,7 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * mainly due to the serialization for tokens for pre-commit hook.
  *
  * Locks are not secret; anyone can view existing locks in a
- * filesystem.  Locks are not omnipotent: they can broken and stolen
+ * filesystem.  Locks are not omnipotent: they can be broken and stolen
  * by people who don't "own" the lock.  (Though admins can tailor a
  * custom break/steal policy via libsvn_repos pre-lock hook script.)
  *
@@ -2538,8 +2538,7 @@ typedef struct svn_fs_lock_result_t
 } svn_fs_lock_result_t;
 
 /** Lock the paths in @a targets in @a fs, and set @a *results to the
- * locks or errors representing each new lock, allocated in @a
- * result_pool.
+ * locks or errors representing each new lock.
  *
  * @warning You may prefer to use svn_repos_fs_lock2() instead,
  * which see.
@@ -2585,6 +2584,9 @@ typedef struct svn_fs_lock_result_t
  * ensure that all such errors are handled to avoid leaks.  The lock
  * associated with each path is returned as #svn_fs_lock_result_t->lock,
  * this will be @c NULL if no lock was created.
+ *
+ * Allocate @a *results in @a result_pool. Use @a scratch_pool for
+ * temporary allocations.
  *
  * @note At this time, only files can be locked.
  *
@@ -2632,7 +2634,7 @@ svn_fs_generate_lock_token(const char **token,
 
 
 /** Remove the locks on the paths in @a targets in @a fs, and return
- * the results in @a *results allocated in @a result_pool.
+ * the results in @a *results.
  *
  * The paths to be unlocked are passed as <tt>const char *</tt> keys
  * of the @a targets hash with <tt>svn_fs_lock_target_t *</tt> values.
@@ -2663,7 +2665,8 @@ svn_fs_generate_lock_token(const char **token,
  * be returned (it is not possible to return @c SVN_NO_ERROR as a hash
  * value directly), #svn_fs_lock_result_t->lock is always NULL.
  *
- * Use @a scratch_pool for temporary allocations.
+ * Allocate @a *results in @a result_pool. Use @a scratch_pool for
+ * temporary allocations.
  *
  * @since New in 1.9.
  */
