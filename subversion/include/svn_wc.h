@@ -8129,7 +8129,8 @@ typedef struct svn_wc_revision_status_t
   svn_boolean_t switched; /**< Is anything switched? */
   svn_boolean_t modified; /**< Is anything modified? */
 
-  /** Whether any WC paths are at a depth other than #svn_depth_infinity.
+  /** Whether any WC paths are at a depth other than #svn_depth_infinity or
+   * are user excluded.
    * @since New in 1.5.
    */
   svn_boolean_t sparse_checkout;
